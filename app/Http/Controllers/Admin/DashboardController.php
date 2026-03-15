@@ -25,6 +25,15 @@ function active_course(Request $request)
     
 }
 
+function incoming_course(Request $request)
+{
+    $incoming_courses = DB::table('course_master')
+        ->where('active_inactive', 1)
+        ->where('start_year', '>', now())
+        ->orderBy('start_year', 'asc')
+        ->get();
+    return view('admin.dashboard.incoming_course', compact('incoming_courses'));
+}
 
 function guest_faculty()
 {
@@ -35,7 +44,6 @@ function guest_faculty()
 function inhouse_faculty(){
    $inhouse_faculty  = $this->getFacultyWithMetrics(1);
     return view('admin.dashboard.inhouse_faculty', compact('inhouse_faculty'));
-    
 }
 
 private function getFacultyWithMetrics(int $facultyType)

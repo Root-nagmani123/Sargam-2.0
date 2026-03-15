@@ -36,9 +36,9 @@
 @endphp
 <header class="topbar">
     <!-- Skip to Content (GIGW Mandatory) -->
-<a href="#main-content" class="visually-hidden-focusable skip-link">
-    Skip to main content
-</a>
+    <a href="#main-content" class="visually-hidden-focusable skip-link">
+        Skip to main content
+    </a>
 
     <header class="header-top-bar d-none d-lg-block">
     <div class="d-flex align-items-center justify-content-between flex-wrap py-1">
@@ -124,7 +124,8 @@
                                     data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-setup' ? 'true' : 'false' }}" aria-controls="setup-panel"
                                     id="setup-tab">
 
-                                    @if(hasRole('Admin') || hasRole('Training-Induction') ||  hasRole('Staff') || hasRole('IST'))
+                                    @if(hasRole('Admin') || hasRole('Training-Induction') || hasRole('Staff') ||
+                                    hasRole('IST'))
                                     <span>Setup</span>
                                     @elseif(hasRole('Internal Faculty') || hasRole('Guest Faculty') ||
                                     hasRole('Student-OT'))
@@ -280,7 +281,7 @@
                             data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-setup' ? 'true' : 'false' }}" aria-controls="setup-panel"
                             id="setup-tab-mobile">
                             <i class="material-icons material-symbols-rounded" aria-hidden="true">settings</i>
-                            @if(hasRole('Admin') || hasRole('Training-Induction') ||  hasRole('Staff'))
+                            @if(hasRole('Admin') || hasRole('Training-Induction') || hasRole('Staff'))
                             <span>Setup</span>
                             @elseif(hasRole('Internal Faculty') || hasRole('Guest Faculty') ||
                             hasRole('Student-OT'))
@@ -311,10 +312,10 @@
 
                     <!-- Financial Dropdown -->
                     <li class="nav-item dropup" role="none">
-                        <a class="nav-link mobile-tab-link dropdown-toggle-custom" href="#"
-                            id="financialDropdownMobile" role="menuitem" aria-haspopup="true"
-                            aria-expanded="false" data-bs-toggle="dropdown">
-                            <i class="material-icons material-symbols-rounded" aria-hidden="true">account_balance_wallet</i>
+                        <a class="nav-link mobile-tab-link dropdown-toggle-custom" href="#" id="financialDropdownMobile"
+                            role="menuitem" aria-haspopup="true" aria-expanded="false" data-bs-toggle="dropdown">
+                            <i class="material-icons material-symbols-rounded"
+                                aria-hidden="true">account_balance_wallet</i>
                             <span>Finance</span>
                         </a>
 
@@ -667,7 +668,7 @@
                     visibility: visible !important;
                     opacity: 1 !important;
                 }
-                
+
                 /* Ensure active sidebar tab pane is visible */
                 body.sidebar-open #sidebarTabContent .tab-pane.show.active {
                     display: block !important;
@@ -825,6 +826,7 @@
 
             /* Desktop styles - ensure sidebar is visible */
             @media (min-width: 992px) {
+
                 /* Reset any mobile-specific styles on desktop */
                 .left-sidebar,
                 .side-mini-panel,
@@ -870,43 +872,46 @@
                 }
             }
             </style>
-<script>
-    const root = document.documentElement;
-    let fontSize = 100;
+            <script>
+            const root = document.documentElement;
+            let fontSize = 100;
 
-    document.querySelectorAll('[aria-label]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            if (btn.textContent === 'A+') fontSize += 10;
-            if (btn.textContent === 'A-') fontSize -= 10;
-            if (btn.textContent === 'A') fontSize = 100;
-            root.style.fontSize = fontSize + '%';
-        });
-    });
-</script>
+            document.querySelectorAll('[aria-label]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    if (btn.textContent === 'A+') fontSize += 10;
+                    if (btn.textContent === 'A-') fontSize -= 10;
+                    if (btn.textContent === 'A') fontSize = 100;
+                    root.style.fontSize = fontSize + '%';
+                });
+            });
+            </script>
 
             <script>
             document.addEventListener('DOMContentLoaded', function() {
                 // Sidebar toggle handler for mobile
                 const sidebarToggler = document.getElementById('headerCollapse');
                 const mobileTabbar = document.querySelector('.mobile-tabbar');
-                
+
                 // Function to get the currently active sidebar (from active tab)
                 function getActiveSidebar() {
                     // First, try to find sidebar in the active sidebar tab pane
-                    const activeSidebarPane = document.querySelector('#sidebarTabContent .tab-pane.show.active');
+                    const activeSidebarPane = document.querySelector(
+                    '#sidebarTabContent .tab-pane.show.active');
                     if (activeSidebarPane) {
                         const sidebarInPane = activeSidebarPane.querySelector('.side-mini-panel');
                         if (sidebarInPane) return sidebarInPane;
                     }
-                    
+
                     // Fallback: find any visible sidebar
-                    const visibleSidebar = document.querySelector('.side-mini-panel:not([style*="display: none"])');
+                    const visibleSidebar = document.querySelector(
+                        '.side-mini-panel:not([style*="display: none"])');
                     if (visibleSidebar) return visibleSidebar;
-                    
+
                     // Last resort: find any sidebar
-                    return document.querySelector('.left-sidebar') || document.querySelector('.side-mini-panel');
+                    return document.querySelector('.left-sidebar') || document.querySelector(
+                    '.side-mini-panel');
                 }
-                
+
                 function updateSidebarState() {
                     // Only apply mobile-specific styles on mobile
                     if (window.innerWidth >= 992) {
@@ -914,29 +919,29 @@
                         // Let desktop CSS handle it
                         return;
                     }
-                    
+
                     const sidebar = getActiveSidebar();
                     if (!sidebar) return;
-                    
+
                     const isOpen = sidebar.classList.contains('show-sidebar');
                     const sidebarTabContent = document.getElementById('sidebarTabContent');
-                    
+
                     if (isOpen) {
                         document.body.classList.add('sidebar-open');
-                        
+
                         // Ensure sidebar and its content are visible (mobile only)
                         sidebar.style.left = '0';
                         sidebar.style.visibility = 'visible';
                         sidebar.style.opacity = '1';
                         sidebar.style.display = 'block';
-                        
+
                         // Ensure sidebar tab content is visible
                         if (sidebarTabContent) {
                             sidebarTabContent.style.display = 'block';
                             sidebarTabContent.style.visibility = 'visible';
                             sidebarTabContent.style.opacity = '1';
                         }
-                        
+
                         // Ensure overlay is visible
                         let overlay = document.querySelector('.sidebar-overlay');
                         if (!overlay) {
@@ -945,36 +950,36 @@
                             document.body.appendChild(overlay);
                         }
                         overlay.classList.add('active');
-                        
+
                         // Prevent body scroll when sidebar is open
                         document.body.style.overflow = 'hidden';
                     } else {
                         document.body.classList.remove('sidebar-open');
-                        
+
                         // Hide sidebar (mobile only)
                         const sidebarWidth = sidebar.classList.contains('side-mini-panel') ? '-70px' : '-100%';
                         sidebar.style.left = sidebarWidth;
                         sidebar.style.visibility = 'hidden';
                         sidebar.style.opacity = '0';
-                        
+
                         // Hide sidebar tab content
                         if (sidebarTabContent) {
                             sidebarTabContent.style.display = 'none';
                             sidebarTabContent.style.visibility = 'hidden';
                             sidebarTabContent.style.opacity = '0';
                         }
-                        
+
                         // Hide overlay
                         const overlay = document.querySelector('.sidebar-overlay');
                         if (overlay) {
                             overlay.classList.remove('active');
                         }
-                        
+
                         // Restore body scroll
                         document.body.style.overflow = '';
                     }
                 }
-                
+
                 // Initialize: Hide sidebar by default on mobile only
                 if (window.innerWidth < 992) {
                     const sidebar = getActiveSidebar();
@@ -996,7 +1001,7 @@
                         sidebar.style.visibility = '';
                         sidebar.style.opacity = '';
                         sidebar.style.display = '';
-                        
+
                         // Ensure sidebar tab content is visible
                         const sidebarTabContent = document.getElementById('sidebarTabContent');
                         if (sidebarTabContent) {
@@ -1006,7 +1011,7 @@
                         }
                     }
                 }
-                
+
                 // Observe all sidebar elements for state changes
                 function observeSidebars() {
                     const allSidebars = document.querySelectorAll('.side-mini-panel, .left-sidebar');
@@ -1018,16 +1023,16 @@
                                 }
                             });
                         });
-                        
+
                         observer.observe(sidebar, {
                             attributes: true,
                             attributeFilter: ['class']
                         });
                     });
                 }
-                
+
                 observeSidebars();
-                
+
                 // Re-observe when tabs change (new sidebar content might be added)
                 document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
                     tab.addEventListener('shown.bs.tab', function() {
@@ -1035,7 +1040,7 @@
                         updateSidebarState();
                     });
                 });
-                
+
                 // Handle window resize - switch between mobile and desktop
                 let resizeTimeout;
                 window.addEventListener('resize', function() {
@@ -1050,21 +1055,22 @@
                                 sidebar.style.visibility = '';
                                 sidebar.style.opacity = '';
                                 sidebar.style.display = '';
-                                
+
                                 // Ensure sidebar tab content is visible
-                                const sidebarTabContent = document.getElementById('sidebarTabContent');
+                                const sidebarTabContent = document.getElementById(
+                                    'sidebarTabContent');
                                 if (sidebarTabContent) {
                                     sidebarTabContent.style.display = '';
                                     sidebarTabContent.style.visibility = '';
                                     sidebarTabContent.style.opacity = '';
                                 }
-                                
+
                                 // Remove overlay
                                 const overlay = document.querySelector('.sidebar-overlay');
                                 if (overlay) {
                                     overlay.classList.remove('active');
                                 }
-                                
+
                                 // Restore body scroll
                                 document.body.style.overflow = '';
                                 document.body.classList.remove('sidebar-open');
@@ -1075,10 +1081,10 @@
                         }
                     }, 150);
                 });
-                
+
                 // Check initial state
                 updateSidebarState();
-                
+
                 // Handle overlay clicks
                 document.addEventListener('click', function(e) {
                     const overlay = document.querySelector('.sidebar-overlay');
@@ -1090,7 +1096,7 @@
                         }
                     }
                 });
-                
+
                 // Ensure sidebar toggle button works
                 if (sidebarToggler) {
                     sidebarToggler.addEventListener('click', function(e) {
@@ -1099,7 +1105,7 @@
                             // Don't prevent default on desktop - let existing sidebar toggle handle it
                             return;
                         }
-                        
+
                         // On mobile, handle toggle
                         e.preventDefault();
                         e.stopPropagation();
@@ -1183,7 +1189,8 @@
 
                             // Keep active state in sync between desktop and mobile tabs
                             const targetId = e.target.getAttribute('href');
-                            document.querySelectorAll('[data-bs-toggle="tab"]').forEach(link => {
+                            document.querySelectorAll('[data-bs-toggle="tab"]').forEach(
+                            link => {
                                 if (link.getAttribute('href') === targetId) {
                                     link.classList.add('active');
                                     link.setAttribute('aria-selected', 'true');
@@ -1255,9 +1262,10 @@
                             e.preventDefault();
                             return;
                         }
-                        
+
                         // Find corresponding desktop tab and trigger it
-                        const desktopTab = document.querySelector(`#mainNavbar .nav-link[href="${href}"]`);
+                        const desktopTab = document.querySelector(
+                            `#mainNavbar .nav-link[href="${href}"]`);
                         if (desktopTab) {
                             e.preventDefault();
                             desktopTab.click();
@@ -1267,7 +1275,7 @@
                                 try {
                                     const tabElement = new bootstrap.Tab(this);
                                     tabElement.show();
-                                } catch(err) {
+                                } catch (err) {
                                     console.log('Bootstrap tab error:', err);
                                 }
                             }
@@ -1401,7 +1409,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function showPane(targetId) {
         if (!targetId || targetId === '#') return; // Skip empty hrefs
-        
+
         panes.forEach(p => {
             if ('#' + p.id === targetId) {
                 p.classList.add('show', 'active');
@@ -1409,7 +1417,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 p.classList.remove('show', 'active');
             }
         });
-        
+
         // Update all tabs (desktop and mobile)
         tabLinks.forEach(l => {
             const href = l.getAttribute('href');
@@ -1421,7 +1429,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 l.setAttribute('aria-selected', 'false');
             }
         });
-        
+
         // Save the active tab to localStorage
         localStorage.setItem('activeMainTab', targetId);
     }
@@ -1434,11 +1442,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 e.preventDefault();
                 return; // Skip tabs without proper href
             }
-            
+
             e.preventDefault();
             showPane(target);
             history.replaceState(null, '', target);
-            
+
             // Ensure default content within the activated tab
             if (typeof activateDefaultSubmenuForPane === 'function') {
                 activateDefaultSubmenuForPane(target);
@@ -1467,7 +1475,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Determine initial tab: fresh login -> home; otherwise use route-based or saved tab
     const isFromLogin = getCookie('fresh_login');
     let initial;
-    
+
     if (isFromLogin) {
         console.log('Fresh login detected - forcing home tab');
         initial = '#home';
@@ -1479,9 +1487,9 @@ document.addEventListener('DOMContentLoaded', function() {
         initial = savedTab || routeTab || '#home';
         console.log('Initial tab:', initial);
     }
-    
+
     showPane(initial);
-    
+
     // Sync mobile tabs with initial state
     const allTabs = document.querySelectorAll('[data-bs-toggle="tab"]');
     allTabs.forEach(tab => {
@@ -1494,7 +1502,7 @@ document.addEventListener('DOMContentLoaded', function() {
             tab.setAttribute('aria-selected', 'false');
         }
     });
-    
+
     // Apply default submenu/content for initial tab
     if (typeof activateDefaultSubmenuForPane === 'function') {
         activateDefaultSubmenuForPane(initial);

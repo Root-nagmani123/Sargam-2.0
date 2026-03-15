@@ -10,4 +10,5 @@
         <strong>Error - </strong> {{ session('error') }}
     </div>
 @endif
+{{-- Validation errors are shown only below each field (no duplicate list at top) --}}
 <div id="status-msg"></div>

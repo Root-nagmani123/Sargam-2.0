@@ -2,116 +2,10 @@
   <script src="{{asset('admin_assets/js/vendor.min.js')}}"></script>
   <!-- Import Js Files -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
-  <!-- Immediately intercept Bootstrap's theme detection -->
-  <script>
-    (function() {
-      'use strict';
-      // Force light mode immediately after Bootstrap loads
-      document.documentElement.setAttribute('data-bs-theme', 'light');
-      
-      // Override Bootstrap's getTheme function if it exists
-      if (window.bootstrap) {
-        // Bootstrap 5.3+ uses getTheme() method
-        const originalGetTheme = window.bootstrap.getTheme || function() {
-          const theme = document.documentElement.getAttribute('data-bs-theme');
-          if (theme) return theme;
-          return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-        };
-        
-        window.bootstrap.getTheme = function() {
-          return 'light';
-        };
-      }
-    })();
-  </script>
   <script src="{{asset('admin_assets/libs/simplebar/dist/simplebar.min.js')}}"></script>
-  <!-- Force light mode before theme scripts load -->
-  <script>
-    // Ensure light mode is set before theme initialization
-    // This runs after Bootstrap loads to reinforce light mode
-    (function() {
-      'use strict';
-      document.documentElement.setAttribute('data-bs-theme', 'light');
-      
-      // Override Bootstrap's theme detection if it hasn't been overridden yet
-      if (window.bootstrap && window.bootstrap.getTheme) {
-        const originalGetTheme = window.bootstrap.getTheme;
-        window.bootstrap.getTheme = function() {
-          return 'light';
-        };
-      }
-    })();
-  </script>
   <script src="{{asset('admin_assets/js/theme/app.init.js')}}"></script>
   <script src="{{asset('admin_assets/js/theme/theme.js')}}"></script>
   <script src="{{asset('admin_assets/js/theme/app.min.js')}}"></script>
-  <!-- Ensure light mode persists after theme scripts -->
-  <script>
-    // Force light mode after theme scripts initialize
-    (function() {
-      'use strict';
-      
-      function forceLightMode() {
-        document.documentElement.setAttribute('data-bs-theme', 'light');
-        document.documentElement.style.colorScheme = 'light';
-        if (document.body) {
-          document.body.style.colorScheme = 'light';
-          if (document.body.getAttribute('data-bs-theme') && 
-              document.body.getAttribute('data-bs-theme') !== 'light') {
-            document.body.setAttribute('data-bs-theme', 'light');
-          }
-        }
-        
-        // Force all Bootstrap CSS variables to light mode
-        const root = document.documentElement;
-        root.style.setProperty('--bs-body-bg', '#fff', 'important');
-        root.style.setProperty('--bs-body-color', '#212529', 'important');
-        root.style.setProperty('color-scheme', 'light', 'important');
-      }
-      
-      // Run immediately
-      forceLightMode();
-      
-      // Run on DOMContentLoaded
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', forceLightMode);
-      } else {
-        forceLightMode();
-      }
-      
-      // Override any theme changes with aggressive observer
-      const observer = new MutationObserver(function(mutations) {
-        let needsFix = false;
-        mutations.forEach(function(mutation) {
-          if (mutation.attributeName === 'data-bs-theme') {
-            const htmlTheme = document.documentElement.getAttribute('data-bs-theme');
-            const bodyTheme = document.body ? document.body.getAttribute('data-bs-theme') : null;
-            if (htmlTheme !== 'light' || (bodyTheme && bodyTheme !== 'light')) {
-              needsFix = true;
-            }
-          }
-        });
-        if (needsFix) {
-          forceLightMode();
-        }
-      });
-      
-      observer.observe(document.documentElement, {
-        attributes: true,
-        attributeFilter: ['data-bs-theme']
-      });
-      
-      if (document.body) {
-        observer.observe(document.body, {
-          attributes: true,
-          attributeFilter: ['data-bs-theme']
-        });
-      }
-      
-      // Periodic check as ultimate fallback
-      setInterval(forceLightMode, 500);
-    })();
-  </script>
   <script src="{{asset('admin_assets/js/theme/sidebarmenu.js')}}"></script>
 
   <!-- solar icons -->
@@ -130,20 +24,145 @@
 </script>
   <script src="{{asset('admin_assets/libs/jquery-steps/build/jquery.steps.min.js')}}"></script>
   <script src="{{asset('admin_assets/libs/jquery-validation/dist/jquery.validate.min.js')}}"></script>
-  <script src="{{asset('admin_assets/libs/select2/dist/js/select2.full.min.js')}}"></script>
+  <script src="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/scripts/choices.min.js" crossorigin="anonymous"></script>
   <script src="{{asset('js/dropdown-search.js')}}"></script>
   <script src="{{asset('admin_assets/js/forms/form-wizard.js')}}"></script>
-  <script src="https://bootstrapdemos.adminmart.com/matdash/dist/assets/libs/datatables.net/js/jquery.dataTables.min.js"></script>
+  <!-- DataTables 1.13.8 + Bootstrap 5 (latest) -->
+  <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js" crossorigin="anonymous"></script>
   <!-- DataTables Responsive plugin -->
   <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
   <!-- Optional: Responsive CSS (can be moved to <head> if desired) -->
   <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css" />
   <script>
-    // Global DataTables defaults: disable auto column width to reduce header jitter
+    // Global DataTables defaults + auto-init + Bootstrap 5 presentation
     (function() {
+      function styleDataTableUi(settings) {
+        var wrapper = settings && settings.nTableWrapper ? settings.nTableWrapper : null;
+        if (!wrapper) return;
+        var $wrapper = $(wrapper);
+
+        // DataTables v1 + v2 selectors
+        $wrapper.find('.dataTables_length label, .dt-length label')
+          .addClass('d-inline-flex align-items-center gap-2 mb-0');
+
+        $wrapper.find('.dataTables_filter label, .dt-search label')
+          .addClass('d-inline-flex align-items-center gap-2 mb-0');
+
+        $wrapper.find('.dataTables_length select, .dt-length select')
+          .addClass('form-select form-select-sm')
+          .attr('aria-label', 'Rows per page');
+
+        $wrapper.find('.dataTables_filter input, .dt-search input')
+          .addClass('form-control form-control-sm')
+          .attr('placeholder', 'Search records...')
+          .attr('aria-label', 'Search records');
+
+        $wrapper.find('.dataTables_info, .dt-info').addClass('text-muted small');
+        $wrapper.find('.dataTables_paginate .pagination, .dt-paging .pagination')
+          .addClass('pagination-sm mb-0 justify-content-md-end');
+      }
+
+      function hasExternalPagination($table) {
+        var $container = $table.closest('.card-body, .modal-body, .container-fluid, .tab-pane');
+        if (!$container.length) {
+          $container = $table.parent();
+        }
+
+        return $container.find('.pagination').filter(function() {
+          return $(this).closest('.dataTables_wrapper').length === 0;
+        }).length > 0;
+      }
+
+      function shouldAutoInit($table) {
+        if (!$table || !$table.length) return false;
+        if (!$table.find('thead th').length) return false;
+        if ($table.closest('.dataTables_wrapper').length) return false;
+        if ($table.is('.no-datatable, .skip-datatable, [data-no-datatable], [data-datatable="false"]')) return false;
+        if ($.fn.DataTable.isDataTable($table[0])) return false;
+
+        var isOptIn =
+          $table.closest('.datatables').length > 0 ||
+          $table.is('.datatable, .js-datatable, .dataTable, [data-datatable]');
+
+        if (!isOptIn) return false;
+        if (hasExternalPagination($table) && !$table.is('[data-force-datatable="true"]')) return false;
+
+        return true;
+      }
+
+      function autoInitDataTables(scope) {
+        if (!(window.jQuery && $.fn && $.fn.dataTable)) return;
+
+        var $scope = scope ? $(scope) : $(document);
+        $scope.find('table').each(function() {
+          var $table = $(this);
+          if (!shouldAutoInit($table)) return;
+
+          var pageLength = parseInt($table.attr('data-page-length'), 10);
+          if (isNaN(pageLength) || pageLength <= 0) {
+            pageLength = 10;
+          }
+
+          $table.DataTable({
+            order: [],
+            pageLength: pageLength
+          });
+        });
+      }
+
       try {
         if (window.jQuery && $.fn && $.fn.dataTable) {
-          $.extend(true, $.fn.dataTable.defaults, { autoWidth: false, responsive: true });
+          $.extend(true, $.fn.dataTable.defaults, {
+            autoWidth: false,
+            ordering: true,
+            searching: true,
+            paging: true,
+            info: true,
+            lengthChange: true,
+            pagingType: 'simple_numbers',
+            pageLength: 10,
+            lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+            dom:
+              '<"row g-2 align-items-center mb-2"<"col-12 col-md-6 d-flex align-items-center"l><"col-12 col-md-6 d-flex justify-content-md-end"f>>' +
+              'rt' +
+              '<"row g-2 align-items-center mt-2"<"col-12 col-md-5"i><"col-12 col-md-7 d-flex justify-content-md-end"p>>',
+            language: {
+              search: '',
+              searchPlaceholder: 'Search records...',
+              lengthMenu: 'Show _MENU_ entries',
+              info: 'Showing _START_ to _END_ of _TOTAL_ entries',
+              infoEmpty: 'No entries to show',
+              infoFiltered: '(filtered from _MAX_ total entries)',
+              paginate: {
+                previous: '<span aria-hidden="true">&lsaquo;</span>',
+                next: '<span aria-hidden="true">&rsaquo;</span>'
+              }
+            }
+          });
+
+          $(document).on('init.dt', function(e, settings) {
+            styleDataTableUi(settings);
+          });
+
+          $(document).on('draw.dt', function(e, settings) {
+            styleDataTableUi(settings);
+          });
+
+          // Run after all per-page scripts have executed (including pushed scripts).
+          window.addEventListener('load', function() {
+            autoInitDataTables(document);
+          });
+
+          // Optional hook for AJAX-rendered HTML chunks.
+          window.SargamDataTables = window.SargamDataTables || {};
+          window.SargamDataTables.autoInit = autoInitDataTables;
+          window.SargamDataTables.style = styleDataTableUi;
+
+          document.addEventListener('sargam:datatable:refresh', function(evt) {
+            var scope = evt && evt.detail && evt.detail.scope ? evt.detail.scope : document;
+            autoInitDataTables(scope);
+          });
         }
       } catch (e) {
         console.warn('Failed to set DataTables defaults:', e);
@@ -168,8 +187,9 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="{{ asset('admin_assets/js/validations.js') }}"></script>
   <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap5.min.js"></script>
   <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
-  <script srx="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
   <script src="https://bootstrapdemos.adminmart.com/matdash/dist/assets/js/datatable/datatable-advanced.init.js"></script>
 
 

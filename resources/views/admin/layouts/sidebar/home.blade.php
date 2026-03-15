@@ -171,6 +171,94 @@
 }
 </style>
 
+<style>
+/* Google-style sidebar - home */
+#sidebar-home .sidebar-google-style.side-mini-panel {
+    width: 90px;
+}
+#sidebar-home .sidebar-google-style .mini-nav {
+    background: #F0F0F0 !important;
+    padding: 12px 0;
+    border-radius: 10px;
+}
+#sidebar-home .sidebar-google-style .sidebar-google-hamburger {
+    padding: 16px 0;
+    margin: 0;
+}
+#sidebar-home .sidebar-google-style .sidebar-google-hamburger .sidebartoggler {
+    color: #555 !important;
+}
+#sidebar-home .sidebar-google-style .mini-nav .mini-nav-item {
+    list-style: none;
+    display: flex !important;
+    justify-content: center !important;
+    width: 100%;
+}
+#sidebar-home .sidebar-google-style .mini-nav ul.mini-nav-ul {
+    padding-inline-start: 0 !important;
+    list-style: none !important;
+}
+#sidebar-home .sidebar-google-style .mini-nav .mini-nav-item > a {
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 12px 8px !important;
+    padding-left: 8px !important;
+    margin: 4px 8px !important;
+    background: transparent !important;
+    height: auto !important;
+    min-height: 56px;
+    width: 100%;
+}
+#sidebar-home .sidebar-google-style .sidebar-google-item {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 4px;
+    text-align: center !important;
+}
+#sidebar-home .sidebar-google-style .sidebar-google-icon-wrap {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 48px;
+    height: 32px;
+    margin-inline: auto;
+    border-radius: 24px;
+    transition: background 0.2s;
+}
+#sidebar-home .sidebar-google-style .sidebar-google-icon-wrap .material-icons {
+    line-height: 1 !important;
+    vertical-align: middle !important;
+}
+#sidebar-home .sidebar-google-style .mini-nav .mini-nav-item > a .material-icons {
+    font-size: 24px !important;
+    color: #555 !important;
+}
+#sidebar-home .sidebar-google-style .sidebar-google-label {
+    font-size: 11px;
+    color: #555 !important;
+    font-weight: 400;
+    text-align: center;
+    line-height: 1.2;
+}
+#sidebar-home .sidebar-google-style .mini-nav .mini-nav-item > a:hover .material-icons,
+#sidebar-home .sidebar-google-style .mini-nav .mini-nav-item > a:hover .sidebar-google-label {
+    color: #333 !important;
+}
+#sidebar-home .sidebar-google-style .mini-nav .mini-nav-item.selected > a .sidebar-google-icon-wrap {
+    background: #E0E0E0 !important;
+}
+#sidebar-home .sidebar-google-style .mini-nav .mini-nav-item.selected > a .material-icons,
+#sidebar-home .sidebar-google-style .mini-nav .mini-nav-item.selected > a .sidebar-google-label {
+    color: #333 !important;
+}
+#sidebar-home .sidebar-google-style .mini-nav .mini-nav-item.selected > a:before {
+    display: none !important;
+}
+</style>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Home sidebar script started');

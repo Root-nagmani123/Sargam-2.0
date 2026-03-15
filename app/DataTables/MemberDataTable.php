@@ -34,41 +34,15 @@ class MemberDataTable extends DataTable
             ->addColumn('actions', function($row) {
                 $deleteUrl = route('member.destroy', encrypt($row->pk));
                 return '<div class="d-flex justify-content-center gap-2">
-                    <a href="' . route('member.edit', $row->pk) . '" class="btn btn-sm btn-primary">Edit</a>
-                    <a href="' . route('member.show', encrypt($row->pk)) . '" class="btn btn-sm btn-success">View</a>
+                <a href="' . route('member.show', encrypt($row->pk)) . '" class="text-primary"><i class="material-icons menu-icon material-symbols-rounded">visibility</i></a>
+                    <a href="' . route('member.edit', $row->pk) . '" class="text-primary"><i class="material-icons menu-icon material-symbols-rounded">edit</i></a>
                     <form action="' . $deleteUrl . '" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this member?\')">
                         ' . csrf_field() . '
                         ' . method_field('DELETE') . '
-                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                        <a href="' . $deleteUrl . '" class="text-primary"><i class="material-icons menu-icon material-symbols-rounded">delete</i></a>
                     </form>
                 </div>';
-
-            })
-            ->filterColumn('employee_name', function ($query, $keyword) {
-                $query->where('first_name', 'like', "%{$keyword}%")
-                      ->orWhere('middle_name', 'like', "%{$keyword}%")
-                      ->orWhere('last_name', 'like', "%{$keyword}%");
-            })
-            ->filterColumn('mobile_no', function ($query, $keyword) {
-                $query->where('mobile', 'like', "%{$keyword}%");
-            })
-            ->filterColumn('email', function ($query, $keyword) {
-                $query->where('email', 'like', "%{$keyword}%");
-            })
-            ->filter(function ($query) {
-                $searchValue = request()->input('search.value');
-
-                if (!empty($searchValue)) {
-                    $query->where(function ($subQuery) use ($searchValue) {
-                        $subQuery->where('first_name', 'like', "%{$searchValue}%")
-                            ->orWhere('middle_name', 'like', "%{$searchValue}%")
-                            ->orWhere('last_name', 'like', "%{$searchValue}%")
-                            ->orWhere('mobile', 'like', "%{$searchValue}%")
-                            ->orWhere('email', 'like', "%{$searchValue}%");
-                    });
-                }
-            }, true)
-            ->rawColumns(['employee_name', 'employee_id', 'actions', 'mobile_no', 'email']);
+            })->rawColumns(['employee_name', 'employee_id', 'actions', 'mobile_no', 'email']);
     }
 
     
