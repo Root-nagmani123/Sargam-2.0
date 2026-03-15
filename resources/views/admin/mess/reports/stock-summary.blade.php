@@ -107,14 +107,14 @@
                 Total items: {{ count($reportData) }}
             </span>
         </div>
-        <div class="table-responsive">
-        <table class="table text-nowrap align-middle mb-0">
+        <div class="table-responsive table-fit-single-view">
+        <table class="table table-fit align-middle mb-0">
             <thead>
                 <tr>
-                    <th rowspan="2" class="text-center align-middle" style="width: 60px;">SR.<br>No</th>
-                    <th rowspan="2" class="text-center align-middle" style="min-width: 150px;">Item Name</th>
-                    <th rowspan="2" class="text-center align-middle" style="min-width: 100px;">Item Code</th>
-                    <th rowspan="2" class="text-center align-middle" style="min-width: 80px;">Unit</th>
+                    <th rowspan="2" class="text-center align-middle">SR.<br>No</th>
+                    <th rowspan="2" class="text-center align-middle">Item Name</th>
+                    <th rowspan="2" class="text-center align-middle">Item Code</th>
+                    <th rowspan="2" class="text-center align-middle">Unit</th>
                     <th colspan="3" class="text-center">Opening</th>
                     <th colspan="3" class="text-center">Purchase</th>
                     <th colspan="3" class="text-center">Sale</th>
@@ -145,7 +145,7 @@
                         <td class="text-center">{{ $index + 1 }}</td>
                         <td>{{ $item['item_name'] }}</td>
                         <td>{{ $item['item_code'] ?? '—' }}</td>
-                        <td>{{ $item['unit'] ?? '—' }}</td>
+                        <td>{{ isset($item['unit']) && is_numeric($item['unit']) ? number_format((float)$item['unit'], 2) : ($item['unit'] ?? '—') }}</td>
                         <!-- Opening -->
                         <td class="text-end">{{ number_format($item['opening_qty'], 2) }}</td>
                         <td class="text-end">₹{{ number_format($item['opening_rate'], 2) }}</td>
@@ -355,14 +355,29 @@ function printStockSummary() {
         font-size: 14px;
     }
 
-    /* Table styling for better visibility */
-    .table th {
-        font-weight: 600;
-        white-space: nowrap;
+    /* Table fits in single view: no scroll, auto height/width */
+    .stock-summary-report .table-fit-single-view {
+        overflow: visible;
+        max-width: 100%;
     }
 
-    .table td {
-        white-space: nowrap;
+    .stock-summary-report .table-fit {
+        width: 100%;
+        table-layout: fixed;
+        font-size: 0.8rem;
+    }
+
+    .stock-summary-report .table-fit th,
+    .stock-summary-report .table-fit td {
+        white-space: normal;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        padding: 0.4rem 0.5rem;
+        vertical-align: middle;
+    }
+
+    .stock-summary-report .table-fit th {
+        font-weight: 600;
     }
 
     /* Error highlighting */

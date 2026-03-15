@@ -1,7 +1,7 @@
 @extends('admin.layouts.master')
 @section('title', 'Stock Balance as of Till Date')
 @section('setup_content')
-<div class="container-fluid stock-balance-report">
+<div class="container-fluid stock-balance-report min-vh-100 d-flex flex-column">
     <x-breadcrum title="Stock Balance as of Till Date"></x-breadcrum>
     <!-- Header Section -->
     <div class="card mb-4 border-0 shadow-sm no-print">
@@ -13,12 +13,12 @@
         </div>
         <div class="card-body pt-3">
             <form method="GET" action="{{ route('admin.mess.reports.stock-balance-till-date') }}">
-                <div class="row g-3">
-                    <div class="col-md-4">
+                <div class="row">
+                    <div class="col-md-3">
                         <label class="form-label">Till Date</label>
-                        <input type="date" name="till_date" class="form-control" value="{{ $tillDate }}">
+                        <input type="date" name="till_date" class="form-select" value="{{ $tillDate }}">
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label">Select Store Name</label>
                         <select name="store_id" class="form-select choices-select" data-placeholder="All Stores">
                             <option value="">All Stores</option>
@@ -29,7 +29,7 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-6">
                         <div class="mt-3 d-flex flex-wrap gap-2 align-items-center">
                             <button type="submit" class="btn btn-primary d-inline-flex align-items-center">
                                 <span class="material-symbols-rounded me-1" style="font-size: 18px;">filter_list</span>
@@ -58,8 +58,8 @@
         </div>
     </div>
 
-<div class="card border-0 shadow-sm">
-    <div class="card-body">
+<div class="card border-0 shadow-sm flex-grow-1 d-flex flex-column min-h-0">
+    <div class="card-body d-flex flex-column flex-grow-1 min-h-0">
         <!-- Report Heading (Print Only) -->
         <div class="report-header text-center mb-4">
             <h4 class="fw-bold text-uppercase mb-1">Stock Balance as of Till Date</h4>
@@ -70,15 +70,15 @@
         </div>
 
         <!-- Report Table -->
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-light d-flex justify-content-between align-items-center py-2">
+        <div class="card border-0 shadow-none flex-grow-1 d-flex flex-column min-h-0">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center py-2 flex-shrink-0">
                 <span class="fw-semibold text-dark">Stock Balance Details</span>
                 <span class="text-muted small">
                     Total items: {{ count($reportData) }}
                 </span>
             </div>
-            <div class="table-responsive">
-                <table class="table text-nowrap align-middle mb-0">
+            <div class="table-responsive flex-grow-1 overflow-auto">
+                <table class="table table-hover align-middle mb-0 stock-balance-table">
                     <thead>
                         <tr>
                             <th>S. No.</th>
@@ -127,40 +127,47 @@
 </div>
 
 <style>
-    @media print {
-        .no-print { 
-            display: none !important; 
-        }
-        .report-header { 
-            display: block !important;
-            margin-top: 20px;
-            margin-bottom: 30px;
-        }
-        body { 
-            font-size: 12px; 
-        }
-        table { 
-            font-size: 11px; 
-        }
-        th, td { 
-            padding: 8px !important; 
-        }
+    /* Auto height/width and proper table view */
+    .stock-balance-report {
+        width: 100%;
+        max-width: 100%;
     }
-    
-    @media screen {
-        .report-header {
-            display: none;
-        }
+
+    .stock-balance-report .card.flex-grow-1,
+    .stock-balance-report .card-body.min-h-0,
+    .stock-balance-report .card.flex-grow-1 .card.min-h-0 {
+        min-height: 0;
     }
-    
-    .report-header h4 {
-        margin-bottom: 10px;
-        color: #000;
+
+    .stock-balance-report .table-responsive {
+        min-height: 200px;
+        max-height: calc(100vh - 320px);
+        -webkit-overflow-scrolling: touch;
+        overflow-x: auto;
+        overflow-y: auto;
     }
-    
-    .report-header h5 {
-        margin-bottom: 20px;
-        color: #af2910;
+
+    .stock-balance-report .stock-balance-table {
+        width: 100%;
+        min-width: 700px;
+        table-layout: auto;
+    }
+
+    .stock-balance-report .stock-balance-table thead th {
+        font-weight: 600;
+        white-space: nowrap;
+        position: sticky;
+        top: 0;
+        background: #f8f9fa;
+        z-index: 1;
+        box-shadow: 0 1px 0 #dee2e6;
+        padding: 0.75rem;
+    }
+
+    .stock-balance-report .stock-balance-table tbody td {
+        white-space: nowrap;
+        padding: 0.65rem 0.75rem;
+        vertical-align: middle;
     }
 
     .stock-balance-report .card {
@@ -171,17 +178,104 @@
         border-bottom: 1px solid #edf1f5;
     }
 
-    .stock-balance-report .table thead th {
-        font-weight: 600;
-        white-space: nowrap;
+    @media print {
+        .no-print {
+            display: none !important;
+        }
+        .report-header {
+            display: block !important;
+            margin-top: 20px;
+            margin-bottom: 30px;
+        }
+        body {
+            font-size: 12px;
+        }
+        table {
+            font-size: 11px;
+        }
+        th, td {
+            padding: 8px !important;
+        }
+        .stock-balance-report .table-responsive {
+            max-height: none !important;
+            overflow: visible !important;
+        }
+        .stock-balance-report .stock-balance-table thead th {
+            position: static;
+        }
     }
 
-    .stock-balance-report .table td {
-        white-space: nowrap;
+    @media screen {
+        .report-header {
+            display: none;
+        }
+    }
+
+    .report-header h4 {
+        margin-bottom: 10px;
+        color: #000;
+    }
+
+    .report-header h5 {
+        margin-bottom: 20px;
+        color: #af2910;
+    }
+
+    /* Choices.js – Bootstrap form-control appearance (keep Choices default structure for dropdown to work) */
+    .stock-balance-report .choices {
+        margin-bottom: 0;
+        font-size: 1rem;
+    }
+    .stock-balance-report .choices .choices__inner {
+        display: inline-block;
+        width: 100%;
+        min-height: 38px;
+        padding: 0.375rem 2.25rem 0.375rem 0.75rem;
+        font-size: 1rem;
+        font-weight: 400;
+        line-height: 1.5;
+        color: var(--bs-body-color);
+        background-color: var(--bs-body-bg);
+        border: 1px solid var(--bs-border-color);
+        border-radius: var(--bs-border-radius);
+    }
+    .stock-balance-report .choices.is-focused .choices__inner,
+    .stock-balance-report .choices.is-open .choices__inner {
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+    .stock-balance-report .choices[data-type*="select-one"] .choices__inner {
+        padding-bottom: 0.375rem;
+    }
+    .stock-balance-report .choices__list--single {
+        padding: 0;
+    }
+    .stock-balance-report .choices__list--single .choices__item {
+        padding: 0;
+    }
+    .stock-balance-report .choices[data-type*="select-one"] .choices__input {
+        padding: 0.375rem 0.75rem;
+        background-color: var(--bs-body-bg);
+    }
+    .stock-balance-report .choices__list--dropdown .choices__item,
+    .stock-balance-report .choices__list[aria-expanded] .choices__item {
+        padding: 0.375rem 0.75rem;
+    }
+    .stock-balance-report .choices__list--dropdown .choices__item--selectable.is-highlighted,
+    .stock-balance-report .choices__list[aria-expanded] .choices__item--selectable.is-highlighted {
+        background-color: var(--bs-primary-bg-subtle);
+        color: var(--bs-primary);
+    }
+    .stock-balance-report .choices__list--dropdown,
+    .stock-balance-report .choices__list[aria-expanded] {
+        border-color: var(--bs-border-color);
+        border-radius: var(--bs-border-radius);
+        box-shadow: var(--bs-box-shadow);
+        z-index: 1060;
     }
 </style>
 
-{{-- Choices.js (enhanced dropdowns) --}}
+{{-- Choices.js – default CSS required for dropdown; script below --}}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/styles/choices.min.css"/>
 <script src="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/scripts/choices.min.js"></script>
 <script>
@@ -200,7 +294,7 @@
                         shouldSort: false,
                         placeholder: true,
                         placeholderValue: placeholder,
-                        searchPlaceholderValue: 'Search...',
+                        searchPlaceholderValue: 'Search...'
                     });
 
                     el.dataset.choicesInitialized = 'true';

@@ -118,7 +118,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/styles/choices.min.css"/>
 <script src="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/scripts/choices.min.js"></script>
 <div class="modal fade" id="createStoreAllocationModal" tabindex="-1" aria-labelledby="createStoreAllocationModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
         <div class="modal-content">
             <form method="POST" action="{{ route('admin.mess.storeallocations.store') }}" id="createAllocationForm">
                 @csrf
@@ -158,14 +158,14 @@
                         <div class="card-body p-0">
                             <div class="table-responsive">
                                 <table class="table table-bordered mb-0" id="allocationItemsTable">
-                                    <thead style="background-color: #af2910;">
+                                    <thead>
                                         <tr>
-                                            <th style="min-width: 180px; color: #fff; border-color: #af2910;">Item Name <span class="text-white">*</span></th>
-                                            <th style="min-width: 90px; color: #fff; border-color: #af2910;">Item Quantity <span class="text-white">*</span></th>
-                                            <th style="min-width: 80px; color: #fff; border-color: #af2910;">Item Unit <span class="text-white">*</span></th>
-                                            <th style="min-width: 100px; color: #fff; border-color: #af2910;">Unit Price <span class="text-white">*</span></th>
-                                            <th style="min-width: 110px; color: #fff; border-color: #af2910;">Total Price <span class="text-white">*</span></th>
-                                            <th style="width: 50px; color: #fff; border-color: #af2910;"></th>
+                                            <th style="min-width: 180px;">Item Name <span class="text-white">*</span></th>
+                                            <th style="min-width: 90px;">Item Quantity <span class="text-white">*</span></th>
+                                            <th style="min-width: 80px;">Item Unit <span class="text-white">*</span></th>
+                                            <th style="min-width: 100px;">Unit Price <span class="text-white">*</span></th>
+                                            <th style="min-width: 110px;">Total Price <span class="text-white">*</span></th>
+                                            <th style="width: 50px;"></th>
                                         </tr>
                                     </thead>
                                     <tbody id="allocationItemsBody">
@@ -201,7 +201,7 @@
 
 {{-- Edit Store Allocation Modal --}}
 <div class="modal fade" id="editStoreAllocationModal" tabindex="-1" aria-labelledby="editStoreAllocationModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
         <div class="modal-content">
             <form method="POST" id="editAllocationForm" action="">
                 @csrf
@@ -241,14 +241,14 @@
                         <div class="card-body p-0">
                             <div class="table-responsive">
                                 <table class="table table-bordered mb-0">
-                                    <thead style="background-color: #af2910;">
+                                    <thead>
                                         <tr>
-                                            <th style="min-width: 180px; color: #fff; border-color: #af2910;">Item Name <span class="text-white">*</span></th>
-                                            <th style="min-width: 90px; color: #fff; border-color: #af2910;">Item Quantity <span class="text-white">*</span></th>
-                                            <th style="min-width: 80px; color: #fff; border-color: #af2910;">Item Unit <span class="text-white">*</span></th>
-                                            <th style="min-width: 100px; color: #fff; border-color: #af2910;">Unit Price <span class="text-white">*</span></th>
-                                            <th style="min-width: 110px; color: #fff; border-color: #af2910;">Total Price <span class="text-white">*</span></th>
-                                            <th style="width: 50px; color: #fff; border-color: #af2910;"></th>
+                                            <th style="min-width: 180px;">Item Name <span class="text-white">*</span></th>
+                                            <th style="min-width: 90px;">Item Quantity <span class="text-white">*</span></th>
+                                            <th style="min-width: 80px;">Item Unit <span class="text-white">*</span></th>
+                                            <th style="min-width: 100px;">Unit Price <span class="text-white">*</span></th>
+                                            <th style="min-width: 110px;">Total Price <span class="text-white">*</span></th>
+                                            <th style="width: 50px;"></th>
                                         </tr>
                                     </thead>
                                     <tbody id="editAllocationItemsBody"></tbody>
