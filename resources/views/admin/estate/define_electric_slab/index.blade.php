@@ -277,7 +277,8 @@
             table.one('draw', function() {
                 setTimeout(function() {
                     var csv = buildCsv();
-                    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                    var BOM = '\uFEFF';
+                    var blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' });
                     var link = document.createElement('a');
                     var url = URL.createObjectURL(blob);
                     link.setAttribute('href', url);

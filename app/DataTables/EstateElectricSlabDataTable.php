@@ -16,7 +16,7 @@ class EstateElectricSlabDataTable extends DataTable
         return (new EloquentDataTable($query))
             ->addIndexColumn()
             ->addColumn('unit_range', function ($row) {
-                return $row->start_unit_range . ' – ' . $row->end_unit_range;
+                return $row->start_unit_range . ' - ' . $row->end_unit_range;
             })
             ->orderColumn('unit_range', 'start_unit_range $1')
             ->filterColumn('unit_range', function ($query, $keyword) {
@@ -29,7 +29,7 @@ class EstateElectricSlabDataTable extends DataTable
                 return number_format((float) $row->rate_per_unit, 2);
             })
             ->addColumn('merge_with_house', function ($row) {
-                return $row->unitType ? e($row->unitType->unit_type) : '—';
+                return $row->unitType ? e($row->unitType->unit_type) : '-';
             })
             ->addColumn('action', function ($row) {
                 $editUrl = route('admin.estate.define-electric-slab.edit', $row->pk);
