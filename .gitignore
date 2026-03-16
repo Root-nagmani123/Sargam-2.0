@@ -27,3 +27,9 @@ docker-compose.yml
 /praposed-mess-management-sidebar-option.jpeg
 /LBSNAA
 /SECURITY_MODULE_IMPLEMENTATION.md
+
+# Docs not for production
+ESTATE_CHANGE_REQUEST_DETAIL.md
+ESTATE_MODULE_FLOW_DIAGRAM.md
+docs/ESTATE_CHANGE_REQUEST_DETAIL.md
+docs/ESTATE_MODULE_FLOW_DIAGRAM.md
