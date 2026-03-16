@@ -8,7 +8,7 @@
 <div class="container-fluid">
     <x-breadcrum title="Notice List" />
     <x-session_message />
-    <div class="card" style="border-left: 4px solid #004a93;">
+    <div class="card">
         @if ($errors->any())
         <div class="alert alert-danger">
             <ul>
@@ -97,76 +97,23 @@
 </div>
 @endsection
 @section('scripts')
-<link href="https://cdnjs.cloudflare.com/ajax/libs/summernote/0.8.18/summernote-lite.min.css" rel="stylesheet">
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/summernote/0.8.18/summernote-lite.min.js"></script>
-
+<script src="https://cdn.ckeditor.com/ckeditor5/41.0.0/classic/ckeditor.js"></script>
 
 <script>
-    $(document).ready(function() {
-        $('#editor').summernote({
-            height: 200,
-            toolbar: [
-                ['style', ['style']],
-                ['font', ['bold', 'italic', 'underline', 'clear']],
-                ['font2', ['strikethrough', 'superscript', 'subscript']],
-                ['fontsize', ['fontsize']],
-                ['color', ['color']],
-                ['para', ['ul', 'ol', 'paragraph']],
-                ['height', ['height']],
-                ['table', ['table']],
-                ['insert', ['link', 'picture', 'video', 'hr', 'pdfUpload']],
-                ['view', ['fullscreen', 'codeview', 'help']]
-            ],
-
-            buttons: {
-                pdfUpload: function(context) {
-                    var ui = $.summernote.ui;
-
-                    // create button
-                    var button = ui.button({
-                        contents: '<i class="note-icon-paperclip"></i> PDF',
-                        tooltip: 'Upload PDF',
-                        click: function() {
-
-                            let fileInput = $('<input type="file" accept="application/pdf">');
-                            fileInput.trigger('click');
-
-                            fileInput.on('change', function() {
-
-                                let file = this.files[0];
-                                let formData = new FormData();
-                                formData.append("file", file);
-
-                                $.ajax({
-                                    url: "{{ route('admin.summernote.upload') }}",
-                                    type: "POST",
-                                    data: formData,
-                                    processData: false,
-                                    contentType: false,
-                                    headers: {
-                                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                                    },
-                                    success: function(data) {
-                                        let url = data.location;
-
-                                        // context.invoke('insertLink', url, file.name);
-
-                                        context.invoke('editor.insertText', url);
-                                    },
-                                    error: function(xhr) {
-                                        alert("PDF Upload Failed: " + xhr.responseJSON.error);
-                                    }
-                                });
-
-                            });
-                        }
-                    });
-
-                    return button.render();
-                }
-            }
-        });
+    document.addEventListener('DOMContentLoaded', function () {
+        ClassicEditor
+            .create(document.querySelector('#editor'), {
+                toolbar: [
+                    'heading', '|',
+                    'bold', 'italic', 'underline', 'strikethrough', '|',
+                    'bulletedList', 'numberedList', '|',
+                    'link', 'blockQuote', 'insertTable', '|',
+                    'undo', 'redo'
+                ]
+            })
+            .catch(error => {
+                console.error('CKEditor initialization error:', error);
+            });
 
         $('#targetAudience').on('change', function() {
             let val = $(this).val();
@@ -194,7 +141,6 @@
                 $('#courseSelect').empty();
             }
         });
-
     });
 </script>
 @endsection

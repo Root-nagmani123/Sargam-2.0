@@ -61,7 +61,7 @@ class GroupMappingDataTable extends DataTable
         <!-- Edit -->
         <a
             href="{$editUrl}"
-            class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1"
+            class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 bg-transparent border-0 p-0 text-primary"
             aria-label="Edit group name mapping"
         >
             <span class="material-icons material-symbols-rounded"
@@ -69,14 +69,13 @@ class GroupMappingDataTable extends DataTable
                   aria-hidden="true">
                 edit
             </span>
-            <span class="d-none d-lg-inline">Edit</span>
         </a>
 
         <!-- Delete -->
         <?php if ($isActive): ?>
             <button
                 type="button"
-                class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 d-none"
+                class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 d-none bg-transparent border-0 p-0 text-primary"
                 disabled
                 aria-disabled="true"
                 title="Cannot delete active group mapping"
@@ -86,7 +85,6 @@ class GroupMappingDataTable extends DataTable
                       aria-hidden="true">
                     delete
                 </span>
-                <span class="d-none d-lg-inline">Delete</span>
             </button>
         <?php else: ?>
             <form action="{$deleteUrl}" method="POST" class="d-inline">
@@ -95,7 +93,7 @@ class GroupMappingDataTable extends DataTable
 
                 <button
                     type="submit"
-                    class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1"
+                    class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1 bg-transparent border-0 p-0 text-primary"
                     aria-label="Delete group name mapping"
                     onclick="return confirm('Are you sure you want to delete this group name mapping?');"
                 >
@@ -104,7 +102,6 @@ class GroupMappingDataTable extends DataTable
                           aria-hidden="true">
                         delete
                     </span>
-                    <span class="d-none d-lg-inline">Delete</span>
                 </button>
             </form>
         <?php endif; ?>

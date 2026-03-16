@@ -445,7 +445,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
 $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
 @endphp
 
-<div class="container-fluid px-3 px-md-4 py-3 pb-4 admin-dashboard-surface">
+<div class="container-fluid">
     <div class="dashboard-welcome shadow-sm bg-gradient d-flex flex-wrap align-items-center justify-content-between gap-2">
         <div>
             <h2 class="mb-0 text-white">{{ $greeting }}, {{ $userName }}</h2>
@@ -599,7 +599,7 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
     </div>
 
     <div class="row g-4">
-        <div class="col-lg-8">
+        <div class="col-lg-7">
         @if(hasRole('Admin') || hasRole('Training-Induction'))
             <div class="card dashboard-panel shadow-sm rounded-4 mb-4">
                 <div class="card-header py-3 px-4 d-flex justify-content-between align-items-center">
@@ -742,7 +742,7 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
             </div>
         </div>
 
-        <div class="col-lg-4">
+        <div class="col-lg-5">
             <div class="card dashboard-panel shadow-sm rounded-4 mb-4">
                 <div class="card-header py-3 px-4 d-flex align-items-center gap-2">
                     <span class="material-icons material-symbols-rounded text-primary">cake</span>
