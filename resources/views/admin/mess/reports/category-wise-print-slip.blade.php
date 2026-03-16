@@ -76,7 +76,7 @@
                             @if(request('client_type_slug') === 'employee' && request('client_type_pk'))
                                 @php
                                     $cat = isset($clientTypeCategories['employee']) ? $clientTypeCategories['employee']->firstWhere('id', request('client_type_pk')) : null;
-                                    $catName = $cat ? strtolower($cat->client_name ?? '') : '';
+                                    $catName = $cat ? strtolower(trim($cat->client_name ?? '')) : '';
                                 @endphp
                                 @if($catName === 'academy staff' && isset($employees))
                                     @foreach($employees as $e)
@@ -522,7 +522,7 @@ document.addEventListener('DOMContentLoaded', function() {
             '{{ $key }}': [
                 @if(isset($clientTypeCategories[$key]))
                     @foreach($clientTypeCategories[$key] as $category)
-                        { value: '{{ $category->id }}', text: '{{ addslashes($category->client_name) }}', dataClientName: '{{ strtolower($category->client_name ?? '') }}' },
+                        { value: '{{ $category->id }}', text: '{{ addslashes($category->client_name) }}', dataClientName: '{{ strtolower(trim($category->client_name ?? '')) }}' },
                     @endforeach
                 @endif
             ],
@@ -541,7 +541,7 @@ document.addEventListener('DOMContentLoaded', function() {
         'mess staff': [ @foreach($messStaff ?? [] as $m){ value: '{{ addslashes($m->full_name) }}', text: '{{ addslashes($m->full_name) }}' },@endforeach ]
     };
 
-    if (clientTypeSlug && clientTypePk && clientTypePkBuyer && window.Choices) {
+    if (clientTypeSlug && clientTypePk && clientTypePkBuyer) {
         const hadServerClientTypeOptions = clientTypePk.options.length > 1;
         const hadServerBuyerOptions = clientTypePkBuyer.options.length > 1;
         const choicesConfig = {
@@ -553,6 +553,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
         function initChoices(el) {
             if (!el) return null;
+            if (!window.Choices) {
+                // Choices.js not available; keep native <select> behaviour
+                return null;
+            }
             if (el.choices) {
                 el.choices.destroy();
             }
@@ -615,7 +619,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (slug === 'employee') {
                 const selectedOpt = clientTypePk.options[clientTypePk.selectedIndex];
                 if (selectedOpt && selectedOpt.dataset && selectedOpt.dataset.clientName) {
-                    dataClientName = selectedOpt.dataset.clientName || '';
+                    dataClientName = (selectedOpt.dataset.clientName || '').trim();
                 } else {
                     dataClientName = resolveEmployeeCategoryName(slug, selectedValue);
                 }

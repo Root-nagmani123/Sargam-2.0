@@ -435,15 +435,11 @@ class ReportController extends Controller
         ]);
 
         $svQuery = \App\Models\Mess\SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'items.itemSubcategory']);
-        $fromDate = $request->filled('from_date') ? $request->from_date : null;
-        $toDate   = $request->filled('to_date') ? $request->to_date : null;
-        if ($fromDate && $toDate) {
-            $svQuery->whereDate('date_from', '<=', $toDate)
-                ->whereDate('date_to', '>=', $fromDate);
-        } elseif ($fromDate) {
-            $svQuery->whereDate('date_to', '>=', $fromDate);
-        } elseif ($toDate) {
-            $svQuery->whereDate('date_from', '<=', $toDate);
+        if ($request->filled('from_date')) {
+            $svQuery->whereDate('issue_date', '>=', $request->from_date);
+        }
+        if ($request->filled('to_date')) {
+            $svQuery->whereDate('issue_date', '<=', $request->to_date);
         }
         if ($request->filled('client_type_slug')) {
             $svQuery->where('client_type_slug', $request->client_type_slug);
@@ -1383,7 +1379,12 @@ class ReportController extends Controller
         }
 
         $categories = ItemCategory::active()->orderBy('category_name')->get();
-        $allItems = ItemSubcategory::where('status', 'active')->orderBy('name')->get();
+
+        $allItemsQuery = ItemSubcategory::where('status', 'active');
+        if ($viewType === 'category_wise' && $categoryId) {
+            $allItemsQuery->where('category_id', $categoryId);
+        }
+        $allItems = $allItemsQuery->orderBy('name')->get();
 
         return view('admin.mess.reports.purchase-sale-quantity', compact(
             'reportData',

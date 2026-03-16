@@ -80,9 +80,9 @@
     <div class="card border-0 shadow-sm rounded-3">
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-striped table-hover align-middle mb-0" id="sellingVouchersTable">
+                <table class="table w-100 text-nowrap" id="sellingVouchersTable">
             <thead>
-                <tr>
+            <tr>
                     <th>S. No.</th>
                     <th>Item Name</th>
                     <th>Item Quantity</th>
@@ -98,6 +98,7 @@
                     <th>Action</th>
                 </tr>
             </thead>
+            @php($serial = 1)
             <tbody>
                 @forelse($kitchenIssues as $voucher)
                     @forelse($voucher->items as $item)

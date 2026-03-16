@@ -16,12 +16,12 @@
                 <div class="row g-3">
                     <div class="col-md-3">
                         <label class="form-label small fw-semibold text-uppercase mb-1 text-muted">From Date</label>
-                        <input type="date" name="from_date" class="form-control form-control-sm" 
+                        <input type="date" name="from_date" class="form-control" 
                                value="{{ $fromDate }}" required>
                     </div>
                     <div class="col-md-3">
                         <label class="form-label small fw-semibold text-uppercase mb-1 text-muted">To Date</label>
-                        <input type="date" name="to_date" class="form-control form-control-sm" 
+                        <input type="date" name="to_date" class="form-control" 
                                value="{{ $toDate }}" required>
                     </div>
                     <div class="col-md-3">
@@ -33,7 +33,7 @@
                     </div>
                     <div class="col-md-3" id="main_store_div" style="display: {{ $storeType == 'main' ? 'block' : 'none' }};">
                         <label class="form-label small fw-semibold text-uppercase mb-1 text-muted">Main Store</label>
-                        <select name="store_id" class="form-select form-select-sm" data-placeholder="All Main Stores">
+                        <select name="store_id" class="form-select " data-placeholder="All Main Stores">
                             <option value="">All Main Stores</option>
                             @foreach($stores as $store)
                                 <option value="{{ $store->id }}" {{ $storeId == $store->id && $storeType == 'main' ? 'selected' : '' }}>
@@ -42,9 +42,9 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-md-4" id="sub_store_div" style="display: {{ $storeType == 'sub' ? 'block' : 'none' }};">
+                    <div class="col-md-3" id="sub_store_div" style="display: {{ $storeType == 'sub' ? 'block' : 'none' }};">
                         <label class="form-label small fw-semibold text-uppercase mb-1 text-muted">Sub Store</label>
-                        <select name="store_id" class="form-select form-select-sm" data-placeholder="All Sub Stores">
+                        <select name="store_id" class="form-select " data-placeholder="All Sub Stores">
                             <option value="">All Sub Stores</option>
                             @foreach($subStores as $subStore)
                                 <option value="{{ $subStore->id }}" {{ $storeId == $subStore->id && $storeType == 'sub' ? 'selected' : '' }}>
