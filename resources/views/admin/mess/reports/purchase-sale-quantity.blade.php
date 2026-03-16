@@ -20,15 +20,15 @@
                 <div class="row g-3 g-md-4">
                     <div class="col-12 col-sm-6 col-md-6 col-lg-2">
                         <label class="form-label">From Date</label>
-                        <input type="date" name="from_date" class="form-control" value="{{ $fromDate }}">
+                        <input type="date" name="from_date" class="form-select" value="{{ $fromDate }}">
                     </div>
                     <div class="col-12 col-sm-6 col-md-6 col-lg-2">
                         <label class="form-label">To Date</label>
-                        <input type="date" name="to_date" class="form-control" value="{{ $toDate }}">
+                        <input type="date" name="to_date" class="form-select" value="{{ $toDate }}">
                     </div>
                     <div class="col-12 col-sm-6 col-md-4 col-lg-2">
                         <label class="form-label">View</label>
-                        <select name="view_type" id="viewType" class="form-select form-select-sm choices-select" data-placeholder="Select View Type">
+                        <select name="view_type" id="viewType" class="form-select choices-select" data-placeholder="Select View Type">
                             <option value="item_wise" {{ $viewType === 'item_wise' ? 'selected' : '' }}>Item-wise</option>
                             <option value="subcategory_wise" {{ $viewType === 'subcategory_wise' ? 'selected' : '' }}>Subcategory-wise</option>
                             <option value="category_wise" {{ $viewType === 'category_wise' ? 'selected' : '' }}>Category-wise</option>
@@ -36,7 +36,7 @@
                     </div>
                     <div class="col-12 col-sm-6 col-md-4 col-lg-3" id="categoryIdWrap" style="display: {{ $viewType === 'category_wise' ? 'block' : 'none' }};">
                         <label class="form-label">Category</label>
-                        <select name="category_id" class="form-select choices-select" data-placeholder="All Categories">
+                        <select name="category_id" id="categoryId" class="form-select choices-select" data-placeholder="All Categories">
                             <option value="">All Categories</option>
                             @foreach($categories as $cat)
                                 <option value="{{ $cat->id }}" {{ $categoryId == $cat->id ? 'selected' : '' }}>{{ $cat->category_name }}</option>
@@ -64,25 +64,25 @@
         <div class="card-footer bg-body-secondary bg-opacity-10 border-0 py-3 d-flex flex-wrap gap-2 align-items-center justify-content-between">
             <div class="d-flex flex-wrap gap-2">
                 <button type="submit" form="purchaseSaleQuantityFilterForm"
-                        class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1 rounded-pill px-3">
+                        class="btn btn-primary d-inline-flex align-items-center gap-1">
                     <span class="material-symbols-rounded" style="font-size: 1.1rem;">filter_list</span>
                     <span>Apply Filters</span>
                 </button>
-                <a href="{{ route('admin.mess.reports.purchase-sale-quantity') }}" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1 rounded-pill px-3">
+                <a href="{{ route('admin.mess.reports.purchase-sale-quantity') }}" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1">
                     <span class="material-symbols-rounded" style="font-size: 1.1rem;">refresh</span>
                     <span>Reset</span>
                 </a>
             </div>
             <div class="d-flex flex-wrap gap-2">
-                <button type="button" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1 rounded-pill px-3" onclick="printPurchaseSaleQuantity()" title="Print or Save as PDF">
+                <button type="button" class="btn btn-outline-primary d-inline-flex align-items-center gap-1" onclick="printPurchaseSaleQuantity()" title="Print or Save as PDF">
                     <span class="material-symbols-rounded" style="font-size: 1.1rem;">print</span>
                     <span>Print</span>
                 </button>
-                <a href="{{ route('admin.mess.reports.purchase-sale-quantity.pdf', request()->query()) }}" target="_blank" rel="noopener" class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1 rounded-pill px-3" title="Download PDF">
+                <a href="{{ route('admin.mess.reports.purchase-sale-quantity.pdf', request()->query()) }}" target="_blank" rel="noopener" class="btn btn-outline-danger d-inline-flex align-items-center gap-1" title="Download PDF">
                     <span class="material-symbols-rounded" style="font-size: 1.1rem;">picture_as_pdf</span>
                     <span>PDF</span>
                 </a>
-                <a href="{{ route('admin.mess.reports.purchase-sale-quantity.excel', request()->query()) }}" class="btn btn-success btn-sm d-inline-flex align-items-center gap-1 rounded-pill px-3" title="Export to Excel">
+                <a href="{{ route('admin.mess.reports.purchase-sale-quantity.excel', request()->query()) }}" class="btn btn-success d-inline-flex align-items-center gap-1" title="Export to Excel">
                     <span class="material-symbols-rounded" style="font-size: 1.1rem;">table_view</span>
                     <span>Export Excel</span>
                 </a>
@@ -189,8 +189,8 @@
     </div>
 </div>
 
-{{-- Tom Select (enhanced dropdowns) --}}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css">
+{{-- Choices.js (enhanced dropdowns) --}}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" rel="stylesheet" />
 
 <style>
@@ -215,7 +215,7 @@
     }
 </style>
 
-<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -229,14 +229,25 @@ document.addEventListener('DOMContentLoaded', function() {
             categoryIdWrap.style.display = viewType.value === 'category_wise' ? 'block' : 'none';
         }
         toggleCategory();
-        viewType.addEventListener('change', toggleCategory);
+        viewType.addEventListener('change', function () {
+            toggleCategory();
+            if (filterForm) {
+                filterForm.submit();
+            }
+        });
     }
 
-    if (typeof window.TomSelect !== 'undefined') {
+    if (categorySelect && filterForm) {
+        categorySelect.addEventListener('change', function () {
+            filterForm.submit();
+        });
+    }
+
+    if (typeof window.Choices !== 'undefined') {
         document
             .querySelectorAll('.purchase-sale-quantity-report select.choices-select')
             .forEach(function (el) {
-                if (el.tomselect) return;
+                if (el.dataset.choices === 'initialized') return;
 
                 var placeholder = el.getAttribute('data-placeholder') || 'Select';
 
