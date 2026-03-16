@@ -93,9 +93,17 @@
                                 @endif
                             @elseif(request('client_type_slug') === 'ot')
                                 {{-- OT: student names load via AJAX when course selected; no static options to avoid wrong list on reload --}}
-                            @elseif(request('client_type_slug') === 'course' && isset($clientTypeCategories['course']) && $clientTypeCategories['course']->isNotEmpty())
-                                @foreach($clientTypeCategories['course'] as $category)
-                                    <option value="{{ $category->client_name }}" {{ request('buyer_name') == $category->client_name ? 'selected' : '' }}>{{ $category->client_name }}</option>
+                            @elseif(request('client_type_slug') === 'course' && isset($courseBuyerNames) && $courseBuyerNames->isNotEmpty())
+                                @foreach($courseBuyerNames as $buyerName)
+                                    <option value="{{ $buyerName }}" {{ request('buyer_name') == $buyerName ? 'selected' : '' }}>{{ $buyerName }}</option>
+                                @endforeach
+                            @elseif(request('client_type_slug') === 'other' && isset($otherBuyerNames) && $otherBuyerNames->isNotEmpty())
+                                @foreach($otherBuyerNames as $buyerName)
+                                    <option value="{{ $buyerName }}" {{ request('buyer_name') == $buyerName ? 'selected' : '' }}>{{ $buyerName }}</option>
+                                @endforeach
+                            @elseif(request('client_type_slug') === 'section' && isset($sectionBuyerNames) && $sectionBuyerNames->isNotEmpty())
+                                @foreach($sectionBuyerNames as $buyerName)
+                                    <option value="{{ $buyerName }}" {{ request('buyer_name') == $buyerName ? 'selected' : '' }}>{{ $buyerName }}</option>
                                 @endforeach
                             @elseif(request('client_type_slug') && isset($clientTypeCategories[request('client_type_slug')]))
                                 @foreach($clientTypeCategories[request('client_type_slug')] as $category)
@@ -547,6 +555,9 @@ document.addEventListener('DOMContentLoaded', function() {
             @endforeach
         @endif
     ];
+    const courseBuyerNames = {!! json_encode(($courseBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
+    const otherBuyerNames = {!! json_encode(($otherBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
+    const sectionBuyerNames = {!! json_encode(($sectionBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
     const employeeNames = {
         'academy staff': [ @foreach($employees ?? [] as $e){ value: '{{ addslashes($e->full_name) }}', text: '{{ addslashes($e->full_name) }}' },@endforeach ],
         'faculty': [ @foreach($faculties ?? [] as $f){ value: '{{ addslashes($f->full_name) }}', text: '{{ addslashes($f->full_name) }}' },@endforeach ],
@@ -667,19 +678,21 @@ document.addEventListener('DOMContentLoaded', function() {
                         setBuyerChoices([], preservedBuyerName);
                     });
             } else if (slug === 'course') {
-                if (clientTypeOptions['course'] && clientTypeOptions['course'].length) {
-                    const list = clientTypeOptions['course'].map(function(o) {
-                        return { value: o.text, text: o.text };
-                    });
-                    setBuyerChoices(list, preservedBuyerName);
-                } else if (otCourseOptions.length) {
-                    const fallback = otCourseOptions.map(function(o) {
-                        return { value: o.text, text: o.text };
-                    });
-                    setBuyerChoices(fallback, preservedBuyerName);
-                } else {
-                    setBuyerChoices([], preservedBuyerName);
-                }
+                // For Course client type, populate Buyer Name from distinct client_name values
+                const list = (courseBuyerNames || []).map(function(name) {
+                    return { value: name, text: name };
+                });
+                setBuyerChoices(list, preservedBuyerName);
+            } else if (slug === 'other') {
+                const list = (otherBuyerNames || []).map(function(name) {
+                    return { value: name, text: name };
+                });
+                setBuyerChoices(list, preservedBuyerName);
+            } else if (slug === 'section') {
+                const list = (sectionBuyerNames || []).map(function(name) {
+                    return { value: name, text: name };
+                });
+                setBuyerChoices(list, preservedBuyerName);
             } else if (slug && clientTypeOptions[slug]) {
                 const list = clientTypeOptions[slug].map(function(o) {
                     return { value: o.text, text: o.text };

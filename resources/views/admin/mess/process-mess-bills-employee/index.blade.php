@@ -133,6 +133,19 @@
                         <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">badge</i>Buyer Name</label>
                         <select name="buyer_name" id="filterBuyerName" class="form-select shadow-sm border-0 choices-select">
                             <option value="">All Buyers</option>
+                            @if(($clientType ?? request('client_type')) === 'course' && isset($courseBuyerNames) && $courseBuyerNames->isNotEmpty())
+                                @foreach($courseBuyerNames as $buyer)
+                                    <option value="{{ $buyer }}" {{ ($buyerName ?? request('buyer_name')) === $buyer ? 'selected' : '' }}>{{ $buyer }}</option>
+                                @endforeach
+                            @elseif(($clientType ?? request('client_type')) === 'other' && isset($otherBuyerNames) && $otherBuyerNames->isNotEmpty())
+                                @foreach($otherBuyerNames as $buyer)
+                                    <option value="{{ $buyer }}" {{ ($buyerName ?? request('buyer_name')) === $buyer ? 'selected' : '' }}>{{ $buyer }}</option>
+                                @endforeach
+                            @elseif(($clientType ?? request('client_type')) === 'section' && isset($sectionBuyerNames) && $sectionBuyerNames->isNotEmpty())
+                                @foreach($sectionBuyerNames as $buyer)
+                                    <option value="{{ $buyer }}" {{ ($buyerName ?? request('buyer_name')) === $buyer ? 'selected' : '' }}>{{ $buyer }}</option>
+                                @endforeach
+                            @endif
                         </select>
                     </div>
                     <div class="col-md-2">
@@ -807,13 +820,16 @@ document.addEventListener('DOMContentLoaded', function() {
         var df = document.getElementById('modal_date_from');
         var dt = document.getElementById('modal_date_to');
         var ct = document.getElementById('modal_client_type');
+        var ctp = document.getElementById('modal_client_type_pk');
         var bn = document.getElementById('modal_buyer_name');
         var dateFrom = (df && df.value) ? toYmd(df.value) : '';
         var dateTo = (dt && dt.value) ? toYmd(dt.value) : '';
         var clientType = (ct && ct.value) ? ct.value : '';
+        var clientTypePk = (ctp && ctp.value) ? ctp.value : '';
         var buyerName = (bn && bn.value) ? bn.value.trim() : '';
         var url = '{{ route("admin.mess.process-mess-bills-employee.modal-data") }}?date_from=' + encodeURIComponent(dateFrom) + '&date_to=' + encodeURIComponent(dateTo);
         if (clientType) url += '&client_type=' + encodeURIComponent(clientType);
+        if (clientTypePk) url += '&client_type_pk=' + encodeURIComponent(clientTypePk);
         if (buyerName) url += '&buyer_name=' + encodeURIComponent(buyerName);
         fetch(url)
             .then(function(r) { return r.json(); })
@@ -996,6 +1012,10 @@ document.addEventListener('DOMContentLoaded', function() {
             ]
         };
 
+        var courseBuyerNames = {!! json_encode(($courseBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
+        var otherBuyerNames = {!! json_encode(($otherBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
+        var sectionBuyerNames = {!! json_encode(($sectionBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
+
         function fillModalClientTypePk() {
             var slug = modalClientType.value;
             modalClientTypePk.innerHTML = '<option value=\"\">All</option>';
@@ -1006,7 +1026,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 choicesPk.setChoices([{ value: '', label: 'All', selected: true }], 'value', 'label', true);
             }
 
-            if (slug === 'ot' && otCourseOptions.length) {
+            if ((slug === 'ot' || slug === 'course') && otCourseOptions.length) {
                 otCourseOptions.forEach(function (o) {
                     var opt = document.createElement('option');
                     opt.value = o.value;
@@ -1074,17 +1094,20 @@ document.addEventListener('DOMContentLoaded', function() {
                         // ignore error; keep only "All Buyers"
                     });
             } else if (slug === 'course') {
-                if (clientTypeOptions['course'] && clientTypeOptions['course'].length) {
-                    var list = clientTypeOptions['course'].map(function (o) {
-                        return { value: o.text, text: o.text };
-                    });
-                    addBuyerOptions(list);
-                } else if (otCourseOptions.length) {
-                    var list2 = otCourseOptions.map(function (o) {
-                        return { value: o.text, text: o.text };
-                    });
-                    addBuyerOptions(list2);
-                }
+                var listCourse = (courseBuyerNames || []).map(function (name) {
+                    return { value: name, text: name };
+                });
+                addBuyerOptions(listCourse);
+            } else if (slug === 'other') {
+                var listOther = (otherBuyerNames || []).map(function (name) {
+                    return { value: name, text: name };
+                });
+                addBuyerOptions(listOther);
+            } else if (slug === 'section') {
+                var listSection = (sectionBuyerNames || []).map(function (name) {
+                    return { value: name, text: name };
+                });
+                addBuyerOptions(listSection);
             } else if (slug && clientTypeOptions[slug]) {
                 var list3 = clientTypeOptions[slug].map(function (o) {
                     return { value: o.text, text: o.text };
@@ -1158,6 +1181,9 @@ document.addEventListener('DOMContentLoaded', function() {
 @endforeach
             ]
         };
+        var courseBuyerNames = {!! json_encode(($courseBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
+        var otherBuyerNames = {!! json_encode(($otherBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
+        var sectionBuyerNames = {!! json_encode(($sectionBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
 
         // Debug: Log initial data
         console.log('=== Main Filter Initialization ===');
@@ -1188,7 +1214,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             clientTypePk.innerHTML = '<option value=\"\">All</option>';
 
-            if (slug === 'ot' && otCourseOptions.length) {
+            if ((slug === 'ot' || slug === 'course') && otCourseOptions.length) {
                 otCourseOptions.forEach(function (o) {
                     var opt = document.createElement('option');
                     opt.value = o.value;
@@ -1310,17 +1336,20 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
                 return; // Exit early for async case
             } else if (slug === 'course') {
-                if (clientTypeOptions['course'] && clientTypeOptions['course'].length) {
-                    var list = clientTypeOptions['course'].map(function (o) {
-                        return { value: o.text, text: o.text };
-                    });
-                    addOptions(list);
-                } else if (otCourseOptions.length) {
-                    var list2 = otCourseOptions.map(function (o) {
-                        return { value: o.text, text: o.text };
-                    });
-                    addOptions(list2);
-                }
+                var listCourse = (courseBuyerNames || []).map(function (name) {
+                    return { value: name, text: name };
+                });
+                addOptions(listCourse);
+            } else if (slug === 'other') {
+                var listOther = (otherBuyerNames || []).map(function (name) {
+                    return { value: name, text: name };
+                });
+                addOptions(listOther);
+            } else if (slug === 'section') {
+                var listSection = (sectionBuyerNames || []).map(function (name) {
+                    return { value: name, text: name };
+                });
+                addOptions(listSection);
             } else if (slug && clientTypeOptions[slug]) {
                 var list3 = clientTypeOptions[slug].map(function (o) {
                     return { value: o.text, text: o.text };

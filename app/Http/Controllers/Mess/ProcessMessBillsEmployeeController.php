@@ -146,6 +146,20 @@ class ProcessMessBillsEmployeeController extends Controller
         // Group by buyer so one combined bill per user (Selling Voucher + Selling Voucher with Date Range)
         $combinedBills = $this->groupBillsByBuyer($bills);
 
+        // Distinct buyer names per type for filters (Course / Other / Section etc.)
+        $bySlug = $bills->groupBy(function ($bill) {
+            return $this->getBillClientTypeSlug($bill);
+        });
+        $courseBuyerNames = isset($bySlug[ClientType::TYPE_COURSE])
+            ? $bySlug[ClientType::TYPE_COURSE]->pluck('client_name')->filter()->unique()->sort()->values()
+            : collect();
+        $otherBuyerNames = isset($bySlug['other'])
+            ? $bySlug['other']->pluck('client_name')->filter()->unique()->sort()->values()
+            : collect();
+        $sectionBuyerNames = isset($bySlug['section'])
+            ? $bySlug['section']->pluck('client_name')->filter()->unique()->sort()->values()
+            : collect();
+
         // Optional status filter on combined bills (0=Unpaid, 1=Partial, 2=Paid)
         if ($statusFilter !== null && $statusFilter !== '') {
             $statusMap = [
@@ -237,7 +251,10 @@ class ProcessMessBillsEmployeeController extends Controller
             'faculties',
             'employees',
             'messStaff',
-            'otCourses'
+            'otCourses',
+            'courseBuyerNames',
+            'otherBuyerNames',
+            'sectionBuyerNames'
         ));
     }
 
@@ -955,6 +972,7 @@ class ProcessMessBillsEmployeeController extends Controller
         $dateFrom = $request->filled('date_from') ? $this->parseDate($request->date_from) : now()->startOfMonth()->format('Y-m-d');
         $dateTo = $request->filled('date_to') ? $this->parseDate($request->date_to) : now()->endOfMonth()->format('Y-m-d');
         $clientType = $request->filled('client_type') ? $request->client_type : null;
+        $clientTypePk = $request->filled('client_type_pk') ? $request->client_type_pk : null;
         $buyerName = $request->filled('buyer_name') ? trim($request->buyer_name) : null;
 
         // Query 1: Selling Voucher with Date Range
@@ -963,6 +981,9 @@ class ProcessMessBillsEmployeeController extends Controller
             ->whereIn('client_type_slug', $dateRangeSlugs)
             ->where('status', '!=', 2); // Only unpaid bills
 
+        if ($clientTypePk) {
+            $dateRangeQuery->where('client_type_pk', $clientTypePk);
+        }
         if ($buyerName) {
             $dateRangeQuery->where('client_name', 'like', '%' . $buyerName . '%');
         }
@@ -986,6 +1007,9 @@ class ProcessMessBillsEmployeeController extends Controller
             ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
             ->where('status', '!=', 2); // Only unpaid bills
 
+        if ($clientTypePk) {
+            $kitchenIssueQuery->where('client_type_pk', $clientTypePk);
+        }
         if ($buyerName) {
             $kitchenIssueQuery->where('client_name', 'like', '%' . $buyerName . '%');
         }

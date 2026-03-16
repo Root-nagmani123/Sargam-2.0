@@ -469,11 +469,15 @@ class ReportController extends Controller
      */
     public function categoryWisePrintSlipExcel(Request $request)
     {
+        // Normalise client_type_pk for OT/Course where the form sends course_master_pk
+        $effectiveClientTypePk = $request->filled('course_master_pk')
+            ? $request->course_master_pk
+            : ($request->filled('client_type_pk') ? $request->client_type_pk : null);
+
         $filtersApplied = $request->filled('from_date')
             || $request->filled('to_date')
             || $request->filled('client_type_slug')
-            || $request->filled('client_type_pk')
-            || $request->filled('course_master_pk')
+            || !is_null($effectiveClientTypePk)
             || $request->filled('buyer_name');
         if (! $filtersApplied) {
             return redirect()->route('admin.mess.reports.category-wise-print-slip')
@@ -497,8 +501,8 @@ class ReportController extends Controller
         if ($request->filled('client_type_slug')) {
             $svQuery->where('client_type_slug', $request->client_type_slug);
         }
-        if ($request->filled('client_type_pk')) {
-            $svQuery->where('client_type_pk', $request->client_type_pk);
+        if (!is_null($effectiveClientTypePk)) {
+            $svQuery->where('client_type_pk', $effectiveClientTypePk);
         }
         if ($request->filled('buyer_name')) {
             $svQuery->where('client_name', 'LIKE', '%' . trim($request->buyer_name) . '%');
@@ -526,8 +530,8 @@ class ReportController extends Controller
         if ($request->filled('client_type_slug') && isset($clientTypeSlugToInt[$request->client_type_slug])) {
             $kiQuery->where('client_type', $clientTypeSlugToInt[$request->client_type_slug]);
         }
-        if ($request->filled('client_type_pk')) {
-            $kiQuery->where('client_type_pk', $request->client_type_pk);
+        if (!is_null($effectiveClientTypePk)) {
+            $kiQuery->where('client_type_pk', $effectiveClientTypePk);
         }
         if ($request->filled('buyer_name')) {
             $kiQuery->where('client_name', 'LIKE', '%' . trim($request->buyer_name) . '%');
@@ -541,6 +545,12 @@ class ReportController extends Controller
         }
 
         $vouchers = $svVouchers->concat($kiVouchers)
+            ->when($request->filled('client_type_slug'), function ($collection) use ($request) {
+                // Hard filter again by slug so only the selected type appears
+                return $collection->filter(function ($v) use ($request) {
+                    return ($v->client_type_slug ?? null) === $request->client_type_slug;
+                });
+            })
             ->sortByDesc(function ($v) {
                 return $v->issue_date ? $v->issue_date->format('Y-m-d') : '';
             })
@@ -564,11 +574,15 @@ class ReportController extends Controller
      */
     public function categoryWisePrintSlipPdf(Request $request)
     {
+        // Normalise client_type_pk for OT/Course where the form sends course_master_pk
+        $effectiveClientTypePk = $request->filled('course_master_pk')
+            ? $request->course_master_pk
+            : ($request->filled('client_type_pk') ? $request->client_type_pk : null);
+
         $filtersApplied = $request->filled('from_date')
             || $request->filled('to_date')
             || $request->filled('client_type_slug')
-            || $request->filled('client_type_pk')
-            || $request->filled('course_master_pk')
+            || !is_null($effectiveClientTypePk)
             || $request->filled('buyer_name');
         if (! $filtersApplied) {
             return redirect()->route('admin.mess.reports.category-wise-print-slip')
@@ -597,8 +611,8 @@ class ReportController extends Controller
         if ($request->filled('client_type_slug')) {
             $svQuery->where('client_type_slug', $request->client_type_slug);
         }
-        if ($request->filled('client_type_pk')) {
-            $svQuery->where('client_type_pk', $request->client_type_pk);
+        if (!is_null($effectiveClientTypePk)) {
+            $svQuery->where('client_type_pk', $effectiveClientTypePk);
         }
         if ($request->filled('buyer_name')) {
             $svQuery->where('client_name', 'LIKE', '%' . trim($request->buyer_name) . '%');
@@ -627,8 +641,8 @@ class ReportController extends Controller
         if ($request->filled('client_type_slug') && isset($clientTypeSlugToInt[$request->client_type_slug])) {
             $kiQuery->where('client_type', $clientTypeSlugToInt[$request->client_type_slug]);
         }
-        if ($request->filled('client_type_pk')) {
-            $kiQuery->where('client_type_pk', $request->client_type_pk);
+        if (!is_null($effectiveClientTypePk)) {
+            $kiQuery->where('client_type_pk', $effectiveClientTypePk);
         }
         if ($request->filled('buyer_name')) {
             $kiQuery->where('client_name', 'LIKE', '%' . trim($request->buyer_name) . '%');
@@ -643,6 +657,11 @@ class ReportController extends Controller
         }
 
         $vouchers = $svVouchers->concat($kiVouchers)
+            ->when($request->filled('client_type_slug'), function ($collection) use ($request) {
+                return $collection->filter(function ($v) use ($request) {
+                    return ($v->client_type_slug ?? null) === $request->client_type_slug;
+                });
+            })
             ->sortByDesc(function ($v) {
                 return $v->issue_date ? $v->issue_date->format('Y-m-d') : '';
             })
@@ -866,11 +885,15 @@ class ReportController extends Controller
      */
     public function categoryWisePrintSlip(Request $request)
     {
+        // Normalise client_type_pk for OT/Course where the form sends course_master_pk
+        $effectiveClientTypePk = $request->filled('course_master_pk')
+            ? $request->course_master_pk
+            : ($request->filled('client_type_pk') ? $request->client_type_pk : null);
+
         $filtersApplied = $request->filled('from_date')
             || $request->filled('to_date')
             || $request->filled('client_type_slug')
-            || $request->filled('client_type_pk')
-            || $request->filled('course_master_pk')
+            || !is_null($effectiveClientTypePk)
             || $request->filled('buyer_name');
 
         if (! $filtersApplied) {
@@ -878,6 +901,9 @@ class ReportController extends Controller
             $paginator = null;
             $allBuyersSections = collect();
             $printAll = false;
+            $courseBuyerNames = collect();
+            $otherBuyerNames = collect();
+            $sectionBuyerNames = collect();
             $clientTypes = ClientType::clientTypes();
             $clientTypeCategories = ClientType::active()
                 ->orderBy('client_type')
@@ -925,7 +951,8 @@ class ReportController extends Controller
                 'employees',
                 'messStaff',
                 'otCourses',
-                'filtersApplied'
+                'filtersApplied',
+                'courseBuyerNames'
             ));
         }
 
@@ -961,8 +988,8 @@ class ReportController extends Controller
         if ($request->filled('client_type_slug')) {
             $svQuery->where('client_type_slug', $request->client_type_slug);
         }
-        if ($request->filled('client_type_pk')) {
-            $svQuery->where('client_type_pk', $request->client_type_pk);
+        if (!is_null($effectiveClientTypePk)) {
+            $svQuery->where('client_type_pk', $effectiveClientTypePk);
         }
         if ($request->filled('buyer_name')) {
             $svQuery->where('client_name', 'LIKE', '%' . trim($request->buyer_name) . '%');
@@ -993,8 +1020,8 @@ class ReportController extends Controller
         if ($request->filled('client_type_slug') && isset($clientTypeSlugToInt[$request->client_type_slug])) {
             $kiQuery->where('client_type', $clientTypeSlugToInt[$request->client_type_slug]);
         }
-        if ($request->filled('client_type_pk')) {
-            $kiQuery->where('client_type_pk', $request->client_type_pk);
+        if (!is_null($effectiveClientTypePk)) {
+            $kiQuery->where('client_type_pk', $effectiveClientTypePk);
         }
         if ($request->filled('buyer_name')) {
             $kiQuery->where('client_name', 'LIKE', '%' . trim($request->buyer_name) . '%');
@@ -1009,11 +1036,45 @@ class ReportController extends Controller
 
         // --- 3. Merge and sort by issue_date desc ---
         $vouchers = $svVouchers->concat($kiVouchers)
+            ->when($request->filled('client_type_slug'), function ($collection) use ($request) {
+                return $collection->filter(function ($v) use ($request) {
+                    return ($v->client_type_slug ?? null) === $request->client_type_slug;
+                });
+            })
             ->sortByDesc(function ($v) { return $v->issue_date ? $v->issue_date->format('Y-m-d') : ''; })
             ->values();
 
         // --- 4. Group by BUYER: load all buyers in a single view (no pagination) ---
         $groupedByBuyer = $vouchers->groupBy('client_type_pk');
+
+        // Distinct buyer names per client_type_slug so that Buyer Name dropdown
+        // can show only valid names for the selected type (course/other/section).
+        $courseBuyerNames = collect();
+        $otherBuyerNames = collect();
+        $sectionBuyerNames = collect();
+
+        $bySlug = $vouchers->groupBy('client_type_slug');
+        if (isset($bySlug[ClientType::TYPE_COURSE])) {
+            $courseBuyerNames = $bySlug[ClientType::TYPE_COURSE]->pluck('client_name')
+                ->filter()
+                ->unique()
+                ->sort()
+                ->values();
+        }
+        if (isset($bySlug['other'])) {
+            $otherBuyerNames = $bySlug['other']->pluck('client_name')
+                ->filter()
+                ->unique()
+                ->sort()
+                ->values();
+        }
+        if (isset($bySlug['section'])) {
+            $sectionBuyerNames = $bySlug['section']->pluck('client_name')
+                ->filter()
+                ->unique()
+                ->sort()
+                ->values();
+        }
         $printAll = $request->boolean('print_all');
 
         // For both normal view and print_all, we prepare all buyers' sections.
@@ -1081,7 +1142,10 @@ class ReportController extends Controller
             'employees',
             'messStaff',
             'otCourses',
-            'filtersApplied'
+            'filtersApplied',
+            'courseBuyerNames',
+            'otherBuyerNames',
+            'sectionBuyerNames'
         ));
     }
     /**
