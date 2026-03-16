@@ -119,8 +119,25 @@ class ReportController extends Controller
     {
         $fromDate = $request->filled('from_date') ? $request->from_date : now()->format('Y-m-d');
         $toDate = $request->filled('to_date') ? $request->to_date : now()->format('Y-m-d');
-        $storeId = $request->filled('store_id') ? $request->store_id : null;
         $storeType = $request->filled('store_type') ? $request->store_type : 'main';
+
+        // Determine store ID based on store type and specific field names.
+        // We support both the new distinct fields (main_store_id/sub_store_id)
+        // and the legacy single store_id for backward compatibility.
+        $storeId = null;
+        if ($storeType === 'main') {
+            if ($request->filled('main_store_id')) {
+                $storeId = $request->main_store_id;
+            } elseif ($request->filled('store_id')) {
+                $storeId = $request->store_id;
+            }
+        } else {
+            if ($request->filled('sub_store_id')) {
+                $storeId = $request->sub_store_id;
+            } elseif ($request->filled('store_id')) {
+                $storeId = $request->store_id;
+            }
+        }
 
         [$reportData, $selectedStoreName] = $this->getStockSummaryReportData($fromDate, $toDate, $storeId, $storeType);
 
@@ -146,8 +163,22 @@ class ReportController extends Controller
     {
         $fromDate = $request->filled('from_date') ? $request->from_date : now()->format('Y-m-d');
         $toDate   = $request->filled('to_date') ? $request->to_date : now()->format('Y-m-d');
-        $storeId  = $request->filled('store_id') ? $request->store_id : null;
         $storeType = $request->filled('store_type') ? $request->store_type : 'main';
+
+        $storeId = null;
+        if ($storeType === 'main') {
+            if ($request->filled('main_store_id')) {
+                $storeId = $request->main_store_id;
+            } elseif ($request->filled('store_id')) {
+                $storeId = $request->store_id;
+            }
+        } else {
+            if ($request->filled('sub_store_id')) {
+                $storeId = $request->sub_store_id;
+            } elseif ($request->filled('store_id')) {
+                $storeId = $request->store_id;
+            }
+        }
 
         [$reportData, $selectedStoreName] = $this->getStockSummaryReportData($fromDate, $toDate, $storeId, $storeType);
 
@@ -165,8 +196,22 @@ class ReportController extends Controller
     {
         $fromDate = $request->filled('from_date') ? $request->from_date : now()->format('Y-m-d');
         $toDate   = $request->filled('to_date') ? $request->to_date : now()->format('Y-m-d');
-        $storeId  = $request->filled('store_id') ? $request->store_id : null;
         $storeType = $request->filled('store_type') ? $request->store_type : 'main';
+
+        $storeId = null;
+        if ($storeType === 'main') {
+            if ($request->filled('main_store_id')) {
+                $storeId = $request->main_store_id;
+            } elseif ($request->filled('store_id')) {
+                $storeId = $request->store_id;
+            }
+        } else {
+            if ($request->filled('sub_store_id')) {
+                $storeId = $request->sub_store_id;
+            } elseif ($request->filled('store_id')) {
+                $storeId = $request->store_id;
+            }
+        }
 
         [$reportData, $selectedStoreName] = $this->getStockSummaryReportData($fromDate, $toDate, $storeId, $storeType);
 
