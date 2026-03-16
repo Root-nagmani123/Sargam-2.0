@@ -4,10 +4,44 @@
 
 @section('setup_content')
 <style>
-    /* List Meter Reading page: search bar right-aligned (default DataTables style) */
-    #listMeterReadingCard .dataTables_filter { float: right !important; text-align: right !important; }
-    #listMeterReadingCard .dataTables_filter label { margin: 0 !important; }
-    #listMeterReadingCard .dataTables_filter input { margin-left: 0.5rem !important; }
+    /* List Meter Reading page: force search bar in top-right of header row */
+    #listMeterReadingCard .dataTables_wrapper .row:first-child {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+    }
+    #listMeterReadingCard .dataTables_wrapper .dataTables_length {
+        text-align: left;
+    }
+    #listMeterReadingCard .dataTables_wrapper .dataTables_filter {
+        width: auto;
+        margin-left: auto;
+        margin-bottom: 0.5rem;
+        float: none !important;
+        text-align: right !important;
+    }
+    #listMeterReadingCard .dataTables_wrapper .dataTables_filter label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        justify-content: flex-end;
+        margin: 0 !important;
+    }
+    @media (max-width: 767.98px) {
+        #listMeterReadingCard .dataTables_wrapper .row:first-child {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        #listMeterReadingCard .dataTables_wrapper .dataTables_filter {
+            width: 100%;
+            margin-left: 0;
+            text-align: left !important;
+        }
+        #listMeterReadingCard .dataTables_wrapper .dataTables_filter label {
+            justify-content: flex-start;
+        }
+    }
 </style>
 <div class="container-fluid px-2 px-sm-3 px-md-4">
     <x-breadcrum title="List Meter Reading" />
@@ -183,7 +217,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 responsive: true,
                 autoWidth: false,
-                dom: '<"row flex-wrap align-items-center gap-2 mb-2"<"col-md-6"l><"col-md-6"f>>rt<"row align-items-center mt-2"<"col-12 col-md-5"i><"col-12 col-md-7"p>>'
+                dom: '<"row mb-3"<"col-md-6 col-12"l><"col-md-6 col-12"f>>rt<"row align-items-center mt-2"<"col-12 col-md-5"i><"col-12 col-md-7"p>>'
             });
         } else {
             dataTableInstance.ajax.reload(null, true);

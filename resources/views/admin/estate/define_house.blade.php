@@ -360,13 +360,24 @@ $(document).ready(function() {
                     return used === 1 ? 'Occupied' : 'Vacant';
                 }
             },
-            { data: 'pk', orderable: false, searchable: false, render: function(pk) {
-                var deleteUrl = (deleteUrlBase.slice(-1) === '/' ? deleteUrlBase : deleteUrlBase + '/') + pk;
-                return '<div class="d-flex flex-nowrap gap-1 justify-content-center">' +
-                       '<button type="button" class="btn btn-sm btn-warning btn-edit-house" title="Edit" data-pk="'+pk+'"><i class="bi bi-pencil"></i></button>' +
-                       '<button type="button" class="btn btn-sm btn-danger btn-delete-house" title="Delete" data-url="'+deleteUrl+'"><i class="bi bi-trash"></i></button>' +
-                       '</div>';
-            }}
+            {
+                data: 'pk',
+                orderable: false,
+                searchable: false,
+                render: function(pk, type, row) {
+                    if (!pk) return '';
+                    var deleteUrl = (deleteUrlBase.slice(-1) === '/' ? deleteUrlBase : deleteUrlBase + '/') + pk;
+                    return '' +
+                        '<div class="d-flex flex-nowrap gap-1 justify-content-center">' +
+                            '<button type="button" class="btn btn-sm btn-outline-primary btn-edit-house" data-pk="' + pk + '" title="Edit">' +
+                                '<i class="material-icons material-symbols-rounded" style="font-size:16px;line-height:1;" aria-hidden="true">edit</i>' +
+                            '</button>' +
+                            '<button type="button" class="btn btn-sm btn-outline-danger btn-delete-house" data-url="' + deleteUrl + '" title="Delete">' +
+                                '<i class="material-icons material-symbols-rounded" style="font-size:16px;line-height:1;" aria-hidden="true">delete</i>' +
+                            '</button>' +
+                        '</div>';
+                }
+            }
         ],
         order: [[0, 'asc']],
         pageLength: 10,
@@ -565,11 +576,12 @@ $(document).ready(function() {
         $('#estate_block_master_pk').html('<option value="">--Select--</option>');
         if (elBlock) tsBlock = initDefineHouseTs(elBlock, '--Select--');
         $('#houseRowsContainer .house-row:gt(0)').remove();
-        $('#houseRowsContainer .house-row').first().find('.licence_fee').val('0.00');
-        $('#houseRowsContainer .house-row').first().find('.vacant_renovation_status').val('1');
-        $('#houseRowsContainer .house-row').first().find('.status-radio').attr('name', 'vacant_renovation_radio_0');
-        $('#houseRowsContainer .house-row').first().find('.status-radio[value="1"]').prop('checked', true);
-        $('#houseRowsContainer .house-row').first().find('.status-radio[value="0"], .status-radio[value="2"]').prop('checked', false);
+            var $firstRow = $('#houseRowsContainer .house-row').first();
+            $firstRow.find('.licence_fee').val('0.00');
+            $firstRow.find('.vacant_renovation_status').val('1');
+            $firstRow.find('.status-radio').attr('name', 'vacant_renovation_radio_0');
+            $firstRow.find('.status-radio[value="1"]').prop('checked', true);
+            $firstRow.find('.status-radio[value="0"], .status-radio[value="2"]').prop('checked', false);
         updateGlobalRemoveButton();
     });
 
@@ -669,11 +681,22 @@ $(document).ready(function() {
             $row.find('.meter_one').val(res.meter_one || '');
             $row.find('.meter_two').val(res.meter_two || '');
             $row.find('.licence_fee').val(res.licence_fee);
-            $row.find('.vacant_renovation_status').val(res.vacant_renovation_status);
             $row.find('.status-radio').attr('name', 'vacant_renovation_radio_0');
-            $row.find('.status-radio[value="1"]').prop('checked', res.vacant_renovation_status == 1);
-            $row.find('.status-radio[value="2"]').prop('checked', res.vacant_renovation_status == 2);
-            $row.find('.status-radio[value="0"]').prop('checked', res.vacant_renovation_status == 0);
+
+            // Determine current status using both vacant_renovation_status and used_home_status
+            var vr = parseInt(res.vacant_renovation_status != null ? res.vacant_renovation_status : 1, 10);
+            var used = parseInt(res.used_home_status != null ? res.used_home_status : 0, 10);
+            var effectiveStatus;
+            if (vr === 0) {
+                effectiveStatus = 0; // Under Renovation
+            } else if (used === 1) {
+                effectiveStatus = 2; // Occupied
+            } else {
+                effectiveStatus = 1; // Vacant
+            }
+            $row.find('.vacant_renovation_status').val(String(effectiveStatus));
+            $row.find('.status-radio').prop('checked', false);
+            $row.find('.status-radio[value="' + effectiveStatus + '"]').prop('checked', true);
             $('#addHouseRowBtn').hide();
             $('#removeHouseRowBtn').hide();
             $('#addEstateHouseModal').modal('show');

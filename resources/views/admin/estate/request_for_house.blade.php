@@ -19,7 +19,7 @@
         <div class="card-body p-4 p-lg-5">
             <h1 class="h4 fw-bold text-body mb-2">Request For House</h1>
             <p class="text-body-secondary small mb-4">
-                This page displays all list of request details added in the system, and provides options to manage records such as add, edit, delete, etc.
+                This page displays all list of request details added in the system, and provides options to manage records.
             </p>
 
             {{-- Main data table --}}
@@ -38,14 +38,14 @@
                             <th scope="col" class="text-nowrap">ELIGIBILITY TYPE</th>
                             <th scope="col" class="text-nowrap">POSSESSION FROM</th>
                             <th scope="col" class="text-nowrap">POSSESSION TO</th>
-                            <th scope="col" class="text-nowrap">CHANGE</th>
+                            <th scope="col" class="text-nowrap">ACTION</th>
                         </tr>
                     </thead>
                     <tbody>
                         @php $requestList = $requests ?? collect(); @endphp
                         @forelse($requestList as $index => $row)
                         <tr>
-                            <td>{{ $index + 1 }}</td>
+                            <td></td>
                             <td>{{ $row->request_id ?? '—' }}</td>
                             <td>{{ $row->request_date ?? '—' }}</td>
                             <td>{{ ($row->name ?? '—') }} ({{ $row->emp_id ?? '—' }})</td>
@@ -55,10 +55,14 @@
                             <td>{{ $row->eligibility_type ?? '—' }}</td>
                             <td>{{ $row->possession_from ?? '—' }}</td>
                             <td>{{ $row->possession_to ?? '—' }}</td>
-                            <td>
-                                <a href="#" class="link-primary text-decoration-none btn-change-request" data-request-id="{{ $row->pk }}">Change</a>
+                            <td class="text-nowrap">
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-primary btn-change-request"
+                                        data-request-id="{{ $row->pk }}">
+                                    Change
+                                </button>
                                 @if(!empty($row->change_approved))
-                                <span class="text-success small d-block">(Your request has been approved)</span>
+                                    <span class="text-success small d-block mt-1">(Your request has been approved)</span>
                                 @endif
                             </td>
                         </tr>
@@ -125,11 +129,7 @@
     #requestForHouseTable tbody tr:hover {
         background-color: rgba(var(--bs-primary-rgb), 0.08);
     }
-    /* Ensure horizontal scroll works smoothly on smaller screens */
-    .dataTables_wrapper .dataTables_scrollHead,
-    .dataTables_wrapper .dataTables_scrollBody {
-        overflow: auto !important;
-    }
+    /* Let Bootstrap handle horizontal scroll via table-responsive wrapper */
 </style>
 @endpush
 
@@ -187,20 +187,29 @@ document.addEventListener('DOMContentLoaded', function() {
     if (window.jQuery && jQuery.fn && jQuery.fn.DataTable) {
         var table = jQuery('#requestForHouseTable');
         if (table.length && !jQuery.fn.DataTable.isDataTable(table)) {
-            table.DataTable({
+            var dt = table.DataTable({
                 responsive: false,
                 autoWidth: false,
-                scrollX: true,
+                scrollX: false,
                 ordering: true,
                 searching: true,
                 lengthChange: true,
                 pageLength: 10,
-                // S.NO. is now first column (index 0), sort by it descending
-                order: [[0, 'desc']],
+                // Default sort by Request Date (index 2)
+                order: [[2, 'desc']],
                 lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
                 columnDefs: [
-                    // Disable ordering/search on S.NO. and Change columns
-                    { targets: [0, 10], orderable: false, searchable: false }
+                    // S.NO. column: dynamic serial number 1,2,3... respecting paging
+                    {
+                        targets: 0,
+                        orderable: false,
+                        searchable: false,
+                        render: function (data, type, row, meta) {
+                            return meta.row + meta.settings._iDisplayStart + 1;
+                        }
+                    },
+                    // Change column (last)
+                    { targets: 10, orderable: false, searchable: false }
                 ],
                 language: {
                     search: 'Search within table:',
@@ -217,6 +226,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 dom: '<"row align-items-center mb-3"<"col-12 col-md-4"l><"col-12 col-md-8"f>>rt<"row align-items-center mt-2"<"col-12 col-md-5"i><"col-12 col-md-7"p>>'
             });
+
+            // Ensure S.NO. column always shows 1,2,3... based on current
+            // sorting, searching and paging (no matter how user interacts).
+            dt.on('order.dt search.dt draw.dt', function () {
+                dt.column(0, {search: 'applied', order: 'applied'}).nodes().each(function (cell, i) {
+                    cell.innerHTML = i + 1;
+                });
+            });
+            dt.draw();
         }
     }
 });

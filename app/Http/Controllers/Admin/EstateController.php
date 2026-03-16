@@ -1689,7 +1689,9 @@ class EstateController extends Controller
                 'eh.doj_academic',
                 'eh.eligibility_type_pk',
                 'eh.current_alot',
-                'epd.possession_date'
+                'epd.possession_date',
+                'epd.current_meter_reading_date',
+                'epd.return_home_status'
             )
             ->orderByDesc('ec.pk');
 
@@ -1730,6 +1732,13 @@ class EstateController extends Controller
                     ? ($row->change_house_no ?: ($row->current_alot ?: '—'))
                     : ($row->current_alot ?: ($row->change_house_no ?: '—'));
 
+                // Possession To: if latest possession row is marked as returned (return_home_status = 1),
+                // use its current_meter_reading_date as the "to" date; otherwise keep as em dash.
+                $possessionTo = '—';
+                if (isset($row->return_home_status) && (int) $row->return_home_status === 1 && ! empty($row->current_meter_reading_date)) {
+                    $possessionTo = \Carbon\Carbon::parse($row->current_meter_reading_date)->format('d-m-Y');
+                }
+
                 return (object) [
                     'pk' => $row->pk,
                     'request_id' => $row->estate_change_req_ID ?: ('Chg-Req-' . $row->pk),
@@ -1741,7 +1750,7 @@ class EstateController extends Controller
                     'alloted_house' => $allottedHouse,
                     'eligibility_type' => $eligibilityLabel,
                     'possession_from' => $row->possession_date ? \Carbon\Carbon::parse($row->possession_date)->format('d-m-Y') : '—',
-                    'possession_to' => '—',
+                    'possession_to' => $possessionTo,
                     'change_approved' => $status === 1,
                 ];
             });
@@ -3657,6 +3666,7 @@ class EstateController extends Controller
                 'h.meter_one',
                 'h.meter_two',
                 'h.vacant_renovation_status',
+                'h.used_home_status',
                 'h.remarks'
             )
             ->first();
@@ -3666,6 +3676,7 @@ class EstateController extends Controller
         }
 
         $row->vacant_renovation_status = (int) ($row->vacant_renovation_status ?? 1);
+        $row->used_home_status = (int) ($row->used_home_status ?? 0);
         return response()->json($row);
     }
 
