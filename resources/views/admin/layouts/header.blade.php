@@ -1529,38 +1529,22 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Helper function to get cookie value
-    function getCookie(name) {
-        const nameEQ = name + '=';
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.indexOf(nameEQ) === 0) {
-                return cookie.substring(nameEQ.length);
-            }
-        }
-        return null;
-    }
-
-    // Helper function to delete cookie
-    function deleteCookie(name) {
-        document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:01 UTC; path=/;';
-    }
-
-    // Determine initial tab: fresh login -> home; otherwise use route-based or saved tab
-    const isFromLogin = getCookie('fresh_login');
+    // Determine initial tab.
+    // If server says active tab is Home (dashboard, calendar, etc.),
+    // always force Home and ignore any previously saved tab.
+    const routeTab = window.SARGAM_ACTIVE_NAV_TAB || '#home';
     let initial;
-    
-    if (isFromLogin) {
-        console.log('Fresh login detected - forcing home tab');
+
+    if (routeTab === '#home') {
+        // Coming from dashboard/home-like routes → always show Home tab.
         initial = '#home';
-        deleteCookie('fresh_login');
         localStorage.removeItem('activeMainTab');
+        console.log('Route is home/dashboard - forcing Home tab');
     } else {
-        const routeTab = window.SARGAM_ACTIVE_NAV_TAB || '#home';
+        // For non-home routes, allow remembering last selected tab.
         const savedTab = localStorage.getItem('activeMainTab');
         initial = savedTab || routeTab || '#home';
-        console.log('Initial tab:', initial);
+        console.log('Initial tab (non-home route):', initial);
     }
     
     showPane(initial);
