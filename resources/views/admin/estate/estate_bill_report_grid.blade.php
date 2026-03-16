@@ -109,8 +109,27 @@ $(document).ready(function() {
             var col = this;
             var header = ($(col.header()).text() || '').trim();
             if (!header) return;
-            var $li = $('<li><label class="dropdown-item d-flex align-items-center gap-2 cursor-pointer mb-0"><input type="checkbox" class="form-check-input bill-report-column-toggle" data-column="' + i + '"> ' + header + '</label></li>');
-            $li.find('input').prop('checked', col.visible());
+            var $li = $('<li>' +
+                '<div class="dropdown-item px-3 py-1">' +
+                    '<div class="form-check d-flex align-items-center mb-0">' +
+                        '<input type="checkbox" class="form-check-input me-2 bill-report-column-toggle" data-column="' + i + '">' +
+                        '<label class="form-check-label cursor-pointer">' + header + '</label>' +
+                    '</div>' +
+                '</div>' +
+            '</li>');
+            $li.find('input.bill-report-column-toggle').prop('checked', col.visible());
+            $li.find('input.bill-report-column-toggle').on('change', function(e) {
+                e.stopPropagation();
+                if (!billReportDt) return;
+                var colIdx = $(this).data('column');
+                billReportDt.column(colIdx).visible($(this).prop('checked'));
+                persistColumnVisibility();
+            });
+            $li.find('label.form-check-label').on('click', function(e) {
+                e.preventDefault();
+                var $checkbox = $(this).closest('.form-check').find('input.bill-report-column-toggle');
+                $checkbox.prop('checked', !$checkbox.prop('checked')).trigger('change');
+            });
             menu.append($li);
         });
     }
@@ -140,12 +159,7 @@ $(document).ready(function() {
         billReportDt.columns.adjust().draw(false);
     }
 
-    $(document).on('change', '.bill-report-column-toggle', function() {
-        if (!billReportDt) return;
-        var colIdx = $(this).data('column');
-        billReportDt.column(colIdx).visible($(this).prop('checked'));
-        persistColumnVisibility();
-    });
+    // Change handler is now attached inside buildColumnToggle per-checkbox
 
     function buildPrintableTableHtml() {
         if (!billReportDt) return '';

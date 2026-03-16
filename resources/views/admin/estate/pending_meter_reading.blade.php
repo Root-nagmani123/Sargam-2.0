@@ -135,9 +135,22 @@ $(document).ready(function() {
                         '<ul class="dropdown-menu dropdown-menu-end py-2" aria-labelledby="pendingMeterColDropdown" id="pendingMeterColMenu"></ul></div>');
                     var $colMenu = $colDropdown.find('#pendingMeterColMenu');
                     colLabels.forEach(function(label, idx) {
-                        var $li = $('<li><label class="dropdown-item d-flex align-items-center gap-2 mb-0 cursor-pointer"><input type="checkbox" class="form-check-input column-toggle" data-column="' + idx + '" checked> ' + label + '</label></li>');
-                        $li.find('input').on('change', function() {
+                        var $li = $('<li>' +
+                            '<div class="dropdown-item px-3 py-1">' +
+                                '<div class="form-check d-flex align-items-center mb-0">' +
+                                    '<input type="checkbox" class="form-check-input me-2 column-toggle" data-column="' + idx + '" checked>' +
+                                    '<label class="form-check-label cursor-pointer">' + label + '</label>' +
+                                '</div>' +
+                            '</div>' +
+                        '</li>');
+                        $li.find('input.column-toggle').on('change', function(e) {
+                            e.stopPropagation();
                             dataTableInstance.column($(this).data('column')).visible(this.checked);
+                        });
+                        $li.find('label.form-check-label').on('click', function(e) {
+                            e.preventDefault();
+                            var $checkbox = $(this).closest('.form-check').find('input.column-toggle');
+                            $checkbox.prop('checked', !$checkbox.prop('checked')).trigger('change');
                         });
                         $colMenu.append($li);
                     });

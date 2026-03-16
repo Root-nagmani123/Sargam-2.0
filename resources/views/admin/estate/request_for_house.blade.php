@@ -28,9 +28,6 @@
                     <caption class="visually-hidden">Request For House – list of request details</caption>
                     <thead class="table-primary">
                         <tr>
-                            <th scope="col" class="text-center">
-                                <input type="checkbox" class="form-check-input" id="selectAll" aria-label="Select all rows">
-                            </th>
                             <th scope="col" class="text-nowrap">S.NO.</th>
                             <th scope="col" class="text-nowrap">REQUEST ID</th>
                             <th scope="col" class="text-nowrap">REQUEST DATE</th>
@@ -41,7 +38,6 @@
                             <th scope="col" class="text-nowrap">ELIGIBILITY TYPE</th>
                             <th scope="col" class="text-nowrap">POSSESSION FROM</th>
                             <th scope="col" class="text-nowrap">POSSESSION TO</th>
-                            <th scope="col" class="text-nowrap">EXTENSION</th>
                             <th scope="col" class="text-nowrap">CHANGE</th>
                         </tr>
                     </thead>
@@ -49,9 +45,6 @@
                         @php $requestList = $requests ?? collect(); @endphp
                         @forelse($requestList as $index => $row)
                         <tr>
-                            <td class="text-center">
-                                <input type="checkbox" class="form-check-input row-select" value="{{ $row->pk ?? $index }}" aria-label="Select row">
-                            </td>
                             <td>{{ $index + 1 }}</td>
                             <td>{{ $row->request_id ?? '—' }}</td>
                             <td>{{ $row->request_date ?? '—' }}</td>
@@ -63,9 +56,6 @@
                             <td>{{ $row->possession_from ?? '—' }}</td>
                             <td>{{ $row->possession_to ?? '—' }}</td>
                             <td>
-                                <a href="#" class="link-primary text-decoration-none">Extension</a>
-                            </td>
-                            <td>
                                 <a href="#" class="link-primary text-decoration-none btn-change-request" data-request-id="{{ $row->pk }}">Change</a>
                                 @if(!empty($row->change_approved))
                                 <span class="text-success small d-block">(Your request has been approved)</span>
@@ -74,8 +64,6 @@
                         </tr>
                         @empty
                         <tr>
-                            <td></td>
-                            <td></td>
                             <td></td>
                             <td></td>
                             <td></td>
@@ -136,6 +124,11 @@
     }
     #requestForHouseTable tbody tr:hover {
         background-color: rgba(var(--bs-primary-rgb), 0.08);
+    }
+    /* Ensure horizontal scroll works smoothly on smaller screens */
+    .dataTables_wrapper .dataTables_scrollHead,
+    .dataTables_wrapper .dataTables_scrollBody {
+        overflow: auto !important;
     }
 </style>
 @endpush
@@ -202,10 +195,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 searching: true,
                 lengthChange: true,
                 pageLength: 10,
-                order: [[1, 'desc']],
+                // S.NO. is now first column (index 0), sort by it descending
+                order: [[0, 'desc']],
                 lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
                 columnDefs: [
-                    { targets: [0, 11, 12], orderable: false, searchable: false }
+                    // Disable ordering/search on S.NO. and Change columns
+                    { targets: [0, 10], orderable: false, searchable: false }
                 ],
                 language: {
                     search: 'Search within table:',
