@@ -164,7 +164,7 @@ Auth::routes(['verify' => true, 'register' => false]);
 
 // Public Routes
 Route::get('/', [LoginController::class, 'showLoginForm'])->name('home');
-Route::get('/', [LoginController::class, 'showLoginForm'])->name('home');
+// Route::get('/', [LoginController::class, 'showLoginForm'])->name('home');
 Route::post('/login', [LoginController::class, 'authenticate'])->name('post_login');
 
 // Protected Routes
@@ -189,7 +189,7 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/dashboard', [UserController::class, 'dashboard'])->name('admin.dashboard');
     Route::get('/breadcrumb-showcase', fn () => view('admin.breadcrumb-showcase'))->name('admin.breadcrumb-showcase');
-    Route::get('/breadcrumb-showcase', fn () => view('admin.breadcrumb-showcase'))->name('admin.breadcrumb-showcase');
+    // Route::get('/breadcrumb-showcase', fn () => view('admin.breadcrumb-showcase'))->name('admin.breadcrumb-showcase');
     Route::get('/dashboard/students', [UserController::class, 'studentList'])->name('admin.dashboard.students');
     Route::get('/dashboard/students/{id}/detail', [UserController::class, 'studentDetail'])->name('admin.dashboard.students.detail');
 
@@ -270,8 +270,8 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('stream', StreamController::class);
      Route::post('admin/stream/toggle-status', [StreamController::class, 'toggleStatus'])
     ->name('admin.stream.toggleStatus');
-     Route::post('admin/stream/toggle-status', [StreamController::class, 'toggleStatus'])
-    ->name('admin.stream.toggleStatus');
+    //  Route::post('admin/stream/toggle-status', [StreamController::class, 'toggleStatus'])
+    // ->name('admin.stream.toggleStatus');
     Route::resource('subject-module', SubjectModuleController::class);
     Route::resource('Venue-Master', VenueMasterController::class);
 
