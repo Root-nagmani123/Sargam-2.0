@@ -41,6 +41,7 @@ class ProcessMessBillsEmployeeController extends Controller
         $dateFrom = $request->filled('date_from') ? $this->parseDate($request->date_from) : now()->startOfMonth()->format('Y-m-d');
         $dateTo = $request->filled('date_to') ? $this->parseDate($request->date_to) : now()->endOfMonth()->format('Y-m-d');
         $clientType = $request->filled('client_type') ? $request->client_type : null;
+        $clientTypePk = $request->filled('client_type_pk') ? $request->client_type_pk : null;
         $buyerName = $request->filled('buyer_name') ? trim($request->buyer_name) : null;
 
         // Query 1: Selling Voucher with Date Range (sv_date_range_reports)
@@ -61,6 +62,9 @@ class ProcessMessBillsEmployeeController extends Controller
 
         if ($clientType) {
             $dateRangeQuery->where('client_type_slug', $clientType);
+        }
+        if ($clientTypePk) {
+            $dateRangeQuery->where('client_type_pk', $clientTypePk);
         }
         if ($dateFrom) {
             $dateRangeQuery->where(function ($q) use ($dateFrom) {
@@ -98,6 +102,10 @@ class ProcessMessBillsEmployeeController extends Controller
             ])
             ->whereIn('client_type', $kitchenClientTypes)
             ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER);
+
+        if ($clientTypePk) {
+            $kitchenIssueQuery->where('client_type_pk', $clientTypePk);
+        }
 
         if ($dateFrom) {
             $kitchenIssueQuery->where('issue_date', '>=', $dateFrom);
@@ -204,6 +212,7 @@ class ProcessMessBillsEmployeeController extends Controller
             'effectiveDateToYmd',
             'stats',
             'clientType',
+            'clientTypePk',
             'buyerName',
             'clientTypes',
             'clientTypeCategories',
