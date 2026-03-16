@@ -98,11 +98,14 @@
                     <th>Action</th>
                 </tr>
             </thead>
+            @php
+                $serial = 1;
+            @endphp
             <tbody>
                 @forelse($kitchenIssues as $voucher)
                     @forelse($voucher->items as $item)
                         <tr>
-                            <td>{{ $loop->iteration }}</td>
+                            <td>{{ $serial++ }}</td>
                             <td>{{ $item->item_name ?: ($item->itemSubcategory->item_name ?? '—') }}</td>
                             <td>{{ $item->quantity }}</td>
                             <td>{{ $item->return_quantity ?? 0 }}</td>
