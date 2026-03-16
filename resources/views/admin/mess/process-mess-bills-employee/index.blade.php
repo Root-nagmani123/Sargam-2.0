@@ -132,6 +132,16 @@
                             <option value="">All Buyers</option>
                         </select>
                     </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-semibold">Status</label>
+                        @php $currentStatus = $statusFilter ?? request('status', ''); @endphp
+                        <select name="status" id="filterStatus" class="form-select">
+                            <option value="">All Status</option>
+                            <option value="unpaid" {{ $currentStatus === 'unpaid' ? 'selected' : '' }}>Unpaid</option>
+                            <option value="partial" {{ $currentStatus === 'partial' ? 'selected' : '' }}>Partial</option>
+                            <option value="paid" {{ $currentStatus === 'paid' ? 'selected' : '' }}>Paid</option>
+                        </select>
+                    </div>
                     <div class="col-md-2 d-flex gap-1">
                         <button type="submit" class="btn btn-primary  flex-grow-1">
                             <i class="material-symbols-rounded align-middle">filter_list</i>
@@ -155,9 +165,10 @@
                 <input type="hidden" name="date_to" value="{{ $effectiveDateTo ?? request('date_to') }}">
                 <input type="hidden" name="client_type" value="{{ $clientType ?? request('client_type') }}">
                 <input type="hidden" name="buyer_name" value="{{ $buyerName ?? request('buyer_name') }}">
+                <input type="hidden" name="status" value="{{ $statusFilter ?? request('status') }}">
                 <div class="d-flex flex-wrap justify-content-end align-items-right mb-3 gap-2">
                     <div class="d-flex align-items-center gap-2">
-                        <a href="{{ route('admin.mess.process-mess-bills-employee.export') }}?{{ http_build_query(request()->only(['date_from', 'date_to', 'client_type', 'buyer_name', 'search'])) }}" class="btn  btn-outline-secondary d-inline-flex align-items-center gap-1" title="Export to Excel">
+                        <a href="{{ route('admin.mess.process-mess-bills-employee.export') }}?{{ http_build_query(request()->only(['date_from', 'date_to', 'client_type', 'buyer_name', 'status', 'search'])) }}" class="btn  btn-outline-secondary d-inline-flex align-items-center gap-1" title="Export to Excel">
                             <i class="material-symbols-rounded" style="font-size: 1.1rem;">file_download</i>
                             <span>Export</span>
                         </a>
