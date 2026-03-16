@@ -91,7 +91,7 @@
 
                     <!-- Table: grouped by bill -->
                     <div class="table-responsive rounded-3 border bg-white stock-purchase-table-wrapper">
-                        <table class="table table-sm table-striped table-hover text-nowrap align-middle mb-0 stock-purchase-table">
+                        <table class="table text-nowrap align-middle mb-0 stock-purchase-table">
                             <thead class="stock-purchase-thead">
                                 <tr>
                                     <th>Item</th>
@@ -150,9 +150,9 @@
                                     </tr>
                                 @endforelse
                                 @if($grandTotalAmount > 0)
-                                    <tr class="grand-total-row bg-secondary text-white fw-bold">
-                                        <td colspan="7" class="text-end">Grand Total:</td>
-                                        <td class="text-end">₹{{ number_format($grandTotalAmount, 2) }}</td>
+                                    <tr class="grand-total-row bg-primary fw-bold">
+                                        <td colspan="7" class="text-end text-white">Grand Total:</td>
+                                        <td class="text-end text-white">₹{{ number_format($grandTotalAmount, 2) }}</td>
                                     </tr>
                                 @endif
                             </tbody>
