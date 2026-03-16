@@ -9,7 +9,8 @@
         $storeName = $bill->resolved_store_name ?? '—';
         $dateFrom = isset($bill->date_from) && $bill->date_from ? $bill->date_from->format('d-m-Y') : ($bill->issue_date ? $bill->issue_date->format('d-m-Y') : '—');
         $dateTo = isset($bill->date_to) && $bill->date_to ? $bill->date_to->format('d-m-Y') : ($bill->issue_date ? $bill->issue_date->format('d-m-Y') : '—');
-        $purchaseDate = $bill->issue_date ? $bill->issue_date->format('d-m-Y') : $dateFrom;
+        // Default fallback for item issue date when not set per item
+        $fallbackIssueDate = $bill->issue_date ? $bill->issue_date->format('d-m-Y') : $dateFrom;
         $totalAmount = (float) $bill->net_total;
         $paidAmount = (float) ($paidAmount ?? 0);
         $dueAmount = (float) ($dueAmount ?? max(0, $totalAmount - $paidAmount));
@@ -315,7 +316,7 @@
                 <tr>
                     <th>Store Name</th>
                     <th>Item Name</th>
-                    <th>Purchase Date</th>
+                    <th>Issue Date</th>
                     <th class="text-end">Rate</th>
                     <th class="text-end">Issue Qty</th>
                     <th class="text-end">Return Qty</th>
@@ -331,11 +332,14 @@
                     $netQty = max(0, $issueQty - $returnQty);
                     $rate = (float) ($item->rate ?? 0);
                     $itemAmount = $netQty * $rate;
+                    // Prefer per-item issue_date (for Selling Voucher Date Range items),
+                    // fall back to bill-level issue date range when not available.
+                    $itemIssueDate = $item->issue_date ?? $fallbackIssueDate;
                 @endphp
                 <tr>
                     <td>{{ $item->store_name ?? $storeName }}</td>
                     <td>{{ $item->item_name ?? ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? '—') }}</td>
-                    <td>{{ $item->purchase_date ?? $purchaseDate }}</td>
+                    <td>{{ $itemIssueDate }}</td>
                     <td class="text-end">{{ number_format($rate, 2) }}</td>
                     <td class="text-end">{{ number_format($issueQty, 2) }}</td>
                     <td class="text-end">{{ number_format($returnQty, 2) }}</td>
