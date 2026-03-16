@@ -261,10 +261,10 @@
         border-radius: 0.375rem;
         border: 1px solid var(--bs-border-color, #dee2e6);
     }
-    #estateChangeRequestTable_wrapper .dataTables_filter {
+    #estateHacApprovedTable_wrapper .dataTables_filter {
         text-align: right;
     }
-    #estateChangeRequestTable_wrapper .dataTables_filter label {
+    #estateHacApprovedTable_wrapper .dataTables_filter label {
         display: flex;
         align-items: center;
         gap: 0.5rem;

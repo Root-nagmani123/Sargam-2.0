@@ -327,8 +327,8 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('delete/{id}', 'delete')->name('delete');
        // Route::post('get-courses-by-status', 'getCoursesByStatus')->name('get.courses.by.status');
 
-     Route::post('get-courses-by-status', 'getCoursesByStatus')
-    ->name('get.courses.by.status');
+    // Route::post('get-courses-by-status', 'getCoursesByStatus')
+    // ->name('get.courses.by.status');
 
 
 
@@ -598,16 +598,16 @@ Route::prefix('admin/family-idcard')->name('admin.family_idcard.')->controller(F
             Route::get('/conversation_student/{id}/{type}', 'conversation_student')->name('conversation_student');
             Route::post('/memo/get-data', [CourseAttendanceNoticeMapController::class, 'getMemoData'])->name('get_memo_data');
             Route::post('/memo/get-generated-data', [CourseAttendanceNoticeMapController::class, 'getGeneratedMemoData'])->name('get_generated_memo_data');
-            Route::post('/memo/get-data', [CourseAttendanceNoticeMapController::class, 'getMemoData'])->name('get_memo_data');
-            Route::post('/memo/get-generated-data', [CourseAttendanceNoticeMapController::class, 'getGeneratedMemoData'])->name('get_generated_memo_data');
+            // Route::post('/memo/get-data', [CourseAttendanceNoticeMapController::class, 'getMemoData'])->name('get_memo_data');
+            // Route::post('/memo/get-generated-data', [CourseAttendanceNoticeMapController::class, 'getGeneratedMemoData'])->name('get_generated_memo_data');
             Route::get('/export-pdf', 'exportPdf')->name('export_pdf');
 
             Route::post('admin/memo-notice-management/filter', 'filter')->name('filter');
             Route::get('admin/memo-notice-management/filter', 'clear_filter')->name('clear_filter');
 
 
-            Route::post('admin/memo-notice-management/filter', 'filter')->name('filter');
-            Route::get('admin/memo-notice-management/filter', 'clear_filter')->name('clear_filter');
+            // Route::post('admin/memo-notice-management/filter', 'filter')->name('filter');
+            // Route::get('admin/memo-notice-management/filter', 'clear_filter')->name('clear_filter');
 
         });
 
@@ -663,7 +663,7 @@ Route::prefix('admin/family-idcard')->name('admin.family_idcard.')->controller(F
         Route::get('export', 'export')->name('export');
         Route::get('import', 'import')->name('import');
         Route::post('import', 'processImport')->name('process.import');
-        Route::post('import', 'processImport')->name('process.import');
+        // Route::post('import', 'processImport')->name('process.import');
     });
 
     Route::prefix('hostel-building-floor-room-map')->name('hostel.building.floor.room.map.')->controller(HostelBuildingFloorRoomMappingController::class)->group(function () {
