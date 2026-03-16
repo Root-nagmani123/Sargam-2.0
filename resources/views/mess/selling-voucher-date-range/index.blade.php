@@ -547,14 +547,14 @@ document.addEventListener('DOMContentLoaded', function () {
                                                 </select>
                                             </td>
                                             <td><input type="text" name="items[0][unit]" class="form-control  dr-unit" readonly placeholder="—"></td>
-                                            <td><input type="number" name="items[0][available_quantity]" class="form-control  dr-avail bg-light" step="0.01" min="0" value="0" placeholder="0" readonly></td>
+                                            <td><input type="text" name="items[0][available_quantity]" class="form-control  dr-avail bg-light" step="0.01" min="0" value="0" placeholder="0" readonly></td>
                                             <td>
-                                                <input type="number" name="items[0][quantity]" class="form-control  dr-qty" step="0.01" min="0.01" placeholder="0" required>
+                                                <input type="text" name="items[0][quantity]" class="form-control  dr-qty" step="0.01" min="0.01" placeholder="0" required>
                                                 <div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div>
                                             </td>
                                             <td><input type="text" class="form-control  dr-left bg-light" readonly placeholder="0"></td>
                                             <td><input type="date" name="items[0][issue_date]" class="form-control  dr-issue-date" value="{{ date('Y-m-d') }}"></td>
-                                            <td><input type="number" name="items[0][rate]" class="form-control  dr-rate" step="0.01" min="0" placeholder="0" required></td>
+                                            <td><input type="text" name="items[0][rate]" class="form-control  dr-rate" step="0.01" min="0" placeholder="0" required></td>
                                             <td><input type="text" class="form-control  dr-total bg-light" readonly placeholder="0.00"></td>
                                             <td><button type="button" class="btn  btn-outline-danger dr-remove-row voucher-icon-btn" disabled title="Remove">×</button></td>
                                         </tr>
