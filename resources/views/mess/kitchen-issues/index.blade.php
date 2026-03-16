@@ -1,74 +1,86 @@
 @extends('admin.layouts.master')
 @section('title', 'Selling Voucher')
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid py-3">
     <x-breadcrum title="Selling Voucher" />
 
     @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <div class="alert alert-success alert-dismissible fade show shadow-sm border-0 mt-2" role="alert">
+            {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     @endif
     @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show">{{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <div class="alert alert-danger alert-dismissible fade show shadow-sm border-0 mt-2" role="alert">
+            {{ session('error') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     @endif
 
-    <div class="card mb-3">
+    <div class="card mb-3 border-0 shadow-sm rounded-3">
         <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4>Selling Voucher</h4>
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addSellingVoucherModal">ADD Selling Voucher</button>
-    </div>
-    <hr class="my-2">
-            <form method="GET" action="{{ route('admin.mess.material-management.index') }}">
-                <div class="row g-2">
-                    <div class="col-md-2">
-                        <label class="form-label small">Status</label>
-                        <select name="status" id="filter_status" class="form-select">
-                            <option value="">All</option>
-                            <option value="0" {{ request('status') === '0' ? 'selected' : '' }}>Pending</option>
-                            <option value="2" {{ request('status') == '2' ? 'selected' : '' }}>Approved</option>
-                            <option value="4" {{ request('status') == '4' ? 'selected' : '' }}>Completed</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label small">Store</label>
-                        <select name="store" id="filter_store" class="form-select">
-                            <option value="">All</option>
-                            @foreach($stores as $store)
-                                <option value="{{ $store['id'] }}" {{ request('store') == $store['id'] ? 'selected' : '' }}>{{ $store['store_name'] }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label small">Start Date</label>
-                        <input type="date" name="start_date" id="filter_start_date" class="form-control " value="{{ request('start_date') ?? date('Y-m-d') }}">
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label small">End Date</label>
-                        <input type="date" name="end_date" id="filter_end_date" class="form-control " value="{{ request('end_date') }}" min="{{ request('start_date') ?? date('Y-m-d') }}">
-                    </div>
-                    <div class="col-md-2 d-flex align-items-end gap-1">
-                        <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-1">
-                            <span class="material-symbols-rounded" style="font-size: 1rem;">filter_list</span>
-                            <span>Filter</span>
-                        </button>
-                        <a href="{{ route('admin.mess.material-management.index') }}" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1">
-                            <span class="material-symbols-rounded" style="font-size: 1rem;">refresh</span>
-                            <span>Clear</span>
-                        </a>
-                    </div>
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                <div>
+                    <h5 class="mb-1 fw-semibold">Selling Voucher</h5>
+                    <p class="text-muted mb-0 small">Quickly filter and manage selling vouchers from here.</p>
                 </div>
-            </form>
+                <button type="button"
+                        class="btn btn-primary d-inline-flex align-items-center gap-2"
+                        data-bs-toggle="modal"
+                        data-bs-target="#addSellingVoucherModal">
+                    <span class="material-symbols-rounded" style="font-size: 1.1rem;">add</span>
+                    <span class="fw-semibold">Add Selling Voucher</span>
+                </button>
+            </div>
+            <div class="border rounded-3 bg-light p-3">
+                <form method="GET" action="{{ route('admin.mess.material-management.index') }}">
+                    <div class="row g-3">
+                        <div class="col-md-2 col-sm-6">
+                            <label class="form-label small text-muted mb-1">Status</label>
+                            <select name="status" id="filter_status" class="form-select form-select-sm">
+                                <option value="">All</option>
+                                <option value="0" {{ request('status') === '0' ? 'selected' : '' }}>Pending</option>
+                                <option value="2" {{ request('status') == '2' ? 'selected' : '' }}>Approved</option>
+                                <option value="4" {{ request('status') == '4' ? 'selected' : '' }}>Completed</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 col-sm-6">
+                            <label class="form-label small text-muted mb-1">Store</label>
+                            <select name="store" id="filter_store" class="form-select form-select-sm">
+                                <option value="">All</option>
+                                @foreach($stores as $store)
+                                    <option value="{{ $store['id'] }}" {{ request('store') == $store['id'] ? 'selected' : '' }}>{{ $store['store_name'] }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-2 col-sm-6">
+                            <label class="form-label small text-muted mb-1">Start Date</label>
+                            <input type="date" name="start_date" id="filter_start_date" class="form-control form-control-sm" value="{{ request('start_date') ?? date('Y-m-d') }}">
+                        </div>
+                        <div class="col-md-2 col-sm-6">
+                            <label class="form-label small text-muted mb-1">End Date</label>
+                            <input type="date" name="end_date" id="filter_end_date" class="form-control form-control-sm" value="{{ request('end_date') }}" min="{{ request('start_date') ?? date('Y-m-d') }}">
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end justify-content-md-end gap-2">
+                            <button type="submit" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1">
+                                <span class="material-symbols-rounded" style="font-size: 1rem;">filter_list</span>
+                                <span>Filter</span>
+                            </button>
+                            <a href="{{ route('admin.mess.material-management.index') }}" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1">
+                                <span class="material-symbols-rounded" style="font-size: 1rem;">refresh</span>
+                                <span>Clear</span>
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 
-   <div class="card">
-    <div class="card-body">
-    <div class="table-responsive">
-        <table class="table text-nowrap align-middle" id="sellingVouchersTable">
+    <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover align-middle mb-0" id="sellingVouchersTable">
             <thead>
                 <tr>
                     <th>S. No.</th>
@@ -86,7 +98,7 @@
                     <th>Action</th>
                 </tr>
             </thead>
-            <tbody>   
+            <tbody>
                 @forelse($kitchenIssues as $voucher)
                     @forelse($voucher->items as $item)
                         <tr>
@@ -138,7 +150,7 @@
                             <td>
                                 <button type="button" class="btn btn-sm btn-outline-secondary btn-return-sv" data-voucher-id="{{ $voucher->pk }}" title="Return">Return</button>
                             </td>
-                            <td>
+                            <td class="d-flex justify-content-center gap-2">
                                 <button type="button" class="btn btn-sm btn-info btn-view-sv" data-voucher-id="{{ $voucher->pk }}" title="View">View</button>
                                 <button type="button" class="btn btn-sm btn-warning btn-edit-sv" data-voucher-id="{{ $voucher->pk }}" title="{{ $voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED ? 'Edit is disabled for approved voucher' : 'Edit' }}" @if($voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED) disabled @endif>Edit</button>
                                 <form action="{{ route('admin.mess.material-management.destroy', $voucher->pk) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this Selling Voucher?');">
@@ -364,15 +376,15 @@ document.addEventListener('DOMContentLoaded', function () {
                                                     @endforeach
                                                 </select>
                                             </td>
-                                            <td><input type="text" name="items[0][unit]" class="form-control  sv-unit" readonly placeholder="—"></td>
-                                            <td><input type="number" name="items[0][available_quantity]" class="form-control  sv-avail bg-light" value="0" placeholder="0" readonly></td>
+                                            <td><input type="text" name="items[0][unit]" class="form-control  sv-unit" readonly></td>
+                                            <td><input type="text" name="items[0][available_quantity]" class="form-control  sv-avail bg-light" readonly></td>
                                             <td>
-                                                <input type="number" name="items[0][quantity]" class="form-control  sv-qty" placeholder="0" required>
+                                                <input type="text" name="items[0][quantity]" class="form-control  sv-qty" required>
                                                 <div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div>
                                             </td>
-                                            <td><input type="text" class="form-control  sv-left bg-light" readonly placeholder="0"></td>
-                                            <td><input type="number" name="items[0][rate]" class="form-control  sv-rate" placeholder="0" required></td>
-                                            <td><input type="text" class="form-control  sv-total bg-light" readonly placeholder="0.00"></td>
+                                            <td><input type="text" class="form-control  sv-left bg-light" readonly></td>
+                                            <td><input type="text" name="items[0][rate]" class="form-control  sv-rate" required></td>
+                                            <td><input type="text" class="form-control  sv-total" readonly></td>
                                             <td><button type="button" class="btn btn-sm btn-outline-danger sv-remove-row" disabled title="Remove">×</button></td>
                                         </tr>
                                     </tbody>
@@ -1046,12 +1058,15 @@ document.addEventListener('DOMContentLoaded', function() {
             if (clientTypeChecked) {
                 clientNameWrap.style.display = '';
                 nameFieldWrap.style.display = '';
-                if (typeof updateModalNameField === 'function') updateModalNameField();
             } else {
                 clientNameWrap.style.display = 'none';
                 nameFieldWrap.style.display = 'none';
             }
-        } else if (typeof updateModalNameField === 'function') {
+        }
+        // After all TomSelect instances (and their wrappers) are created, ensure that
+        // only the correct Name dropdown(s) are visible for the currently selected
+        // client type (especially after a validation error + old() values).
+        if (typeof updateModalNameField === 'function') {
             updateModalNameField();
         }
     }
@@ -1643,35 +1658,55 @@ document.addEventListener('DOMContentLoaded', function() {
         const showAcademyStaff = isEmployee && isAcademyStaff;
         const showMessStaff = isEmployee && isMessStaff;
         const showAny = showFaculty || showAcademyStaff || showMessStaff;
+
+        // Pehle high-level Client Name / OT Course / Course select ko control karo
         if (isOt) {
+            // OT: sirf OT Course + OT Student dikhna chahiye
+            setSelectVisible(clientNameSelect, false);
+            if (courseSelect) setSelectVisible(courseSelect, false);
+            if (otStudentSelect) { setSelectVisible(otStudentSelect, true); }
+            const otCourseSelect = document.getElementById('modalOtCourseSelect');
+            if (otCourseSelect) setSelectVisible(otCourseSelect, true);
             nameInput.style.display = 'none';
             nameInput.removeAttribute('required');
-            [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) { if (sel) { setSelectVisible(sel, false); sel.value = ''; sel.removeAttribute('required'); } });
-            if (otStudentSelect) { setSelectVisible(otStudentSelect, true); }
-            if (courseSelect) { setSelectVisible(courseSelect, false); courseSelect.value = ''; courseSelect.removeAttribute('required'); }
-            if (courseNameSelect) { setSelectVisible(courseNameSelect, false); courseNameSelect.value = ''; courseNameSelect.removeAttribute('required'); }
         } else if (isCourse) {
+            // Course: sirf Course select + text Name field
+            setSelectVisible(clientNameSelect, false);
+            const otCourseSelect = document.getElementById('modalOtCourseSelect');
+            if (otCourseSelect) setSelectVisible(otCourseSelect, false);
+            if (otStudentSelect) { setSelectVisible(otStudentSelect, false); }
+            if (courseSelect) setSelectVisible(courseSelect, true);
             nameInput.style.display = 'block';
             nameInput.placeholder = 'Course name';
             nameInput.setAttribute('required', 'required');
-            [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) { if (sel) { setSelectVisible(sel, false); sel.value = ''; sel.removeAttribute('required'); } });
-            if (otStudentSelect) { setSelectVisible(otStudentSelect, false); otStudentSelect.value = ''; otStudentSelect.removeAttribute('required'); }
-            if (courseSelect) { setSelectVisible(courseSelect, true); }
-            if (courseNameSelect) { setSelectVisible(courseNameSelect, false); courseNameSelect.removeAttribute('required'); courseNameSelect.value = ''; }
         } else {
+            // Employee / Section / Other: sirf Client Name + (Faculty/Staff/Mess) dropdown ya text field
+            setSelectVisible(clientNameSelect, true);
+            const otCourseSelect = document.getElementById('modalOtCourseSelect');
+            if (otCourseSelect) setSelectVisible(otCourseSelect, false);
+            if (otStudentSelect) { setSelectVisible(otStudentSelect, false); }
+            if (courseSelect) setSelectVisible(courseSelect, false);
             nameInput.style.display = showAny ? 'none' : 'block';
-            nameInput.removeAttribute('required');
-            [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) {
-                if (!sel) return;
-                const show = sel === facultySelect ? showFaculty : (sel === academyStaffSelect ? showAcademyStaff : showMessStaff);
-                setSelectVisible(sel, show);
-                sel.removeAttribute('required');
-                if (show) { sel.setAttribute('required', 'required'); sel.value = nameInput.value || ''; if (sel.value) nameInput.value = sel.value; } else sel.value = '';
-            });
-            if (otStudentSelect) { setSelectVisible(otStudentSelect, false); otStudentSelect.value = ''; otStudentSelect.removeAttribute('required'); }
-            if (courseSelect) { setSelectVisible(courseSelect, false); courseSelect.value = ''; courseSelect.removeAttribute('required'); }
-            if (courseNameSelect) { setSelectVisible(courseNameSelect, false); courseNameSelect.value = ''; courseNameSelect.removeAttribute('required'); }
-            if (!showAny) nameInput.setAttribute('required', 'required');
+        }
+
+        // Ab niche ke detailed faculty/academy/mess/course-name dropdowns handle karo
+        [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) {
+            if (!sel) return;
+            const show = sel === facultySelect ? showFaculty : (sel === academyStaffSelect ? showAcademyStaff : showMessStaff);
+            setSelectVisible(sel, show);
+            sel.removeAttribute('required');
+            if (show) {
+                sel.setAttribute('required', 'required');
+                sel.value = nameInput.value || '';
+                if (sel.value) nameInput.value = sel.value;
+            } else {
+                sel.value = '';
+            }
+        });
+        if (otStudentSelect) { setSelectVisible(otStudentSelect, isOt); if (!isOt) { otStudentSelect.value = ''; otStudentSelect.removeAttribute('required'); } }
+        if (courseNameSelect) { setSelectVisible(courseNameSelect, false); courseNameSelect.value = ''; courseNameSelect.removeAttribute('required'); }
+        if (!showAny && !isOt && !isCourse) {
+            nameInput.setAttribute('required', 'required');
         }
     }
     document.querySelectorAll('#addSellingVoucherModal .client-type-radio').forEach(function(radio) {

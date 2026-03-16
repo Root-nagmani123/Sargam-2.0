@@ -74,6 +74,17 @@
 
     <div class="card selling-voucher-card">
         <div class="card-body">
+            <div class="d-flex justify-content-end mb-2">
+                <div class="input-group input-group-sm selling-voucher-search-wrapper" style="max-width: 260px;">
+                    <span class="input-group-text">
+                        <i class="material-symbols-rounded" style="font-size: 1rem;">search</i>
+                    </span>
+                    <input type="text"
+                           id="sellingVoucherCustomSearch"
+                           class="form-control"
+                           placeholder="Search selling vouchers...">
+                </div>
+            </div>
             <div class="table-responsive">
                 <table class="table align-middle mb-0 voucher-table" id="sellingVoucherDateRangeTable">
                     <thead>
@@ -193,14 +204,43 @@
         </div>
     </div>
 
-    @include('components.mess-master-datatables', [
-    'tableId' => 'sellingVoucherDateRangeTable',
-    'searchPlaceholder' => 'Search selling vouchers...',
-    'ordering' => false,
-    'actionColumnIndex' => 12,
-    'infoLabel' => 'selling vouchers',
-    'searchDelay' => 0
-    ])
+@include('components.mess-master-datatables', [
+'tableId' => 'sellingVoucherDateRangeTable',
+'searchPlaceholder' => 'Search selling vouchers...',
+'ordering' => false,
+'actionColumnIndex' => 12,
+'infoLabel' => 'selling vouchers',
+'searchDelay' => 0
+])
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    if (typeof window.jQuery === 'undefined' || !window.jQuery.fn.DataTable) return;
+    var $ = window.jQuery;
+    var $table = $('#sellingVoucherDateRangeTable');
+    if (!$table.length) return;
+
+    function bindSellingVoucherSearch(dtApi) {
+        var $input = $('#sellingVoucherCustomSearch');
+        if (!$input.length) return;
+        $input.on('keyup change', function () {
+            var val = this.value;
+            dtApi.search(val).draw();
+        });
+    }
+
+    if ($.fn.DataTable.isDataTable($table)) {
+        bindSellingVoucherSearch($table.DataTable());
+    } else {
+        $table.on('init.dt', function (e, settings) {
+            var api = new $.fn.dataTable.Api(settings);
+            bindSellingVoucherSearch(api);
+        });
+    }
+});
+</script>
+@endpush
 </div>
 
 {{-- Tom Select CSS --}}
@@ -303,10 +343,10 @@
         box-shadow: var(--bs-box-shadow-sm);
     }
 
-    /* Mobile: enable horizontal scroll for wide table */
+    /* Mobile: enable horizontal scroll for wide table (only table scrolls, controls stay fixed) */
     @media (max-width: 991.98px) {
         .selling-voucher-card .card-body {
-            overflow-x: auto;
+            overflow-x: visible;
         }
 
         .selling-voucher-card .table-responsive {
@@ -317,6 +357,29 @@
         #sellingVoucherDateRangeTable {
             min-width: 1200px;
         }
+    }
+
+    /* Keep DataTable search box pinned and not floating while scrolling */
+    .selling-voucher-card .dataTables_wrapper {
+        position: relative;
+    }
+
+    .selling-voucher-card .dataTables_wrapper .dataTables_filter {
+        display: none; /* hide default DataTables search for this table */
+    }
+
+    .selling-voucher-search-wrapper {
+        max-width: 260px;
+    }
+
+    /* Keep length dropdown, info text and pagination pinned on horizontal scroll */
+    .selling-voucher-card .dataTables_wrapper .dataTables_length,
+    .selling-voucher-card .dataTables_wrapper .dataTables_info,
+    .selling-voucher-card .dataTables_wrapper .dataTables_paginate {
+        position: sticky;
+        left: 0;
+        z-index: 5;
+        background-color: #fff;
     }
 </style>
 <div class="modal fade" id="addReportModal" tabindex="-1" aria-labelledby="addReportModalLabel" aria-hidden="true">
