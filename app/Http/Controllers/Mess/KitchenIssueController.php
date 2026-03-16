@@ -385,7 +385,11 @@ class KitchenIssueController extends Controller
                 ->with('success', 'Selling Voucher created successfully');
         } catch (ValidationException $e) {
             DB::rollBack();
-            throw $e;
+
+            return redirect()->route('admin.mess.material-management.index')
+                ->withErrors($e->errors())
+                ->withInput()
+                ->with('open_selling_voucher_modal', true);
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()->route('admin.mess.material-management.index')

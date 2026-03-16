@@ -46,7 +46,6 @@
                 <table id="itemCategoriesTable" class="table align-middle w-100">
                     <thead>
                         <tr>
-                            <th>#</th>
                             <th>Category Name</th>
                             <th>Category Type</th>
                             <th>Item Category Description</th>
@@ -57,7 +56,6 @@
                     <tbody>
                         @foreach($itemcategories as $itemcategory)
                             <tr>
-                                <td>{{ $itemcategory->id }}</td>
                                 <td><div class="fw-semibold">{{ $itemcategory->category_name }}</div></td>
                                 <td>
                                     {{ $categoryTypes[$itemcategory->category_type ?? 'raw_material'] ?? ucfirst(str_replace('_', ' ', $itemcategory->category_type ?? '')) }}
@@ -197,7 +195,7 @@
     </div>
 </div>
 
-@include('components.mess-master-datatables', ['tableId' => 'itemCategoriesTable', 'searchPlaceholder' => 'Search category items...', 'orderColumn' => 1, 'actionColumnIndex' => 5, 'infoLabel' => 'category items'])
+@include('components.mess-master-datatables', ['tableId' => 'itemCategoriesTable', 'searchPlaceholder' => 'Search category items...', 'orderColumn' => 0, 'actionColumnIndex' => 4, 'infoLabel' => 'category items'])
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {

@@ -109,7 +109,6 @@
                 <table id="itemSubcategoriesTable" class="table align-middle mb-0">
                     <thead>
                         <tr>
-                            <th>#</th>
                             <th>Category</th>
                             <th>Item Name</th>
                             <th>Item Code</th>
@@ -122,8 +121,7 @@
                     <tbody>
                         @foreach($itemsubcategories as $itemsubcategory)
                             <tr>
-                                <td>{{ $itemsubcategory->id }}</td>
-                                <td>{{ $itemsubcategory->category ? $itemsubcategory->category->category_name : '-' }}</td>
+                                    <td>{{ $itemsubcategory->category ? $itemsubcategory->category->category_name : '-' }}</td>
                                 <td><div class="fw-semibold">{{ $itemsubcategory->item_name }}</div></td>
                                 <td>{{ $itemsubcategory->item_code ?? '-' }}</td>
                                 <td>{{ $itemsubcategory->unit_measurement ?? '-' }}</td>
@@ -303,7 +301,7 @@
     </div>
 </div>
 
-@include('components.mess-master-datatables', ['tableId' => 'itemSubcategoriesTable', 'searchPlaceholder' => 'Search subcategory items...', 'orderColumn' => 2, 'actionColumnIndex' => 7, 'infoLabel' => 'subcategory items'])
+@include('components.mess-master-datatables', ['tableId' => 'itemSubcategoriesTable', 'searchPlaceholder' => 'Search items...', 'orderColumn' => 1, 'actionColumnIndex' => 6, 'infoLabel' => 'subcategory items'])
 @push('scripts')
 <script>
 (function () {

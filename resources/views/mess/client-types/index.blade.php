@@ -27,7 +27,6 @@
                 <table id="clientTypesTable" class="table  align-middle w-100">
                     <thead>
                         <tr>
-                            <th>#</th>
                             <th>Client Types</th>
                             <th>Client Name</th>
                             <th>Status</th>
@@ -37,7 +36,6 @@
                     <tbody>
                         @foreach($clientTypes as $clientType)
                             <tr>
-                                <td>{{ $clientType->id }}</td>
                                 <td><div class="fw-semibold">{{ $clientTypeOptions[$clientType->client_type] ?? $clientType->client_type }}</div></td>
                                 <td><div class="fw-semibold">{{ $clientType->client_name }}</div></td>
                                 <td>
@@ -164,7 +162,7 @@
     </div>
 </div>
 
-@include('components.mess-master-datatables', ['tableId' => 'clientTypesTable', 'searchPlaceholder' => 'Search client types...', 'orderColumn' => 1, 'actionColumnIndex' => 4, 'infoLabel' => 'client types'])
+@include('components.mess-master-datatables', ['tableId' => 'clientTypesTable', 'searchPlaceholder' => 'Search client types...', 'orderColumn' => 0, 'actionColumnIndex' => 3, 'infoLabel' => 'client types'])
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {

@@ -25,7 +25,6 @@
                     <table id="vendorsTable" class="table align-middle w-100">
                         <thead>
                             <tr>
-                                <th>#</th>
                                 <th>Vendor Name</th>
                                 <th>Email</th>
                                 <th>Contact Person</th>
@@ -37,7 +36,6 @@
                         <tbody>
                             @foreach($vendors as $vendor)
                             <tr>
-                                <td>{{ $vendor->id }}</td>
                                 <td>
                                     <div class="fw-semibold">{{ $vendor->name }}</div>
                                 </td>
@@ -366,7 +364,7 @@
     </div>
 </div>
 @include('components.mess-master-datatables', ['tableId' => 'vendorsTable', 'searchPlaceholder' => 'Search vendors...',
-'orderColumn' => 1, 'actionColumnIndex' => 6, 'infoLabel' => 'vendors'])
+'orderColumn' => 0, 'actionColumnIndex' => 5, 'infoLabel' => 'vendors'])
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {

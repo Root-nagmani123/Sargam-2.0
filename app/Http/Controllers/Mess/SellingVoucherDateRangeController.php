@@ -47,6 +47,12 @@ class SellingVoucherDateRangeController extends Controller
         if ($request->filled('start_date') && $request->filled('end_date')) {
             // Filter strictly by Request Date (date_from) falling within the selected range
             $query->whereBetween('date_from', [$request->start_date, $request->end_date]);
+        } elseif ($request->filled('start_date')) {
+            // Partial filter: only start date provided – show vouchers from this date onward
+            $query->whereDate('date_from', '>=', $request->start_date);
+        } elseif ($request->filled('end_date')) {
+            // Partial filter: only end date provided – show vouchers up to this date
+            $query->whereDate('date_from', '<=', $request->end_date);
         }
 
         // DataTables handles pagination/search on the client; return full filtered set.
