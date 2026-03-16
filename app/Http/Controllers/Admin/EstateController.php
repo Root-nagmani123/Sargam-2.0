@@ -5747,7 +5747,14 @@ class EstateController extends Controller
                 });
             }
 
-            $recordsFiltered = (clone $query)->count('emrd.pk');
+            // DataTables needs recordsFiltered, but when there is no global search,
+            // it is identical to recordsTotal. Avoid running a second heavy COUNT
+            // over the joined/windowed query in that common case.
+            if ($searchValue === '') {
+                $recordsFiltered = $recordsTotal;
+            } else {
+                $recordsFiltered = (clone $query)->count('emrd.pk');
+            }
 
             $orderCol = (int) data_get($request->all(), 'order.0.column', 0);
             // Default: latest first (so recently updated readings appear on top)

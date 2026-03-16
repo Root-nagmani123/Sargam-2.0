@@ -39,9 +39,46 @@
         </div>
     </div>
 
-    <!-- Data Table Card -->
+    <!-- Filters + Data Table Card -->
     <div class="card shadow-sm">
         <div class="card-body">
+            <!-- Simple filter row: require bill month & year before loading -->
+            <div class="row g-3 mb-3 no-print align-items-end">
+                <div class="col-sm-6 col-md-4 col-lg-3">
+                    <label for="filterBillYear" class="form-label mb-1">Bill Year<span class="text-danger">*</span></label>
+                    <input type="number" min="2000" max="2100" class="form-control form-control-sm" id="filterBillYear" placeholder="e.g. 2025" value="{{ now()->year }}">
+                </div>
+                <div class="col-sm-6 col-md-4 col-lg-3">
+                    <label for="filterBillMonth" class="form-label mb-1">Bill Month<span class="text-danger">*</span></label>
+                    <select id="filterBillMonth" class="form-select form-select-sm">
+                        <option value="">Select month</option>
+                        <option value="1" @if(now()->month === 1) selected @endif>January</option>
+                        <option value="2" @if(now()->month === 2) selected @endif>February</option>
+                        <option value="3" @if(now()->month === 3) selected @endif>March</option>
+                        <option value="4" @if(now()->month === 4) selected @endif>April</option>
+                        <option value="5" @if(now()->month === 5) selected @endif>May</option>
+                        <option value="6" @if(now()->month === 6) selected @endif>June</option>
+                        <option value="7" @if(now()->month === 7) selected @endif>July</option>
+                        <option value="8" @if(now()->month === 8) selected @endif>August</option>
+                        <option value="9" @if(now()->month === 9) selected @endif>September</option>
+                        <option value="10" @if(now()->month === 10) selected @endif>October</option>
+                        <option value="11" @if(now()->month === 11) selected @endif>November</option>
+                        <option value="12" @if(now()->month === 12) selected @endif>December</option>
+                    </select>
+                </div>
+                <div class="col-sm-12 col-md-4 col-lg-3 d-flex gap-2">
+                    <button type="button" id="btnUpdateMeterNoApplyFilter" class="btn btn-primary btn-sm flex-grow-1">
+                        Apply Filter
+                    </button>
+                    <button type="button" id="btnUpdateMeterNoClearFilter" class="btn btn-outline-secondary btn-sm flex-grow-1">
+                        Clear
+                    </button>
+                </div>
+                <div class="col-12">
+                    <div id="updateMeterNoFilterHint" class="small text-muted"></div>
+                </div>
+            </div>
+
             <div class="update-meter-no-table-wrapper table-responsive">
                 <table class="table text-nowrap" id="updateMeterNoTable">
                     <thead>
@@ -98,11 +135,23 @@
 @push('scripts')
 <script>
 $(document).ready(function() {
+    var updateMeterNoFilters = {
+        bill_year: ($('#filterBillYear').val() || '').trim(),
+        bill_month: ($('#filterBillMonth').val() || '').trim(),
+    };
+
     var table = $('#updateMeterNoTable').DataTable({
         processing: true,
         serverSide: true,
+        deferLoading: 0,
         ajax: {
             url: "{{ route('admin.estate.update-meter-no.list') }}",
+            data: function (d) {
+                if (updateMeterNoFilters.bill_year && updateMeterNoFilters.bill_month) {
+                    d.bill_year = updateMeterNoFilters.bill_year;
+                    d.bill_month = updateMeterNoFilters.bill_month;
+                }
+            },
         },
         columns: [
             { data: 'sn', title: 'S.No.' },
@@ -141,6 +190,48 @@ $(document).ready(function() {
         autoWidth: true,
         scrollX: true,
         dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
+    });
+
+    // On first load, if current month/year present, load that data by default
+    if (updateMeterNoFilters.bill_year && updateMeterNoFilters.bill_month) {
+        $('#updateMeterNoFilterHint').text(
+            'Showing records for Bill Year ' + updateMeterNoFilters.bill_year + ' and Bill Month ' + $('#filterBillMonth option:selected').text() + '.'
+        );
+        table.ajax.reload();
+    } else {
+        $('#updateMeterNoFilterHint').text(
+            'Please select Bill Year and Bill Month, then click "Apply Filter" to load records.'
+        );
+    }
+
+    $('#btnUpdateMeterNoApplyFilter').on('click', function() {
+        var year = ($('#filterBillYear').val() || '').trim();
+        var month = ($('#filterBillMonth').val() || '').trim();
+
+        if (!year || !month) {
+            alert('Please select both Bill Year and Bill Month to load the list.');
+            return;
+        }
+
+        updateMeterNoFilters.bill_year = year;
+        updateMeterNoFilters.bill_month = month;
+
+        $('#updateMeterNoFilterHint').text(
+            'Showing records for Bill Year ' + year + ' and Bill Month ' + $('#filterBillMonth option:selected').text() + '.'
+        );
+
+        table.ajax.reload();
+    });
+
+    $('#btnUpdateMeterNoClearFilter').on('click', function() {
+        $('#filterBillYear').val('');
+        $('#filterBillMonth').val('');
+        updateMeterNoFilters.bill_year = null;
+        updateMeterNoFilters.bill_month = null;
+        $('#updateMeterNoFilterHint').text(
+            'Please select Bill Year and Bill Month, then click "Apply Filter" to load records.'
+        );
+        table.clear().draw();
     });
 
     function buildUpdateMeterNoColumnToggle() {
