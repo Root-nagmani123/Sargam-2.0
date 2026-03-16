@@ -132,6 +132,16 @@
                             <option value="">All Buyers</option>
                         </select>
                     </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-semibold">Status</label>
+                        @php $currentStatus = $statusFilter ?? request('status', ''); @endphp
+                        <select name="status" id="filterStatus" class="form-select">
+                            <option value="">All Status</option>
+                            <option value="unpaid" {{ $currentStatus === 'unpaid' ? 'selected' : '' }}>Unpaid</option>
+                            <option value="partial" {{ $currentStatus === 'partial' ? 'selected' : '' }}>Partial</option>
+                            <option value="paid" {{ $currentStatus === 'paid' ? 'selected' : '' }}>Paid</option>
+                        </select>
+                    </div>
                     <div class="col-md-2 d-flex gap-1">
                         <button type="submit" class="btn btn-primary  flex-grow-1">
                             <i class="material-symbols-rounded align-middle">filter_list</i>
@@ -155,9 +165,10 @@
                 <input type="hidden" name="date_to" value="{{ $effectiveDateTo ?? request('date_to') }}">
                 <input type="hidden" name="client_type" value="{{ $clientType ?? request('client_type') }}">
                 <input type="hidden" name="buyer_name" value="{{ $buyerName ?? request('buyer_name') }}">
+                <input type="hidden" name="status" value="{{ $statusFilter ?? request('status') }}">
                 <div class="d-flex flex-wrap justify-content-end align-items-right mb-3 gap-2">
                     <div class="d-flex align-items-center gap-2">
-                        <a href="{{ route('admin.mess.process-mess-bills-employee.export') }}?{{ http_build_query(request()->only(['date_from', 'date_to', 'client_type', 'buyer_name', 'search'])) }}" class="btn  btn-outline-secondary d-inline-flex align-items-center gap-1" title="Export to Excel">
+                        <a href="{{ route('admin.mess.process-mess-bills-employee.export') }}?{{ http_build_query(request()->only(['date_from', 'date_to', 'client_type', 'buyer_name', 'status', 'search'])) }}" class="btn  btn-outline-secondary d-inline-flex align-items-center gap-1" title="Export to Excel">
                             <i class="material-symbols-rounded" style="font-size: 1.1rem;">file_download</i>
                             <span>Export</span>
                         </a>
@@ -1290,7 +1301,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var dateStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-');
         var timeStr = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
         var rows = (data.items || []).map(function(item) {
-            return '<tr><td>' + (item.store_name || '—') + '</td><td>' + (item.item_name || '—') + '</td><td>' + (item.purchase_date || '—') + '</td><td class="text-end">' + (item.price || '0') + '</td><td class="text-end">' + (item.quantity || '0') + '</td><td class="text-end">' + (item.amount || '0') + '</td></tr>';
+            return '<tr><td>' + (item.store_name || '—') + '</td><td>' + (item.item_name || '—') + '</td><td>' + (item.issue_date || '—') + '</td><td class="text-end">' + (item.price || '0') + '</td><td class="text-end">' + (item.quantity || '0') + '</td><td class="text-end">' + (item.amount || '0') + '</td></tr>';
         }).join('');
         var clientNameCourse = data.client_name_course || (function () {
             if (data.course_name) {
@@ -1327,7 +1338,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 ? ('<div class="client-row"><span><span class="client-label">Remarks</span>: <span class="client-value">' + data.remarks + '</span></span></div>')
                 : '') +
             '<hr/>' +
-            '<table class="bill-table"><thead><tr><th>Store Name</th><th>Item Name</th><th>Purchase Date</th><th class="text-end">Price</th><th class="text-end">Quantity</th><th class="text-end">Amount</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+            '<table class="bill-table"><thead><tr><th>Store Name</th><th>Item Name</th><th>Issue Date</th><th class="text-end">Price</th><th class="text-end">Quantity</th><th class="text-end">Amount</th></tr></thead><tbody>' + rows + '</tbody></table>' +
             '<div class="receipt-bottom">' +
             '<div></div>' +
             '<div class="payment-summary">' +

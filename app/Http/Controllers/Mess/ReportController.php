@@ -119,8 +119,25 @@ class ReportController extends Controller
     {
         $fromDate = $request->filled('from_date') ? $request->from_date : now()->format('Y-m-d');
         $toDate = $request->filled('to_date') ? $request->to_date : now()->format('Y-m-d');
-        $storeId = $request->filled('store_id') ? $request->store_id : null;
         $storeType = $request->filled('store_type') ? $request->store_type : 'main';
+
+        // Determine store ID based on store type and specific field names.
+        // We support both the new distinct fields (main_store_id/sub_store_id)
+        // and the legacy single store_id for backward compatibility.
+        $storeId = null;
+        if ($storeType === 'main') {
+            if ($request->filled('main_store_id')) {
+                $storeId = $request->main_store_id;
+            } elseif ($request->filled('store_id')) {
+                $storeId = $request->store_id;
+            }
+        } else {
+            if ($request->filled('sub_store_id')) {
+                $storeId = $request->sub_store_id;
+            } elseif ($request->filled('store_id')) {
+                $storeId = $request->store_id;
+            }
+        }
 
         [$reportData, $selectedStoreName] = $this->getStockSummaryReportData($fromDate, $toDate, $storeId, $storeType);
 
@@ -146,8 +163,22 @@ class ReportController extends Controller
     {
         $fromDate = $request->filled('from_date') ? $request->from_date : now()->format('Y-m-d');
         $toDate   = $request->filled('to_date') ? $request->to_date : now()->format('Y-m-d');
-        $storeId  = $request->filled('store_id') ? $request->store_id : null;
         $storeType = $request->filled('store_type') ? $request->store_type : 'main';
+
+        $storeId = null;
+        if ($storeType === 'main') {
+            if ($request->filled('main_store_id')) {
+                $storeId = $request->main_store_id;
+            } elseif ($request->filled('store_id')) {
+                $storeId = $request->store_id;
+            }
+        } else {
+            if ($request->filled('sub_store_id')) {
+                $storeId = $request->sub_store_id;
+            } elseif ($request->filled('store_id')) {
+                $storeId = $request->store_id;
+            }
+        }
 
         [$reportData, $selectedStoreName] = $this->getStockSummaryReportData($fromDate, $toDate, $storeId, $storeType);
 
@@ -165,8 +196,22 @@ class ReportController extends Controller
     {
         $fromDate = $request->filled('from_date') ? $request->from_date : now()->format('Y-m-d');
         $toDate   = $request->filled('to_date') ? $request->to_date : now()->format('Y-m-d');
-        $storeId  = $request->filled('store_id') ? $request->store_id : null;
         $storeType = $request->filled('store_type') ? $request->store_type : 'main';
+
+        $storeId = null;
+        if ($storeType === 'main') {
+            if ($request->filled('main_store_id')) {
+                $storeId = $request->main_store_id;
+            } elseif ($request->filled('store_id')) {
+                $storeId = $request->store_id;
+            }
+        } else {
+            if ($request->filled('sub_store_id')) {
+                $storeId = $request->sub_store_id;
+            } elseif ($request->filled('store_id')) {
+                $storeId = $request->store_id;
+            }
+        }
 
         [$reportData, $selectedStoreName] = $this->getStockSummaryReportData($fromDate, $toDate, $storeId, $storeType);
 
@@ -375,10 +420,18 @@ class ReportController extends Controller
         ]);
 
         if ($request->filled('from_date')) {
-            $query->whereDate('issue_date', '>=', $request->from_date);
+            $from = $request->from_date;
+            $query->where(function ($q) use ($from) {
+                $q->whereDate('issue_date', '>=', $from)
+                  ->orWhereDate('date_from', '>=', $from);
+            });
         }
         if ($request->filled('to_date')) {
-            $query->whereDate('issue_date', '<=', $request->to_date);
+            $to = $request->to_date;
+            $query->where(function ($q) use ($to) {
+                $q->whereDate('issue_date', '<=', $to)
+                  ->orWhereDate('date_to', '<=', $to);
+            });
         }
         if ($request->filled('employee_ot_filter')) {
             if ($request->employee_ot_filter === 'employee_ot') {
@@ -435,11 +488,15 @@ class ReportController extends Controller
         ]);
 
         $svQuery = \App\Models\Mess\SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'items.itemSubcategory']);
-        if ($request->filled('from_date')) {
-            $svQuery->whereDate('issue_date', '>=', $request->from_date);
-        }
-        if ($request->filled('to_date')) {
-            $svQuery->whereDate('issue_date', '<=', $request->to_date);
+        $fromDate = $request->filled('from_date') ? $request->from_date : null;
+        $toDate   = $request->filled('to_date') ? $request->to_date : null;
+        if ($fromDate && $toDate) {
+            $svQuery->whereDate('date_from', '<=', $toDate)
+                ->whereDate('date_to', '>=', $fromDate);
+        } elseif ($fromDate) {
+            $svQuery->whereDate('date_to', '>=', $fromDate);
+        } elseif ($toDate) {
+            $svQuery->whereDate('date_from', '<=', $toDate);
         }
         if ($request->filled('client_type_slug')) {
             $svQuery->where('client_type_slug', $request->client_type_slug);
@@ -884,17 +941,26 @@ class ReportController extends Controller
         ]);
 
         // --- 1. Selling Voucher Date Range ---
+        // Use date range overlap logic on date_from/date_to so partial overlaps also match.
         $svQuery = \App\Models\Mess\SellingVoucherDateRangeReport::with([
             'store',
             'clientTypeCategory',
             'items.itemSubcategory'
         ]);
 
-        if ($request->filled('from_date')) {
-            $svQuery->whereDate('issue_date', '>=', $request->from_date);
-        }
-        if ($request->filled('to_date')) {
-            $svQuery->whereDate('issue_date', '<=', $request->to_date);
+        $fromDate = $request->filled('from_date') ? $request->from_date : null;
+        $toDate   = $request->filled('to_date') ? $request->to_date : null;
+
+        if ($fromDate && $toDate) {
+            // Any voucher whose [date_from, date_to] overlaps [fromDate, toDate]
+            $svQuery->whereDate('date_from', '<=', $toDate)
+                ->whereDate('date_to', '>=', $fromDate);
+        } elseif ($fromDate) {
+            // Vouchers that end on/after fromDate
+            $svQuery->whereDate('date_to', '>=', $fromDate);
+        } elseif ($toDate) {
+            // Vouchers that start on/before toDate
+            $svQuery->whereDate('date_from', '<=', $toDate);
         }
         if ($request->filled('client_type_slug')) {
             $svQuery->where('client_type_slug', $request->client_type_slug);
@@ -950,44 +1016,24 @@ class ReportController extends Controller
             ->sortByDesc(function ($v) { return $v->issue_date ? $v->issue_date->format('Y-m-d') : ''; })
             ->values();
 
-        // --- 4. Paginate by BUYER: one buyer per page (or all for print_all) ---
+        // --- 4. Group by BUYER: load all buyers in a single view (no pagination) ---
         $groupedByBuyer = $vouchers->groupBy('client_type_pk');
-        $totalBuyers = $groupedByBuyer->count();
         $printAll = $request->boolean('print_all');
 
-        if ($printAll) {
-            $allBuyersSections = $groupedByBuyer->values()->map(function ($buyerVouchers) {
-                return $buyerVouchers->groupBy(function ($v) {
-                    $pk = $v->client_type_pk ?? '';
-                    $slug = $v->client_type_slug ?? '';
-                    return $pk . '-' . $slug;
-                });
-            });
-            $currentBuyerVouchers = collect();
-            $groupedSections = collect();
-            $paginator = null;
-        } else {
-            $currentPage = (int) $request->get('page', 1);
-            $perPage = 1;
-            $currentPage = max(1, min($currentPage, (int) max(1, ceil($totalBuyers / $perPage)) ?: 1));
-            $currentBuyerVouchers = $groupedByBuyer->values()->forPage($currentPage, $perPage)->first();
-            if (! $currentBuyerVouchers) {
-                $currentBuyerVouchers = collect();
-            }
-            $groupedSections = $currentBuyerVouchers->groupBy(function ($v) {
+        // For both normal view and print_all, we prepare all buyers' sections.
+        // View will iterate over $allBuyersSections so everything shows in one go.
+        $allBuyersSections = $groupedByBuyer->values()->map(function ($buyerVouchers) {
+            return $buyerVouchers->groupBy(function ($v) {
                 $pk = $v->client_type_pk ?? '';
                 $slug = $v->client_type_slug ?? '';
                 return $pk . '-' . $slug;
             });
-            $allBuyersSections = collect();
-            $paginator = new \Illuminate\Pagination\LengthAwarePaginator(
-                $groupedByBuyer->forPage($currentPage, $perPage)->values(),
-                $totalBuyers,
-                $perPage,
-                $currentPage,
-                ['path' => $request->url(), 'query' => $request->except('print_all')]
-            );
-        }
+        });
+
+        // Backwards compatibility: keep variables expected by the view.
+        // $groupedSections is no longer used for pagination but kept as empty collection.
+        $groupedSections = collect();
+        $paginator = null;
 
         $clientTypes = ClientType::clientTypes();
         $clientTypeCategories = ClientType::active()
@@ -1293,11 +1339,19 @@ class ReportController extends Controller
         
         // Apply filters
         if ($request->filled('from_date')) {
-            $query->whereDate('issue_date', '>=', $request->from_date);
+            $from = $request->from_date;
+            $query->where(function ($q) use ($from) {
+                $q->whereDate('issue_date', '>=', $from)
+                  ->orWhereDate('date_from', '>=', $from);
+            });
         }
         
         if ($request->filled('to_date')) {
-            $query->whereDate('issue_date', '<=', $request->to_date);
+            $to = $request->to_date;
+            $query->where(function ($q) use ($to) {
+                $q->whereDate('issue_date', '<=', $to)
+                  ->orWhereDate('date_to', '<=', $to);
+            });
         }
         
         // Employee / OT filter

@@ -74,6 +74,17 @@
 
     <div class="card selling-voucher-card">
         <div class="card-body">
+            <div class="d-flex justify-content-end mb-2">
+                <div class="input-group input-group-sm selling-voucher-search-wrapper" style="max-width: 260px;">
+                    <span class="input-group-text">
+                        <i class="material-symbols-rounded" style="font-size: 1rem;">search</i>
+                    </span>
+                    <input type="text"
+                           id="sellingVoucherCustomSearch"
+                           class="form-control"
+                           placeholder="Search selling vouchers...">
+                </div>
+            </div>
             <div class="table-responsive">
                 <table class="table align-middle mb-0 voucher-table" id="sellingVoucherDateRangeTable">
                     <thead>
@@ -193,14 +204,43 @@
         </div>
     </div>
 
-    @include('components.mess-master-datatables', [
-    'tableId' => 'sellingVoucherDateRangeTable',
-    'searchPlaceholder' => 'Search selling vouchers...',
-    'ordering' => false,
-    'actionColumnIndex' => 12,
-    'infoLabel' => 'selling vouchers',
-    'searchDelay' => 0
-    ])
+@include('components.mess-master-datatables', [
+'tableId' => 'sellingVoucherDateRangeTable',
+'searchPlaceholder' => 'Search selling vouchers...',
+'ordering' => false,
+'actionColumnIndex' => 12,
+'infoLabel' => 'selling vouchers',
+'searchDelay' => 0
+])
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    if (typeof window.jQuery === 'undefined' || !window.jQuery.fn.DataTable) return;
+    var $ = window.jQuery;
+    var $table = $('#sellingVoucherDateRangeTable');
+    if (!$table.length) return;
+
+    function bindSellingVoucherSearch(dtApi) {
+        var $input = $('#sellingVoucherCustomSearch');
+        if (!$input.length) return;
+        $input.on('keyup change', function () {
+            var val = this.value;
+            dtApi.search(val).draw();
+        });
+    }
+
+    if ($.fn.DataTable.isDataTable($table)) {
+        bindSellingVoucherSearch($table.DataTable());
+    } else {
+        $table.on('init.dt', function (e, settings) {
+            var api = new $.fn.dataTable.Api(settings);
+            bindSellingVoucherSearch(api);
+        });
+    }
+});
+</script>
+@endpush
 </div>
 
 {{-- Tom Select CSS --}}
@@ -249,14 +289,6 @@
     .voucher-section-card .card-header {
         background: var(--bs-tertiary-bg);
         border-bottom: 1px solid var(--bs-border-color-translucent);
-    }
-
-    .voucher-brand-head th {
-        background-color: #af2910 !important;
-        color: #fff !important;
-        border-color: #af2910 !important;
-        font-weight: 600;
-        white-space: nowrap;
     }
 
     #addReportModal .modal-dialog {
@@ -311,10 +343,10 @@
         box-shadow: var(--bs-box-shadow-sm);
     }
 
-    /* Mobile: enable horizontal scroll for wide table */
+    /* Mobile: enable horizontal scroll for wide table (only table scrolls, controls stay fixed) */
     @media (max-width: 991.98px) {
         .selling-voucher-card .card-body {
-            overflow-x: auto;
+            overflow-x: visible;
         }
 
         .selling-voucher-card .table-responsive {
@@ -325,6 +357,29 @@
         #sellingVoucherDateRangeTable {
             min-width: 1200px;
         }
+    }
+
+    /* Keep DataTable search box pinned and not floating while scrolling */
+    .selling-voucher-card .dataTables_wrapper {
+        position: relative;
+    }
+
+    .selling-voucher-card .dataTables_wrapper .dataTables_filter {
+        display: none; /* hide default DataTables search for this table */
+    }
+
+    .selling-voucher-search-wrapper {
+        max-width: 260px;
+    }
+
+    /* Keep length dropdown, info text and pagination pinned on horizontal scroll */
+    .selling-voucher-card .dataTables_wrapper .dataTables_length,
+    .selling-voucher-card .dataTables_wrapper .dataTables_info,
+    .selling-voucher-card .dataTables_wrapper .dataTables_paginate {
+        position: sticky;
+        left: 0;
+        z-index: 5;
+        background-color: #fff;
     }
 </style>
 <div class="modal fade" id="addReportModal" tabindex="-1" aria-labelledby="addReportModalLabel" aria-hidden="true">
@@ -492,14 +547,14 @@
                                                 </select>
                                             </td>
                                             <td><input type="text" name="items[0][unit]" class="form-control  dr-unit" readonly placeholder="—"></td>
-                                            <td><input type="number" name="items[0][available_quantity]" class="form-control  dr-avail bg-light" step="0.01" min="0" value="0" placeholder="0" readonly></td>
+                                            <td><input type="text" name="items[0][available_quantity]" class="form-control  dr-avail bg-light" step="0.01" min="0" value="0" placeholder="0" readonly></td>
                                             <td>
-                                                <input type="number" name="items[0][quantity]" class="form-control  dr-qty" step="0.01" min="0.01" placeholder="0" required>
+                                                <input type="text" name="items[0][quantity]" class="form-control  dr-qty" step="0.01" min="0.01" placeholder="0" required>
                                                 <div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div>
                                             </td>
                                             <td><input type="text" class="form-control  dr-left bg-light" readonly placeholder="0"></td>
                                             <td><input type="date" name="items[0][issue_date]" class="form-control  dr-issue-date" value="{{ date('Y-m-d') }}"></td>
-                                            <td><input type="number" name="items[0][rate]" class="form-control  dr-rate" step="0.01" min="0" placeholder="0" required></td>
+                                            <td><input type="text" name="items[0][rate]" class="form-control  dr-rate" step="0.01" min="0" placeholder="0" required></td>
                                             <td><input type="text" class="form-control  dr-total bg-light" readonly placeholder="0.00"></td>
                                             <td><button type="button" class="btn  btn-outline-danger dr-remove-row voucher-icon-btn" disabled title="Remove">×</button></td>
                                         </tr>

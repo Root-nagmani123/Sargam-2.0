@@ -38,12 +38,21 @@ use App\Http\Controllers\Admin\{
     DashboardStatisticsController,
     ParticipantHistoryController,
     CourseRepositoryController,
-    WhosWhoController,
+    EstateController,
 };
 use App\Http\Controllers\Dashboard\Calendar1Controller;
 use App\Http\Controllers\Admin\MemoNoticeController;
 use App\Http\Controllers\Admin\Master\DisciplineMasterController;
 use App\Http\Controllers\Admin\FeedbackController;
+use App\Http\Controllers\Admin\Estate\{
+    EstateCampusController,
+    EstateElectricSlabController,
+    UnitTypeController,
+    UnitSubTypeController,
+    EstateBlockController,
+    PayScaleController,
+    EligibilityCriteriaController,
+};
 use App\Http\Controllers\Admin\IssueManagement\{
     IssueManagementController,
     IssueCategoryController,
@@ -840,11 +849,410 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
     Route::post('/feedback_details/export', [FeedbackController::class, 'exportFeedbackDetails'])->name('admin.feedback.feedback_details.export');
 });
 
-   Route::get('/student-faculty-feedback', [CalendarController::class, 'studentFacultyFeedback'])->name('feedback.get.studentFacultyFeedback');
- Route::get(
-    '/admin/feedback/pending',
-    [FeedbackController::class, 'pendingFeedbackIndex']
-)->name('admin.feedback.pending');
+Route::get('/student-faculty-feedback', [CalendarController::class, 'studentFacultyFeedback'])->name('feedback.get.studentFacultyFeedback');
+Route::get('/admin/feedback/pending-students', [FeedbackController::class, 'pendingStudents'])->name('admin.feedback.pending.students');
+// Change export routes to POST
+Route::post('/admin/feedback/pending-students/export/pdf', [FeedbackController::class, 'exportPendingStudentsPDF'])
+    ->name('admin.feedback.export.pdf');
+
+Route::post('/admin/feedback/pending-students/export/excel', [FeedbackController::class, 'exportPendingStudentsExcel'])
+    ->name('admin.feedback.export.excel');
+
+// ============================================
+// Issue Management Module Routes (CENTCOM)
+// ============================================
+Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () {
+
+    // Issue Management - Main Routes
+    Route::get('issue-management', [IssueManagementController::class, 'index'])->name('issue-management.index');
+    Route::get('issue-management/export/excel', [IssueManagementController::class, 'exportExcel'])->name('issue-management.export.excel');
+    Route::get('issue-management/export/pdf', [IssueManagementController::class, 'exportPdf'])->name('issue-management.export.pdf');
+    Route::get('issue-management/centcom', [IssueManagementController::class, 'centcom'])->name('issue-management.centcom');
+    Route::get('issue-management/create', [IssueManagementController::class, 'create'])->name('issue-management.create');
+    Route::post('issue-management', [IssueManagementController::class, 'store'])->name('issue-management.store');
+
+    // AJAX Routes (must come BEFORE parameterized routes like {id})
+    Route::get('issue-management/sub-categories/{categoryId}', [IssueManagementController::class, 'getSubCategories'])->name('issue-management.sub-categories');
+    Route::get('issue-management/nodal-employees/{categoryId}', [IssueManagementController::class, 'getNodalEmployees'])->name('issue-management.nodal-employees');
+    Route::get('issue-management/buildings', [IssueManagementController::class, 'getBuildings'])->name('issue-management.buildings');
+    Route::get('issue-management/floors', [IssueManagementController::class, 'getFloors'])->name('issue-management.floors');
+    Route::get('issue-management/rooms', [IssueManagementController::class, 'getRooms'])->name('issue-management.rooms');
+
+    // Parameterized Routes (must come AFTER specific routes)
+    Route::get('issue-management/{id}', [IssueManagementController::class, 'show'])->name('issue-management.show');
+    Route::get('issue-management/{id}/edit', [IssueManagementController::class, 'edit'])->name('issue-management.edit');
+    Route::put('issue-management/{id}', [IssueManagementController::class, 'update'])->name('issue-management.update');
+    Route::put('issue-management/{id}/status', [IssueManagementController::class, 'status_update'])->name('issue-management.status_update');
+
+    // AJAX Routes
+    Route::get('issue-management/sub-categories/{categoryId}', [IssueManagementController::class, 'getSubCategories'])->name('issue-management.sub-categories');
+    Route::post('issue-management/{id}/feedback', [IssueManagementController::class, 'addFeedback'])->name('issue-management.add-feedback');
+
+    // Category Management
+    Route::get('issue-categories', [IssueCategoryController::class, 'index'])->name('issue-categories.index');
+    Route::post('issue-categories', [IssueCategoryController::class, 'store'])->name('issue-categories.store');
+    Route::put('issue-categories/{id}', [IssueCategoryController::class, 'update'])->name('issue-categories.update');
+    Route::delete('issue-categories/{id}', [IssueCategoryController::class, 'destroy'])->name('issue-categories.destroy');    // Sub-Category Management
+    Route::get('issue-sub-categories', [IssueSubCategoryController::class, 'index'])->name('issue-sub-categories.index');
+    Route::post('issue-sub-categories', [IssueSubCategoryController::class, 'store'])->name('issue-sub-categories.store');
+    Route::put('issue-sub-categories/{id}', [IssueSubCategoryController::class, 'update'])->name('issue-sub-categories.update');
+    Route::delete('issue-sub-categories/{id}', [IssueSubCategoryController::class, 'destroy'])->name('issue-sub-categories.destroy');
+
+    // Priority Management
+    Route::get('issue-priorities', [IssuePriorityController::class, 'index'])->name('issue-priorities.index');
+    Route::post('issue-priorities', [IssuePriorityController::class, 'store'])->name('issue-priorities.store');
+    Route::put('issue-priorities/{id}', [IssuePriorityController::class, 'update'])->name('issue-priorities.update');
+    Route::delete('issue-priorities/{id}', [IssuePriorityController::class, 'destroy'])->name('issue-priorities.destroy');
+
+    // Escalation Matrix (3-level hierarchy)
+    Route::get('issue-escalation-matrix', [IssueEscalationMatrixController::class, 'index'])->name('issue-escalation-matrix.index');
+    Route::post('issue-escalation-matrix', [IssueEscalationMatrixController::class, 'store'])->name('issue-escalation-matrix.store');
+    Route::put('issue-escalation-matrix/{categoryId}', [IssueEscalationMatrixController::class, 'update'])->name('issue-escalation-matrix.update');
+});
+// Mess Management
+    Route::prefix('admin/mess')->name('admin.mess.')->group(function () {
+        // Master Data
+        Route::resource('events', \App\Http\Controllers\Mess\EventController::class)->only(['index', 'create', 'store']);
+        Route::resource('inventories', \App\Http\Controllers\Mess\InventoryController::class)->only(['index', 'create', 'store']);
+        Route::resource('vendors', \App\Http\Controllers\Mess\VendorController::class)->except(['show']);
+        Route::resource('invoices', \App\Http\Controllers\Mess\InvoiceController::class)->only(['index', 'create', 'store']);
+        Route::resource('itemcategories', \App\Http\Controllers\Mess\ItemCategoryController::class)->except(['show']);
+        Route::resource('itemsubcategories', \App\Http\Controllers\Mess\ItemSubcategoryController::class)->except(['show']);
+        Route::resource('storeallocations', \App\Http\Controllers\Mess\StoreAllocationController::class)->only(['index', 'store']);
+        Route::get('storeallocations/{id}/edit', [\App\Http\Controllers\Mess\StoreAllocationController::class, 'edit'])->name('storeallocations.edit');
+        Route::put('storeallocations/{id}', [\App\Http\Controllers\Mess\StoreAllocationController::class, 'update'])->name('storeallocations.update');
+        Route::delete('storeallocations/{id}', [\App\Http\Controllers\Mess\StoreAllocationController::class, 'destroy'])->name('storeallocations.destroy');
+        
+        // Store Management
+        Route::resource('stores', \App\Http\Controllers\Mess\StoreController::class)->except(['show']);
+        
+        Route::resource('sub-stores', \App\Http\Controllers\Mess\SubStoreController::class)->except(['show']);
+        
+        // NEW: Setup - Configuration Modules
+        Route::resource('vendor-item-mappings', \App\Http\Controllers\Mess\VendorItemMappingController::class);
+        Route::resource('menu-rate-lists', \App\Http\Controllers\Mess\MenuRateListController::class);
+        Route::resource('sale-counters', \App\Http\Controllers\Mess\SaleCounterController::class);
+        Route::resource('sale-counter-mappings', \App\Http\Controllers\Mess\SaleCounterMappingController::class);
+        Route::resource('credit-limits', \App\Http\Controllers\Mess\CreditLimitController::class);
+        Route::resource('client-types', \App\Http\Controllers\Mess\ClientTypeController::class)->except(['show']);
+        Route::post('meal-rate-master/{id}/toggle-status', [\App\Http\Controllers\Mess\MealRateMasterController::class, 'toggleStatus'])->name('meal-rate-master.toggle-status');
+        Route::resource('meal-rate-master', \App\Http\Controllers\Mess\MealRateMasterController::class)->except(['show']);
+        Route::resource('number-configs', \App\Http\Controllers\Mess\NumberConfigController::class);
+        
+        // Purchase Order Management
+        Route::resource('purchaseorders', \App\Http\Controllers\Mess\PurchaseOrderController::class)->except(['edit', 'update', 'destroy']);
+        Route::get('purchaseorders/{id}/edit', [\App\Http\Controllers\Mess\PurchaseOrderController::class, 'edit'])->name('purchaseorders.edit');
+        Route::put('purchaseorders/{id}', [\App\Http\Controllers\Mess\PurchaseOrderController::class, 'update'])->name('purchaseorders.update');
+        Route::delete('purchaseorders/{id}', [\App\Http\Controllers\Mess\PurchaseOrderController::class, 'destroy'])->name('purchaseorders.destroy');
+        Route::post('purchaseorders/{id}/approve', [\App\Http\Controllers\Mess\PurchaseOrderController::class, 'approve'])->name('purchaseorders.approve');
+        Route::post('purchaseorders/{id}/reject', [\App\Http\Controllers\Mess\PurchaseOrderController::class, 'reject'])->name('purchaseorders.reject');
+        Route::get('purchaseorders/vendor/{vendorId}/items', [\App\Http\Controllers\Mess\PurchaseOrderController::class, 'getVendorItems'])->name('purchaseorders.vendor.items');
+        
+        // Material Management (formerly Kitchen Issue)
+        Route::get('material-management/students-by-course/{course_pk}', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'getStudentsByCourse'])->name('material-management.students-by-course');
+        Route::get('material-management/store/{storeIdentifier}/items', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'getStoreItems'])->name('material-management.store.items');
+        Route::resource('material-management', \App\Http\Controllers\Mess\KitchenIssueController::class);
+        Route::get('material-management/{id}/return', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'returnData'])->name('material-management.return');
+        Route::put('material-management/{id}/return', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'updateReturn'])->name('material-management.update-return');
+        Route::post('material-management/{id}/send-for-approval', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'sendForApproval'])->name('material-management.send-for-approval');
+        Route::get('material-management/records/ajax', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'getKitchenIssueRecords'])->name('material-management.records');
+        Route::get('material-management/reports/bill', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'billReport'])->name('material-management.bill-report');
+
+        // Selling Voucher with Date Range (standalone module - design like Selling Voucher, data separate)
+        Route::get('selling-voucher-date-range/students-by-course/{course_pk}', [\App\Http\Controllers\Mess\SellingVoucherDateRangeController::class, 'getStudentsByCourse'])->name('selling-voucher-date-range.students-by-course');
+        Route::get('selling-voucher-date-range/store/{storeIdentifier}/items', [\App\Http\Controllers\Mess\SellingVoucherDateRangeController::class, 'getStoreItems'])->name('selling-voucher-date-range.store.items');
+        Route::resource('selling-voucher-date-range', \App\Http\Controllers\Mess\SellingVoucherDateRangeController::class);
+        Route::get('selling-voucher-date-range/{id}/return', [\App\Http\Controllers\Mess\SellingVoucherDateRangeController::class, 'returnData'])->name('selling-voucher-date-range.return');
+        Route::put('selling-voucher-date-range/{id}/return', [\App\Http\Controllers\Mess\SellingVoucherDateRangeController::class, 'updateReturn'])->name('selling-voucher-date-range.update-return');
+        
+        // Material Management Approval
+        Route::prefix('material-management-approvals')->name('material-management-approvals.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Mess\KitchenIssueApprovalController::class, 'index'])->name('index');
+            Route::get('/{id}', [\App\Http\Controllers\Mess\KitchenIssueApprovalController::class, 'show'])->name('show');
+            Route::post('/{id}/approve', [\App\Http\Controllers\Mess\KitchenIssueApprovalController::class, 'approve'])->name('approve');
+            Route::post('/{id}/reject', [\App\Http\Controllers\Mess\KitchenIssueApprovalController::class, 'reject'])->name('reject');
+        });
+        
+        // NEW: Billing & Finance
+        Route::get('process-mess-bills-employee', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'index'])->name('process-mess-bills-employee.index');
+        Route::get('process-mess-bills-employee/modal-data', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'modalData'])->name('process-mess-bills-employee.modal-data');
+        Route::get('process-mess-bills-employee/{id}/payment-details', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'paymentDetails'])->name('process-mess-bills-employee.payment-details');
+        Route::post('process-mess-bills-employee/{id}/generate-invoice', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'generateInvoice'])->name('process-mess-bills-employee.generate-invoice');
+        Route::post('process-mess-bills-employee/{id}/generate-payment', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'generatePayment'])->name('process-mess-bills-employee.generate-payment');
+        Route::get('process-mess-bills-employee/{id}/print-receipt', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'printReceipt'])->name('process-mess-bills-employee.print-receipt');
+        Route::get('process-mess-bills-employee/export', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'export'])->name('process-mess-bills-employee.export');
+        Route::resource('monthly-bills', \App\Http\Controllers\Mess\MonthlyBillController::class);
+        Route::post('monthly-bills/generate', [\App\Http\Controllers\Mess\MonthlyBillController::class, 'generateBills'])->name('monthly-bills.generate');
+        Route::resource('finance-bookings', \App\Http\Controllers\Mess\FinanceBookingController::class);
+        Route::post('finance-bookings/{id}/approve', [\App\Http\Controllers\Mess\FinanceBookingController::class, 'approve'])->name('finance-bookings.approve');
+        Route::post('finance-bookings/{id}/reject', [\App\Http\Controllers\Mess\FinanceBookingController::class, 'reject'])->name('finance-bookings.reject');
+        
+        // NEW: Mess RBAC - Permission Management
+        // IMPORTANT: Custom routes MUST come BEFORE resource route
+        // Route::get('permissions/users-by-role', [\App\Http\Controllers\Mess\MessPermissionController::class, 'getUsersByRole'])->name('permissions.getUsersByRole');
+        // Route::get('permissions/check/{action}', [\App\Http\Controllers\Mess\MessPermissionController::class, 'checkPermission'])->name('permissions.check');
+        // Route::resource('permissions', \App\Http\Controllers\Mess\MessPermissionController::class);
+        
+        // Reports
+        Route::prefix('reports')->name('reports.')->group(function () {
+            Route::get('stock-purchase-details', [\App\Http\Controllers\Mess\ReportController::class, 'stockPurchaseDetails'])->name('stock-purchase-details');
+            Route::get('stock-purchase-details/export', [\App\Http\Controllers\Mess\ReportController::class, 'stockPurchaseDetailsExcel'])->name('stock-purchase-details.excel');
+            Route::get('stock-purchase-details/export-pdf', [\App\Http\Controllers\Mess\ReportController::class, 'stockPurchaseDetailsPdf'])->name('stock-purchase-details.pdf');
+            Route::get('stock-summary', [\App\Http\Controllers\Mess\ReportController::class, 'stockSummary'])->name('stock-summary');
+            Route::get('stock-summary/export', [\App\Http\Controllers\Mess\ReportController::class, 'stockSummaryExcel'])->name('stock-summary.excel');
+            Route::get('stock-summary/export-pdf', [\App\Http\Controllers\Mess\ReportController::class, 'stockSummaryPdf'])->name('stock-summary.pdf');
+            Route::get('category-wise-print-slip', [\App\Http\Controllers\Mess\ReportController::class, 'categoryWisePrintSlip'])->name('category-wise-print-slip');
+            Route::get('category-wise-print-slip/export', [\App\Http\Controllers\Mess\ReportController::class, 'categoryWisePrintSlipExcel'])->name('category-wise-print-slip.excel');
+            Route::get('category-wise-print-slip/export-pdf', [\App\Http\Controllers\Mess\ReportController::class, 'categoryWisePrintSlipPdf'])->name('category-wise-print-slip.pdf');
+            Route::get('stock-balance-till-date', [\App\Http\Controllers\Mess\ReportController::class, 'stockBalanceTillDate'])->name('stock-balance-till-date');
+            Route::get('stock-balance-till-date/export', [\App\Http\Controllers\Mess\ReportController::class, 'stockBalanceTillDateExcel'])->name('stock-balance-till-date.excel');
+            Route::get('stock-balance-till-date/export-pdf', [\App\Http\Controllers\Mess\ReportController::class, 'stockBalanceTillDatePdf'])->name('stock-balance-till-date.pdf');
+            Route::get('selling-voucher-print-slip', [\App\Http\Controllers\Mess\ReportController::class, 'sellingVoucherPrintSlip'])->name('selling-voucher-print-slip');
+            Route::get('selling-voucher-print-slip/export', [\App\Http\Controllers\Mess\ReportController::class, 'sellingVoucherPrintSlipExcel'])->name('selling-voucher-print-slip.excel');
+            Route::get('purchase-sale-quantity', [\App\Http\Controllers\Mess\ReportController::class, 'purchaseSaleQuantityReport'])->name('purchase-sale-quantity');
+            Route::get('purchase-sale-quantity/export', [\App\Http\Controllers\Mess\ReportController::class, 'purchaseSaleQuantityExcel'])->name('purchase-sale-quantity.excel');
+            Route::get('purchase-sale-quantity/export-pdf', [\App\Http\Controllers\Mess\ReportController::class, 'purchaseSaleQuantityPdf'])->name('purchase-sale-quantity.pdf');
+            Route::get('low-stock', [\App\Http\Controllers\Mess\ReportController::class, 'lowStockReport'])->name('low-stock');
+            Route::get('low-stock/export-pdf', [\App\Http\Controllers\Mess\ReportController::class, 'lowStockPdf'])->name('low-stock.pdf');
+        });
+    });
+
+     // Estate Management Routes (auth required)
+    Route::middleware(['auth'])->prefix('admin/estate')->name('admin.estate.')->group(function () {
+        // Estate Request for Others
+        Route::get('request-for-others', [EstateController::class, 'requestForOthers'])->name('request-for-others');
+
+        // Request For Estate (estate_home_request_details + possession)
+        Route::get('request-for-estate', [EstateController::class, 'requestForEstate'])->name('request-for-estate');
+        Route::get('request-for-estate/next-req-id', [EstateController::class, 'getNextRequestForEstateId'])->name('request-for-estate.next-req-id');   
+        // Put In HAC workflow
+        Route::get('put-in-hac', [EstateController::class, 'putInHac'])->name('put-in-hac');
+        Route::post('put-in-hac', [EstateController::class, 'putInHacAction'])->name('put-in-hac.action');
+        Route::get('request-for-estate/employees', [EstateController::class, 'getRequestForEstateEmployees'])->name('request-for-estate.employees');
+        Route::get('request-for-estate/employee-details/{pk}', [EstateController::class, 'getRequestForEstateEmployeeDetails'])->name('request-for-estate.employee-details');
+        Route::get('request-details/{id}', [EstateController::class, 'requestAndChangeRequestDetails'])->name('request-details');
+        Route::get('request-details/{id}', [EstateController::class, 'requestAndChangeRequestDetails'])->name('request-details');
+        Route::get('request-for-estate/vacant-houses', [EstateController::class, 'getVacantHousesForEstateRequest'])->name('request-for-estate.vacant-houses');
+        Route::post('request-for-estate', [EstateController::class, 'storeRequestForEstate'])->name('request-for-estate.store');
+        Route::delete('request-for-estate/{id}', [EstateController::class, 'destroyRequestForEstate'])->name('request-for-estate.destroy');
+
+        // Estate Approval Setting & Add Approved Request House
+        Route::get('estate-approval-setting', [EstateController::class, 'estateApprovalSetting'])->name('estate-approval-setting');
+        Route::get('add-approved-request-house', [EstateController::class, 'addApprovedRequestHouse'])->name('add-approved-request-house');
+        Route::post('store-approved-request-house', [EstateController::class, 'storeApprovedRequestHouse'])->name('store-approved-request-house');
+        Route::delete('estate-approval-setting/{id}', [EstateController::class, 'destroyEstateApprovalSetting'])->name('estate-approval-setting.destroy');
+
+        Route::get('add-other-estate-request', [EstateController::class, 'addOtherEstateRequest'])->name('add-other-estate-request');
+        Route::post('add-other-estate-request', [EstateController::class, 'storeOtherEstateRequest'])->name('add-other-estate-request.store');
+        Route::delete('other-estate-request/{id}', [EstateController::class, 'destroyOtherEstateRequest'])->name('other-estate-request.destroy');
+
+        // Change Requests (HAC Approved) + New requests
+        // Change Requests (HAC Approved) + New requests
+        Route::get('change-request-hac-approved', [EstateController::class, 'changeRequestHacApproved'])->name('change-request-hac-approved');
+        Route::get('change-request/approve-details/{id}', [EstateController::class, 'getChangeRequestApproveDetails'])->name('change-request.approve-details');
+        Route::get('change-request/vacant-houses', [EstateController::class, 'getChangeRequestVacantHouses'])->name('change-request.vacant-houses');
+        Route::post('change-request/approve/{id}', [EstateController::class, 'approveChangeRequest'])->name('change-request.approve');
+        Route::post('change-request/disapprove/{id}', [EstateController::class, 'disapproveChangeRequest'])->name('change-request.disapprove');
+        Route::get('change-request/details/{id?}', [EstateController::class, 'changeRequestDetails'])->name('change-request-details');
+        Route::post('change-request/details/{id}', [EstateController::class, 'updateChangeRequestDetails'])->name('change-request-details.update');
+        Route::get('change-request/details/modal/{id}', [EstateController::class, 'changeRequestDetailsModal'])->name('change-request-details.modal');
+        Route::get('raise-change-request/{id}', [EstateController::class, 'raiseChangeRequest'])->name('raise-change-request');
+        Route::post('raise-change-request', [EstateController::class, 'storeRaiseChangeRequest'])->name('raise-change-request.store');
+        Route::get('request-for-house', [EstateController::class, 'requestForHouse'])->name('request-for-house');
+        Route::get('change-request/details/{id?}', [EstateController::class, 'changeRequestDetails'])->name('change-request-details');
+        Route::post('change-request/details/{id}', [EstateController::class, 'updateChangeRequestDetails'])->name('change-request-details.update');
+        Route::get('change-request/details/modal/{id}', [EstateController::class, 'changeRequestDetailsModal'])->name('change-request-details.modal');
+        Route::get('raise-change-request/{id}', [EstateController::class, 'raiseChangeRequest'])->name('raise-change-request');
+        Route::post('raise-change-request', [EstateController::class, 'storeRaiseChangeRequest'])->name('raise-change-request.store');
+        Route::get('request-for-house', [EstateController::class, 'requestForHouse'])->name('request-for-house');
+        Route::get('new-request/allot-details/{id}', [EstateController::class, 'getNewRequestAllotDetails'])->name('new-request.allot-details');
+        Route::post('new-request/allot/{id}', [EstateController::class, 'allotNewRequest'])->name('new-request.allot');
+        
+        Route::get('add-other-estate-request', [EstateController::class, 'addOtherEstateRequest'])->name('add-other-estate-request');
+        Route::post('add-other-estate-request', [EstateController::class, 'storeOtherEstateRequest'])->name('add-other-estate-request.store');
+        Route::delete('other-estate-request/{id}', [EstateController::class, 'destroyOtherEstateRequest'])->name('other-estate-request.destroy');
+
+        // Estate Possession (two different: Possession Details = LBSNAA, Estate Possession for Other = Others)
+        Route::get('possession-details', [EstateController::class, 'possessionDetails'])->name('possession-details');
+        Route::get('possession-details/create', [EstateController::class, 'possessionDetailsCreate'])->name('possession-details.create');
+        Route::post('possession-details/store', [EstateController::class, 'storePossessionDetails'])->name('possession-details.store');
+        Route::delete('possession-details/{id}', [EstateController::class, 'destroyPossessionDetails'])->name('possession-details.delete');
+        // Estate Possession (two different: Possession Details = LBSNAA, Estate Possession for Other = Others)
+        Route::get('possession-details', [EstateController::class, 'possessionDetails'])->name('possession-details');
+        Route::get('possession-details/create', [EstateController::class, 'possessionDetailsCreate'])->name('possession-details.create');
+        Route::post('possession-details/store', [EstateController::class, 'storePossessionDetails'])->name('possession-details.store');
+        Route::delete('possession-details/{id}', [EstateController::class, 'destroyPossessionDetails'])->name('possession-details.delete');
+        Route::get('possession-for-others', [EstateController::class, 'possessionForOthers'])->name('possession-for-others');
+        Route::delete('possession/{id}', [EstateController::class, 'destroyPossession'])->name('possession-delete');
+
+        Route::get('possession-view', [EstateController::class, 'possessionView'])->name('possession-view');
+        Route::post('possession-view/store', [EstateController::class, 'storePossession'])->name('possession-view.store');
+        Route::get('possession/blocks', [EstateController::class, 'getPossessionBlocks'])->name('possession.blocks');
+        Route::get('possession/unit-sub-types', [EstateController::class, 'getPossessionUnitSubTypes'])->name('possession.unit-sub-types');
+        Route::get('possession/houses', [EstateController::class, 'getPossessionHouses'])->name('possession.houses');
+
+        // Update Meter
+        Route::get('update-meter-reading', [EstateController::class, 'updateMeterReading'])->name('update-meter-reading');
+        Route::get('list-meter-reading', [EstateController::class, 'listMeterReading'])->name('list-meter-reading');
+        Route::get('list-meter-reading/data', [EstateController::class, 'getListMeterReadingData'])->name('list-meter-reading.data');
+        Route::get('update-meter-reading/list', [EstateController::class, 'getMeterReadingList'])->name('update-meter-reading.list');
+        Route::get('update-meter-reading/meter-reading-dates', [EstateController::class, 'getMeterReadingDates'])->name('update-meter-reading.meter-reading-dates');
+        Route::get('update-meter-reading/blocks', [EstateController::class, 'getMeterReadingBlocks'])->name('update-meter-reading.blocks');
+        Route::get('update-meter-reading/unit-sub-types', [EstateController::class, 'getMeterReadingUnitSubTypes'])->name('update-meter-reading.unit-sub-types');
+        Route::post('update-meter-reading/store', [EstateController::class, 'storeMeterReadings'])->name('update-meter-reading.store');
 
 
+        Route::get('update-meter-reading-of-other', [EstateController::class, 'updateMeterReadingOfOther'])->name('update-meter-reading-of-other');
+        Route::get('update-meter-reading-of-other/list', [EstateController::class, 'getMeterReadingListOther'])->name('update-meter-reading-of-other.list');
+        Route::get('update-meter-reading-of-other/meter-reading-dates', [EstateController::class, 'getMeterReadingDatesOther'])->name('update-meter-reading-of-other.meter-reading-dates');
+        Route::get('update-meter-reading-of-other/blocks', [EstateController::class, 'getMeterReadingBlocksOther'])->name('update-meter-reading-of-other.blocks');
+        Route::get('update-meter-reading-of-other/unit-sub-types', [EstateController::class, 'getMeterReadingUnitSubTypesOther'])->name('update-meter-reading-of-other.unit-sub-types');
+        Route::post('update-meter-reading-of-other/store', [EstateController::class, 'storeMeterReadingsOther'])->name('update-meter-reading-of-other.store');
 
+
+        Route::get('update-meter-no', [EstateController::class, 'updateMeterNo'])->name('update-meter-no');
+        Route::get('update-meter-no/list', [EstateController::class, 'getUpdateMeterNoList'])->name('update-meter-no.list');
+
+        // Generate Estate Bill / Estate Bill Summary (permanent/LBSNAA)
+        // Generate Estate Bill / Estate Bill Summary (permanent/LBSNAA)
+        Route::get('generate-estate-bill', [EstateController::class, 'generateEstateBill'])->name('generate-estate-bill');
+        Route::post('generate-estate-bill/verify-selected', [EstateController::class, 'verifySelectedBillsLbsna'])->name('generate-estate-bill.verify-selected');
+        Route::post('generate-estate-bill/save-as-draft', [EstateController::class, 'saveAsDraftBillsLbsna'])->name('generate-estate-bill.save-as-draft');
+
+        // Generate Estate Bill for Other (contract employees)
+        Route::get('generate-estate-bill-for-other', [EstateController::class, 'generateEstateBillForOther'])->name('generate-estate-bill-for-other');
+        Route::get('generate-estate-bill-for-other/data', [EstateController::class, 'getGenerateEstateBillForOtherData'])->name('generate-estate-bill-for-other.data');
+        Route::post('generate-estate-bill-for-other/verify-selected', [EstateController::class, 'verifySelectedBillsForOther'])->name('generate-estate-bill-for-other.verify-selected');
+        Route::post('generate-estate-bill-for-other/save-as-draft', [EstateController::class, 'saveAsDraftBillsForOther'])->name('generate-estate-bill-for-other.save-as-draft');
+
+        Route::get('return-house', [EstateController::class, 'returnHouse'])->name('return-house');
+        Route::get('return-house/employees', [EstateController::class, 'getReturnHouseEmployees'])->name('return-house.employees');
+        Route::get('return-house/request-details', [EstateController::class, 'getReturnHouseRequestDetails'])->name('return-house.request-details');
+        Route::post('return-house/mark-return/{id}', [EstateController::class, 'markReturnHouse'])->name('return-house.mark-return');
+        Route::post('generate-estate-bill/verify-selected', [EstateController::class, 'verifySelectedBillsLbsna'])->name('generate-estate-bill.verify-selected');
+        Route::post('generate-estate-bill/save-as-draft', [EstateController::class, 'saveAsDraftBillsLbsna'])->name('generate-estate-bill.save-as-draft');
+
+        // Generate Estate Bill for Other (contract employees)
+        Route::get('generate-estate-bill-for-other', [EstateController::class, 'generateEstateBillForOther'])->name('generate-estate-bill-for-other');
+        Route::get('generate-estate-bill-for-other/data', [EstateController::class, 'getGenerateEstateBillForOtherData'])->name('generate-estate-bill-for-other.data');
+        Route::post('generate-estate-bill-for-other/verify-selected', [EstateController::class, 'verifySelectedBillsForOther'])->name('generate-estate-bill-for-other.verify-selected');
+        Route::post('generate-estate-bill-for-other/save-as-draft', [EstateController::class, 'saveAsDraftBillsForOther'])->name('generate-estate-bill-for-other.save-as-draft');
+
+        Route::get('return-house', [EstateController::class, 'returnHouse'])->name('return-house');
+        Route::get('return-house/employees', [EstateController::class, 'getReturnHouseEmployees'])->name('return-house.employees');
+        Route::get('return-house/request-details', [EstateController::class, 'getReturnHouseRequestDetails'])->name('return-house.request-details');
+        Route::post('return-house/mark-return/{id}', [EstateController::class, 'markReturnHouse'])->name('return-house.mark-return');
+
+        // Define House
+        Route::get('define-house', [EstateController::class, 'defineHouse'])->name('define-house');
+        Route::post('define-house', [EstateController::class, 'storeDefineHouse'])->name('define-house.store');
+        Route::get('define-house/data', [EstateController::class, 'getDefineHouseData'])->name('define-house.data');
+        Route::get('define-house/blocks', [EstateController::class, 'getDefineHouseBlocks'])->name('define-house.blocks');
+        Route::get('define-house/{id}', [EstateController::class, 'showDefineHouse'])->name('define-house.show');
+        Route::put('define-house/{id}', [EstateController::class, 'updateDefineHouse'])->name('define-house.update');
+        Route::delete('define-house/{id}', [EstateController::class, 'destroyDefineHouse'])->name('define-house.destroy');
+
+        // Define Electric Slab
+        Route::get('define-electric-slab', [EstateElectricSlabController::class, 'index'])->name('define-electric-slab.index');
+        Route::get('define-electric-slab/create', [EstateElectricSlabController::class, 'create'])->name('define-electric-slab.create');
+        Route::post('define-electric-slab', [EstateElectricSlabController::class, 'store'])->name('define-electric-slab.store');
+        Route::get('define-electric-slab/{id}/edit', [EstateElectricSlabController::class, 'edit'])->name('define-electric-slab.edit');
+        Route::put('define-electric-slab/{id}', [EstateElectricSlabController::class, 'update'])->name('define-electric-slab.update');
+        Route::delete('define-electric-slab/{id}', [EstateElectricSlabController::class, 'destroy'])->name('define-electric-slab.destroy');
+        // Define Electric Slab
+        Route::get('define-electric-slab', [EstateElectricSlabController::class, 'index'])->name('define-electric-slab.index');
+        Route::get('define-electric-slab/create', [EstateElectricSlabController::class, 'create'])->name('define-electric-slab.create');
+        Route::post('define-electric-slab', [EstateElectricSlabController::class, 'store'])->name('define-electric-slab.store');
+        Route::get('define-electric-slab/{id}/edit', [EstateElectricSlabController::class, 'edit'])->name('define-electric-slab.edit');
+        Route::put('define-electric-slab/{id}', [EstateElectricSlabController::class, 'update'])->name('define-electric-slab.update');
+        Route::delete('define-electric-slab/{id}', [EstateElectricSlabController::class, 'destroy'])->name('define-electric-slab.destroy');
+
+        // Define Estate/Campus
+        Route::get('define-campus', [EstateCampusController::class, 'index'])->name('define-campus.index');
+        Route::get('define-campus/create', [EstateCampusController::class, 'create'])->name('define-campus.create');
+        Route::post('define-campus', [EstateCampusController::class, 'store'])->name('define-campus.store');
+        Route::get('define-campus/{id}/edit', [EstateCampusController::class, 'edit'])->name('define-campus.edit');
+        Route::put('define-campus/{id}', [EstateCampusController::class, 'update'])->name('define-campus.update');
+        Route::delete('define-campus/{id}', [EstateCampusController::class, 'destroy'])->name('define-campus.destroy');
+
+        // Define Unit Type
+        Route::get('define-unit-type', [UnitTypeController::class, 'index'])->name('define-unit-type.index');
+        Route::get('define-unit-type/create', [UnitTypeController::class, 'create'])->name('define-unit-type.create');
+        Route::post('define-unit-type', [UnitTypeController::class, 'store'])->name('define-unit-type.store');
+        Route::get('define-unit-type/{id}/edit', [UnitTypeController::class, 'edit'])->name('define-unit-type.edit');
+        Route::put('define-unit-type/{id}', [UnitTypeController::class, 'update'])->name('define-unit-type.update');
+        Route::delete('define-unit-type/{id}', [UnitTypeController::class, 'destroy'])->name('define-unit-type.destroy');
+
+        // Define Unit Sub Type
+        Route::get('define-unit-sub-type', [UnitSubTypeController::class, 'index'])->name('define-unit-sub-type.index');
+        Route::get('define-unit-sub-type/create', [UnitSubTypeController::class, 'create'])->name('define-unit-sub-type.create');
+        Route::post('define-unit-sub-type', [UnitSubTypeController::class, 'store'])->name('define-unit-sub-type.store');
+        Route::get('define-unit-sub-type/{id}/edit', [UnitSubTypeController::class, 'edit'])->name('define-unit-sub-type.edit');
+        Route::put('define-unit-sub-type/{id}', [UnitSubTypeController::class, 'update'])->name('define-unit-sub-type.update');
+        Route::delete('define-unit-sub-type/{id}', [UnitSubTypeController::class, 'destroy'])->name('define-unit-sub-type.destroy');
+
+        // Define Block/Building
+        Route::get('define-block-building', [EstateBlockController::class, 'index'])->name('define-block-building.index');
+        Route::get('define-block-building/create', [EstateBlockController::class, 'create'])->name('define-block-building.create');
+        Route::post('define-block-building', [EstateBlockController::class, 'store'])->name('define-block-building.store');
+        Route::get('define-block-building/{id}/edit', [EstateBlockController::class, 'edit'])->name('define-block-building.edit');
+        Route::put('define-block-building/{id}', [EstateBlockController::class, 'update'])->name('define-block-building.update');
+        Route::delete('define-block-building/{id}', [EstateBlockController::class, 'destroy'])->name('define-block-building.destroy');
+
+        // Define Pay Scale (for eligibility)
+        Route::get('define-pay-scale', [PayScaleController::class, 'index'])->name('define-pay-scale.index');
+        Route::get('define-pay-scale/create', [PayScaleController::class, 'create'])->name('define-pay-scale.create');
+        Route::post('define-pay-scale', [PayScaleController::class, 'store'])->name('define-pay-scale.store');
+        Route::get('define-pay-scale/{id}/edit', [PayScaleController::class, 'edit'])->name('define-pay-scale.edit');
+        Route::put('define-pay-scale/{id}', [PayScaleController::class, 'update'])->name('define-pay-scale.update');
+        Route::delete('define-pay-scale/{id}', [PayScaleController::class, 'destroy'])->name('define-pay-scale.destroy');
+
+        // Eligibility - Criteria
+        Route::get('eligibility-criteria', [EligibilityCriteriaController::class, 'index'])->name('eligibility-criteria.index');
+        Route::get('eligibility-criteria/create', [EligibilityCriteriaController::class, 'create'])->name('eligibility-criteria.create');
+        Route::post('eligibility-criteria', [EligibilityCriteriaController::class, 'store'])->name('eligibility-criteria.store');
+        Route::get('eligibility-criteria/{id}/edit', [EligibilityCriteriaController::class, 'edit'])->name('eligibility-criteria.edit');
+        Route::put('eligibility-criteria/{id}', [EligibilityCriteriaController::class, 'update'])->name('eligibility-criteria.update');
+        Route::delete('eligibility-criteria/{id}', [EligibilityCriteriaController::class, 'destroy'])->name('eligibility-criteria.destroy');
+
+        // Estate Reports
+        Route::prefix('reports')->name('reports.')->group(function () {
+            Route::get('pending-meter-reading/data', [EstateController::class, 'getPendingMeterReadingData'])->name('pending-meter-reading.data');
+            Route::get('pending-meter-reading', [EstateController::class, 'pendingMeterReading'])->name('pending-meter-reading');
+            
+            Route::get('house-status/data', [EstateController::class, 'getHouseStatusData'])->name('house-status.data');
+            Route::get('house-status', [EstateController::class, 'houseStatus'])->name('house-status');
+            
+            Route::get('pending-meter-reading', function () {
+                return view('admin.estate.pending_meter_reading');
+            })->name('pending-meter-reading');
+
+            Route::get('house-status', function () {
+                return view('admin.estate.house_status');
+            })->name('house-status');
+
+            Route::get('bill-report-grid/data', [EstateController::class, 'getBillReportGridData'])->name('bill-report-grid.data');
+            Route::get('pending-meter-reading', function () {
+                return view('admin.estate.pending_meter_reading');
+            })->name('pending-meter-reading');
+
+            Route::get('house-status', function () {
+                return view('admin.estate.house_status');
+            })->name('house-status');
+
+            Route::get('bill-report-grid/data', [EstateController::class, 'getBillReportGridData'])->name('bill-report-grid.data');
+            Route::get('bill-report-grid', function () {
+                return view('admin.estate.estate_bill_report_grid');
+            })->name('bill-report-grid');
+
+            Route::get('bill-report-print/employees', [EstateController::class, 'getBillReportPrintEmployees'])->name('bill-report-print.employees');
+            Route::get('bill-report-print', [EstateController::class, 'estateBillReportPrint'])->name('bill-report-print');
+            Route::get('bill-report-print-all', [EstateController::class, 'estateBillReportPrintAll'])->name('bill-report-print-all');
+            Route::get('bill-report-print-all-pdf', [EstateController::class, 'estateBillReportPrintAllPdf'])->name('bill-report-print-all-pdf');
+
+            Route::get('migration-report', [EstateController::class, 'estateMigrationReport'])->name('migration-report');
+            Route::get('migration-report/filter-options', [EstateController::class, 'getEstateMigrationReportFilterOptions'])->name('migration-report.filter-options');
+        });
+    });
+Route::get('/view-logs', [App\Http\Controllers\LogController::class, 'index'])
+    ->middleware('auth');

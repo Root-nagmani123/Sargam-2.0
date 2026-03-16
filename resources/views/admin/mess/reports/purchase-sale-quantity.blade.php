@@ -1,38 +1,40 @@
 @extends('admin.layouts.master')
 @section('title', 'Item Report')
 @section('setup_content')
-<div class="container-fluid purchase-sale-quantity-report">
+<div class="container-fluid purchase-sale-quantity-report py-3">
     <x-breadcrum title="Item Report"></x-breadcrum>
-    <div class="card mb-4 border-0 shadow-sm no-print">
-        <div class="card-header bg-white border-0 pb-0">
+
+    {{-- Filter card --}}
+    <div class="card mb-4 border-0 rounded-3 shadow-sm no-print">
+        <div class="card-header bg-white border-0 py-3">
             <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
                 <div class="d-flex align-items-center gap-2">
-                    <span class="material-symbols-rounded text-primary" style="font-size: 22px;">filter_list</span>
+                    <span class="material-symbols-rounded text-primary fs-4">filter_list</span>
                     <h5 class="mb-0 fw-semibold text-dark">Filter Item Report</h5>
                 </div>
                 <span class="text-muted small">Refine results by date range, view type &amp; category</span>
             </div>
         </div>
-        <div class="card-body pt-3">
+        <div class="card-body pt-0 pb-3">
             <form id="purchaseSaleQuantityFilterForm" method="GET" action="{{ route('admin.mess.reports.purchase-sale-quantity') }}">
-                <div class="row g-3">
-                    <div class="col-md-2">
+                <div class="row g-3 g-md-4">
+                    <div class="col-12 col-sm-6 col-md-6 col-lg-2">
                         <label class="form-label">From Date</label>
                         <input type="date" name="from_date" class="form-control" value="{{ $fromDate }}">
                     </div>
-                    <div class="col-md-2">
+                    <div class="col-12 col-sm-6 col-md-6 col-lg-2">
                         <label class="form-label">To Date</label>
                         <input type="date" name="to_date" class="form-control" value="{{ $toDate }}">
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-12 col-sm-6 col-md-4 col-lg-2">
                         <label class="form-label">View</label>
-                        <select name="view_type" id="viewType" class="form-select choices-select" data-placeholder="Select View Type">
+                        <select name="view_type" id="viewType" class="form-select form-select-sm choices-select" data-placeholder="Select View Type">
                             <option value="item_wise" {{ $viewType === 'item_wise' ? 'selected' : '' }}>Item-wise</option>
                             <option value="subcategory_wise" {{ $viewType === 'subcategory_wise' ? 'selected' : '' }}>Subcategory-wise</option>
                             <option value="category_wise" {{ $viewType === 'category_wise' ? 'selected' : '' }}>Category-wise</option>
                         </select>
                     </div>
-                    <div class="col-md-3" id="categoryIdWrap" style="display: {{ $viewType === 'category_wise' ? 'block' : 'none' }};">
+                    <div class="col-12 col-sm-6 col-md-4 col-lg-3" id="categoryIdWrap" style="display: {{ $viewType === 'category_wise' ? 'block' : 'none' }};">
                         <label class="form-label">Category</label>
                         <select name="category_id" class="form-select choices-select" data-placeholder="All Categories">
                             <option value="">All Categories</option>
@@ -41,70 +43,77 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-12 col-sm-6 col-md-4 col-lg-3">
                         <label class="form-label">Item</label>
                         <select name="item_id" class="form-select choices-select" data-placeholder="All Items">
                             <option value="">All Items</option>
                             @foreach($allItems as $it)
-                                <option value="{{ $it->id }}" {{ ($itemId ?? '') == $it->id ? 'selected' : '' }}>{{ $it->item_name ?? $it->subcategory_name ?? $it->name ?? '—' }}</option>
+                                <option
+                                    value="{{ $it->id }}"
+                                    data-category-id="{{ $it->category_id ?? '' }}"
+                                    {{ ($itemId ?? '') == $it->id ? 'selected' : '' }}
+                                >
+                                    {{ $it->item_name ?? $it->subcategory_name ?? $it->name ?? '—' }}
+                                </option>
                             @endforeach
                         </select>
                     </div>
                 </div>
             </form>
         </div>
-        <div class="card-footer bg-light border-0 pt-3 d-flex flex-wrap gap-2 align-items-center justify-content-between">
+        <div class="card-footer bg-body-secondary bg-opacity-10 border-0 py-3 d-flex flex-wrap gap-2 align-items-center justify-content-between">
             <div class="d-flex flex-wrap gap-2">
                 <button type="submit" form="purchaseSaleQuantityFilterForm"
-                        class="btn btn-primary d-inline-flex align-items-center">
-                    <span class="material-symbols-rounded me-1" style="font-size: 18px;">filter_list</span>
+                        class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1 rounded-pill px-3">
+                    <span class="material-symbols-rounded" style="font-size: 1.1rem;">filter_list</span>
                     <span>Apply Filters</span>
                 </button>
-                <a href="{{ route('admin.mess.reports.purchase-sale-quantity') }}" class="btn btn-outline-secondary d-inline-flex align-items-center">
-                    <span class="material-symbols-rounded me-1" style="font-size: 18px;">refresh</span>
+                <a href="{{ route('admin.mess.reports.purchase-sale-quantity') }}" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1 rounded-pill px-3">
+                    <span class="material-symbols-rounded" style="font-size: 1.1rem;">refresh</span>
                     <span>Reset</span>
                 </a>
             </div>
             <div class="d-flex flex-wrap gap-2">
-                <button type="button" class="btn btn-outline-primary d-inline-flex align-items-center" onclick="printPurchaseSaleQuantity()" title="Print or Save as PDF">
-                    <span class="material-symbols-rounded me-1" style="font-size: 18px;">print</span>
+                <button type="button" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1 rounded-pill px-3" onclick="printPurchaseSaleQuantity()" title="Print or Save as PDF">
+                    <span class="material-symbols-rounded" style="font-size: 1.1rem;">print</span>
                     <span>Print</span>
                 </button>
-                <a href="{{ route('admin.mess.reports.purchase-sale-quantity.pdf', request()->query()) }}" target="_blank" rel="noopener" class="btn btn-outline-danger d-inline-flex align-items-center" title="Download PDF">
-                    <span class="material-symbols-rounded me-1" style="font-size: 18px;">picture_as_pdf</span>
+                <a href="{{ route('admin.mess.reports.purchase-sale-quantity.pdf', request()->query()) }}" target="_blank" rel="noopener" class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1 rounded-pill px-3" title="Download PDF">
+                    <span class="material-symbols-rounded" style="font-size: 1.1rem;">picture_as_pdf</span>
                     <span>PDF</span>
                 </a>
-                <a href="{{ route('admin.mess.reports.purchase-sale-quantity.excel', request()->query()) }}" class="btn btn-success d-inline-flex align-items-center" title="Export to Excel">
-                    <span class="material-symbols-rounded me-1" style="font-size: 18px;">table_view</span>
+                <a href="{{ route('admin.mess.reports.purchase-sale-quantity.excel', request()->query()) }}" class="btn btn-success btn-sm d-inline-flex align-items-center gap-1 rounded-pill px-3" title="Export to Excel">
+                    <span class="material-symbols-rounded" style="font-size: 1.1rem;">table_view</span>
                     <span>Export Excel</span>
                 </a>
             </div>
         </div>
     </div>
 
-    <div class="card">
-        <div class="card-header bg-white border-0 pb-0 text-center report-header">
-            <h4 class="fw-bold mb-1">Item Report</h4>
-            <p class="mb-0 text-muted">
+    {{-- Report card --}}
+    <div class="card border-0 rounded-3 shadow-sm overflow-hidden">
+        <div class="card-header bg-primary bg-opacity-10 border-0 py-3 text-center report-header">
+            <h4 class="fw-bold mb-1 text-primary">Item Report</h4>
+            <p class="mb-0 text-body-secondary small">
                 From {{ date('d-M-Y', strtotime($fromDate)) }} to {{ date('d-M-Y', strtotime($toDate)) }}
             </p>
         </div>
-        <div class="card-body pt-3">
+        <div class="card-body p-0">
             @if($viewType === 'item_wise')
                 <div class="table-responsive">
-                    <table class="table text-nowrap  align-middle mb-0">
+                    <table class="table align-middle mb-0">
                         <thead>
                             <tr>
-                                <th>S. No.</th>
-                                <th>Item Name</th>
-                                <th>Unit</th>
-                                <th class="text-end">Total Purchase Qty</th>
-                                <th class="text-end">Avg Purchase Price</th>
-                                <th class="text-end">Total Sale Qty</th>
-                                <th class="text-end">Avg Sale Price</th>
+                                <th class="border-0 bg-body-secondary py-3">S. No.</th>
+                                <th class="border-0 bg-body-secondary py-3">Item Name</th>
+                                <th class="border-0 bg-body-secondary py-3">Unit</th>
+                                <th class="text-end border-0 bg-body-secondary py-3">Total Purchase Qty</th>
+                                <th class="text-end border-0 bg-body-secondary py-3">Avg Purchase Price</th>
+                                <th class="text-end border-0 bg-body-secondary py-3">Total Sale Qty</th>
+                                <th class="text-end border-0 bg-body-secondary py-3">Avg Sale Price</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody class="table-group-divider">
                             @forelse($reportData as $index => $row)
                                 <tr>
                                     <td class="text-center">{{ $index + 1 }}</td>
@@ -117,7 +126,8 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" class="text-center text-muted py-4">
+                                    <td colspan="7" class="text-center text-body-secondary py-5">
+                                        <span class="material-symbols-rounded text-muted d-block mb-2" style="font-size: 2.5rem;">inbox</span>
                                         No data found for the selected date range
                                     </td>
                                 </tr>
@@ -128,22 +138,27 @@
             @else
                 @php $groupedData = $groupedData ?? []; @endphp
                 @forelse($groupedData as $group)
-                    <div class="mb-4">
-                        <h5 class="text-primary mb-2">{{ $group['category_name'] }}</h5>
+                    <div class="mb-0 border-bottom border-secondary border-opacity-25">
+                        <div class="px-4 pt-3 pb-2">
+                            <h6 class="text-primary fw-semibold mb-0 d-flex align-items-center gap-2">
+                                <span class="material-symbols-rounded" style="font-size: 1.25rem;">category</span>
+                                {{ $group['category_name'] }}
+                            </h6>
+                        </div>
                         <div class="table-responsive">
-                            <table class="table table-striped table-hover align-middle mb-0">
-                                <thead class="bg-primary text-white">
+                            <table class="table table-hover table-striped align-middle mb-0">
+                                <thead class="table-primary">
                                     <tr>
-                                        <th style="width: 60px;">S. No.</th>
-                                        <th>Item Name</th>
-                                        <th>Unit</th>
-                                        <th class="text-end">Total Purchase Qty</th>
-                                        <th class="text-end">Avg Purchase Price</th>
-                                        <th class="text-end">Total Sale Qty</th>
-                                        <th class="text-end">Avg Sale Price</th>
+                                        <th class="border-0 py-3" style="width: 60px;">S. No.</th>
+                                        <th class="border-0 py-3">Item Name</th>
+                                        <th class="border-0 py-3">Unit</th>
+                                        <th class="text-end border-0 py-3">Total Purchase Qty</th>
+                                        <th class="text-end border-0 py-3">Avg Purchase Price</th>
+                                        <th class="text-end border-0 py-3">Total Sale Qty</th>
+                                        <th class="text-end border-0 py-3">Avg Sale Price</th>
                                     </tr>
                                 </thead>
-                                <tbody>
+                                <tbody class="table-group-divider">
                                     @foreach($group['items'] as $idx => $row)
                                         <tr>
                                             <td class="text-center">{{ $idx + 1 }}</td>
@@ -164,7 +179,10 @@
                         </div>
                     </div>
                 @empty
-                    <div class="alert alert-info mb-0">No data found for the selected filters.</div>
+                    <div class="alert alert-info fade show rounded-0 border-0 mb-0 d-flex align-items-center gap-2" role="alert">
+                        <span class="material-symbols-rounded">info</span>
+                        <span>No data found for the selected filters.</span>
+                    </div>
                 @endforelse
             @endif
         </div>
@@ -182,13 +200,18 @@
     }
 
     .purchase-sale-quantity-report .choices__inner {
-        min-height: 38px;
-        padding: 4px 8px;
-        border-radius: 0.375rem;
+        min-height: 31px;
+        padding: 0.25rem 0.5rem;
+        border-radius: var(--bs-border-radius, 0.375rem);
+        font-size: 0.875rem;
     }
 
     .purchase-sale-quantity-report .choices__list--single .choices__item {
         padding: 2px 0;
+    }
+
+    .purchase-sale-quantity-report .card-footer .btn {
+        transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out;
     }
 </style>
 
@@ -198,6 +221,9 @@
 document.addEventListener('DOMContentLoaded', function() {
     var viewType = document.getElementById('viewType');
     var categoryIdWrap = document.getElementById('categoryIdWrap');
+    var categorySelect = document.querySelector('select[name="category_id"]');
+    var itemSelectEl = document.querySelector('select[name="item_id"]');
+
     if (viewType && categoryIdWrap) {
         function toggleCategory() {
             categoryIdWrap.style.display = viewType.value === 'category_wise' ? 'block' : 'none';
@@ -225,6 +251,71 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 });
             });
+
+        // After TomSelect is initialized, restrict the Item dropdown options
+        // when "Category-wise" view is selected, so that only items belonging
+        // to the chosen category are shown.
+        if (itemSelectEl && itemSelectEl.tomselect) {
+            var itemTom = itemSelectEl.tomselect;
+            var allItemOptions = Object.values(itemTom.options || {});
+
+            function filterItemsByCategory() {
+                if (!itemTom) return;
+
+                var currentView = viewType ? viewType.value : 'item_wise';
+                var selectedCategoryId = categorySelect ? String(categorySelect.value || '') : '';
+                var currentValue = itemTom.getValue();
+
+                itemTom.clearOptions();
+
+                var allowedValues = [];
+                allItemOptions.forEach(function (opt) {
+                    // Always keep the "All Items" (empty) option
+                    if (!opt.value) {
+                        itemTom.addOption(opt);
+                        allowedValues.push(opt.value);
+                        return;
+                    }
+
+                    if (currentView === 'category_wise' && selectedCategoryId) {
+                        var catId = '';
+                        if (typeof opt.category_id !== 'undefined' && opt.category_id !== null) {
+                            catId = String(opt.category_id);
+                        } else if (typeof opt.categoryId !== 'undefined' && opt.categoryId !== null) {
+                            catId = String(opt.categoryId);
+                        } else if (typeof opt['data-category-id'] !== 'undefined' && opt['data-category-id'] !== null) {
+                            catId = String(opt['data-category-id']);
+                        }
+
+                        if (catId !== selectedCategoryId) {
+                            return; // skip items from other categories
+                        }
+                    }
+
+                    itemTom.addOption(opt);
+                    allowedValues.push(opt.value);
+                });
+
+                itemTom.refreshOptions(false);
+
+                if (currentValue && allowedValues.indexOf(currentValue) !== -1) {
+                    itemTom.setValue(currentValue, true);
+                } else if (currentView === 'category_wise' && selectedCategoryId) {
+                    // Default to "All Items" when switching categories
+                    itemTom.clear(true);
+                }
+            }
+
+            // Run once on page load
+            filterItemsByCategory();
+
+            if (categorySelect) {
+                categorySelect.addEventListener('change', filterItemsByCategory);
+            }
+            if (viewType) {
+                viewType.addEventListener('change', filterItemsByCategory);
+            }
+        }
     }
 });
 

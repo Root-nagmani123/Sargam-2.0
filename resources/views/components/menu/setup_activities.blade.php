@@ -12,7 +12,39 @@
                             <!-- ---------------------------------- -->
                             <!-- Home -->
                             <!-- ---------------------------------- -->
-                             @if(hasRole('Admin') || hasRole('Training-Induction') ||  hasRole('Training-MCTP') || hasRole('IST'))
+                            @php
+                                $showUserManagement = hasRole('Admin') || hasRole('Super Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST');
+                                $estateSelfServiceRoles = hasRole('Staff') || hasRole('Student-OT') || hasRole('Doctor') || hasRole('Guest Faculty') || hasRole('Internal Faculty');
+                                // Check if current self-service user is a permanent LBSNAA employee (payroll = 0)
+                                $isPermanentEstateEmployee = false;
+                                $user = Auth::user();
+                                if ($user && $estateSelfServiceRoles && \Illuminate\Support\Facades\Schema::hasTable('employee_master')) {
+                                    $empIdCandidates = array_values(array_filter([
+                                        $user->user_id ?? null,
+                                        $user->pk ?? null,
+                                    ], fn ($v) => $v !== null && $v !== ''));
+                                    if (!empty($empIdCandidates)) {
+                                        $empQuery = \Illuminate\Support\Facades\DB::table('employee_master');
+                                        $empQuery->whereIn('pk', $empIdCandidates);
+                                        if (\Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'pk_old')) {
+                                            $empQuery->orWhereIn('pk_old', $empIdCandidates);
+                                        }
+                                        $empRow = $empQuery->select('payroll')->first();
+                                        if ($empRow && (int) ($empRow->payroll ?? 0) === 0) {
+                                            $isPermanentEstateEmployee = true;
+                                        }
+                                    }
+                                }
+                                // Estate section visible for:
+                                // - Admin / Super Admin / Training / IST (user management)
+                                // - Estate / HAC Person
+                                // - All self-service estate roles (Staff, Student-OT, Doctor, Guest Faculty, Internal Faculty)
+                                //   They will still be restricted inside the menu to only their own-data items.
+                                $showEstateSection = $showUserManagement || hasRole('Estate') || hasRole('Super Admin') || hasRole('HAC Person') || $estateSelfServiceRoles;
+                                $isEstateAdmin = hasRole('Estate') || hasRole('Super Admin');
+                                $isHACPerson = hasRole('HAC Person');
+                            @endphp
+                             @if($showUserManagement)
                             <li class="nav-section" role="listitem">
 
                                 <!-- Main Container with Improved Layout -->
@@ -32,7 +64,7 @@
                             <!-- Academic -->
                             <!-- ---------------------------------- -->
                             {{-- EMPLOYEE --}}
-                          
+
                             <li class="sidebar-item" style="background: #4077ad;
                                 border-radius: 30px 0px 0px 30px;
                                 width: 100%;
@@ -47,29 +79,31 @@
                                 </a>
                             </li>
                             <ul class="collapse list-unstyled ps-3" id="employeeCollapse">
-                               <li class="sidebar-item"><a class="sidebar-link" href="{{ route('member.index') }}">
-                                            <span class="hide-menu small small-sm-normal text-nowrap">Employee Master</span>
-                                        </a></li>
-                                    <li class="sidebar-item"><a class="sidebar-link"
-                                            href="{{ route('master.employee.type.index') }}">
-                                            <span class="hide-menu small small-sm-normal text-nowrap">Employee Type</span>
-                                        </a></li>
-                                    <li class="sidebar-item"><a class="sidebar-link"
-                                            href="{{ route('master.employee.group.index') }}">
-                                            <span class="hide-menu small small-sm-normal text-nowrap">Employee Group</span>
-                                        </a></li>
-                                    <li class="sidebar-item"><a class="sidebar-link"
-                                            href="{{ route('master.department.master.index') }}">
-                                            <span class="hide-menu small small-sm-normal text-nowrap">Department Master</span>
-                                        </a></li>
-                                    <li class="sidebar-item"><a class="sidebar-link"
-                                            href="{{ route('master.designation.index') }}">
-                                            <span class="hide-menu small small-sm-normal text-nowrap">Designation Master</span>
-                                        </a></li>
-                                    <li class="sidebar-item"><a class="sidebar-link"
-                                            href="{{ route('master.caste.category.index') }}">
-                                            <span class="hide-menu small small-sm-normal text-nowrap">Caste Category</span>
-                                        </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('member.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Employee Master</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('master.employee.type.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Employee Type</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('master.employee.group.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Employee Group</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('master.department.master.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Department
+                                            Master</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('master.designation.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Designation
+                                            Master</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('master.caste.category.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Caste Category</span>
+                                    </a></li>
                             </ul>
 
                             {{-- FACULTY --}}
@@ -90,7 +124,8 @@
                             <ul class="collapse list-unstyled ps-3" id="facultyCollapse">
                                 <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('master.faculty.expertise.index') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Faculty Expertise</span>
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Faculty
+                                            Expertise</span>
                                     </a></li>
                                 <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('master.faculty.type.master.index') }}">
@@ -114,7 +149,8 @@
                                 <a class="sidebar-link d-flex justify-content-between align-items-center"
                                     data-bs-toggle="collapse" href="#userManagementCollapse" role="button"
                                     aria-expanded="false" aria-controls="userManagementCollapse">
-                                    <span class="hide-menu fw-bold small small-sm-normal text-nowrap">Roles & Permissions</span>
+                                    <span class="hide-menu fw-bold small small-sm-normal text-nowrap">Roles &
+                                        Permissions</span>
                                     <i class="material-icons menu-icon material-symbols-rounded"
                                         style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
                                 </a>
@@ -126,7 +162,8 @@
                                     </a></li>
                                 <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('admin.users.index') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">User Permissions</span>
+                                        <span class="hide-menu small small-sm-normal text-nowrap">User
+                                            Permissions</span>
                                     </a></li>
 
                                 {{-- <li class="sidebar-item"><a class="sidebar-link"
@@ -137,7 +174,7 @@
                             <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('course-repository.index') }}">
                                 <span class="hide-menu">Course Repository</span>
-                                </a></li>                            
+                                </a></li>
                             @endif
 
                         </ul>

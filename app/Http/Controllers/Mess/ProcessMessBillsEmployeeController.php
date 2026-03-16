@@ -42,6 +42,7 @@ class ProcessMessBillsEmployeeController extends Controller
         $dateTo = $request->filled('date_to') ? $this->parseDate($request->date_to) : now()->endOfMonth()->format('Y-m-d');
         $clientType = $request->filled('client_type') ? $request->client_type : null;
         $buyerName = $request->filled('buyer_name') ? trim($request->buyer_name) : null;
+        $statusFilter = $request->filled('status') ? $request->status : null;
 
         // Query 1: Selling Voucher with Date Range (sv_date_range_reports)
         $dateRangeQuery = SellingVoucherDateRangeReport::query()
@@ -137,12 +138,28 @@ class ProcessMessBillsEmployeeController extends Controller
         // Group by buyer so one combined bill per user (Selling Voucher + Selling Voucher with Date Range)
         $combinedBills = $this->groupBillsByBuyer($bills);
 
+        // Optional status filter on combined bills (0=Unpaid, 1=Partial, 2=Paid)
+        if ($statusFilter !== null && $statusFilter !== '') {
+            $statusMap = [
+                'unpaid' => 0,
+                'partial' => 1,
+                'paid' => 2,
+                0 => 0,
+                1 => 1,
+                2 => 2,
+            ];
+            $normalized = $statusMap[$statusFilter] ?? null;
+            if ($normalized !== null) {
+                $combinedBills = $combinedBills->where('status', $normalized)->values();
+            }
+        }
+
         $effectiveDateFrom = $request->filled('date_from') ? $request->date_from : now()->startOfMonth()->format('d-m-Y');
         $effectiveDateTo = $request->filled('date_to') ? $request->date_to : now()->endOfMonth()->format('d-m-Y');
         $effectiveDateFromYmd = $dateFrom;
         $effectiveDateToYmd = $dateTo;
 
-        // Stats based on combined bills (one per buyer)
+        // Stats based on (optionally filtered) combined bills (one per buyer)
         $stats = [
             'total_bills' => $combinedBills->count(),
             'paid_count' => $combinedBills->where('status', 2)->count(),
@@ -204,6 +221,7 @@ class ProcessMessBillsEmployeeController extends Controller
             'effectiveDateToYmd',
             'stats',
             'clientType',
+            'statusFilter',
             'buyerName',
             'clientTypes',
             'clientTypeCategories',
@@ -384,6 +402,7 @@ class ProcessMessBillsEmployeeController extends Controller
         $search = ($search !== null && $search !== '') ? $search : null;
         $clientType = $request->filled('client_type') ? $request->client_type : null;
         $buyerName = $request->filled('buyer_name') ? trim($request->buyer_name) : null;
+        $statusFilter = $request->filled('status') ? $request->status : null;
 
         // Same union query as index, but get all results
         $dateRangeQuery = SellingVoucherDateRangeReport::query()
@@ -476,6 +495,22 @@ class ProcessMessBillsEmployeeController extends Controller
         })->filter()->values();
 
         $combinedBills = $this->groupBillsByBuyer($bills);
+
+        // Optional status filter on combined bills for export as well
+        if ($statusFilter !== null && $statusFilter !== '') {
+            $statusMap = [
+                'unpaid' => 0,
+                'partial' => 1,
+                'paid' => 2,
+                0 => 0,
+                1 => 1,
+                2 => 2,
+            ];
+            $normalized = $statusMap[$statusFilter] ?? null;
+            if ($normalized !== null) {
+                $combinedBills = $combinedBills->where('status', $normalized)->values();
+            }
+        }
         $paymentTypeMap = [0 => 'Cash', 1 => 'Deduct From Salary', 2 => 'Online', 5 => 'Deduct From Salary'];
         $statusMap = [0 => 'Unpaid', 1 => 'Pending', 2 => 'Paid'];
 
@@ -538,6 +573,18 @@ class ProcessMessBillsEmployeeController extends Controller
                     $remarksList[] = trim((string) $b->remarks);
                 }
                 foreach ($b->items ?? [] as $item) {
+                    // Prefer per-item issue_date (for Selling Voucher Date Range items),
+                    // otherwise fall back to the voucher's issue_date.
+                    $itemIssueDate = null;
+                    try {
+                        if (isset($item->issue_date) && $item->issue_date) {
+                            $itemIssueDate = $item->issue_date instanceof Carbon
+                                ? $item->issue_date->format('d-m-Y')
+                                : Carbon::parse($item->issue_date)->format('d-m-Y');
+                        }
+                    } catch (\Throwable $e) {
+                        $itemIssueDate = null;
+                    }
                     $items[] = (object) [
                         'item_name' => $item->item_name ?? ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? '—'),
                         'quantity' => $item->quantity,
@@ -546,7 +593,7 @@ class ProcessMessBillsEmployeeController extends Controller
                         'amount' => $item->amount ?? 0,
                         'itemSubcategory' => null,
                         'store_name' => $storeName,
-                        'purchase_date' => $purchaseDateStr,
+                        'issue_date' => $itemIssueDate ?: $purchaseDateStr,
                     ];
                 }
                 if ($b->issue_date) {
@@ -735,10 +782,22 @@ class ProcessMessBillsEmployeeController extends Controller
                     $clientTypeDisplay = $bill->client_type_display ?? ($bill->client_type_label ?? ($bill->clientTypeCategory ? ucfirst($bill->clientTypeCategory->client_type ?? '') : '—'));
                 }
                 foreach ($bill->items ?? [] as $item) {
+                    // Prefer per-item issue_date where available (Selling Voucher Date Range items);
+                    // otherwise fall back to the voucher-level issue date.
+                    $itemIssueDate = null;
+                    try {
+                        if (isset($item->issue_date) && $item->issue_date) {
+                            $itemIssueDate = $item->issue_date instanceof Carbon
+                                ? $item->issue_date->format('d-m-Y')
+                                : Carbon::parse($item->issue_date)->format('d-m-Y');
+                        }
+                    } catch (\Throwable $e) {
+                        $itemIssueDate = null;
+                    }
                     $items[] = [
                         'store_name' => $storeName,
                         'item_name' => $item->item_name ?? ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? '—'),
-                        'purchase_date' => $purchaseDate,
+                        'issue_date' => $itemIssueDate ?: $purchaseDate,
                         'price' => number_format($item->rate ?? 0, 1),
                         'quantity' => $item->quantity,
                         'amount' => number_format($item->amount ?? 0, 2),
