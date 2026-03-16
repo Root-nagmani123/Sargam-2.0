@@ -251,14 +251,6 @@
         border-bottom: 1px solid var(--bs-border-color-translucent);
     }
 
-    .voucher-brand-head th {
-        background-color: #af2910 !important;
-        color: #fff !important;
-        border-color: #af2910 !important;
-        font-weight: 600;
-        white-space: nowrap;
-    }
-
     #addReportModal .modal-dialog {
         max-height: calc(100vh - 2rem);
         margin: 1rem auto;
