@@ -375,10 +375,18 @@ class ReportController extends Controller
         ]);
 
         if ($request->filled('from_date')) {
-            $query->whereDate('issue_date', '>=', $request->from_date);
+            $from = $request->from_date;
+            $query->where(function ($q) use ($from) {
+                $q->whereDate('issue_date', '>=', $from)
+                  ->orWhereDate('date_from', '>=', $from);
+            });
         }
         if ($request->filled('to_date')) {
-            $query->whereDate('issue_date', '<=', $request->to_date);
+            $to = $request->to_date;
+            $query->where(function ($q) use ($to) {
+                $q->whereDate('issue_date', '<=', $to)
+                  ->orWhereDate('date_to', '<=', $to);
+            });
         }
         if ($request->filled('employee_ot_filter')) {
             if ($request->employee_ot_filter === 'employee_ot') {
@@ -1293,11 +1301,19 @@ class ReportController extends Controller
         
         // Apply filters
         if ($request->filled('from_date')) {
-            $query->whereDate('issue_date', '>=', $request->from_date);
+            $from = $request->from_date;
+            $query->where(function ($q) use ($from) {
+                $q->whereDate('issue_date', '>=', $from)
+                  ->orWhereDate('date_from', '>=', $from);
+            });
         }
         
         if ($request->filled('to_date')) {
-            $query->whereDate('issue_date', '<=', $request->to_date);
+            $to = $request->to_date;
+            $query->where(function ($q) use ($to) {
+                $q->whereDate('issue_date', '<=', $to)
+                  ->orWhereDate('date_to', '<=', $to);
+            });
         }
         
         // Employee / OT filter

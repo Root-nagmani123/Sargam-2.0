@@ -538,6 +538,18 @@ class ProcessMessBillsEmployeeController extends Controller
                     $remarksList[] = trim((string) $b->remarks);
                 }
                 foreach ($b->items ?? [] as $item) {
+                    // Prefer per-item issue_date (for Selling Voucher Date Range items),
+                    // otherwise fall back to the voucher's issue_date.
+                    $itemIssueDate = null;
+                    try {
+                        if (isset($item->issue_date) && $item->issue_date) {
+                            $itemIssueDate = $item->issue_date instanceof Carbon
+                                ? $item->issue_date->format('d-m-Y')
+                                : Carbon::parse($item->issue_date)->format('d-m-Y');
+                        }
+                    } catch (\Throwable $e) {
+                        $itemIssueDate = null;
+                    }
                     $items[] = (object) [
                         'item_name' => $item->item_name ?? ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? '—'),
                         'quantity' => $item->quantity,
@@ -546,7 +558,7 @@ class ProcessMessBillsEmployeeController extends Controller
                         'amount' => $item->amount ?? 0,
                         'itemSubcategory' => null,
                         'store_name' => $storeName,
-                        'purchase_date' => $purchaseDateStr,
+                        'issue_date' => $itemIssueDate ?: $purchaseDateStr,
                     ];
                 }
                 if ($b->issue_date) {
@@ -735,10 +747,22 @@ class ProcessMessBillsEmployeeController extends Controller
                     $clientTypeDisplay = $bill->client_type_display ?? ($bill->client_type_label ?? ($bill->clientTypeCategory ? ucfirst($bill->clientTypeCategory->client_type ?? '') : '—'));
                 }
                 foreach ($bill->items ?? [] as $item) {
+                    // Prefer per-item issue_date where available (Selling Voucher Date Range items);
+                    // otherwise fall back to the voucher-level issue date.
+                    $itemIssueDate = null;
+                    try {
+                        if (isset($item->issue_date) && $item->issue_date) {
+                            $itemIssueDate = $item->issue_date instanceof Carbon
+                                ? $item->issue_date->format('d-m-Y')
+                                : Carbon::parse($item->issue_date)->format('d-m-Y');
+                        }
+                    } catch (\Throwable $e) {
+                        $itemIssueDate = null;
+                    }
                     $items[] = [
                         'store_name' => $storeName,
                         'item_name' => $item->item_name ?? ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? '—'),
-                        'purchase_date' => $purchaseDate,
+                        'issue_date' => $itemIssueDate ?: $purchaseDate,
                         'price' => number_format($item->rate ?? 0, 1),
                         'quantity' => $item->quantity,
                         'amount' => number_format($item->amount ?? 0, 2),
