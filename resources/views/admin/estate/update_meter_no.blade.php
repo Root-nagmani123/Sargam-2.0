@@ -33,7 +33,7 @@
                 <ul class="dropdown-menu dropdown-menu-end" id="updateMeterNoColumnToggleMenu"></ul>
             </div>
             <button type="button" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-2" id="btnUpdateMeterNoPrint" title="Print">
-                <i class="bi bi-printer"></i>
+                <i class="material-icons material-symbols-rounded">print</i>
                 <span class="d-none d-md-inline">Print</span>
             </button>
         </div>

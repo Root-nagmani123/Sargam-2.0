@@ -117,7 +117,7 @@ $(document).ready(function() {
                 // Print button next to search (same row as DataTable filter)
                 var $filter = $('#houseStatusTable_wrapper .dataTables_filter');
                 if ($filter.length && !$('#btnPrintHouseStatus').length) {
-                    $filter.append('<label class="d-inline-flex align-items-center ms-2 mb-0"><button type="button" class="btn btn-outline-secondary btn-sm py-1 px-2" id="btnPrintHouseStatus" title="Print"><i class="bi bi-printer"></i></button></label>');
+                    $filter.append('<label class="d-inline-flex align-items-center ms-2 mb-0"><button type="button" class="btn btn-outline-secondary btn-sm py-1 px-2" id="btnPrintHouseStatus" title="Print"><i class="material-icons material-symbols-rounded">print</i></button></label>');
                 }
             },
             error: function(xhr) {

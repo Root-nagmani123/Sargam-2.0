@@ -165,7 +165,7 @@
                                     <td class="small">{{ \Illuminate\Support\Str::limit($chg->remarks, 40) }}</td>
                                     <td class="text-center">
                                         <a href="{{ $chg->edit_url }}" class="btn btn-sm btn-outline-primary" title="Edit change request details">
-                                            <i class="bi bi-pencil-square"></i>
+                                            <i class="material-icons">edit</i>
                                         </a>
                                     </td>
                                 </tr>
