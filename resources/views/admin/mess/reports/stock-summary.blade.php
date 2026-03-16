@@ -109,33 +109,18 @@
                 Total items: {{ count($reportData) }}
             </span>
         </div>
-        <div class="stock-table-wrapper">
-        <table class="table text-nowrap align-middle mb-0 stock-fixed-columns-table">
+        <div class="table-responsive table-fit-single-view">
+        <table class="table table-fit align-middle mb-0">
             <thead>
                 <tr>
-                    <th rowspan="2" class="sticky-col sticky-col-1">
-                        SR. No
-                    </th>
-                    <th rowspan="2" class="sticky-col sticky-col-2">Item Name
-                    </th>
-                    <th rowspan="2" class="sticky-col sticky-col-3">
-                        Item Code
-                    </th>
-                    <th rowspan="2" class="sticky-col sticky-col-4">
-                        Unit
-                    </th>
-                    <th colspan="3">
-                        Opening
-                    </th>
-                    <th colspan="3">
-                        Purchase
-                    </th>
-                    <th colspan="3">
-                        Sale
-                    </th>
-                    <th colspan="3">
-                        Closing
-                    </th>
+                    <th rowspan="2" class="text-center align-middle">SR.<br>No</th>
+                    <th rowspan="2" class="text-center align-middle">Item Name</th>
+                    <th rowspan="2" class="text-center align-middle">Item Code</th>
+                    <th rowspan="2" class="text-center align-middle">Unit</th>
+                    <th colspan="3" class="text-center">Opening</th>
+                    <th colspan="3" class="text-center">Purchase</th>
+                    <th colspan="3" class="text-center">Sale</th>
+                    <th colspan="3" class="text-center">Closing</th>
                 </tr>
                 <tr>
                     <!-- Opening -->
@@ -159,10 +144,10 @@
             <tbody>
                 @forelse($reportData as $index => $item)
                     <tr>
-                        <td class="text-center sticky-col sticky-col-1">{{ $index + 1 }}</td>
-                        <td class="sticky-col sticky-col-2 text-nowrap">{{ $item['item_name'] }}</td>
-                        <td class="sticky-col sticky-col-3 text-nowrap">{{ $item['item_code'] ?? '—' }}</td>
-                        <td class="sticky-col sticky-col-4 text-nowrap">{{ $item['unit'] ?? '—' }}</td>
+                        <td class="text-center">{{ $index + 1 }}</td>
+                        <td>{{ $item['item_name'] }}</td>
+                        <td>{{ $item['item_code'] ?? '—' }}</td>
+                        <td>{{ isset($item['unit']) && is_numeric($item['unit']) ? number_format((float)$item['unit'], 2) : ($item['unit'] ?? '—') }}</td>
                         <!-- Opening -->
                         <td class="text-end">{{ number_format($item['opening_qty'], 2) }}</td>
                         <td class="text-end">₹{{ number_format($item['opening_rate'], 2) }}</td>
@@ -393,21 +378,104 @@ function printStockSummary() {
 }
 </script>
 
-<script>
-    // Enhanced scroll indicator for table
-    document.addEventListener('DOMContentLoaded', function() {
-        const tableWrapper = document.querySelector('.stock-table-wrapper');
-        if (tableWrapper) {
-            tableWrapper.addEventListener('scroll', function() {
-                if (this.scrollLeft > 10) {
-                    this.classList.add('scrolled');
-                } else {
-                    this.classList.remove('scrolled');
-                }
-            });
+<style>
+    @media print {
+        .no-print { 
+            display: none !important; 
         }
-    });
-</script>
+        .report-header { 
+            display: block !important;
+            margin-top: 20px;
+            margin-bottom: 30px;
+        }
+        body { 
+            font-size: 12px; 
+        }
+        table { 
+            font-size: 11px;
+            page-break-inside: auto;
+        }
+        table tr {
+            page-break-inside: avoid;
+            page-break-after: auto;
+        }
+        table thead {
+            display: table-header-group;
+        }
+        th, td { 
+            padding: 6px !important; 
+        }
+        @page {
+            margin: 1cm;
+            size: A4 landscape;
+        }
+    }
+    
+    .report-header h4 {
+        margin-bottom: 10px;
+        color: #000;
+        font-weight: bold;
+    }
+    
+    .report-header p {
+        color: #333;
+        font-size: 14px;
+    }
+
+    /* Table fits in single view: no scroll, auto height/width */
+    .stock-summary-report .table-fit-single-view {
+        overflow: visible;
+        max-width: 100%;
+    }
+
+    .stock-summary-report .table-fit {
+        width: 100%;
+        table-layout: fixed;
+        font-size: 0.8rem;
+    }
+
+    .stock-summary-report .table-fit th,
+    .stock-summary-report .table-fit td {
+        white-space: normal;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        padding: 0.4rem 0.5rem;
+        vertical-align: middle;
+    }
+
+    .stock-summary-report .table-fit th {
+        font-weight: 600;
+    }
+
+    /* Error highlighting */
+    .table-danger {
+        background-color: #f8d7da !important;
+    }
+
+    .table-danger:hover {
+        background-color: #f5c2c7 !important;
+    }
+
+    .text-danger {
+        color: #dc3545 !important;
+    }
+
+    .fw-bold {
+        font-weight: 700 !important;
+    }
+
+    /* Alert styling */
+    .alert-danger {
+        border-left: 4px solid #dc3545;
+    }
+
+    @media print {
+        .table-danger {
+            background-color: #ffcccc !important;
+            border: 2px solid #ff0000 !important;
+        }
+    }
+</style>
 
 <script>
     // Store Type Selection Handler

@@ -589,14 +589,14 @@
                                 <table class="table text-nowrap mb-0" id="poItemsTable">
                                     <thead>
                                         <tr>
-                                            <th style="min-width: 300px;">Item Name <span class="text-white">*</span></th>
-                                            <th>Unit</th>
-                                            <th>Item Code</th>
-                                            <th>Quantity <span class="text-white">*</span></th>
-                                            <th>Unit Price <span class="text-white">*</span></th>
-                                            <th>Tax (%)</th>
-                                            <th>Total Amount</th>
-                                            <th></th>
+                                            <th style="width: 180px;">Item Name <span class="text-white">*</span></th>
+                                            <th style="width:auto;">Unit</th>
+                                            <th style="width:auto;">Item Code</th>
+                                            <th style="width:auto;">Quantity <span class="text-white">*</span></th>
+                                            <th style="width:auto;">Unit Price <span class="text-white">*</span></th>
+                                            <th style="width:auto;">Tax (%)</th>
+                                            <th style="width:auto;">Total Amount</th>
+                                            <th style="width:auto;"></th>
                                         </tr>
                                     </thead>
                                     <tbody id="poItemsBody">
@@ -745,14 +745,14 @@
                                 <table class="table text-nowrap mb-0">
                                     <thead>
                                         <tr>
-                                            <th>Item Name <span class="text-white">*</span></th>
-                                            <th>Unit</th>
-                                            <th>Item Code</th>
-                                            <th>Quantity <span class="text-white">*</span></th>
-                                            <th>Unit Price <span class="text-white">*</span></th>
-                                            <th>Tax (%)</th>
-                                            <th>Total Amount</th>
-                                            <th></th>
+                                            <th style="width:180px;">Item Name <span class="text-white">*</span></th>
+                                            <th style="width:auto;">Unit</th>
+                                            <th style="width:auto;">Item Code</th>
+                                            <th style="width:120px;">Quantity <span class="text-white">*</span></th>
+                                            <th style="width:120px;">Unit Price <span class="text-white">*</span></th>
+                                            <th style="width:120px;">Tax (%)</th>
+                                            <th style="width:120px;">Total Amount</th>
+                                            <th style="width:auto;"></th>
                                         </tr>
                                     </thead>
                                     <tbody id="editPoItemsBody"></tbody>
@@ -1186,8 +1186,8 @@
         })
         .catch(err => {
             console.error(err);
-            alert('Failed to load vendor items.');
-            filteredItems = [];
+            filteredItems = itemSubcategories || [];
+            if (callback) callback();
         });
     }
 
@@ -1495,9 +1495,24 @@
                     document.getElementById('editPOForm').action = editPoBaseUrl + '/' + poId;
                     document.getElementById('editPoNumber').value = po.po_number || '';
                     document.getElementById('editPoDate').value = po.po_date || '';
-                    document.getElementById('editStoreId').value = po.store_id || '';
-                    document.getElementById('editVendorId').value = po.vendor_id || '';
-                    document.getElementById('editPaymentCode').value = po.payment_code || '';
+                    var storeVal = (po.store_id != null && po.store_id !== '') ? String(po.store_id) : '';
+                    var vendorVal = (po.vendor_id != null && po.vendor_id !== '') ? String(po.vendor_id) : '';
+                    var paymentVal = (po.payment_code != null && po.payment_code !== '') ? String(po.payment_code) : '';
+                    if (tomSelectInstances.edit.store) {
+                        tomSelectInstances.edit.store.setValue(storeVal, true);
+                    } else {
+                        document.getElementById('editStoreId').value = storeVal;
+                    }
+                    if (tomSelectInstances.edit.vendor) {
+                        tomSelectInstances.edit.vendor.setValue(vendorVal, true);
+                    } else {
+                        document.getElementById('editVendorId').value = vendorVal;
+                    }
+                    if (tomSelectInstances.edit.payment) {
+                        tomSelectInstances.edit.payment.setValue(paymentVal, true);
+                    } else {
+                        document.getElementById('editPaymentCode').value = paymentVal;
+                    }
                     document.getElementById('editBillNo').value = po.bill_no || '';
                     const editBillDateEl = document.getElementById('editBillDate');
                     if (editBillDateEl) editBillDateEl.value = po.bill_date || '';
@@ -1556,13 +1571,16 @@
                         new bootstrap.Modal(document.getElementById('editPurchaseOrderModal')).show();
                     }
 
+                    // Show modal immediately with all items; vendor-specific list loads in background
+                    buildEditRows(itemSubcategories);
                     if (po.vendor_id) {
                         fetchVendorItems(po.vendor_id, function() {
-                            buildEditRows(filteredItems);
+                            const tbody = document.getElementById('editPoItemsBody');
+                            if (tbody && document.getElementById('editPurchaseOrderModal').classList.contains('show')) {
+                                editModalItems = (filteredItems && filteredItems.length) ? filteredItems : itemSubcategories;
+                                updateItemDropdowns(tbody, true);
+                            }
                         });
-                    } else {
-                        editModalItems = itemSubcategories;
-                        buildEditRows(itemSubcategories);
                     }
                 })
                 .catch(err => { console.error(err); alert('Failed to load purchase order.'); });
@@ -1933,4 +1951,3 @@
 })();
 </script>
 @endsection
-
