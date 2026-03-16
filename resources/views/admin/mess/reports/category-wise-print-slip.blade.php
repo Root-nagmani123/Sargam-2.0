@@ -48,7 +48,7 @@
                     </div>
                     <div class="col-12 col-md-3 col-lg-2">
                         <label class="form-label fw-semibold small text-uppercase text-muted mb-1">Client Type</label>
-                        <select id="clientTypePk" class="form-select" name="{{ request('client_type_slug') === 'ot' ? 'course_master_pk' : 'client_type_pk' }}">
+                        <select id="clientTypePk" class="form-select" name="{{ in_array(request('client_type_slug'), ['ot', 'course']) ? 'course_master_pk' : 'client_type_pk' }}">
                             <option value="">All</option>
                             @if(request('client_type_slug') === 'employee' && isset($clientTypeCategories['employee']))
                                 @foreach($clientTypeCategories['employee'] as $category)
@@ -58,9 +58,9 @@
                                 @foreach($otCourses as $course)
                                     <option value="{{ $course->pk }}" {{ (string)request('course_master_pk') === (string)$course->pk ? 'selected' : '' }}>{{ $course->course_name }}</option>
                                 @endforeach
-                            @elseif(request('client_type_slug') === 'course' && isset($clientTypeCategories['course']) && $clientTypeCategories['course']->isNotEmpty())
-                                @foreach($clientTypeCategories['course'] as $category)
-                                    <option value="{{ $category->id }}" {{ request('client_type_pk') == $category->id ? 'selected' : '' }}>{{ $category->client_name }}</option>
+                            @elseif(request('client_type_slug') === 'course' && isset($otCourses))
+                                @foreach($otCourses as $course)
+                                    <option value="{{ $course->pk }}" {{ (string)request('course_master_pk') === (string)$course->pk ? 'selected' : '' }}>{{ $course->course_name }}</option>
                                 @endforeach
                             @elseif(request('client_type_slug') && isset($clientTypeCategories[request('client_type_slug')]))
                                 @foreach($clientTypeCategories[request('client_type_slug')] as $category)
@@ -96,10 +96,6 @@
                             @elseif(request('client_type_slug') === 'course' && isset($clientTypeCategories['course']) && $clientTypeCategories['course']->isNotEmpty())
                                 @foreach($clientTypeCategories['course'] as $category)
                                     <option value="{{ $category->client_name }}" {{ request('buyer_name') == $category->client_name ? 'selected' : '' }}>{{ $category->client_name }}</option>
-                                @endforeach
-                            @elseif(request('client_type_slug') === 'course' && isset($otCourses) && $otCourses->isNotEmpty())
-                                @foreach($otCourses as $course)
-                                    <option value="{{ $course->course_name }}" {{ request('buyer_name') == $course->course_name ? 'selected' : '' }}>{{ $course->course_name }}</option>
                                 @endforeach
                             @elseif(request('client_type_slug') && isset($clientTypeCategories[request('client_type_slug')]))
                                 @foreach($clientTypeCategories[request('client_type_slug')] as $category)
@@ -178,11 +174,27 @@
             $slug = $first->client_type_slug ?? '';
             $typeSuffix = ($slug === 'employee') ? 'Employee' : (($slug === 'ot') ? 'OT' : ucfirst($slug));
             if (!$typeSuffix) $typeSuffix = 'N/A';
+
+            // When filtering by Course, append selected course name to CLIENT TYPE label.
+            $courseDisplay = null;
+            if ($slug === 'course' && request()->filled('course_master_pk') && isset($otCourses) && $otCourses->isNotEmpty()) {
+                $selectedCourse = $otCourses->firstWhere('pk', request('course_master_pk'));
+                if ($selectedCourse) {
+                    $courseDisplay = $selectedCourse->course_name;
+                }
+            }
         @endphp
         <div class="print-slip-section print-slip-page mb-4">
             <div class="report-details-row mb-2">
                 <span class="report-buyer-label">BUYER NAME : {{ $buyerName }}- {{ $typeSuffix }}</span>
-                <span class="report-client-type">CLIENT TYPE : <strong>{{ $clientTypeLabel }}</strong></span>
+                <span class="report-client-type">
+                    CLIENT TYPE : <strong>
+                        {{ $clientTypeLabel }}
+                        @if($courseDisplay)
+                            [{{ $courseDisplay }}]
+                        @endif
+                    </strong>
+                </span>
             </div>
             <div class="table-responsive">
                 <table class="table text-nowrap table-sm mb-0 print-slip-table align-middle">
@@ -571,10 +583,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const slug = clientTypeSlug.value;
             const prevValue = clientTypePk.value;
 
-            clientTypePk.name = (slug === 'ot') ? 'course_master_pk' : 'client_type_pk';
+            clientTypePk.name = (slug === 'ot' || slug === 'course') ? 'course_master_pk' : 'client_type_pk';
 
             clientTypePk.innerHTML = '<option value="">All</option>';
-            if (slug === 'ot' && otCourseOptions.length) {
+            if ((slug === 'ot' || slug === 'course') && otCourseOptions.length) {
                 otCourseOptions.forEach(function(o) {
                     const opt = document.createElement('option');
                     opt.value = o.value;
@@ -657,10 +669,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
                     setBuyerChoices(list, preservedBuyerName);
                 } else if (otCourseOptions.length) {
-                    const list = otCourseOptions.map(function(o) {
+                    const fallback = otCourseOptions.map(function(o) {
                         return { value: o.text, text: o.text };
                     });
-                    setBuyerChoices(list, preservedBuyerName);
+                    setBuyerChoices(fallback, preservedBuyerName);
                 } else {
                     setBuyerChoices([], preservedBuyerName);
                 }

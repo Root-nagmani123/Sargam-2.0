@@ -48,7 +48,13 @@
                         <select name="item_id" class="form-select choices-select" data-placeholder="All Items">
                             <option value="">All Items</option>
                             @foreach($allItems as $it)
-                                <option value="{{ $it->id }}" {{ ($itemId ?? '') == $it->id ? 'selected' : '' }}>{{ $it->item_name ?? $it->subcategory_name ?? $it->name ?? '—' }}</option>
+                                <option
+                                    value="{{ $it->id }}"
+                                    data-category-id="{{ $it->category_id ?? '' }}"
+                                    {{ ($itemId ?? '') == $it->id ? 'selected' : '' }}
+                                >
+                                    {{ $it->item_name ?? $it->subcategory_name ?? $it->name ?? '—' }}
+                                </option>
                             @endforeach
                         </select>
                     </div>
@@ -215,6 +221,9 @@
 document.addEventListener('DOMContentLoaded', function() {
     var viewType = document.getElementById('viewType');
     var categoryIdWrap = document.getElementById('categoryIdWrap');
+    var categorySelect = document.querySelector('select[name="category_id"]');
+    var itemSelectEl = document.querySelector('select[name="item_id"]');
+
     if (viewType && categoryIdWrap) {
         function toggleCategory() {
             categoryIdWrap.style.display = viewType.value === 'category_wise' ? 'block' : 'none';
@@ -242,6 +251,71 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 });
             });
+
+        // After TomSelect is initialized, restrict the Item dropdown options
+        // when "Category-wise" view is selected, so that only items belonging
+        // to the chosen category are shown.
+        if (itemSelectEl && itemSelectEl.tomselect) {
+            var itemTom = itemSelectEl.tomselect;
+            var allItemOptions = Object.values(itemTom.options || {});
+
+            function filterItemsByCategory() {
+                if (!itemTom) return;
+
+                var currentView = viewType ? viewType.value : 'item_wise';
+                var selectedCategoryId = categorySelect ? String(categorySelect.value || '') : '';
+                var currentValue = itemTom.getValue();
+
+                itemTom.clearOptions();
+
+                var allowedValues = [];
+                allItemOptions.forEach(function (opt) {
+                    // Always keep the "All Items" (empty) option
+                    if (!opt.value) {
+                        itemTom.addOption(opt);
+                        allowedValues.push(opt.value);
+                        return;
+                    }
+
+                    if (currentView === 'category_wise' && selectedCategoryId) {
+                        var catId = '';
+                        if (typeof opt.category_id !== 'undefined' && opt.category_id !== null) {
+                            catId = String(opt.category_id);
+                        } else if (typeof opt.categoryId !== 'undefined' && opt.categoryId !== null) {
+                            catId = String(opt.categoryId);
+                        } else if (typeof opt['data-category-id'] !== 'undefined' && opt['data-category-id'] !== null) {
+                            catId = String(opt['data-category-id']);
+                        }
+
+                        if (catId !== selectedCategoryId) {
+                            return; // skip items from other categories
+                        }
+                    }
+
+                    itemTom.addOption(opt);
+                    allowedValues.push(opt.value);
+                });
+
+                itemTom.refreshOptions(false);
+
+                if (currentValue && allowedValues.indexOf(currentValue) !== -1) {
+                    itemTom.setValue(currentValue, true);
+                } else if (currentView === 'category_wise' && selectedCategoryId) {
+                    // Default to "All Items" when switching categories
+                    itemTom.clear(true);
+                }
+            }
+
+            // Run once on page load
+            filterItemsByCategory();
+
+            if (categorySelect) {
+                categorySelect.addEventListener('change', filterItemsByCategory);
+            }
+            if (viewType) {
+                viewType.addEventListener('change', filterItemsByCategory);
+            }
+        }
     }
 });
 
