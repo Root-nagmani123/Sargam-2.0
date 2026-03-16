@@ -1,41 +1,46 @@
 @extends('admin.layouts.master')
 
 @section('setup_content')
-<div class="container-fluid low-stock-report py-2">
+<div class="container-fluid low-stock-report py-3 py-md-4">
     <x-breadcrum title="Low Stock Report"></x-breadcrum>
 
     <!-- Filters -->
-    <div class="card mb-4 border-0 shadow-sm rounded-4 no-print overflow-hidden">
-        <div class="card-header bg-body-tertiary border-0 py-3">
+    <div class="card mb-4 border-0 shadow rounded-4 no-print overflow-hidden">
+        <div class="card-header bg-body-secondary border-0 py-3 px-3 px-md-4">
             <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-                <div>
-                    <h5 class="mb-1 fw-semibold text-dark d-inline-flex align-items-center gap-2">
-                        <span class="material-symbols-rounded icon-20">tune</span>
-                        Filter Low Stock Items
-                    </h5>
-                    <p class="mb-0 text-body-secondary small">
-                        Items where available stock is at or below alert quantity
-                    </p>
+                <div class="d-flex align-items-center gap-3">
+                    <div class="rounded-3 bg-primary bg-opacity-10 p-2 d-flex align-items-center justify-content-center">
+                        <span class="material-symbols-rounded icon-24 text-primary">tune</span>
+                    </div>
+                    <div>
+                        <h5 class="mb-0 fw-semibold text-body-emphasis d-inline-flex align-items-center gap-2">
+                            Filter Low Stock Items
+                        </h5>
+                        <p class="mb-0 text-body-secondary small mt-1 opacity-90">
+                            Items where available stock is at or below alert quantity
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="card-body pt-3">
+        <div class="card-body pt-0 px-3 px-md-4 pb-4">
             <form method="GET" action="{{ route('admin.mess.reports.low-stock') }}">
-                <div class="row g-3 align-items-end">
-                    <div class="col-12 col-md-3 col-lg-3">
-                        <label class="form-label text-uppercase fw-semibold text-body-secondary mb-1">Till Date</label>
+                <div class="row g-3 g-md-4 align-items-end">
+                    <div class="col-12 col-md-4 col-lg-3">
+                        <label for="till_date" class="form-label small text-uppercase fw-semibold text-body-secondary mb-1">Till Date</label>
                         <input
                             type="date"
+                            id="till_date"
                             name="till_date"
-                            class="form-control"
+                            class="form-control form-control-lg rounded-3 focus-ring focus-ring-primary"
                             value="{{ $tillDate }}"
                             required
                         >
                     </div>
 
-                    <div class="col-12 col-md-3 col-lg-3">
-                        <label class="form-label small text-uppercase fw-semibold text-body-secondary mb-1">Store</label>
-                        <select name="store_id" class="form-select choices-select" data-placeholder="All Stores">
+                    <div class="col-12 col-md-4 col-lg-3">
+                        <label for="store_id" class="form-label small text-uppercase fw-semibold text-body-secondary mb-1">Store</label>
+                        <select id="store_id" name="store_id" class="form-select form-select-lg rounded-3 focus-ring focus-ring-primary" data-placeholder="All Stores">
                             <option value="">All Stores</option>
                             @foreach($stores as $store)
                                 <option value="{{ $store->id }}" {{ ($storeId ?? null) == $store->id ? 'selected' : '' }}>
@@ -46,21 +51,21 @@
                     </div>
 
                     <div class="col-12 col-lg-6">
-                        <div class="d-flex flex-wrap gap-2 justify-content-lg-end">
-                            <button type="submit" class="btn btn-primary d-inline-flex align-items-center">
-                                <span class="material-symbols-rounded icon-18 me-1">filter_list</span>
+                        <div class="d-flex flex-wrap gap-2 justify-content-lg-end pt-md-2">
+                            <button type="submit" class="btn btn-primary btn-lg rounded-3 px-4 d-inline-flex align-items-center gap-2">
+                                <span class="material-symbols-rounded icon-18">filter_list</span>
                                 Apply Filters
                             </button>
-                            <a href="{{ route('admin.mess.reports.low-stock') }}" class="btn btn-outline-secondary d-inline-flex align-items-center">
-                                <span class="material-symbols-rounded icon-18 me-1">refresh</span>
+                            <a href="{{ route('admin.mess.reports.low-stock') }}" class="btn btn-outline-secondary btn-lg rounded-3 px-4 d-inline-flex align-items-center gap-2">
+                                <span class="material-symbols-rounded icon-18">refresh</span>
                                 Reset
                             </a>
-                            <button type="button" class="btn btn-outline-primary d-inline-flex align-items-center" onclick="printLowStockReport()" title="Print report">
-                                <span class="material-symbols-rounded icon-18 me-1">print</span>
+                            <button type="button" class="btn btn-outline-primary btn-lg rounded-3 px-4 d-inline-flex align-items-center gap-2" onclick="printLowStockReport()" title="Print report">
+                                <span class="material-symbols-rounded icon-18">print</span>
                                 Print
                             </button>
-                            <a href="{{ route('admin.mess.reports.low-stock.pdf', request()->query()) }}" class="btn btn-danger d-inline-flex align-items-center" title="Download PDF">
-                                <span class="material-symbols-rounded icon-18 me-1">picture_as_pdf</span>
+                            <a href="{{ route('admin.mess.reports.low-stock.pdf', request()->query()) }}" class="btn btn-danger btn-lg rounded-3 px-4 d-inline-flex align-items-center gap-2" title="Download PDF">
+                                <span class="material-symbols-rounded icon-18">picture_as_pdf</span>
                                 Download PDF
                             </a>
                         </div>
@@ -71,43 +76,43 @@
     </div>
 
     <!-- Report Table -->
-    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
-        <div class="card-body p-3 p-md-4">
-            <div class="report-header text-center mb-4">
-                <h4 class="fw-bold text-uppercase mb-1">Low Stock Report</h4>
-                <p class="mb-2 text-body-secondary">
-                    <span class="badge text-bg-light border text-dark fw-normal rounded-pill px-3 py-2">
+    <div class="card border-0 shadow rounded-4 overflow-hidden">
+        <div class="card-body p-4 p-md-5">
+            <div class="report-header text-center mb-4 pb-3 border-bottom border-body-secondary border-opacity-25">
+                <h4 class="fw-bold text-uppercase mb-3 fs-5 text-body-emphasis">Low Stock Report</h4>
+                <div class="d-flex flex-wrap justify-content-center gap-2 gap-md-3">
+                    <span class="badge text-bg-body-secondary text-body-emphasis fw-normal rounded-pill px-3 py-2 border border-body-secondary border-opacity-50">
+                        <span class="material-symbols-rounded icon-16 align-text-bottom me-1">event</span>
                         Till: {{ date('d-F-Y', strtotime($tillDate)) }}
                     </span>
-                </p>
-                <p class="mb-0">
                     <span class="badge text-bg-primary fw-normal rounded-pill px-3 py-2">
-                        <strong>Store:</strong> {{ $selectedStoreName ?? 'All Stores' }}
+                        <span class="material-symbols-rounded icon-16 align-text-bottom me-1">store</span>
+                        {{ $selectedStoreName ?? 'All Stores' }}
                     </span>
-                </p>
+                </div>
             </div>
 
-            <div class="card border rounded-4 overflow-hidden">
-                <div class="card-header bg-body-tertiary border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2 py-3">
-                    <span class="fw-semibold text-dark d-inline-flex align-items-center gap-2">
-                        <span class="material-symbols-rounded icon-20">inventory_2</span>
+            <div class="card border border-body-secondary border-opacity-25 rounded-4 overflow-hidden">
+                <div class="card-header bg-body-tertiary border-bottom border-body-secondary border-opacity-25 d-flex justify-content-between align-items-center flex-wrap gap-2 py-3 px-4">
+                    <span class="fw-semibold text-body-emphasis d-inline-flex align-items-center gap-2">
+                        <span class="material-symbols-rounded icon-20 text-primary">inventory_2</span>
                         Items at or below minimum stock
                     </span>
-                    <span class="badge text-bg-light border text-dark rounded-pill px-3 py-2">
-                        Total items: {{ is_array($items) ? count($items) : 0 }}
+                    <span class="badge text-bg-body-secondary text-body-emphasis rounded-pill px-3 py-2 border border-body-secondary border-opacity-50 fw-semibold">
+                        Total: {{ is_array($items) ? count($items) : 0 }} items
                     </span>
                 </div>
 
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0" id="lowStockReportTable">
-                        <thead class="table-light">
+                    <table class="table table-hover table-striped align-middle mb-0" id="lowStockReportTable">
+                        <thead class="table-light text-nowrap">
                             <tr>
-                                <th class="text-center text-uppercase small fw-semibold text-secondary" style="width: 70px;">Sr. No.</th>
-                                <th class="text-uppercase small fw-semibold text-secondary" style="min-width: 220px;">Item Name</th>
-                                <th class="text-center text-uppercase small fw-semibold text-secondary" style="min-width: 90px;">Unit</th>
-                                <th class="text-end text-uppercase small fw-semibold text-secondary" style="min-width: 120px;">Available Qty</th>
-                                <th class="text-end text-uppercase small fw-semibold text-secondary" style="min-width: 120px;">Alert Qty</th>
-                                <th class="text-center text-uppercase small fw-semibold text-secondary" style="min-width: 150px;">Status</th>
+                                <th class="text-center text-uppercase small fw-bold text-body-secondary py-3 ps-3" style="width: 70px;">Sr. No.</th>
+                                <th class="text-uppercase small fw-bold text-body-secondary py-3" style="min-width: 220px;">Item Name</th>
+                                <th class="text-center text-uppercase small fw-bold text-body-secondary py-3" style="min-width: 90px;">Unit</th>
+                                <th class="text-end text-uppercase small fw-bold text-body-secondary py-3" style="min-width: 120px;">Available Qty</th>
+                                <th class="text-end text-uppercase small fw-bold text-body-secondary py-3" style="min-width: 120px;">Alert Qty</th>
+                                <th class="text-center text-uppercase small fw-bold text-body-secondary py-3 pe-3" style="min-width: 150px;">Status</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -117,26 +122,28 @@
                                     $alert = $row['alert_quantity'] ?? 0;
                                 @endphp
                                 <tr class="{{ $remaining < $alert ? 'table-danger' : '' }}">
-                                    <td class="text-center">{{ $index + 1 }}</td>
-                                    <td class="fw-semibold">{{ $row['item_name'] ?? '-' }}</td>
+                                    <td class="text-center ps-3">{{ $index + 1 }}</td>
+                                    <td class="fw-semibold text-body-emphasis">{{ $row['item_name'] ?? '-' }}</td>
                                     <td class="text-center">{{ $row['unit'] ?? 'Unit' }}</td>
-                                    <td class="text-end">{{ number_format($remaining, 2) }}</td>
+                                    <td class="text-end fw-medium">{{ number_format($remaining, 2) }}</td>
                                     <td class="text-end">{{ number_format($alert, 2) }}</td>
-                                    <td class="text-center">
+                                    <td class="text-center pe-3">
                                         @if($remaining <= 0)
-                                            <span class="badge text-bg-danger rounded-pill">Out of Stock</span>
+                                            <span class="badge text-bg-danger rounded-pill px-3 py-2">Out of Stock</span>
                                         @elseif($remaining <= $alert)
-                                            <span class="badge text-bg-warning rounded-pill">Below Minimum</span>
+                                            <span class="badge text-bg-warning text-dark rounded-pill px-3 py-2">Below Minimum</span>
                                         @else
-                                            <span class="badge text-bg-success rounded-pill">OK</span>
+                                            <span class="badge text-bg-success rounded-pill px-3 py-2">OK</span>
                                         @endif
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="6" class="text-center text-body-secondary py-5">
-                                        <span class="material-symbols-rounded d-block mb-2 icon-24">inventory_2</span>
-                                        No items are currently below their minimum stock level for the selected filters.
+                                    <td colspan="6" class="text-center text-body-secondary py-5 px-4">
+                                        <div class="d-inline-flex flex-column align-items-center gap-2">
+                                            <span class="material-symbols-rounded icon-48 text-body-tertiary opacity-75">inventory_2</span>
+                                            <span class="small fw-medium">No items are currently below their minimum stock level for the selected filters.</span>
+                                        </div>
                                     </td>
                                 </tr>
                             @endforelse
@@ -154,9 +161,11 @@
         vertical-align: middle;
     }
 
+    .low-stock-report .icon-16 { font-size: 16px; }
     .low-stock-report .icon-18 { font-size: 18px; }
     .low-stock-report .icon-20 { font-size: 20px; }
     .low-stock-report .icon-24 { font-size: 24px; }
+    .low-stock-report .icon-48 { font-size: 48px; }
 
     @media print {
         .no-print {

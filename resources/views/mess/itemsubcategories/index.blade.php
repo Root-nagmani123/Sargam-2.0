@@ -1,5 +1,61 @@
 @extends('admin.layouts.master')
 @section('title', 'Subcategory Item Master')
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
+<style>
+    /* Choices.js + Bootstrap for filter category select */
+    .itemsubcategories-filter-form .choices__inner {
+        min-height: 31px;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+        border-radius: var(--bs-border-radius, 0.375rem);
+        border: 1px solid var(--bs-border-color);
+        background-color: var(--bs-body-bg);
+    }
+    .itemsubcategories-filter-form .choices__list--single .choices__item {
+        padding: 2px 0;
+    }
+    .itemsubcategories-filter-form .choices.is-focused .choices__inner,
+    .itemsubcategories-filter-form .choices.is-open .choices__inner {
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+    .itemsubcategories-filter-form .choices__list--dropdown .choices__item--selectable.is-highlighted,
+    .itemsubcategories-filter-form .choices__list[aria-expanded] .choices__item--selectable.is-highlighted {
+        background-color: var(--bs-primary);
+        color: #fff;
+    }
+
+    /* Choices.js + Bootstrap for create/edit modal selects */
+    #createItemSubcategoryModal .choices__inner,
+    #editItemSubcategoryModal .choices__inner {
+        min-height: 31px;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+        border-radius: var(--bs-border-radius, 0.375rem);
+        border: 1px solid var(--bs-border-color);
+        background-color: var(--bs-body-bg);
+    }
+    #createItemSubcategoryModal .choices__list--single .choices__item,
+    #editItemSubcategoryModal .choices__list--single .choices__item {
+        padding: 2px 0;
+    }
+    #createItemSubcategoryModal .choices.is-focused .choices__inner,
+    #createItemSubcategoryModal .choices.is-open .choices__inner,
+    #editItemSubcategoryModal .choices.is-focused .choices__inner,
+    #editItemSubcategoryModal .choices.is-open .choices__inner {
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+    #createItemSubcategoryModal .choices__list--dropdown .choices__item--selectable.is-highlighted,
+    #createItemSubcategoryModal .choices__list[aria-expanded] .choices__item--selectable.is-highlighted,
+    #editItemSubcategoryModal .choices__list--dropdown .choices__item--selectable.is-highlighted,
+    #editItemSubcategoryModal .choices__list[aria-expanded] .choices__item--selectable.is-highlighted {
+        background-color: var(--bs-primary);
+        color: #fff;
+    }
+</style>
+@endpush
 @section('setup_content')
 @php
     $selectedCategoryId = $categoryIdFilter ?? request('category_id', '');
@@ -19,10 +75,10 @@
                 </button>
             </div>
 
-            <form method="GET" action="{{ route('admin.mess.itemsubcategories.index') }}" class="mb-3 row g-3 align-items-end">
+            <form method="GET" action="{{ route('admin.mess.itemsubcategories.index') }}" class="itemsubcategories-filter-form mb-3 row g-3 align-items-end">
                 <div class="col-sm-6 col-md-4 col-lg-3">
                     <label for="filter_category_id" class="form-label mb-1 small fw-semibold">Category name</label>
-                    <select name="category_id" id="filter_category_id" class="form-select">
+                    <select name="category_id" id="filter_category_id" class="form-select js-choices" data-placeholder="All">
                         <option value="">All</option>
                         @foreach($categories as $cat)
                             <option value="{{ $cat->id }}" {{ (string) $selectedCategoryId === (string) $cat->id ? 'selected' : '' }}>{{ $cat->category_name }}</option>
@@ -30,8 +86,8 @@
                     </select>
                 </div>
                 <div class="col-sm-6 col-md-auto d-flex gap-2">
-                    <button type="submit" class="btn  btn-primary d-inline-flex align-items-center gap-1">
-                        <i class="material-symbols-rounded" style="font-size: 1rem;">filter_list</i>
+                    <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-1">
+                        <i class="material-symbols-rounded">filter_list</i>
                         <span>Filter</span>
                     </button>
                     @if($selectedCategoryId !== '')
@@ -50,7 +106,7 @@
             @endif
 
             <div class="table-responsive">
-                <table id="itemSubcategoriesTable" class="table text-nowrap align-middle mb-0 w-100">
+                <table id="itemSubcategoriesTable" class="table align-middle mb-0">
                     <thead>
                         <tr>
                             <th>#</th>
@@ -125,7 +181,7 @@
                     <div class="row g-3">
                         <div class="col-6">
                             <label class="form-label">Category <span class="text-danger">*</span></label>
-                            <select name="category_id" id="create_category_id" class="form-select" required>
+                            <select name="category_id" id="create_category_id" class="form-select form-select-sm js-choices" data-placeholder="Select Category" required>
                                 <option value="">Select Category</option>
                                 @foreach($categories as $cat)
                                     <option value="{{ $cat->id }}" {{ old('category_id') == $cat->id ? 'selected' : '' }}>{{ $cat->category_name }}</option>
@@ -159,7 +215,7 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Status</label>
-                            <select name="status" id="create_status" class="form-select">
+                            <select name="status" id="create_status" class="form-select form-select-sm js-choices">
                                 <option value="active" {{ old('status', 'active') === 'active' ? 'selected' : '' }}>Active</option>
                                 <option value="inactive" {{ old('status') === 'inactive' ? 'selected' : '' }}>Inactive</option>
                             </select>
@@ -444,6 +500,26 @@ function initItemSubcategoryScripts() {
             });
         });
     }
+
+    // Initialize Choices.js on create & edit modal selects
+    var choicesInstances = {};
+    function createChoicesInstance(selectEl, key) {
+        if (!window.Choices || !selectEl) return null;
+        if (choicesInstances[key]) {
+            choicesInstances[key].destroy();
+        }
+        choicesInstances[key] = new Choices(selectEl, {
+            searchEnabled: true,
+            itemSelectText: '',
+            shouldSort: false
+        });
+        return choicesInstances[key];
+    }
+
+    // Initial setup for filter + create modal selects
+    createChoicesInstance(document.getElementById('filter_category_id'), 'filterCategory');
+    createChoicesInstance(document.getElementById('create_category_id'), 'createCategory');
+    createChoicesInstance(document.getElementById('create_status'), 'createStatus');
 
     document.addEventListener('mousedown', function(e) {
         var btn = e.target.closest('.btn-edit-itemsubcategory');

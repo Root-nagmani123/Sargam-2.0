@@ -158,14 +158,14 @@
                         <div class="card-body p-0">
                             <div class="table-responsive">
                                 <table class="table table-bordered mb-0" id="allocationItemsTable">
-                                    <thead style="background-color: #af2910;">
+                                    <thead>
                                         <tr>
-                                            <th style="min-width: 280px; color: #fff; border-color: #af2910;">Item Name <span class="text-white">*</span></th>
-                                            <th style="min-width: 90px; color: #fff; border-color: #af2910;">Item Quantity <span class="text-white">*</span></th>
-                                            <th style="min-width: 80px; color: #fff; border-color: #af2910;">Item Unit <span class="text-white">*</span></th>
-                                            <th style="min-width: 100px; color: #fff; border-color: #af2910;">Unit Price <span class="text-white">*</span></th>
-                                            <th style="min-width: 110px; color: #fff; border-color: #af2910;">Total Price <span class="text-white">*</span></th>
-                                            <th style="width: 50px; color: #fff; border-color: #af2910;"></th>
+                                            <th style="min-width: 180px;">Item Name <span class="text-white">*</span></th>
+                                            <th style="min-width: 90px;">Item Quantity <span class="text-white">*</span></th>
+                                            <th style="min-width: 80px;">Item Unit <span class="text-white">*</span></th>
+                                            <th style="min-width: 100px;">Unit Price <span class="text-white">*</span></th>
+                                            <th style="min-width: 110px;">Total Price <span class="text-white">*</span></th>
+                                            <th style="width: 50px;"></th>
                                         </tr>
                                     </thead>
                                     <tbody id="allocationItemsBody">
@@ -241,14 +241,14 @@
                         <div class="card-body p-0">
                             <div class="table-responsive">
                                 <table class="table table-bordered mb-0">
-                                    <thead style="background-color: #af2910;">
+                                    <thead>
                                         <tr>
-                                            <th style="min-width: 280px; color: #fff; border-color: #af2910;">Item Name <span class="text-white">*</span></th>
-                                            <th style="min-width: 90px; color: #fff; border-color: #af2910;">Item Quantity <span class="text-white">*</span></th>
-                                            <th style="min-width: 80px; color: #fff; border-color: #af2910;">Item Unit <span class="text-white">*</span></th>
-                                            <th style="min-width: 100px; color: #fff; border-color: #af2910;">Unit Price <span class="text-white">*</span></th>
-                                            <th style="min-width: 110px; color: #fff; border-color: #af2910;">Total Price <span class="text-white">*</span></th>
-                                            <th style="width: 50px; color: #fff; border-color: #af2910;"></th>
+                                            <th style="min-width: 180px;">Item Name <span class="text-white">*</span></th>
+                                            <th style="min-width: 90px;">Item Quantity <span class="text-white">*</span></th>
+                                            <th style="min-width: 80px;">Item Unit <span class="text-white">*</span></th>
+                                            <th style="min-width: 100px;">Unit Price <span class="text-white">*</span></th>
+                                            <th style="min-width: 110px;">Total Price <span class="text-white">*</span></th>
+                                            <th style="width: 50px;"></th>
                                         </tr>
                                     </thead>
                                     <tbody id="editAllocationItemsBody"></tbody>
