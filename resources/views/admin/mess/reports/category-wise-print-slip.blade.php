@@ -35,7 +35,7 @@
                         <label class="form-label fw-semibold small text-uppercase text-muted mb-1">To Date</label>
                         <input type="date" name="to_date" class="form-control" value="{{ request('to_date') }}">
                     </div>
-                    <div class="col-12 col-md-3 col-lg-3">
+                    <div class="col-12 col-md-3 col-lg-2">
                         <label class="form-label fw-semibold small text-uppercase text-muted mb-1">Employee / OT / Course</label>
                         <select name="client_type_slug" id="clientTypeSlug" class="form-select">
                             <option value="">All Client Types</option>
@@ -46,7 +46,7 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-12 col-md-3 col-lg-3">
+                    <div class="col-12 col-md-3 col-lg-2">
                         <label class="form-label fw-semibold small text-uppercase text-muted mb-1">Client Type</label>
                         <select id="clientTypePk" class="form-select" name="{{ request('client_type_slug') === 'ot' ? 'course_master_pk' : 'client_type_pk' }}">
                             <option value="">All</option>
@@ -69,7 +69,7 @@
                             @endif
                         </select>
                     </div>
-                    <div class="col-12 col-md-3 col-lg-2">
+                    <div class="col-12 col-md-3 col-lg-4">
                         <label class="form-label fw-semibold small text-uppercase text-muted mb-1">Buyer Name (Selling Voucher)</label>
                         <select name="buyer_name" id="clientTypePkBuyer" class="form-select">
                             <option value="">All Buyers</option>
@@ -141,7 +141,8 @@
         @php
         $fromDateFormatted = request('from_date') ? \Carbon\Carbon::parse(request('from_date'))->format('d-F-Y') : 'Start';
         $toDateFormatted = request('to_date') ? \Carbon\Carbon::parse(request('to_date'))->format('d-F-Y') : 'End';
-        $sectionsToShow = request('print_all') && isset($allBuyersSections) ? $allBuyersSections : collect([$groupedSections]);
+        // Always show all buyers' sections in one go (no pagination)
+        $sectionsToShow = isset($allBuyersSections) ? $allBuyersSections : collect([$groupedSections]);
     @endphp
 
     @if($sectionsToShow->isEmpty())
@@ -251,45 +252,10 @@
     @endforeach
     @endif
 
-    <!-- Pagination: one buyer per page (hide when print) -->
-    @if(!request('print_all') && isset($paginator) && $paginator->hasPages())
-        <div class="d-flex align-items-center gap-2 mt-3 no-print pagination-custom">
-            <span class="text-secondary">Page</span>
-            <input type="number" class="form-control  pagination-page-input" id="paginationPageInput"
-                value="{{ $paginator->currentPage() }}" min="1" max="{{ $paginator->lastPage() }}"
-                style="width: 60px; display: inline-block;">
-            <span class="text-secondary">of {{ $paginator->lastPage() }}</span>
-            @if($paginator->currentPage() > 1)
-                <a href="{{ $paginator->withQueryString()->url($paginator->currentPage() - 1) }}" class="btn btn-sm btn-outline-secondary pagination-arrow" aria-label="Previous">&lsaquo;</a>
-            @endif
-            @if($paginator->hasMorePages())
-                <a href="{{ $paginator->withQueryString()->nextPageUrl() }}" class="btn btn-sm btn-outline-secondary pagination-arrow" aria-label="Next">&rsaquo;</a>
-            @endif
-        </div>
-        <script>
-        (function() {
-            var input = document.getElementById('paginationPageInput');
-            if (!input) return;
-            var lastPage = {{ $paginator->lastPage() }};
-            var baseUrl = "{{ $paginator->withQueryString()->url(1) }}";
-            function goToPage() {
-                var p = parseInt(input.value, 10);
-                if (isNaN(p) || p < 1) p = 1;
-                if (p > lastPage) p = lastPage;
-                input.value = p;
-                var url = baseUrl.match(/page=/) ? baseUrl.replace(/page=\d+/, 'page=' + p) : baseUrl + (baseUrl.indexOf('?') >= 0 ? '&' : '?') + 'page=' + p;
-                window.location.href = url;
-            }
-            input.addEventListener('change', goToPage);
-            input.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); goToPage(); } });
-        })();
-        </script>
-    @endif
+    <!-- Pagination removed: all data loaded in a single view -->
         </div>
     </div>
 </div>
-
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css">
 
 <style>
     /* Report header – same on screen and print */
@@ -417,7 +383,9 @@ window.addEventListener('load', function() {
 </script>
 @endif
 
-<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+{{-- Choices.js for enhanced Bootstrap-styled selects --}}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 
 <script>
 function printCategoryWiseSlip() {
@@ -567,30 +535,41 @@ document.addEventListener('DOMContentLoaded', function() {
             @endforeach
         @endif
     ];
-    const employeeNames = { 'academy staff': [ @foreach($employees ?? [] as $e){ value: '{{ addslashes($e->full_name) }}', text: '{{ addslashes($e->full_name) }}' },@endforeach ], 'faculty': [ @foreach($faculties ?? [] as $f){ value: '{{ addslashes($f->full_name) }}', text: '{{ addslashes($f->full_name) }}' },@endforeach ], 'mess staff': [ @foreach($messStaff ?? [] as $m){ value: '{{ addslashes($m->full_name) }}', text: '{{ addslashes($m->full_name) }}' },@endforeach ] };
+    const employeeNames = {
+        'academy staff': [ @foreach($employees ?? [] as $e){ value: '{{ addslashes($e->full_name) }}', text: '{{ addslashes($e->full_name) }}' },@endforeach ],
+        'faculty': [ @foreach($faculties ?? [] as $f){ value: '{{ addslashes($f->full_name) }}', text: '{{ addslashes($f->full_name) }}' },@endforeach ],
+        'mess staff': [ @foreach($messStaff ?? [] as $m){ value: '{{ addslashes($m->full_name) }}', text: '{{ addslashes($m->full_name) }}' },@endforeach ]
+    };
 
-    if (clientTypeSlug && clientTypePk && clientTypePkBuyer) {
-        const tomSelectConfig = {
-            create: false,
-            allowEmptyOption: true,
-            sortField: { field: 'text', direction: 'asc' },
-            plugins: ['dropdown_input']
+    if (clientTypeSlug && clientTypePk && clientTypePkBuyer && window.Choices) {
+        const hadServerClientTypeOptions = clientTypePk.options.length > 1;
+        const hadServerBuyerOptions = clientTypePkBuyer.options.length > 1;
+        const choicesConfig = {
+            searchEnabled: true,
+            itemSelectText: '',
+            shouldSort: true,
+            allowHTML: false,
         };
 
-        function initTomSelect(el) {
-            if (typeof window.TomSelect === 'undefined') return;
-            if (el.tomselect) {
-                el.tomselect.destroy();
+        function initChoices(el) {
+            if (!el) return null;
+            if (el.choices) {
+                el.choices.destroy();
             }
-            return new TomSelect(el, tomSelectConfig);
+            // Ensure underlying select keeps Bootstrap classes
+            el.classList.add('form-select', 'w-100');
+            const instance = new Choices(el, choicesConfig);
+            el.choices = instance;
+            return instance;
         }
 
-        initTomSelect(clientTypeSlug);
-        initTomSelect(clientTypePk);
-        initTomSelect(clientTypePkBuyer);
+        initChoices(clientTypeSlug);
+        initChoices(clientTypePk);
+        initChoices(clientTypePkBuyer);
 
         function fillClientTypeSelect() {
             const slug = clientTypeSlug.value;
+            const prevValue = clientTypePk.value;
 
             clientTypePk.name = (slug === 'ot') ? 'course_master_pk' : 'client_type_pk';
 
@@ -612,7 +591,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             }
 
-            initTomSelect(clientTypePk);
+            // Try to preserve previous selection after rebuilding
+            if (prevValue) {
+                clientTypePk.value = prevValue;
+            }
+
+            initChoices(clientTypePk);
             fillBuyerNameSelect();
         }
 
@@ -648,7 +632,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (preserveValue) {
                     clientTypePkBuyer.value = preserveValue;
                 }
-                initTomSelect(clientTypePkBuyer);
+                initChoices(clientTypePkBuyer);
             }
 
             if (slug === 'employee' && dataClientName && employeeNames[dataClientName]) {
@@ -693,12 +677,21 @@ document.addEventListener('DOMContentLoaded', function() {
         clientTypeSlug.addEventListener('change', function() { fillClientTypeSelect(); });
         clientTypePk.addEventListener('change', function() { fillBuyerNameSelect(); });
 
-        if (clientTypeSlug.value === 'ot') {
-            clientTypePk.name = 'course_master_pk';
-            if (clientTypePk.value) fillBuyerNameSelect();
-        }
-        if (clientTypeSlug.value === 'course') {
-            fillBuyerNameSelect();
+        // Initial population on page load for dependent dropdowns
+        if (clientTypeSlug.value) {
+            // If server already rendered options (after a filter submit), keep them and just
+            // hydrate Choices + buyer options based on current selection.
+            if (hadServerClientTypeOptions) {
+                initChoices(clientTypePk);
+                // Rebuild buyer list from JS helpers but preserve current buyer_name
+                fillBuyerNameSelect();
+            } else {
+                // Fresh load with only "All" option -> build from JS maps
+                fillClientTypeSelect();
+            }
+        } else {
+            clientTypePkBuyer.innerHTML = '<option value="">All Buyers</option>';
+            initChoices(clientTypePkBuyer);
         }
     }
 });
