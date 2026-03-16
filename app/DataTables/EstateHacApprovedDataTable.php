@@ -43,8 +43,8 @@ class EstateHacApprovedDataTable extends DataTable
             })
             ->editColumn('eligibility_label', fn ($row) => e($row->eligibility_label ?? '—'))
             ->editColumn('request_type', fn ($row) => $row->request_type === 'change'
-                ? '<span class="badge bg-info">Change Request</span>'
-                : '<span class="badge bg-secondary">New Request</span>')
+                ? '<span class="badge bg-danger">Change Request</span>'
+                : '<span class="badge bg-primary">New Request</span>')
             ->editColumn('current_or_availability', function ($row) {
                 // Change request: show current allotment/availability only after approval
                 if (($row->request_type ?? '') === 'change') {
@@ -57,7 +57,7 @@ class EstateHacApprovedDataTable extends DataTable
             ->addColumn('action', function ($row) {
                 $detailsPk = (int) ($row->estate_home_request_details_pk ?? $row->source_pk ?? 0);
                 $detailsUrl = $detailsPk ? route('admin.estate.request-details', ['id' => $detailsPk]) : '#';
-                $detailsLink = $detailsPk ? '<a href="' . e($detailsUrl) . '" class="btn btn-sm btn-outline-secondary me-1" title="Request &amp; Change Details"><i class="bi bi-eye"></i></a>' : '';
+                $detailsLink = $detailsPk ? '<a href="' . e($detailsUrl) . '" class="btn btn-primary btn-sm me-1" title="Request &amp; Change Details"><i class="material-icons">visibility</i></a>' : '';
                 if ($row->request_type === 'change') {
                     $status = (int) ($row->change_ap_dis_status ?? 0);
                     if ($status === 1) {
@@ -73,8 +73,7 @@ class EstateHacApprovedDataTable extends DataTable
                     </div>';
                 }
                 $url = route('admin.estate.new-request.allot-details', ['id' => $row->source_pk]);
-                return $detailsLink . '<button type="button" class="btn btn-sm btn-success btn-allot-new-request" data-id="' . (int) $row->source_pk . '" data-req-id="' . e($row->request_id ?? '') . '" data-details-url="' . e($url) . '" title="Allot house (add to Possession Details)">
-                    <i class="bi bi-house-add me-1"></i> Allot
+                return $detailsLink . '<button type="button" class="btn btn-success btn-allot-new-request" data-id="' . (int) $row->source_pk . '" data-req-id="' . e($row->request_id ?? '') . '" data-details-url="' . e($url) . '" title="Allot house (add to Possession Details)"> Allot
                 </button>';
             })
             ->rawColumns(['request_type', 'action'])

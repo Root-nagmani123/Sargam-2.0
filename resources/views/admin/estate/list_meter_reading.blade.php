@@ -169,7 +169,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         className: 'text-center',
                         render: function (data) {
                             var url = data || '#';
-                            return '<a href="' + url + '" class="btn btn-sm btn-outline-success" title="Edit"><i class="bi bi-pencil-square"></i></a>';
+                            return '<a href="' + url + '" class="btn btn-sm btn-outline-success" title="Edit"><i class="material-icons">edit</i></a>';
                         }
                     }
                 ],

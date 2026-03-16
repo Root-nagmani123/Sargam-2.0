@@ -29,7 +29,7 @@
                 <ul class="dropdown-menu dropdown-menu-end" id="defineHouseColumnToggleMenu"></ul>
             </div>
             <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" id="btnDefineHousePrint" title="Print">
-                <i class="bi bi-printer"></i>
+                <i class="material-icons material-symbols-rounded">print</i>
                 <span class="d-none d-md-inline">Print</span>
             </button>
         </div>

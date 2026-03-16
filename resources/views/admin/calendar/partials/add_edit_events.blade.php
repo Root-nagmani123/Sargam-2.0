@@ -479,7 +479,7 @@
 
                             <div class="col-12">
                                 <label for="topic" class="form-label required">
-                                    <i class="bi bi-pencil-square"></i>Topic
+                                    <i class="material-icons">edit</i>Topic
                                 </label>
                                 <textarea name="topic" id="topic" class="form-control" rows="3"
                                     placeholder="Enter topic details" required aria-required="true"></textarea>
