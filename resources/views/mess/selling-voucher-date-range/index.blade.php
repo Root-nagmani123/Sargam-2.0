@@ -1010,7 +1010,10 @@
                 selectEl.appendChild(opt);
             });
             if (typeof TomSelect !== 'undefined') {
-                var inst = new TomSelect(selectEl, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Client Name' });
+                var inst = new TomSelect(selectEl, createBlankSearchConfig({
+                    placeholder: 'Select Client Name',
+                    clearOnOpen: true
+                }));
                 if (selectEl.id === 'drClientNameSelect') addModalTomSelectInstances.client = inst;
             }
         }
@@ -1030,7 +1033,10 @@
                 editSel.appendChild(opt);
             });
             if (typeof TomSelect !== 'undefined') {
-                editModalTomSelectInstances.client = new TomSelect(editSel, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Client Name' });
+                editModalTomSelectInstances.client = new TomSelect(editSel, createBlankSearchConfig({
+                    placeholder: 'Select Client Name',
+                    clearOnOpen: true
+                }));
             }
         }
 
@@ -1078,26 +1084,88 @@
                 if (el.tomselect) { try { el.tomselect.destroy(); } catch (e) {} }
             });
         }
+        function createBlankSearchConfig(extra) {
+            return Object.assign({
+                allowEmptyOption: true,
+                dropdownParent: 'body',
+                searchField: ['text'],
+                controlInput: '<input>',
+                highlight: false,
+                onInitialize: function () {
+                    this.activeOption = null;
+                },
+                onDropdownOpen: function (dropdown) {
+                    var self = this;
+                    function clearInputAndCursor() {
+                        var input = self.control_input || (dropdown && dropdown.querySelector('input'));
+                        if (typeof self.setTextboxValue === 'function') self.setTextboxValue('');
+                        if (typeof self.onSearchChange === 'function') self.onSearchChange('');
+                        if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
+                        if (input) {
+                            input.value = '';
+                            input.focus();
+                            try { input.setSelectionRange(0, 0); } catch (e) {}
+                            input.scrollLeft = 0;
+                        }
+                    }
+                    // Agar clearOnOpen true hai to har open par selection bhi hatao
+                    if (self.settings && self.settings.clearOnOpen) {
+                        self.clear(true);
+                    }
+                    clearInputAndCursor();
+                    setTimeout(clearInputAndCursor, 0);
+                    setTimeout(clearInputAndCursor, 50);
+                    setTimeout(clearInputAndCursor, 100);
+                    if (dropdown) {
+                        setTimeout(function () {
+                            var opts = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"]');
+                            opts.forEach(function (opt) {
+                                opt.classList.remove('active');
+                                opt.classList.remove('selected');
+                                opt.setAttribute('aria-selected', 'false');
+                            });
+                        }, 0);
+                    }
+                }
+            }, extra || {});
+        }
+
         function initAddModalTomSelects() {
             if (typeof TomSelect === 'undefined') return;
             var paymentSel = document.querySelector('#addReportModal select[name="payment_type"]');
-            if (paymentSel && !paymentSel.tomselect) addModalTomSelectInstances.payment = new TomSelect(paymentSel, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Payment Type' });
+            if (paymentSel && !paymentSel.tomselect) {
+                addModalTomSelectInstances.payment = new TomSelect(paymentSel, createBlankSearchConfig({
+                    placeholder: 'Payment Type',
+                    clearOnOpen: true
+                }));
+            }
             var clientSel = document.getElementById('drClientNameSelect');
             var clientTypeRadio = document.querySelector('#addReportModal .dr-client-type-radio:checked');
             var slug = clientTypeRadio ? (clientTypeRadio.value || '').toLowerCase() : 'employee';
             if (clientSel && slug !== 'ot' && slug !== 'course' && clientNameOptionsAdd.length) {
                 rebuildClientNameSelect(clientSel, clientNameOptionsAdd, slug);
             } else if (clientSel && !clientSel.tomselect) {
-                addModalTomSelectInstances.client = new TomSelect(clientSel, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Client Name' });
+                addModalTomSelectInstances.client = new TomSelect(clientSel, createBlankSearchConfig({
+                    placeholder: 'Select Client Name',
+                    clearOnOpen: true
+                }));
             }
             var storeSel = document.querySelector('#addReportModal select[name="inve_store_master_pk"]');
-            if (storeSel && !storeSel.tomselect) addModalTomSelectInstances.store = new TomSelect(storeSel, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Store' });
+            if (storeSel && !storeSel.tomselect) {
+                addModalTomSelectInstances.store = new TomSelect(storeSel, createBlankSearchConfig({
+                    placeholder: 'Select Store',
+                    clearOnOpen: true
+                }));
+            }
             var nameSelectIds = ['drOtCourseSelect', 'drCourseSelect', 'drFacultySelect', 'drAcademyStaffSelect', 'drMessStaffSelect', 'drOtStudentSelect', 'drCourseNameSelect'];
             nameSelectIds.forEach(function(id) {
                 var sel = document.getElementById(id);
                 if (!sel || sel.tomselect) return;
                 var ph = id.indexOf('Faculty') !== -1 ? 'Select Faculty' : id.indexOf('Academy') !== -1 ? 'Select Academy Staff' : id.indexOf('Mess') !== -1 ? 'Select Mess Staff' : id.indexOf('OtStudent') !== -1 ? 'Select Student' : 'Select Course';
-                new TomSelect(sel, { allowEmptyOption: true, dropdownParent: 'body', placeholder: ph });
+                new TomSelect(sel, createBlankSearchConfig({
+                    placeholder: ph,
+                    clearOnOpen: true
+                }));
             });
             var otCourseSel = document.getElementById('drOtCourseSelect');
             var drCourseSel = document.getElementById('drCourseSelect');
@@ -1106,7 +1174,11 @@
             if (clientSel) setSelectVisible(clientSel, slug !== 'ot' && slug !== 'course');
             document.querySelectorAll('#addModalItemsBody .dr-item-select').forEach(function(select) {
                 if (select.tomselect) return;
-                new TomSelect(select, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Item', maxOptions: null });
+                new TomSelect(select, createBlankSearchConfig({
+                    placeholder: 'Select Item',
+                    maxOptions: null,
+                    clearOnOpen: true
+                }));
             });
             if (typeof updateDrNameField === 'function') updateDrNameField();
             var addChecked = document.querySelector('#addReportModal .dr-client-type-radio:checked');
@@ -1120,7 +1192,12 @@
         function initEditModalTomSelects() {
             if (typeof TomSelect === 'undefined') return;
             var paymentSel = document.querySelector('#editReportModal select.edit-payment-type');
-            if (paymentSel && !paymentSel.tomselect) editModalTomSelectInstances.payment = new TomSelect(paymentSel, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Payment Type' });
+            if (paymentSel && !paymentSel.tomselect) {
+                editModalTomSelectInstances.payment = new TomSelect(paymentSel, createBlankSearchConfig({
+                    placeholder: 'Payment Type',
+                    clearOnOpen: true
+                }));
+            }
             var clientSel = document.getElementById('editDrClientNameSelect');
             var editRadio = document.querySelector('#editReportModal .edit-dr-client-type-radio:checked');
             var editSlug = editRadio ? (editRadio.value || '').toLowerCase() : 'employee';
@@ -1133,10 +1210,18 @@
                     else clientSel.value = preservedPk;
                 }
             } else if (clientSel && !clientSel.tomselect) {
-                editModalTomSelectInstances.client = new TomSelect(clientSel, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Client Name' });
+                editModalTomSelectInstances.client = new TomSelect(clientSel, createBlankSearchConfig({
+                    placeholder: 'Select Client Name',
+                    clearOnOpen: true
+                }));
             }
             var storeSel = document.querySelector('#editReportModal select.edit-store-id');
-            if (storeSel && !storeSel.tomselect) editModalTomSelectInstances.store = new TomSelect(storeSel, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Store' });
+            if (storeSel && !storeSel.tomselect) {
+                editModalTomSelectInstances.store = new TomSelect(storeSel, createBlankSearchConfig({
+                    placeholder: 'Select Store',
+                    clearOnOpen: true
+                }));
+            }
             var editNameInpForInit = document.getElementById('editDrClientNameInput');
             var nameValForInit = (editNameInpForInit && editNameInpForInit.value) ? String(editNameInpForInit.value).trim() : '';
             if (nameValForInit) {
@@ -1152,11 +1237,18 @@
                 var sel = document.getElementById(id);
                 if (!sel || sel.tomselect) return;
                 var ph = id.indexOf('Faculty') !== -1 ? 'Select Faculty' : id.indexOf('Academy') !== -1 ? 'Select Academy Staff' : id.indexOf('Mess') !== -1 ? 'Select Mess Staff' : 'Select Course';
-                new TomSelect(sel, { allowEmptyOption: true, dropdownParent: 'body', placeholder: ph });
+                new TomSelect(sel, createBlankSearchConfig({
+                    placeholder: ph,
+                    clearOnOpen: true
+                }));
             });
             document.querySelectorAll('#editModalItemsBody .edit-dr-item-select').forEach(function(select) {
                 if (select.tomselect) return;
-                new TomSelect(select, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Item', maxOptions: null });
+                new TomSelect(select, createBlankSearchConfig({
+                    placeholder: 'Select Item',
+                    maxOptions: null,
+                    clearOnOpen: true
+                }));
             });
             if (typeof updateEditDrNameField === 'function') updateEditDrNameField();
             var editChecked = document.querySelector('#editReportModal .edit-dr-client-type-radio:checked');
@@ -1216,8 +1308,116 @@
             if (typeof TomSelect === 'undefined') return;
             var filterStatus = document.querySelector('form[method="GET"] select[name="status"]');
             var filterStore = document.querySelector('form[method="GET"] select[name="store"]');
-            if (filterStatus) { if (filterStatus.tomselect) filterStatus.tomselect.destroy(); new TomSelect(filterStatus, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'All Status' }); }
-            if (filterStore) { if (filterStore.tomselect) filterStore.tomselect.destroy(); new TomSelect(filterStore, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'All Stores' }); }
+
+            if (filterStatus) {
+                if (filterStatus.tomselect) filterStatus.tomselect.destroy();
+                new TomSelect(filterStatus, {
+                    allowEmptyOption: true,
+                    dropdownParent: 'body',
+                    placeholder: 'All Status',
+                    searchField: ['text'],
+                    controlInput: '<input>',
+                    highlight: false,
+                    onInitialize: function () {
+                        this.activeOption = null;
+                    },
+                    onDropdownOpen: function (dropdown) {
+                        var self = this;
+                        function clearInputAndCursor() {
+                            var input = self.control_input || (dropdown && dropdown.querySelector('input'));
+                            if (typeof self.setTextboxValue === 'function') self.setTextboxValue('');
+                            if (typeof self.onSearchChange === 'function') self.onSearchChange('');
+                            if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
+                            if (input) {
+                                input.value = '';
+                                input.focus();
+                                try { input.setSelectionRange(0, 0); } catch (e) {}
+                                input.scrollLeft = 0;
+                            }
+                        }
+                        // Har open par selection + search ko blank karo
+                        self.clear(true);
+                        clearInputAndCursor();
+                        setTimeout(function () {
+                            self.clear(true);
+                            clearInputAndCursor();
+                        }, 0);
+                        setTimeout(function () {
+                            self.clear(true);
+                            clearInputAndCursor();
+                        }, 50);
+                        setTimeout(function () {
+                            self.clear(true);
+                            clearInputAndCursor();
+                        }, 100);
+                        if (dropdown) {
+                            setTimeout(function () {
+                                var opts = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"]');
+                                opts.forEach(function (opt) {
+                                    opt.classList.remove('active');
+                                    opt.classList.remove('selected');
+                                    opt.setAttribute('aria-selected', 'false');
+                                });
+                            }, 0);
+                        }
+                    }
+                });
+            }
+
+            if (filterStore) {
+                if (filterStore.tomselect) filterStore.tomselect.destroy();
+                new TomSelect(filterStore, {
+                    allowEmptyOption: true,
+                    dropdownParent: 'body',
+                    placeholder: 'All Stores',
+                    searchField: ['text'],
+                    controlInput: '<input>',
+                    highlight: false,
+                    onInitialize: function () {
+                        this.activeOption = null;
+                    },
+                    onDropdownOpen: function (dropdown) {
+                        var self = this;
+                        function clearInputAndCursor() {
+                            var input = self.control_input || (dropdown && dropdown.querySelector('input'));
+                            if (typeof self.setTextboxValue === 'function') self.setTextboxValue('');
+                            if (typeof self.onSearchChange === 'function') self.onSearchChange('');
+                            if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
+                            if (input) {
+                                input.value = '';
+                                input.focus();
+                                try { input.setSelectionRange(0, 0); } catch (e) {}
+                                input.scrollLeft = 0;
+                            }
+                        }
+                        // Har open par selection + search ko blank karo
+                        self.clear(true);
+                        clearInputAndCursor();
+                        setTimeout(function () {
+                            self.clear(true);
+                            clearInputAndCursor();
+                        }, 0);
+                        setTimeout(function () {
+                            self.clear(true);
+                            clearInputAndCursor();
+                        }, 50);
+                        setTimeout(function () {
+                            self.clear(true);
+                            clearInputAndCursor();
+                        }, 100);
+                        if (dropdown) {
+                            setTimeout(function () {
+                                var opts = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"]');
+                                opts.forEach(function (opt) {
+                                    opt.classList.remove('active');
+                                    opt.classList.remove('selected');
+                                    opt.setAttribute('aria-selected', 'false');
+                                });
+                            }, 0);
+                        }
+                    }
+                });
+            }
         });
 
         function enforceQtyWithinAvailable(row, availSelector, qtySelector) {
@@ -1522,7 +1722,15 @@
             tbody.appendChild(newTr);
             addRowIndex++;
             var newItemSelect = newTr.querySelector('.dr-item-select');
-            if (newItemSelect && typeof TomSelect !== 'undefined') new TomSelect(newItemSelect, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Item', maxOptions: null });
+            if (newItemSelect && typeof TomSelect !== 'undefined') {
+                new TomSelect(newItemSelect, createBlankSearchConfig({
+                    allowEmptyOption: true,
+                    dropdownParent: 'body',
+                    placeholder: 'Select Item',
+                    maxOptions: null,
+                    clearOnOpen: true
+                }));
+            }
             updateAddRowUnit(newTr);
             newTr.querySelector('.dr-avail').addEventListener('input', function() {
                 updateAddRowLeft(newTr);

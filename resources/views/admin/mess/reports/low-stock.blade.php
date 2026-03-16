@@ -202,9 +202,9 @@
     }
 </style>
 
-{{-- Choices.js (enhanced dropdowns) --}}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/styles/choices.min.css"/>
-<script src="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/scripts/choices.min.js"></script>
+{{-- Tom Select (enhanced dropdowns) --}}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css">
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 <script>
     function printLowStockReport() {
         var table = document.getElementById('lowStockReportTable');
@@ -426,27 +426,27 @@
         printWindow.document.close();
     }
 
-    (function () {
-        document.addEventListener('DOMContentLoaded', function () {
-            if (typeof window.Choices === 'undefined') return;
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof window.TomSelect === 'undefined') return;
 
-            document
-                .querySelectorAll('.low-stock-report select.choices-select')
-                .forEach(function (el) {
-                    if (el.dataset.choicesInitialized === 'true') return;
+        document
+            .querySelectorAll('.low-stock-report select.choices-select')
+            .forEach(function (el) {
+                if (el.tomselect) return;
 
-                    var placeholder = el.getAttribute('data-placeholder') || 'Select';
+                var placeholder = el.getAttribute('data-placeholder') || 'Select';
 
-                    new Choices(el, {
-                        shouldSort: false,
-                        placeholder: true,
-                        placeholderValue: placeholder,
-                        searchPlaceholderValue: 'Search...',
-                    });
-
-                    el.dataset.choicesInitialized = 'true';
+                new TomSelect(el, {
+                    create: false,
+                    allowEmptyOption: true,
+                    placeholder: placeholder,
+                    plugins: ['dropdown_input'],
+                    sortField: {
+                        field: 'text',
+                        direction: 'asc'
+                    }
                 });
-        });
-    })();
+            });
+    });
 </script>
 @endsection

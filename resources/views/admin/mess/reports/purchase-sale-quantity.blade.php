@@ -183,7 +183,8 @@
     </div>
 </div>
 
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/styles/choices.min.css"/>
+{{-- Tom Select (enhanced dropdowns) --}}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" rel="stylesheet" />
 
 <style>
@@ -208,7 +209,7 @@
     }
 </style>
 
-<script src="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/scripts/choices.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -222,23 +223,24 @@ document.addEventListener('DOMContentLoaded', function() {
         viewType.addEventListener('change', toggleCategory);
     }
 
-    if (typeof window.Choices !== 'undefined') {
+    if (typeof window.TomSelect !== 'undefined') {
         document
             .querySelectorAll('.purchase-sale-quantity-report select.choices-select')
             .forEach(function (el) {
-                if (el.dataset.choicesInitialized === 'true') return;
+                if (el.tomselect) return;
 
                 var placeholder = el.getAttribute('data-placeholder') || 'Select';
 
-                new Choices(el, {
-                    shouldSort: false,
-                    placeholder: true,
-                    placeholderValue: placeholder,
-                    searchPlaceholderValue: 'Search...',
-                    itemSelectText: '',
+                new TomSelect(el, {
+                    create: false,
+                    allowEmptyOption: true,
+                    placeholder: placeholder,
+                    plugins: ['dropdown_input'],
+                    sortField: {
+                        field: 'text',
+                        direction: 'asc'
+                    }
                 });
-
-                el.dataset.choicesInitialized = 'true';
             });
     }
 });

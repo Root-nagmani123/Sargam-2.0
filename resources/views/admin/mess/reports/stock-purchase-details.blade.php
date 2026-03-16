@@ -12,20 +12,20 @@
                 <span class="text-muted small">Refine results by date, vendor &amp; store</span>
             </div>
         </div>
-        <div class="card-body pt-3">
+        <div class="card-body pt-3 p-3 p-lg-4">
             <form method="GET" action="{{ route('admin.mess.reports.stock-purchase-details') }}">
                 <div class="row g-3">
                     <div class="col-md-3">
                         <label class="form-label small fw-semibold">From Date</label>
-                        <input type="date" name="from_date" class="form-control " value="{{ $fromDate }}">
+                        <input type="date" name="from_date" class="form-control form-control-sm" value="{{ $fromDate }}">
                     </div>
                     <div class="col-md-3">
                         <label class="form-label small fw-semibold">To Date</label>
-                        <input type="date" name="to_date" class="form-control " value="{{ $toDate }}">
+                        <input type="date" name="to_date" class="form-control form-control-sm" value="{{ $toDate }}">
                     </div>
                     <div class="col-md-3">
                         <label class="form-label small fw-semibold">Select Vendor Name</label>
-                        <select name="vendor_id" class="form-select rounded-1 choices-select" data-placeholder="All Vendors">
+                        <select name="vendor_id" class="form-select form-select-sm rounded-1 choices-select" data-placeholder="All Vendors">
                             <option value="">All Vendors</option>
                             @foreach($vendors as $vendor)
                                 <option value="{{ $vendor->id }}" {{ request('vendor_id') == $vendor->id ? 'selected' : '' }}>{{ $vendor->name }}</option>
@@ -34,7 +34,7 @@
                     </div>
                     <div class="col-md-3">
                         <label class="form-label small fw-semibold">Select Store Name</label>
-                        <select name="store_id" class="form-select rounded-1 choices-select" data-placeholder="All Stores">
+                        <select name="store_id" class="form-select form-select-sm rounded-1 choices-select" data-placeholder="All Stores">
                             <option value="">All Stores</option>
                             @foreach($stores as $store)
                                 <option value="{{ $store->id }}" {{ request('store_id') == $store->id ? 'selected' : '' }}>{{ $store->store_name }}</option>
@@ -76,7 +76,7 @@
     <div class="report-area">
             <!-- Report content -->
             <div class="report-content card border-0 shadow-sm rounded-3">
-                <div class="card-body">
+                <div class="card-body p-3 p-lg-4">
                     <!-- Report header (title centered, date bar, vendor) -->
                     <div class="report-header mb-4 border-bottom pb-3 text-center">
                         <h4 class="report-title-center fw-bold mb-2 text-dark text-center text-uppercase tracking-wide">Stock Purchase Details</h4>
@@ -90,9 +90,9 @@
                     </div>
 
                     <!-- Table: grouped by bill -->
-                    <div class="table-responsive">
-                        <table class="table text-nowrap align-middle mb-0">
-                            <thead>
+                    <div class="table-responsive rounded-3 border bg-white stock-purchase-table-wrapper">
+                        <table class="table table-sm table-striped table-hover text-nowrap align-middle mb-0 stock-purchase-table">
+                            <thead class="stock-purchase-thead">
                                 <tr>
                                     <th>Item</th>
                                     <th>Item Code</th>
@@ -168,34 +168,36 @@
                 </div>
             @endif
     </div>
-</div>
 
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/styles/choices.min.css"/>
-<script src="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/scripts/choices.min.js"></script>
-<script>
-(function () {
-    document.addEventListener('DOMContentLoaded', function () {
-        if (typeof window.Choices === 'undefined') return;
+    {{-- Tom Select for vendor & store dropdowns (shared with other mess screens) --}}
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (typeof window.TomSelect === 'undefined') return;
 
-        document
-            .querySelectorAll('.stock-purchase-report select.choices-select')
-            .forEach(function (el) {
-                if (el.dataset.choicesInitialized === 'true') return;
+            document
+                .querySelectorAll('.stock-purchase-report select.choices-select')
+                .forEach(function (el) {
+                    if (el.dataset.tomselectInitialized === 'true') return;
 
-                var placeholder = el.getAttribute('data-placeholder') || 'Select';
+                    var placeholder = el.getAttribute('data-placeholder') || 'Select';
 
-                new Choices(el, {
-                    shouldSort: false,
-                    placeholder: true,
-                    placeholderValue: placeholder,
-                    searchPlaceholderValue: 'Search...',
+                    new TomSelect(el, {
+                        placeholder: placeholder,
+                        allowEmptyOption: true,
+                        maxOptions: 500,
+                        plugins: ['dropdown_input'],
+                        sortField: {
+                            field: 'text',
+                            direction: 'asc'
+                        }
+                    });
+
+                    el.dataset.tomselectInitialized = 'true';
                 });
-
-                el.dataset.choicesInitialized = 'true';
-            });
-    });
-})();
-</script>
+        });
+    </script>
 <script>
 function printStockPurchaseTable() {
     var table = document.querySelector('.stock-purchase-report .report-content table');

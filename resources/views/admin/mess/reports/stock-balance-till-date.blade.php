@@ -20,7 +20,7 @@
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Select Store Name</label>
-                        <select name="store_id" class="form-select choices-select" data-placeholder="All Stores">
+                        <select name="store_id" class="form-select" data-placeholder="All Stores">
                             <option value="">All Stores</option>
                             @foreach($stores as $store)
                                 <option value="{{ $store->id }}" {{ $storeId == $store->id ? 'selected' : '' }}>
@@ -281,12 +281,12 @@
 <script>
     (function () {
         document.addEventListener('DOMContentLoaded', function () {
-            if (typeof window.Choices === 'undefined') return;
+            if (typeof window.TomSelect === 'undefined') return;
 
             document
-                .querySelectorAll('.stock-balance-report select.choices-select')
+                .querySelectorAll('.stock-balance-report select')
                 .forEach(function (el) {
-                    if (el.dataset.choicesInitialized === 'true') return;
+                        if (el.dataset.tomselectInitialized === 'true') return;
 
                     var placeholder = el.getAttribute('data-placeholder') || 'Select';
 
@@ -297,7 +297,7 @@
                         searchPlaceholderValue: 'Search...'
                     });
 
-                    el.dataset.choicesInitialized = 'true';
+                    el.dataset.tomselectInitialized = 'true';
                 });
         });
     })();
