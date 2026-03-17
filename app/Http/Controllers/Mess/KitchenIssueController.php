@@ -170,6 +170,49 @@ class KitchenIssueController extends Controller
     }
 
     /**
+     * AJAX: previously used buyer names for Selling Voucher.
+     *
+     * Query params:
+     * - client_type_slug: course|section|other
+     * - client_type_pk: for course => course_master.pk, for section/other => mess_client_types.id
+     */
+    public function getBuyerNames(Request $request)
+    {
+        $slug = strtolower(trim((string) $request->query('client_type_slug', '')));
+        if (!in_array($slug, ['course', 'section', 'other'], true)) {
+            return response()->json(['buyers' => []]);
+        }
+
+        $clientTypePk = (int) $request->query('client_type_pk', 0);
+        if ($clientTypePk <= 0) {
+            return response()->json(['buyers' => []]);
+        }
+
+        $clientType = match ($slug) {
+            'course' => KitchenIssueMaster::CLIENT_COURSE,
+            'section' => KitchenIssueMaster::CLIENT_SECTION,
+            'other' => KitchenIssueMaster::CLIENT_OTHER,
+        };
+
+        $buyers = KitchenIssueMaster::query()
+            ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+            ->where('client_type', $clientType)
+            ->where('client_type_pk', $clientTypePk)
+            ->whereHas('items')
+            ->whereNotNull('client_name')
+            ->where('client_name', '!=', '')
+            ->distinct()
+            ->pluck('client_name')
+            ->map(fn ($n) => trim((string) $n))
+            ->filter(fn ($n) => $n !== '')
+            ->unique()
+            ->sort()
+            ->values();
+
+        return response()->json(['buyers' => $buyers]);
+    }
+
+    /**
      * Show the form for creating a new selling voucher
      */
     public function create()
