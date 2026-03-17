@@ -202,13 +202,13 @@ document.addEventListener('DOMContentLoaded', function () {
 #addSellingVoucherModal .modal-content { max-height: calc(100vh - 2rem); display: flex; flex-direction: column; }
 #addSellingVoucherModal .modal-body { overflow-y: auto; max-height: calc(100vh - 10rem); position: relative; }
 .ts-dropdown { z-index: 2000; }
-
-/* Visually remove default first-option highlight in Tom Select dropdowns */
-.ts-dropdown .option.active,
-.ts-dropdown .option.selected,
-.ts-dropdown .option[aria-selected="true"] {
-    background-color: transparent !important;
-    color: inherit !important;
+/* Keep keyboard navigation visible in Tom Select dropdowns */
+.ts-dropdown .option.active {
+    background: rgba(13, 110, 253, 0.12);
+}
+.ts-dropdown .option[aria-selected="true"],
+.ts-dropdown .option.selected {
+    background: rgba(13, 110, 253, 0.20);
 }
 </style>
 <div class="modal fade" id="addSellingVoucherModal" tabindex="-1" aria-labelledby="addSellingVoucherModalLabel" aria-hidden="true">
