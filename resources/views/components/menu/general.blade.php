@@ -26,12 +26,12 @@
                                     <span class="hide-menu small small-sm-normal text-nowrap">Batch Profile</span>
                                 </a>
                             </li>
-                            <!-- Notice Notification Route -->
+                                    @endif
+                                      <!-- Notice Notification Route -->
                              <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('admin.notice.index') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Notice Notifications</span>
                                     </a></li>
-                                    @endif
 
                             <!-- Faculty Dashboard Route -->
                             @if(hasRole('Doctor'))

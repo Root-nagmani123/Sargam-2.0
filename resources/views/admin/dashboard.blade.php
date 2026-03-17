@@ -445,7 +445,6 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
 $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
 @endphp
 
-<div class="admin-dashboard-surface py-3 py-lg-4">
 <div class="container-fluid px-3 px-lg-4">
     <div class="dashboard-welcome shadow-sm bg-gradient d-flex flex-wrap align-items-center justify-content-between gap-2">
         <div>
@@ -813,7 +812,6 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
             </div>
         </div>
     </div>
-</div>
 </div>
 
 @push('scripts')
