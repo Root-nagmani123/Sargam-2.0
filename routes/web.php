@@ -977,6 +977,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
             Route::get('stock-summary/export', [\App\Http\Controllers\Mess\ReportController::class, 'stockSummaryExcel'])->name('stock-summary.excel');
             Route::get('stock-summary/export-pdf', [\App\Http\Controllers\Mess\ReportController::class, 'stockSummaryPdf'])->name('stock-summary.pdf');
             Route::get('category-wise-print-slip', [\App\Http\Controllers\Mess\ReportController::class, 'categoryWisePrintSlip'])->name('category-wise-print-slip');
+            Route::get('category-wise-print-slip/course-buyers/{course_pk}', [\App\Http\Controllers\Mess\ReportController::class, 'getCourseBuyerNamesByCourse'])->name('category-wise-print-slip.course-buyers');
+            Route::get('category-wise-print-slip/buyers', [\App\Http\Controllers\Mess\ReportController::class, 'getBuyerNamesForReportFilters'])->name('category-wise-print-slip.buyers');
             Route::get('category-wise-print-slip/export', [\App\Http\Controllers\Mess\ReportController::class, 'categoryWisePrintSlipExcel'])->name('category-wise-print-slip.excel');
             Route::get('category-wise-print-slip/export-pdf', [\App\Http\Controllers\Mess\ReportController::class, 'categoryWisePrintSlipPdf'])->name('category-wise-print-slip.pdf');
             Route::get('stock-balance-till-date', [\App\Http\Controllers\Mess\ReportController::class, 'stockBalanceTillDate'])->name('stock-balance-till-date');

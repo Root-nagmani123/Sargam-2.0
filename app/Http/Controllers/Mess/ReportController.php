@@ -882,6 +882,175 @@ class ReportController extends Controller
     }
 
     /**
+     * AJAX: Buyer Names for Course (Selling Voucher report filter).
+     * Returns distinct client_name values for a given course_pk, respecting optional date filters.
+     */
+    public function getCourseBuyerNamesByCourse(Request $request, $course_pk)
+    {
+        $coursePk = (int) $course_pk;
+        if ($coursePk <= 0) {
+            return response()->json(['buyers' => []]);
+        }
+
+        $fromDate = $request->filled('from_date') ? $request->from_date : null;
+        $toDate   = $request->filled('to_date') ? $request->to_date : null;
+
+        // Selling Voucher Date Range (SV)
+        $svQuery = \App\Models\Mess\SellingVoucherDateRangeReport::query()
+            ->where('client_type_slug', \App\Models\Mess\ClientType::TYPE_COURSE)
+            ->where('client_type_pk', $coursePk)
+            ->whereHas('items')
+            ->whereIn('status', [
+                \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_DRAFT,
+                \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_FINAL,
+                \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED,
+            ]);
+
+        // Date overlap logic, matching the main report
+        if ($fromDate && $toDate) {
+            $svQuery->whereDate('date_from', '<=', $toDate)
+                ->whereDate('date_to', '>=', $fromDate);
+        } elseif ($fromDate) {
+            $svQuery->whereDate('date_to', '>=', $fromDate);
+        } elseif ($toDate) {
+            $svQuery->whereDate('date_from', '<=', $toDate);
+        }
+
+        $svBuyers = (clone $svQuery)
+            ->whereNotNull('client_name')
+            ->where('client_name', '!=', '')
+            ->distinct()
+            ->pluck('client_name');
+
+        // Kitchen Issue (Selling Voucher type)
+        $kiQuery = KitchenIssueMaster::query()
+            ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+            ->whereHas('items')
+            ->where('client_type', KitchenIssueMaster::CLIENT_COURSE)
+            ->where('client_type_pk', $coursePk);
+
+        if ($fromDate) {
+            $kiQuery->whereDate('issue_date', '>=', $fromDate);
+        }
+        if ($toDate) {
+            $kiQuery->whereDate('issue_date', '<=', $toDate);
+        }
+
+        $kiBuyers = (clone $kiQuery)
+            ->whereNotNull('client_name')
+            ->where('client_name', '!=', '')
+            ->distinct()
+            ->pluck('client_name');
+
+        $buyers = $svBuyers->concat($kiBuyers)
+            ->filter()
+            ->map(fn ($n) => trim((string) $n))
+            ->filter(fn ($n) => $n !== '')
+            ->unique()
+            ->sort()
+            ->values();
+
+        return response()->json(['buyers' => $buyers]);
+    }
+
+    /**
+     * AJAX: Buyer Names for Sale Voucher Report filters.
+     * Supports: other, section (and course/ot if needed) with optional date + client_type_pk/course_master_pk.
+     */
+    public function getBuyerNamesForReportFilters(Request $request)
+    {
+        $slug = strtolower(trim((string) $request->query('client_type_slug', '')));
+        if (!in_array($slug, [\App\Models\Mess\ClientType::TYPE_COURSE, \App\Models\Mess\ClientType::TYPE_OTHER, 'section', \App\Models\Mess\ClientType::TYPE_OT, \App\Models\Mess\ClientType::TYPE_EMPLOYEE], true)) {
+            return response()->json(['buyers' => []]);
+        }
+
+        $fromDate = $request->filled('from_date') ? $request->from_date : null;
+        $toDate   = $request->filled('to_date') ? $request->to_date : null;
+
+        // Normalise PK depending on slug
+        $effectivePk = null;
+        if (in_array($slug, [\App\Models\Mess\ClientType::TYPE_COURSE, \App\Models\Mess\ClientType::TYPE_OT], true)) {
+            $effectivePk = $request->filled('course_master_pk') ? (int) $request->course_master_pk : null;
+        } else {
+            $effectivePk = $request->filled('client_type_pk') ? (int) $request->client_type_pk : null;
+        }
+
+        $svQuery = \App\Models\Mess\SellingVoucherDateRangeReport::query()
+            ->where('client_type_slug', $slug)
+            ->whereHas('items')
+            ->whereIn('status', [
+                \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_DRAFT,
+                \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_FINAL,
+                \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED,
+            ]);
+
+        if (!is_null($effectivePk)) {
+            $svQuery->where('client_type_pk', $effectivePk);
+        }
+
+        // Date overlap logic, matching the main report
+        if ($fromDate && $toDate) {
+            $svQuery->whereDate('date_from', '<=', $toDate)
+                ->whereDate('date_to', '>=', $fromDate);
+        } elseif ($fromDate) {
+            $svQuery->whereDate('date_to', '>=', $fromDate);
+        } elseif ($toDate) {
+            $svQuery->whereDate('date_from', '<=', $toDate);
+        }
+
+        $svBuyers = (clone $svQuery)
+            ->whereNotNull('client_name')
+            ->where('client_name', '!=', '')
+            ->distinct()
+            ->pluck('client_name');
+
+        // Kitchen Issue side
+        $kiQuery = KitchenIssueMaster::query()
+            ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+            ->whereHas('items');
+
+        $slugToKiType = [
+            \App\Models\Mess\ClientType::TYPE_EMPLOYEE => KitchenIssueMaster::CLIENT_EMPLOYEE,
+            \App\Models\Mess\ClientType::TYPE_OT       => KitchenIssueMaster::CLIENT_OT,
+            \App\Models\Mess\ClientType::TYPE_COURSE   => KitchenIssueMaster::CLIENT_COURSE,
+            \App\Models\Mess\ClientType::TYPE_OTHER    => KitchenIssueMaster::CLIENT_OTHER,
+            'section'                                  => KitchenIssueMaster::CLIENT_SECTION,
+        ];
+        if (isset($slugToKiType[$slug])) {
+            $kiQuery->where('client_type', $slugToKiType[$slug]);
+        } else {
+            // Unknown mapping => no buyers
+            return response()->json(['buyers' => []]);
+        }
+
+        if (!is_null($effectivePk)) {
+            $kiQuery->where('client_type_pk', $effectivePk);
+        }
+        if ($fromDate) {
+            $kiQuery->whereDate('issue_date', '>=', $fromDate);
+        }
+        if ($toDate) {
+            $kiQuery->whereDate('issue_date', '<=', $toDate);
+        }
+
+        $kiBuyers = (clone $kiQuery)
+            ->whereNotNull('client_name')
+            ->where('client_name', '!=', '')
+            ->distinct()
+            ->pluck('client_name');
+
+        $buyers = $svBuyers->concat($kiBuyers)
+            ->filter()
+            ->map(fn ($n) => trim((string) $n))
+            ->filter(fn ($n) => $n !== '')
+            ->unique()
+            ->sort()
+            ->values();
+
+        return response()->json(['buyers' => $buyers]);
+    }
+
+    /**
      * Category-wise Print Slip
      * Shows selling voucher details from both: Selling Voucher Date Range and Kitchen Issue (Selling Voucher type).
      * Data is displayed only after the user applies at least one filter (from_date, to_date, client type, or buyer).
