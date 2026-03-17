@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\EmployeeMaster;
 
 class VehiclePassTWApplyApproval extends Model
 {
@@ -35,7 +36,42 @@ class VehiclePassTWApplyApproval extends Model
 
     public function approvedBy()
     {
-        return $this->belongsTo(EmployeeMaster::class, 'created_by', 'pk');
+        // Use veh_emp_approval_pk (actual approver) instead of created_by
+        return $this->belongsTo(EmployeeMaster::class, 'veh_emp_approval_pk', 'pk');
+    }
+
+    /**
+     * Accessor: resolve approver name using pk OR pk_old.
+     */
+    public function getApprovedByNameAttribute(): ?string
+    {
+        $id = $this->veh_emp_approval_pk;
+        if (empty($id)) {
+            return null;
+        }
+
+        $emp = EmployeeMaster::findByIdOrPkOld($id);
+        if (! $emp) {
+            return null;
+        }
+
+        // Prefer explicit emp_name column if present, else use first_name/last_name or name accessor.
+        if (isset($emp->emp_name) && !empty($emp->emp_name)) {
+            return $emp->emp_name;
+        }
+
+        if (method_exists($emp, 'getNameAttribute')) {
+            $name = $emp->name;
+            if (!empty($name)) {
+                return $name;
+            }
+        }
+
+        $first = (string) ($emp->first_name ?? '');
+        $last = (string) ($emp->last_name ?? '');
+        $full = trim($first . ' ' . $last);
+
+        return $full !== '' ? $full : null;
     }
 
     public function getRecommendStatusTextAttribute()

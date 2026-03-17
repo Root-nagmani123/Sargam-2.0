@@ -19,29 +19,38 @@ class FamilyIDCardApprovalController extends Controller
 {
     public function index()
     {
-        
         $user = Auth::user();
         $currentEmployeePk = $user->user_id ?? $user->pk ?? null;
 
-        // Base query for pending requests
-        $baseQuery = SecurityFamilyIdApply::where('id_status', 1);
+        $search = trim(request()->get('search', ''));
+        $dateFrom = request()->get('date_from');
+        $dateTo = request()->get('date_to');
 
-        // Filter based on employee type and authority
-        $baseQuery->where(function ($q) use ($currentEmployeePk) {
-            // Permanent employees: Only show their own requests (emp_id_apply = current user)
-            $q->where(function ($subQ) use ($currentEmployeePk) {
-                 if (hasRole('Admin')) {
-                    // Admin can see all pending requests
-                    $subQ->whereNotNull('emp_id_apply'); // No filter for admin
-                } 
-            });
-            // Contractual employees: Show requests where department_approval_emp_pk = current user
-          
-        });
+        $isLevel1 = hasRole('Security Card') && !hasRole('Admin Security');
+        $isLevel2 = hasRole('Admin Security') && !hasRole('Security Card');
 
-        $pendingRows = $baseQuery->orderBy('created_date', 'desc')->get();
-        // print_r($pendingRows->toArray()); // Debug: Check the retrieved rows
-        // die;
+        // Base query: ALL family ID card requests (Pending / Approved / Rejected), with approval history
+        // Requirement: Both Security Card (Level 1) and Admin Security (Level 2) should see ALL records,
+        // with actionability controlled by can_approve flags only.
+        $baseQuery = SecurityFamilyIdApply::with('approvals')->orderBy('created_date', 'desc');
+
+        // Date filters on created_date
+        if (!empty($dateFrom)) {
+            try {
+                $from = \Carbon\Carbon::parse($dateFrom)->startOfDay()->toDateTimeString();
+                $baseQuery->where('created_date', '>=', $from);
+            } catch (\Exception $e) {
+            }
+        }
+        if (!empty($dateTo)) {
+            try {
+                $to = \Carbon\Carbon::parse($dateTo)->endOfDay()->toDateTimeString();
+                $baseQuery->where('created_date', '<=', $to);
+            } catch (\Exception $e) {
+            }
+        }
+
+        $pendingRows = $baseQuery->get();
 
         $groupKey = function ($r) {
             $date = $r->created_date ? \Carbon\Carbon::parse($r->created_date)->format('Y-m-d H:i:s') : '';
@@ -70,9 +79,40 @@ class FamilyIDCardApprovalController extends Controller
             }
         }
 
-        $groupList = $groups->map(function ($rows) use ($creators) {
+        $groupList = $groups->map(function ($rows) use ($creators, $isLevel1, $isLevel2) {
             $first = $rows->sortBy('fml_id_apply')->first();
             $creatorName = $creators[(string) ($first->created_by ?? '')] ?? ('User #' . ($first->created_by ?? '--'));
+
+            // Determine phase/status
+            $statusInt = (int) ($first->id_status ?? 1); // 1=Pending,2=Approved,3=Rejected
+            $hasLevel1 = $first->approvals && $first->approvals->where('status', 1)->isNotEmpty();
+            $hasLevel2 = $first->approvals && $first->approvals->where('status', 2)->isNotEmpty();
+
+            $phaseLabel = 'Pending (Level 1)';
+            $phaseClass = 'warning';
+            if ($statusInt === 2 && $hasLevel2) {
+                $phaseLabel = 'Approved';
+                $phaseClass = 'success';
+            } elseif ($statusInt === 3) {
+                $phaseLabel = 'Rejected';
+                $phaseClass = 'danger';
+            } elseif ($statusInt === 1 && $hasLevel1 && ! $hasLevel2) {
+                $phaseLabel = 'Pending Final Approval';
+                $phaseClass = 'primary';
+            }
+
+            // Can current role approve this group?
+            $canApprove = false;
+            if ($statusInt === 1) {
+                if ($isLevel1 && ! $hasLevel1) {
+                    // Level 1: Pending and no L1 approval yet
+                    $canApprove = true;
+                } elseif ($isLevel2 && $hasLevel1 && ! $hasLevel2) {
+                    // Level 2: L1 done, final approval pending
+                    $canApprove = true;
+                }
+            }
+
             return (object) [
                 'first_id' => $first->fml_id_apply,
                 'emp_id_apply' => $first->emp_id_apply,
@@ -82,8 +122,32 @@ class FamilyIDCardApprovalController extends Controller
                 'member_count' => $rows->count(),
                 'members' => $rows,
                 'employee_type' => $first->employee_type,
+                'phase_label' => $phaseLabel,
+                'phase_class' => $phaseClass,
+                'can_approve' => $canApprove,
+                'status_int' => $statusInt,
+                'has_level1' => $hasLevel1,
+                'has_level2' => $hasLevel2,
             ];
         })->values();
+
+        // Text search across Submitted By and Employee ID (case-insensitive)
+        if ($search !== '') {
+            $searchLower = mb_strtolower($search);
+            $groupList = $groupList->filter(function ($g) use ($searchLower) {
+                $submitted = mb_strtolower($g->submitted_by ?? '');
+                $empId = mb_strtolower($g->emp_id_apply ?? '');
+                return str_contains($submitted, $searchLower) || str_contains($empId, $searchLower);
+            })->values();
+        }
+
+        // For Security Admin (Level 2), show only records where Level 1 is completed
+        // i.e. recommendation given (has_level1 = true). Pending Level 1 rows are hidden.
+        if ($isLevel2) {
+            $groupList = $groupList->filter(function ($g) {
+                return (bool) ($g->has_level1 ?? false);
+            })->values();
+        }
 
         $perPage = 10;
         $page = (int) request()->get('page', 1);
@@ -98,6 +162,9 @@ class FamilyIDCardApprovalController extends Controller
 
         return view('admin.security.family_idcard_approval.index', [
             'groups' => $paginator,
+            'search' => $search,
+            'dateFrom' => $dateFrom,
+            'dateTo' => $dateTo,
         ]);
     }
 
@@ -135,23 +202,84 @@ class FamilyIDCardApprovalController extends Controller
 
         $application = SecurityFamilyIdApply::where('fml_id_apply', $fmlIdApply)->firstOrFail();
 
-        if ((int) $application->id_status !== 1) {
-            return redirect()->back()->with('error', 'Application already processed');
-        }
-
         $user = Auth::user();
         $employeePk = $user->user_id ?? null;
 
-        $application->id_status = 2;
-        $application->save();
+        // Determine level based on role
+        $isLevel1 = hasRole('Security Card') && !hasRole('Admin Security');
+        $isLevel2 = hasRole('Admin Security') || hasRole('Admin');
 
-        SecurityFamilyIdApplyApproval::create([
-            'security_fm_id_apply_pk' => $fmlIdApply,
-            'status' => 1,
-            'approval_remarks' => $validated['approval_remarks'] ?? null,
-            'created_by' => $employeePk,
-            'created_date' => now(),
-        ]);
+        if (! $isLevel1 && ! $isLevel2) {
+            return redirect()->back()->with('error', 'You are not authorized to approve this request.');
+        }
+
+        // On first approval: update existing status 0 row (or create) to status=1, recommend_status=1,
+        // and create a fresh status 0 row for the next level.
+        if ($isLevel1) {
+            if ((int) $application->id_status !== 1) {
+                return redirect()->back()->with('error', 'Application already processed');
+            }
+
+            // Find latest approval row with status 0 for this application
+            $baseApproval = SecurityFamilyIdApplyApproval::where('security_fm_id_apply_pk', $fmlIdApply)
+                ->where('status', 0)
+                ->orderByDesc('created_date')
+                ->first();
+
+            if (! $baseApproval) {
+                $baseApproval = new SecurityFamilyIdApplyApproval([
+                    'security_fm_id_apply_pk' => $fmlIdApply,
+                    'status' => 0,
+                ]);
+            }
+
+            $baseApproval->status = 1;
+            $baseApproval->approval_remarks = $validated['approval_remarks'] ?? null;
+            $baseApproval->recommend_status = 1;
+            $baseApproval->approval_emp_pk = $employeePk;
+            $baseApproval->created_by = $baseApproval->created_by ?: $employeePk;
+            $baseApproval->created_date = $baseApproval->created_date ?: now();
+            $baseApproval->modified_by = $employeePk;
+            $baseApproval->modified_date = now();
+            $baseApproval->save();
+
+            // Prepare a fresh row with status 0 for final approval level
+            SecurityFamilyIdApplyApproval::create([
+                'security_fm_id_apply_pk' => $fmlIdApply,
+                'status' => 0,
+                'approval_remarks' => null,
+                'recommend_status' => null,
+                'approval_emp_pk' => null,
+                'created_by' => $employeePk,
+                'created_date' => now(),
+                'modified_by' => $employeePk,
+                'modified_date' => now(),
+            ]);
+        } elseif ($isLevel2) {
+            // Final approval: mark latest status 0 row as status=2 and update application to Approved
+            if ((int) $application->id_status !== 1) {
+                return redirect()->back()->with('error', 'Application is not pending final approval.');
+            }
+
+            $pendingApproval = SecurityFamilyIdApplyApproval::where('security_fm_id_apply_pk', $fmlIdApply)
+                ->where('status', 0)
+                ->orderByDesc('created_date')
+                ->first();
+
+            if (! $pendingApproval) {
+                return redirect()->back()->with('error', 'No pending approval step found for this application.');
+            }
+
+            $pendingApproval->status = 2;
+            $pendingApproval->approval_remarks = $validated['approval_remarks'] ?? null;
+            $pendingApproval->approval_emp_pk = $employeePk;
+            $pendingApproval->modified_by = $employeePk;
+            $pendingApproval->modified_date = now();
+            $pendingApproval->save();
+
+            $application->id_status = 2;
+            $application->save();
+        }
 
         return redirect()->route('admin.security.family_idcard_approval.index')
             ->with('success', 'Family ID Card approved successfully');
@@ -221,16 +349,76 @@ class FamilyIDCardApprovalController extends Controller
         $employeePk = $user->user_id ?? null;
         $remarks = $request->input('approval_remarks', null);
 
+        $isLevel1 = hasRole('Security Card') && !hasRole('Admin Security');
+        $isLevel2 = hasRole('Admin Security') || hasRole('Admin');
+
+        if (! $isLevel1 && ! $isLevel2) {
+            return redirect()->route('admin.security.family_idcard_approval.index')
+                ->with('error', 'You are not authorized to approve these requests.');
+        }
+
         foreach ($groupRows as $row) {
-            $row->id_status = 2;
-            $row->save();
-            SecurityFamilyIdApplyApproval::create([
-                'security_fm_id_apply_pk' => $row->fml_id_apply,
-                'status' => 1,
-                'approval_remarks' => $remarks,
-                'created_by' => $employeePk,
-                'created_date' => now(),
-            ]);
+            if ($isLevel1) {
+                if ((int) $row->id_status !== 1) {
+                    continue;
+                }
+                $baseApproval = SecurityFamilyIdApplyApproval::where('security_fm_id_apply_pk', $row->fml_id_apply)
+                    ->where('status', 0)
+                    ->orderByDesc('created_date')
+                    ->first();
+
+                if (! $baseApproval) {
+                    $baseApproval = new SecurityFamilyIdApplyApproval([
+                        'security_fm_id_apply_pk' => $row->fml_id_apply,
+                        'status' => 0,
+                    ]);
+                }
+
+                $baseApproval->status = 1;
+                $baseApproval->approval_remarks = $remarks;
+                $baseApproval->recommend_status = 1;
+                $baseApproval->approval_emp_pk = $employeePk;
+                $baseApproval->created_by = $baseApproval->created_by ?: $employeePk;
+                $baseApproval->created_date = $baseApproval->created_date ?: now();
+                $baseApproval->modified_by = $employeePk;
+                $baseApproval->modified_date = now();
+                $baseApproval->save();
+
+                SecurityFamilyIdApplyApproval::create([
+                    'security_fm_id_apply_pk' => $row->fml_id_apply,
+                    'status' => 0,
+                    'approval_remarks' => null,
+                    'recommend_status' => null,
+                    'approval_emp_pk' => null,
+                    'created_by' => $employeePk,
+                    'created_date' => now(),
+                    'modified_by' => $employeePk,
+                    'modified_date' => now(),
+                ]);
+            } elseif ($isLevel2) {
+                if ((int) $row->id_status !== 1) {
+                    continue;
+                }
+
+                $pendingApproval = SecurityFamilyIdApplyApproval::where('security_fm_id_apply_pk', $row->fml_id_apply)
+                    ->where('status', 0)
+                    ->orderByDesc('created_date')
+                    ->first();
+
+                if (! $pendingApproval) {
+                    continue;
+                }
+
+                $pendingApproval->status = 2;
+                $pendingApproval->approval_remarks = $remarks;
+                $pendingApproval->approval_emp_pk = $employeePk;
+                $pendingApproval->modified_by = $employeePk;
+                $pendingApproval->modified_date = now();
+                $pendingApproval->save();
+
+                $row->id_status = 2;
+                $row->save();
+            }
         }
 
         return redirect()->route('admin.security.family_idcard_approval.index')

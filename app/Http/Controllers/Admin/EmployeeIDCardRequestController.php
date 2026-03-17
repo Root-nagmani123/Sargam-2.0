@@ -235,6 +235,7 @@ class EmployeeIDCardRequestController extends Controller
         $rows = DB::table('sec_id_cardno_config_map')
             ->where('card_name', $code)
             ->where('sec_id_cardno_master', $masterPk)
+            ->where('active_inactive', 1)
             ->whereNotNull('config_name')
             ->where('config_name', '!=', '')
             ->orderBy('config_name')
@@ -582,7 +583,7 @@ class EmployeeIDCardRequestController extends Controller
                         'father_name' => $validated['father_name'] ?? null,
                         'card_type' => '',
                         'department_approval_emp_pk' => null,
-                        'depart_approval_status' => null,
+                        'depart_approval_status' => 1,
                         'depart_approval_date' => null,
                         'section' => null,
                         'id_proof' => null,
@@ -634,7 +635,8 @@ class EmployeeIDCardRequestController extends Controller
                 if ($request->hasFile('documents')) {
                     $docPath = $request->file('documents')->store('idcard/documents', 'public');
                 }
-
+                $empIdApply_data= $empIdApply;
+               
                 // Insert matches security_con_oth_id_apply structure (pk auto; section = bigint department_master_pk)
                 DB::table('security_con_oth_id_apply')->insert([
                     'emp_id_apply' => $empIdApply,
@@ -661,7 +663,9 @@ class EmployeeIDCardRequestController extends Controller
                     'doc_path' => $docPath,
                     'department_approval_emp_pk' => !empty($validated['approval_authority']) ? (int) $validated['approval_authority'] : null,
                     'section' => $userDepartmentPk,
+                    'depart_approval_status' => 1,
                 ]);
+             
 
                 // Case 3 - Request Employee ID Card (Other/Contractual): Only security_con_oth_id_apply at request time.
                 // security_con_oth_id_apply_approval rows are inserted when approvers approve (EmployeeIDCardApprovalController).

@@ -1,6 +1,13 @@
 @extends('admin.layouts.master')
 @section('title', 'ID Card Approval Details')
 @section('setup_content')
+@php
+    $stage = isset($stage) ? (int) $stage : (int) request()->get('stage');
+    if (!in_array($stage, [1, 2, 3], true)) {
+        $stage = $request->approved_by_a1 === null ? 1 : 2;
+    }
+@endphp
+
 <style>
     .table th{
         background-color: #004a93;
@@ -12,8 +19,32 @@
     <div class="card" style="border-left:4px solid #004a93;">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h4 class="mb-0">Request #{{ $request->id }} - {{ $request->name }}</h4>
-               
+                <div>
+                    <h4 class="mb-0">Request #{{ $request->id }} - {{ $request->name }}</h4>
+                    <small class="text-muted">
+                        Approval Level:
+                        <span class="fw-semibold">{{ $stage === 2 ? 'Approval II' : 'Approval I' }}</span>
+                    </small>
+                </div>
+                @if($request->status === 'Pending' && ($canApprove ?? true))
+                    <div class="d-flex gap-2">
+                        <form action="{{ $stage === 3 ? route('admin.security.employee_idcard_approval.approve3', encrypt($request->id)) : ($stage === 2 ? route('admin.security.employee_idcard_approval.approve2', encrypt($request->id)) : route('admin.security.employee_idcard_approval.approve1', encrypt($request->id))) }}"
+                              method="POST" class="d-inline">
+                            @csrf
+                            <button type="submit" class="btn btn-success">
+                                <i class="material-icons material-symbols-rounded" style="font-size:18px;vertical-align:middle;">check_circle</i>
+                                Approve ({{ $stage === 3 ? 'Level 3' : ($stage === 2 ? 'Level 2' : 'Level 1') }})
+                            </button>
+                        </form>
+                        <button type="button"
+                                class="btn btn-outline-danger"
+                                data-bs-toggle="modal"
+                                data-bs-target="#rejectModal">
+                            <i class="material-icons material-symbols-rounded" style="font-size:18px;vertical-align:middle;">cancel</i>
+                            Reject
+                        </button>
+                    </div>
+                @endif
             </div>
 
             <div class="row">
@@ -56,7 +87,8 @@
                                 if (!empty($request->joining_letter)) {
                                     $docLinks[] = [
                                         'label' => 'Joining Letter',
-                                        'path' => 'idcard/' . ltrim($request->joining_letter, '/'),
+                                        // For permanent ID cards, joining_letter is already the full storage path (e.g. idcard/joining_letters/...)
+                                        'path' => ltrim($request->joining_letter, '/'),
                                         'full' => false,
                                     ];
                                 }
@@ -152,7 +184,7 @@
                                         @if(isset($request->request_type) && $request->request_type === 'duplicate')
                                             <span class="badge bg-info">Duplicate</span>
                                         @else
-                                            <span class="badge bg-secondary">Regular</span>
+                                            <span class="badge bg-secondary">Fresh</span>
                                         @endif
                                     </td>
                                 </tr>
@@ -202,7 +234,7 @@
     </div>
 </div>
 
-@if(($request->approved_by_a1 === null && $request->rejected_by === null) || ($request->approved_by_a2 === null && $request->rejected_by === null && $request->approved_by_a1 !== null))
+@if(($canApprove ?? true) && (($request->approved_by_a1 === null && $request->rejected_by === null) || ($request->approved_by_a2 === null && $request->rejected_by === null && $request->approved_by_a1 !== null)))
 <div class="modal fade" id="rejectModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -210,7 +242,7 @@
                 <h5 class="modal-title">Rejection Reason</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ $request->approved_by_a1 === null ? route('admin.security.employee_idcard_approval.reject1', encrypt($request->id)) : route('admin.security.employee_idcard_approval.reject2', encrypt($request->id)) }}" method="POST">
+            <form action="{{ $stage === 2 ? route('admin.security.employee_idcard_approval.reject2', encrypt($request->id)) : route('admin.security.employee_idcard_approval.reject1', encrypt($request->id)) }}" method="POST">
                 @csrf
                 <div class="modal-body">
                     <div class="mb-3">

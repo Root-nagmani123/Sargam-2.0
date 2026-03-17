@@ -168,28 +168,32 @@ class FamilyIDCardRequestController extends Controller
                 ->where('pk', $authUserId)
                 ->orWhere('pk_old', $authUserId)
                 ->first();
-            if ($authEmp) {
-                $defaultApprovalAuthorityPk = $authEmp->pk;
-                $defaultDesignation = $authEmp->designation->designation_name ?? '';
-                if ($authEmp->department_master_pk) {
-                    $userDepartmentName = $authEmp->department->department_name ?? null;
-                    $approvalAuthorityEmployees = EmployeeMaster::with('designation')
-                        ->where('department_master_pk', $authEmp->department_master_pk)
-                        ->when(Schema::hasColumn('employee_master', 'payroll'), fn ($q) => $q->where('payroll', 0))
-                        ->when(Schema::hasColumn('employee_master', 'status'), fn ($q) => $q->where('status', 1))
-                        ->orderBy('first_name')
-                        ->orderBy('last_name')
-                        ->get(['pk', 'first_name', 'last_name', 'designation_master_pk']);
-                }
-                // Government (Permanent): approved ID from security_parm_id_apply
-                $parmRow = DB::table('security_parm_id_apply')
-                    ->where('employee_master_pk', $authEmp->pk)
-                    ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
-                    ->orderBy('created_date', 'desc')
-                    ->first(['id_card_no', 'emp_id_apply']);
-                if ($parmRow) {
-                    $defaultEmployeeIdPermanent = $parmRow->id_card_no ?? $parmRow->emp_id_apply ?? '';
-                }
+                if ($authEmp) {
+                    $defaultApprovalAuthorityPk = $authEmp->pk;
+                    $defaultDesignation = $authEmp->designation->designation_name ?? '';
+                    if ($authEmp->department_master_pk) {
+                        $userDepartmentName = $authEmp->department->department_name ?? null;
+                        $approvalAuthorityEmployees = EmployeeMaster::with('designation')
+                            ->where('department_master_pk', $authEmp->department_master_pk)
+                            ->when(Schema::hasColumn('employee_master', 'payroll'), fn ($q) => $q->where('payroll', 0))
+                            ->when(Schema::hasColumn('employee_master', 'status'), fn ($q) => $q->where('status', 1))
+                            ->orderBy('first_name')
+                            ->orderBy('last_name')
+                            ->get(['pk', 'first_name', 'last_name', 'designation_master_pk']);
+                    }
+
+                    // Permanent Employee: default to EmployeeMaster.emp_id (Employee ID)
+                    $defaultEmployeeIdPermanent = $authEmp->emp_id ?? '';
+
+                    // If an approved security_parm_id_apply exists with an ID card number, prefer that
+                    $parmRow = DB::table('security_parm_id_apply')
+                        ->where('employee_master_pk', $authEmp->pk)
+                        ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
+                        ->orderBy('created_date', 'desc')
+                        ->first(['id_card_no', 'emp_id_apply']);
+                    if ($parmRow && !empty($parmRow->id_card_no)) {
+                        $defaultEmployeeIdPermanent = $parmRow->id_card_no;
+                    }
                 // Contractual: approved ID from security_con_oth_id_apply (created_by = employee pk)
                 $conRow = DB::table('security_con_oth_id_apply')
                     ->where('created_by', $authEmp->pk)
@@ -240,6 +244,22 @@ class FamilyIDCardRequestController extends Controller
                 throw ValidationException::withMessages([
                     "members.{$index}.valid_to" => 'Valid To date must not be earlier than Valid From date.',
                 ]);
+            }
+
+            // Enforce minimum age: family member must be 13 years or older
+            $dob = $member['dob'] ?? null;
+            if (!empty($dob)) {
+                try {
+                    $birthDate = Carbon::parse($dob)->startOfDay();
+                    $thirteenYearsAgo = Carbon::now()->subYears(13)->startOfDay();
+                    if ($birthDate->greaterThan($thirteenYearsAgo)) {
+                        throw ValidationException::withMessages([
+                            "members.{$index}.dob" => 'Family members younger than 13 years do not require a separate ID card.',
+                        ]);
+                    }
+                } catch (\Exception $e) {
+                    // If DOB parsing fails, let default date validation handle it
+                }
             }
         }
 

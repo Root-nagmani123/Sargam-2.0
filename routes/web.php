@@ -374,13 +374,35 @@ Route::prefix('security/vehicle-pass-approval')->name('admin.security.vehicle_pa
 Route::prefix('security/employee-idcard-approval')->name('admin.security.employee_idcard_approval.')->controller(\App\Http\Controllers\Admin\Security\EmployeeIDCardApprovalController::class)->group(function () {
     Route::get('/approval1', 'approval1')->name('approval1');
     Route::get('/approval2', 'approval2')->name('approval2');
+    Route::get('/approval3', 'approval3')->name('approval3');
     Route::get('/all', 'all')->name('all');
     Route::get('/show/{id}', 'show')->name('show');
     Route::get('/export', 'export')->name('export');
     Route::post('/approve1/{id}', 'approve1')->name('approve1');
     Route::post('/approve2/{id}', 'approve2')->name('approve2');
+    Route::post('/approve3/{id}', 'approve3')->name('approve3');
     Route::post('/reject1/{id}', 'reject1')->name('reject1');
     Route::post('/reject2/{id}', 'reject2')->name('reject2');
+});
+
+// ID Card - Card Type Master (sec_id_cardno_master)
+Route::prefix('security/idcard-card-type')->name('admin.security.idcard_card_type.')->controller(\App\Http\Controllers\Admin\Security\CardTypeMasterController::class)->group(function () {
+    Route::get('/', 'index')->name('index');
+    Route::get('/create', 'create')->name('create');
+    Route::post('/store', 'store')->name('store');
+    Route::get('/edit/{id}', 'edit')->name('edit');
+    Route::post('/update/{id}', 'update')->name('update');
+    Route::delete('/delete/{id}', 'delete')->name('delete');
+});
+
+// ID Card - Sub Type & Mapping Master (sec_id_cardno_config_map)
+Route::prefix('security/idcard-sub-type')->name('admin.security.idcard_sub_type.')->controller(\App\Http\Controllers\Admin\Security\CardSubTypeMasterController::class)->group(function () {
+    Route::get('/', 'index')->name('index');
+    Route::get('/create', 'create')->name('create');
+    Route::post('/store', 'store')->name('store');
+    Route::get('/edit/{id}', 'edit')->name('edit');
+    Route::post('/update/{id}', 'update')->name('update');
+    Route::delete('/delete/{id}', 'delete')->name('delete');
 });
 
 // Family ID Card Approval Routes

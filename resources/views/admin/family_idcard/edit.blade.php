@@ -28,8 +28,7 @@
                         <select name="card_type" id="card_type" class="form-select" required>
                             <option value="">Select The Card Type</option>
                             <option value="Family" {{ old('card_type', $request->card_type) == 'Family' ? 'selected' : '' }}>Family</option>
-                            <option value="Employee" {{ old('card_type', $request->card_type) == 'Employee' ? 'selected' : '' }}>Employee</option>
-                        </select>
+                             </select>
                         @error('card_type')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
                     @if($employeeType === 'Contractual Employee')
