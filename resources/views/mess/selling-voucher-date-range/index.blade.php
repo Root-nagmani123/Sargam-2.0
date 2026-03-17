@@ -1117,6 +1117,12 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!select) return '';
             return select.tomselect ? select.tomselect.getValue() : select.value;
         }
+        function setSelectValue(select, value) {
+            if (!select) return;
+            var v = (value === null || value === undefined) ? '' : String(value);
+            if (select.tomselect) select.tomselect.setValue(v);
+            else select.value = v;
+        }
         function getSelectSelectedOption(select) {
             if (!select) return null;
             const val = getSelectValue(select);
@@ -2926,7 +2932,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     const editDrCourseNameEl = document.getElementById('editDrCourseNameSelect');
                     if (editDrCourseNameEl) editDrCourseNameEl.value = v.client_type_pk || '';
                     document.querySelector('.edit-payment-type').value = String(v.payment_type ?? 1);
-                    document.querySelector('.edit-client-type-pk').value = v.client_type_pk || '';
                     const slug = v.client_type_slug || 'employee';
                     document.querySelectorAll('.edit-dr-client-type-radio').forEach(function(radio) {
                         radio.checked = (radio.value === slug);
@@ -3004,14 +3009,11 @@ document.addEventListener('DOMContentLoaded', function () {
                             editClientSelect.style.display = 'block';
                             editClientSelect.setAttribute('required', 'required');
                             editClientSelect.setAttribute('name', 'client_type_pk');
-                            editClientSelect.value = v.client_type_pk || '';
-                            editClientSelect.querySelectorAll('option').forEach(function(opt) {
-                                if (opt.value === '') {
-                                    opt.hidden = false;
-                                    return;
-                                }
-                                opt.hidden = (opt.dataset.type || '') !== slug;
-                            });
+                            if (clientNameOptionsEdit && clientNameOptionsEdit.length) {
+                                rebuildEditClientNameSelect(slug);
+                            }
+                            editClientSelect = document.getElementById('editDrClientNameSelect');
+                            setSelectValue(editClientSelect, v.client_type_pk || '');
                         }
                         if (editOtSelect) {
                             editOtSelect.style.display = 'none';
@@ -3038,6 +3040,8 @@ document.addEventListener('DOMContentLoaded', function () {
                         }
                     }
                     updateEditDrNameField();
+                    // Ensure TomSelect instances exist for the final state (and preserve selected values)
+                    initEditModalTomSelects();
                     editCurrentStoreId = v.store_id || '';
                     const items = data.items || [];
                     const openEditModalWithItems = function() {

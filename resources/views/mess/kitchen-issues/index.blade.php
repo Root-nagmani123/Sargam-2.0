@@ -833,6 +833,13 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    function setSelectValue(selectEl, value) {
+        if (!selectEl) return;
+        var v = (value === null || value === undefined) ? '' : String(value);
+        if (selectEl.tomselect) selectEl.tomselect.setValue(v);
+        else selectEl.value = v;
+    }
+
     // When user clicks any Cancel/Close button in a modal (secondary button),
     // close the modal and refresh the page to reset all filters/state (only for Add/Edit Selling Voucher modals).
     document.querySelectorAll('#addSellingVoucherModal button.btn-secondary[data-bs-dismiss="modal"], #editSellingVoucherModal button.btn-secondary[data-bs-dismiss="modal"]').forEach(function(btn) {
@@ -1685,6 +1692,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
                 }
             }
+
         });
     }
 
@@ -2530,9 +2538,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     
                     document.querySelector('#editSellingVoucherModal select.edit-payment-type').value = String(v.payment_type ?? 1);
-                    
-                    const clientTypePkSelect = document.querySelector('#editSellingVoucherModal select[name="client_type_pk"]');
-                    if (clientTypePkSelect) clientTypePkSelect.value = v.client_type_pk || '';
+                    const editSlug = (v.client_type_slug || 'employee');
                     
                     document.getElementById('editModalClientNameInput').value = v.client_name || '';
                     document.getElementById('editModalFacultySelect').value = v.client_name || '';
@@ -2586,6 +2592,14 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (typeof initEditModalTomSelects === 'function') {
                             initEditModalTomSelects();
                         }
+                        // Ensure Client Name dropdown is rebuilt for current Client Type, then select saved value.
+                        if (editSlug !== 'ot' && editSlug !== 'course') {
+                            const editClientSelect = document.getElementById('editClientNameSelect');
+                            if (editClientSelect && clientNameOptionsEdit.length) {
+                                rebuildClientNameSelect(editClientSelect, clientNameOptionsEdit, editSlug);
+                            }
+                            setSelectValue(document.getElementById('editClientNameSelect'), v.client_type_pk || '');
+                        }
                         // After Tom Select init, show only the active dropdowns in Client Name column and Name column
                         if (typeof applyEditModalClientNameColumnVisibility === 'function') {
                             applyEditModalClientNameColumnVisibility();
@@ -2625,7 +2639,15 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (editCourseNameSelect) { editCourseNameSelect.style.display = 'none'; editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
                         if (editNameInp) { editNameInp.style.display = 'block'; editNameInp.readOnly = false; editNameInp.placeholder = 'Course name'; editNameInp.value = v.client_name || ''; editNameInp.setAttribute('required', 'required'); }
                     } else {
-                        if (editClientSelect) { editClientSelect.style.display = 'block'; editClientSelect.setAttribute('required', 'required'); editClientSelect.setAttribute('name', 'client_type_pk'); editClientSelect.querySelectorAll('option').forEach(function(opt) { if (opt.value === '') { opt.hidden = false; return; } opt.hidden = (opt.dataset.type || '') !== (v.client_type_slug || 'employee'); }); }
+                        if (editClientSelect) {
+                            editClientSelect.style.display = 'block';
+                            editClientSelect.setAttribute('required', 'required');
+                            editClientSelect.setAttribute('name', 'client_type_pk');
+                            if (clientNameOptionsEdit.length) {
+                                rebuildClientNameSelect(editClientSelect, clientNameOptionsEdit, (v.client_type_slug || 'employee'));
+                            }
+                            setSelectValue(document.getElementById('editClientNameSelect'), v.client_type_pk || '');
+                        }
                         if (editOtSelect) { editOtSelect.style.display = 'none'; editOtSelect.removeAttribute('required'); editOtSelect.removeAttribute('name'); editOtSelect.value = ''; }
                         if (editCourseSelect) { editCourseSelect.style.display = 'none'; editCourseSelect.removeAttribute('required'); editCourseSelect.removeAttribute('name'); editCourseSelect.value = ''; }
                         if (editCourseNameSelect) { editCourseNameSelect.style.display = 'none'; editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
