@@ -778,7 +778,7 @@ class CalendarController extends Controller
                 ->join('course_student_attendance as csa', function ($join) use ($student_pk) {
                     $join->on('csa.timetable_pk', '=', 't.pk')
                         ->where('csa.Student_master_pk', '=', $student_pk)
-                        ->where('csa.status', '1');
+                        ->where('csa.status', 1);
                 })
                 ->whereNotExists(function ($sub) use ($student_pk) {
                     $sub->select(DB::raw(1))
@@ -790,14 +790,14 @@ class CalendarController extends Controller
                 })
                 // Modified: Show past sessions OR today's sessions if end time has passed
                 ->whereRaw("
-                TIMESTAMP(
-                    t.END_DATE,
-                    STR_TO_DATE(
+                        TIMESTAMP(
+                        t.END_DATE,
+                        STR_TO_DATE(
                         TRIM(SUBSTRING_INDEX(t.class_session, '-', -1)),
                         '%h:%i %p'
-                    )
-                ) <= CONVERT_TZ(NOW(), '+00:00', '+05:30')
-            ");
+                            )
+                         ) <= CONVERT_TZ(NOW(), '+00:00', '+05:30')
+                            ");
 
             if (hasRole('Student-OT')) {
                 $pendingQuery
@@ -873,7 +873,15 @@ class CalendarController extends Controller
                 abort(403, 'Missing token');
             }
 
-            // ================= TOKEN AUTH =================
+    public function studentFacultyFeedback(Request $request)
+    {
+        try {
+            $otUrl = '';
+
+            if (!$request->has('token')) {
+                abort(403, 'Missing token');
+            }
+
             $key = config('services.moodle.key');
             $iv  = config('services.moodle.iv');
 
@@ -889,12 +897,15 @@ class CalendarController extends Controller
                 abort(403, 'Invalid token');
             }
 
-            $user = User::where('user_name', trim($username))->firstOrFail();
-            Auth::login($user);
+            $user = User::where('user_name', $username)->first();
 
+            if (!$user) {
+                abort(403, 'User not found');
+            }
+
+            Auth::login($user);
             $student_pk = auth()->user()->user_id;
 
-            // ================= PENDING FEEDBACK =================
             $pendingQuery = DB::table('timetable as t')
                 ->select([
                     't.pk as timetable_pk',
@@ -902,70 +913,53 @@ class CalendarController extends Controller
                     't.Ratting_checkbox',
                     't.feedback_checkbox',
                     't.Remark_checkbox',
-                    't.faculty_master as faculty_json', // Keep original JSON
-                    'f.pk as faculty_pk', // Get individual faculty PK
+                    't.faculty_master as faculty_pk',
                     'f.full_name as faculty_name',
                     'c.course_name',
                     'v.venue_name',
                     DB::raw('t.START_DATE as from_date'),
                     't.class_session',
+                    // CORRECTED: Use same format as working function
                     DB::raw("
                     STR_TO_DATE(
                         TRIM(SUBSTRING_INDEX(t.class_session, '-', -1)),
                         '%h:%i %p'
                     ) as session_end_time
-                "),
+                ")
                 ])
-                // ===== FACULTY (JSON + SINGLE VALUE SUPPORT) =====
-                ->leftJoin('faculty_master as f', function ($join) {
-                    $join->whereRaw("
-                    (
-                        JSON_VALID(t.faculty_master)
-                        AND JSON_CONTAINS(
-                            t.faculty_master,
-                            JSON_QUOTE(CAST(f.pk AS CHAR))
-                        )
-                    )
-                    OR
-                    (
-                        NOT JSON_VALID(t.faculty_master)
-                        AND CAST(t.faculty_master AS CHAR) = CAST(f.pk AS CHAR)
-                    )
-                ");
-                })
+                ->join('faculty_master as f', 't.faculty_master', '=', 'f.pk')
                 ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
-                ->leftJoin('venue_master as v', 't.venue_id', '=', 'v.venue_id')
+                ->join('venue_master as v', 't.venue_id', '=', 'v.venue_id')
+
                 ->join('student_master_course__map as smcm', function ($join) use ($student_pk) {
                     $join->on('smcm.course_master_pk', '=', 't.course_master_pk')
-                        ->where('smcm.student_master_pk', $student_pk)
-                        ->where('smcm.active_inactive', 1);
+                        ->where('smcm.student_master_pk', '=', $student_pk)
+                        ->where('smcm.active_inactive', '=', 1);
                 })
+
+                ->where('t.feedback_checkbox', 1)
                 ->join('course_student_attendance as csa', function ($join) use ($student_pk) {
                     $join->on('csa.timetable_pk', '=', 't.pk')
-                        ->where('csa.Student_master_pk', $student_pk)
-                        ->where('csa.status', '1');
+                        ->where('csa.Student_master_pk', '=', $student_pk)
+                        ->where('csa.status', 1);
                 })
-                ->where('t.feedback_checkbox', 1)
-                ->where('t.active_inactive', 1)
                 ->whereNotExists(function ($sub) use ($student_pk) {
                     $sub->select(DB::raw(1))
                         ->from('topic_feedback as tf')
                         ->whereColumn('tf.timetable_pk', 't.pk')
                         ->where('tf.student_master_pk', $student_pk)
-                        ->where('tf.faculty_pk', DB::raw('f.pk')) // Check for this specific faculty
                         ->where('tf.is_submitted', 1);
                 })
                 ->whereRaw("
-                TIMESTAMP(
-                    t.END_DATE,
-                    STR_TO_DATE(
+                        TIMESTAMP(
+                        t.END_DATE,
+                        STR_TO_DATE(
                         TRIM(SUBSTRING_INDEX(t.class_session, '-', -1)),
                         '%h:%i %p'
-                    )
-                ) <= CONVERT_TZ(NOW(), '+00:00', '+05:30')
-            ");
+                            )
+                         ) <= CONVERT_TZ(NOW(), '+00:00', '+05:30')
+                            ");
 
-            // ===== OT GROUP FILTER =====
             if (hasRole('Student-OT')) {
                 $pendingQuery
                     ->join('course_group_timetable_mapping as cgtm', 'cgtm.timetable_pk', '=', 't.pk')
@@ -976,14 +970,8 @@ class CalendarController extends Controller
             $pendingData = $pendingQuery
                 ->orderBy('t.START_DATE', 'asc')
                 ->orderBy('session_end_time', 'asc')
-                ->get()
-                ->unique(function ($item) {
-                    // Ensure each faculty-timetable combination is unique
-                    return $item->timetable_pk . '_' . $item->faculty_pk;
-                })
-                ->values();
+                ->get();
 
-            // ================= SUBMITTED FEEDBACK =================
             $submittedData = DB::table('topic_feedback as tf')
                 ->select([
                     'tf.pk as feedback_pk',
@@ -995,10 +983,8 @@ class CalendarController extends Controller
                     'tf.rating',
                     'tf.is_submitted',
                     'tf.created_date',
-                    'tf.faculty_pk',
                     't.subject_topic',
-                    // Get faculty name from faculty_master using tf.faculty_pk
-                    'fm.full_name as faculty_name',
+                    'f.full_name as faculty_name',
                     'c.course_name',
                     'v.venue_name',
                     DB::raw('t.START_DATE as from_date'),
@@ -1008,7 +994,14 @@ class CalendarController extends Controller
                 ])
                 ->join('timetable as t', 'tf.timetable_pk', '=', 't.pk')
                 ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
-                ->join('faculty_master as fm', 'tf.faculty_pk', '=', 'fm.pk') // JOIN ON tf.faculty_pk
+
+                ->join('student_master_course__map as smcm', function ($join) use ($student_pk) {
+                    $join->on('smcm.course_master_pk', '=', 't.course_master_pk')
+                        ->where('smcm.student_master_pk', '=', $student_pk)
+                        ->where('smcm.active_inactive', '=', 1);
+                })
+
+                ->leftJoin('faculty_master as f', 't.faculty_master', '=', 'f.pk')
                 ->leftJoin('venue_master as v', 't.venue_id', '=', 'v.venue_id')
                 ->where('tf.student_master_pk', $student_pk)
                 ->where('tf.is_submitted', 1)
@@ -1017,7 +1010,7 @@ class CalendarController extends Controller
 
             return view(
                 'admin.feedback.student_feedback',
-                compact('pendingData', 'submittedData')
+                compact('pendingData', 'submittedData', 'otUrl')
             );
         } catch (\Throwable $e) {
             logger()->error('Error in studentFacultyFeedback: ' . $e->getMessage());

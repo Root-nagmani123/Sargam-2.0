@@ -169,11 +169,11 @@
             aria-labelledby="notificationDropdown">
 
             <!-- Header -->
-            <li class="dropdown-header sticky-top bg-white d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
+            <li class="notification-dropdown-header">
                 <span class="fw-semibold">Notifications</span>
                 @if($unreadCount > 0)
                     <button type="button"
-                        class="btn btn-sm btn-link text-primary p-0"
+                        class="btn btn-sm btn-link text-primary p-0 text-nowrap"
                         onclick="markAllAsRead()">
                         Mark all as read
                     </button>
@@ -187,32 +187,27 @@
 
                 @if($notifications->count() > 0)
                     @foreach($notifications as $notification)
-                        <li>
-                            <a class="dropdown-item px-3 py-3 d-flex gap-2 notification-item
-                                {{ $notification->is_read ? '' : 'unread' }}"
+                        <li class="notification-list-item">
+                            <a class="notification-item {{ $notification->is_read ? '' : 'notification-item-unread' }}"
                                href="javascript:void(0)"
                                onclick="markAsRead({{ $notification->pk }})">
-
-                                <div class="flex-grow-1">
-                                    <div class="fw-semibold small">
-                                        {{ $notification->title ?? 'Notification' }}
+                                <div class="notification-item-body">
+                                    <div class="d-flex align-items-start justify-content-between gap-2">
+                                        <span class="notification-item-title">{{ $notification->title ?? 'Notification' }}</span>
+                                        @if(empty($notification->is_read))
+                                        <span class="badge bg-danger notification-new-tag">New</span>
+                                        @endif
                                     </div>
-                                    <div class="text-muted small mt-1">
-                                        {{ Str::limit($notification->message ?? '', 60) }}
-                                    </div>
-                                    <div class="text-muted mt-1" style="font-size: 11px;">
-                                        {{ \Carbon\Carbon::parse($notification->created_at)->diffForHumans() }}
-                                    </div>
+                                    <p class="notification-item-message">{{ Str::limit($notification->message ?? '', 60) }}</p>
+                                    <span class="notification-item-time">{{ \Carbon\Carbon::parse($notification->created_at)->diffForHumans() }}</span>
                                 </div>
                             </a>
                         </li>
                     @endforeach
                 @else
-                    <li class="text-center px-4 py-5 text-muted">
-                        <i class="material-icons material-symbols-rounded fs-1 opacity-25">
-                            notifications_none
-                        </i>
-                        <div class="mt-2 small">No notifications</div>
+                    <li class="notification-empty-state">
+                        <i class="material-icons material-symbols-rounded">notifications_none</i>
+                        <span>No notifications</span>
                     </li>
                 @endif
             </div>
@@ -294,26 +289,31 @@
                     @endif
                     <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
                 </div>
-                <div class="offcanvas-body p-0 overflow-y-auto" style="max-height: calc(70vh - 60px);">
+                <div class="offcanvas-body p-0 overflow-y-auto notification-mobile-list" style="max-height: calc(70vh - 60px);">
                     <div id="notificationListMobile">
                         @php
                         $notificationsMobile = notification()->getNotifications(Auth::user()->user_id ?? 0, 10, false);
                         @endphp
                         @if($notificationsMobile->count() > 0)
                         @foreach($notificationsMobile as $notification)
-                        <a class="d-block px-3 py-3 border-bottom text-decoration-none text-dark {{ $notification->is_read ? '' : 'bg-light' }}"
+                        <a class="notification-item notification-mobile-item {{ $notification->is_read ? '' : 'notification-item-unread' }}"
                             href="javascript:void(0)" onclick="markAsRead({{ $notification->pk }})">
-                            <div class="fw-semibold small">{{ $notification->title ?? 'Notification' }}</div>
-                            <div class="text-muted small mt-1">{{ Str::limit($notification->message ?? '', 80) }}</div>
-                            <div class="text-muted" style="font-size: 10px; margin-top: 4px;">
-                                {{ \Carbon\Carbon::parse($notification->created_at)->diffForHumans() }}
+                            <div class="notification-item-body">
+                                <div class="d-flex align-items-start justify-content-between gap-2">
+                                    <span class="notification-item-title">{{ $notification->title ?? 'Notification' }}</span>
+                                    @if(empty($notification->is_read))
+                                    <span class="badge bg-danger notification-new-tag">New</span>
+                                    @endif
+                                </div>
+                                <p class="notification-item-message">{{ Str::limit($notification->message ?? '', 80) }}</p>
+                                <span class="notification-item-time">{{ \Carbon\Carbon::parse($notification->created_at)->diffForHumans() }}</span>
                             </div>
                         </a>
                         @endforeach
                         @else
-                        <div class="px-3 py-5 text-center text-muted">
-                            <i class="material-icons material-symbols-rounded" style="font-size: 48px; opacity: 0.3;">notifications_none</i>
-                            <div class="mt-2">No notifications</div>
+                        <div class="notification-empty-state">
+                            <i class="material-icons material-symbols-rounded">notifications_none</i>
+                            <span>No notifications</span>
                         </div>
                         @endif
                     </div>
@@ -321,40 +321,123 @@
             </div>
 
             <style>
+                .notification-btn {
+                    transition: background-color 0.2s ease, transform 0.2s ease;
+                }
                 .notification-btn:hover {
-    background-color: var(--bs-light);
-    transform: translateY(-1px);
-}
-
-.notification-badge {
-    font-size: 10px;
-    padding: 4px 6px;
-}
-
-.notification-dropdown {
-    width: 360px;
-    max-height: 420px;
-    overflow: hidden;
-}
-
-.notification-list {
-    max-height: 360px;
-    overflow-y: auto;
-}
-
-.notification-item {
-    border-left: 3px solid transparent;
-    transition: background-color 0.2s ease;
-}
-
-.notification-item.unread {
-    background-color: var(--bs-light);
-    border-left-color: var(--bs-primary);
-}
-
-.notification-item:hover {
-    background-color: rgba(0, 0, 0, 0.03);
-}
+                    background-color: var(--bs-light);
+                    transform: translateY(-1px);
+                }
+                .notification-badge {
+                    font-size: 10px;
+                    padding: 4px 6px;
+                }
+                .notification-dropdown {
+                    width: 380px;
+                    max-height: 440px;
+                    overflow: hidden;
+                    padding: 0;
+                }
+                .notification-dropdown-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 14px 18px;
+                    border-bottom: 1px solid var(--bs-border-color-translucent);
+                    background: var(--bs-body-bg);
+                    position: sticky;
+                    top: 0;
+                    z-index: 1;
+                }
+                .notification-list {
+                    max-height: 380px;
+                    overflow-y: auto;
+                    padding: 8px 0;
+                }
+                .notification-list-item {
+                    list-style: none;
+                    margin: 0;
+                }
+                .notification-item {
+                    display: block;
+                    padding: 14px 18px;
+                    margin: 4px 10px;
+                    border-radius: 10px;
+                    text-decoration: none;
+                    color: inherit;
+                    border-left: 3px solid transparent;
+                    transition: background-color 0.2s ease, border-color 0.2s ease;
+                }
+                .notification-item:hover {
+                    background-color: rgba(0, 0, 0, 0.04);
+                }
+                .notification-item-unread {
+                    background-color: rgba(var(--bs-primary-rgb), 0.06);
+                    border-left-color: var(--bs-primary);
+                }
+                .notification-item-unread:hover {
+                    background-color: rgba(var(--bs-primary-rgb), 0.1);
+                }
+                .notification-item-body {
+                    min-width: 0;
+                }
+                .notification-item-title {
+                    font-size: 0.875rem;
+                    font-weight: 600;
+                    color: var(--bs-primary);
+                    line-height: 1.3;
+                }
+                .notification-item-message {
+                    font-size: 0.8125rem;
+                    color: var(--bs-primary);
+                    margin: 6px 0 0 0;
+                    line-height: 1.4;
+                }
+                .notification-item-time {
+                    font-size: 0.6875rem;
+                    color: var(--bs-primary);
+                    margin-top: 6px;
+                    display: block;
+                }
+                /* Blinking "New" tag for unread notifications */
+                .notification-new-tag {
+                    font-size: 0.625rem;
+                    font-weight: 600;
+                    letter-spacing: 0.02em;
+                    padding: 0.2em 0.5em;
+                    flex-shrink: 0;
+                    animation: notification-blink 1.2s ease-in-out infinite;
+                }
+                @keyframes notification-blink {
+                    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(var(--bs-danger-rgb), 0.4); }
+                    50% { opacity: 0.85; box-shadow: 0 0 0 4px rgba(var(--bs-danger-rgb), 0); }
+                }
+                .notification-empty-state {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 48px 24px;
+                    color: var(--bs-primary);
+                    list-style: none;
+                    margin: 0;
+                }
+                .notification-empty-state .material-icons {
+                    font-size: 2.5rem;
+                    opacity: 0.35;
+                    margin-bottom: 10px;
+                }
+                .notification-empty-state span {
+                    font-size: 0.875rem;
+                }
+                /* Mobile offcanvas notifications */
+                .notification-mobile-list {
+                    padding: 8px 12px 16px;
+                }
+                .notification-mobile-item {
+                    margin: 4px 0;
+                    padding: 14px 16px;
+                }
 
                 /* Skip link visibility */
 .skip-link {
@@ -1362,38 +1445,22 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Helper function to get cookie value
-    function getCookie(name) {
-        const nameEQ = name + '=';
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.indexOf(nameEQ) === 0) {
-                return cookie.substring(nameEQ.length);
-            }
-        }
-        return null;
-    }
-
-    // Helper function to delete cookie
-    function deleteCookie(name) {
-        document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:01 UTC; path=/;';
-    }
-
-    // Determine initial tab: fresh login -> home; otherwise use route-based or saved tab
-    const isFromLogin = getCookie('fresh_login');
+    // Determine initial tab.
+    // If server says active tab is Home (dashboard, calendar, etc.),
+    // always force Home and ignore any previously saved tab.
+    const routeTab = window.SARGAM_ACTIVE_NAV_TAB || '#home';
     let initial;
-    
-    if (isFromLogin) {
-        console.log('Fresh login detected - forcing home tab');
+
+    if (routeTab === '#home') {
+        // Coming from dashboard/home-like routes → always show Home tab.
         initial = '#home';
-        deleteCookie('fresh_login');
         localStorage.removeItem('activeMainTab');
+        console.log('Route is home/dashboard - forcing Home tab');
     } else {
-        const routeTab = window.SARGAM_ACTIVE_NAV_TAB || '#home';
+        // For non-home routes, allow remembering last selected tab.
         const savedTab = localStorage.getItem('activeMainTab');
         initial = savedTab || routeTab || '#home';
-        console.log('Initial tab:', initial);
+        console.log('Initial tab (non-home route):', initial);
     }
     
     showPane(initial);

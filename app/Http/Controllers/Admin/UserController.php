@@ -195,7 +195,9 @@ class UserController extends Controller
              $todayTimetable = $this->getTodayTimetableForFaculty($userId);
          }
 
-        return view('admin.dashboard', compact('year', 'month', 'events','emp_dob_data', 'totalActiveCourses', 'upcomingCourses', 'total_guest_faculty', 'total_internal_faculty', 'exemptionCount', 'MDO_count', 'todayTimetable', 'totalSessions', 'totalStudents', 'isCCorACC'));
+        $batchProfileCoursesCount = CourseMaster::where('active_inactive', 1)->count();
+
+        return view('admin.dashboard', compact('year', 'month', 'events','emp_dob_data', 'totalActiveCourses', 'upcomingCourses', 'total_guest_faculty', 'total_internal_faculty', 'exemptionCount', 'MDO_count', 'todayTimetable', 'totalSessions', 'totalStudents', 'isCCorACC', 'batchProfileCoursesCount'));
     }
 
     /**
@@ -504,6 +506,149 @@ class UserController extends Controller
             ->get();
         
         return view('admin.dashboard.student_list', compact('students', 'availableCourses', 'counsellorTypes', 'groupNames'));
+    }
+
+    /**
+     * Display My Counselee list (counsellor's assigned counselees with phase progress).
+     *
+     * @return \Illuminate\View\View
+     */
+    public function myCounselee()
+    {
+        $userId = Auth::user()->user_id;
+
+        // Only faculty users should see dynamic counselee mapping
+        $faculty = FacultyMaster::where('employee_master_pk', $userId)->first();
+        if (!$faculty) {
+            return view('admin.dashboard.my_counselee', ['counselees' => []]);
+        }
+
+        $facultyPk = (int) $faculty->pk;
+        $today = Carbon::now()->format('Y-m-d');
+        $noticeMemoService = app(\App\Services\OTNoticeMemoService::class);
+
+        // Find active group mappings assigned to this faculty for active courses
+        $groupMappings = DB::table('group_type_master_course_master_map as gmap')
+            ->join('course_master as cm', 'gmap.course_name', '=', 'cm.pk')
+            ->where('gmap.active_inactive', 1)
+            ->where('cm.active_inactive', 1)
+            ->where('cm.end_date', '>=', $today)
+            ->where('gmap.facility_id', $facultyPk)
+            ->select('gmap.pk as group_pk', 'gmap.course_name as course_pk')
+            ->get();
+
+        if ($groupMappings->isEmpty()) {
+            return view('admin.dashboard.my_counselee', ['counselees' => []]);
+        }
+
+        $groupPks = $groupMappings->pluck('group_pk')->unique()->values();
+        $coursePksByGroup = $groupMappings->keyBy('group_pk')->map(fn ($r) => (int) $r->course_pk);
+
+        // Students in these groups
+        $studentGroupRows = StudentCourseGroupMap::with([
+            'student.service',
+            'student.cadre',
+            'groupTypeMasterCourseMasterMap.courseGroup',
+        ])
+            ->whereIn('group_type_master_course_master_map_pk', $groupPks)
+            ->where('active_inactive', 1)
+            ->get();
+
+        // Build unique list by student_pk (prefer rows where course is known)
+        $byStudent = [];
+        foreach ($studentGroupRows as $row) {
+            $studentPk = (int) $row->student_master_pk;
+            if (!$row->student) {
+                continue;
+            }
+            if (!isset($byStudent[$studentPk])) {
+                $byStudent[$studentPk] = $row;
+            }
+        }
+
+        $counselees = [];
+        foreach ($byStudent as $studentPk => $row) {
+            $student = $row->student;
+            $coursePk = (int) ($coursePksByGroup[$row->group_type_master_course_master_map_pk] ?? 0);
+
+            // Course details (from relationship if loaded, else lookup from enrollment)
+            $course = $row->groupTypeMasterCourseMasterMap?->courseGroup;
+            if (!$course && $coursePk) {
+                $course = CourseMaster::find($coursePk);
+            }
+
+            // Attendance % for this student in this course (present + late) / total
+            $att = CourseStudentAttendance::where('Student_master_pk', $studentPk)
+                ->when($coursePk > 0, fn ($q) => $q->where('course_master_pk', $coursePk))
+                ->selectRaw('COUNT(*) as total_sessions,
+                    COALESCE(SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END), 0) as present_count,
+                    COALESCE(SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END), 0) as late_count
+                ')
+                ->first();
+            $totalSessions = (int) ($att->total_sessions ?? 0);
+            $present = (int) ($att->present_count ?? 0);
+            $late = (int) ($att->late_count ?? 0);
+            $attendancePct = $totalSessions > 0 ? (int) round((($present + $late) / $totalSessions) * 100) : 0;
+
+            $exemptionsCount = StudentMedicalExemption::where('student_master_pk', $studentPk)
+                ->where('active_inactive', 1)
+                ->count();
+            $memosCount = $noticeMemoService->getMemos($studentPk)->count();
+
+            // Phase list: use active enrolled courses as “completed/active” sequence
+            $courseMaps = StudentMasterCourseMap::with('course')
+                ->where('student_master_pk', $studentPk)
+                ->where('active_inactive', 1)
+                ->get()
+                ->filter(fn ($m) => $m->course && (int) $m->course->active_inactive === 1)
+                ->sortBy(fn ($m) => $m->course->start_year ?? $m->course->start_date ?? 0)
+                ->values();
+
+            $phases = [];
+            foreach ($courseMaps as $m) {
+                $cm = $m->course;
+                $isActiveCourse = $cm->end_date && Carbon::parse($cm->end_date)->gte(Carbon::today());
+                $label = $cm->couse_short_name ?? $cm->course_name ?? 'Course';
+                $phases[] = [
+                    'name' => (string) $label,
+                    'status' => $isActiveCourse ? 'active' : 'completed',
+                ];
+            }
+            // Ensure at least one entry
+            if (empty($phases) && $course) {
+                $phases[] = [
+                    'name' => (string) ($course->couse_short_name ?? $course->course_name ?? 'Course'),
+                    'status' => 'active',
+                ];
+            }
+
+            $photo = null;
+            if (!empty($student->photo_path)) {
+                $photo = asset('storage/' . $student->photo_path);
+            }
+
+            $displayName = $student->display_name ?? trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? ''));
+            $counselees[] = [
+                'name' => $displayName ?: ('Student #' . $studentPk),
+                'id' => $student->generated_OT_code ?? ('STU-' . $studentPk),
+                'service' => $student->service?->service_name ?? 'N/A',
+                'cadre' => $student->cadre?->cadre_name ?? 'N/A',
+                'email' => $student->email ?? 'N/A',
+                'fc_date' => $course ? (($course->couse_short_name ?? $course->course_name ?? 'N/A')) : 'N/A',
+                'phase_badge' => $course ? ($course->couse_short_name ?? 'Active') : 'Active',
+                'attendance' => $attendancePct,
+                'memos' => $memosCount,
+                'exemptions' => $exemptionsCount,
+                'phases' => $phases,
+                'photo' => $photo,
+                'active' => true,
+            ];
+        }
+
+        // Stable sort by name
+        usort($counselees, fn ($a, $b) => strcmp((string) $a['name'], (string) $b['name']));
+
+        return view('admin.dashboard.my_counselee', compact('counselees'));
     }
 
     /**

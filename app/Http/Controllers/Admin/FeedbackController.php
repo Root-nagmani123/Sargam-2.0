@@ -35,36 +35,13 @@ class FeedbackController extends Controller
     public function database()
     {
         try {
-            $userId = auth()->id(); // current logged-in user
-
-            // Get role-based course IDs if needed
-            $data_course_id = get_Role_by_course();
-
-            // Current date
-            $currentDate = now()->toDateString();
-
-            // Fetch only courses that are active and assigned to user
-            $coursesQuery = CourseMaster::where('active_inactive', 1)
-                ->where(function ($q) use ($currentDate) {
-                    // Course is active if end_date is null OR end_date >= today
-                    $q->whereNull('end_date')
-                        ->orWhere('end_date', '>=', $currentDate);
-                });
-
-            // Apply role-based filtering if exists
+            $data_course_id =  get_Role_by_course();
+            // Fetch active courses
+            $courses = CourseMaster::where('active_inactive', 1);
             if (!empty($data_course_id)) {
-                $coursesQuery->whereIn('pk', $data_course_id);
+                $courses->whereIn('pk', $data_course_id);
             }
-
-            // Optional: If user is a student, only show courses they are enrolled in
-            if (auth()->user()->role == 'student') {
-                $coursesQuery->whereHas('students', function ($q) use ($userId, $currentDate) {
-                    $q->where('student_master_pk', $userId)
-                        ->where('active_inactive', 1);
-                });
-            }
-
-            $courses = $coursesQuery->select('pk', 'course_name')
+            $courses = $courses->select('pk', 'course_name')
                 ->orderBy('course_name')
                 ->get();
 
@@ -327,7 +304,6 @@ class FeedbackController extends Controller
 
     public function showFacultyAverage(Request $request)
     {
-        // dd($request->all());
         $data_course_id =  get_Role_by_course();
 
 
@@ -339,36 +315,13 @@ class FeedbackController extends Controller
         $courseType = $request->input('course_type', 'current');
 
         // 1. Get programs from course_master table
-        $currentDate = now()->toDateString();
-
-        $currentDate = now()->toDateString();
-
-        // Fetch programs based on selected course type
-        $programsQuery = DB::table('course_master')
-            ->where('active_inactive', 1)
-            ->when($courseType === 'current', function ($q) use ($currentDate) {
-                $q->where(function ($q2) use ($currentDate) {
-                    $q2->whereNull('end_date')
-                        ->orWhereDate('end_date', '>=', $currentDate);
-                });
-            })
-            ->when($courseType === 'archived', function ($q) use ($currentDate) {
-                $q->whereDate('end_date', '<', $currentDate);
-            })
+        $programs = DB::table('course_master')
             ->when(!empty($data_course_id), function ($query) use ($data_course_id) {
                 $query->whereIn('pk', $data_course_id);
             })
-            ->orderBy('course_name');
-
-        $programs = $programsQuery->pluck('course_name', 'pk');
-
-        // Default fallback if no programs found
-        if ($programs->isEmpty()) {
-            $programs = collect([
-                'Phase-I 2024' => 'Phase-I 2024'
-            ]);
-        }
-
+            ->distinct()
+            ->orderBy('course_name')
+            ->pluck('course_name', 'course_name');
 
         if ($programs->isEmpty()) {
             $programs = collect([
@@ -1357,9 +1310,9 @@ class FeedbackController extends Controller
         if (!empty($data_course_id)) {
             $query->whereIn('cm.pk', $data_course_id);
         }
-
-        // Group by - ADD class_session to group by
-        $query->groupBy('tf.topic_name', 'cm.pk', 'cm.course_name', 'cm.active_inactive', 'cm.end_date', 'fm.full_name', 'fm.faculty_type', 'tf.faculty_pk', 'tt.START_DATE', 'tt.END_DATE', 'tt.class_session', 'tf.timetable_pk');
+        $query->whereNotNull('tf.presentation')
+            ->whereNotNull('tf.content')
+            ->groupBy('tf.topic_name', 'cm.pk', 'cm.course_name', 'cm.active_inactive', 'cm.end_date', 'fm.full_name', 'fm.faculty_type', 'tf.faculty_pk', 'tt.START_DATE', 'tt.END_DATE', 'tf.timetable_pk');
 
         // Apply filters
         if ($programId && $programId !== '') {
@@ -3018,6 +2971,123 @@ class FeedbackController extends Controller
         return $pdf->download('feedback_details_' . date('Y_m_d_H_i') . '.pdf');
     }
 
+   public function pendingFeedbackIndex()
+{
+    try {
+        $students = DB::table('course_student_attendance as csa')
+            ->join('student_master as sm', 'sm.pk', '=', 'csa.Student_master_pk')
+            ->join('timetable as t', 't.pk', '=', 'csa.timetable_pk')
+
+            ->where('csa.status', 1)              // attended
+            ->where('t.feedback_checkbox', 1)     // feedback enabled
+
+            // feedback window over
+            ->whereRaw("
+                TIMESTAMP(
+                    t.END_DATE,
+                    STR_TO_DATE(
+                        TRIM(SUBSTRING_INDEX(t.class_session, '-', -1)),
+                        '%h:%i %p'
+                    )
+                ) <= CONVERT_TZ(NOW(), '+00:00', '+05:30')
+            ")
+
+            // NOT submitted feedback
+            ->whereNotExists(function ($sub) {
+                $sub->select(DB::raw(1))
+                    ->from('topic_feedback as tf')
+                    ->whereColumn('tf.student_master_pk', 'sm.pk')
+                    ->whereColumn('tf.timetable_pk', 't.pk')
+                    ->where('tf.is_submitted', 1);
+            })
+
+            ->select(
+                'sm.pk',
+                DB::raw("CONCAT(sm.first_name,' ',sm.last_name) as full_name"),
+                'sm.email',
+                'sm.contact_no',
+                'sm.user_id as generated_OT_code'
+            )
+            ->distinct()
+            ->orderBy('full_name')
+            ->get();
+
+        return view('admin.feedback.pending_students', compact('students'));
+
+    } catch (\Throwable $e) {
+        logger()->error('Error in pendingFeedbackIndex: ' . $e->getMessage());
+        return back()->with('error', $e->getMessage());
+    }
+}
+
+
+//    public function pendingFeedbackIndex()
+// {
+//     try {
+//         $students = DB::table('course_student_attendance as csa')
+//             ->join('student_master as sm', 'sm.pk', '=', 'csa.Student_master_pk')
+//             ->join('timetable as t', 't.pk', '=', 'csa.timetable_pk')
+//             ->join('student_master_course__map as smcm', function ($join) {
+//                 $join->on('smcm.student_master_pk', '=', 'sm.pk')
+//                      ->on('smcm.course_master_pk', '=', 't.course_master_pk')
+//                      ->where('smcm.active_inactive', 1);
+//             })
+//             ->where('t.feedback_checkbox', 1)
+//             ->where('csa.status', 1)
+
+//             /* only sessions already completed */
+//             ->whereRaw("
+//                 TIMESTAMP(
+//                     t.END_DATE,
+//                     STR_TO_DATE(
+//                         TRIM(SUBSTRING_INDEX(t.class_session, '-', -1)),
+//                         '%h:%i %p'
+//                     )
+//                 ) <= CONVERT_TZ(NOW(), '+00:00', '+05:30')
+//             ")
+
+//             /* feedback NOT submitted */
+//             ->whereNotExists(function ($q) {
+//                 $q->select(DB::raw(1))
+//                   ->from('topic_feedback as tf')
+//                   ->whereColumn('tf.student_master_pk', 'sm.pk')
+//                   ->whereColumn('tf.timetable_pk', 't.pk')
+//                   ->where('tf.is_submitted', 1);
+//             })
+
+//             ->select(
+//                 'sm.pk',
+//                 DB::raw("
+//                     COALESCE(
+//                         sm.display_name,
+//                         CONCAT_WS(' ', sm.first_name, sm.middle_name, sm.last_name)
+//                     ) AS full_name
+//                 "),
+//                 'sm.email',
+//                 'sm.contact_no'
+//             )
+//             ->distinct()
+//             ->orderBy('full_name')
+//             ->get();
+
+//         return view('admin.feedback.pending_students', compact('students'));
+
+//     } catch (\Exception $e) {
+//         \Log::error('Error in pendingFeedbackIndex', [
+//             'error' => $e->getMessage()
+//         ]);
+
+//         abort(500, 'Unable to load pending feedback list');
+//     }
+// }
+
+
+
+    // private function getProgramName($programId)
+    // {
+    //     $program = DB::table('course_master')
+    //         ->where('pk', $programId)
+    //         ->first();
 
 
 
