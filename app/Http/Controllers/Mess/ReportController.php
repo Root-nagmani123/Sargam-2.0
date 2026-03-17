@@ -489,6 +489,7 @@ class ReportController extends Controller
             \App\Models\Mess\ClientType::TYPE_OT      => KitchenIssueMaster::CLIENT_OT,
             \App\Models\Mess\ClientType::TYPE_COURSE  => KitchenIssueMaster::CLIENT_COURSE,
             \App\Models\Mess\ClientType::TYPE_OTHER   => KitchenIssueMaster::CLIENT_OTHER,
+            'section'                                 => KitchenIssueMaster::CLIENT_SECTION,
         ]);
 
         $svQuery = \App\Models\Mess\SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'items.itemSubcategory']);
@@ -594,6 +595,7 @@ class ReportController extends Controller
             \App\Models\Mess\ClientType::TYPE_OT      => KitchenIssueMaster::CLIENT_OT,
             \App\Models\Mess\ClientType::TYPE_COURSE  => KitchenIssueMaster::CLIENT_COURSE,
             \App\Models\Mess\ClientType::TYPE_OTHER   => KitchenIssueMaster::CLIENT_OTHER,
+            'section'                                 => KitchenIssueMaster::CLIENT_SECTION,
         ]);
 
         $svQuery = \App\Models\Mess\SellingVoucherDateRangeReport::with([
@@ -875,6 +877,7 @@ class ReportController extends Controller
             KitchenIssueMaster::CLIENT_OT      => \App\Models\Mess\ClientType::TYPE_OT,
             KitchenIssueMaster::CLIENT_COURSE  => \App\Models\Mess\ClientType::TYPE_COURSE,
             KitchenIssueMaster::CLIENT_OTHER   => \App\Models\Mess\ClientType::TYPE_OTHER,
+            KitchenIssueMaster::CLIENT_SECTION => 'section',
         ];
     }
 
@@ -961,6 +964,7 @@ class ReportController extends Controller
             \App\Models\Mess\ClientType::TYPE_OT      => KitchenIssueMaster::CLIENT_OT,
             \App\Models\Mess\ClientType::TYPE_COURSE  => KitchenIssueMaster::CLIENT_COURSE,
             \App\Models\Mess\ClientType::TYPE_OTHER   => KitchenIssueMaster::CLIENT_OTHER,
+            'section'                                 => KitchenIssueMaster::CLIENT_SECTION,
         ]);
 
         // --- 1. Selling Voucher Date Range ---

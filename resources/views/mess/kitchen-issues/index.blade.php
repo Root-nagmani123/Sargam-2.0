@@ -725,6 +725,114 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('Selling Voucher script loaded');
     console.log('Bootstrap available:', typeof bootstrap !== 'undefined');
 
+    // Cache original Client Name options so we can rebuild the select per Client Type.
+    // (TomSelect doesn't reliably respect option.hidden after init.)
+    var clientNameOptionsAdd = [];
+    var clientNameOptionsEdit = [];
+    function cacheClientNameOptions() {
+        clientNameOptionsAdd = [];
+        clientNameOptionsEdit = [];
+        var addSel = document.getElementById('modalClientNameSelect');
+        if (addSel) {
+            addSel.querySelectorAll('option[value]').forEach(function(opt) {
+                clientNameOptionsAdd.push({
+                    value: opt.value,
+                    text: (opt.textContent || '').trim(),
+                    type: ((opt.dataset.type || '').toLowerCase().trim()),
+                    clientName: ((opt.dataset.clientName || '').toLowerCase().trim())
+                });
+            });
+        }
+        var editSel = document.getElementById('editClientNameSelect');
+        if (editSel) {
+            editSel.querySelectorAll('option[value]').forEach(function(opt) {
+                clientNameOptionsEdit.push({
+                    value: opt.value,
+                    text: (opt.textContent || '').trim(),
+                    type: ((opt.dataset.type || '').toLowerCase().trim()),
+                    clientName: ((opt.dataset.clientName || '').toLowerCase().trim())
+                });
+            });
+        }
+    }
+    cacheClientNameOptions();
+
+    function rebuildClientNameSelect(selectEl, optionsList, slug) {
+        if (!selectEl || !Array.isArray(optionsList)) return;
+        var slugLower = (slug || '').toLowerCase().trim();
+        var filtered = optionsList.filter(function(o) { return (o.type || '').toLowerCase().trim() === slugLower; });
+
+        // Preserve a valid selection if possible; otherwise clear.
+        var preserved = '';
+        if (selectEl.tomselect) preserved = selectEl.tomselect.getValue() || '';
+        else preserved = selectEl.value || '';
+
+        if (selectEl.tomselect) { try { selectEl.tomselect.destroy(); } catch (e) {} }
+        selectEl.innerHTML = '<option value="">Select Client Name</option>';
+        filtered.forEach(function(o) {
+            var opt = document.createElement('option');
+            opt.value = o.value;
+            opt.textContent = o.text;
+            opt.setAttribute('data-type', (o.type || '').toLowerCase().trim());
+            opt.setAttribute('data-client-name', (o.clientName || '').toLowerCase().trim());
+            selectEl.appendChild(opt);
+        });
+
+        if (typeof TomSelect !== 'undefined') {
+            new TomSelect(selectEl, {
+                allowEmptyOption: true,
+                dropdownParent: 'body',
+                placeholder: 'Select Client Name',
+                searchField: ['text'],
+                controlInput: '<input>',
+                highlight: false,
+                onInitialize: function () {
+                    this.activeOption = null;
+                },
+                onDropdownOpen: function (dropdown) {
+                    var self = this;
+                    var input = this.control_input || (dropdown && dropdown.querySelector('input'));
+                    function clearInputAndCursor() {
+                        if (typeof self.setTextboxValue === 'function') self.setTextboxValue('');
+                        if (typeof self.onSearchChange === 'function') self.onSearchChange('');
+                        if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
+                        if (input) {
+                            input.value = '';
+                            input.focus();
+                            try { input.setSelectionRange(0, 0); } catch (e) {}
+                            input.scrollLeft = 0;
+                        }
+                    }
+                    clearInputAndCursor();
+                    setTimeout(clearInputAndCursor, 0);
+                    setTimeout(clearInputAndCursor, 50);
+                    setTimeout(clearInputAndCursor, 100);
+                    // dropdown open होते ही selection bhi clear karni hai (blank state)
+                    self.clear(true);
+                    if (dropdown) {
+                        setTimeout(function () {
+                            var opts = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"]');
+                            opts.forEach(function (opt) {
+                                opt.classList.remove('active');
+                                opt.classList.remove('selected');
+                                opt.setAttribute('aria-selected', 'false');
+                            });
+                        }, 0);
+                    }
+                }
+            });
+        }
+
+        // Restore preserved selection if it still exists.
+        if (preserved) {
+            var stillExists = Array.from(selectEl.options).some(function(o) { return String(o.value) === String(preserved); });
+            if (stillExists) {
+                if (selectEl.tomselect) selectEl.tomselect.setValue(preserved, true);
+                else selectEl.value = preserved;
+            }
+        }
+    }
+
     // When user clicks any Cancel/Close button in a modal (secondary button),
     // close the modal and refresh the page to reset all filters/state (only for Add/Edit Selling Voucher modals).
     document.querySelectorAll('#addSellingVoucherModal button.btn-secondary[data-bs-dismiss="modal"], #editSellingVoucherModal button.btn-secondary[data-bs-dismiss="modal"]').forEach(function(btn) {
@@ -975,7 +1083,11 @@ document.addEventListener('DOMContentLoaded', function() {
             }));
         }
         var clientSel = document.getElementById('modalClientNameSelect');
-        if (clientSel && !clientSel.tomselect) {
+        var addRadio = document.querySelector('#addSellingVoucherModal .client-type-radio:checked');
+        var addSlug = addRadio ? (addRadio.value || '').toLowerCase().trim() : 'employee';
+        if (clientSel && addSlug !== 'ot' && addSlug !== 'course' && clientNameOptionsAdd.length) {
+            rebuildClientNameSelect(clientSel, clientNameOptionsAdd, addSlug);
+        } else if (clientSel && !clientSel.tomselect) {
             addModalTomSelectInstances.client = new TomSelect(clientSel, createBlankSearchConfig({
                 placeholder: 'Select Client Name',
                 clearOnOpen: true
@@ -1132,9 +1244,13 @@ document.addEventListener('DOMContentLoaded', function() {
             }));
         }
 
-        // Client Name
+        // Client Name (filter by selected Client Type)
         var clientSel = document.getElementById('editClientNameSelect');
-        if (clientSel && !clientSel.tomselect) {
+        var editRadio = document.querySelector('#editSellingVoucherModal .edit-client-type-radio:checked');
+        var editSlug = editRadio ? (editRadio.value || '').toLowerCase().trim() : 'employee';
+        if (clientSel && editSlug !== 'ot' && editSlug !== 'course' && clientNameOptionsEdit.length) {
+            rebuildClientNameSelect(clientSel, clientNameOptionsEdit, editSlug);
+        } else if (clientSel && !clientSel.tomselect) {
             editModalTomSelectInstances.client = new TomSelect(clientSel, createBlankSearchConfig({
                 placeholder: 'Select Client Name',
                 clearOnOpen: true
@@ -1745,11 +1861,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (otStudentSelect) { setSelectVisible(otStudentSelect, false); otStudentSelect.removeAttribute('required'); otStudentSelect.innerHTML = '<option value="">Select Student</option>'; otStudentSelect.value = ''; }
                 if (courseSelect) { setSelectVisible(courseSelect, false); courseSelect.removeAttribute('required'); courseSelect.value = ''; }
                 if (courseNameSelect) { setSelectVisible(courseNameSelect, false); courseNameSelect.removeAttribute('required'); courseNameSelect.value = ''; }
-                if (clientSelect) {
-                    clientSelect.querySelectorAll('option').forEach(function(opt) {
-                        if (opt.value === '') { opt.hidden = false; return; }
-                        opt.hidden = opt.dataset.type !== this.value;
-                    }.bind(this));
+                if (clientSelect && clientNameOptionsAdd.length) {
+                    rebuildClientNameSelect(clientSelect, clientNameOptionsAdd, this.value);
                 }
                 if (nameInput) { nameInput.style.display = 'block'; nameInput.placeholder = 'Client / section / role name'; nameInput.setAttribute('required', 'required'); }
             }
@@ -1922,11 +2035,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (otCourseSelect) { setSelectVisible(otCourseSelect, false); otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
                 if (editCourseSelect) { setSelectVisible(editCourseSelect, false); editCourseSelect.removeAttribute('required'); editCourseSelect.removeAttribute('name'); editCourseSelect.value = ''; }
                 if (editCourseNameSelect) { setSelectVisible(editCourseNameSelect, false); editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
-                if (clientSelect) {
-                    clientSelect.querySelectorAll('option').forEach(function(opt) {
-                        if (opt.value === '') { opt.hidden = false; return; }
-                        opt.hidden = (opt.dataset.type || '') !== (this.value || '');
-                    }.bind(this));
+                if (clientSelect && clientNameOptionsEdit.length) {
+                    rebuildClientNameSelect(clientSelect, clientNameOptionsEdit, this.value);
                 }
                 if (nameInput) { nameInput.style.display = 'block'; nameInput.readOnly = false; nameInput.placeholder = 'Client / section / role name'; nameInput.setAttribute('required', 'required'); }
             }

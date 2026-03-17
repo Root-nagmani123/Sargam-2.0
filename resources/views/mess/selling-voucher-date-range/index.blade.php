@@ -1042,36 +1042,40 @@ document.addEventListener('DOMContentLoaded', function () {
             var addSel = document.getElementById('drClientNameSelect');
             if (addSel) {
                 addSel.querySelectorAll('option[value]').forEach(function(opt) {
-                    clientNameOptionsAdd.push({ value: opt.value, text: (opt.textContent || '').trim(), type: (opt.dataset.type || '').toLowerCase(), clientName: (opt.dataset.clientName || '').toLowerCase() });
+                    clientNameOptionsAdd.push({
+                        value: opt.value,
+                        text: (opt.textContent || '').trim(),
+                        type: ((opt.dataset.type || '').toLowerCase().trim()),
+                        clientName: ((opt.dataset.clientName || '').toLowerCase().trim())
+                    });
                 });
             }
             var editSel = document.getElementById('editDrClientNameSelect');
             if (editSel) {
                 editSel.querySelectorAll('option[value]').forEach(function(opt) {
-                    clientNameOptionsEdit.push({ value: opt.value, text: (opt.textContent || '').trim(), type: (opt.dataset.type || '').toLowerCase(), clientName: (opt.dataset.clientName || '').toLowerCase() });
+                    clientNameOptionsEdit.push({
+                        value: opt.value,
+                        text: (opt.textContent || '').trim(),
+                        type: ((opt.dataset.type || '').toLowerCase().trim()),
+                        clientName: ((opt.dataset.clientName || '').toLowerCase().trim())
+                    });
                 });
             }
         });
 
         function rebuildClientNameSelect(selectEl, optionsList, slug) {
             if (!selectEl || !Array.isArray(optionsList)) return;
-            var slugLower = (slug || '').toLowerCase();
-            var filtered = optionsList.filter(function(o) { return o.type === slugLower; });
-            
-            // Destroy Choices instance if exists
-            var existingChoices = addModalChoicesInstances.client;
-            if (existingChoices) {
-                try { existingChoices.destroy(); } catch (e) {}
-            }
-            addModalChoicesInstances.client = null;
-            
+            var slugLower = (slug || '').toLowerCase().trim();
+            var filtered = optionsList.filter(function(o) { return (o.type || '').toLowerCase().trim() === slugLower; });
+            if (selectEl.tomselect) { try { selectEl.tomselect.destroy(); } catch (e) {} }
+            if (selectEl.id === 'drClientNameSelect') addModalTomSelectInstances.client = null;
             selectEl.innerHTML = '<option value="">Select Client Name</option>';
             filtered.forEach(function(o) {
                 var opt = document.createElement('option');
                 opt.value = o.value;
                 opt.textContent = o.text;
-                opt.setAttribute('data-type', o.type);
-                opt.setAttribute('data-client-name', o.clientName);
+                opt.setAttribute('data-type', ((o.type || '').toLowerCase().trim()));
+                opt.setAttribute('data-client-name', ((o.clientName || '').toLowerCase().trim()));
                 selectEl.appendChild(opt);
             });
             
@@ -1087,22 +1091,16 @@ document.addEventListener('DOMContentLoaded', function () {
         function rebuildEditClientNameSelect(slug) {
             var editSel = document.getElementById('editDrClientNameSelect');
             if (!editSel || !clientNameOptionsEdit.length) return;
-            var slugLower = (slug || '').toLowerCase();
-            var filtered = clientNameOptionsEdit.filter(function(o) { return o.type === slugLower; });
-            
-            // Destroy Choices instance if exists
-            if (editModalChoicesInstances.client) {
-                try { editModalChoicesInstances.client.destroy(); } catch (e) {}
-            }
-            editModalChoicesInstances.client = null;
-            
+            var slugLower = (slug || '').toLowerCase().trim();
+            var filtered = clientNameOptionsEdit.filter(function(o) { return (o.type || '').toLowerCase().trim() === slugLower; });
+            if (editSel.tomselect) { try { editSel.tomselect.destroy(); } catch (e) {} editModalTomSelectInstances.client = null; }
             editSel.innerHTML = '<option value="">Select Client Name</option>';
             filtered.forEach(function(o) {
                 var opt = document.createElement('option');
                 opt.value = o.value;
                 opt.textContent = o.text;
-                opt.setAttribute('data-type', o.type);
-                opt.setAttribute('data-client-name', o.clientName);
+                opt.setAttribute('data-type', ((o.type || '').toLowerCase().trim()));
+                opt.setAttribute('data-client-name', ((o.clientName || '').toLowerCase().trim()));
                 editSel.appendChild(opt);
             });
             
