@@ -1,4 +1,5 @@
-<nav class="sidebar-nav scroll-sidebar" id="menu-right-setup-mini-9" data-simplebar="">
+<nav class="sidebar-nav scroll-sidebar" id="menu-right-setup-mini-9" data-simplebar=""
+    data-mess-module="{{ request()->is('admin/mess*') ? '1' : '0' }}">
     <ul class="sidebar-menu" id="sidebarnav">
         <!-- ======= MASTER DATA ======= -->
         <li class="sidebar-item"
@@ -201,3 +202,23 @@
         </ul>
     </ul>
 </nav>
+
+@push('scripts')
+<script>
+document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Tab' || e.shiftKey) return;
+
+    var nav = document.getElementById('menu-right-setup-mini-9');
+    if (!nav || nav.dataset.messModule !== '1') return;
+
+    var active = document.activeElement;
+    if (!active || !nav.contains(active)) return;
+
+    // Only treat Tab as "Enter" for actionable sidebar items (not inputs)
+    if (active.matches('a, button, [role="button"], [data-bs-toggle="collapse"]')) {
+        e.preventDefault();
+        try { active.click(); } catch (err) {}
+    }
+}, true);
+</script>
+@endpush

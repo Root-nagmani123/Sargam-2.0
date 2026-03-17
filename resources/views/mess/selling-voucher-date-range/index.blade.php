@@ -85,8 +85,8 @@
                            placeholder="Search selling vouchers...">
                 </div>
             </div>
-            <div class="table-responsive">
-                <table class="table align-middle mb-0 voucher-table" id="sellingVoucherDateRangeTable">
+            <div class="table-responsive d-inline-block" style="max-width: 100%;">
+                <table class="table align-middle mb-0 voucher-table w-auto" id="sellingVoucherDateRangeTable">
                     <thead>
                         <tr>
                             <th>S. No.</th>
@@ -526,13 +526,13 @@ document.addEventListener('DOMContentLoaded', function () {
                                     <thead class="voucher-brand-head">
                                         <tr>
                                             <th style="min-width: 180px;">Item Name <span class="text-white">*</span></th>
-                                            <th style="min-width: 80px;">Unit</th>
-                                            <th style="min-width: 100px;">Available Qty</th>
-                                            <th style="min-width: 90px;">Issue Qty <span class="text-white">*</span></th>
-                                            <th style="min-width: 90px;">Left Qty</th>
-                                            <th style="min-width: 120px;">Issue Date</th>
-                                            <th style="min-width: 100px;">Rate <span class="text-white">*</span></th>
-                                            <th style="min-width: 110px;">Total Amount</th>
+                                            <th style="min-width: 150px;">Unit</th>
+                                            <th style="width: auto;">Available Qty</th>
+                                            <th style="width: auto;">Issue Qty <span class="text-white">*</span></th>
+                                            <th style="width: auto;">Left Qty</th>
+                                            <th style="width: auto;">Issue Date</th>
+                                            <th style="width: 90px;">Rate <span class="text-white">*</span></th>
+                                            <th style="width: auto;">Total Amount</th>
                                             <th style="width: 50px;"></th>
                                         </tr>
                                     </thead>
@@ -547,15 +547,15 @@ document.addEventListener('DOMContentLoaded', function () {
                                                 </select>
                                             </td>
                                             <td><input type="text" name="items[0][unit]" class="form-control  dr-unit" readonly placeholder="—"></td>
-                                            <td><input type="text" name="items[0][available_quantity]" class="form-control  dr-avail bg-light" step="0.01" min="0" value="0" placeholder="0" readonly></td>
+                                            <td><input type="text" name="items[0][available_quantity]" class="form-control  dr-avail bg-light" readonly></td>
                                             <td>
-                                                <input type="text" name="items[0][quantity]" class="form-control  dr-qty" step="0.01" min="0.01" placeholder="0" required>
+                                                <input type="text" name="items[0][quantity]" class="form-control  dr-qty" required>
                                                 <div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div>
                                             </td>
-                                            <td><input type="text" class="form-control  dr-left bg-light" readonly placeholder="0"></td>
+                                            <td><input type="text" class="form-control  dr-left bg-light" readonly></td>
                                             <td><input type="date" name="items[0][issue_date]" class="form-control  dr-issue-date" value="{{ date('Y-m-d') }}"></td>
-                                            <td><input type="text" name="items[0][rate]" class="form-control  dr-rate" step="0.01" min="0" placeholder="0" required></td>
-                                            <td><input type="text" class="form-control  dr-total bg-light" readonly placeholder="0.00"></td>
+                                            <td><input type="text" name="items[0][rate]" class="form-control  dr-rate" required></td>
+                                            <td><input type="text" class="form-control  dr-total bg-light" readonly></td>
                                             <td><button type="button" class="btn  btn-outline-danger dr-remove-row voucher-icon-btn" disabled title="Remove">×</button></td>
                                         </tr>
                                     </tbody>
@@ -1680,12 +1680,12 @@ document.addEventListener('DOMContentLoaded', function () {
             return '<tr class="dr-item-row">' +
                 '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select  dr-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
                 '<td><input type="text" name="items[' + index + '][unit]" class="form-control  dr-unit" readonly placeholder="—"></td>' +
-                '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control  dr-avail bg-light" step="0.01" min="0" value="0" placeholder="0" readonly></td>' +
-                '<td><input type="number" name="items[' + index + '][quantity]" class="form-control  dr-qty" step="0.01" min="0.01" placeholder="0" required><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
+                '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control  dr-avail bg-light" readonly></td>' +
+                '<td><input type="number" name="items[' + index + '][quantity]" class="form-control  dr-qty" required><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
                 '<td><input type="text" class="form-control  dr-left bg-light" readonly placeholder="0"></td>' +
                 '<td><input type="date" name="items[' + index + '][issue_date]" class="form-control  dr-issue-date" value="' + new Date().toISOString().slice(0, 10) + '"></td>' +
-                '<td><input type="number" name="items[' + index + '][rate]" class="form-control  dr-rate" step="0.01" min="0" placeholder="0" required></td>' +
-                '<td><input type="text" class="form-control  dr-total bg-light" readonly placeholder="0.00"></td>' +
+                '<td><input type="number" name="items[' + index + '][rate]" class="form-control  dr-rate" required></td>' +
+                '<td><input type="text" class="form-control  dr-total bg-light" readonly></td>' +
                 '<td><button type="button" class="btn  btn-outline-danger dr-remove-row voucher-icon-btn" title="Remove">×</button></td>' +
                 '</tr>';
         }

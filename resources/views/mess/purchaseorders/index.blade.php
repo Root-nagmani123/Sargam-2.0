@@ -590,7 +590,7 @@
                                     <thead>
                                         <tr>
                                             <th style="width: 180px;">Item Name <span class="text-white">*</span></th>
-                                            <th style="width:auto;">Unit</th>
+                                            <th style="width:150px;">Unit</th>
                                             <th style="width:auto;">Item Code</th>
                                             <th style="width:auto;">Quantity <span class="text-white">*</span></th>
                                             <th style="width:auto;">Unit Price <span class="text-white">*</span></th>
@@ -611,10 +611,10 @@
                                             </td>
                                             <td><input type="text" name="items[0][unit]" class="form-control  po-unit" readonly placeholder="—"></td>
                                             <td><input type="text" name="items[0][item_code_display]" class="form-control  po-item-code" readonly placeholder="—"></td>
-                                            <td><input type="number" name="items[0][quantity]" class="form-control  po-qty" step="0.01" min="0.01" placeholder="0" required></td>
-                                            <td><input type="number" name="items[0][unit_price]" class="form-control  po-unit-price" step="0.01" min="0" placeholder="0" required></td>
-                                            <td><input type="number" name="items[0][tax_percent]" class="form-control  po-tax" step="0.01" min="0" max="100" value="0" placeholder="0"></td>
-                                            <td><input type="text" name="items[0][total_display]" class="form-control  po-line-total bg-light" readonly placeholder="0.00"></td>
+                                            <td><input type="text" name="items[0][quantity]" class="form-control  po-qty" required></td>
+                                            <td><input type="text" name="items[0][unit_price]" class="form-control  po-unit-price" required></td>
+                                            <td><input type="text" name="items[0][tax_percent]" class="form-control  po-tax"></td>
+                                            <td><input type="text" name="items[0][total_display]" class="form-control  po-line-total bg-light" readonly></td>
                                             <td><button type="button" class="btn  btn-outline-danger po-remove-row" disabled title="Remove">×</button></td>
                                         </tr>
                                     </tbody>
@@ -1161,9 +1161,9 @@
             </td>
             <td><input type="text" name="items[${index}][unit]" class="form-control  po-unit" readonly placeholder="—" value="${unit}"></td>
             <td><input type="text" class="form-control  po-item-code" readonly placeholder="—" value="${code}"></td>
-            <td><input type="number" name="items[${index}][quantity]" class="form-control  po-qty" step="0.01" min="0.01" placeholder="0" value="${qty}" required></td>
-            <td><input type="number" name="items[${index}][unit_price]" class="form-control  po-unit-price" step="0.01" min="0" placeholder="0" value="${price}" required></td>
-            <td><input type="number" name="items[${index}][tax_percent]" class="form-control  po-tax" step="0.01" min="0" max="100" value="${tax}" placeholder="0"></td>
+            <td><input type="text" name="items[${index}][quantity]" class="form-control  po-qty" value="${qty}" required></td>
+            <td><input type="text" name="items[${index}][unit_price]" class="form-control  po-unit-price" value="${price}" required></td>
+            <td><input type="text" name="items[${index}][tax_percent]" class="form-control  po-tax" max="100" value="${tax}"></td>
             <td><input type="text" class="form-control  po-line-total bg-light" readonly placeholder="0.00" value="${lineTotal}"></td>
             <td><button type="button" class="btn  btn-outline-danger po-remove-row" title="Remove">×</button></td>
         </tr>`;
