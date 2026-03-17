@@ -162,7 +162,35 @@
                 <div class="card content-card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <span>Faculty Feedback Average</span>
-                        <small class="text-muted">Data refreshed: {{ $refreshTime ?? now()->format('d-M-Y H:i') }}</small>
+                        <div class="btn-group" role="group" style="margin-left: auto; gap: 10px;">
+                            <!-- Excel Export -->
+                            <a href="{{ route('feedback.average.export.excel', [
+                                'course_type' => $courseType,
+                                'program_name' => $currentProgram,
+                                'faculty_name' => $currentFaculty,
+                                'from_date' => $fromDate,
+                                'to_date' => $toDate,
+                            ]) }}"
+                                class="btn btn-success" target="_blank" title="Export to Excel"
+                                style="padding: 10px 25px; font-size: 15px; font-weight: 600; border-radius: 6px;">
+                                <i class="fas fa-file-excel" style="margin-right: 8px;"></i> Export Excel
+                            </a>
+
+                            <!-- PDF Export -->
+                            <a href="{{ route('feedback.average.export.pdf', [
+                                'course_type' => $courseType,
+                                'program_name' => $currentProgram,
+                                'faculty_name' => $currentFaculty,
+                                'from_date' => $fromDate,
+                                'to_date' => $toDate,
+                            ]) }}"
+                                class="btn btn-danger" target="_blank" title="Export to PDF"
+                                style="padding: 10px 25px; font-size: 15px; font-weight: 600; border-radius: 6px;">
+                                <i class="fas fa-file-pdf" style="margin-right: 8px;"></i> Export PDF
+                            </a>
+                        </div>
+
+                        {{-- <small class="text-muted">Data refreshed: {{ $refreshTime ?? now()->format('d-M-Y H:i') }}</small> --}}
                     </div>
 
                     <div class="card-body">
@@ -258,6 +286,55 @@
             document.getElementById('filterForm').submit();
         }
 
+        // Function to update export links with current filter values
+        function updateExportLinks() {
+            // Get current values from the filter form
+            const courseType = document.querySelector('input[name="course_type"]:checked')?.value || 'current';
+            const programName = document.querySelector('select[name="program_name"]')?.value || '';
+            const facultyName = document.querySelector('select[name="faculty_name"]')?.value || '';
+            const fromDate = document.querySelector('input[name="from_date"]')?.value || '';
+            const toDate = document.querySelector('input[name="to_date"]')?.value || '';
+
+            // Get the base URLs
+            const excelBaseUrl = "{{ route('feedback.average.export.excel') }}";
+            const pdfBaseUrl = "{{ route('feedback.average.export.pdf') }}";
+
+            // Find all export links
+            const exportLinks = document.querySelectorAll('.btn-group a');
+
+            exportLinks.forEach(link => {
+                if (link.href.includes('export-excel')) {
+                    // Update Excel link
+                    const url = new URL(excelBaseUrl, window.location.origin);
+                    url.searchParams.set('course_type', courseType);
+                    url.searchParams.set('program_name', programName);
+                    url.searchParams.set('faculty_name', facultyName);
+                    url.searchParams.set('from_date', fromDate);
+                    url.searchParams.set('to_date', toDate);
+                    link.href = url.toString();
+                    link.title = `Export to Excel (Program: ${programName})`;
+                } else if (link.href.includes('export-pdf')) {
+                    // Update PDF link
+                    const url = new URL(pdfBaseUrl, window.location.origin);
+                    url.searchParams.set('course_type', courseType);
+                    url.searchParams.set('program_name', programName);
+                    url.searchParams.set('faculty_name', facultyName);
+                    url.searchParams.set('from_date', fromDate);
+                    url.searchParams.set('to_date', toDate);
+                    link.href = url.toString();
+                    link.title = `Export to PDF (Program: ${programName})`;
+                }
+            });
+
+            console.log('Export links updated with:', {
+                courseType,
+                programName,
+                facultyName,
+                fromDate,
+                toDate
+            });
+        }
+
         // AJAX function to load data without page refresh
         function loadFeedbackData() {
             // Show loading spinner
@@ -274,26 +351,43 @@
                 params.append(key, value);
             }
 
+            // Add cache busting parameter
+            params.append('_', Date.now());
+
             // Make AJAX request
-            fetch(`{{ route('feedback.average') }}?${params.toString()}`)
+            fetch(`{{ route('feedback.average') }}?${params.toString()}`, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Cache-Control': 'no-cache'
+                    }
+                })
                 .then(response => response.text())
                 .then(html => {
                     // Parse the HTML response
                     const parser = new DOMParser();
                     const doc = parser.parseFromString(html, 'text/html');
 
+                    // Update program dropdown first (important for course type changes)
+                    const newProgramSelect = doc.querySelector('select[name="program_name"]');
+                    if (newProgramSelect) {
+                        const currentProgramSelect = document.querySelector('select[name="program_name"]');
+                        currentProgramSelect.innerHTML = newProgramSelect.innerHTML;
+                    }
+
                     // Extract the table content from the response
                     const newTableContainer = doc.querySelector('#tableContainer');
                     const newProgramTitle = doc.querySelector('.text-center h6');
                     const newRefreshTime = doc.querySelector('.card-header small');
 
-                    // Update the DOM
+                    // Update the table container
                     if (newTableContainer) {
                         document.getElementById('tableContainer').innerHTML = newTableContainer.innerHTML;
                     }
 
+                    // Update program title if it exists
                     if (newProgramTitle) {
-                        const programTitleElement = document.querySelector('.text-center h6');
+                        // Check if title already exists
+                        let programTitleElement = document.querySelector('.text-center h6');
                         if (programTitleElement) {
                             programTitleElement.textContent = newProgramTitle.textContent;
                         } else {
@@ -305,9 +399,13 @@
                         }
                     }
 
+                    // Update refresh time
                     if (newRefreshTime) {
                         document.querySelector('.card-header small').textContent = newRefreshTime.textContent;
                     }
+
+                    // IMPORTANT: Update export links with current filter values
+                    updateExportLinks();
 
                     // Hide loading spinner and show table
                     document.getElementById('loadingSpinner').style.display = 'none';
@@ -322,10 +420,28 @@
                 });
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
-            // Load initial data on page load (for current courses)
-            // This ensures data is shown immediately
+        // Function to load programs when course type changes
+        function loadProgramsByCourseType(courseType) {
+            fetch(`{{ route('feedback.average') }}?course_type=${courseType}&_=${Date.now()}`, {
+                    headers: {
+                        'Cache-Control': 'no-cache'
+                    }
+                })
+                .then(response => response.text())
+                .then(html => {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const newProgramSelect = doc.querySelector('select[name="program_name"]');
 
+                    if (newProgramSelect) {
+                        const currentProgramSelect = document.querySelector('select[name="program_name"]');
+                        currentProgramSelect.innerHTML = newProgramSelect.innerHTML;
+                    }
+                })
+                .catch(error => console.error('Error loading programs:', error));
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
             // Set default to "current" courses if not already set
             const currentCourseRadio = document.querySelector('input[name="course_type"][value="current"]');
             const archivedCourseRadio = document.querySelector('input[name="course_type"][value="archived"]');
@@ -335,38 +451,112 @@
                 currentCourseRadio.checked = true;
             }
 
-            // Remove auto-submit on filter change
-            const filterInputs = document.querySelectorAll(
-                '#filterForm select, #filterForm input[type="radio"], #filterForm input[type="date"]');
-            filterInputs.forEach(input => {
-                // Remove any existing change event listeners
-                input.removeEventListener('change', loadFeedbackData);
-                // Add new event listener for AJAX loading
-                input.addEventListener('change', loadFeedbackData);
+            // Update export links on page load
+            setTimeout(() => {
+                updateExportLinks();
+            }, 200);
+
+            // Handle course type change separately (special handling)
+            document.querySelectorAll('input[name="course_type"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    const courseType = this.value;
+
+                    // Show loading spinner
+                    document.getElementById('loadingSpinner').style.display = 'block';
+                    document.getElementById('tableContainer').style.display = 'none';
+
+                    // First load programs for the selected course type
+                    loadProgramsByCourseType(courseType);
+
+                    // Then load feedback data with a slight delay to ensure programs are updated
+                    setTimeout(() => {
+                        loadFeedbackData();
+                    }, 300);
+
+                    // Update export links after course type change
+                    setTimeout(() => {
+                        updateExportLinks();
+                    }, 600);
+                });
             });
 
-            // Also handle form submit to prevent page refresh
+            // Handle other filter changes (select, date inputs)
+            const filterInputs = document.querySelectorAll(
+                '#filterForm select:not([name="course_type"]), #filterForm input[type="date"]'
+            );
+
+            filterInputs.forEach(input => {
+                // Remove any existing event listeners and add new one
+                input.removeEventListener('change', loadFeedbackData);
+                input.addEventListener('change', function() {
+                    loadFeedbackData();
+                    // Update export links after filter change
+                    setTimeout(updateExportLinks, 300);
+                });
+            });
+
+            // Handle program dropdown changes specifically
+            const programSelect = document.querySelector('select[name="program_name"]');
+            if (programSelect) {
+                programSelect.addEventListener('change', function() {
+                    // Update export links immediately when program changes
+                    setTimeout(updateExportLinks, 100);
+                });
+            }
+
+            // Handle faculty dropdown changes
+            const facultySelect = document.querySelector('select[name="faculty_name"]');
+            if (facultySelect) {
+                facultySelect.addEventListener('change', function() {
+                    setTimeout(updateExportLinks, 100);
+                });
+            }
+
+            // Handle date inputs changes
+            const fromDateInput = document.querySelector('input[name="from_date"]');
+            const toDateInput = document.querySelector('input[name="to_date"]');
+
+            if (fromDateInput) {
+                fromDateInput.addEventListener('change', function() {
+                    setTimeout(updateExportLinks, 100);
+                });
+            }
+
+            if (toDateInput) {
+                toDateInput.addEventListener('change', function() {
+                    setTimeout(updateExportLinks, 100);
+                });
+            }
+
+            // Handle form submit to prevent page refresh
             document.getElementById('filterForm').addEventListener('submit', function(e) {
                 e.preventDefault(); // Prevent form submission
                 loadFeedbackData(); // Load data via AJAX
             });
+
+            // Initial load of data
+            // Small delay to ensure DOM is fully ready
+            setTimeout(() => {
+                loadFeedbackData();
+            }, 100);
         });
-        document.querySelectorAll('input[name="course_type"]').forEach(radio => {
-            radio.addEventListener('change', function() {
-                const courseType = this.value;
-                fetch(`{{ route('feedback.average') }}?course_type=${courseType}`)
-                    .then(res => res.text())
-                    .then(html => {
-                        // Extract new program options from response
-                        const parser = new DOMParser();
-                        const doc = parser.parseFromString(html, 'text/html');
-                        const newSelect = doc.querySelector('select[name="program_name"]');
-                        if (newSelect) {
-                            document.querySelector('select[name="program_name"]').innerHTML = newSelect
-                                .innerHTML;
-                        }
-                    });
-            });
+
+        // Optional: Add debounce function for better performance if needed
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // Also update export links after any AJAX content is loaded
+        document.addEventListener('ajaxComplete', function() {
+            setTimeout(updateExportLinks, 300);
         });
     </script>
 @endsection
