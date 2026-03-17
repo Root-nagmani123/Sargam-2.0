@@ -43,7 +43,7 @@
             </div>
             <div class="table-responsive request-for-estate-table-wrap">
                 {!! $dataTable->table([
-                    'class' => 'table text-nowrap align-middle mb-0',
+                    'class' => 'table align-middle mb-0',
                     'aria-describedby' => 'request-for-estate-caption'
                 ]) !!}
             </div>
@@ -171,14 +171,12 @@
 <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
 <style>.ts-dropdown { z-index: 1060 !important; }</style>
 <style>
-    /* Responsive table: horizontal scroll */
+    /* Table should fit within container without horizontal scroll */
     .request-for-estate-table-wrap {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
         width: 100%;
     }
-    .request-for-estate-table-wrap table {
-        min-width: 992px;
+    #requestForEstateTable {
+        width: 100% !important;
     }
     /* DataTables controls: Bootstrap 5 form classes */
     #requestForEstateTable_wrapper .dataTables_length label {
@@ -215,7 +213,20 @@
         color: #fff;
         font-weight: 600;
         border-color: var(--bs-primary);
-        padding: 0.75rem;
+        padding: 0.45rem 0.6rem;
+        font-size: 0.875rem;
+        white-space: nowrap;
+    }
+    /* Compact body cells to reduce gaps */
+    #requestForEstateTable_wrapper tbody td {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.875rem;
+        vertical-align: middle;
+        white-space: normal;
+        word-break: break-word;
+    }
+    /* Keep action icons in one line */
+    #requestForEstateTable_wrapper tbody td:last-child {
         white-space: nowrap;
     }
     /* Pagination: Bootstrap 5 classes */
@@ -251,6 +262,7 @@
     <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
     <script>
     $(function() {
+        var defaultEmployeePk = @json($defaultEmployeePk ?? null);
         var deleteRequestEstateUrl = '';
         var $requestForEstateTable = $('#requestForEstateTable');
 
@@ -295,7 +307,7 @@
             if (eligEl) tsModalEligibility = initTs(eligEl, { placeholder: '— Select eligibility type —' });
         }
 
-        function loadRequestEstateEmployees(includePk, thenSelectPk, onDone) {
+        function loadRequestEstateEmployees(includePk, thenSelectPk, onDone, silentSelect) {
             var url = '{{ route("admin.estate.request-for-estate.employees") }}';
             if (includePk) url += '?include_pk=' + includePk;
             var selEl = document.getElementById('modal_employee_pk');
@@ -310,9 +322,12 @@
                 }
                 if (typeof TomSelect !== 'undefined' && selEl) {
                     tsModalEmployee = initTs(selEl, { placeholder: '— Select employee —' });
-                    if (thenSelectPk) tsModalEmployee.setValue(String(thenSelectPk), true);
+                    if (thenSelectPk) tsModalEmployee.setValue(String(thenSelectPk), silentSelect === undefined ? true : !!silentSelect);
                 } else if (thenSelectPk) {
                     $sel.val(thenSelectPk);
+                }
+                if (thenSelectPk && !(silentSelect === undefined ? true : !!silentSelect)) {
+                    $('#modal_employee_pk').trigger('change');
                 }
                 if (typeof onDone === 'function') onDone();
             });
@@ -365,7 +380,8 @@
             clearEmployeeDerivedFields();
             $('#addEditRequestEstateFormErrors').addClass('d-none').find('#addEditRequestEstateFormErrorsText').empty();
             $('#formAddEditRequestEstate').find('.field-error').empty().end().find('.is-invalid').removeClass('is-invalid');
-            loadRequestEstateEmployees();
+            // Auto-select logged-in user's employee (self-service) and fetch details immediately.
+            loadRequestEstateEmployees(null, defaultEmployeePk ? String(defaultEmployeePk) : null, null, false);
             $.get('{{ route("admin.estate.request-for-estate.next-req-id") }}', function(res) {
                 if (res.next_req_id) $('#modal_req_id').val(res.next_req_id);
                 if (addEditModal) addEditModal.show();
@@ -400,7 +416,7 @@
             $('#formAddEditRequestEstate').find('.field-error').empty().end().find('.is-invalid').removeClass('is-invalid');
             loadRequestEstateEmployees(rowPk, employeePk, function() {
                 if (addEditModal) addEditModal.show();
-            });
+            }, true);
         });
 
         $(document).on('change', '#modal_employee_pk', function() {

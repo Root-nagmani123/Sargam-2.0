@@ -112,7 +112,27 @@ class EstateController extends Controller
 
         View::share('eligibilityTypes', $eligibilityTypes);
 
-        return $dataTable->render('admin.estate.request_for_estate', compact('eligibilityTypes'));
+        // Default employee for "self-service" users: auto-select logged-in user's employee on Add modal.
+        $defaultEmployeePk = null;
+        $user = Auth::user();
+        $isEstateAuthority = $user && (hasRole('Estate') || hasRole('Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST'));
+        if ($user && ! $isEstateAuthority) {
+            $employeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null);
+            if (! empty($employeeIds)) {
+                $hasPkOld = Schema::hasColumn('employee_master', 'pk_old');
+                $defaultEmployeePk = DB::table('employee_master')
+                    ->whereIn('pk', $employeeIds)
+                    ->orWhere(function ($q) use ($employeeIds, $hasPkOld) {
+                        if ($hasPkOld) {
+                            $q->whereIn('pk_old', $employeeIds);
+                        }
+                    })
+                    ->orderBy('pk')
+                    ->value('pk');
+            }
+        }
+
+        return $dataTable->render('admin.estate.request_for_estate', compact('eligibilityTypes', 'defaultEmployeePk'));
     }
 
     /**
@@ -6342,7 +6362,8 @@ class EstateController extends Controller
         if ($billMonth && $billMonth > $currentYm) {
             $billMonth = $currentYm;
         }
-        $unitSubTypePk = $request->get('unit_sub_type_pk');
+        // Unit Sub Type filter is restricted to Super Admin only.
+        $unitSubTypePk = hasRole('Super Admin') ? $request->get('unit_sub_type_pk') : null;
         $bills = collect();
 
         $hasUnitTypeOnSubType = \Illuminate\Support\Facades\Schema::hasColumn('estate_unit_sub_type_master', 'estate_unit_type_master_pk');

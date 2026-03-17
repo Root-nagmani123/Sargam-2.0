@@ -26,55 +26,43 @@ class EstateHacApprovedDataTable extends DataTable
                 return \Carbon\Carbon::parse($d)->format('d-m-Y');
             })
             ->editColumn('emp_name', fn ($row) => e($row->emp_name ?? '—'))
-            ->editColumn('employee_id', fn ($row) => e($row->employee_id ?? '—'))
             ->editColumn('emp_designation', fn ($row) => e($row->emp_designation ?? '—'))
             ->editColumn('pay_scale', fn ($row) => e($row->pay_scale ?? '—'))
-            ->editColumn('doj_pay_scale', function ($row) {
-                $d = $row->doj_pay_scale ?? null;
-                return $d ? \Carbon\Carbon::parse($d)->format('d-m-Y') : '—';
-            })
-            ->editColumn('doj_service', function ($row) {
-                $d = $row->doj_service ?? null;
-                return $d ? \Carbon\Carbon::parse($d)->format('d-m-Y') : '—';
-            })
-            ->editColumn('doj_academic', function ($row) {
-                $d = $row->doj_academic ?? null;
-                return $d ? \Carbon\Carbon::parse($d)->format('d-m-Y') : '—';
-            })
-            ->editColumn('eligibility_label', fn ($row) => e($row->eligibility_label ?? '—'))
             ->editColumn('request_type', fn ($row) => $row->request_type === 'change'
                 ? '<span class="badge bg-danger">Change Request</span>'
                 : '<span class="badge bg-primary">New Request</span>')
-            ->editColumn('current_or_availability', function ($row) {
-                // Change request: show current allotment/availability only after approval
-                if (($row->request_type ?? '') === 'change') {
-                    $approved = (int) ($row->change_ap_dis_status ?? 0) === 1;
-                    return $approved ? e($row->current_or_availability ?? '—') : '—';
-                }
-                return e($row->current_or_availability ?? '—');
-            })
-            ->editColumn('remarks', fn ($row) => \Illuminate\Support\Str::limit(e($row->remarks ?? ''), 60))
             ->addColumn('action', function ($row) {
                 $detailsPk = (int) ($row->estate_home_request_details_pk ?? $row->source_pk ?? 0);
                 $detailsUrl = $detailsPk ? route('admin.estate.request-details', ['id' => $detailsPk]) : '#';
-                $detailsLink = $detailsPk ? '<a href="' . e($detailsUrl) . '" class="btn btn-primary btn-sm me-1" title="Request &amp; Change Details"><i class="material-icons">visibility</i></a>' : '';
+                $detailsLink = $detailsPk
+                    ? '<a href="' . e($detailsUrl) . '" class="btn btn-outline-primary btn-sm hac-action-btn" title="View details" aria-label="View details"><i class="material-icons">visibility</i></a>'
+                    : '';
                 if ($row->request_type === 'change') {
                     $status = (int) ($row->change_ap_dis_status ?? 0);
                     if ($status === 1) {
-                        return $detailsLink . '<span class="badge bg-success">Approved</span>';
+                        return '<div class="hac-action d-inline-flex align-items-center gap-1 justify-content-center flex-nowrap">'
+                            . $detailsLink
+                            . '<span class="btn btn-success btn-sm hac-action-btn" title="Approved" aria-label="Approved"><i class="material-icons">check</i></span>'
+                            . '</div>';
                     }
                     if ($status === 2) {
-                        return $detailsLink . '<span class="badge bg-danger">Disapproved</span>';
+                        return '<div class="hac-action d-inline-flex align-items-center gap-1 justify-content-center flex-nowrap">'
+                            . $detailsLink
+                            . '<span class="badge bg-danger">Disapproved</span>'
+                            . '</div>';
                     }
                     $reqId = e($row->request_id ?? 'N/A');
-                    return $detailsLink . '<div class="d-inline-flex flex-wrap gap-1 justify-content-center">
-                        <button type="button" class="btn btn-sm btn-success btn-approve-change-request" data-id="' . (int) $row->source_pk . '" data-request-id="' . $reqId . '">Approve</button>
-                        <button type="button" class="btn btn-sm btn-outline-danger btn-disapprove-change-request" data-id="' . (int) $row->source_pk . '" data-request-id="' . $reqId . '">Disapprove</button>
-                    </div>';
+                    return '<div class="hac-action d-inline-flex align-items-center gap-1 justify-content-center flex-nowrap">'
+                        . $detailsLink
+                        . '<button type="button" class="btn btn-success btn-sm hac-action-btn btn-approve-change-request" data-id="' . (int) $row->source_pk . '" data-request-id="' . $reqId . '" title="Approve" aria-label="Approve"><i class="material-icons">check</i></button>'
+                        . '<button type="button" class="btn btn-outline-danger btn-sm hac-action-btn btn-disapprove-change-request" data-id="' . (int) $row->source_pk . '" data-request-id="' . $reqId . '" title="Disapprove" aria-label="Disapprove"><i class="material-icons">close</i></button>'
+                        . '</div>';
                 }
                 $url = route('admin.estate.new-request.allot-details', ['id' => $row->source_pk]);
-                return $detailsLink . '<button type="button" class="btn btn-success btn-allot-new-request" data-id="' . (int) $row->source_pk . '" data-req-id="' . e($row->request_id ?? '') . '" data-details-url="' . e($url) . '" title="Allot house (add to Possession Details)"> Allot
-                </button>';
+                return '<div class="hac-action d-inline-flex align-items-center gap-1 justify-content-center flex-nowrap">'
+                    . $detailsLink
+                    . '<button type="button" class="btn btn-sm btn-success hac-action-btn btn-allot-new-request" data-id="' . (int) $row->source_pk . '" data-req-id="' . e($row->request_id ?? '') . '" data-details-url="' . e($url) . '" title="Allot house" aria-label="Allot house"><i class="material-icons">home</i></button>'
+                    . '</div>';
             })
             ->rawColumns(['request_type', 'action'])
             ->filter(function ($query) {
@@ -84,11 +72,8 @@ class EstateHacApprovedDataTable extends DataTable
                     $query->where(function ($q) use ($searchLike) {
                         $q->where('request_id', 'like', $searchLike)
                             ->orWhere('emp_name', 'like', $searchLike)
-                            ->orWhere('employee_id', 'like', $searchLike)
                             ->orWhere('emp_designation', 'like', $searchLike)
-                            ->orWhere('pay_scale', 'like', $searchLike)
-                            ->orWhere('current_or_availability', 'like', $searchLike)
-                            ->orWhere('remarks', 'like', $searchLike);
+                            ->orWhere('pay_scale', 'like', $searchLike);
                     });
                 }
             }, true)
@@ -108,15 +93,8 @@ class EstateHacApprovedDataTable extends DataTable
                 'ec.estate_change_req_ID as request_id',
                 'ec.change_req_date as request_date',
                 'eh.emp_name',
-                'eh.employee_id',
                 'eh.emp_designation',
                 'eh.pay_scale',
-                'eh.doj_pay_scale',
-                'eh.doj_service',
-                'eh.doj_academic',
-                DB::raw("CASE eh.eligibility_type_pk WHEN 61 THEN 'Type-I' WHEN 62 THEN 'Type-II' WHEN 63 THEN 'Type-III' ELSE 'Type-IV' END as eligibility_label"),
-                'ec.change_house_no as current_or_availability',
-                'ec.remarks',
                 'ec.change_ap_dis_status'
             );
 
@@ -141,15 +119,8 @@ class EstateHacApprovedDataTable extends DataTable
                 'eh.req_id as request_id',
                 'eh.req_date as request_date',
                 'eh.emp_name',
-                'eh.employee_id',
                 'eh.emp_designation',
                 'eh.pay_scale',
-                'eh.doj_pay_scale',
-                'eh.doj_service',
-                'eh.doj_academic',
-                DB::raw("CASE eh.eligibility_type_pk WHEN 61 THEN 'Type-I' WHEN 62 THEN 'Type-II' WHEN 63 THEN 'Type-III' ELSE 'Type-IV' END as eligibility_label"),
-                'eh.current_alot as current_or_availability',
-                'eh.remarks',
                 DB::raw('NULL as change_ap_dis_status')
             );
 
@@ -196,15 +167,8 @@ class EstateHacApprovedDataTable extends DataTable
             Column::make('request_id')->title('REQUEST ID')->orderable(true)->searchable(true),
             Column::make('request_date')->title('REQUEST DATE')->orderable(true)->searchable(false),
             Column::make('emp_name')->title('NAME')->orderable(true)->searchable(true),
-            Column::make('employee_id')->title('EMP.ID')->orderable(true)->searchable(true),
             Column::make('emp_designation')->title('DESIGNATION')->orderable(true)->searchable(true),
             Column::make('pay_scale')->title('PAY SCALE')->orderable(true)->searchable(true),
-            Column::make('doj_pay_scale')->title('DOJ PAY SCALE')->orderable(false)->searchable(false),
-            Column::make('doj_service')->title('DOJ SERVICE')->orderable(false)->searchable(false),
-            Column::make('doj_academic')->title('DOJ ACADEMY')->orderable(false)->searchable(false),
-            Column::make('eligibility_label')->title('ELIGIBILITY')->orderable(false)->searchable(false),
-            Column::make('current_or_availability')->title('CURRENT ALLOTMENT / AVAILABILITY')->orderable(true)->searchable(true),
-            Column::make('remarks')->title('REMARKS')->orderable(false)->searchable(true),
             Column::computed('action')->title('ACTION')->addClass('text-center')->orderable(false)->searchable(false)->width('180px'),
         ];
     }

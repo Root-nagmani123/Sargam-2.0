@@ -10,7 +10,14 @@
     <div class="d-flex flex-column flex-md-row flex-wrap align-items-start align-items-md-center justify-content-between gap-3 mb-4">
         <div>
             <h1 class="h4 fw-semibold mb-1">Generate Estate Bill</h1>
-            <p class="text-muted small mb-0">View and generate estate bill summary. Select bill month and unit sub type, then use actions to notify or save as draft.</p>
+            <p class="text-muted small mb-0">
+                View and generate estate bill summary.
+                @if(hasRole('Super Admin'))
+                    Select bill month and unit sub type, then use actions to notify or save as draft.
+                @else
+                    Select bill month, then use actions to notify or save as draft.
+                @endif
+            </p>
         </div>
     </div>
 
@@ -29,6 +36,7 @@
                     <input type="month" class="form-control" id="bill_month" name="bill_month" value="{{ old('bill_month', $billMonth) }}" max="{{ date('Y-m') }}" required aria-describedby="bill_month_help">
                     <div id="bill_month_help" class="form-text small">Select the month for billing</div>
                 </div>
+                @if(hasRole('Super Admin'))
                 <div class="col-12 col-sm-6 col-md-4 col-lg-3">
                     <label for="unit_sub_type_pk" class="form-label fw-medium">Unit Sub Type </label>
                     <select class="form-select" id="unit_sub_type_pk" name="unit_sub_type_pk" aria-label="Select Unit Sub Type" aria-describedby="unit_sub_type_help">
@@ -39,18 +47,29 @@
                     </select>
                     <div id="unit_sub_type_help" class="form-text small">Filter by unit category</div>
                 </div>
-                <div class="col-12 col-sm-6 col-md-4 col-lg-2 d-flex align-items-center pb-1">
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="checkbox" id="check_all" name="check_all" aria-describedby="check_all_help">
-                        <label class="form-check-label" for="check_all">Check All</label>
+                @endif
+                <div class="col-12 col-md-6 col-lg-4">
+                    <div class="d-flex flex-wrap gap-3 align-items-end">
+                        <div>
+                            <label class="form-label fw-medium invisible mb-2">Options</label>
+                            <div class="d-flex align-items-center" style="min-height: 38px;">
+                                <div class="form-check form-check-inline mb-0">
+                                    <input class="form-check-input" type="checkbox" id="check_all" name="check_all" aria-describedby="check_all_help">
+                                    <label class="form-check-label" for="check_all">Check All</label>
+                                </div>
+                                <span id="check_all_help" class="visually-hidden">Select or clear all bill checkboxes</span>
+                            </div>
+                            <div class="form-text small invisible">Spacer</div>
+                        </div>
+                        <div>
+                            <label class="form-label fw-medium invisible mb-2">Action</label>
+                            <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-2" style="min-height: 38px;">
+                                <i class="material-symbols-rounded" style="font-size: 1.1rem;">visibility</i>
+                                Show
+                            </button>
+                            <div class="form-text small invisible">Spacer</div>
+                        </div>
                     </div>
-                    <span id="check_all_help" class="visually-hidden">Select or clear all bill checkboxes</span>
-                </div>
-                <div class="col-12 col-sm-6 col-md-4 col-lg-2">
-                    <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-2">
-                        <i class="material-symbols-rounded" style="font-size: 1.1rem;">visibility</i>
-                        Show
-                    </button>
                 </div>
                 <div class="col-12 col-md-auto ms-md-auto d-flex gap-2 flex-wrap justify-content-sm-start">
                     <button type="button" id="btn_print_selected" class="btn btn-outline-success btn-sm d-inline-flex align-items-center gap-1" title="Print selected bills (each in a new tab)">
@@ -73,7 +92,7 @@
     <div class="d-flex flex-column flex-sm-row flex-wrap align-items-center justify-content-center justify-content-sm-between gap-3 mb-4">
         <p class="lead fw-semibold text-body mb-0 py-2 px-3 bg-body-secondary rounded-3 d-inline-block">LAL BAHADUR SHASTRI NATIONAL ACADEMY OF ADMINISTRATION, MUSSOORIE — ESTATE BILL</p>
         <div class="d-flex gap-2 flex-wrap justify-content-center">
-            <a href="{{ route('admin.estate.reports.bill-report-print-all', ['bill_month' => $billMonth, 'unit_sub_type_pk' => $unitSubTypePk]) }}" target="_blank" rel="noopener" id="btn_print_all" class="btn btn-success btn-sm d-inline-flex align-items-center gap-1" title="View all bills in one page — print or download as PDF at once">
+            <a href="{{ route('admin.estate.reports.bill-report-print-all', array_merge(['bill_month' => $billMonth], hasRole('Super Admin') ? ['unit_sub_type_pk' => $unitSubTypePk] : [])) }}" target="_blank" rel="noopener" id="btn_print_all" class="btn btn-success btn-sm d-inline-flex align-items-center gap-1" title="View all bills in one page — print or download as PDF at once">
                 <i class="material-symbols-rounded" style="font-size: 1rem;">print</i>
                 Print All
             </a>

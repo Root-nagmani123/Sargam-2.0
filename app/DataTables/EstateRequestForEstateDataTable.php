@@ -25,7 +25,6 @@ class EstateRequestForEstateDataTable extends DataTable
             })
             ->editColumn('name_id', function ($row) {
                 $name = trim((string) ($row->emp_name ?? ''));
-                $id = trim((string) ($row->employee_id ?? ''));
 
                 // Defensive fix: some legacy/self-service rows may have empty emp_name even though employee_pk is set.
                 // In that case, try to resolve the name from employee_master on the fly so listing shows proper name.
@@ -57,7 +56,7 @@ class EstateRequestForEstateDataTable extends DataTable
                     }
                 }
 
-                return $name ? ($id ? $name . ' / ' . $id : $name) : ($id ?: '—');
+                return $name !== '' ? $name : '—';
             })
             ->editColumn('doj_academic', function ($row) {
                 $d = $row->doj_academic;
@@ -271,18 +270,19 @@ class EstateRequestForEstateDataTable extends DataTable
     {
         return $this->builder()
             ->setTableId('requestForEstateTable')
-            ->addTableClass('table table-bordered table-striped table-hover text-nowrap align-middle mb-0')
+            ->addTableClass('table table-bordered table-striped table-hover align-middle mb-0')
             ->columns($this->getColumns())
             ->minifiedAjax()
             ->parameters([
                 'responsive' => false,
-                'autoWidth' => false,
-                'scrollX' => true,
+                'autoWidth' => true,
+                'scrollX' => false,
                 'ordering' => true,
                 'searching' => true,
                 'lengthChange' => true,
                 'pageLength' => 10,
-                'order' => [[8, 'desc']],
+                // Default sort by latest request date
+                'order' => [[2, 'desc']],
                 'lengthMenu' => [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
                 'language' => [
                     'search' => 'Search within table:',
@@ -298,23 +298,40 @@ class EstateRequestForEstateDataTable extends DataTable
                     ],
                 ],
                 'dom' => '<"row align-items-center mb-3"<"col-12 col-md-4"l><"col-12 col-md-8 request-for-estate-search-col"f>>rt<"row align-items-center mt-2"<"col-12 col-md-5"i><"col-12 col-md-7"p>>',
-                'columnDefs' => [['targets' => [8], 'visible' => false]],
             ]);
     }
 
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('S.NO.')->addClass('text-center')->orderable(false)->searchable(false)->width('50px'),
-            Column::make('req_id')->title('REQUEST ID')->orderable(true)->searchable(true),
-            Column::make('req_date')->title('REQUEST DATE')->orderable(true)->searchable(false),
-            Column::computed('name_id')->title('NAME / ID')->orderable(false)->searchable(true),
-            Column::make('doj_academic')->title('DATE OF JOINING IN ACADEMY')->orderable(false)->searchable(false),
-            Column::make('status')->title('STATUS OF REQUEST')->orderable(false)->searchable(false),
-            Column::make('current_alot')->title('ALLOTED HOUSE')->orderable(false)->searchable(true),
-            Column::make('eligibility_type_pk')->title('ELIGIBILITY TYPE')->orderable(false)->searchable(false),
-            Column::make('pk')->title('')->orderable(true)->searchable(false)->exportable(false)->printable(false),
-            Column::computed('change')->title('CHANGE')->addClass('text-center')->orderable(false)->searchable(false)->width('100px'),
+            Column::computed('DT_RowIndex')
+                ->title('S.NO.')
+                ->addClass('text-center')
+                ->orderable(false)
+                ->searchable(false)
+                ->width('50px'),
+            Column::make('req_id')
+                ->title('REQUEST ID')
+                ->orderable(true)
+                ->searchable(true),
+            Column::make('req_date')
+                ->title('REQUEST DATE')
+                ->orderable(true)
+                ->searchable(false),
+            Column::computed('name_id')
+                ->title('NAME')
+                ->orderable(false)
+                ->searchable(true),
+            Column::make('status')
+                ->title('STATUS')
+                ->orderable(false)
+                ->searchable(false),
+            Column::computed('change')
+                ->title('ACTION')
+                ->addClass('text-center')
+                ->orderable(false)
+                ->searchable(false)
+                ->width('100px'),
         ];
     }
 

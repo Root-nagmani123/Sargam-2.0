@@ -338,6 +338,33 @@
         font-size: 0.875rem;
         color: var(--bs-secondary-color);
     }
+
+    /* Action buttons: consistent square icon buttons */
+    #estateHacApprovedTable_wrapper td .hac-action {
+        white-space: nowrap;
+    }
+    #estateHacApprovedTable_wrapper td .hac-action-btn {
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 0.5rem;
+        line-height: 1;
+    }
+    #estateHacApprovedTable_wrapper td .hac-action-btn i {
+        font-size: 1rem;
+        line-height: 1;
+    }
+    #estateHacApprovedTable_wrapper td .hac-action-btn .material-icons {
+        font-size: 18px;
+        line-height: 1;
+        width: auto;
+        height: auto;
+        display: inline-block;
+        vertical-align: middle;
+    }
 </style>
 @endpush
 

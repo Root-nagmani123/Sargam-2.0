@@ -46,6 +46,9 @@
                                 // HAC menus (Put In HAC / HAC Approved) visible to HAC Person + Estate/Admin (same as main sidebar).
                                 $canSeeHAC = $isHACPerson || $canSeeAllEstate;
                                 $canSeeSelfOnly = $canSeeAllEstate || $isHACPerson || $estateSelfServiceRoles;
+                                // Restricted menus: visible ONLY to Admin/Estate/Super Admin.
+                                $canSeeUpdateMeterNo = hasRole('Admin') || hasRole('Estate') || hasRole('Super Admin');
+                                $canSeeListMeterReading = hasRole('Admin') || hasRole('Estate') || hasRole('Super Admin');
                                 // "Other" estate operations (for other employees, Return House, Define House, etc.) are restricted strictly to Admin / Estate / Super Admin.
                                 $canManageOthersEstate = $isEstateAdmin || hasRole('Admin') || hasRole('Super Admin');
                                 // But Return House list should also be visible to permanent estate self-service employees (same as main sidebar).
@@ -102,7 +105,7 @@
                                     </li>
                                     @endif
 
-                                    @if($canSeeSelfOnly)
+                                    @if($canSeeUpdateMeterNo)
                                     <li class="sidebar-item">
                                         <a class="sidebar-link {{ request()->routeIs('admin.estate.update-meter-no') ? 'active' : '' }}"
                                             href="{{ route('admin.estate.update-meter-no') }}">
@@ -132,13 +135,16 @@
                                     </li>
                                     @endif
 
-                                    @if($canSeeSelfOnly)
+                                    @if($canSeeListMeterReading)
                                     <li class="sidebar-item">
                                         <a class="sidebar-link {{ request()->routeIs('admin.estate.list-meter-reading*') ? 'active' : '' }}"
                                             href="{{ route('admin.estate.list-meter-reading') }}">
                                             <span class="hide-menu small small-sm-normal text-nowrap">List Meter Reading</span>
                                         </a>
                                     </li>
+                                    @endif
+
+                                    @if($canSeeSelfOnly)
                                     <li class="sidebar-item">
                                         <a class="sidebar-link {{ request()->routeIs('admin.estate.generate-estate-bill') ? 'active' : '' }}"
                                             href="{{ route('admin.estate.generate-estate-bill') }}">
