@@ -115,7 +115,7 @@
                 <tr>
                     <th rowspan="2" class="text-center align-middle">SR.<br>No</th>
                     <th rowspan="2" class="text-center align-middle">Item Name</th>
-                    <th rowspan="2" class="align-middle">Unit</th>
+                    <th rowspan="2" class="align-middle text-end">Unit</th>
                     <th colspan="3" class="text-center">Opening</th>
                     <th colspan="3" class="text-center">Purchase</th>
                     <th colspan="3" class="text-center">Sale</th>
@@ -144,8 +144,8 @@
                 @forelse($reportData as $index => $item)
                     <tr>
                         <td class="text-center">{{ $index + 1 }}</td>
-                        <td>{{ $item['item_name'] }}</td>
-                        <td>{{ isset($item['unit']) && is_numeric($item['unit']) ? number_format((float)$item['unit'], 2) : ($item['unit'] ?? '—') }}</td>
+                        <td class="fw-bold" style="font-size: 1rem;">{{ $item['item_name'] }}</td>
+                        <td class="text-end">{{ isset($item['unit']) && is_numeric($item['unit']) ? number_format((float)$item['unit'], 2) : ($item['unit'] ?? '—') }}</td>
                         <!-- Opening -->
                         <td class="text-end">{{ number_format($item['opening_qty'], 2) }}</td>
                         <td class="text-end">₹{{ number_format($item['opening_rate'], 2) }}</td>
@@ -363,7 +363,7 @@ function printStockSummary() {
         font-size: 14px;
     }
 
-    /* Fixed table height with inner vertical + horizontal scroll */
+    /* Fixed table height with inner scroll */
     .stock-summary-report .table-fit-single-view {
         overflow-x: auto;
         overflow-y: auto;
@@ -373,36 +373,18 @@ function printStockSummary() {
     }
 
     .stock-summary-report .table-fit {
-        position: relative;
-        border-collapse: separate;
-        border-spacing: 0;
-        table-layout: auto;
-        width: max-content;
-        min-width: 100%;
+        width: 100%;
+        table-layout: fixed;
+        font-size: 0.8rem;
     }
 
-    /* Sticky table header on scroll (2-row header) */
-    .stock-summary-report .table-fit thead th {
-        position: sticky;
-        top: 0;
-        z-index: 20;
-        background: #0b4a7e; /* deep blue like screenshot */
-        color: #fff;
-    }
-
-    /* 2nd header row should sit below the 1st header row */
-    .stock-summary-report .table-fit thead tr:nth-child(2) th {
-        top: var(--ssr-sticky-row1, 34px); /* row1 height (auto-set by JS) */
-        z-index: 21;
-    }
-
-    /* Keep borders clean while sticky */
-    .stock-summary-report .table-fit thead th {
-        box-shadow: 0 1px 0 rgba(0,0,0,.08);
-    }
-
-    .stock-summary-report .table-fit thead th {
-        border-color: rgba(255,255,255,.25);
+    .stock-summary-report .table-fit th,
+    .stock-summary-report .table-fit td {
+        padding: 0.4rem 0.5rem;
+        white-space: normal;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        vertical-align: middle;
     }
 
     /* Robust sticky header (cloned THEAD) */
@@ -414,32 +396,15 @@ function printStockSummary() {
         overflow: hidden;
     }
     .stock-summary-report .ssr-sticky-head table {
-        margin-bottom: 0;
+        width: 100%;
+        table-layout: fixed;
+        margin: 0;
     }
     .stock-summary-report .ssr-sticky-head th {
         background: #0b4a7e !important;
         color: #fff !important;
-        border-color: rgba(255,255,255,.25) !important;
         box-shadow: 0 1px 0 rgba(0,0,0,.08);
-    }
-
-    .stock-summary-report .table-fit {
-        width: 100%;
-        table-layout: fixed;
-        font-size: 0.8rem;
-    }
-
-    .stock-summary-report .table-fit th,
-    .stock-summary-report .table-fit td {
-        white-space: normal;
-        word-wrap: break-word;
-        overflow-wrap: break-word;
-        padding: 0.4rem 0.5rem;
-        vertical-align: middle;
-    }
-
-    .stock-summary-report .table-fit th {
-        font-weight: 600;
+        border-color: rgba(255,255,255,.25) !important;
     }
 
     /* Error highlighting */
@@ -491,70 +456,71 @@ function printStockSummary() {
             });
         }
 
-        // Set CSS var for 2-row sticky header offset (match actual first row height)
-        try {
-            const table = document.querySelector('.stock-summary-report .table-fit');
-            if (table) {
-                const row1 = table.querySelector('thead tr:first-child');
-                if (row1) {
-                    const h = row1.getBoundingClientRect().height;
-                    table.style.setProperty('--ssr-sticky-row1', Math.ceil(h) + 'px');
-                }
-            }
-        } catch (e) {}
-
-        // Robust sticky header inside scroll container (matches screenshot)
+        // Robust sticky header inside scroll container (works reliably with rowspan/colspan headers)
         try {
             const scroller = document.querySelector('.stock-summary-report .table-fit-single-view');
             const table = scroller ? scroller.querySelector('table.table-fit') : null;
             const thead = table ? table.querySelector('thead') : null;
-            if (scroller && table && thead) {
-                // Remove previous sticky head if any (hot reload safety)
-                const old = scroller.querySelector('.ssr-sticky-head');
-                if (old) old.remove();
+            if (!scroller || !table || !thead) return;
 
-                const stickyWrap = document.createElement('div');
-                stickyWrap.className = 'ssr-sticky-head';
+            // Remove existing sticky header (if any)
+            const old = scroller.querySelector('.ssr-sticky-head');
+            if (old) old.remove();
 
-                const stickyTable = document.createElement('table');
-                stickyTable.className = table.className;
-                // Let width be auto; we'll sync actual column widths below
+            const stickyWrap = document.createElement('div');
+            stickyWrap.className = 'ssr-sticky-head';
 
-                // Clone THEAD only
-                stickyTable.appendChild(thead.cloneNode(true));
-                stickyWrap.appendChild(stickyTable);
+            const stickyTable = document.createElement('table');
+            stickyTable.className = table.className;
 
-                // Insert before original table so it sits above it
-                scroller.insertBefore(stickyWrap, table);
+            // Clone THEAD only
+            stickyTable.appendChild(thead.cloneNode(true));
+            stickyWrap.appendChild(stickyTable);
 
-                // Sync column widths (original table layout -> sticky header)
-                const syncWidths = function() {
-                    const origThs = table.querySelectorAll('thead th');
-                    const stickyThs = stickyTable.querySelectorAll('thead th');
-                    if (!origThs.length || origThs.length !== stickyThs.length) return;
-                    stickyTable.style.width = table.scrollWidth + 'px';
-                    for (let i = 0; i < origThs.length; i++) {
-                        const w = origThs[i].getBoundingClientRect().width;
-                        stickyThs[i].style.width = w + 'px';
-                        stickyThs[i].style.minWidth = w + 'px';
-                        stickyThs[i].style.maxWidth = w + 'px';
-                    }
-                };
+            // Insert sticky header before the real table
+            scroller.insertBefore(stickyWrap, table);
+
+            const syncWidths = function() {
+                // Ensure sticky table matches the visible width of the scroller
+                stickyTable.style.width = scroller.clientWidth + 'px';
+
+                // Map widths from ORIGINAL thead th to sticky th
+                const origThs = thead.querySelectorAll('th');
+                const stickyThs = stickyTable.querySelectorAll('th');
+                if (!origThs.length || origThs.length !== stickyThs.length) return;
+
+                for (let i = 0; i < origThs.length; i++) {
+                    const w = origThs[i].getBoundingClientRect().width;
+                    stickyThs[i].style.width = w + 'px';
+                    stickyThs[i].style.minWidth = w + 'px';
+                    stickyThs[i].style.maxWidth = w + 'px';
+                }
+
+                // Also set the first row height so header looks consistent
+                const row1 = stickyTable.querySelector('thead tr:first-child');
+                if (row1) {
+                    row1.style.height = row1.getBoundingClientRect().height + 'px';
+                }
+            };
+
+            // Sync once before hiding original THEAD
+            syncWidths();
+
+            // Hide original THEAD so there is no blank space under sticky header
+            thead.style.display = 'none';
+
+            // Re-sync on resize (layout changes)
+            window.addEventListener('resize', function() {
+                // Temporarily show THEAD to measure widths again
+                thead.style.display = '';
                 syncWidths();
-                window.addEventListener('resize', syncWidths);
+                thead.style.display = 'none';
+            });
 
-                // Sync horizontal scroll: translate sticky header table
-                scroller.addEventListener('scroll', function() {
-                    if (scroller.scrollWidth > scroller.clientWidth) {
-                        stickyTable.style.transform = 'translateX(' + (-scroller.scrollLeft) + 'px)';
-                    } else {
-                        stickyTable.style.transform = '';
-                    }
-                });
-
-                // Hide original THEAD visually (keep it for layout/calcs)
-                thead.style.visibility = 'hidden';
-            }
+            // Sync horizontal scroll by translating sticky table
+            scroller.addEventListener('scroll', function() {
+                stickyTable.style.transform = 'translateX(' + (-scroller.scrollLeft) + 'px)';
+            });
         } catch (e) {}
     });
 </script>
