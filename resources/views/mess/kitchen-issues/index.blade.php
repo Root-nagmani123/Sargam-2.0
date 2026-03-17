@@ -1327,15 +1327,122 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Prevent double submit on Add Selling Voucher form (stops double entry)
+    // Helper: reset Add Selling Voucher modal form (without closing modal)
+    function resetSellingVoucherModalForm() {
+        var modalEl = document.getElementById('addSellingVoucherModal');
+        if (!modalEl) return;
+
+        destroyAddModalTomSelects();
+
+        var form = document.getElementById('sellingVoucherModalForm');
+        if (form) {
+            form.reset();
+            form.classList.remove('was-validated');
+            form.querySelectorAll('.is-invalid').forEach(function(el) { el.classList.remove('is-invalid'); });
+        }
+        var storeSel = modalEl.querySelector('select[name="store_id"]');
+        if (storeSel) storeSel.value = '';
+        var issueDateInp = modalEl.querySelector('input[name="issue_date"]');
+        if (issueDateInp) issueDateInp.value = new Date().toISOString().slice(0, 10);
+        var paymentSel = modalEl.querySelector('select[name="payment_type"]');
+        if (paymentSel) paymentSel.value = '1';
+        var empRadio = modalEl.querySelector('.client-type-radio[value="employee"]');
+        if (empRadio) { empRadio.checked = true; empRadio.dispatchEvent(new Event('change')); }
+        var clientPkSel = modalEl.querySelector('#modalClientNameSelect');
+        if (clientPkSel) clientPkSel.value = '';
+        var clientNameInp = document.getElementById('modalClientNameInput');
+        if (clientNameInp) clientNameInp.value = '';
+        modalEl.querySelectorAll('#modalClientNameWrap select, #modalNameFieldWrap select').forEach(function(s) {
+            if (s && typeof s.value !== 'undefined') s.value = '';
+        });
+        var billInput = document.getElementById('addSvBillFileInput');
+        if (billInput) billInput.value = '';
+        var billWrap = document.getElementById('addSvBillFileChosenWrap');
+        var billName = document.getElementById('addSvBillFileChosenName');
+        if (billWrap) billWrap.classList.add('d-none');
+        if (billName) billName.textContent = '';
+        var tbody = document.getElementById('modalItemsBody');
+        if (tbody) {
+            tbody.innerHTML = getRowHtml(0);
+            rowIndex = 1;
+            updateRemoveButtons();
+        }
+        var grandTotalEl = document.getElementById('modalGrandTotal');
+        if (grandTotalEl) grandTotalEl.textContent = '₹0.00';
+    }
+
+    // Prevent double submit on Add Selling Voucher form (stops double entry) + AJAX submit
     var sellingVoucherModalForm = document.getElementById('sellingVoucherModalForm');
     if (sellingVoucherModalForm) {
-        sellingVoucherModalForm.addEventListener('submit', function() {
-            var btn = this.querySelector('button[type="submit"]');
-            if (btn && !btn.disabled) {
+        sellingVoucherModalForm.addEventListener('submit', function(e) {
+            // If invalid, the capture validation listener will have prevented default.
+            if (!this.checkValidity()) return;
+
+            e.preventDefault();
+
+            var form = this;
+            var btn = form.querySelector('button[type="submit"]');
+            if (btn && btn.disabled) return;
+            if (btn) {
+                if (!btn.dataset.originalText) {
+                    btn.dataset.originalText = btn.textContent || '';
+                }
                 btn.disabled = true;
                 btn.textContent = 'Saving...';
             }
+
+            var action = form.getAttribute('action') || window.location.href;
+            var method = (form.getAttribute('method') || 'POST').toUpperCase();
+            var formData = new FormData(form);
+            var csrf = form.querySelector('input[name="_token"]');
+
+            fetch(action, {
+                method: method,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': csrf ? csrf.value : '',
+                    'Accept': 'application/json'
+                },
+                body: formData
+            })
+                .then(function(response) {
+                    return response.json().then(function(payload) {
+                        return { ok: response.ok, status: response.status, payload: payload };
+                    }).catch(function() {
+                        return { ok: response.ok, status: response.status, payload: null };
+                    });
+                })
+                .then(function(res) {
+                    var data = res.payload;
+                    if (res.ok && data && data.success) {
+                        resetSellingVoucherModalForm();
+                        if (window.toastr && data.message) {
+                            toastr.success(data.message);
+                        } else if (data.message) {
+                            alert(data.message);
+                        }
+                    } else {
+                        var msg = (data && data.message) ? data.message : 'Failed to save voucher. Please try again.';
+                        if (res.status === 422 && data && data.errors) {
+                            try {
+                                var firstKey = Object.keys(data.errors)[0];
+                                if (firstKey && data.errors[firstKey] && data.errors[firstKey][0]) {
+                                    msg = data.errors[firstKey][0];
+                                }
+                            } catch (e) {}
+                        }
+                        alert(msg);
+                    }
+                })
+                .catch(function() {
+                    alert('Failed to save voucher. Please try again.');
+                })
+                .finally(function() {
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.textContent = btn.dataset.originalText || 'Save Selling Voucher';
+                    }
+                });
         });
     }
 

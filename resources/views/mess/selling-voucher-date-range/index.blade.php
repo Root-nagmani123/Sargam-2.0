@@ -533,7 +533,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                             <th style="width: auto;">Issue Qty <span class="text-white">*</span></th>
                                             <th style="width: auto;">Left Qty</th>
                                             <th style="width: auto;">Issue Date</th>
-                                            <th style="width: 90px;">Rate <span class="text-white">*</span></th>
+                                            <th style="width: 110px;">Rate <span class="text-white">*</span></th>
                                             <th style="width: auto;">Total Amount</th>
                                             <th style="width: 50px;"></th>
                                         </tr>
@@ -3202,49 +3202,72 @@ document.addEventListener('DOMContentLoaded', function () {
             editReportModal.addEventListener('hidden.bs.modal', function() { destroyEditModalTomSelects(); });
         }
 
+        // Helper: reset Add Selling Voucher (Date Range) form to default state (without closing modal)
+        function resetAddReportForm() {
+            var addReportModal = document.getElementById('addReportModal');
+            if (!addReportModal) return;
+
+            destroyAddModalTomSelects();
+
+            var form = document.getElementById('addReportForm');
+            if (form) {
+                form.reset();
+                form.classList.remove('was-validated');
+                form.querySelectorAll('.is-invalid').forEach(function(el) { el.classList.remove('is-invalid'); });
+            }
+            var storeSel = addReportModal.querySelector('select[name="inve_store_master_pk"]');
+            if (storeSel) storeSel.value = '';
+            var issueDateInp = addReportModal.querySelector('input[name="issue_date"]');
+            if (issueDateInp) issueDateInp.value = new Date().toISOString().slice(0, 10);
+            var paymentSel = addReportModal.querySelector('select[name="payment_type"]');
+            if (paymentSel) paymentSel.value = '1';
+            var empRadio = addReportModal.querySelector('.dr-client-type-radio[value="employee"]');
+            if (empRadio) { empRadio.checked = true; empRadio.dispatchEvent(new Event('change')); }
+            var clientPkSel = addReportModal.querySelector('#drClientNameSelect');
+            if (clientPkSel) clientPkSel.value = '';
+            var clientNameInp = document.getElementById('drClientNameInput');
+            if (clientNameInp) clientNameInp.value = '';
+            addReportModal.querySelectorAll('#drClientNameWrap select, #drNameFieldWrap select').forEach(function(s) {
+                if (s && typeof s.value !== 'undefined') s.value = '';
+            });
+            var billInput = document.getElementById('addDrBillFileInput');
+            if (billInput) billInput.value = '';
+            var billWrap = document.getElementById('addDrBillFileChosenWrap');
+            var billName = document.getElementById('addDrBillFileChosenName');
+            if (billWrap) billWrap.classList.add('d-none');
+            if (billName) billName.textContent = '';
+            var tbody = document.getElementById('addModalItemsBody');
+            if (tbody) {
+                tbody.innerHTML = getAddRowHtml(0);
+                addRowIndex = 1;
+                tbody.querySelectorAll('.dr-remove-row').forEach(function(btn) {
+                    btn.disabled = (tbody.querySelectorAll('.dr-item-row').length <= 1);
+                });
+                var firstRow = tbody.querySelector('.dr-item-row');
+                if (firstRow) {
+                    firstRow.querySelector('.dr-item-select').addEventListener('change', function() {
+                        updateAddRowUnit(firstRow);
+                    });
+                    firstRow.querySelector('.dr-qty').addEventListener('input', function() {
+                        refreshAllAvailable();
+                        updateAddRowTotal(firstRow);
+                        updateAddGrandTotal();
+                    });
+                    firstRow.querySelector('.dr-rate').addEventListener('input', function() {
+                        updateAddRowTotal(firstRow);
+                        updateAddGrandTotal();
+                    });
+                }
+            }
+            var grandTotalEl = document.getElementById('addModalGrandTotal');
+            if (grandTotalEl) grandTotalEl.textContent = '₹0.00';
+        }
+
         // Reset add modal when closed (so next open starts fresh)
         const addReportModal = document.getElementById('addReportModal');
         if (addReportModal) {
             addReportModal.addEventListener('hidden.bs.modal', function() {
-                destroyAddModalTomSelects();
-                const form = document.getElementById('addReportForm');
-                if (form) {
-                    form.reset();
-                    form.classList.remove('was-validated');
-                    form.querySelectorAll('.is-invalid').forEach(function(el) { el.classList.remove('is-invalid'); });
-                }
-                const storeSel = addReportModal.querySelector('select[name="inve_store_master_pk"]');
-                if (storeSel) storeSel.value = '';
-                const issueDateInp = addReportModal.querySelector('input[name="issue_date"]');
-                if (issueDateInp) issueDateInp.value = new Date().toISOString().slice(0, 10);
-                const paymentSel = addReportModal.querySelector('select[name="payment_type"]');
-                if (paymentSel) paymentSel.value = '1';
-                const empRadio = addReportModal.querySelector('.dr-client-type-radio[value="employee"]');
-                if (empRadio) { empRadio.checked = true; empRadio.dispatchEvent(new Event('change')); }
-                const clientPkSel = addReportModal.querySelector('#drClientNameSelect');
-                if (clientPkSel) clientPkSel.value = '';
-                const clientNameInp = document.getElementById('drClientNameInput');
-                if (clientNameInp) clientNameInp.value = '';
-                addReportModal.querySelectorAll('#drClientNameWrap select, #drNameFieldWrap select').forEach(function(s) { if (s.value !== undefined) s.value = ''; });
-                const billInput = document.getElementById('addDrBillFileInput');
-                if (billInput) billInput.value = '';
-                const billWrap = document.getElementById('addDrBillFileChosenWrap');
-                const billName = document.getElementById('addDrBillFileChosenName');
-                if (billWrap) billWrap.classList.add('d-none');
-                if (billName) billName.textContent = '';
-                const tbody = document.getElementById('addModalItemsBody');
-                if (tbody) {
-                    tbody.innerHTML = getAddRowHtml(0);
-                    addRowIndex = 1;
-                    tbody.querySelectorAll('.dr-remove-row').forEach(function(btn) { btn.disabled = (tbody.querySelectorAll('.dr-item-row').length <= 1); });
-                    if (tbody.querySelector('.dr-item-row')) {
-                        tbody.querySelector('.dr-item-select').addEventListener('change', function() { updateAddRowUnit(tbody.querySelector('.dr-item-row')); });
-                        tbody.querySelector('.dr-qty').addEventListener('input', function() { refreshAllAvailable(); updateAddRowTotal(tbody.querySelector('.dr-item-row')); updateAddGrandTotal(); });
-                        tbody.querySelector('.dr-rate').addEventListener('input', function() { updateAddRowTotal(tbody.querySelector('.dr-item-row')); updateAddGrandTotal(); });
-                    }
-                }
-                const grandTotalEl = document.getElementById('addModalGrandTotal');
-                if (grandTotalEl) grandTotalEl.textContent = '₹0.00';
+                resetAddReportForm();
             });
 
             addReportModal.addEventListener('show.bs.modal', function() {
@@ -3285,7 +3308,7 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
 
-        // Prevent double submit on Add form (stops double entry on Save Selling Voucher)
+        // Prevent double submit on Add form (stops double entry on Save Selling Voucher) + AJAX submit
         var addReportFormEl = document.getElementById('addReportForm');
         if (addReportFormEl) {
             addReportFormEl.addEventListener('submit', function(e) {
@@ -3299,12 +3322,82 @@ document.addEventListener('DOMContentLoaded', function () {
                     return;
                 }
             }, true);
-            addReportFormEl.addEventListener('submit', function() {
-                var btn = this.querySelector('button[type="submit"]');
-                if (btn && !btn.disabled) {
+
+            addReportFormEl.addEventListener('submit', function(e) {
+                // If the form is invalid, the capture listener above will already have prevented default.
+                if (!this.checkValidity()) {
+                    return;
+                }
+
+                e.preventDefault();
+
+                var form = this;
+                var btn = form.querySelector('button[type="submit"]');
+                if (btn && btn.disabled) {
+                    return;
+                }
+                if (btn) {
+                    if (!btn.dataset.originalText) {
+                        btn.dataset.originalText = btn.textContent || '';
+                    }
                     btn.disabled = true;
                     btn.textContent = 'Saving...';
                 }
+
+                var action = form.getAttribute('action') || window.location.href;
+                var method = (form.getAttribute('method') || 'POST').toUpperCase();
+                var formData = new FormData(form);
+                var csrf = form.querySelector('input[name="_token"]');
+
+                fetch(action, {
+                    method: method,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': csrf ? csrf.value : '',
+                        'Accept': 'application/json'
+                    },
+                    body: formData
+                })
+                    .then(function(response) {
+                        return response.json().then(function(payload) {
+                            return { ok: response.ok, status: response.status, payload: payload };
+                        }).catch(function() {
+                            return { ok: response.ok, status: response.status, payload: null };
+                        });
+                    })
+                    .then(function(res) {
+                        var data = res.payload;
+                        if (res.ok && data && data.success) {
+                            // Reset form for next entry but keep modal open
+                            resetAddReportForm();
+
+                            if (window.toastr && data.message) {
+                                toastr.success(data.message);
+                            } else if (data.message) {
+                                alert(data.message);
+                            }
+                        } else {
+                            var msg = (data && data.message) ? data.message : 'Failed to save voucher. Please try again.';
+                            if (res.status === 422 && data && data.errors) {
+                                try {
+                                    var firstKey = Object.keys(data.errors)[0];
+                                    if (firstKey && data.errors[firstKey] && data.errors[firstKey][0]) {
+                                        msg = data.errors[firstKey][0];
+                                    }
+                                } catch (e) {}
+                            }
+                            alert(msg);
+                        }
+                    })
+                    .catch(function() {
+                        alert('Failed to save voucher. Please try again.');
+                    })
+                    .finally(function() {
+                        if (btn) {
+                            btn.disabled = false;
+                            btn.textContent = btn.dataset.originalText || 'Save Selling Voucher';
+                        }
+                    });
             });
         }
 
