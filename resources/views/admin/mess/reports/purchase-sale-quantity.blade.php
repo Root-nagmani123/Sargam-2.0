@@ -219,6 +219,7 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    var filterForm = document.getElementById('purchaseSaleQuantityFilterForm');
     var viewType = document.getElementById('viewType');
     var categoryIdWrap = document.getElementById('categoryIdWrap');
     var categorySelect = document.querySelector('select[name="category_id"]');
@@ -231,100 +232,86 @@ document.addEventListener('DOMContentLoaded', function() {
         toggleCategory();
         viewType.addEventListener('change', function () {
             toggleCategory();
-            if (filterForm) {
-                filterForm.submit();
-            }
-        });
-    }
-
-    if (categorySelect && filterForm) {
-        categorySelect.addEventListener('change', function () {
-            filterForm.submit();
         });
     }
 
     if (typeof window.Choices !== 'undefined') {
+        var choicesInstances = new Map();
+
         document
             .querySelectorAll('.purchase-sale-quantity-report select.choices-select')
             .forEach(function (el) {
                 if (el.dataset.choices === 'initialized') return;
+                el.dataset.choices = 'initialized';
 
                 var placeholder = el.getAttribute('data-placeholder') || 'Select';
 
-                new TomSelect(el, {
-                    create: false,
-                    allowEmptyOption: true,
-                    placeholder: placeholder,
-                    plugins: ['dropdown_input'],
-                    sortField: {
-                        field: 'text',
-                        direction: 'asc'
-                    }
+                var instance = new Choices(el, {
+                    searchEnabled: true,
+                    shouldSort: false,
+                    placeholder: true,
+                    placeholderValue: placeholder,
+                    itemSelectText: '',
+                    allowHTML: false,
+                    removeItemButton: false,
                 });
+
+                choicesInstances.set(el, instance);
             });
 
-        // After TomSelect is initialized, restrict the Item dropdown options
-        // when "Category-wise" view is selected, so that only items belonging
-        // to the chosen category are shown.
-        if (itemSelectEl && itemSelectEl.tomselect) {
-            var itemTom = itemSelectEl.tomselect;
-            var allItemOptions = Object.values(itemTom.options || {});
+        // Filter Item dropdown options based on selected category.
+        // Uses the original <option data-category-id="..."> values rendered by Blade.
+        if (itemSelectEl && choicesInstances.has(itemSelectEl)) {
+            var itemChoices = choicesInstances.get(itemSelectEl);
 
-            function filterItemsByCategory() {
-                if (!itemTom) return;
+            var originalItemOptions = Array.from(itemSelectEl.querySelectorAll('option')).map(function (opt) {
+                return {
+                    value: opt.value,
+                    label: opt.textContent ? opt.textContent.trim() : '',
+                    categoryId: opt.getAttribute('data-category-id') || '',
+                    selected: opt.selected
+                };
+            });
 
-                var currentView = viewType ? viewType.value : 'item_wise';
+            function rebuildItemChoices() {
                 var selectedCategoryId = categorySelect ? String(categorySelect.value || '') : '';
-                var currentValue = itemTom.getValue();
 
-                itemTom.clearOptions();
+                // Keep current selection if still valid after filtering.
+                var currentValue = itemSelectEl.value || '';
 
-                var allowedValues = [];
-                allItemOptions.forEach(function (opt) {
-                    // Always keep the "All Items" (empty) option
-                    if (!opt.value) {
-                        itemTom.addOption(opt);
-                        allowedValues.push(opt.value);
-                        return;
-                    }
-
-                    if (currentView === 'category_wise' && selectedCategoryId) {
-                        var catId = '';
-                        if (typeof opt.category_id !== 'undefined' && opt.category_id !== null) {
-                            catId = String(opt.category_id);
-                        } else if (typeof opt.categoryId !== 'undefined' && opt.categoryId !== null) {
-                            catId = String(opt.categoryId);
-                        } else if (typeof opt['data-category-id'] !== 'undefined' && opt['data-category-id'] !== null) {
-                            catId = String(opt['data-category-id']);
-                        }
-
-                        if (catId !== selectedCategoryId) {
-                            return; // skip items from other categories
-                        }
-                    }
-
-                    itemTom.addOption(opt);
-                    allowedValues.push(opt.value);
+                var filtered = originalItemOptions.filter(function (opt) {
+                    // Always include empty ("All Items") option
+                    if (!opt.value) return true;
+                    if (!selectedCategoryId) return true;
+                    return String(opt.categoryId || '') === selectedCategoryId;
                 });
 
-                itemTom.refreshOptions(false);
+                itemChoices.clearChoices();
+                itemChoices.setChoices(
+                    filtered.map(function (opt) {
+                        return {
+                            value: opt.value,
+                            label: opt.label,
+                            selected: opt.value === currentValue
+                        };
+                    }),
+                    'value',
+                    'label',
+                    true
+                );
 
-                if (currentValue && allowedValues.indexOf(currentValue) !== -1) {
-                    itemTom.setValue(currentValue, true);
-                } else if (currentView === 'category_wise' && selectedCategoryId) {
-                    // Default to "All Items" when switching categories
-                    itemTom.clear(true);
+                // If current value got removed, reset to empty option
+                var stillExists = filtered.some(function (opt) { return opt.value === currentValue; });
+                if (!stillExists) {
+                    itemChoices.setChoiceByValue('');
                 }
             }
 
-            // Run once on page load
-            filterItemsByCategory();
+            // Run once on load (handles pre-selected category on page load)
+            rebuildItemChoices();
 
             if (categorySelect) {
-                categorySelect.addEventListener('change', filterItemsByCategory);
-            }
-            if (viewType) {
-                viewType.addEventListener('change', filterItemsByCategory);
+                categorySelect.addEventListener('change', rebuildItemChoices);
             }
         }
     }
