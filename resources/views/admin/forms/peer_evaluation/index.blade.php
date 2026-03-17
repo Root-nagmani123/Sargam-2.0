@@ -1,161 +1,17 @@
 @extends('admin.layouts.master')
 @section('title', 'Peer Evaluation Form | Sargam Admin')
 @section('setup_content')
-    <div class="container-fluid">
-    <div class="card p-3">
-        <h4 class="mb-4">Peer Evaluation Form</h4>
-
-        @if (session('success'))
-            <div class="alert alert-success alert-dismissible fade show">
-                <i class="fas fa-check-circle"></i> {{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        @endif
-
-        {{-- Group Selection --}}
-
-            <div class="card-body">
-                <form method="GET" action="{{ route('peer.index') }}" id="groupForm">
-                    <div class="row">
-                        {{-- <div class="col-md-6">
-                            <label for="group_id" class="form-label">Select Group</label>
-                            <select name="group_id" id="group_id" class="form-select" onchange="this.form.submit()">
-                                <option value="">-- Select a Group --</option>
-                                @foreach ($groups as $group)
-                                    <option value="{{ $group->id }}" 
-                                        {{ $selectedGroupId == $group->id ? 'selected' : '' }}>
-                                        {{ $group->group_name }}
-                                        @if (!$group->is_active)
-                                            (Inactive)
-                                        @endif
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div> --}}
-                        {{-- <div class="col-md-6">
-                            <div class="mt-4">
-                                @if ($selectedGroupId)
-                                    @php
-                                        $memberCount = count($members);
-                                        $selectedGroup = $groups->where('id', $selectedGroupId)->first();
-                                    @endphp
-                                    <div class="alert alert-info">
-                                        <strong>Selected:</strong> {{ $selectedGroup->group_name }}
-                                        | <strong>Members:</strong> {{ $memberCount }}
-                                    </div>
-                                @endif
-                            </div>
-                        </div> --}}
+    <div class="container-fluid py-4">
+        <div class="card shadow-lg border-0 rounded-4 overflow-hidden">
+            {{-- Header Section --}}
+            <div class="card-header bg-gradient-primary py-4 border-0">
+                <div class="d-flex align-items-center">
+                    <div class="icon-wrapper bg-white bg-opacity-20 rounded-circle p-3 me-3">
+                        <i class="material-icons material-symbols-rounded" style="font-size: 2.5rem;">assignment</i>
                     </div>
-                </form>
-            </div>
-
-        @if ($selectedGroupId && count($members) > 0)
-            <form method="POST" action="{{ route('peer.store') }}" id="evaluationForm">
-                @csrf
-                <input type="hidden" name="group_id" value="{{ $selectedGroupId }}">
-
-                <div class="card">
-                    <div class="card-header  text-white">
-                        <h5 class="mb-0">
-                            <i class="fas fa-clipboard-list"></i>
-                            Evaluation Form - {{ $groups->where('id', $selectedGroupId)->first()->group_name }}
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table">
-                                <thead>
-                                    <tr>
-                                        <th>Sr.No</th>
-                                        <th>User Name</th>
-                                        <th>Group Name</th>
-                                        @foreach ($columns as $column)
-                                            <th>
-                                                {{ $column->column_name }}
-                                                <br>
-                                                <small >(1-{{ $selectedGroup->max_marks }})</small>
-                                            </th>
-                                        @endforeach
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {{-- @foreach ($members as $index => $member)
-                                        <tr>
-                                            <td>{{ $index + 1 }}</td>
-                                            <td class="text-start">
-                                                <strong>{{ $member->first_name }}</strong>
-                                                @if ($member->user_id)
-                                                    <br>
-                                                    <small > - {{ $member->ot_code }}</small>
-                                                @endif
-                                            </td>
-                                            <td>
-                                                <span class="badge bg-primary">
-                                                    {{ $groups->where('id', $selectedGroupId)->first()->group_name }}
-                                                </span>
-                                            </td>
-                                            @foreach ($columns as $column)
-                                                <td>
-                                                    <input type="number" min="1" max="10"
-                                                        name="scores[{{ $member->member_pk }}][{{ $column->id }}]"
-                                                        class="form-control text-center score-input"
-                                                        value="0" 
-                                                        required
-                                                        onchange="validateScore(this)">
-                                                    <small >1-10</small>
-                                                </td>
-                                            @endforeach
-                                        </tr>
-                                    @endforeach --}}
-
-                                    @foreach ($members as $index => $member)
-                                        <tr>
-                                            <td>{{ $index + 1 }}</td>
-                                            <td class="text-start">
-                                                <strong>{{ $member->first_name }}</strong>
-                                                @if ($member->user_id)
-                                                    <br>
-                                                    <small > - {{ $member->ot_code }}</small>
-                                                @endif
-                                            </td>
-                                            <td>
-                                                <span class="badge bg-primary">
-                                                    {{ $groups->where('id', $selectedGroupId)->first()->group_name }}
-                                                </span>
-                                            </td>
-                                            @foreach ($columns as $column)
-                                                <td>
-                                                    <input type="number" min="1" max="10"
-                                                        name="scores[{{ $member->id }}][{{ $column->id }}]"
-                                                        class="form-control text-center score-input" value="0" required
-                                                        onchange="validateScore(this)">
-                                                </td>
-                                            @endforeach
-                                        </tr>
-                                    @endforeach
-
-                                </tbody>
-                            </table>
-                        </div>
-                        {{-- Reflection Fields Section --}}
-                        @foreach ($reflectionFields as $field)
-                            <label class="form-label fw-bold mb-3">
-                                <br>
-                                <strong>{{ $field->field_label }} :</strong>
-                            </label>
-                            <textarea name="reflections[{{ $field->id }}]" class="form-control reflection-textarea" rows="4"
-                                placeholder="Enter your description for {{ $field->field_label }}"></textarea>
-                        @endforeach
-
-                        <div class="mt-4">
-                            <button type="submit" class="btn btn-success btn-lg">
-                                <i class="fas fa-paper-plane"></i> Submit Evaluation
-                            </button>
-                            <button type="button" class="btn btn-warning btn-lg" onclick="resetScores()">
-                                <i class="fas fa-redo"></i> Reset Scores
-                            </button>
-                        </div>
+                    <div>
+                        <h3 class="mb-0 fw-bold text-white">Peer Evaluation Form</h3>
+                        <p class="mb-0 opacity-75 small">Evaluate your peers with detailed feedback</p>
                     </div>
                 </div>
             </div>
@@ -339,7 +195,6 @@
                 @endif
             </div>
         </div>
-    </div>
     </div>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
