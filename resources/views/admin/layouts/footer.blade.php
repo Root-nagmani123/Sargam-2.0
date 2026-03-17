@@ -2,28 +2,7 @@
   <script src="{{asset('admin_assets/js/vendor.min.js')}}"></script>
   <!-- Import Js Files -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
-  <!-- Immediately intercept Bootstrap's theme detection -->
-  <script>
-    (function() {
-      'use strict';
-      // Force light mode immediately after Bootstrap loads
-      document.documentElement.setAttribute('data-bs-theme', 'light');
-      
-      // Override Bootstrap's getTheme function if it exists
-      if (window.bootstrap) {
-        // Bootstrap 5.3+ uses getTheme() method
-        const originalGetTheme = window.bootstrap.getTheme || function() {
-          const theme = document.documentElement.getAttribute('data-bs-theme');
-          if (theme) return theme;
-          return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-        };
-        
-        window.bootstrap.getTheme = function() {
-          return 'light';
-        };
-      }
-    })();
-  </script>
+
   <script src="{{asset('admin_assets/libs/simplebar/dist/simplebar.min.js')}}"></script>
   <!-- Force light mode before theme scripts load -->
   <script>
