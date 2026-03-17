@@ -493,11 +493,15 @@ class ReportController extends Controller
         ]);
 
         $svQuery = \App\Models\Mess\SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'items.itemSubcategory']);
-        if ($request->filled('from_date')) {
-            $svQuery->whereDate('issue_date', '>=', $request->from_date);
-        }
-        if ($request->filled('to_date')) {
-            $svQuery->whereDate('issue_date', '<=', $request->to_date);
+        $fromDate = $request->filled('from_date') ? $request->from_date : null;
+        $toDate   = $request->filled('to_date') ? $request->to_date : null;
+        if ($fromDate && $toDate) {
+            $svQuery->whereDate('date_from', '<=', $toDate)
+                ->whereDate('date_to', '>=', $fromDate);
+        } elseif ($fromDate) {
+            $svQuery->whereDate('date_to', '>=', $fromDate);
+        } elseif ($toDate) {
+            $svQuery->whereDate('date_from', '<=', $toDate);
         }
         if ($request->filled('client_type_slug')) {
             $svQuery->where('client_type_slug', $request->client_type_slug);
