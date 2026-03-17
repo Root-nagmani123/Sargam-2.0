@@ -1088,8 +1088,13 @@ document.addEventListener('DOMContentLoaded', function() {
             if (slug === 'employee') {
                 var selectedOpt = modalClientTypePk.options[modalClientTypePk.selectedIndex];
                 var dataClientName = selectedOpt && selectedOpt.dataset ? (selectedOpt.dataset.clientName || '') : '';
-                if (dataClientName && employeeNames[dataClientName]) {
+                if (dataClientName && employeeNames[dataClientName] && employeeNames[dataClientName].length) {
                     addBuyerOptions(employeeNames[dataClientName]);
+                } else {
+                    // Fallback: show all employee-type buyers if specific group not found
+                    Object.keys(employeeNames || {}).forEach(function (key) {
+                        addBuyerOptions(employeeNames[key] || []);
+                    });
                 }
             } else if (slug === 'ot' && selectedPk) {
                 fetch(studentsByCourseUrl + '/' + selectedPk, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
