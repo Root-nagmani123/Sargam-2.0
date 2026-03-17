@@ -115,7 +115,7 @@
                 <tr>
                     <th rowspan="2" class="text-center align-middle">SR.<br>No</th>
                     <th rowspan="2" class="text-center align-middle">Item Name</th>
-                    <th rowspan="2" class="text-center align-middle">Unit</th>
+                    <th rowspan="2" class="align-middle text-end">Unit</th>
                     <th colspan="3" class="text-center">Opening</th>
                     <th colspan="3" class="text-center">Purchase</th>
                     <th colspan="3" class="text-center">Sale</th>
@@ -144,8 +144,8 @@
                 @forelse($reportData as $index => $item)
                     <tr>
                         <td class="text-center">{{ $index + 1 }}</td>
-                        <td>{{ $item['item_name'] }}</td>
-                        <td>{{ isset($item['unit']) && is_numeric($item['unit']) ? number_format((float)$item['unit'], 2) : ($item['unit'] ?? '—') }}</td>
+                        <td class="fw-bold" style="font-size: 1rem;">{{ $item['item_name'] }}</td>
+                        <td class="text-end">{{ isset($item['unit']) && is_numeric($item['unit']) ? number_format((float)$item['unit'], 2) : ($item['unit'] ?? '—') }}</td>
                         <!-- Opening -->
                         <td class="text-end">{{ number_format($item['opening_qty'], 2) }}</td>
                         <td class="text-end">₹{{ number_format($item['opening_rate'], 2) }}</td>
@@ -363,10 +363,13 @@ function printStockSummary() {
         font-size: 14px;
     }
 
-    /* Table fits in single view: no scroll, auto height/width */
+    /* Fixed table height with inner scroll */
     .stock-summary-report .table-fit-single-view {
-        overflow: visible;
+        overflow-x: auto;
+        overflow-y: auto;
         max-width: 100%;
+        height: 70vh;
+        border-radius: .5rem;
     }
 
     .stock-summary-report .table-fit {
@@ -377,15 +380,31 @@ function printStockSummary() {
 
     .stock-summary-report .table-fit th,
     .stock-summary-report .table-fit td {
+        padding: 0.4rem 0.5rem;
         white-space: normal;
         word-wrap: break-word;
         overflow-wrap: break-word;
-        padding: 0.4rem 0.5rem;
         vertical-align: middle;
     }
 
-    .stock-summary-report .table-fit th {
-        font-weight: 600;
+    /* Robust sticky header (cloned THEAD) */
+    .stock-summary-report .ssr-sticky-head {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        background: #0b4a7e;
+        overflow: hidden;
+    }
+    .stock-summary-report .ssr-sticky-head table {
+        width: 100%;
+        table-layout: fixed;
+        margin: 0;
+    }
+    .stock-summary-report .ssr-sticky-head th {
+        background: #0b4a7e !important;
+        color: #fff !important;
+        box-shadow: 0 1px 0 rgba(0,0,0,.08);
+        border-color: rgba(255,255,255,.25) !important;
     }
 
     /* Error highlighting */
@@ -436,6 +455,73 @@ function printStockSummary() {
                 }
             });
         }
+
+        // Robust sticky header inside scroll container (works reliably with rowspan/colspan headers)
+        try {
+            const scroller = document.querySelector('.stock-summary-report .table-fit-single-view');
+            const table = scroller ? scroller.querySelector('table.table-fit') : null;
+            const thead = table ? table.querySelector('thead') : null;
+            if (!scroller || !table || !thead) return;
+
+            // Remove existing sticky header (if any)
+            const old = scroller.querySelector('.ssr-sticky-head');
+            if (old) old.remove();
+
+            const stickyWrap = document.createElement('div');
+            stickyWrap.className = 'ssr-sticky-head';
+
+            const stickyTable = document.createElement('table');
+            stickyTable.className = table.className;
+
+            // Clone THEAD only
+            stickyTable.appendChild(thead.cloneNode(true));
+            stickyWrap.appendChild(stickyTable);
+
+            // Insert sticky header before the real table
+            scroller.insertBefore(stickyWrap, table);
+
+            const syncWidths = function() {
+                // Ensure sticky table matches the visible width of the scroller
+                stickyTable.style.width = scroller.clientWidth + 'px';
+
+                // Map widths from ORIGINAL thead th to sticky th
+                const origThs = thead.querySelectorAll('th');
+                const stickyThs = stickyTable.querySelectorAll('th');
+                if (!origThs.length || origThs.length !== stickyThs.length) return;
+
+                for (let i = 0; i < origThs.length; i++) {
+                    const w = origThs[i].getBoundingClientRect().width;
+                    stickyThs[i].style.width = w + 'px';
+                    stickyThs[i].style.minWidth = w + 'px';
+                    stickyThs[i].style.maxWidth = w + 'px';
+                }
+
+                // Also set the first row height so header looks consistent
+                const row1 = stickyTable.querySelector('thead tr:first-child');
+                if (row1) {
+                    row1.style.height = row1.getBoundingClientRect().height + 'px';
+                }
+            };
+
+            // Sync once before hiding original THEAD
+            syncWidths();
+
+            // Hide original THEAD so there is no blank space under sticky header
+            thead.style.display = 'none';
+
+            // Re-sync on resize (layout changes)
+            window.addEventListener('resize', function() {
+                // Temporarily show THEAD to measure widths again
+                thead.style.display = '';
+                syncWidths();
+                thead.style.display = 'none';
+            });
+
+            // Sync horizontal scroll by translating sticky table
+            scroller.addEventListener('scroll', function() {
+                stickyTable.style.transform = 'translateX(' + (-scroller.scrollLeft) + 'px)';
+            });
+        } catch (e) {}
     });
 </script>
 

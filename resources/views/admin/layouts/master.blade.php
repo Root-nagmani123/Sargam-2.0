@@ -281,8 +281,6 @@
         }
     }
 
- }
-
     .pagination .page-item.active .page-link.current-page {
         border: 2px solid #0d6efd !important;
         border-radius: 8px !important;
@@ -746,6 +744,83 @@ document.addEventListener("DOMContentLoaded", function () {
       // Force reflow to apply styles
       document.documentElement.offsetHeight;
     });
+  </script>
+
+  <script>
+    // Admin Mess: Tab on dropdown should act like Enter (Select2-friendly)
+    (function () {
+      function isAdminMessPage() {
+        try {
+          const p = (window.location && window.location.pathname || '').toLowerCase();
+          return p.includes('/admin/mess') || (p.includes('/mess') && !p.includes('/message'));
+        } catch (e) {
+          return false;
+        }
+      }
+
+      function shouldConvertTabToEnter(e) {
+        if (!e || e.defaultPrevented) return false;
+        if (e.key !== 'Tab' || e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) return false;
+
+        const active = document.activeElement;
+
+        // Select2: when dropdown is open, focus is in .select2-search__field
+        const isSelect2Search = !!(active && active.classList && active.classList.contains('select2-search__field'));
+        const isSelect2Open = !!document.querySelector('.select2-container--open');
+
+        if (isSelect2Search && isSelect2Open) return true;
+
+        // Fallback: if focus is within a select2 container and it's open
+        if (isSelect2Open && active && active.closest && active.closest('.select2-container')) return true;
+
+        // Choices.js: open dropdown has `.choices.is-open`; focus is usually in `.choices__input`
+        const choicesRoot = active && active.closest ? active.closest('.choices') : null;
+        if (choicesRoot && choicesRoot.classList && choicesRoot.classList.contains('is-open')) return true;
+        if (document.querySelector('.choices.is-open') && active && active.classList && active.classList.contains('choices__input')) return true;
+
+        // Tom Select: open dropdown typically sets `.ts-wrapper.dropdown-active`
+        const tomRoot = active && active.closest ? active.closest('.ts-wrapper') : null;
+        if (tomRoot && tomRoot.classList && tomRoot.classList.contains('dropdown-active')) return true;
+        if (document.querySelector('.ts-wrapper.dropdown-active') && active && active.closest && active.closest('.ts-control')) return true;
+
+        return false;
+      }
+
+      function dispatchEnterOnActiveElement() {
+        const el = document.activeElement;
+        if (!el) return;
+
+        // Prefer keyboard event for Select2; it listens on keydown in the search field
+        try {
+          const evt = new KeyboardEvent('keydown', {
+            key: 'Enter',
+            code: 'Enter',
+            keyCode: 13,
+            which: 13,
+            bubbles: true,
+            cancelable: true
+          });
+          el.dispatchEvent(evt);
+        } catch (e) {
+          // Very old browsers fallback
+          if (typeof el.dispatchEvent === 'function') {
+            const legacy = document.createEvent('Event');
+            legacy.initEvent('keydown', true, true);
+            legacy.keyCode = 13;
+            legacy.which = 13;
+            el.dispatchEvent(legacy);
+          }
+        }
+      }
+
+      document.addEventListener('keydown', function (e) {
+        if (!isAdminMessPage()) return;
+        if (!shouldConvertTabToEnter(e)) return;
+
+        e.preventDefault();
+        dispatchEnterOnActiveElement();
+      }, true);
+    })();
   </script>
 </body>
 

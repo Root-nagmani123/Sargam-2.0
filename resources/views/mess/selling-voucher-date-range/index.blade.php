@@ -456,6 +456,8 @@ document.addEventListener('DOMContentLoaded', function () {
                                 <div class="col-md-4" id="drNameFieldWrap" style="display:none;">
                                     <label class="form-label voucher-label">Name <span class="text-danger">*</span></label>
                                     <input type="text" name="client_name" id="drClientNameInput" class="form-control " value="{{ old('client_name') }}" placeholder="Client / section / role name" required>
+                                    <datalist id="drCourseBuyerNames"></datalist>
+                                    <datalist id="drGenericBuyerNames"></datalist>
                                     <select id="drFacultySelect" class="form-select " style="display:none;">
                                         <option value="">Select Faculty</option>
                                         @foreach($faculties ?? [] as $f)
@@ -531,7 +533,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                             <th style="width: auto;">Issue Qty <span class="text-white">*</span></th>
                                             <th style="width: auto;">Left Qty</th>
                                             <th style="width: auto;">Issue Date</th>
-                                            <th style="width: 90px;">Rate <span class="text-white">*</span></th>
+                                            <th style="width: 110px;">Rate <span class="text-white">*</span></th>
                                             <th style="width: auto;">Total Amount</th>
                                             <th style="width: 50px;"></th>
                                         </tr>
@@ -929,6 +931,8 @@ document.addEventListener('DOMContentLoaded', function () {
                                 <div class="col-md-4" id="editDrNameFieldWrap" style="display:none;">
                                     <label class="form-label voucher-label">Name <span class="text-danger">*</span></label>
                                     <input type="text" name="client_name" class="form-control  edit-client-name" id="editDrClientNameInput" placeholder="Client / section / role name" required>
+                                    <datalist id="editDrCourseBuyerNames"></datalist>
+                                    <datalist id="editDrGenericBuyerNames"></datalist>
                                     <select id="editDrFacultySelect" class="form-select " style="display:none;">
                                         <option value="">Select Faculty</option>
                                         @foreach($faculties ?? [] as $f)
@@ -1949,6 +1953,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (isOt) {
                 nameInput.style.display = 'none';
                 nameInput.removeAttribute('required');
+                nameInput.removeAttribute('list');
                 [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) {
                     if (sel) {
                         setSelectVisible(sel, false);
@@ -1969,8 +1974,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             } else if (isCourse) {
                 nameInput.style.display = 'block';
-                nameInput.placeholder = 'Course name';
+                nameInput.placeholder = 'Name';
                 nameInput.setAttribute('required', 'required');
+                nameInput.setAttribute('list', 'drCourseBuyerNames');
                 [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) {
                     if (sel) {
                         setSelectVisible(sel, false);
@@ -1992,6 +1998,7 @@ document.addEventListener('DOMContentLoaded', function () {
             } else {
                 nameInput.style.display = showAny ? 'none' : 'block';
                 nameInput.removeAttribute('required');
+                nameInput.setAttribute('list', 'drGenericBuyerNames');
                 [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) {
                     if (!sel) return;
                     const show = sel === facultySelect ? showFaculty : (sel === academyStaffSelect ? showAcademyStaff : showMessStaff);
@@ -2150,6 +2157,56 @@ document.addEventListener('DOMContentLoaded', function () {
                 updateDrNameField();
             });
         });
+
+        function loadAddDrBuyerNames() {
+            const clientTypeRadio = document.querySelector('#addReportModal .dr-client-type-radio:checked');
+            const clientNameSelect = document.getElementById('drClientNameSelect');
+            const drCourseSelect = document.getElementById('drCourseSelect');
+            const nameInput = document.getElementById('drClientNameInput');
+            const courseDl = document.getElementById('drCourseBuyerNames');
+            const genericDl = document.getElementById('drGenericBuyerNames');
+            if (!clientTypeRadio || !nameInput || !courseDl || !genericDl) return;
+
+            const slug = (clientTypeRadio.value || '').toLowerCase();
+            let pk = '';
+            let targetDl = null;
+
+            if (slug === 'course') {
+                pk = drCourseSelect ? getSelectValue(drCourseSelect) : '';
+                targetDl = courseDl;
+                nameInput.setAttribute('list', 'drCourseBuyerNames');
+                genericDl.innerHTML = '';
+            } else if (slug === 'section' || slug === 'other') {
+                pk = clientNameSelect ? getSelectValue(clientNameSelect) : '';
+                targetDl = genericDl;
+                nameInput.setAttribute('list', 'drGenericBuyerNames');
+                courseDl.innerHTML = '';
+            } else {
+                nameInput.removeAttribute('list');
+                courseDl.innerHTML = '';
+                genericDl.innerHTML = '';
+                return;
+            }
+
+            targetDl.innerHTML = '';
+            if (!pk) return;
+
+            fetch(baseUrl + '/buyer-names?client_type_slug=' + encodeURIComponent(slug) + '&client_type_pk=' + encodeURIComponent(pk), {
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+            })
+                .then(r => r.json())
+                .then(function(data) {
+                    targetDl.innerHTML = '';
+                    (data.buyers || []).forEach(function(b) {
+                        const opt = document.createElement('option');
+                        opt.value = b;
+                        targetDl.appendChild(opt);
+                    });
+                })
+                .catch(function() {
+                    targetDl.innerHTML = '';
+                });
+        }
         document.getElementById('drOtCourseSelect').addEventListener('change', function() {
             const coursePk = getSelectValue(this);
             const otStudentSelect = document.getElementById('drOtStudentSelect');
@@ -2191,9 +2248,12 @@ document.addEventListener('DOMContentLoaded', function () {
             if (inp) inp.value = getSelectValue(this) || '';
         });
         document.getElementById('drCourseSelect').addEventListener('change', function() {
-            // Do not auto-fill Name with course value
+            loadAddDrBuyerNames();
         });
-        document.getElementById('drClientNameSelect').addEventListener('change', updateDrNameField);
+        document.getElementById('drClientNameSelect').addEventListener('change', function() {
+            updateDrNameField();
+            loadAddDrBuyerNames();
+        });
         document.getElementById('drFacultySelect').addEventListener('change', function() {
             const inp = document.getElementById('drClientNameInput');
             if (inp) inp.value = getSelectValue(this) || '';
@@ -2210,6 +2270,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
         const addChecked = document.querySelector('#addReportModal .dr-client-type-radio:checked');
         if (addChecked) addChecked.dispatchEvent(new Event('change'));
+        loadAddDrBuyerNames();
 
         // Edit modal: same Faculty / Academy Staff / Mess Staff dropdown logic
         function updateEditDrNameField() {
@@ -2238,6 +2299,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (isOt) {
                 nameInput.style.display = 'none';
                 nameInput.removeAttribute('required');
+                nameInput.removeAttribute('list');
                 [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) {
                     if (sel) {
                         setSelectVisible(sel, false);
@@ -2257,8 +2319,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             } else if (isCourse) {
                 nameInput.style.display = 'block';
-                nameInput.placeholder = 'Course name';
+                nameInput.placeholder = 'Name';
                 nameInput.setAttribute('required', 'required');
+                nameInput.setAttribute('list', 'editDrCourseBuyerNames');
                 [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) {
                     if (sel) {
                         setSelectVisible(sel, false);
@@ -2275,6 +2338,7 @@ document.addEventListener('DOMContentLoaded', function () {
             } else {
                 nameInput.style.display = showAny ? 'none' : 'block';
                 nameInput.removeAttribute('required');
+                nameInput.setAttribute('list', 'editDrGenericBuyerNames');
                 [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) {
                     if (!sel) return;
                     const show = sel === facultySelect ? showFaculty : (sel === academyStaffSelect ? showAcademyStaff : showMessStaff);
@@ -2300,6 +2364,56 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
                 if (!showAny) nameInput.setAttribute('required', 'required');
             }
+        }
+
+        function loadEditDrBuyerNames() {
+            const clientTypeRadio = document.querySelector('#editReportModal .edit-dr-client-type-radio:checked');
+            const clientNameSelect = document.getElementById('editDrClientNameSelect');
+            const drCourseSelect = document.getElementById('editDrCourseSelect');
+            const nameInput = document.getElementById('editDrClientNameInput');
+            const courseDl = document.getElementById('editDrCourseBuyerNames');
+            const genericDl = document.getElementById('editDrGenericBuyerNames');
+            if (!clientTypeRadio || !nameInput || !courseDl || !genericDl) return;
+
+            const slug = (clientTypeRadio.value || '').toLowerCase();
+            let pk = '';
+            let targetDl = null;
+
+            if (slug === 'course') {
+                pk = drCourseSelect ? getSelectValue(drCourseSelect) : '';
+                targetDl = courseDl;
+                nameInput.setAttribute('list', 'editDrCourseBuyerNames');
+                genericDl.innerHTML = '';
+            } else if (slug === 'section' || slug === 'other') {
+                pk = clientNameSelect ? getSelectValue(clientNameSelect) : '';
+                targetDl = genericDl;
+                nameInput.setAttribute('list', 'editDrGenericBuyerNames');
+                courseDl.innerHTML = '';
+            } else {
+                nameInput.removeAttribute('list');
+                courseDl.innerHTML = '';
+                genericDl.innerHTML = '';
+                return;
+            }
+
+            targetDl.innerHTML = '';
+            if (!pk) return;
+
+            fetch(baseUrl + '/buyer-names?client_type_slug=' + encodeURIComponent(slug) + '&client_type_pk=' + encodeURIComponent(pk), {
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+            })
+                .then(r => r.json())
+                .then(function(data) {
+                    targetDl.innerHTML = '';
+                    (data.buyers || []).forEach(function(b) {
+                        const opt = document.createElement('option');
+                        opt.value = b;
+                        targetDl.appendChild(opt);
+                    });
+                })
+                .catch(function() {
+                    targetDl.innerHTML = '';
+                });
         }
         document.querySelectorAll('#editReportModal .edit-dr-client-type-radio').forEach(function(radio) {
             radio.addEventListener('change', function() {
@@ -2427,6 +2541,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 }
                 updateEditDrNameField();
+                loadEditDrBuyerNames();
             });
         });
         document.getElementById('editDrOtCourseSelect').addEventListener('change', function() {
@@ -2470,12 +2585,12 @@ document.addEventListener('DOMContentLoaded', function () {
             if (inp) inp.value = getSelectValue(this) || '';
         });
         document.getElementById('editDrCourseSelect').addEventListener('change', function() {
-            const inp = document.getElementById('editDrClientNameInput');
-            const opt = getSelectSelectedOption(this);
-            const courseName = (opt && opt.textContent) ? opt.textContent.trim() : '';
-            if (inp) inp.value = courseName;
+            loadEditDrBuyerNames();
         });
-        document.getElementById('editDrClientNameSelect').addEventListener('change', updateEditDrNameField);
+        document.getElementById('editDrClientNameSelect').addEventListener('change', function() {
+            updateEditDrNameField();
+            loadEditDrBuyerNames();
+        });
         document.getElementById('editDrFacultySelect').addEventListener('change', function() {
             const inp = document.getElementById('editDrClientNameInput');
             if (inp) inp.value = getSelectValue(this) || '';
@@ -3087,49 +3202,72 @@ document.addEventListener('DOMContentLoaded', function () {
             editReportModal.addEventListener('hidden.bs.modal', function() { destroyEditModalTomSelects(); });
         }
 
+        // Helper: reset Add Selling Voucher (Date Range) form to default state (without closing modal)
+        function resetAddReportForm() {
+            var addReportModal = document.getElementById('addReportModal');
+            if (!addReportModal) return;
+
+            destroyAddModalTomSelects();
+
+            var form = document.getElementById('addReportForm');
+            if (form) {
+                form.reset();
+                form.classList.remove('was-validated');
+                form.querySelectorAll('.is-invalid').forEach(function(el) { el.classList.remove('is-invalid'); });
+            }
+            var storeSel = addReportModal.querySelector('select[name="inve_store_master_pk"]');
+            if (storeSel) storeSel.value = '';
+            var issueDateInp = addReportModal.querySelector('input[name="issue_date"]');
+            if (issueDateInp) issueDateInp.value = new Date().toISOString().slice(0, 10);
+            var paymentSel = addReportModal.querySelector('select[name="payment_type"]');
+            if (paymentSel) paymentSel.value = '1';
+            var empRadio = addReportModal.querySelector('.dr-client-type-radio[value="employee"]');
+            if (empRadio) { empRadio.checked = true; empRadio.dispatchEvent(new Event('change')); }
+            var clientPkSel = addReportModal.querySelector('#drClientNameSelect');
+            if (clientPkSel) clientPkSel.value = '';
+            var clientNameInp = document.getElementById('drClientNameInput');
+            if (clientNameInp) clientNameInp.value = '';
+            addReportModal.querySelectorAll('#drClientNameWrap select, #drNameFieldWrap select').forEach(function(s) {
+                if (s && typeof s.value !== 'undefined') s.value = '';
+            });
+            var billInput = document.getElementById('addDrBillFileInput');
+            if (billInput) billInput.value = '';
+            var billWrap = document.getElementById('addDrBillFileChosenWrap');
+            var billName = document.getElementById('addDrBillFileChosenName');
+            if (billWrap) billWrap.classList.add('d-none');
+            if (billName) billName.textContent = '';
+            var tbody = document.getElementById('addModalItemsBody');
+            if (tbody) {
+                tbody.innerHTML = getAddRowHtml(0);
+                addRowIndex = 1;
+                tbody.querySelectorAll('.dr-remove-row').forEach(function(btn) {
+                    btn.disabled = (tbody.querySelectorAll('.dr-item-row').length <= 1);
+                });
+                var firstRow = tbody.querySelector('.dr-item-row');
+                if (firstRow) {
+                    firstRow.querySelector('.dr-item-select').addEventListener('change', function() {
+                        updateAddRowUnit(firstRow);
+                    });
+                    firstRow.querySelector('.dr-qty').addEventListener('input', function() {
+                        refreshAllAvailable();
+                        updateAddRowTotal(firstRow);
+                        updateAddGrandTotal();
+                    });
+                    firstRow.querySelector('.dr-rate').addEventListener('input', function() {
+                        updateAddRowTotal(firstRow);
+                        updateAddGrandTotal();
+                    });
+                }
+            }
+            var grandTotalEl = document.getElementById('addModalGrandTotal');
+            if (grandTotalEl) grandTotalEl.textContent = '₹0.00';
+        }
+
         // Reset add modal when closed (so next open starts fresh)
         const addReportModal = document.getElementById('addReportModal');
         if (addReportModal) {
             addReportModal.addEventListener('hidden.bs.modal', function() {
-                destroyAddModalTomSelects();
-                const form = document.getElementById('addReportForm');
-                if (form) {
-                    form.reset();
-                    form.classList.remove('was-validated');
-                    form.querySelectorAll('.is-invalid').forEach(function(el) { el.classList.remove('is-invalid'); });
-                }
-                const storeSel = addReportModal.querySelector('select[name="inve_store_master_pk"]');
-                if (storeSel) storeSel.value = '';
-                const issueDateInp = addReportModal.querySelector('input[name="issue_date"]');
-                if (issueDateInp) issueDateInp.value = new Date().toISOString().slice(0, 10);
-                const paymentSel = addReportModal.querySelector('select[name="payment_type"]');
-                if (paymentSel) paymentSel.value = '1';
-                const empRadio = addReportModal.querySelector('.dr-client-type-radio[value="employee"]');
-                if (empRadio) { empRadio.checked = true; empRadio.dispatchEvent(new Event('change')); }
-                const clientPkSel = addReportModal.querySelector('#drClientNameSelect');
-                if (clientPkSel) clientPkSel.value = '';
-                const clientNameInp = document.getElementById('drClientNameInput');
-                if (clientNameInp) clientNameInp.value = '';
-                addReportModal.querySelectorAll('#drClientNameWrap select, #drNameFieldWrap select').forEach(function(s) { if (s.value !== undefined) s.value = ''; });
-                const billInput = document.getElementById('addDrBillFileInput');
-                if (billInput) billInput.value = '';
-                const billWrap = document.getElementById('addDrBillFileChosenWrap');
-                const billName = document.getElementById('addDrBillFileChosenName');
-                if (billWrap) billWrap.classList.add('d-none');
-                if (billName) billName.textContent = '';
-                const tbody = document.getElementById('addModalItemsBody');
-                if (tbody) {
-                    tbody.innerHTML = getAddRowHtml(0);
-                    addRowIndex = 1;
-                    tbody.querySelectorAll('.dr-remove-row').forEach(function(btn) { btn.disabled = (tbody.querySelectorAll('.dr-item-row').length <= 1); });
-                    if (tbody.querySelector('.dr-item-row')) {
-                        tbody.querySelector('.dr-item-select').addEventListener('change', function() { updateAddRowUnit(tbody.querySelector('.dr-item-row')); });
-                        tbody.querySelector('.dr-qty').addEventListener('input', function() { refreshAllAvailable(); updateAddRowTotal(tbody.querySelector('.dr-item-row')); updateAddGrandTotal(); });
-                        tbody.querySelector('.dr-rate').addEventListener('input', function() { updateAddRowTotal(tbody.querySelector('.dr-item-row')); updateAddGrandTotal(); });
-                    }
-                }
-                const grandTotalEl = document.getElementById('addModalGrandTotal');
-                if (grandTotalEl) grandTotalEl.textContent = '₹0.00';
+                resetAddReportForm();
             });
 
             addReportModal.addEventListener('show.bs.modal', function() {
@@ -3170,7 +3308,7 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
 
-        // Prevent double submit on Add form (stops double entry on Save Selling Voucher)
+        // Prevent double submit on Add form (stops double entry on Save Selling Voucher) + AJAX submit
         var addReportFormEl = document.getElementById('addReportForm');
         if (addReportFormEl) {
             addReportFormEl.addEventListener('submit', function(e) {
@@ -3184,12 +3322,82 @@ document.addEventListener('DOMContentLoaded', function () {
                     return;
                 }
             }, true);
-            addReportFormEl.addEventListener('submit', function() {
-                var btn = this.querySelector('button[type="submit"]');
-                if (btn && !btn.disabled) {
+
+            addReportFormEl.addEventListener('submit', function(e) {
+                // If the form is invalid, the capture listener above will already have prevented default.
+                if (!this.checkValidity()) {
+                    return;
+                }
+
+                e.preventDefault();
+
+                var form = this;
+                var btn = form.querySelector('button[type="submit"]');
+                if (btn && btn.disabled) {
+                    return;
+                }
+                if (btn) {
+                    if (!btn.dataset.originalText) {
+                        btn.dataset.originalText = btn.textContent || '';
+                    }
                     btn.disabled = true;
                     btn.textContent = 'Saving...';
                 }
+
+                var action = form.getAttribute('action') || window.location.href;
+                var method = (form.getAttribute('method') || 'POST').toUpperCase();
+                var formData = new FormData(form);
+                var csrf = form.querySelector('input[name="_token"]');
+
+                fetch(action, {
+                    method: method,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': csrf ? csrf.value : '',
+                        'Accept': 'application/json'
+                    },
+                    body: formData
+                })
+                    .then(function(response) {
+                        return response.json().then(function(payload) {
+                            return { ok: response.ok, status: response.status, payload: payload };
+                        }).catch(function() {
+                            return { ok: response.ok, status: response.status, payload: null };
+                        });
+                    })
+                    .then(function(res) {
+                        var data = res.payload;
+                        if (res.ok && data && data.success) {
+                            // Reset form for next entry but keep modal open
+                            resetAddReportForm();
+
+                            if (window.toastr && data.message) {
+                                toastr.success(data.message);
+                            } else if (data.message) {
+                                alert(data.message);
+                            }
+                        } else {
+                            var msg = (data && data.message) ? data.message : 'Failed to save voucher. Please try again.';
+                            if (res.status === 422 && data && data.errors) {
+                                try {
+                                    var firstKey = Object.keys(data.errors)[0];
+                                    if (firstKey && data.errors[firstKey] && data.errors[firstKey][0]) {
+                                        msg = data.errors[firstKey][0];
+                                    }
+                                } catch (e) {}
+                            }
+                            alert(msg);
+                        }
+                    })
+                    .catch(function() {
+                        alert('Failed to save voucher. Please try again.');
+                    })
+                    .finally(function() {
+                        if (btn) {
+                            btn.disabled = false;
+                            btn.textContent = btn.dataset.originalText || 'Save Selling Voucher';
+                        }
+                    });
             });
         }
 

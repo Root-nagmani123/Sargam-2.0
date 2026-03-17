@@ -15,6 +15,7 @@ use App\Models\EmployeeMaster;
 use App\Models\DepartmentMaster;
 use App\Models\CourseMaster;
 use App\Models\StudentMaster;
+use App\Models\KitchenIssueMaster;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -151,6 +152,60 @@ class SellingVoucherDateRangeController extends Controller
         ]);
     }
 
+    /**
+     * AJAX: previously used buyer names for Selling Voucher (Date Range).
+     *
+     * Query params:
+     * - client_type_slug: course|section|other
+     * - client_type_pk: for course => course_master.pk, for section/other => mess_client_types.id
+     */
+    public function getBuyerNames(Request $request)
+    {
+        $slug = strtolower(trim((string) $request->query('client_type_slug', '')));
+        if (!in_array($slug, ['course', 'section', 'other'], true)) {
+            return response()->json(['buyers' => []]);
+        }
+
+        $clientTypePk = (int) $request->query('client_type_pk', 0);
+        if ($clientTypePk <= 0) {
+            return response()->json(['buyers' => []]);
+        }
+
+        $svBuyers = SellingVoucherDateRangeReport::query()
+            ->where('client_type_slug', $slug)
+            ->where('client_type_pk', $clientTypePk)
+            ->whereHas('items')
+            ->whereNotNull('client_name')
+            ->where('client_name', '!=', '')
+            ->distinct()
+            ->pluck('client_name')
+            ->map(fn ($n) => trim((string) $n));
+
+        $slugToKiType = [
+            'course' => KitchenIssueMaster::CLIENT_COURSE,
+            'section' => KitchenIssueMaster::CLIENT_SECTION,
+            'other' => KitchenIssueMaster::CLIENT_OTHER,
+        ];
+        $kiBuyers = KitchenIssueMaster::query()
+            ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+            ->where('client_type', $slugToKiType[$slug])
+            ->where('client_type_pk', $clientTypePk)
+            ->whereHas('items')
+            ->whereNotNull('client_name')
+            ->where('client_name', '!=', '')
+            ->distinct()
+            ->pluck('client_name')
+            ->map(fn ($n) => trim((string) $n));
+
+        $buyers = $svBuyers->concat($kiBuyers)
+            ->filter(fn ($n) => $n !== '')
+            ->unique()
+            ->sort()
+            ->values();
+
+        return response()->json(['buyers' => $buyers]);
+    }
+
     public function create()
     {
         return redirect()->route('admin.mess.selling-voucher-date-range.index');
@@ -227,6 +282,15 @@ class SellingVoucherDateRangeController extends Controller
         }
         if (!empty($qtyErrors)) {
             $bag = new MessageBag(['items' => implode(' ', $qtyErrors)]);
+
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed.',
+                    'errors' => ['items' => [implode(' ', $qtyErrors)]],
+                ], 422);
+            }
+
             return redirect()->route('admin.mess.selling-voucher-date-range.index')
                 ->withInput()
                 ->withErrors($bag)
@@ -328,10 +392,29 @@ class SellingVoucherDateRangeController extends Controller
 
             DB::commit();
 
+            // AJAX request: return JSON so frontend can keep modal open without full page reload
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Date Range Report created successfully.',
+                    'report_id' => $report->id,
+                ]);
+            }
+
+            // Normal request: redirect back and reopen Add modal
             return redirect()->route('admin.mess.selling-voucher-date-range.index')
-                ->with('success', 'Date Range Report created successfully.');
+                ->with('success', 'Date Range Report created successfully.')
+                ->with('open_add_modal', true);
         } catch (\Exception $e) {
             DB::rollBack();
+
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to create report: ' . $e->getMessage(),
+                ], 500);
+            }
+
             return redirect()->route('admin.mess.selling-voucher-date-range.index')
                 ->withInput()
                 ->with('error', 'Failed to create report: ' . $e->getMessage())

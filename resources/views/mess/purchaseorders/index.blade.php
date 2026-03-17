@@ -1767,6 +1767,123 @@
             return false;
         }
     });
+
+    // AJAX submit: Create Purchase Order (keep modal open until user closes)
+    (function() {
+        var form = document.getElementById('createPOForm');
+        if (!form) return;
+
+        function resetCreatePurchaseOrderForm() {
+            // Reuse existing reset logic by triggering modal show handler logic:
+            // - clears TomSelect selections
+            // - resets items table to one row
+            // - clears bill file input
+            var createModal = document.getElementById('createPurchaseOrderModal');
+            if (!createModal) return;
+
+            // Reset vendor selection + filtered items
+            currentVendorId = null;
+            filteredItems = itemSubcategories;
+
+            // Reset native form fields
+            form.reset();
+
+            // Reset Tom Select dropdowns
+            if (tomSelectInstances && tomSelectInstances.create) {
+                if (tomSelectInstances.create.vendor) tomSelectInstances.create.vendor.clear();
+                if (tomSelectInstances.create.store) tomSelectInstances.create.store.clear();
+                if (tomSelectInstances.create.payment) tomSelectInstances.create.payment.clear();
+            }
+
+            // Clear selected bill file (if any)
+            if (createBillFileInputEl) createBillFileInputEl.value = '';
+
+            // Reset items table to a single fresh row
+            destroyAllItemDropdowns();
+            var tbody = document.getElementById('poItemsBody');
+            if (tbody) {
+                tbody.innerHTML = '';
+                tbody.insertAdjacentHTML('beforeend', getItemRowHtml(0, null, false));
+                itemRowIndex = 1;
+                initAllItemDropdowns(tbody);
+                updateGrandTotal();
+                updateRemoveButtons();
+            }
+        }
+
+        form.addEventListener('submit', function(e) {
+            // If any earlier listener prevented default, do nothing.
+            if (e.defaultPrevented) return;
+
+            if (!form.checkValidity()) {
+                // Let browser/Bootstrap validations do their job
+                return;
+            }
+
+            e.preventDefault();
+
+            var btn = form.querySelector('button[type="submit"]');
+            if (btn && btn.disabled) return;
+            if (btn) {
+                if (!btn.dataset.originalText) btn.dataset.originalText = btn.textContent || '';
+                btn.disabled = true;
+                btn.textContent = 'Creating...';
+            }
+
+            var action = form.getAttribute('action') || window.location.href;
+            var method = (form.getAttribute('method') || 'POST').toUpperCase();
+            var formData = new FormData(form);
+            var csrf = form.querySelector('input[name="_token"]');
+
+            fetch(action, {
+                method: method,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': csrf ? csrf.value : '',
+                    'Accept': 'application/json'
+                },
+                body: formData
+            })
+                .then(function(response) {
+                    return response.json().then(function(payload) {
+                        return { ok: response.ok, status: response.status, payload: payload };
+                    }).catch(function() {
+                        return { ok: response.ok, status: response.status, payload: null };
+                    });
+                })
+                .then(function(res) {
+                    var data = res.payload;
+                    if (res.ok && data && data.success) {
+                        resetCreatePurchaseOrderForm();
+                        if (window.toastr && data.message) {
+                            toastr.success(data.message);
+                        } else if (data.message) {
+                            alert(data.message);
+                        }
+                    } else {
+                        var msg = (data && data.message) ? data.message : 'Failed to create purchase order. Please try again.';
+                        if (res.status === 422 && data && data.errors) {
+                            try {
+                                var firstKey = Object.keys(data.errors)[0];
+                                if (firstKey && data.errors[firstKey] && data.errors[firstKey][0]) {
+                                    msg = data.errors[firstKey][0];
+                                }
+                            } catch (e) {}
+                        }
+                        alert(msg);
+                    }
+                })
+                .catch(function() {
+                    alert('Failed to create purchase order. Please try again.');
+                })
+                .finally(function() {
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.textContent = btn.dataset.originalText || 'Create Purchase Order';
+                    }
+                });
+        });
+    })();
     document.getElementById('editPOForm').addEventListener('submit', function(e) {
         const input = document.getElementById('editContactNumber');
         if (input && !validateContactNumber(input.value)) {
@@ -1785,7 +1902,7 @@
     });
 
     // Auto-open create modal when validation errors exist (e.g. after failed submit)
-    @if($errors->any())
+    @if($errors->any() || session('open_create_po_modal'))
     document.addEventListener('DOMContentLoaded', function() {
         const createModal = document.getElementById('createPurchaseOrderModal');
         if (createModal && (document.getElementById('createPOForm') || document.querySelector('[name="po_number"]'))) {

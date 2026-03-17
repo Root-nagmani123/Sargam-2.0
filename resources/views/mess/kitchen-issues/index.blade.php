@@ -202,13 +202,13 @@ document.addEventListener('DOMContentLoaded', function () {
 #addSellingVoucherModal .modal-content { max-height: calc(100vh - 2rem); display: flex; flex-direction: column; }
 #addSellingVoucherModal .modal-body { overflow-y: auto; max-height: calc(100vh - 10rem); position: relative; }
 .ts-dropdown { z-index: 2000; }
-
-/* Visually remove default first-option highlight in Tom Select dropdowns */
-.ts-dropdown .option.active,
-.ts-dropdown .option.selected,
-.ts-dropdown .option[aria-selected="true"] {
-    background-color: transparent !important;
-    color: inherit !important;
+/* Keep keyboard navigation visible in Tom Select dropdowns */
+.ts-dropdown .option.active {
+    background: rgba(13, 110, 253, 0.12);
+}
+.ts-dropdown .option[aria-selected="true"],
+.ts-dropdown .option.selected {
+    background: rgba(13, 110, 253, 0.20);
 }
 </style>
 <div class="modal fade" id="addSellingVoucherModal" tabindex="-1" aria-labelledby="addSellingVoucherModalLabel" aria-hidden="true">
@@ -285,6 +285,8 @@ document.addEventListener('DOMContentLoaded', function () {
                                 <div class="col-md-4" id="modalNameFieldWrap">
                                     <label class="form-label">Name <span class="text-danger">*</span></label>
                                     <input type="text" name="client_name" id="modalClientNameInput" class="form-control" value="{{ old('client_name') }}" placeholder="Client / section / role name" required>
+                                    <datalist id="modalCourseBuyerNames"></datalist>
+                                    <datalist id="modalGenericBuyerNames"></datalist>
                                     <select id="modalFacultySelect" class="form-select" style="display:none;">
                                         <option value="">Select Faculty</option>
                                         @foreach($faculties ?? [] as $f)
@@ -477,6 +479,8 @@ document.addEventListener('DOMContentLoaded', function () {
                                 <div class="col-md-4" id="editModalNameFieldWrap">
                                     <label class="form-label">Name <span class="text-danger">*</span></label>
                                     <input type="text" name="client_name" class="form-control edit-client-name" id="editModalClientNameInput" placeholder="Client / section / role name" required>
+                                    <datalist id="editCourseBuyerNames"></datalist>
+                                    <datalist id="editGenericBuyerNames"></datalist>
                                     <select id="editModalFacultySelect" class="form-select" style="display:none;">
                                         <option value="">Select Faculty</option>
                                         @foreach($faculties ?? [] as $f)
@@ -1323,15 +1327,122 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Prevent double submit on Add Selling Voucher form (stops double entry)
+    // Helper: reset Add Selling Voucher modal form (without closing modal)
+    function resetSellingVoucherModalForm() {
+        var modalEl = document.getElementById('addSellingVoucherModal');
+        if (!modalEl) return;
+
+        destroyAddModalTomSelects();
+
+        var form = document.getElementById('sellingVoucherModalForm');
+        if (form) {
+            form.reset();
+            form.classList.remove('was-validated');
+            form.querySelectorAll('.is-invalid').forEach(function(el) { el.classList.remove('is-invalid'); });
+        }
+        var storeSel = modalEl.querySelector('select[name="store_id"]');
+        if (storeSel) storeSel.value = '';
+        var issueDateInp = modalEl.querySelector('input[name="issue_date"]');
+        if (issueDateInp) issueDateInp.value = new Date().toISOString().slice(0, 10);
+        var paymentSel = modalEl.querySelector('select[name="payment_type"]');
+        if (paymentSel) paymentSel.value = '1';
+        var empRadio = modalEl.querySelector('.client-type-radio[value="employee"]');
+        if (empRadio) { empRadio.checked = true; empRadio.dispatchEvent(new Event('change')); }
+        var clientPkSel = modalEl.querySelector('#modalClientNameSelect');
+        if (clientPkSel) clientPkSel.value = '';
+        var clientNameInp = document.getElementById('modalClientNameInput');
+        if (clientNameInp) clientNameInp.value = '';
+        modalEl.querySelectorAll('#modalClientNameWrap select, #modalNameFieldWrap select').forEach(function(s) {
+            if (s && typeof s.value !== 'undefined') s.value = '';
+        });
+        var billInput = document.getElementById('addSvBillFileInput');
+        if (billInput) billInput.value = '';
+        var billWrap = document.getElementById('addSvBillFileChosenWrap');
+        var billName = document.getElementById('addSvBillFileChosenName');
+        if (billWrap) billWrap.classList.add('d-none');
+        if (billName) billName.textContent = '';
+        var tbody = document.getElementById('modalItemsBody');
+        if (tbody) {
+            tbody.innerHTML = getRowHtml(0);
+            rowIndex = 1;
+            updateRemoveButtons();
+        }
+        var grandTotalEl = document.getElementById('modalGrandTotal');
+        if (grandTotalEl) grandTotalEl.textContent = '₹0.00';
+    }
+
+    // Prevent double submit on Add Selling Voucher form (stops double entry) + AJAX submit
     var sellingVoucherModalForm = document.getElementById('sellingVoucherModalForm');
     if (sellingVoucherModalForm) {
-        sellingVoucherModalForm.addEventListener('submit', function() {
-            var btn = this.querySelector('button[type="submit"]');
-            if (btn && !btn.disabled) {
+        sellingVoucherModalForm.addEventListener('submit', function(e) {
+            // If invalid, the capture validation listener will have prevented default.
+            if (!this.checkValidity()) return;
+
+            e.preventDefault();
+
+            var form = this;
+            var btn = form.querySelector('button[type="submit"]');
+            if (btn && btn.disabled) return;
+            if (btn) {
+                if (!btn.dataset.originalText) {
+                    btn.dataset.originalText = btn.textContent || '';
+                }
                 btn.disabled = true;
                 btn.textContent = 'Saving...';
             }
+
+            var action = form.getAttribute('action') || window.location.href;
+            var method = (form.getAttribute('method') || 'POST').toUpperCase();
+            var formData = new FormData(form);
+            var csrf = form.querySelector('input[name="_token"]');
+
+            fetch(action, {
+                method: method,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': csrf ? csrf.value : '',
+                    'Accept': 'application/json'
+                },
+                body: formData
+            })
+                .then(function(response) {
+                    return response.json().then(function(payload) {
+                        return { ok: response.ok, status: response.status, payload: payload };
+                    }).catch(function() {
+                        return { ok: response.ok, status: response.status, payload: null };
+                    });
+                })
+                .then(function(res) {
+                    var data = res.payload;
+                    if (res.ok && data && data.success) {
+                        resetSellingVoucherModalForm();
+                        if (window.toastr && data.message) {
+                            toastr.success(data.message);
+                        } else if (data.message) {
+                            alert(data.message);
+                        }
+                    } else {
+                        var msg = (data && data.message) ? data.message : 'Failed to save voucher. Please try again.';
+                        if (res.status === 422 && data && data.errors) {
+                            try {
+                                var firstKey = Object.keys(data.errors)[0];
+                                if (firstKey && data.errors[firstKey] && data.errors[firstKey][0]) {
+                                    msg = data.errors[firstKey][0];
+                                }
+                            } catch (e) {}
+                        }
+                        alert(msg);
+                    }
+                })
+                .catch(function() {
+                    alert('Failed to save voucher. Please try again.');
+                })
+                .finally(function() {
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.textContent = btn.dataset.originalText || 'Save Selling Voucher';
+                    }
+                });
         });
     }
 
@@ -1834,6 +1945,42 @@ document.addEventListener('DOMContentLoaded', function() {
             nameInput.setAttribute('required', 'required');
         }
     }
+
+    function loadAddModalGenericBuyerNames() {
+        const clientTypeRadio = document.querySelector('#addSellingVoucherModal .client-type-radio:checked');
+        const clientNameSelect = document.getElementById('modalClientNameSelect');
+        const nameInput = document.getElementById('modalClientNameInput');
+        const dataList = document.getElementById('modalGenericBuyerNames');
+        if (!clientTypeRadio || !clientNameSelect || !nameInput || !dataList) return;
+
+        const slug = (clientTypeRadio.value || '').toLowerCase();
+        if (slug !== 'section' && slug !== 'other') {
+            nameInput.removeAttribute('list');
+            dataList.innerHTML = '';
+            return;
+        }
+
+        const pk = clientNameSelect.value || '';
+        nameInput.setAttribute('list', 'modalGenericBuyerNames');
+        dataList.innerHTML = '';
+        if (!pk) return;
+
+        fetch(editSvBaseUrl + '/buyer-names?client_type_slug=' + encodeURIComponent(slug) + '&client_type_pk=' + encodeURIComponent(pk), {
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+        })
+            .then(r => r.json())
+            .then(function(data) {
+                dataList.innerHTML = '';
+                (data.buyers || []).forEach(function(b) {
+                    const opt = document.createElement('option');
+                    opt.value = b;
+                    dataList.appendChild(opt);
+                });
+            })
+            .catch(function() {
+                dataList.innerHTML = '';
+            });
+    }
     document.querySelectorAll('#addSellingVoucherModal .client-type-radio').forEach(function(radio) {
         radio.addEventListener('change', function() {
             // Show Client Name & Name columns as soon as a Client Type is selected
@@ -1862,7 +2009,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (otStudentSelect) { setSelectVisible(otStudentSelect, false); otStudentSelect.removeAttribute('required'); otStudentSelect.innerHTML = '<option value="">Select Student</option>'; otStudentSelect.value = ''; }
                 if (courseSelect) { setSelectVisible(courseSelect, true); courseSelect.setAttribute('required', 'required'); courseSelect.setAttribute('name', 'client_type_pk'); courseSelect.value = ''; }
                 if (courseNameSelect) { setSelectVisible(courseNameSelect, false); courseNameSelect.removeAttribute('required'); courseNameSelect.value = ''; }
-                if (nameInput) { nameInput.style.display = 'block'; nameInput.value = ''; nameInput.placeholder = 'Course name'; nameInput.setAttribute('required', 'required'); }
+                if (nameInput) {
+                    nameInput.style.display = 'block';
+                    nameInput.value = '';
+                    nameInput.placeholder = 'Name';
+                    nameInput.setAttribute('required', 'required');
+                    nameInput.setAttribute('list', 'modalCourseBuyerNames');
+                }
+                const dl = document.getElementById('modalCourseBuyerNames');
+                if (dl) dl.innerHTML = '';
             } else {
                 if (clientSelect) { setSelectVisible(clientSelect, true); clientSelect.setAttribute('required', 'required'); clientSelect.setAttribute('name', 'client_type_pk'); }
                 if (otCourseSelect) { setSelectVisible(otCourseSelect, false); otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
@@ -1872,9 +2027,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (clientSelect && clientNameOptionsAdd.length) {
                     rebuildClientNameSelect(clientSelect, clientNameOptionsAdd, this.value);
                 }
-                if (nameInput) { nameInput.style.display = 'block'; nameInput.placeholder = 'Client / section / role name'; nameInput.setAttribute('required', 'required'); }
+                if (nameInput) {
+                    nameInput.style.display = 'block';
+                    nameInput.placeholder = 'Client / section / role name';
+                    nameInput.setAttribute('required', 'required');
+                    nameInput.removeAttribute('list');
+                }
+                const dl = document.getElementById('modalCourseBuyerNames');
+                if (dl) dl.innerHTML = '';
             }
             updateModalNameField();
+            loadAddModalGenericBuyerNames();
         });
     });
     function reinitNameSelectTomSelect(select, placeholder) {
@@ -1934,13 +2097,37 @@ document.addEventListener('DOMContentLoaded', function() {
     const modalCourseSelect = document.getElementById('modalCourseSelect');
     if (modalCourseSelect) {
         modalCourseSelect.addEventListener('change', function() {
-            // Do not auto-fill Name with course value
+            const coursePk = this.value;
+            const nameInput = document.getElementById('modalClientNameInput');
+            const dataList = document.getElementById('modalCourseBuyerNames');
+            if (!nameInput || !dataList) return;
+
+            nameInput.setAttribute('list', 'modalCourseBuyerNames');
+            dataList.innerHTML = '';
+
+            if (!coursePk) return;
+            fetch(editSvBaseUrl + '/buyer-names?client_type_slug=course&client_type_pk=' + encodeURIComponent(coursePk), { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(r => r.json())
+                .then(function(data) {
+                    dataList.innerHTML = '';
+                    (data.buyers || []).forEach(function(b) {
+                        const opt = document.createElement('option');
+                        opt.value = b;
+                        dataList.appendChild(opt);
+                    });
+                })
+                .catch(function() {
+                    dataList.innerHTML = '';
+                });
         });
     }
     
     const modalClientNameSelect = document.getElementById('modalClientNameSelect');
     if (modalClientNameSelect) {
-        modalClientNameSelect.addEventListener('change', updateModalNameField);
+        modalClientNameSelect.addEventListener('change', function() {
+            updateModalNameField();
+            loadAddModalGenericBuyerNames();
+        });
     }
     
     const modalFacultySelect = document.getElementById('modalFacultySelect');
@@ -2017,6 +2204,42 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!showAny) nameInput.setAttribute('required', 'required');
         }
     }
+
+    function loadEditModalGenericBuyerNames() {
+        const clientTypeRadio = document.querySelector('#editSellingVoucherModal .edit-client-type-radio:checked');
+        const clientNameSelect = document.getElementById('editClientNameSelect');
+        const nameInput = document.getElementById('editModalClientNameInput');
+        const dataList = document.getElementById('editGenericBuyerNames');
+        if (!clientTypeRadio || !clientNameSelect || !nameInput || !dataList) return;
+
+        const slug = (clientTypeRadio.value || '').toLowerCase();
+        if (slug !== 'section' && slug !== 'other') {
+            nameInput.removeAttribute('list');
+            dataList.innerHTML = '';
+            return;
+        }
+
+        const pk = clientNameSelect.value || '';
+        nameInput.setAttribute('list', 'editGenericBuyerNames');
+        dataList.innerHTML = '';
+        if (!pk) return;
+
+        fetch(editSvBaseUrl + '/buyer-names?client_type_slug=' + encodeURIComponent(slug) + '&client_type_pk=' + encodeURIComponent(pk), {
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+        })
+            .then(r => r.json())
+            .then(function(data) {
+                dataList.innerHTML = '';
+                (data.buyers || []).forEach(function(b) {
+                    const opt = document.createElement('option');
+                    opt.value = b;
+                    dataList.appendChild(opt);
+                });
+            })
+            .catch(function() {
+                dataList.innerHTML = '';
+            });
+    }
     document.querySelectorAll('#editSellingVoucherModal .edit-client-type-radio').forEach(function(radio) {
         radio.addEventListener('change', function() {
             const isOt = (this.value || '').toLowerCase() === 'ot';
@@ -2037,7 +2260,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (otCourseSelect) { setSelectVisible(otCourseSelect, false); otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
                 if (editCourseSelect) { setSelectVisible(editCourseSelect, true); editCourseSelect.setAttribute('required', 'required'); editCourseSelect.setAttribute('name', 'client_type_pk'); editCourseSelect.value = ''; }
                 if (editCourseNameSelect) { setSelectVisible(editCourseNameSelect, false); editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
-                if (nameInput) { nameInput.style.display = 'block'; nameInput.readOnly = false; nameInput.placeholder = 'Course name'; nameInput.value = nameInput.value || ''; nameInput.setAttribute('required', 'required'); }
+                if (nameInput) {
+                    nameInput.style.display = 'block';
+                    nameInput.readOnly = false;
+                    nameInput.placeholder = 'Name';
+                    nameInput.value = nameInput.value || '';
+                    nameInput.setAttribute('required', 'required');
+                    nameInput.setAttribute('list', 'editCourseBuyerNames');
+                }
+                const dl = document.getElementById('editCourseBuyerNames');
+                if (dl) dl.innerHTML = '';
             } else {
                 if (clientSelect) { setSelectVisible(clientSelect, true); clientSelect.setAttribute('required', 'required'); clientSelect.setAttribute('name', 'client_type_pk'); }
                 if (otCourseSelect) { setSelectVisible(otCourseSelect, false); otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
@@ -2046,9 +2278,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (clientSelect && clientNameOptionsEdit.length) {
                     rebuildClientNameSelect(clientSelect, clientNameOptionsEdit, this.value);
                 }
-                if (nameInput) { nameInput.style.display = 'block'; nameInput.readOnly = false; nameInput.placeholder = 'Client / section / role name'; nameInput.setAttribute('required', 'required'); }
+                if (nameInput) {
+                    nameInput.style.display = 'block';
+                    nameInput.readOnly = false;
+                    nameInput.placeholder = 'Client / section / role name';
+                    nameInput.setAttribute('required', 'required');
+                    nameInput.removeAttribute('list');
+                }
+                const dl = document.getElementById('editCourseBuyerNames');
+                if (dl) dl.innerHTML = '';
             }
             updateEditModalNameField();
+            loadEditModalGenericBuyerNames();
         });
     });
     const editModalOtCourseSelect = document.getElementById('editModalOtCourseSelect');
@@ -2064,14 +2305,36 @@ document.addEventListener('DOMContentLoaded', function() {
     if (editModalCourseSelect) {
         editModalCourseSelect.addEventListener('change', function() {
             const inp = document.getElementById('editModalClientNameInput');
-            const courseName = (this.options[this.selectedIndex] && this.options[this.selectedIndex].textContent) ? this.options[this.selectedIndex].textContent.trim() : '';
-            if (inp) inp.value = courseName;
+            const coursePk = this.value;
+            const dataList = document.getElementById('editCourseBuyerNames');
+            if (!inp || !dataList) return;
+
+            inp.setAttribute('list', 'editCourseBuyerNames');
+            dataList.innerHTML = '';
+
+            if (!coursePk) return;
+            fetch(editSvBaseUrl + '/buyer-names?client_type_slug=course&client_type_pk=' + encodeURIComponent(coursePk), { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(r => r.json())
+                .then(function(data) {
+                    dataList.innerHTML = '';
+                    (data.buyers || []).forEach(function(b) {
+                        const opt = document.createElement('option');
+                        opt.value = b;
+                        dataList.appendChild(opt);
+                    });
+                })
+                .catch(function() {
+                    dataList.innerHTML = '';
+                });
         });
     }
     
     const editClientNameSelect = document.getElementById('editClientNameSelect');
     if (editClientNameSelect) {
-        editClientNameSelect.addEventListener('change', updateEditModalNameField);
+        editClientNameSelect.addEventListener('change', function() {
+            updateEditModalNameField();
+            loadEditModalGenericBuyerNames();
+        });
     }
     
     const editModalFacultySelect = document.getElementById('editModalFacultySelect');
@@ -2549,7 +2812,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     const editOtCourseEl = document.getElementById('editModalOtCourseSelect');
                     if (editOtCourseEl) editOtCourseEl.value = v.client_type_pk || '';
                     const editCourseEl = document.getElementById('editModalCourseSelect');
-                    if (editCourseEl) editCourseEl.value = v.client_type_pk || '';
+                    if (editCourseEl) {
+                        editCourseEl.value = v.client_type_pk || '';
+                        if ((v.client_type_slug || '') === 'course') {
+                            editCourseEl.dispatchEvent(new Event('change'));
+                        }
+                    }
                     const editCourseNameEl = document.getElementById('editModalCourseNameSelect');
                     if (editCourseNameEl) editCourseNameEl.value = v.client_type_pk || '';
                     document.querySelector('#editSellingVoucherModal input.edit-issue-date').value = v.issue_date || '';
