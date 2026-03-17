@@ -158,6 +158,16 @@
                             <option value="paid" {{ $currentStatus === 'paid' ? 'selected' : '' }}>Paid</option>
                         </select>
                     </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-semibold">Status</label>
+                        @php $currentStatus = $statusFilter ?? request('status', ''); @endphp
+                        <select name="status" id="filterStatus" class="form-select">
+                            <option value="">All Status</option>
+                            <option value="unpaid" {{ $currentStatus === 'unpaid' ? 'selected' : '' }}>Unpaid</option>
+                            <option value="partial" {{ $currentStatus === 'partial' ? 'selected' : '' }}>Partial</option>
+                            <option value="paid" {{ $currentStatus === 'paid' ? 'selected' : '' }}>Paid</option>
+                        </select>
+                    </div>
                     <div class="col-md-2 d-flex gap-1">
                         <button type="submit" class="btn btn-primary  flex-grow-1">
                             <i class="material-symbols-rounded align-middle">filter_list</i>

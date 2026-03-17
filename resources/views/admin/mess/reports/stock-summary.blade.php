@@ -110,12 +110,11 @@
             </span>
         </div>
         <div class="table-responsive table-fit-single-view">
-        <table class="table table-fit align-middle mb-0">
+        <table class="table table-fit align-middle mb-0 w-100">
             <thead>
                 <tr>
                     <th rowspan="2" class="text-center align-middle">SR.<br>No</th>
                     <th rowspan="2" class="text-center align-middle">Item Name</th>
-                    <th rowspan="2" class="text-center align-middle">Item Code</th>
                     <th rowspan="2" class="text-center align-middle">Unit</th>
                     <th colspan="3" class="text-center">Opening</th>
                     <th colspan="3" class="text-center">Purchase</th>
@@ -124,21 +123,21 @@
                 </tr>
                 <tr>
                     <!-- Opening -->
-                    <th class="text-center">Qty</th>
-                    <th class="text-center">Rate</th>
-                    <th class="text-center">Amount</th>
+                    <th class="text-end">Qty</th>
+                    <th class="text-end">Rate</th>
+                    <th class="text-end">Amount</th>
                     <!-- Purchase -->
-                    <th class="text-center">Qty</th>
-                    <th class="text-center">Rate</th>
-                    <th class="text-center">Amount</th>
+                    <th class="text-end">Qty</th>
+                    <th class="text-end">Rate</th>
+                    <th class="text-end">Amount</th>
                     <!-- Sale -->
-                    <th class="text-center">Qty</th>
-                    <th class="text-center">Rate</th>
-                    <th class="text-center">Amount</th>
+                    <th class="text-end">Qty</th>
+                    <th class="text-end">Rate</th>
+                    <th class="text-end">Amount</th>
                     <!-- Closing -->
-                    <th class="text-center">Qty</th>
-                    <th class="text-center">Rate</th>
-                    <th class="text-center">Amount</th>
+                    <th class="text-end">Qty</th>
+                    <th class="text-end">Rate</th>
+                    <th class="text-end">Amount</th>
                 </tr>
             </thead>
             <tbody>
@@ -146,7 +145,6 @@
                     <tr>
                         <td class="text-center">{{ $index + 1 }}</td>
                         <td>{{ $item['item_name'] }}</td>
-                        <td>{{ $item['item_code'] ?? '—' }}</td>
                         <td>{{ isset($item['unit']) && is_numeric($item['unit']) ? number_format((float)$item['unit'], 2) : ($item['unit'] ?? '—') }}</td>
                         <!-- Opening -->
                         <td class="text-end">{{ number_format($item['opening_qty'], 2) }}</td>
@@ -167,7 +165,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="16" class="text-center py-5" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
+                        <td colspan="15" class="text-center py-5" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
                             <div class="d-flex flex-column align-items-center gap-3">
                                 <div>
                                     <h6 class="text-muted mb-1">No Stock Movement Found</h6>
@@ -187,7 +185,7 @@
                         ];
                     @endphp
                     <tr class="table-primary fw-bold">
-                        <td colspan="4" class="text-end sticky-col sticky-col-total" style="font-size: 1rem; letter-spacing: 0.02em;">
+                        <td colspan="3" class="text-end sticky-col sticky-col-total" style="font-size: 1rem; letter-spacing: 0.02em;">
                             Total
                         </td>
                         <td class="text-end">—</td>
@@ -212,63 +210,6 @@
 </div>
 </div>
 
-<style>
-    .stock-table-wrapper {
-        position: relative;
-        overflow: auto; /* allow both horizontal and vertical scroll inside */
-        max-height: 70vh;
-    }
-
-    .stock-fixed-columns-table {
-        border-collapse: separate;
-        border-spacing: 0;
-    }
-
-    .stock-fixed-columns-table th,
-    .stock-fixed-columns-table td {
-        white-space: nowrap;
-    }
-
-    .stock-fixed-columns-table .sticky-col {
-        position: -webkit-sticky;
-        position: sticky;
-        background-color: #ffffff;
-        z-index: 2;
-    }
-
-    .stock-fixed-columns-table thead .sticky-col {
-        z-index: 3;
-        top: 0;
-    }
-
-    /* Column widths and offsets (tune these values as per your design) */
-    .stock-table-wrapper {
-        --col-1-width: 60px;
-        --col-2-width: 220px;
-        --col-3-width: 120px;
-        --col-4-width: 80px;
-    }
-
-    .stock-fixed-columns-table .sticky-col-1 {
-        left: 0;
-        min-width: var(--col-1-width);
-    }
-
-    .stock-fixed-columns-table .sticky-col-2 {
-        left: var(--col-1-width);
-        min-width: var(--col-2-width);
-    }
-
-    .stock-fixed-columns-table .sticky-col-3 {
-        left: calc(var(--col-1-width) + var(--col-2-width));
-        min-width: var(--col-3-width);
-    }
-
-    .stock-fixed-columns-table .sticky-col-4 {
-        left: calc(var(--col-1-width) + var(--col-2-width) + var(--col-3-width));
-        min-width: var(--col-4-width);
-    }
-</style>
 
 <script>
 function printStockSummary() {
