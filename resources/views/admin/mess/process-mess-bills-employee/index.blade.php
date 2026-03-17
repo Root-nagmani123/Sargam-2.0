@@ -22,13 +22,16 @@
     </div>
 
     {{-- Page header --}}
-    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4 no-print">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4 no-print p-4 rounded-3 shadow-sm" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
         <div>
-            <h4 class="mb-1 fw-bold">Process Mess Bills</h4>
-            <p class="text-muted small mb-0">View mess bills for Employee, OT, Course & Other, generate invoices, and mark payments. Filter by date to see bills from Selling Voucher and Date Range reports.</p>
+            <h4 class="mb-2 fw-bold d-flex align-items-center gap-2">
+                <i class="material-symbols-rounded" style="font-size: 2rem;">receipt_long</i>
+                Process Mess Bills
+            </h4>
+            <p class="mb-0 small opacity-90">View mess bills for Employee, OT, Course & Other, generate invoices, and mark payments. Filter by date to see bills from Selling Voucher and Date Range reports.</p>
         </div>
-        <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#addProcessMessBillsModal">
-            <i class="material-symbols-rounded" style="font-size: 1.25rem;">receipt_long</i>
+        <button type="button" class="btn btn-light shadow d-inline-flex align-items-center gap-2 px-4" data-bs-toggle="modal" data-bs-target="#addProcessMessBillsModal" style="font-weight: 600;">
+            <i class="material-symbols-rounded" style="font-size: 1.3rem;">add_circle</i>
             Generate Invoice
         </button>
     </div>
@@ -36,55 +39,55 @@
     {{-- Summary cards --}}
     <div class="no-print">
     @php $stats = $stats ?? ['total_bills' => 0, 'paid_count' => 0, 'unpaid_count' => 0, 'total_amount' => 0]; @endphp
-    <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3 mb-4">
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3 mb-4 animate__animated animate__fadeIn">
         <div class="col">
-            <div class="card border-0 shadow-sm h-100">
+            <div class="card border-0 shadow h-100 hover-lift transition-all">
                 <div class="card-body d-flex align-items-center gap-3">
-                    <div class="rounded-3 bg-primary bg-opacity-10 p-2">
-                        <i class="material-symbols-rounded text-primary" style="font-size: 1.75rem;">description</i>
+                    <div class="rounded-3 bg-primary bg-opacity-10 p-3 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
+                        <i class="material-symbols-rounded text-primary" style="font-size: 2rem;">description</i>
                     </div>
                     <div>
-                        <div class="text-muted small text-uppercase fw-semibold">Total Bills</div>
-                        <div class="fs-4 fw-bold">{{ number_format($stats['total_bills']) }}</div>
+                        <div class="text-muted small text-uppercase fw-semibold mb-1">Total Bills</div>
+                        <div class="fs-3 fw-bold text-dark">{{ number_format($stats['total_bills']) }}</div>
                     </div>
                 </div>
             </div>
         </div>
         <div class="col">
-            <div class="card border-0 shadow-sm h-100">
+            <div class="card border-0 shadow h-100 hover-lift transition-all">
                 <div class="card-body d-flex align-items-center gap-3">
-                    <div class="rounded-3 bg-warning bg-opacity-10 p-2">
-                        <i class="material-symbols-rounded text-warning" style="font-size: 1.75rem;">schedule</i>
+                    <div class="rounded-3 bg-warning bg-opacity-10 p-3 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
+                        <i class="material-symbols-rounded text-warning" style="font-size: 2rem;">schedule</i>
                     </div>
                     <div>
-                        <div class="text-muted small text-uppercase fw-semibold">Unpaid</div>
-                        <div class="fs-4 fw-bold">{{ number_format($stats['unpaid_count']) }}</div>
+                        <div class="text-muted small text-uppercase fw-semibold mb-1">Unpaid</div>
+                        <div class="fs-3 fw-bold text-dark">{{ number_format($stats['unpaid_count']) }}</div>
                     </div>
                 </div>
             </div>
         </div>
         <div class="col">
-            <div class="card border-0 shadow-sm h-100">
+            <div class="card border-0 shadow h-100 hover-lift transition-all">
                 <div class="card-body d-flex align-items-center gap-3">
-                    <div class="rounded-3 bg-success bg-opacity-10 p-2">
-                        <i class="material-symbols-rounded text-success" style="font-size: 1.75rem;">check_circle</i>
+                    <div class="rounded-3 bg-success bg-opacity-10 p-3 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
+                        <i class="material-symbols-rounded text-success" style="font-size: 2rem;">check_circle</i>
                     </div>
                     <div>
-                        <div class="text-muted small text-uppercase fw-semibold">Paid</div>
-                        <div class="fs-4 fw-bold">{{ number_format($stats['paid_count']) }}</div>
+                        <div class="text-muted small text-uppercase fw-semibold mb-1">Paid</div>
+                        <div class="fs-3 fw-bold text-dark">{{ number_format($stats['paid_count']) }}</div>
                     </div>
                 </div>
             </div>
         </div>
         <div class="col">
-            <div class="card border-0 shadow-sm h-100">
+            <div class="card border-0 shadow h-100 hover-lift transition-all">
                 <div class="card-body d-flex align-items-center gap-3">
-                    <div class="rounded-3 bg-info bg-opacity-10 p-2">
-                        <i class="material-symbols-rounded text-info" style="font-size: 1.75rem;">payments</i>
+                    <div class="rounded-3 bg-info bg-opacity-10 p-3 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
+                        <i class="material-symbols-rounded text-info" style="font-size: 2rem;">payments</i>
                     </div>
                     <div>
-                        <div class="text-muted small text-uppercase fw-semibold">Total Amount</div>
-                        <div class="fs-4 fw-bold">₹ {{ number_format($stats['total_amount'], 2) }}</div>
+                        <div class="text-muted small text-uppercase fw-semibold mb-1">Total Amount</div>
+                        <div class="fs-3 fw-bold text-dark">₹ {{ number_format($stats['total_amount'], 2) }}</div>
                     </div>
                 </div>
             </div>
@@ -93,27 +96,27 @@
     </div>
 
     {{-- Filters card --}}
-    <div class="card border-0 shadow-sm mb-4 no-print bg-body-tertiary">
+    <div class="card border-0 shadow mb-4 no-print" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
         <div class="card-body p-3 p-lg-4">
             <form method="GET" action="{{ route('admin.mess.process-mess-bills-employee.index') }}" id="mainFilterForm">
                 <div class="row g-3 align-items-end">
                     <div class="col-md-2">
-                        <label class="form-label small fw-semibold">Date From <span class="text-danger">*</span></label>
-                        <input type="text" name="date_from" id="date_from" class="form-control "
+                        <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">event</i>Date From <span class="text-danger">*</span></label>
+                        <input type="text" name="date_from" id="date_from" class="form-control shadow-sm border-0"
                                value="{{ $effectiveDateFrom ?? request('date_from', now()->startOfMonth()->format('d-m-Y')) }}"
                                data-default-ymd="{{ $effectiveDateFromYmd ?? now()->startOfMonth()->format('Y-m-d') }}"
                                placeholder="dd-mm-yyyy" autocomplete="off">
                     </div>
                     <div class="col-md-2">
-                        <label class="form-label small fw-semibold">Date To <span class="text-danger">*</span></label>
-                        <input type="text" name="date_to" id="date_to" class="form-control "
+                        <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">event</i>Date To <span class="text-danger">*</span></label>
+                        <input type="text" name="date_to" id="date_to" class="form-control shadow-sm border-0"
                                value="{{ $effectiveDateTo ?? request('date_to', now()->endOfMonth()->format('d-m-Y')) }}"
                                data-default-ymd="{{ $effectiveDateToYmd ?? now()->endOfMonth()->format('Y-m-d') }}"
                                placeholder="dd-mm-yyyy" autocomplete="off">
                     </div>
                     <div class="col-md-2">
-                        <label class="form-label small fw-semibold">Employee / OT / Course Employee</label>
-                        <select name="client_type" id="filterClientTypeSlug" class="form-select  choices-select" data-placeholder="All client types">
+                        <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">person</i>Employee / OT / Course</label>
+                        <select name="client_type" id="filterClientTypeSlug" class="form-select shadow-sm border-0 choices-select" data-placeholder="All client types">
                             <option value="">All Client Types</option>
                             @foreach($clientTypes ?? [] as $key => $label)
                                 <option value="{{ $key }}" {{ ($clientType ?? request('client_type')) === $key ? 'selected' : '' }}>{{ $label }}</option>
@@ -121,15 +124,38 @@
                         </select>
                     </div>
                     <div class="col-md-2">
-                        <label class="form-label small fw-semibold">Client Type</label>
-                        <select id="filterClientTypePk" class="form-select choices-select">
+                        <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">category</i>Client Type</label>
+                        <select name="client_type_pk" id="filterClientTypePk" class="form-select shadow-sm border-0 choices-select" data-placeholder="All">
                             <option value="">All</option>
                         </select>
                     </div>
                     <div class="col-md-2">
-                        <label class="form-label small fw-semibold">Buyer Name</label>
-                        <select name="buyer_name" id="filterBuyerName" class="form-select choices-select">
+                        <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">badge</i>Buyer Name</label>
+                        <select name="buyer_name" id="filterBuyerName" class="form-select shadow-sm border-0 choices-select">
                             <option value="">All Buyers</option>
+                            @if(($clientType ?? request('client_type')) === 'course' && isset($courseBuyerNames) && $courseBuyerNames->isNotEmpty())
+                                @foreach($courseBuyerNames as $buyer)
+                                    <option value="{{ $buyer }}" {{ ($buyerName ?? request('buyer_name')) === $buyer ? 'selected' : '' }}>{{ $buyer }}</option>
+                                @endforeach
+                            @elseif(($clientType ?? request('client_type')) === 'other' && isset($otherBuyerNames) && $otherBuyerNames->isNotEmpty())
+                                @foreach($otherBuyerNames as $buyer)
+                                    <option value="{{ $buyer }}" {{ ($buyerName ?? request('buyer_name')) === $buyer ? 'selected' : '' }}>{{ $buyer }}</option>
+                                @endforeach
+                            @elseif(($clientType ?? request('client_type')) === 'section' && isset($sectionBuyerNames) && $sectionBuyerNames->isNotEmpty())
+                                @foreach($sectionBuyerNames as $buyer)
+                                    <option value="{{ $buyer }}" {{ ($buyerName ?? request('buyer_name')) === $buyer ? 'selected' : '' }}>{{ $buyer }}</option>
+                                @endforeach
+                            @endif
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-semibold">Status</label>
+                        @php $currentStatus = $statusFilter ?? request('status', ''); @endphp
+                        <select name="status" id="filterStatus" class="form-select">
+                            <option value="">All Status</option>
+                            <option value="unpaid" {{ $currentStatus === 'unpaid' ? 'selected' : '' }}>Unpaid</option>
+                            <option value="partial" {{ $currentStatus === 'partial' ? 'selected' : '' }}>Partial</option>
+                            <option value="paid" {{ $currentStatus === 'paid' ? 'selected' : '' }}>Paid</option>
                         </select>
                     </div>
                     <div class="col-md-2">
@@ -150,7 +176,9 @@
                         @php
                             $clearFilterParams = [];
                         @endphp
-                        <a href="{{ route('admin.mess.process-mess-bills-employee.index', $clearFilterParams) }}" class="btn btn-outline-secondary ">Clear filters</a>
+                        <a href="{{ route('admin.mess.process-mess-bills-employee.index', $clearFilterParams) }}" class="btn btn-outline-secondary shadow-sm" title="Clear all filters">
+                            <i class="material-symbols-rounded" style="font-size: 1.1rem;">filter_list_off</i>
+                        </a>
                     </div>
                 </div>
             </form>
@@ -158,21 +186,22 @@
     </div>
 
     {{-- Table card – DataTables client-side search/sort like mess master --}}
-    <div class="card border-0 shadow-sm">
+    <div class="card border-0 shadow">
         <div class="card-body p-3 p-lg-4">
             <form method="GET" action="{{ route('admin.mess.process-mess-bills-employee.index') }}" id="filterForm" class="no-print">
                 <input type="hidden" name="date_from" value="{{ $effectiveDateFrom ?? request('date_from') }}">
                 <input type="hidden" name="date_to" value="{{ $effectiveDateTo ?? request('date_to') }}">
                 <input type="hidden" name="client_type" value="{{ $clientType ?? request('client_type') }}">
+                <input type="hidden" name="client_type_pk" value="{{ $clientTypePk ?? request('client_type_pk') }}">
                 <input type="hidden" name="buyer_name" value="{{ $buyerName ?? request('buyer_name') }}">
                 <input type="hidden" name="status" value="{{ $statusFilter ?? request('status') }}">
                 <div class="d-flex flex-wrap justify-content-end align-items-right mb-3 gap-2">
                     <div class="d-flex align-items-center gap-2">
-                        <a href="{{ route('admin.mess.process-mess-bills-employee.export') }}?{{ http_build_query(request()->only(['date_from', 'date_to', 'client_type', 'buyer_name', 'status', 'search'])) }}" class="btn  btn-outline-secondary d-inline-flex align-items-center gap-1" title="Export to Excel">
+                        <a href="{{ route('admin.mess.process-mess-bills-employee.export') }}?{{ http_build_query(request()->only(['date_from', 'date_to', 'client_type', 'client_type_pk', 'buyer_name', 'status', 'search'])) }}" class="btn btn-outline-success shadow-sm d-inline-flex align-items-center gap-2 px-3" title="Export to Excel">
                             <i class="material-symbols-rounded" style="font-size: 1.1rem;">file_download</i>
                             <span>Export</span>
                         </a>
-                        <button type="button" class="btn  btn-outline-primary d-inline-flex align-items-center gap-1" title="Print" onclick="printProcessMessBillsMainTable()">
+                        <button type="button" class="btn btn-outline-primary shadow-sm d-inline-flex align-items-center gap-2 px-3" title="Print" onclick="printProcessMessBillsMainTable()">
                             <i class="material-symbols-rounded" style="font-size: 1.1rem;">print</i>
                             <span>Print</span>
                         </button>
@@ -181,8 +210,8 @@
             </form>
 
             <div class="table-responsive">
-                <table class="table text-nowrap align-middle mb-0" id="processMessBillsTable">
-                    <thead>
+                <table class="table table-sm table-striped table-hover text-nowrap align-middle mb-0" id="processMessBillsTable">
+                    <thead class="table-light">
                         <tr>
                             <th class="text-nowrap py-2">S.No.</th>
                             <th class="text-nowrap py-2">Buyer Name</th>
@@ -211,25 +240,27 @@
                                 <td>{{ $cb->payment_type ?? '—' }}</td>
                                 <td>
                                     @if(($cb->status ?? 0) == 2)
-                                        <span class="badge bg-success">Paid</span>
+                                        <span class="badge rounded-pill text-bg-success shadow-sm px-3 py-2">✓ Paid</span>
                                     @elseif(($cb->status ?? 0) == 1)
-                                        <span class="badge bg-warning text-dark">Partial</span>
+                                        <span class="badge rounded-pill text-bg-warning text-dark shadow-sm px-3 py-2">⏱ Partial</span>
                                     @else
-                                        <span class="badge bg-secondary">Unpaid</span>
+                                        <span class="badge rounded-pill text-bg-secondary shadow-sm px-3 py-2">○ Unpaid</span>
                                     @endif
                                 </td>
                                 <td class="text-center no-print">
                                     <a href="{{ route('admin.mess.process-mess-bills-employee.print-receipt', ['id' => $cb->combined_id]) }}?date_from={{ urlencode($effectiveDateFromYmd ?? '') }}&date_to={{ urlencode($effectiveDateToYmd ?? '') }}" target="_blank"
-                                       class="btn  btn-outline-primary text-primary bg-transparent border-0" title="Print receipt ({{ $cb->combined_invoice_no ?? 'Invoice' }})">
-                                        <i class="material-symbols-rounded">receipt</i>
+                                       class="btn btn-sm btn-outline-primary shadow-sm d-inline-flex align-items-center justify-content-center gap-1 px-3" title="Print receipt ({{ $cb->combined_invoice_no ?? 'Invoice' }})">
+                                        <i class="material-symbols-rounded" style="font-size: 1.1rem;">receipt</i>
+                                        <span class="d-none d-sm-inline">Receipt</span>
                                     </a>
                                 </td>
                             </tr>
                         @empty
                             <tr>
                                 <td colspan="9" class="text-center py-5 text-muted">
-                                    <i class="material-symbols-rounded d-block mb-2" style="font-size: 2.5rem;">inbox</i>
-                                    No bills found for the selected date range.
+                                    <i class="material-symbols-rounded d-block mb-3 text-primary" style="font-size: 4rem;">inbox</i>
+                                    <div class="fw-semibold fs-5 mb-1">No bills found</div>
+                                    <div class="small">Try adjusting your filters or date range</div>
                                 </td>
                             </tr>
                         @endforelse
@@ -466,6 +497,55 @@
         size: auto;
     }
 }
+
+/* Modern UI/UX Enhancements */
+.hover-lift {
+    transition: all 0.3s ease;
+}
+.hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.15) !important;
+}
+.transition-all {
+    transition: all 0.3s ease-in-out;
+}
+.animate__animated {
+    animation-duration: 0.6s;
+}
+.animate__fadeIn {
+    animation-name: fadeIn;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.form-control:focus, .form-select:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+}
+.btn {
+    transition: all 0.2s ease-in-out;
+}
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.15);
+}
+.btn:active {
+    transform: translateY(0);
+}
+.badge {
+    padding: 0.35em 0.65em;
+    font-weight: 600;
+}
+.table tbody tr {
+    transition: all 0.2s ease;
+}
+.table tbody tr:hover {
+    background-color: rgba(13, 110, 253, 0.05);
+}
+.card {
+    transition: all 0.3s ease;
+}
 </style>
 <div class="modal fade" id="addProcessMessBillsModal" tabindex="-1" aria-labelledby="addProcessMessBillsModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered modal-fullscreen-md-down">
@@ -484,18 +564,18 @@
                     @csrf
                     <div class="row g-3 mb-3">
                         <div class="col-md-3">
-                            <label class="form-label small fw-semibold">Date From <span class="text-danger">*</span></label>
-                            <input type="text" name="modal_date_from" id="modal_date_from" class="form-control form-control-sm"
+                            <label class="form-label small fw-semibold text-dark mb-2\"><i class=\"material-symbols-rounded align-middle me-1\" style=\"font-size: 1rem;\">event</i>Date From <span class="text-danger">*</span></label>
+                            <input type="text" name="modal_date_from" id="modal_date_from" class="form-control form-control-sm shadow-sm border-0"
                                    value="{{ now()->startOfMonth()->format('d-m-Y') }}" placeholder="dd-mm-yyyy" autocomplete="off" required>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label small fw-semibold">Date To <span class="text-danger">*</span></label>
-                            <input type="text" name="modal_date_to" id="modal_date_to" class="form-control form-control-sm"
+                            <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1rem;">event</i>Date To <span class="text-danger">*</span></label>
+                            <input type="text" name="modal_date_to" id="modal_date_to" class="form-control form-control-sm shadow-sm border-0"
                                    value="{{ now()->endOfMonth()->format('d-m-Y') }}" placeholder="dd-mm-yyyy" autocomplete="off" required>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label small fw-semibold">Employee / OT / Course Employee</label>
-                            <select name="modal_client_type" id="modal_client_type" class="form-select  choices-select" data-placeholder="All Client Types">
+                            <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1rem;">person</i>Employee / OT / Course</label>
+                            <select name="modal_client_type" id="modal_client_type" class="form-select shadow-sm border-0 choices-select" data-placeholder="All Client Types">
                                 <option value="">All Client Types</option>
                                 @foreach($clientTypes ?? [] as $key => $label)
                                     <option value="{{ $key }}">{{ $label }}</option>
@@ -503,25 +583,25 @@
                             </select>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label small fw-semibold">Client Type</label>
-                            <select name="modal_client_type_pk" id="modal_client_type_pk" class="form-select  choices-select" data-placeholder="All">
+                            <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1rem;">category</i>Client Type</label>
+                            <select name="modal_client_type_pk" id="modal_client_type_pk" class="form-select shadow-sm border-0 choices-select" data-placeholder="All">
                                 <option value="">All</option>
                             </select>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label small fw-semibold">Buyer Name</label>
-                            <select name="modal_buyer_name" id="modal_buyer_name" class="form-select  choices-select" data-placeholder="All Buyers">
+                            <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1rem;">badge</i>Buyer Name</label>
+                            <select name="modal_buyer_name" id="modal_buyer_name" class="form-select shadow-sm border-0 choices-select" data-placeholder="All Buyers">
                                 <option value="">All Buyers</option>
                             </select>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label small fw-semibold">Invoice Date</label>
-                            <input type="text" name="modal_invoice_date" id="modal_invoice_date" class="form-control form-control-sm"
+                            <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1rem;">receipt</i>Invoice Date</label>
+                            <input type="text" name="modal_invoice_date" id="modal_invoice_date" class="form-control form-control-sm shadow-sm border-0"
                                    value="{{ now()->format('d-m-Y') }}" placeholder="dd-mm-yyyy" autocomplete="off">
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label small fw-semibold">Mode of Payment</label>
-                            <select name="mode_of_payment" id="modal_mode_of_payment" class="form-select  choices-select" data-placeholder="Select mode">
+                            <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1rem;">payments</i>Mode of Payment</label>
+                            <select name="mode_of_payment" id="modal_mode_of_payment" class="form-select shadow-sm border-0 choices-select" data-placeholder="Select mode">
                                 <option value="deduct_from_salary" selected>Deduct From Salary</option>
                                 <option value="cash">Cash</option>
                                 <option value="online">Online</option>
@@ -529,12 +609,12 @@
                         </div>
                         <div class="col-md-3 d-flex align-items-end justify-content-md-end">
                             <div class="d-flex flex-wrap gap-2 w-100 justify-content-start justify-content-md-end">
-                            <button type="button" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1" id="modalLoadBillsBtn">
-                                <i class="material-symbols-rounded align-middle" style="font-size: 1rem;">search</i>
+                            <button type="button" class="btn btn-primary shadow btn-sm d-inline-flex align-items-center gap-2 px-3" id="modalLoadBillsBtn">
+                                <i class="material-symbols-rounded" style="font-size: 1rem;">search</i>
                                 <span>Load Bills</span>
                             </button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1" id="modalClearFiltersBtn">
-                                <i class="material-symbols-rounded align-middle" style="font-size: 1rem;">filter_list_off</i>
+                            <button type="button" class="btn btn-outline-secondary shadow-sm btn-sm d-inline-flex align-items-center gap-2 px-3" id="modalClearFiltersBtn">
+                                <i class="material-symbols-rounded" style="font-size: 1rem;">filter_list_off</i>
                                 <span>Clear Filters</span>
                             </button>
                             </div>
@@ -543,65 +623,68 @@
                 </form>
 
                 {{-- Bulk actions (shown when rows selected) --}}
-                <div class="d-none align-items-center gap-2 mb-3 p-2 rounded-3 bg-light border border-dashed" id="modalBulkActionsBar">
-                    <span class="small fw-semibold" id="modalSelectedCount">0 selected</span>
-                    <button type="button" class="btn  btn-outline-primary" id="modalBulkInvoiceBtn">Generate Invoice (selected)</button>
-                    <button type="button" class="btn  btn-outline-success" id="modalBulkPaymentBtn">Mark as Paid (selected)</button>
+                <div class="d-none align-items-center gap-2 mb-3 p-3 rounded-3 bg-light border border-primary border-opacity-25" id="modalBulkActionsBar">
+                    <span class="small fw-bold text-primary" id="modalSelectedCount">0 selected</span>
+                    <button type="button" class="btn btn-sm btn-outline-primary shadow-sm" id="modalBulkInvoiceBtn">Generate Invoice (selected)</button>
+                    <button type="button" class="btn btn-sm btn-outline-success shadow-sm" id="modalBulkPaymentBtn">Mark as Paid (selected)</button>
                 </div>
 
                 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
                     <div class="d-flex align-items-center gap-2">
-                        <span class="small text-muted">Show</span>
-                        <select id="modalPerPage" class="form-select form-select-sm" style="width: auto;">
+                        <span class="small text-muted fw-semibold">Show</span>
+                        <select id="modalPerPage" class="form-select form-select-sm shadow-sm border-0" style="width: auto;">
                             <option value="10" selected>10</option>
                             <option value="25">25</option>
                             <option value="50">50</option>
                             <option value="100">100</option>
                         </select>
-                        <span class="small text-muted">entries</span>
+                        <span class="small text-muted fw-semibold">entries</span>
                     </div>
                     <div class="d-flex align-items-center gap-2">
-                        <div class="input-group input-group-sm" style="width: 220px; max-width: 100%;">
-                            <span class="input-group-text bg-transparent border-end-0">
-                                <i class="material-symbols-rounded align-middle" style="font-size: 1rem;">search</i>
+                        <div class="input-group input-group-sm shadow-sm" style="width: 240px; max-width: 100%;">
+                            <span class="input-group-text bg-white border-end-0">
+                                <i class="material-symbols-rounded text-muted" style="font-size: 1.1rem;">search</i>
                             </span>
-                            <input type="text" id="modalSearch" class="form-control  border-start-0" placeholder="Search bills...">
+                            <input type="text" id="modalSearch" class="form-control border-start-0" placeholder="Search bills...">
                         </div>
-                        <button type="button" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1" onclick="printProcessMessBillsTable()" title="Print bills list">
+                        <button type="button" class="btn btn-outline-primary shadow-sm btn-sm d-inline-flex align-items-center gap-2 px-3" onclick="printProcessMessBillsTable()" title="Print bills list">
                             <i class="material-symbols-rounded align-middle" style="font-size: 1rem;">print</i>
                             <span>Print</span>
                         </button>
                     </div>
                 </div>
 
-                <div class="table-responsive rounded-3 border bg-white">
-                <table id="modalBillsTable" class="table table-sm table-striped table-hover align-middle mb-0">
-                        <thead class="table-light">
+                <div class="table-responsive rounded-3 border shadow-sm bg-white">
+                <table id="modalBillsTable" class="table table-sm table-hover align-middle mb-0">
+                        <thead style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
                             <tr>
-                                <th class="text-nowrap py-2" style="width: 40px;"><input type="checkbox" id="modalSelectAll" class="form-check-input" title="Select all"></th>
-                                <th class="text-nowrap py-2">S.No.</th>
-                                <th class="text-nowrap py-2">Buyer Name</th>
-                                <th class="text-nowrap py-2">Invoice No.</th>
-                                <th class="text-nowrap py-2">Payment Type</th>
-                                <th class="text-nowrap py-2 text-end">Total</th>
-                                <th class="text-nowrap py-2 text-center">Actions</th>
-                                <th class="text-nowrap py-2 text-center">Receipt</th>
+                                <th class="text-nowrap py-3 fw-semibold" style="width: 40px;"><input type="checkbox" id="modalSelectAll" class="form-check-input" title="Select all"></th>
+                                <th class="text-nowrap py-3 fw-semibold">S.No.</th>
+                                <th class="text-nowrap py-3 fw-semibold">Buyer Name</th>
+                                <th class="text-nowrap py-3 fw-semibold">Invoice No.</th>
+                                <th class="text-nowrap py-3 fw-semibold">Payment Type</th>
+                                <th class="text-nowrap py-3 fw-semibold text-end">Total</th>
+                                <th class="text-nowrap py-3 fw-semibold text-center">Actions</th>
+                                <th class="text-nowrap py-3 fw-semibold text-center">Receipt</th>
                             </tr>
                         </thead>
                         <tbody id="modalBillsTableBody">
                             <tr>
-                                <td colspan="8" class="text-center py-4 text-muted">Select date range and click <strong>Load Bills</strong> to load unpaid bills.</td>
+                                <td colspan="8" class="text-center py-5 text-muted">
+                                    <i class="material-symbols-rounded d-block mb-2 text-primary" style="font-size: 3rem;">description</i>
+                                    <div class="fw-semibold">Select date range and click <strong class="text-primary">Load Bills</strong> to load unpaid bills.</div>
+                                </td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
 
-                <div class="d-flex flex-wrap justify-content-between align-items-center mt-3 pt-2 border-top">
-                    <div class="small text-muted" id="modalPaginationInfo">Showing 0 to 0 of 0 entries</div>
+                <div class="d-flex flex-wrap justify-content-between align-items-center mt-3 pt-3 border-top">
+                    <div class="small text-muted fw-semibold" id="modalPaginationInfo">Showing 0 to 0 of 0 entries</div>
                 </div>
             </div>
-            <div class="modal-footer bg-light border-0 rounded-bottom-3">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+            <div class="modal-footer bg-light border-0 rounded-bottom-3 py-3">
+                <button type="button" class="btn btn-outline-secondary shadow-sm px-4" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -610,10 +693,12 @@
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 <style>
-    .ts-dropdown { z-index: 2000; }
+    .choices__list--dropdown {
+        z-index: 2000;
+    }
 </style>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -652,42 +737,63 @@ document.addEventListener('DOMContentLoaded', function() {
         flatpickr('#payNowChequeDate', { dateFormat: 'd-m-Y', allowInput: true });
     }
 
-    // Initialize Tom Select on all dropdowns within this report (previously Choices.js)
-    function initTomSelectElement(el) {
-        if (!el || typeof window.TomSelect === 'undefined') return;
-        if (el.dataset.tomselectInitialized === 'true') return;
+    // Initialize Choices.js on all dropdowns within this report
+    function initChoicesElement(el) {
+        if (!el || typeof window.Choices === 'undefined') return;
+        if (el.dataset.choicesInitialized === 'true') return;
 
         var placeholder = el.getAttribute('data-placeholder') || 'Select';
+        var shouldSearch = (el.options && el.options.length > 10);
 
-        new TomSelect(el, {
-            placeholder: placeholder,
-            allowEmptyOption: true,
-            maxOptions: 500,
-            plugins: ['dropdown_input'],
-            sortField: {
-                field: 'text',
-                direction: 'asc'
-            }
+        var instance = new Choices(el, {
+            searchEnabled: shouldSearch,
+            removeItemButton: false,
+            itemSelectText: '',
+            shouldSort: false,
+            placeholderValue: placeholder,
+            allowHTML: false
         });
 
-        el.dataset.tomselectInitialized = 'true';
+        el.dataset.choicesInitialized = 'true';
+        el.choicesInstance = instance;
     }
 
-    if (typeof window.TomSelect !== 'undefined') {
+    function refreshChoicesFromSelect(el, selectedValue) {
+        console.log('refreshChoicesFromSelect called - el:', el, 'selectedValue:', selectedValue);
+        console.log('choicesInstance exists?', !!el.choicesInstance);
+        if (!el || !el.choicesInstance) {
+            console.warn('No choicesInstance found for element:', el);
+            return;
+        }
+        var instance = el.choicesInstance;
+        var values = Array.from(el.options).map(function (o) {
+            return { value: o.value, label: o.text, selected: selectedValue != null ? String(o.value) === String(selectedValue) : o.selected };
+        });
+        console.log('Refreshing choices with', values.length, 'options');
+        instance.clearStore();
+        instance.setChoices(values, 'value', 'label', true);
+        try {
+            instance.setChoiceByValue(selectedValue != null ? String(selectedValue) : (el.value || ''));
+        } catch (e) {
+            console.error('Error setting choice value:', e);
+        }
+    }
+
+    if (typeof window.Choices !== 'undefined') {
         document
             .querySelectorAll('.process-mess-bills-employee-report select.choices-select')
             .forEach(function (el) {
-                initTomSelectElement(el);
+                initChoicesElement(el);
             });
     }
 
-    // Ensure modal dropdowns are (re)initialized with Tom Select when the modal opens
+    // Ensure modal dropdowns are (re)initialized with Choices when the modal opens
     var addProcessMessBillsModalEl = document.getElementById('addProcessMessBillsModal');
     if (addProcessMessBillsModalEl && typeof bootstrap !== 'undefined') {
         addProcessMessBillsModalEl.addEventListener('shown.bs.modal', function () {
             ['modal_client_type', 'modal_client_type_pk', 'modal_buyer_name', 'modal_mode_of_payment'].forEach(function (id) {
                 var el = document.getElementById(id);
-                initTomSelectElement(el);
+                initChoicesElement(el);
             });
         });
     }
@@ -724,13 +830,16 @@ document.addEventListener('DOMContentLoaded', function() {
         var df = document.getElementById('modal_date_from');
         var dt = document.getElementById('modal_date_to');
         var ct = document.getElementById('modal_client_type');
+        var ctp = document.getElementById('modal_client_type_pk');
         var bn = document.getElementById('modal_buyer_name');
         var dateFrom = (df && df.value) ? toYmd(df.value) : '';
         var dateTo = (dt && dt.value) ? toYmd(dt.value) : '';
         var clientType = (ct && ct.value) ? ct.value : '';
+        var clientTypePk = (ctp && ctp.value) ? ctp.value : '';
         var buyerName = (bn && bn.value) ? bn.value.trim() : '';
         var url = '{{ route("admin.mess.process-mess-bills-employee.modal-data") }}?date_from=' + encodeURIComponent(dateFrom) + '&date_to=' + encodeURIComponent(dateTo);
         if (clientType) url += '&client_type=' + encodeURIComponent(clientType);
+        if (clientTypePk) url += '&client_type_pk=' + encodeURIComponent(clientTypePk);
         if (buyerName) url += '&buyer_name=' + encodeURIComponent(buyerName);
         fetch(url)
             .then(function(r) { return r.json(); })
@@ -825,35 +934,31 @@ document.addEventListener('DOMContentLoaded', function() {
         var ct = document.getElementById('modal_client_type');
         if (ct) {
             ct.value = '';
-            if (ct.tomselect) {
-                ct.tomselect.clear(true);
+            if (ct.choicesInstance) {
+                ct.choicesInstance.setChoiceByValue('');
             }
         }
         var ctp = document.getElementById('modal_client_type_pk');
         if (ctp) {
             ctp.innerHTML = '<option value=\"\">All</option>';
-            if (ctp.tomselect) {
-                ctp.tomselect.clear(true);
-                ctp.tomselect.clearOptions();
-                ctp.tomselect.addOption({ value: '', text: 'All' });
-                ctp.tomselect.addItem('');
+            if (ctp.choicesInstance) {
+                ctp.choicesInstance.clearStore();
+                ctp.choicesInstance.setChoices([{ value: '', label: 'All', selected: true }], 'value', 'label', true);
             }
         }
         var bn = document.getElementById('modal_buyer_name');
         if (bn) {
             bn.innerHTML = '<option value=\"\">All Buyers</option>';
-            if (bn.tomselect) {
-                bn.tomselect.clear(true);
-                bn.tomselect.clearOptions();
-                bn.tomselect.addOption({ value: '', text: 'All Buyers' });
-                bn.tomselect.addItem('');
+            if (bn.choicesInstance) {
+                bn.choicesInstance.clearStore();
+                bn.choicesInstance.setChoices([{ value: '', label: 'All Buyers', selected: true }], 'value', 'label', true);
             }
         }
         var mp = document.getElementById('modal_mode_of_payment');
         if (mp) {
             mp.value = 'deduct_from_salary';
-            if (mp.tomselect) {
-                mp.tomselect.setValue('deduct_from_salary', true);
+            if (mp.choicesInstance) {
+                mp.choicesInstance.setChoiceByValue('deduct_from_salary');
             }
         }
         var ms = document.getElementById('modalSearch');
@@ -917,27 +1022,26 @@ document.addEventListener('DOMContentLoaded', function() {
             ]
         };
 
+        var courseBuyerNames = {!! json_encode(($courseBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
+        var otherBuyerNames = {!! json_encode(($otherBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
+        var sectionBuyerNames = {!! json_encode(($sectionBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
+
         function fillModalClientTypePk() {
             var slug = modalClientType.value;
             modalClientTypePk.innerHTML = '<option value=\"\">All</option>';
 
-            var tsPk = modalClientTypePk.tomselect || null;
-            if (tsPk) {
-                tsPk.clear(true);
-                tsPk.clearOptions();
-                tsPk.addOption({ value: '', text: 'All' });
-                tsPk.addItem('');
+            var choicesPk = modalClientTypePk.choicesInstance || null;
+            if (choicesPk) {
+                choicesPk.clearStore();
+                choicesPk.setChoices([{ value: '', label: 'All', selected: true }], 'value', 'label', true);
             }
 
-            if (slug === 'ot' && otCourseOptions.length) {
+            if ((slug === 'ot' || slug === 'course') && otCourseOptions.length) {
                 otCourseOptions.forEach(function (o) {
                     var opt = document.createElement('option');
                     opt.value = o.value;
                     opt.textContent = o.text;
                     modalClientTypePk.appendChild(opt);
-                    if (tsPk) {
-                        tsPk.addOption({ value: o.value, text: o.text });
-                    }
                 });
             } else if (slug && clientTypeOptions[slug]) {
                 clientTypeOptions[slug].forEach(function (o) {
@@ -948,13 +1052,15 @@ document.addEventListener('DOMContentLoaded', function() {
                         opt.dataset.clientName = o.dataClientName;
                     }
                     modalClientTypePk.appendChild(opt);
-                    if (tsPk) {
-                        tsPk.addOption({ value: o.value, text: o.text });
-                    }
                 });
             }
-            if (tsPk) {
-                tsPk.refreshOptions(false);
+
+            if (choicesPk) {
+                var newChoices = Array.from(modalClientTypePk.options).map(function (o) {
+                    return { value: o.value, label: o.text, selected: o.selected };
+                });
+                choicesPk.clearStore();
+                choicesPk.setChoices(newChoices, 'value', 'label', true);
             }
             fillModalBuyerNames();
         }
@@ -964,12 +1070,10 @@ document.addEventListener('DOMContentLoaded', function() {
             var selectedPk = modalClientTypePk.value;
             modalBuyerName.innerHTML = '<option value=\"\">All Buyers</option>';
 
-            var tsBuyer = modalBuyerName.tomselect || null;
-            if (tsBuyer) {
-                tsBuyer.clear(true);
-                tsBuyer.clearOptions();
-                tsBuyer.addOption({ value: '', text: 'All Buyers' });
-                tsBuyer.addItem('');
+            var choicesBuyer = modalBuyerName.choicesInstance || null;
+            if (choicesBuyer) {
+                choicesBuyer.clearStore();
+                choicesBuyer.setChoices([{ value: '', label: 'All Buyers', selected: true }], 'value', 'label', true);
             }
 
             function addBuyerOptions(list) {
@@ -978,9 +1082,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     opt.value = o.value;
                     opt.textContent = o.text;
                     modalBuyerName.appendChild(opt);
-                    if (tsBuyer) {
-                        tsBuyer.addOption({ value: o.value, text: o.text });
-                    }
                 });
             }
 
@@ -998,33 +1099,38 @@ document.addEventListener('DOMContentLoaded', function() {
                             return { value: s.display_name || '', text: s.display_name || '—' };
                         });
                         addBuyerOptions(students);
-                        if (tsBuyer) {
-                            tsBuyer.refreshOptions(false);
-                        }
                     })
                     .catch(function () {
                         // ignore error; keep only "All Buyers"
                     });
             } else if (slug === 'course') {
-                if (clientTypeOptions['course'] && clientTypeOptions['course'].length) {
-                    var list = clientTypeOptions['course'].map(function (o) {
-                        return { value: o.text, text: o.text };
-                    });
-                    addBuyerOptions(list);
-                } else if (otCourseOptions.length) {
-                    var list2 = otCourseOptions.map(function (o) {
-                        return { value: o.text, text: o.text };
-                    });
-                    addBuyerOptions(list2);
-                }
+                var listCourse = (courseBuyerNames || []).map(function (name) {
+                    return { value: name, text: name };
+                });
+                addBuyerOptions(listCourse);
+            } else if (slug === 'other') {
+                var listOther = (otherBuyerNames || []).map(function (name) {
+                    return { value: name, text: name };
+                });
+                addBuyerOptions(listOther);
+            } else if (slug === 'section') {
+                var listSection = (sectionBuyerNames || []).map(function (name) {
+                    return { value: name, text: name };
+                });
+                addBuyerOptions(listSection);
             } else if (slug && clientTypeOptions[slug]) {
                 var list3 = clientTypeOptions[slug].map(function (o) {
                     return { value: o.text, text: o.text };
                 });
                 addBuyerOptions(list3);
             }
-            if (tsBuyer) {
-                tsBuyer.refreshOptions(false);
+
+            if (choicesBuyer) {
+                var newChoices = Array.from(modalBuyerName.options).map(function (o) {
+                    return { value: o.value, label: o.text, selected: o.selected };
+                });
+                choicesBuyer.clearStore();
+                choicesBuyer.setChoices(newChoices, 'value', 'label', true);
             }
         }
 
@@ -1041,6 +1147,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var clientTypePk = document.getElementById('filterClientTypePk');
         var buyerSelect = document.getElementById('filterBuyerName');
         var studentsByCourseUrl = "{{ url('/admin/mess/selling-voucher-date-range/students-by-course') }}";
+        var preservedClientTypePk = {!! json_encode($clientTypePk ?? request('client_type_pk', '')) !!};
         var preservedBuyerName = {!! json_encode($buyerName ?? request('buyer_name', '')) !!};
 
         if (!clientTypeSlug || !clientTypePk || !buyerSelect) {
@@ -1084,28 +1191,45 @@ document.addEventListener('DOMContentLoaded', function() {
 @endforeach
             ]
         };
+        var courseBuyerNames = {!! json_encode(($courseBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
+        var otherBuyerNames = {!! json_encode(($otherBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
+        var sectionBuyerNames = {!! json_encode(($sectionBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
 
-        function fillClientTypePk() {
+        // Debug: Log initial data
+        console.log('=== Main Filter Initialization ===');
+        console.log('clientTypeOptions:', clientTypeOptions);
+        console.log('employeeNames:', employeeNames);
+        console.log('Academy Staff count:', employeeNames['academy staff'] ? employeeNames['academy staff'].length : 0);
+        console.log('Faculty count:', employeeNames['faculty'] ? employeeNames['faculty'].length : 0);
+        console.log('Mess Staff count:', employeeNames['mess staff'] ? employeeNames['mess staff'].length : 0);
+        console.log('otCourses count:', otCourseOptions.length);
+
+        function fillClientTypePk(preserve) {
             var slug = clientTypeSlug.value;
+            var currentClientPk = preserve ? preservedClientTypePk : '';
+            console.log('=== fillClientTypePk START ===');
+            console.log('slug:', slug, 'preserve:', preserve, 'currentClientPk:', currentClientPk);
+            
+            // If Choices.js exists, destroy it first to rebuild clean
+            if (clientTypePk.choicesInstance) {
+                console.log('Destroying existing Choices.js instance for clientTypePk...');
+                try {
+                    clientTypePk.choicesInstance.destroy();
+                    clientTypePk.choicesInstance = null;
+                    clientTypePk.dataset.choicesInitialized = 'false';
+                } catch (e) {
+                    console.error('Error destroying Choices instance:', e);
+                }
+            }
+            
             clientTypePk.innerHTML = '<option value=\"\">All</option>';
 
-            var tsClientPk = clientTypePk.tomselect || null;
-            if (tsClientPk) {
-                tsClientPk.clear(true);
-                tsClientPk.clearOptions();
-                tsClientPk.addOption({ value: '', text: 'All' });
-                tsClientPk.addItem('');
-            }
-
-            if (slug === 'ot' && otCourseOptions.length) {
+            if ((slug === 'ot' || slug === 'course') && otCourseOptions.length) {
                 otCourseOptions.forEach(function (o) {
                     var opt = document.createElement('option');
                     opt.value = o.value;
                     opt.textContent = o.text;
                     clientTypePk.appendChild(opt);
-                    if (tsClientPk) {
-                        tsClientPk.addOption({ value: o.value, text: o.text });
-                    }
                 });
             } else if (slug && clientTypeOptions[slug]) {
                 clientTypeOptions[slug].forEach(function (o) {
@@ -1116,14 +1240,31 @@ document.addEventListener('DOMContentLoaded', function() {
                         opt.dataset.clientName = o.dataClientName;
                     }
                     clientTypePk.appendChild(opt);
-                    if (tsClientPk) {
-                        tsClientPk.addOption({ value: o.value, text: o.text });
-                    }
                 });
             }
-            if (tsClientPk) {
-                tsClientPk.refreshOptions(false);
+            
+            // Restore selected value if preserving
+            if (currentClientPk) {
+                clientTypePk.value = currentClientPk;
             }
+
+            console.log('fillClientTypePk - Re-initializing Choices.js for clientTypePk...');
+            console.log('fillClientTypePk - Total options:', clientTypePk.options.length);
+            
+            // Re-initialize Choices.js after options are added
+            if (typeof window.Choices !== 'undefined') {
+                initChoicesElement(clientTypePk);
+                if (currentClientPk && clientTypePk.choicesInstance) {
+                    console.log('fillClientTypePk - Setting choice to:', currentClientPk);
+                    try {
+                        clientTypePk.choicesInstance.setChoiceByValue(currentClientPk);
+                    } catch (e) {
+                        console.error('Error setting choice value:', e);
+                    }
+                }
+            }
+            
+            console.log('fillClientTypePk - Calling fillBuyerSelect(true)...');
             fillBuyerSelect(true);
         }
 
@@ -1131,43 +1272,55 @@ document.addEventListener('DOMContentLoaded', function() {
             var slug = clientTypeSlug.value;
             var selectedPk = clientTypePk.value;
             var currentBuyer = preserve ? preservedBuyerName : '';
-            buyerSelect.innerHTML = '<option value=\"\">All Buyers</option>';
-
-            var tsBuyerMain = buyerSelect.tomselect || null;
-            if (tsBuyerMain) {
-                tsBuyerMain.clear(true);
-                tsBuyerMain.clearOptions();
-                tsBuyerMain.addOption({ value: '', text: 'All Buyers' });
-                if (currentBuyer) {
-                    tsBuyerMain.addItem(currentBuyer);
-                } else {
-                    tsBuyerMain.addItem('');
+            console.log('=== fillBuyerSelect START ===');
+            console.log('slug:', slug, 'selectedPk:', selectedPk, 'preserve:', preserve);
+            console.log('buyerSelect.choicesInstance exists?', !!buyerSelect.choicesInstance);
+            
+            // If Choices.js exists, destroy it first to rebuild clean
+            if (buyerSelect.choicesInstance) {
+                console.log('Destroying existing Choices.js instance...');
+                try {
+                    buyerSelect.choicesInstance.destroy();
+                    buyerSelect.choicesInstance = null;
+                    buyerSelect.dataset.choicesInitialized = 'false';
+                } catch (e) {
+                    console.error('Error destroying Choices instance:', e);
                 }
             }
+            
+            // Clear existing options
+            buyerSelect.innerHTML = '<option value="">All Buyers</option>';
 
             function addOptions(list) {
+                console.log('addOptions called with', list ? list.length : 0, 'items');
                 (list || []).forEach(function (o) {
                     var opt = document.createElement('option');
                     opt.value = o.value;
                     opt.textContent = o.text;
                     buyerSelect.appendChild(opt);
-                    if (tsBuyerMain) {
-                        tsBuyerMain.addOption({ value: o.value, text: o.text });
-                    }
+                    console.log('Added option:', o.text);
                 });
                 if (currentBuyer) {
                     buyerSelect.value = currentBuyer;
-                    if (tsBuyerMain) {
-                        tsBuyerMain.setValue(currentBuyer, true);
-                    }
+                    console.log('Set current buyer to:', currentBuyer);
                 }
             }
 
-            if (slug === 'employee') {
+            if (slug === 'employee' && selectedPk) {
                 var selectedOpt = clientTypePk.options[clientTypePk.selectedIndex];
                 var dataClientName = selectedOpt && selectedOpt.dataset ? (selectedOpt.dataset.clientName || '') : '';
-                if (dataClientName && employeeNames[dataClientName]) {
+                console.log('Employee Debug - selectedPk:', selectedPk);
+                console.log('Employee Debug - selectedOpt:', selectedOpt);
+                console.log('Employee Debug - dataClientName:', dataClientName);
+                console.log('Employee Debug - employeeNames keys:', Object.keys(employeeNames));
+                console.log('Employee Debug - employeeNames[dataClientName]:', employeeNames[dataClientName]);
+                
+                if (dataClientName && employeeNames[dataClientName] && employeeNames[dataClientName].length > 0) {
+                    console.log('Employee Debug - Adding', employeeNames[dataClientName].length, 'employees');
                     addOptions(employeeNames[dataClientName]);
+                } else {
+                    console.warn('Employee: No employees found for dataClientName:', dataClientName);
+                    console.warn('Available keys:', Object.keys(employeeNames));
                 }
             } else if (slug === 'ot' && selectedPk) {
                 fetch(studentsByCourseUrl + '/' + selectedPk, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
@@ -1177,39 +1330,64 @@ document.addEventListener('DOMContentLoaded', function() {
                             return { value: s.display_name || '', text: s.display_name || '—' };
                         });
                         addOptions(students);
-                        if (tsBuyerMain) {
-                            tsBuyerMain.refreshOptions(false);
+                        // Re-initialize Choices.js after async data load
+                        if (typeof window.Choices !== 'undefined') {
+                            initChoicesElement(buyerSelect);
+                            if (currentBuyer) {
+                                buyerSelect.choicesInstance.setChoiceByValue(currentBuyer);
+                            }
                         }
                     })
                     .catch(function () {
-                        // ignore; leave All Buyers only
+                        // ignore; leave All Buyers only - still need to init Choices
+                        if (typeof window.Choices !== 'undefined') {
+                            initChoicesElement(buyerSelect);
+                        }
                     });
+                return; // Exit early for async case
             } else if (slug === 'course') {
-                if (clientTypeOptions['course'] && clientTypeOptions['course'].length) {
-                    var list = clientTypeOptions['course'].map(function (o) {
-                        return { value: o.text, text: o.text };
-                    });
-                    addOptions(list);
-                } else if (otCourseOptions.length) {
-                    var list2 = otCourseOptions.map(function (o) {
-                        return { value: o.text, text: o.text };
-                    });
-                    addOptions(list2);
-                }
+                var listCourse = (courseBuyerNames || []).map(function (name) {
+                    return { value: name, text: name };
+                });
+                addOptions(listCourse);
+            } else if (slug === 'other') {
+                var listOther = (otherBuyerNames || []).map(function (name) {
+                    return { value: name, text: name };
+                });
+                addOptions(listOther);
+            } else if (slug === 'section') {
+                var listSection = (sectionBuyerNames || []).map(function (name) {
+                    return { value: name, text: name };
+                });
+                addOptions(listSection);
             } else if (slug && clientTypeOptions[slug]) {
                 var list3 = clientTypeOptions[slug].map(function (o) {
                     return { value: o.text, text: o.text };
                 });
                 addOptions(list3);
             }
-            if (tsBuyerMain) {
-                tsBuyerMain.refreshOptions(false);
+            
+            console.log('fillBuyerSelect - Total options in buyerSelect:', buyerSelect.options.length);
+            console.log('fillBuyerSelect - Re-initializing Choices.js...');
+            
+            // Re-initialize Choices.js after options are added
+            if (typeof window.Choices !== 'undefined') {
+                initChoicesElement(buyerSelect);
+                if (currentBuyer && buyerSelect.choicesInstance) {
+                    console.log('fillBuyerSelect - Setting choice to:', currentBuyer);
+                    try {
+                        buyerSelect.choicesInstance.setChoiceByValue(currentBuyer);
+                    } catch (e) {
+                        console.error('Error setting choice value:', e);
+                    }
+                }
             }
         }
 
         clientTypeSlug.addEventListener('change', function () {
+            preservedClientTypePk = ''; // reset when main type changes
             preservedBuyerName = ''; // reset when main type changes
-            fillClientTypePk();
+            fillClientTypePk(false);
         });
         clientTypePk.addEventListener('change', function () {
             preservedBuyerName = '';
@@ -1217,7 +1395,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         // Initial populate on page load
-        fillClientTypePk();
+        fillClientTypePk(true);
     })();
 
     document.getElementById('modalSelectAll').addEventListener('change', function() {
@@ -1524,26 +1702,42 @@ document.addEventListener('DOMContentLoaded', function() {
 <script>
 function printProcessMessBillsMainTable() {
     var table = document.getElementById('processMessBillsTable');
-    if (!table) {
-        window.print();
-        return;
+    if (!table) { window.print(); return; }
+
+    // Use DataTables API so print includes ALL filtered rows, not just current page
+    var dt = null;
+    try {
+        if (window.jQuery && window.jQuery.fn && window.jQuery.fn.DataTable && window.jQuery.fn.DataTable.isDataTable('#processMessBillsTable')) {
+            dt = window.jQuery('#processMessBillsTable').DataTable();
+        }
+    } catch (e) {}
+
+    var rowsData = [];
+    if (dt) {
+        rowsData = dt.rows({ search: 'applied' }).data().toArray();
+    } else {
+        rowsData = Array.from(table.querySelectorAll('tbody tr')).map(function (tr) {
+            return Array.from(tr.children).map(function (td) { return td.innerHTML; });
+        });
     }
 
-    var printWindow = window.open('', '_blank');
-    if (!printWindow) {
-        window.print();
-        return;
-    }
-
-    var title = 'Process Mess Bills - Employee';
-    var periodText = 'Period: {{ $dateFromDisplay }} to {{ $dateToDisplay }}';
+    // Remove action column (last column) for print
+    var actionColIdx = 8;
 
     var originalThead = table.querySelector('thead');
-    var originalTbody = table.querySelector('tbody');
-    var firstHeaderRow = originalThead ? originalThead.querySelector('tr') : null;
-    var columnsCount = firstHeaderRow ? firstHeaderRow.children.length : 8;
-    var columnHeadHtml = originalThead ? originalThead.innerHTML : '';
-    var bodyHtml       = originalTbody ? originalTbody.innerHTML : table.innerHTML;
+    var headerCells = originalThead ? Array.from(originalThead.querySelectorAll('tr th')) : [];
+    var printHeaderCells = headerCells.filter(function (_, idx) { return idx !== actionColIdx; });
+    var headerHtml = '<tr>' + printHeaderCells.map(function (th) { return '<th>' + th.innerHTML + '</th>'; }).join('') + '</tr>';
+
+    var bodyRowsHtml = rowsData.map(function (row) {
+        var cells = Array.isArray(row) ? row : (row && row.length != null ? Array.from(row) : []);
+        var filteredCells = cells.filter(function (_, idx) { return idx !== actionColIdx; });
+        return '<tr>' + filteredCells.map(function (c) { return '<td>' + c + '</td>'; }).join('') + '</tr>';
+    }).join('');
+
+    var columnsCount = printHeaderCells.length || 8;
+    var title = 'Process Mess Bills - Employee';
+    var periodText = 'Period: {{ $dateFromDisplay }} to {{ $dateToDisplay }}';
 
     var printableTable = `
       <table class="table table-sm table-bordered align-middle mb-0">
@@ -1570,12 +1764,15 @@ function printProcessMessBillsMainTable() {
               </div>
             </th>
           </tr>
-          ${columnHeadHtml}
+          ${headerHtml}
         </thead>
         <tbody>
-          ${bodyHtml}
+          ${bodyRowsHtml}
         </tbody>
       </table>`;
+
+    var printWindow = window.open('', '_blank');
+    if (!printWindow) { window.print(); return; }
 
     printWindow.document.open();
     printWindow.document.write(`<!doctype html>
@@ -1659,12 +1856,27 @@ function printProcessMessBillsTable() {
         : 'All Dates';
 
     // Build printable table with LBSNAA header inside thead so it repeats on every page
+    // Print ALL rows from modal dataset (not only current "per page" view)
     var originalThead = table.querySelector('thead');
-    var originalTbody = table.querySelector('tbody');
-    var firstHeaderRow = originalThead ? originalThead.querySelector('tr') : null;
-    var columnsCount = firstHeaderRow ? firstHeaderRow.children.length : 8;
-    var columnHeadHtml = originalThead ? originalThead.innerHTML : '';
-    var bodyHtml       = originalTbody ? originalTbody.innerHTML : table.innerHTML;
+    var headerRow = originalThead ? originalThead.querySelector('tr') : null;
+    var headerCells = headerRow ? Array.from(headerRow.children) : [];
+    // Remove Checkbox (0), Actions (6) and Receipt (7) columns from print
+    var removeIdx = { 0: true, 6: true, 7: true };
+    var printHeaderCells = headerCells.filter(function (_, idx) { return !removeIdx[idx]; });
+    var columnsCount = printHeaderCells.length || 6;
+    var columnHeadHtml = '<tr>' + printHeaderCells.map(function (th) { return '<th>' + th.innerHTML + '</th>'; }).join('') + '</tr>';
+
+    var filtered = (typeof getFilteredModalBills === 'function') ? getFilteredModalBills() : [];
+    var bodyHtml = filtered.map(function (b, i) {
+        var sn = i + 1;
+        return '<tr>' +
+            '<td>' + sn + '</td>' +
+            '<td>' + (b.buyer_name || '—') + '</td>' +
+            '<td>' + (b.invoice_no || '—') + '</td>' +
+            '<td>' + (b.payment_type || '—') + '</td>' +
+            '<td class="text-end">' + (b.total || '0') + '</td>' +
+            '</tr>';
+    }).join('');
 
     var printableTable = `
       <table class="table table-sm table-bordered align-middle mb-0">

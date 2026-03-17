@@ -469,11 +469,15 @@ class ReportController extends Controller
      */
     public function categoryWisePrintSlipExcel(Request $request)
     {
+        // Normalise client_type_pk for OT/Course where the form sends course_master_pk
+        $effectiveClientTypePk = $request->filled('course_master_pk')
+            ? $request->course_master_pk
+            : ($request->filled('client_type_pk') ? $request->client_type_pk : null);
+
         $filtersApplied = $request->filled('from_date')
             || $request->filled('to_date')
             || $request->filled('client_type_slug')
-            || $request->filled('client_type_pk')
-            || $request->filled('course_master_pk')
+            || !is_null($effectiveClientTypePk)
             || $request->filled('buyer_name');
         if (! $filtersApplied) {
             return redirect()->route('admin.mess.reports.category-wise-print-slip')
@@ -485,6 +489,7 @@ class ReportController extends Controller
             \App\Models\Mess\ClientType::TYPE_OT      => KitchenIssueMaster::CLIENT_OT,
             \App\Models\Mess\ClientType::TYPE_COURSE  => KitchenIssueMaster::CLIENT_COURSE,
             \App\Models\Mess\ClientType::TYPE_OTHER   => KitchenIssueMaster::CLIENT_OTHER,
+            'section'                                 => KitchenIssueMaster::CLIENT_SECTION,
         ]);
 
         $svQuery = \App\Models\Mess\SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'items.itemSubcategory']);
@@ -501,8 +506,8 @@ class ReportController extends Controller
         if ($request->filled('client_type_slug')) {
             $svQuery->where('client_type_slug', $request->client_type_slug);
         }
-        if ($request->filled('client_type_pk')) {
-            $svQuery->where('client_type_pk', $request->client_type_pk);
+        if (!is_null($effectiveClientTypePk)) {
+            $svQuery->where('client_type_pk', $effectiveClientTypePk);
         }
         if ($request->filled('buyer_name')) {
             $svQuery->where('client_name', 'LIKE', '%' . trim($request->buyer_name) . '%');
@@ -530,8 +535,8 @@ class ReportController extends Controller
         if ($request->filled('client_type_slug') && isset($clientTypeSlugToInt[$request->client_type_slug])) {
             $kiQuery->where('client_type', $clientTypeSlugToInt[$request->client_type_slug]);
         }
-        if ($request->filled('client_type_pk')) {
-            $kiQuery->where('client_type_pk', $request->client_type_pk);
+        if (!is_null($effectiveClientTypePk)) {
+            $kiQuery->where('client_type_pk', $effectiveClientTypePk);
         }
         if ($request->filled('buyer_name')) {
             $kiQuery->where('client_name', 'LIKE', '%' . trim($request->buyer_name) . '%');
@@ -545,6 +550,12 @@ class ReportController extends Controller
         }
 
         $vouchers = $svVouchers->concat($kiVouchers)
+            ->when($request->filled('client_type_slug'), function ($collection) use ($request) {
+                // Hard filter again by slug so only the selected type appears
+                return $collection->filter(function ($v) use ($request) {
+                    return ($v->client_type_slug ?? null) === $request->client_type_slug;
+                });
+            })
             ->sortByDesc(function ($v) {
                 return $v->issue_date ? $v->issue_date->format('Y-m-d') : '';
             })
@@ -568,11 +579,15 @@ class ReportController extends Controller
      */
     public function categoryWisePrintSlipPdf(Request $request)
     {
+        // Normalise client_type_pk for OT/Course where the form sends course_master_pk
+        $effectiveClientTypePk = $request->filled('course_master_pk')
+            ? $request->course_master_pk
+            : ($request->filled('client_type_pk') ? $request->client_type_pk : null);
+
         $filtersApplied = $request->filled('from_date')
             || $request->filled('to_date')
             || $request->filled('client_type_slug')
-            || $request->filled('client_type_pk')
-            || $request->filled('course_master_pk')
+            || !is_null($effectiveClientTypePk)
             || $request->filled('buyer_name');
         if (! $filtersApplied) {
             return redirect()->route('admin.mess.reports.category-wise-print-slip')
@@ -584,6 +599,7 @@ class ReportController extends Controller
             \App\Models\Mess\ClientType::TYPE_OT      => KitchenIssueMaster::CLIENT_OT,
             \App\Models\Mess\ClientType::TYPE_COURSE  => KitchenIssueMaster::CLIENT_COURSE,
             \App\Models\Mess\ClientType::TYPE_OTHER   => KitchenIssueMaster::CLIENT_OTHER,
+            'section'                                 => KitchenIssueMaster::CLIENT_SECTION,
         ]);
 
         $svQuery = \App\Models\Mess\SellingVoucherDateRangeReport::with([
@@ -601,8 +617,8 @@ class ReportController extends Controller
         if ($request->filled('client_type_slug')) {
             $svQuery->where('client_type_slug', $request->client_type_slug);
         }
-        if ($request->filled('client_type_pk')) {
-            $svQuery->where('client_type_pk', $request->client_type_pk);
+        if (!is_null($effectiveClientTypePk)) {
+            $svQuery->where('client_type_pk', $effectiveClientTypePk);
         }
         if ($request->filled('buyer_name')) {
             $svQuery->where('client_name', 'LIKE', '%' . trim($request->buyer_name) . '%');
@@ -631,8 +647,8 @@ class ReportController extends Controller
         if ($request->filled('client_type_slug') && isset($clientTypeSlugToInt[$request->client_type_slug])) {
             $kiQuery->where('client_type', $clientTypeSlugToInt[$request->client_type_slug]);
         }
-        if ($request->filled('client_type_pk')) {
-            $kiQuery->where('client_type_pk', $request->client_type_pk);
+        if (!is_null($effectiveClientTypePk)) {
+            $kiQuery->where('client_type_pk', $effectiveClientTypePk);
         }
         if ($request->filled('buyer_name')) {
             $kiQuery->where('client_name', 'LIKE', '%' . trim($request->buyer_name) . '%');
@@ -647,6 +663,11 @@ class ReportController extends Controller
         }
 
         $vouchers = $svVouchers->concat($kiVouchers)
+            ->when($request->filled('client_type_slug'), function ($collection) use ($request) {
+                return $collection->filter(function ($v) use ($request) {
+                    return ($v->client_type_slug ?? null) === $request->client_type_slug;
+                });
+            })
             ->sortByDesc(function ($v) {
                 return $v->issue_date ? $v->issue_date->format('Y-m-d') : '';
             })
@@ -860,7 +881,177 @@ class ReportController extends Controller
             KitchenIssueMaster::CLIENT_OT      => \App\Models\Mess\ClientType::TYPE_OT,
             KitchenIssueMaster::CLIENT_COURSE  => \App\Models\Mess\ClientType::TYPE_COURSE,
             KitchenIssueMaster::CLIENT_OTHER   => \App\Models\Mess\ClientType::TYPE_OTHER,
+            KitchenIssueMaster::CLIENT_SECTION => 'section',
         ];
+    }
+
+    /**
+     * AJAX: Buyer Names for Course (Selling Voucher report filter).
+     * Returns distinct client_name values for a given course_pk, respecting optional date filters.
+     */
+    public function getCourseBuyerNamesByCourse(Request $request, $course_pk)
+    {
+        $coursePk = (int) $course_pk;
+        if ($coursePk <= 0) {
+            return response()->json(['buyers' => []]);
+        }
+
+        $fromDate = $request->filled('from_date') ? $request->from_date : null;
+        $toDate   = $request->filled('to_date') ? $request->to_date : null;
+
+        // Selling Voucher Date Range (SV)
+        $svQuery = \App\Models\Mess\SellingVoucherDateRangeReport::query()
+            ->where('client_type_slug', \App\Models\Mess\ClientType::TYPE_COURSE)
+            ->where('client_type_pk', $coursePk)
+            ->whereHas('items')
+            ->whereIn('status', [
+                \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_DRAFT,
+                \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_FINAL,
+                \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED,
+            ]);
+
+        // Date overlap logic, matching the main report
+        if ($fromDate && $toDate) {
+            $svQuery->whereDate('date_from', '<=', $toDate)
+                ->whereDate('date_to', '>=', $fromDate);
+        } elseif ($fromDate) {
+            $svQuery->whereDate('date_to', '>=', $fromDate);
+        } elseif ($toDate) {
+            $svQuery->whereDate('date_from', '<=', $toDate);
+        }
+
+        $svBuyers = (clone $svQuery)
+            ->whereNotNull('client_name')
+            ->where('client_name', '!=', '')
+            ->distinct()
+            ->pluck('client_name');
+
+        // Kitchen Issue (Selling Voucher type)
+        $kiQuery = KitchenIssueMaster::query()
+            ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+            ->whereHas('items')
+            ->where('client_type', KitchenIssueMaster::CLIENT_COURSE)
+            ->where('client_type_pk', $coursePk);
+
+        if ($fromDate) {
+            $kiQuery->whereDate('issue_date', '>=', $fromDate);
+        }
+        if ($toDate) {
+            $kiQuery->whereDate('issue_date', '<=', $toDate);
+        }
+
+        $kiBuyers = (clone $kiQuery)
+            ->whereNotNull('client_name')
+            ->where('client_name', '!=', '')
+            ->distinct()
+            ->pluck('client_name');
+
+        $buyers = $svBuyers->concat($kiBuyers)
+            ->filter()
+            ->map(fn ($n) => trim((string) $n))
+            ->filter(fn ($n) => $n !== '')
+            ->unique()
+            ->sort()
+            ->values();
+
+        return response()->json(['buyers' => $buyers]);
+    }
+
+    /**
+     * AJAX: Buyer Names for Sale Voucher Report filters.
+     * Supports: other, section (and course/ot if needed) with optional date + client_type_pk/course_master_pk.
+     */
+    public function getBuyerNamesForReportFilters(Request $request)
+    {
+        $slug = strtolower(trim((string) $request->query('client_type_slug', '')));
+        if (!in_array($slug, [\App\Models\Mess\ClientType::TYPE_COURSE, \App\Models\Mess\ClientType::TYPE_OTHER, 'section', \App\Models\Mess\ClientType::TYPE_OT, \App\Models\Mess\ClientType::TYPE_EMPLOYEE], true)) {
+            return response()->json(['buyers' => []]);
+        }
+
+        $fromDate = $request->filled('from_date') ? $request->from_date : null;
+        $toDate   = $request->filled('to_date') ? $request->to_date : null;
+
+        // Normalise PK depending on slug
+        $effectivePk = null;
+        if (in_array($slug, [\App\Models\Mess\ClientType::TYPE_COURSE, \App\Models\Mess\ClientType::TYPE_OT], true)) {
+            $effectivePk = $request->filled('course_master_pk') ? (int) $request->course_master_pk : null;
+        } else {
+            $effectivePk = $request->filled('client_type_pk') ? (int) $request->client_type_pk : null;
+        }
+
+        $svQuery = \App\Models\Mess\SellingVoucherDateRangeReport::query()
+            ->where('client_type_slug', $slug)
+            ->whereHas('items')
+            ->whereIn('status', [
+                \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_DRAFT,
+                \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_FINAL,
+                \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED,
+            ]);
+
+        if (!is_null($effectivePk)) {
+            $svQuery->where('client_type_pk', $effectivePk);
+        }
+
+        // Date overlap logic, matching the main report
+        if ($fromDate && $toDate) {
+            $svQuery->whereDate('date_from', '<=', $toDate)
+                ->whereDate('date_to', '>=', $fromDate);
+        } elseif ($fromDate) {
+            $svQuery->whereDate('date_to', '>=', $fromDate);
+        } elseif ($toDate) {
+            $svQuery->whereDate('date_from', '<=', $toDate);
+        }
+
+        $svBuyers = (clone $svQuery)
+            ->whereNotNull('client_name')
+            ->where('client_name', '!=', '')
+            ->distinct()
+            ->pluck('client_name');
+
+        // Kitchen Issue side
+        $kiQuery = KitchenIssueMaster::query()
+            ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+            ->whereHas('items');
+
+        $slugToKiType = [
+            \App\Models\Mess\ClientType::TYPE_EMPLOYEE => KitchenIssueMaster::CLIENT_EMPLOYEE,
+            \App\Models\Mess\ClientType::TYPE_OT       => KitchenIssueMaster::CLIENT_OT,
+            \App\Models\Mess\ClientType::TYPE_COURSE   => KitchenIssueMaster::CLIENT_COURSE,
+            \App\Models\Mess\ClientType::TYPE_OTHER    => KitchenIssueMaster::CLIENT_OTHER,
+            'section'                                  => KitchenIssueMaster::CLIENT_SECTION,
+        ];
+        if (isset($slugToKiType[$slug])) {
+            $kiQuery->where('client_type', $slugToKiType[$slug]);
+        } else {
+            // Unknown mapping => no buyers
+            return response()->json(['buyers' => []]);
+        }
+
+        if (!is_null($effectivePk)) {
+            $kiQuery->where('client_type_pk', $effectivePk);
+        }
+        if ($fromDate) {
+            $kiQuery->whereDate('issue_date', '>=', $fromDate);
+        }
+        if ($toDate) {
+            $kiQuery->whereDate('issue_date', '<=', $toDate);
+        }
+
+        $kiBuyers = (clone $kiQuery)
+            ->whereNotNull('client_name')
+            ->where('client_name', '!=', '')
+            ->distinct()
+            ->pluck('client_name');
+
+        $buyers = $svBuyers->concat($kiBuyers)
+            ->filter()
+            ->map(fn ($n) => trim((string) $n))
+            ->filter(fn ($n) => $n !== '')
+            ->unique()
+            ->sort()
+            ->values();
+
+        return response()->json(['buyers' => $buyers]);
     }
 
     /**
@@ -870,11 +1061,15 @@ class ReportController extends Controller
      */
     public function categoryWisePrintSlip(Request $request)
     {
+        // Normalise client_type_pk for OT/Course where the form sends course_master_pk
+        $effectiveClientTypePk = $request->filled('course_master_pk')
+            ? $request->course_master_pk
+            : ($request->filled('client_type_pk') ? $request->client_type_pk : null);
+
         $filtersApplied = $request->filled('from_date')
             || $request->filled('to_date')
             || $request->filled('client_type_slug')
-            || $request->filled('client_type_pk')
-            || $request->filled('course_master_pk')
+            || !is_null($effectiveClientTypePk)
             || $request->filled('buyer_name');
 
         if (! $filtersApplied) {
@@ -882,6 +1077,9 @@ class ReportController extends Controller
             $paginator = null;
             $allBuyersSections = collect();
             $printAll = false;
+            $courseBuyerNames = collect();
+            $otherBuyerNames = collect();
+            $sectionBuyerNames = collect();
             $clientTypes = ClientType::clientTypes();
             $clientTypeCategories = ClientType::active()
                 ->orderBy('client_type')
@@ -929,7 +1127,8 @@ class ReportController extends Controller
                 'employees',
                 'messStaff',
                 'otCourses',
-                'filtersApplied'
+                'filtersApplied',
+                'courseBuyerNames'
             ));
         }
 
@@ -938,6 +1137,7 @@ class ReportController extends Controller
             \App\Models\Mess\ClientType::TYPE_OT      => KitchenIssueMaster::CLIENT_OT,
             \App\Models\Mess\ClientType::TYPE_COURSE  => KitchenIssueMaster::CLIENT_COURSE,
             \App\Models\Mess\ClientType::TYPE_OTHER   => KitchenIssueMaster::CLIENT_OTHER,
+            'section'                                 => KitchenIssueMaster::CLIENT_SECTION,
         ]);
 
         // --- 1. Selling Voucher Date Range ---
@@ -965,8 +1165,8 @@ class ReportController extends Controller
         if ($request->filled('client_type_slug')) {
             $svQuery->where('client_type_slug', $request->client_type_slug);
         }
-        if ($request->filled('client_type_pk')) {
-            $svQuery->where('client_type_pk', $request->client_type_pk);
+        if (!is_null($effectiveClientTypePk)) {
+            $svQuery->where('client_type_pk', $effectiveClientTypePk);
         }
         if ($request->filled('buyer_name')) {
             $svQuery->where('client_name', 'LIKE', '%' . trim($request->buyer_name) . '%');
@@ -997,8 +1197,8 @@ class ReportController extends Controller
         if ($request->filled('client_type_slug') && isset($clientTypeSlugToInt[$request->client_type_slug])) {
             $kiQuery->where('client_type', $clientTypeSlugToInt[$request->client_type_slug]);
         }
-        if ($request->filled('client_type_pk')) {
-            $kiQuery->where('client_type_pk', $request->client_type_pk);
+        if (!is_null($effectiveClientTypePk)) {
+            $kiQuery->where('client_type_pk', $effectiveClientTypePk);
         }
         if ($request->filled('buyer_name')) {
             $kiQuery->where('client_name', 'LIKE', '%' . trim($request->buyer_name) . '%');
@@ -1013,11 +1213,45 @@ class ReportController extends Controller
 
         // --- 3. Merge and sort by issue_date desc ---
         $vouchers = $svVouchers->concat($kiVouchers)
+            ->when($request->filled('client_type_slug'), function ($collection) use ($request) {
+                return $collection->filter(function ($v) use ($request) {
+                    return ($v->client_type_slug ?? null) === $request->client_type_slug;
+                });
+            })
             ->sortByDesc(function ($v) { return $v->issue_date ? $v->issue_date->format('Y-m-d') : ''; })
             ->values();
 
         // --- 4. Group by BUYER: load all buyers in a single view (no pagination) ---
         $groupedByBuyer = $vouchers->groupBy('client_type_pk');
+
+        // Distinct buyer names per client_type_slug so that Buyer Name dropdown
+        // can show only valid names for the selected type (course/other/section).
+        $courseBuyerNames = collect();
+        $otherBuyerNames = collect();
+        $sectionBuyerNames = collect();
+
+        $bySlug = $vouchers->groupBy('client_type_slug');
+        if (isset($bySlug[ClientType::TYPE_COURSE])) {
+            $courseBuyerNames = $bySlug[ClientType::TYPE_COURSE]->pluck('client_name')
+                ->filter()
+                ->unique()
+                ->sort()
+                ->values();
+        }
+        if (isset($bySlug['other'])) {
+            $otherBuyerNames = $bySlug['other']->pluck('client_name')
+                ->filter()
+                ->unique()
+                ->sort()
+                ->values();
+        }
+        if (isset($bySlug['section'])) {
+            $sectionBuyerNames = $bySlug['section']->pluck('client_name')
+                ->filter()
+                ->unique()
+                ->sort()
+                ->values();
+        }
         $printAll = $request->boolean('print_all');
 
         // For both normal view and print_all, we prepare all buyers' sections.
@@ -1085,7 +1319,10 @@ class ReportController extends Controller
             'employees',
             'messStaff',
             'otCourses',
-            'filtersApplied'
+            'filtersApplied',
+            'courseBuyerNames',
+            'otherBuyerNames',
+            'sectionBuyerNames'
         ));
     }
     /**
@@ -1444,7 +1681,12 @@ class ReportController extends Controller
         }
 
         $categories = ItemCategory::active()->orderBy('category_name')->get();
-        $allItems = ItemSubcategory::where('status', 'active')->orderBy('name')->get();
+
+        $allItemsQuery = ItemSubcategory::where('status', 'active');
+        if ($viewType === 'category_wise' && $categoryId) {
+            $allItemsQuery->where('category_id', $categoryId);
+        }
+        $allItems = $allItemsQuery->orderBy('name')->get();
 
         return view('admin.mess.reports.purchase-sale-quantity', compact(
             'reportData',

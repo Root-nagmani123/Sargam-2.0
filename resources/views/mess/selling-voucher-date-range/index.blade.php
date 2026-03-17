@@ -85,8 +85,8 @@
                            placeholder="Search selling vouchers...">
                 </div>
             </div>
-            <div class="table-responsive">
-                <table class="table align-middle mb-0 voucher-table" id="sellingVoucherDateRangeTable">
+            <div class="table-responsive d-inline-block" style="max-width: 100%;">
+                <table class="table align-middle mb-0 voucher-table w-auto" id="sellingVoucherDateRangeTable">
                     <thead>
                         <tr>
                             <th>S. No.</th>
@@ -526,13 +526,13 @@ document.addEventListener('DOMContentLoaded', function () {
                                     <thead class="voucher-brand-head">
                                         <tr>
                                             <th style="min-width: 180px;">Item Name <span class="text-white">*</span></th>
-                                            <th style="min-width: 80px;">Unit</th>
-                                            <th style="min-width: 100px;">Available Qty</th>
-                                            <th style="min-width: 90px;">Issue Qty <span class="text-white">*</span></th>
-                                            <th style="min-width: 90px;">Left Qty</th>
-                                            <th style="min-width: 120px;">Issue Date</th>
-                                            <th style="min-width: 100px;">Rate <span class="text-white">*</span></th>
-                                            <th style="min-width: 110px;">Total Amount</th>
+                                            <th style="min-width: 150px;">Unit</th>
+                                            <th style="width: auto;">Available Qty</th>
+                                            <th style="width: auto;">Issue Qty <span class="text-white">*</span></th>
+                                            <th style="width: auto;">Left Qty</th>
+                                            <th style="width: auto;">Issue Date</th>
+                                            <th style="width: 90px;">Rate <span class="text-white">*</span></th>
+                                            <th style="width: auto;">Total Amount</th>
                                             <th style="width: 50px;"></th>
                                         </tr>
                                     </thead>
@@ -547,15 +547,15 @@ document.addEventListener('DOMContentLoaded', function () {
                                                 </select>
                                             </td>
                                             <td><input type="text" name="items[0][unit]" class="form-control  dr-unit" readonly placeholder="—"></td>
-                                            <td><input type="text" name="items[0][available_quantity]" class="form-control  dr-avail bg-light" step="0.01" min="0" value="0" placeholder="0" readonly></td>
+                                            <td><input type="text" name="items[0][available_quantity]" class="form-control  dr-avail bg-light" readonly></td>
                                             <td>
-                                                <input type="text" name="items[0][quantity]" class="form-control  dr-qty" step="0.01" min="0.01" placeholder="0" required>
+                                                <input type="text" name="items[0][quantity]" class="form-control  dr-qty" required>
                                                 <div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div>
                                             </td>
-                                            <td><input type="text" class="form-control  dr-left bg-light" readonly placeholder="0"></td>
+                                            <td><input type="text" class="form-control  dr-left bg-light" readonly></td>
                                             <td><input type="date" name="items[0][issue_date]" class="form-control  dr-issue-date" value="{{ date('Y-m-d') }}"></td>
-                                            <td><input type="text" name="items[0][rate]" class="form-control  dr-rate" step="0.01" min="0" placeholder="0" required></td>
-                                            <td><input type="text" class="form-control  dr-total bg-light" readonly placeholder="0.00"></td>
+                                            <td><input type="text" name="items[0][rate]" class="form-control  dr-rate" required></td>
+                                            <td><input type="text" class="form-control  dr-total bg-light" readonly></td>
                                             <td><button type="button" class="btn  btn-outline-danger dr-remove-row voucher-icon-btn" disabled title="Remove">×</button></td>
                                         </tr>
                                     </tbody>
@@ -1046,21 +1046,31 @@ document.addEventListener('DOMContentLoaded', function () {
             var addSel = document.getElementById('drClientNameSelect');
             if (addSel) {
                 addSel.querySelectorAll('option[value]').forEach(function(opt) {
-                    clientNameOptionsAdd.push({ value: opt.value, text: (opt.textContent || '').trim(), type: (opt.dataset.type || '').toLowerCase(), clientName: (opt.dataset.clientName || '').toLowerCase() });
+                    clientNameOptionsAdd.push({
+                        value: opt.value,
+                        text: (opt.textContent || '').trim(),
+                        type: ((opt.dataset.type || '').toLowerCase().trim()),
+                        clientName: ((opt.dataset.clientName || '').toLowerCase().trim())
+                    });
                 });
             }
             var editSel = document.getElementById('editDrClientNameSelect');
             if (editSel) {
                 editSel.querySelectorAll('option[value]').forEach(function(opt) {
-                    clientNameOptionsEdit.push({ value: opt.value, text: (opt.textContent || '').trim(), type: (opt.dataset.type || '').toLowerCase(), clientName: (opt.dataset.clientName || '').toLowerCase() });
+                    clientNameOptionsEdit.push({
+                        value: opt.value,
+                        text: (opt.textContent || '').trim(),
+                        type: ((opt.dataset.type || '').toLowerCase().trim()),
+                        clientName: ((opt.dataset.clientName || '').toLowerCase().trim())
+                    });
                 });
             }
         });
 
         function rebuildClientNameSelect(selectEl, optionsList, slug) {
             if (!selectEl || !Array.isArray(optionsList)) return;
-            var slugLower = (slug || '').toLowerCase();
-            var filtered = optionsList.filter(function(o) { return o.type === slugLower; });
+            var slugLower = (slug || '').toLowerCase().trim();
+            var filtered = optionsList.filter(function(o) { return (o.type || '').toLowerCase().trim() === slugLower; });
             if (selectEl.tomselect) { try { selectEl.tomselect.destroy(); } catch (e) {} }
             if (selectEl.id === 'drClientNameSelect') addModalTomSelectInstances.client = null;
             selectEl.innerHTML = '<option value="">Select Client Name</option>';
@@ -1068,8 +1078,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 var opt = document.createElement('option');
                 opt.value = o.value;
                 opt.textContent = o.text;
-                opt.setAttribute('data-type', o.type);
-                opt.setAttribute('data-client-name', o.clientName);
+                opt.setAttribute('data-type', ((o.type || '').toLowerCase().trim()));
+                opt.setAttribute('data-client-name', ((o.clientName || '').toLowerCase().trim()));
                 selectEl.appendChild(opt);
             });
             if (typeof TomSelect !== 'undefined') {
@@ -1083,16 +1093,16 @@ document.addEventListener('DOMContentLoaded', function () {
         function rebuildEditClientNameSelect(slug) {
             var editSel = document.getElementById('editDrClientNameSelect');
             if (!editSel || !clientNameOptionsEdit.length) return;
-            var slugLower = (slug || '').toLowerCase();
-            var filtered = clientNameOptionsEdit.filter(function(o) { return o.type === slugLower; });
+            var slugLower = (slug || '').toLowerCase().trim();
+            var filtered = clientNameOptionsEdit.filter(function(o) { return (o.type || '').toLowerCase().trim() === slugLower; });
             if (editSel.tomselect) { try { editSel.tomselect.destroy(); } catch (e) {} editModalTomSelectInstances.client = null; }
             editSel.innerHTML = '<option value="">Select Client Name</option>';
             filtered.forEach(function(o) {
                 var opt = document.createElement('option');
                 opt.value = o.value;
                 opt.textContent = o.text;
-                opt.setAttribute('data-type', o.type);
-                opt.setAttribute('data-client-name', o.clientName);
+                opt.setAttribute('data-type', ((o.type || '').toLowerCase().trim()));
+                opt.setAttribute('data-client-name', ((o.clientName || '').toLowerCase().trim()));
                 editSel.appendChild(opt);
             });
             if (typeof TomSelect !== 'undefined') {
@@ -1106,6 +1116,12 @@ document.addEventListener('DOMContentLoaded', function () {
         function getSelectValue(select) {
             if (!select) return '';
             return select.tomselect ? select.tomselect.getValue() : select.value;
+        }
+        function setSelectValue(select, value) {
+            if (!select) return;
+            var v = (value === null || value === undefined) ? '' : String(value);
+            if (select.tomselect) select.tomselect.setValue(v);
+            else select.value = v;
         }
         function getSelectSelectedOption(select) {
             if (!select) return null;
@@ -1670,12 +1686,12 @@ document.addEventListener('DOMContentLoaded', function () {
             return '<tr class="dr-item-row">' +
                 '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select  dr-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
                 '<td><input type="text" name="items[' + index + '][unit]" class="form-control  dr-unit" readonly placeholder="—"></td>' +
-                '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control  dr-avail bg-light" step="0.01" min="0" value="0" placeholder="0" readonly></td>' +
-                '<td><input type="number" name="items[' + index + '][quantity]" class="form-control  dr-qty" step="0.01" min="0.01" placeholder="0" required><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
+                '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control  dr-avail bg-light" readonly></td>' +
+                '<td><input type="number" name="items[' + index + '][quantity]" class="form-control  dr-qty" required><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
                 '<td><input type="text" class="form-control  dr-left bg-light" readonly placeholder="0"></td>' +
                 '<td><input type="date" name="items[' + index + '][issue_date]" class="form-control  dr-issue-date" value="' + new Date().toISOString().slice(0, 10) + '"></td>' +
-                '<td><input type="number" name="items[' + index + '][rate]" class="form-control  dr-rate" step="0.01" min="0" placeholder="0" required></td>' +
-                '<td><input type="text" class="form-control  dr-total bg-light" readonly placeholder="0.00"></td>' +
+                '<td><input type="number" name="items[' + index + '][rate]" class="form-control  dr-rate" required></td>' +
+                '<td><input type="text" class="form-control  dr-total bg-light" readonly></td>' +
                 '<td><button type="button" class="btn  btn-outline-danger dr-remove-row voucher-icon-btn" title="Remove">×</button></td>' +
                 '</tr>';
         }
@@ -2916,7 +2932,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     const editDrCourseNameEl = document.getElementById('editDrCourseNameSelect');
                     if (editDrCourseNameEl) editDrCourseNameEl.value = v.client_type_pk || '';
                     document.querySelector('.edit-payment-type').value = String(v.payment_type ?? 1);
-                    document.querySelector('.edit-client-type-pk').value = v.client_type_pk || '';
                     const slug = v.client_type_slug || 'employee';
                     document.querySelectorAll('.edit-dr-client-type-radio').forEach(function(radio) {
                         radio.checked = (radio.value === slug);
@@ -2994,14 +3009,11 @@ document.addEventListener('DOMContentLoaded', function () {
                             editClientSelect.style.display = 'block';
                             editClientSelect.setAttribute('required', 'required');
                             editClientSelect.setAttribute('name', 'client_type_pk');
-                            editClientSelect.value = v.client_type_pk || '';
-                            editClientSelect.querySelectorAll('option').forEach(function(opt) {
-                                if (opt.value === '') {
-                                    opt.hidden = false;
-                                    return;
-                                }
-                                opt.hidden = (opt.dataset.type || '') !== slug;
-                            });
+                            if (clientNameOptionsEdit && clientNameOptionsEdit.length) {
+                                rebuildEditClientNameSelect(slug);
+                            }
+                            editClientSelect = document.getElementById('editDrClientNameSelect');
+                            setSelectValue(editClientSelect, v.client_type_pk || '');
                         }
                         if (editOtSelect) {
                             editOtSelect.style.display = 'none';
@@ -3028,6 +3040,8 @@ document.addEventListener('DOMContentLoaded', function () {
                         }
                     }
                     updateEditDrNameField();
+                    // Ensure TomSelect instances exist for the final state (and preserve selected values)
+                    initEditModalTomSelects();
                     editCurrentStoreId = v.store_id || '';
                     const items = data.items || [];
                     const openEditModalWithItems = function() {

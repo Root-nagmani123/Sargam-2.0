@@ -1,5 +1,5 @@
 @extends('admin.layouts.master')
-
+@section('title', 'Low Stock Report')
 @section('setup_content')
 <div class="container-fluid low-stock-report py-3 py-md-4">
     <x-breadcrum title="Low Stock Report"></x-breadcrum>
@@ -32,7 +32,7 @@
                             type="date"
                             id="till_date"
                             name="till_date"
-                            class="form-control form-control-lg rounded-3 focus-ring focus-ring-primary"
+                            class="form-control"
                             value="{{ $tillDate }}"
                             required
                         >
@@ -40,7 +40,7 @@
 
                     <div class="col-12 col-md-4 col-lg-3">
                         <label for="store_id" class="form-label small text-uppercase fw-semibold text-body-secondary mb-1">Store</label>
-                        <select id="store_id" name="store_id" class="form-select form-select-lg rounded-3 focus-ring focus-ring-primary" data-placeholder="All Stores">
+                        <select id="store_id" name="store_id" class="form-select" data-placeholder="All Stores">
                             <option value="">All Stores</option>
                             @foreach($stores as $store)
                                 <option value="{{ $store->id }}" {{ ($storeId ?? null) == $store->id ? 'selected' : '' }}>
@@ -52,19 +52,19 @@
 
                     <div class="col-12 col-lg-6">
                         <div class="d-flex flex-wrap gap-2 justify-content-lg-end pt-md-2">
-                            <button type="submit" class="btn btn-primary btn-lg rounded-3 px-4 d-inline-flex align-items-center gap-2">
+                            <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-1">
                                 <span class="material-symbols-rounded icon-18">filter_list</span>
                                 Apply Filters
                             </button>
-                            <a href="{{ route('admin.mess.reports.low-stock') }}" class="btn btn-outline-secondary btn-lg rounded-3 px-4 d-inline-flex align-items-center gap-2">
+                            <a href="{{ route('admin.mess.reports.low-stock') }}" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1">
                                 <span class="material-symbols-rounded icon-18">refresh</span>
                                 Reset
                             </a>
-                            <button type="button" class="btn btn-outline-primary btn-lg rounded-3 px-4 d-inline-flex align-items-center gap-2" onclick="printLowStockReport()" title="Print report">
+                            <button type="button" class="btn btn-outline-primary d-inline-flex align-items-center gap-1" onclick="printLowStockReport()" title="Print report">
                                 <span class="material-symbols-rounded icon-18">print</span>
                                 Print
                             </button>
-                            <a href="{{ route('admin.mess.reports.low-stock.pdf', request()->query()) }}" class="btn btn-danger btn-lg rounded-3 px-4 d-inline-flex align-items-center gap-2" title="Download PDF">
+                            <a href="{{ route('admin.mess.reports.low-stock.pdf', request()->query()) }}" class="btn btn-danger d-inline-flex align-items-center gap-1" title="Download PDF">
                                 <span class="material-symbols-rounded icon-18">picture_as_pdf</span>
                                 Download PDF
                             </a>
@@ -76,7 +76,7 @@
     </div>
 
     <!-- Report Table -->
-    <div class="card border-0 shadow rounded-4 overflow-hidden">
+    <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
         <div class="card-body p-4 p-md-5">
             <div class="report-header text-center mb-4 pb-3 border-bottom border-body-secondary border-opacity-25">
                 <h4 class="fw-bold text-uppercase mb-3 fs-5 text-body-emphasis">Low Stock Report</h4>
