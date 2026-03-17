@@ -243,11 +243,7 @@ document.addEventListener('DOMContentLoaded', function () {
 @endpush
 </div>
 
-{{-- Tom Select CSS --}}
-<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
-{{-- Tom Select JS --}}
-<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
-<style>.ts-dropdown { z-index: 2000; }</style>
+{{-- Choices.js loaded globally in master layout --}}
 
 {{-- Add Report Modal --}}
 <style>
@@ -1061,8 +1057,14 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!selectEl || !Array.isArray(optionsList)) return;
             var slugLower = (slug || '').toLowerCase();
             var filtered = optionsList.filter(function(o) { return o.type === slugLower; });
-            if (selectEl.tomselect) { try { selectEl.tomselect.destroy(); } catch (e) {} }
-            if (selectEl.id === 'drClientNameSelect') addModalTomSelectInstances.client = null;
+            
+            // Destroy Choices instance if exists
+            var existingChoices = addModalChoicesInstances.client;
+            if (existingChoices) {
+                try { existingChoices.destroy(); } catch (e) {}
+            }
+            addModalChoicesInstances.client = null;
+            
             selectEl.innerHTML = '<option value="">Select Client Name</option>';
             filtered.forEach(function(o) {
                 var opt = document.createElement('option');
@@ -1072,12 +1074,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 opt.setAttribute('data-client-name', o.clientName);
                 selectEl.appendChild(opt);
             });
-            if (typeof TomSelect !== 'undefined') {
-                var inst = new TomSelect(selectEl, createBlankSearchConfig({
-                    placeholder: 'Select Client Name',
-                    clearOnOpen: true
-                }));
-                if (selectEl.id === 'drClientNameSelect') addModalTomSelectInstances.client = inst;
+            
+            if (typeof Choices !== 'undefined') {
+                addModalChoicesInstances.client = new Choices(selectEl, {
+                    searchEnabled: true,
+                    itemSelectText: '',
+                    shouldSort: false,
+                    placeholderValue: 'Select Client Name'
+                });
             }
         }
         function rebuildEditClientNameSelect(slug) {
@@ -1085,7 +1089,13 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!editSel || !clientNameOptionsEdit.length) return;
             var slugLower = (slug || '').toLowerCase();
             var filtered = clientNameOptionsEdit.filter(function(o) { return o.type === slugLower; });
-            if (editSel.tomselect) { try { editSel.tomselect.destroy(); } catch (e) {} editModalTomSelectInstances.client = null; }
+            
+            // Destroy Choices instance if exists
+            if (editModalChoicesInstances.client) {
+                try { editModalChoicesInstances.client.destroy(); } catch (e) {}
+            }
+            editModalChoicesInstances.client = null;
+            
             editSel.innerHTML = '<option value="">Select Client Name</option>';
             filtered.forEach(function(o) {
                 var opt = document.createElement('option');
@@ -1095,17 +1105,20 @@ document.addEventListener('DOMContentLoaded', function () {
                 opt.setAttribute('data-client-name', o.clientName);
                 editSel.appendChild(opt);
             });
-            if (typeof TomSelect !== 'undefined') {
-                editModalTomSelectInstances.client = new TomSelect(editSel, createBlankSearchConfig({
-                    placeholder: 'Select Client Name',
-                    clearOnOpen: true
-                }));
+            
+            if (typeof Choices !== 'undefined') {
+                editModalChoicesInstances.client = new Choices(editSel, {
+                    searchEnabled: true,
+                    itemSelectText: '',
+                    shouldSort: false,
+                    placeholderValue: 'Select Client Name'
+                });
             }
         }
 
         function getSelectValue(select) {
             if (!select) return '';
-            return select.tomselect ? select.tomselect.getValue() : select.value;
+            return select.value || '';
         }
         function getSelectSelectedOption(select) {
             if (!select) return null;
@@ -1117,35 +1130,32 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         function setSelectVisible(select, visible) {
             if (!select) return;
-            var wrapper = null;
-            if (select.tomselect && select.tomselect.wrapper) wrapper = select.tomselect.wrapper;
-            if (!wrapper && select.parentElement) {
-                var p = select.parentElement;
-                if (p.classList && p.classList.contains('ts-wrapper')) wrapper = p;
-                else if (p.parentElement && p.parentElement.classList && p.parentElement.classList.contains('ts-wrapper')) wrapper = p.parentElement;
+            var wrapper = select.parentElement;
+            if (wrapper && wrapper.classList && wrapper.classList.contains('choices')) {
+                wrapper.style.display = visible ? '' : 'none';
+            } else {
+                select.style.display = visible ? 'block' : 'none';
             }
-            if (wrapper) wrapper.style.display = visible ? '' : 'none';
-            else select.style.display = visible ? 'block' : 'none';
         }
 
-        var addModalTomSelectInstances = { payment: null, client: null, store: null };
-        var editModalTomSelectInstances = { payment: null, client: null, store: null };
+        var addModalChoicesInstances = { payment: null, client: null, store: null };
+        var editModalChoicesInstances = { payment: null, client: null, store: null };
+        var addModalOtherChoices = [];
+        var editModalOtherChoices = [];
 
         function destroyAddModalTomSelects() {
-            if (addModalTomSelectInstances.payment) { try { addModalTomSelectInstances.payment.destroy(); } catch (e) {} addModalTomSelectInstances.payment = null; }
-            if (addModalTomSelectInstances.client) { try { addModalTomSelectInstances.client.destroy(); } catch (e) {} addModalTomSelectInstances.client = null; }
-            if (addModalTomSelectInstances.store) { try { addModalTomSelectInstances.store.destroy(); } catch (e) {} addModalTomSelectInstances.store = null; }
-            document.querySelectorAll('#addReportModal select').forEach(function(el) {
-                if (el.tomselect) { try { el.tomselect.destroy(); } catch (e) {} }
-            });
+            if (addModalChoicesInstances.payment) { try { addModalChoicesInstances.payment.destroy(); } catch (e) {} addModalChoicesInstances.payment = null; }
+            if (addModalChoicesInstances.client) { try { addModalChoicesInstances.client.destroy(); } catch (e) {} addModalChoicesInstances.client = null; }
+            if (addModalChoicesInstances.store) { try { addModalChoicesInstances.store.destroy(); } catch (e) {} addModalChoicesInstances.store = null; }
+            addModalOtherChoices.forEach(function(ch) { try { ch.destroy(); } catch (e) {} });
+            addModalOtherChoices = [];
         }
         function destroyEditModalTomSelects() {
-            if (editModalTomSelectInstances.payment) { try { editModalTomSelectInstances.payment.destroy(); } catch (e) {} editModalTomSelectInstances.payment = null; }
-            if (editModalTomSelectInstances.client) { try { editModalTomSelectInstances.client.destroy(); } catch (e) {} editModalTomSelectInstances.client = null; }
-            if (editModalTomSelectInstances.store) { try { editModalTomSelectInstances.store.destroy(); } catch (e) {} editModalTomSelectInstances.store = null; }
-            document.querySelectorAll('#editReportModal select').forEach(function(el) {
-                if (el.tomselect) { try { el.tomselect.destroy(); } catch (e) {} }
-            });
+            if (editModalChoicesInstances.payment) { try { editModalChoicesInstances.payment.destroy(); } catch (e) {} editModalChoicesInstances.payment = null; }
+            if (editModalChoicesInstances.client) { try { editModalChoicesInstances.client.destroy(); } catch (e) {} editModalChoicesInstances.client = null; }
+            if (editModalChoicesInstances.store) { try { editModalChoicesInstances.store.destroy(); } catch (e) {} editModalChoicesInstances.store = null; }
+            editModalOtherChoices.forEach(function(ch) { try { ch.destroy(); } catch (e) {} });
+            editModalOtherChoices = [];
         }
         function createBlankSearchConfig(extra) {
             return Object.assign({

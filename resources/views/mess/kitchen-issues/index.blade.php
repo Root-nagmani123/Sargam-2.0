@@ -32,43 +32,47 @@
                     <span class="fw-semibold">Add Selling Voucher</span>
                 </button>
             </div>
-            <div class="border rounded-3 bg-light p-3">
+            <div class="bg-body-tertiary border rounded-4 p-3 p-lg-4">
                 <form method="GET" action="{{ route('admin.mess.material-management.index') }}">
-                    <div class="row g-3">
-                        <div class="col-md-2 col-sm-6">
-                            <label class="form-label small text-muted mb-1">Status</label>
-                            <select name="status" id="filter_status" class="form-select form-select-sm">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-12 col-sm-6 col-lg-3">
+                            <label for="filter_status" class="form-label small fw-semibold text-secondary mb-1">Status</label>
+                            <select name="status" id="filter_status" class="form-select">
                                 <option value="">All</option>
                                 <option value="0" {{ request('status') === '0' ? 'selected' : '' }}>Pending</option>
                                 <option value="2" {{ request('status') == '2' ? 'selected' : '' }}>Approved</option>
                                 <option value="4" {{ request('status') == '4' ? 'selected' : '' }}>Completed</option>
                             </select>
                         </div>
-                        <div class="col-md-2 col-sm-6">
-                            <label class="form-label small text-muted mb-1">Store</label>
-                            <select name="store" id="filter_store" class="form-select form-select-sm">
+
+                        <div class="col-12 col-sm-6 col-lg-5">
+                            <label for="filter_store" class="form-label small fw-semibold text-secondary mb-1">Store</label>
+                            <select name="store" id="filter_store" class="form-select">
                                 <option value="">All</option>
                                 @foreach($stores as $store)
                                     <option value="{{ $store['id'] }}" {{ request('store') == $store['id'] ? 'selected' : '' }}>{{ $store['store_name'] }}</option>
                                 @endforeach
                             </select>
                         </div>
-                        <div class="col-md-2 col-sm-6">
-                            <label class="form-label small text-muted mb-1">Start Date</label>
-                            <input type="date" name="start_date" id="filter_start_date" class="form-control form-control-sm" value="{{ request('start_date') ?? date('Y-m-d') }}">
+
+                        <div class="col-12 col-sm-6 col-lg-2">
+                            <label for="filter_start_date" class="form-label small fw-semibold text-secondary mb-1">Start Date</label>
+                            <input type="date" name="start_date" id="filter_start_date" class="form-control" value="{{ request('start_date') ?? date('Y-m-d') }}">
                         </div>
-                        <div class="col-md-2 col-sm-6">
-                            <label class="form-label small text-muted mb-1">End Date</label>
-                            <input type="date" name="end_date" id="filter_end_date" class="form-control form-control-sm" value="{{ request('end_date') }}" min="{{ request('start_date') ?? date('Y-m-d') }}">
+
+                        <div class="col-12 col-sm-6 col-lg-2">
+                            <label for="filter_end_date" class="form-label small fw-semibold text-secondary mb-1">End Date</label>
+                            <input type="date" name="end_date" id="filter_end_date" class="form-control" value="{{ request('end_date') }}" min="{{ request('start_date') ?? date('Y-m-d') }}">
                         </div>
-                        <div class="col-md-4 d-flex align-items-end justify-content-md-end gap-2">
-                            <button type="submit" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1">
-                                <span class="material-symbols-rounded" style="font-size: 1rem;">filter_list</span>
-                                <span>Filter</span>
+
+                        <div class="col-12 d-grid gap-2 d-md-flex justify-content-md-end pt-1">
+                            <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-2">
+                                <span class="material-symbols-rounded" style="font-size: 1.05rem;">filter_list</span>
+                                <span class="fw-semibold">Filter</span>
                             </button>
-                            <a href="{{ route('admin.mess.material-management.index') }}" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1">
-                                <span class="material-symbols-rounded" style="font-size: 1rem;">refresh</span>
-                                <span>Clear</span>
+                            <a href="{{ route('admin.mess.material-management.index') }}" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2">
+                                <span class="material-symbols-rounded" style="font-size: 1.05rem;">refresh</span>
+                                <span class="fw-semibold">Clear</span>
                             </a>
                         </div>
                     </div>
@@ -183,11 +187,7 @@
     ])
 </div>
 
-{{-- Tom Select CSS --}}
-<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
-
-{{-- Tom Select JS --}}
-<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+{{-- Choices.js loaded globally in master layout --}}
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {

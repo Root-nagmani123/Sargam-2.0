@@ -1,61 +1,5 @@
 @extends('admin.layouts.master')
 @section('title', 'Subcategory Item Master')
-@push('styles')
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
-<style>
-    /* Choices.js + Bootstrap for filter category select */
-    .itemsubcategories-filter-form .choices__inner {
-        min-height: 31px;
-        padding: 0.25rem 0.5rem;
-        font-size: 0.875rem;
-        border-radius: var(--bs-border-radius, 0.375rem);
-        border: 1px solid var(--bs-border-color);
-        background-color: var(--bs-body-bg);
-    }
-    .itemsubcategories-filter-form .choices__list--single .choices__item {
-        padding: 2px 0;
-    }
-    .itemsubcategories-filter-form .choices.is-focused .choices__inner,
-    .itemsubcategories-filter-form .choices.is-open .choices__inner {
-        border-color: #86b7fe;
-        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-    }
-    .itemsubcategories-filter-form .choices__list--dropdown .choices__item--selectable.is-highlighted,
-    .itemsubcategories-filter-form .choices__list[aria-expanded] .choices__item--selectable.is-highlighted {
-        background-color: var(--bs-primary);
-        color: #fff;
-    }
-
-    /* Choices.js + Bootstrap for create/edit modal selects */
-    #createItemSubcategoryModal .choices__inner,
-    #editItemSubcategoryModal .choices__inner {
-        min-height: 31px;
-        padding: 0.25rem 0.5rem;
-        font-size: 0.875rem;
-        border-radius: var(--bs-border-radius, 0.375rem);
-        border: 1px solid var(--bs-border-color);
-        background-color: var(--bs-body-bg);
-    }
-    #createItemSubcategoryModal .choices__list--single .choices__item,
-    #editItemSubcategoryModal .choices__list--single .choices__item {
-        padding: 2px 0;
-    }
-    #createItemSubcategoryModal .choices.is-focused .choices__inner,
-    #createItemSubcategoryModal .choices.is-open .choices__inner,
-    #editItemSubcategoryModal .choices.is-focused .choices__inner,
-    #editItemSubcategoryModal .choices.is-open .choices__inner {
-        border-color: #86b7fe;
-        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-    }
-    #createItemSubcategoryModal .choices__list--dropdown .choices__item--selectable.is-highlighted,
-    #createItemSubcategoryModal .choices__list[aria-expanded] .choices__item--selectable.is-highlighted,
-    #editItemSubcategoryModal .choices__list--dropdown .choices__item--selectable.is-highlighted,
-    #editItemSubcategoryModal .choices__list[aria-expanded] .choices__item--selectable.is-highlighted {
-        background-color: var(--bs-primary);
-        color: #fff;
-    }
-</style>
-@endpush
 @section('setup_content')
 @php
     $selectedCategoryId = $categoryIdFilter ?? request('category_id', '');
@@ -159,11 +103,8 @@
         </div>
 </div>
 
-{{-- Tom Select CSS --}}
-<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
-
-{{-- Tom Select JS --}}
-<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+{{-- Choices.js --}}
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 
 {{-- Create Item Modal --}}
 <div class="modal fade" id="createItemSubcategoryModal" tabindex="-1" aria-labelledby="createItemSubcategoryModalLabel" aria-hidden="true">
@@ -312,78 +253,32 @@ function initItemSubcategoryScripts() {
     var itemNameMessage = 'Item name may only contain letters, numbers, spaces and hyphens. Special characters are not allowed.';
     var unitMeasurementMessage = 'Unit measurement may only contain letters, numbers, spaces, hyphens, slashes and periods. Special characters are not allowed.';
 
-    // Initialize Tom Select on all dropdowns (filter + create + edit)
-    if (window.TomSelect) {
+    // Initialize Choices.js on all dropdowns (filter + create + edit)
+    var choicesInstances = {};
+    if (window.Choices) {
         var dropdowns = [
-            // Filter dropdown: keep value on open
-            { id: 'filter_category_id', placeholder: 'All categories', clearOnInit: false, clearOnOpen: false },
-            // Create dropdowns: blank on init + every open
-            { id: 'create_category_id', placeholder: 'Select category', clearOnInit: true, clearOnOpen: true },
-            { id: 'create_status', placeholder: 'Select status', clearOnInit: true, clearOnOpen: true },
-            // Edit dropdowns: show saved value initially, but clear when user opens to pick new
-            { id: 'edit_category_id', placeholder: 'Select category', clearOnInit: false, clearOnOpen: true },
-            { id: 'edit_status', placeholder: 'Select status', clearOnInit: false, clearOnOpen: true }
+            { id: 'filter_category_id', key: 'filterCategory' },
+            { id: 'create_category_id', key: 'createCategory' },
+            { id: 'create_status', key: 'createStatus' },
+            { id: 'edit_category_id', key: 'editCategory' },
+            { id: 'edit_status', key: 'editStatus' }
         ];
 
         dropdowns.forEach(function (cfg) {
             var el = document.getElementById(cfg.id);
             if (!el) return;
-            if (el.tomselect) {
-                el.tomselect.destroy();
+            if (choicesInstances[cfg.key]) {
+                choicesInstances[cfg.key].destroy();
             }
             try {
-                var hadValue = !!el.value;
-                var clearOnOpen = !!cfg.clearOnOpen;
-                var ts = new TomSelect(el, {
-                    allowEmptyOption: true,
-                    create: false,
-                    dropdownParent: 'body',
-                    placeholder: cfg.placeholder,
-                    maxOptions: null,
-                    hideSelected: false,
-                    highlight: false,
-                    onInitialize: function () {
-                        // Dont auto-highlight first option
-                        this.activeOption = null;
-                    },
-                    onDropdownOpen: function (dropdown) {
-                        // Search input cursor always at start
-                        var input = this.control_input || dropdown.querySelector('input');
-                        if (input) {
-                            input.value = '';
-                            setTimeout(function () {
-                                input.focus();
-                                try {
-                                    input.setSelectionRange(0, 0);
-                                } catch (e) {}
-                                input.scrollLeft = 0;
-                            }, 0);
-                        }
-
-                        // User ne dropdown open kiya hai: agar is config me clearOnOpen true hai
-                        // to pehle se selected value hata do taaki fresh selection mile
-                        if (clearOnOpen) {
-                            this.clear(true);
-                        }
-
-                        // Remove visual active/selected option in dropdown list
-                        setTimeout(function () {
-                            var opts = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"]');
-                            opts.forEach(function (opt) {
-                                opt.classList.remove('active');
-                                opt.classList.remove('selected');
-                                opt.setAttribute('aria-selected', 'false');
-                            });
-                        }, 0);
-                    }
+                choicesInstances[cfg.key] = new Choices(el, {
+                    searchEnabled: true,
+                    itemSelectText: '',
+                    shouldSort: false,
+                    removeItemButton: false
                 });
-
-                // Sirf jahan clearOnInit true ho aur koi value na ho, wahan hi init par clear karein
-                if (cfg.clearOnInit && !hadValue) {
-                    ts.clear(true);
-                }
             } catch (e) {
-                console.error('Tom Select init failed for', cfg.id, e);
+                console.error('Choices.js init failed for', cfg.id, e);
             }
         });
     }
@@ -499,26 +394,6 @@ function initItemSubcategoryScripts() {
         });
     }
 
-    // Initialize Choices.js on create & edit modal selects
-    var choicesInstances = {};
-    function createChoicesInstance(selectEl, key) {
-        if (!window.Choices || !selectEl) return null;
-        if (choicesInstances[key]) {
-            choicesInstances[key].destroy();
-        }
-        choicesInstances[key] = new Choices(selectEl, {
-            searchEnabled: true,
-            itemSelectText: '',
-            shouldSort: false
-        });
-        return choicesInstances[key];
-    }
-
-    // Initial setup for filter + create modal selects
-    createChoicesInstance(document.getElementById('filter_category_id'), 'filterCategory');
-    createChoicesInstance(document.getElementById('create_category_id'), 'createCategory');
-    createChoicesInstance(document.getElementById('create_status'), 'createStatus');
-
     document.addEventListener('mousedown', function(e) {
         var btn = e.target.closest('.btn-edit-itemsubcategory');
         if (!btn) return;
@@ -532,9 +407,10 @@ function initItemSubcategoryScripts() {
         var editStatusSelect = document.getElementById('edit_status');
 
         if (editCategorySelect) {
-            editCategorySelect.value = categoryId;
-            if (editCategorySelect.tomselect) {
-                editCategorySelect.tomselect.setValue(categoryId || '', true);
+            if (choicesInstances.editCategory) {
+                choicesInstances.editCategory.setChoiceByValue(categoryId || '');
+            } else {
+                editCategorySelect.value = categoryId;
             }
         }
         document.getElementById('edit_item_name').value = btn.getAttribute('data-item-name') || '';
@@ -544,9 +420,10 @@ function initItemSubcategoryScripts() {
         document.getElementById('edit_description').value = btn.getAttribute('data-description') || '';
 
         if (editStatusSelect) {
-            editStatusSelect.value = statusVal;
-            if (editStatusSelect.tomselect) {
-                editStatusSelect.tomselect.setValue(statusVal || '', true);
+            if (choicesInstances.editStatus) {
+                choicesInstances.editStatus.setChoiceByValue(statusVal || '');
+            } else {
+                editStatusSelect.value = statusVal;
             }
         }
         new bootstrap.Modal(document.getElementById('editItemSubcategoryModal')).show();
@@ -564,13 +441,5 @@ if (document.readyState === 'loading') {
 
 <style>
 .table thead th { background-color: #004a93 !important; color: #fff !important; }
-
-/* Ensure Tom Select dropdowns appear above modals/backdrop */
-.ts-dropdown {
-    z-index: 10000 !important;
-}
-.ts-control {
-    z-index: 1;
-}
 </style>
 @endsection

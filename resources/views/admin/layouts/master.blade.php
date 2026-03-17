@@ -579,6 +579,125 @@
     <script src="{{ asset('admin_assets/js/tab-persistence.js') }}"></script>
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Mess Module: Choices.js for dropdowns -->
+    @if(request()->is('admin/mess/*') || request()->is('mess/*'))
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
+    <style>
+        /* Bootstrap-styled Choices.js dropdowns */
+        .choices__inner {
+            min-height: calc(1.5em + 0.75rem + 2px);
+            padding: 0.375rem 0.75rem;
+            font-size: 1rem;
+            font-weight: 400;
+            line-height: 1.5;
+            color: var(--bs-body-color);
+            background-color: var(--bs-body-bg);
+            border: 1px solid var(--bs-border-color);
+            border-radius: var(--bs-border-radius);
+            transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
+        }
+        .choices.is-focused .choices__inner,
+        .choices.is-open .choices__inner {
+            border-color: #86b7fe;
+            outline: 0;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
+        .choices__list--dropdown {
+            border: 1px solid var(--bs-border-color);
+            border-radius: var(--bs-border-radius);
+            background-color: var(--bs-body-bg);
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+            z-index: 1050 !important;
+            font-size: 1rem;
+        }
+        /* Higher z-index for dropdowns in modals */
+        .modal .choices__list--dropdown {
+            z-index: 2000 !important;
+        }
+        .choices__list--dropdown .choices__item--selectable {
+            padding: 0.5rem 1rem;
+            color: var(--bs-body-color);
+            transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out;
+            font-size: 1rem;
+            font-weight: 400;
+            line-height: 1.5;
+        }
+        .choices__list--dropdown .choices__item--selectable:hover,
+        .choices__list--dropdown .choices__item--selectable.is-highlighted {
+            background-color: var(--bs-primary);
+            color: #fff;
+            cursor: pointer;
+        }
+        .choices__item--disabled {
+            opacity: 0.5;
+            pointer-events: none;
+            color: var(--bs-secondary-color);
+        }
+        .choices[data-type*="select-one"] .choices__inner {
+            padding-right: 2.25rem;
+        }
+        .choices[data-type*="select-one"]::after {
+            border: none;
+            content: '';
+            width: 16px;
+            height: 12px;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: 16px 12px;
+            position: absolute;
+            right: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        .form-select-sm .choices__inner,
+        .choices[data-type*="select-one"].form-select-sm .choices__inner {
+            min-height: calc(1.5em + 0.5rem + 2px);
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+            border-radius: var(--bs-border-radius-sm);
+        }
+        /* Small variant dropdown items */
+        .form-select-sm .choices__list--dropdown,
+        .choices.form-select-sm .choices__list--dropdown {
+            font-size: 0.875rem;
+        }
+        .form-select-sm .choices__list--dropdown .choices__item--selectable,
+        .choices.form-select-sm .choices__list--dropdown .choices__item--selectable {
+            font-size: 0.875rem;
+            padding: 0.25rem 0.5rem;
+        }
+        .choices__list--single .choices__item {
+            font-size: 1rem;
+            font-weight: 400;
+            line-height: 1.5;
+        }
+        .form-select-sm .choices__list--single .choices__item,
+        .choices.form-select-sm .choices__list--single .choices__item {
+            font-size: 0.875rem;
+        }
+        .choices__heading {
+            display: block;
+            padding: 0.5rem 1rem;
+            margin-bottom: 0;
+            font-size: 0.875rem;
+            color: var(--bs-secondary-color);
+            white-space: nowrap;
+        }
+        /* Ensure select element is hidden */
+        .choices__input--hidden,
+        .choices__inner input[type="search"].choices__input--cloned {
+            padding: 0;
+            min-height: 0;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+    <script src="{{ asset('js/choices-tomselect-wrapper.js') }}?v=4"></script>
+    @endif
+    <!-- Mess Module: Tab key works like Enter (load before other scripts) -->
+    @if(request()->is('admin/mess/*') || request()->is('mess/*'))
+    <script src="{{ asset('js/mess-tab-handler.js') }}?v=2"></script>
+    @endif
     @stack('scripts')
     <script>
 document.addEventListener('DOMContentLoaded', function () {

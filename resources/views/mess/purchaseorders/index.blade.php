@@ -224,11 +224,7 @@
     'infoLabel' => 'purchase orders'
 ])
 
-{{-- Tom Select CSS --}}
-<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
-
-{{-- Tom Select JS --}}
-<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+{{-- Choices.js loaded globally in master layout --}}
 
 {{-- Create Purchase Order Modal --}}
 <style>
@@ -611,9 +607,9 @@
                                             </td>
                                             <td><input type="text" name="items[0][unit]" class="form-control  po-unit" readonly placeholder="—"></td>
                                             <td><input type="text" name="items[0][item_code_display]" class="form-control  po-item-code" readonly placeholder="—"></td>
-                                            <td><input type="number" name="items[0][quantity]" class="form-control  po-qty" step="0.01" min="0.01" placeholder="0" required></td>
-                                            <td><input type="number" name="items[0][unit_price]" class="form-control  po-unit-price" step="0.01" min="0" placeholder="0" required></td>
-                                            <td><input type="number" name="items[0][tax_percent]" class="form-control  po-tax" step="0.01" min="0" max="100" value="0" placeholder="0"></td>
+                                            <td><input type="text" name="items[0][quantity]" class="form-control  po-qty" step="0.01" min="0.01" placeholder="0" required></td>
+                                            <td><input type="text" name="items[0][unit_price]" class="form-control  po-unit-price" step="0.01" min="0" placeholder="0" required></td>
+                                            <td><input type="text" name="items[0][tax_percent]" class="form-control  po-tax" step="0.01" min="0" max="100" value="0" placeholder="0"></td>
                                             <td><input type="text" name="items[0][total_display]" class="form-control  po-line-total bg-light" readonly placeholder="0.00"></td>
                                             <td><button type="button" class="btn  btn-outline-danger po-remove-row" disabled title="Remove">×</button></td>
                                         </tr>
