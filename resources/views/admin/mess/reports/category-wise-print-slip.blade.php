@@ -535,7 +535,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const clientTypePk = document.getElementById('clientTypePk');
     const clientTypePkBuyer = document.getElementById('clientTypePkBuyer');
     const studentsByCourseUrl = "{{ url('/admin/mess/selling-voucher-date-range/students-by-course') }}";
+    const courseBuyersByCourseUrl = "{{ url('/admin/mess/reports/category-wise-print-slip/course-buyers') }}";
+    const buyersForReportUrl = "{{ url('/admin/mess/reports/category-wise-print-slip/buyers') }}";
     const preservedBuyerName = {!! json_encode(request('buyer_name', '')) !!};
+    const preservedCoursePk = {!! json_encode(request('course_master_pk', '')) !!};
 
     const clientTypeOptions = {
         @foreach($clientTypes as $key => $label)
@@ -619,8 +622,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             // Try to preserve previous selection after rebuilding
-            if (prevValue) {
-                clientTypePk.value = prevValue;
+            if (prevValue) clientTypePk.value = prevValue;
+            if (!prevValue && (slug === 'ot' || slug === 'course') && preservedCoursePk) {
+                clientTypePk.value = preservedCoursePk;
             }
 
             initChoices(clientTypePk);
@@ -678,21 +682,76 @@ document.addEventListener('DOMContentLoaded', function() {
                         setBuyerChoices([], preservedBuyerName);
                     });
             } else if (slug === 'course') {
-                // For Course client type, populate Buyer Name from distinct client_name values
-                const list = (courseBuyerNames || []).map(function(name) {
-                    return { value: name, text: name };
-                });
-                setBuyerChoices(list, preservedBuyerName);
+                // Course: load buyer names dynamically by selected course (no Apply Filters needed)
+                if (selectedValue) {
+                    clientTypePkBuyer.innerHTML = '<option value="">Loading...</option>';
+                    const qs = new URLSearchParams();
+                    if (document.querySelector('input[name="from_date"]')?.value) qs.set('from_date', document.querySelector('input[name="from_date"]').value);
+                    if (document.querySelector('input[name="to_date"]')?.value) qs.set('to_date', document.querySelector('input[name="to_date"]').value);
+                    const url = courseBuyersByCourseUrl + '/' + selectedValue + (qs.toString() ? ('?' + qs.toString()) : '');
+                    fetch(url, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                        .then(function(r) { return r.json(); })
+                        .then(function(data) {
+                            const buyers = (data.buyers || []).map(function(name) {
+                                return { value: name || '', text: name || '—' };
+                            }).filter(function(o) { return o.value; });
+                            setBuyerChoices(buyers, preservedBuyerName);
+                        })
+                        .catch(function() {
+                            // Fallback to server-provided list (if any)
+                            const list = (courseBuyerNames || []).map(function(name) {
+                                return { value: name, text: name };
+                            });
+                            setBuyerChoices(list, preservedBuyerName);
+                        });
+                } else {
+                    // No course selected yet
+                    setBuyerChoices([], preservedBuyerName);
+                }
             } else if (slug === 'other') {
-                const list = (otherBuyerNames || []).map(function(name) {
-                    return { value: name, text: name };
-                });
-                setBuyerChoices(list, preservedBuyerName);
+                // Other: load buyer names dynamically (optionally filtered by selected client_type_pk)
+                clientTypePkBuyer.innerHTML = '<option value="">Loading...</option>';
+                const qs = new URLSearchParams();
+                qs.set('client_type_slug', 'other');
+                if (document.querySelector('input[name="from_date"]')?.value) qs.set('from_date', document.querySelector('input[name="from_date"]').value);
+                if (document.querySelector('input[name="to_date"]')?.value) qs.set('to_date', document.querySelector('input[name="to_date"]').value);
+                if (selectedValue) qs.set('client_type_pk', selectedValue);
+                fetch(buyersForReportUrl + '?' + qs.toString(), { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        const buyers = (data.buyers || []).map(function(name) {
+                            return { value: name || '', text: name || '—' };
+                        }).filter(function(o) { return o.value; });
+                        setBuyerChoices(buyers, preservedBuyerName);
+                    })
+                    .catch(function() {
+                        const list = (otherBuyerNames || []).map(function(name) {
+                            return { value: name, text: name };
+                        });
+                        setBuyerChoices(list, preservedBuyerName);
+                    });
             } else if (slug === 'section') {
-                const list = (sectionBuyerNames || []).map(function(name) {
-                    return { value: name, text: name };
-                });
-                setBuyerChoices(list, preservedBuyerName);
+                // Section: load buyer names dynamically (optionally filtered by selected client_type_pk)
+                clientTypePkBuyer.innerHTML = '<option value="">Loading...</option>';
+                const qs = new URLSearchParams();
+                qs.set('client_type_slug', 'section');
+                if (document.querySelector('input[name="from_date"]')?.value) qs.set('from_date', document.querySelector('input[name="from_date"]').value);
+                if (document.querySelector('input[name="to_date"]')?.value) qs.set('to_date', document.querySelector('input[name="to_date"]').value);
+                if (selectedValue) qs.set('client_type_pk', selectedValue);
+                fetch(buyersForReportUrl + '?' + qs.toString(), { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        const buyers = (data.buyers || []).map(function(name) {
+                            return { value: name || '', text: name || '—' };
+                        }).filter(function(o) { return o.value; });
+                        setBuyerChoices(buyers, preservedBuyerName);
+                    })
+                    .catch(function() {
+                        const list = (sectionBuyerNames || []).map(function(name) {
+                            return { value: name, text: name };
+                        });
+                        setBuyerChoices(list, preservedBuyerName);
+                    });
             } else if (slug && clientTypeOptions[slug]) {
                 const list = clientTypeOptions[slug].map(function(o) {
                     return { value: o.text, text: o.text };
