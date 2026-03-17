@@ -484,13 +484,17 @@ class ReportController extends Controller
                 ->with('error', 'Please apply filters before exporting.');
         }
 
-        $clientTypeSlugToInt = array_flip([
+        // Map human-readable client type slugs (used by filters / forms)
+        // to the integer codes stored in `kitchen_issue_master.client_type`.
+        // NOTE: Do NOT use array_flip here – the keys must remain the slugs
+        // so that lookups like $clientTypeSlugToInt['employee'] work correctly.
+        $clientTypeSlugToInt = [
             \App\Models\Mess\ClientType::TYPE_EMPLOYEE => KitchenIssueMaster::CLIENT_EMPLOYEE,
             \App\Models\Mess\ClientType::TYPE_OT      => KitchenIssueMaster::CLIENT_OT,
             \App\Models\Mess\ClientType::TYPE_COURSE  => KitchenIssueMaster::CLIENT_COURSE,
             \App\Models\Mess\ClientType::TYPE_OTHER   => KitchenIssueMaster::CLIENT_OTHER,
             'section'                                 => KitchenIssueMaster::CLIENT_SECTION,
-        ]);
+        ];
 
         $svQuery = \App\Models\Mess\SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'items.itemSubcategory']);
         $fromDate = $request->filled('from_date') ? $request->from_date : null;
@@ -1222,7 +1226,17 @@ class ReportController extends Controller
             ->values();
 
         // --- 4. Group by BUYER: load all buyers in a single view (no pagination) ---
-        $groupedByBuyer = $vouchers->groupBy('client_type_pk');
+        // IMPORTANT:
+        // `client_type_pk` is the "client category" (e.g. Faculty/Academy Staff) for Employee type,
+        // so multiple buyers share the same pk. Grouping only by pk collapses multiple buyers into one
+        // and makes it look like some buyers/vouchers are missing in the report.
+        // We must group by buyer identity: name + type (+ pk for safety).
+        $groupedByBuyer = $vouchers->groupBy(function ($v) {
+            $name = trim((string) ($v->client_name ?? ($v->clientTypeCategory->client_name ?? '')));
+            $slug = (string) ($v->client_type_slug ?? '');
+            $pk = (string) ($v->client_type_pk ?? '');
+            return $name . '|' . $slug . '|' . $pk;
+        });
 
         // Distinct buyer names per client_type_slug so that Buyer Name dropdown
         // can show only valid names for the selected type (course/other/section).
