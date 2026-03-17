@@ -15,6 +15,7 @@ use App\Models\EmployeeMaster;
 use App\Models\DepartmentMaster;
 use App\Models\CourseMaster;
 use App\Models\StudentMaster;
+use App\Models\KitchenIssueMaster;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -149,6 +150,60 @@ class SellingVoucherDateRangeController extends Controller
                 return ['pk' => $s->pk, 'display_name' => $displayName];
             })->filter(fn($s) => $s['display_name'] !== '—')->values(),
         ]);
+    }
+
+    /**
+     * AJAX: previously used buyer names for Selling Voucher (Date Range).
+     *
+     * Query params:
+     * - client_type_slug: course|section|other
+     * - client_type_pk: for course => course_master.pk, for section/other => mess_client_types.id
+     */
+    public function getBuyerNames(Request $request)
+    {
+        $slug = strtolower(trim((string) $request->query('client_type_slug', '')));
+        if (!in_array($slug, ['course', 'section', 'other'], true)) {
+            return response()->json(['buyers' => []]);
+        }
+
+        $clientTypePk = (int) $request->query('client_type_pk', 0);
+        if ($clientTypePk <= 0) {
+            return response()->json(['buyers' => []]);
+        }
+
+        $svBuyers = SellingVoucherDateRangeReport::query()
+            ->where('client_type_slug', $slug)
+            ->where('client_type_pk', $clientTypePk)
+            ->whereHas('items')
+            ->whereNotNull('client_name')
+            ->where('client_name', '!=', '')
+            ->distinct()
+            ->pluck('client_name')
+            ->map(fn ($n) => trim((string) $n));
+
+        $slugToKiType = [
+            'course' => KitchenIssueMaster::CLIENT_COURSE,
+            'section' => KitchenIssueMaster::CLIENT_SECTION,
+            'other' => KitchenIssueMaster::CLIENT_OTHER,
+        ];
+        $kiBuyers = KitchenIssueMaster::query()
+            ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+            ->where('client_type', $slugToKiType[$slug])
+            ->where('client_type_pk', $clientTypePk)
+            ->whereHas('items')
+            ->whereNotNull('client_name')
+            ->where('client_name', '!=', '')
+            ->distinct()
+            ->pluck('client_name')
+            ->map(fn ($n) => trim((string) $n));
+
+        $buyers = $svBuyers->concat($kiBuyers)
+            ->filter(fn ($n) => $n !== '')
+            ->unique()
+            ->sort()
+            ->values();
+
+        return response()->json(['buyers' => $buyers]);
     }
 
     public function create()

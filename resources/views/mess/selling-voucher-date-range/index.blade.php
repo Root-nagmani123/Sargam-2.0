@@ -456,6 +456,8 @@ document.addEventListener('DOMContentLoaded', function () {
                                 <div class="col-md-4" id="drNameFieldWrap" style="display:none;">
                                     <label class="form-label voucher-label">Name <span class="text-danger">*</span></label>
                                     <input type="text" name="client_name" id="drClientNameInput" class="form-control " value="{{ old('client_name') }}" placeholder="Client / section / role name" required>
+                                    <datalist id="drCourseBuyerNames"></datalist>
+                                    <datalist id="drGenericBuyerNames"></datalist>
                                     <select id="drFacultySelect" class="form-select " style="display:none;">
                                         <option value="">Select Faculty</option>
                                         @foreach($faculties ?? [] as $f)
@@ -929,6 +931,8 @@ document.addEventListener('DOMContentLoaded', function () {
                                 <div class="col-md-4" id="editDrNameFieldWrap" style="display:none;">
                                     <label class="form-label voucher-label">Name <span class="text-danger">*</span></label>
                                     <input type="text" name="client_name" class="form-control  edit-client-name" id="editDrClientNameInput" placeholder="Client / section / role name" required>
+                                    <datalist id="editDrCourseBuyerNames"></datalist>
+                                    <datalist id="editDrGenericBuyerNames"></datalist>
                                     <select id="editDrFacultySelect" class="form-select " style="display:none;">
                                         <option value="">Select Faculty</option>
                                         @foreach($faculties ?? [] as $f)
@@ -1949,6 +1953,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (isOt) {
                 nameInput.style.display = 'none';
                 nameInput.removeAttribute('required');
+                nameInput.removeAttribute('list');
                 [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) {
                     if (sel) {
                         setSelectVisible(sel, false);
@@ -1969,8 +1974,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             } else if (isCourse) {
                 nameInput.style.display = 'block';
-                nameInput.placeholder = 'Course name';
+                nameInput.placeholder = 'Name';
                 nameInput.setAttribute('required', 'required');
+                nameInput.setAttribute('list', 'drCourseBuyerNames');
                 [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) {
                     if (sel) {
                         setSelectVisible(sel, false);
@@ -1992,6 +1998,7 @@ document.addEventListener('DOMContentLoaded', function () {
             } else {
                 nameInput.style.display = showAny ? 'none' : 'block';
                 nameInput.removeAttribute('required');
+                nameInput.setAttribute('list', 'drGenericBuyerNames');
                 [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) {
                     if (!sel) return;
                     const show = sel === facultySelect ? showFaculty : (sel === academyStaffSelect ? showAcademyStaff : showMessStaff);
@@ -2150,6 +2157,56 @@ document.addEventListener('DOMContentLoaded', function () {
                 updateDrNameField();
             });
         });
+
+        function loadAddDrBuyerNames() {
+            const clientTypeRadio = document.querySelector('#addReportModal .dr-client-type-radio:checked');
+            const clientNameSelect = document.getElementById('drClientNameSelect');
+            const drCourseSelect = document.getElementById('drCourseSelect');
+            const nameInput = document.getElementById('drClientNameInput');
+            const courseDl = document.getElementById('drCourseBuyerNames');
+            const genericDl = document.getElementById('drGenericBuyerNames');
+            if (!clientTypeRadio || !nameInput || !courseDl || !genericDl) return;
+
+            const slug = (clientTypeRadio.value || '').toLowerCase();
+            let pk = '';
+            let targetDl = null;
+
+            if (slug === 'course') {
+                pk = drCourseSelect ? getSelectValue(drCourseSelect) : '';
+                targetDl = courseDl;
+                nameInput.setAttribute('list', 'drCourseBuyerNames');
+                genericDl.innerHTML = '';
+            } else if (slug === 'section' || slug === 'other') {
+                pk = clientNameSelect ? getSelectValue(clientNameSelect) : '';
+                targetDl = genericDl;
+                nameInput.setAttribute('list', 'drGenericBuyerNames');
+                courseDl.innerHTML = '';
+            } else {
+                nameInput.removeAttribute('list');
+                courseDl.innerHTML = '';
+                genericDl.innerHTML = '';
+                return;
+            }
+
+            targetDl.innerHTML = '';
+            if (!pk) return;
+
+            fetch(baseUrl + '/buyer-names?client_type_slug=' + encodeURIComponent(slug) + '&client_type_pk=' + encodeURIComponent(pk), {
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+            })
+                .then(r => r.json())
+                .then(function(data) {
+                    targetDl.innerHTML = '';
+                    (data.buyers || []).forEach(function(b) {
+                        const opt = document.createElement('option');
+                        opt.value = b;
+                        targetDl.appendChild(opt);
+                    });
+                })
+                .catch(function() {
+                    targetDl.innerHTML = '';
+                });
+        }
         document.getElementById('drOtCourseSelect').addEventListener('change', function() {
             const coursePk = getSelectValue(this);
             const otStudentSelect = document.getElementById('drOtStudentSelect');
@@ -2191,9 +2248,12 @@ document.addEventListener('DOMContentLoaded', function () {
             if (inp) inp.value = getSelectValue(this) || '';
         });
         document.getElementById('drCourseSelect').addEventListener('change', function() {
-            // Do not auto-fill Name with course value
+            loadAddDrBuyerNames();
         });
-        document.getElementById('drClientNameSelect').addEventListener('change', updateDrNameField);
+        document.getElementById('drClientNameSelect').addEventListener('change', function() {
+            updateDrNameField();
+            loadAddDrBuyerNames();
+        });
         document.getElementById('drFacultySelect').addEventListener('change', function() {
             const inp = document.getElementById('drClientNameInput');
             if (inp) inp.value = getSelectValue(this) || '';
@@ -2210,6 +2270,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
         const addChecked = document.querySelector('#addReportModal .dr-client-type-radio:checked');
         if (addChecked) addChecked.dispatchEvent(new Event('change'));
+        loadAddDrBuyerNames();
 
         // Edit modal: same Faculty / Academy Staff / Mess Staff dropdown logic
         function updateEditDrNameField() {
@@ -2238,6 +2299,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (isOt) {
                 nameInput.style.display = 'none';
                 nameInput.removeAttribute('required');
+                nameInput.removeAttribute('list');
                 [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) {
                     if (sel) {
                         setSelectVisible(sel, false);
@@ -2257,8 +2319,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             } else if (isCourse) {
                 nameInput.style.display = 'block';
-                nameInput.placeholder = 'Course name';
+                nameInput.placeholder = 'Name';
                 nameInput.setAttribute('required', 'required');
+                nameInput.setAttribute('list', 'editDrCourseBuyerNames');
                 [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) {
                     if (sel) {
                         setSelectVisible(sel, false);
@@ -2275,6 +2338,7 @@ document.addEventListener('DOMContentLoaded', function () {
             } else {
                 nameInput.style.display = showAny ? 'none' : 'block';
                 nameInput.removeAttribute('required');
+                nameInput.setAttribute('list', 'editDrGenericBuyerNames');
                 [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) {
                     if (!sel) return;
                     const show = sel === facultySelect ? showFaculty : (sel === academyStaffSelect ? showAcademyStaff : showMessStaff);
@@ -2300,6 +2364,56 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
                 if (!showAny) nameInput.setAttribute('required', 'required');
             }
+        }
+
+        function loadEditDrBuyerNames() {
+            const clientTypeRadio = document.querySelector('#editReportModal .edit-dr-client-type-radio:checked');
+            const clientNameSelect = document.getElementById('editDrClientNameSelect');
+            const drCourseSelect = document.getElementById('editDrCourseSelect');
+            const nameInput = document.getElementById('editDrClientNameInput');
+            const courseDl = document.getElementById('editDrCourseBuyerNames');
+            const genericDl = document.getElementById('editDrGenericBuyerNames');
+            if (!clientTypeRadio || !nameInput || !courseDl || !genericDl) return;
+
+            const slug = (clientTypeRadio.value || '').toLowerCase();
+            let pk = '';
+            let targetDl = null;
+
+            if (slug === 'course') {
+                pk = drCourseSelect ? getSelectValue(drCourseSelect) : '';
+                targetDl = courseDl;
+                nameInput.setAttribute('list', 'editDrCourseBuyerNames');
+                genericDl.innerHTML = '';
+            } else if (slug === 'section' || slug === 'other') {
+                pk = clientNameSelect ? getSelectValue(clientNameSelect) : '';
+                targetDl = genericDl;
+                nameInput.setAttribute('list', 'editDrGenericBuyerNames');
+                courseDl.innerHTML = '';
+            } else {
+                nameInput.removeAttribute('list');
+                courseDl.innerHTML = '';
+                genericDl.innerHTML = '';
+                return;
+            }
+
+            targetDl.innerHTML = '';
+            if (!pk) return;
+
+            fetch(baseUrl + '/buyer-names?client_type_slug=' + encodeURIComponent(slug) + '&client_type_pk=' + encodeURIComponent(pk), {
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+            })
+                .then(r => r.json())
+                .then(function(data) {
+                    targetDl.innerHTML = '';
+                    (data.buyers || []).forEach(function(b) {
+                        const opt = document.createElement('option');
+                        opt.value = b;
+                        targetDl.appendChild(opt);
+                    });
+                })
+                .catch(function() {
+                    targetDl.innerHTML = '';
+                });
         }
         document.querySelectorAll('#editReportModal .edit-dr-client-type-radio').forEach(function(radio) {
             radio.addEventListener('change', function() {
@@ -2427,6 +2541,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 }
                 updateEditDrNameField();
+                loadEditDrBuyerNames();
             });
         });
         document.getElementById('editDrOtCourseSelect').addEventListener('change', function() {
@@ -2470,12 +2585,12 @@ document.addEventListener('DOMContentLoaded', function () {
             if (inp) inp.value = getSelectValue(this) || '';
         });
         document.getElementById('editDrCourseSelect').addEventListener('change', function() {
-            const inp = document.getElementById('editDrClientNameInput');
-            const opt = getSelectSelectedOption(this);
-            const courseName = (opt && opt.textContent) ? opt.textContent.trim() : '';
-            if (inp) inp.value = courseName;
+            loadEditDrBuyerNames();
         });
-        document.getElementById('editDrClientNameSelect').addEventListener('change', updateEditDrNameField);
+        document.getElementById('editDrClientNameSelect').addEventListener('change', function() {
+            updateEditDrNameField();
+            loadEditDrBuyerNames();
+        });
         document.getElementById('editDrFacultySelect').addEventListener('change', function() {
             const inp = document.getElementById('editDrClientNameInput');
             if (inp) inp.value = getSelectValue(this) || '';
