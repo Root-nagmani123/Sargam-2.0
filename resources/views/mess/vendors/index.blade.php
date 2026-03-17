@@ -267,44 +267,67 @@
 </div>
 
 {{-- Edit Vendor Modal --}}
+<style>
+    /* Ensure body scroll works with sticky header/footer */
+    #editVendorModal .modal-dialog {
+        max-height: calc(100vh - 2rem);
+        margin: 1rem auto;
+    }
+    #editVendorModal .modal-content {
+        max-height: calc(100vh - 2rem);
+        display: flex;
+        flex-direction: column;
+    }
+    #editVendorModal .modal-body {
+        overflow-y: auto;
+    }
+</style>
 <div class="modal fade" id="editVendorModal" tabindex="-1" aria-labelledby="editVendorModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
             <form id="editVendorForm" method="POST" action="" enctype="multipart/form-data">
                 @csrf
                 @method('PUT')
-                <div class="modal-header bg-body-tertiary border-0 py-3 px-4">
-                    <h5 class="modal-title fw-semibold" id="editVendorModalLabel">Edit Vendor</h5>
+                <div class="modal-header bg-body border-bottom py-3 px-3 px-lg-4 position-sticky top-0 z-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="rounded-circle bg-primary-subtle text-primary d-inline-flex align-items-center justify-content-center flex-shrink-0" style="width: 36px; height: 36px;">
+                            <i class="material-symbols-rounded" style="font-size: 1.35rem;">storefront</i>
+                        </span>
+                        <div class="lh-sm">
+                            <h5 class="modal-title fw-semibold mb-0" id="editVendorModalLabel">Edit Vendor</h5>
+                            <div class="small text-muted">Update vendor details and click Update.</div>
+                        </div>
+                    </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-3 p-lg-4 bg-body-tertiary">
-                    <div class="card border-0 shadow-sm overflow-hidden">
+                    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
                         <div class="card-body p-3 p-lg-4">
                             <div class="row g-3">
                                 <div class="col-12">
                                     <label class="form-label fw-medium">Vendor Name <span
                                             class="text-danger">*</span></label>
-                                    <input type="text" name="name" id="edit_vendor_name" class="form-control" required
+                                    <input type="text" name="name" id="edit_vendor_name" class="form-control form-control-sm" required
                                         pattern="[a-zA-Z0-9\s\-]+" maxlength="255" autocomplete="off">
                                     <div class="text-danger small mt-1" id="edit_vendor_name_error" role="alert"></div>
                                 </div>
                                 <div class="col-12">
                                     <label class="form-label fw-medium">Email</label>
-                                    <input type="email" name="email" id="edit_vendor_email" class="form-control"
+                                    <input type="email" name="email" id="edit_vendor_email" class="form-control form-control-sm"
                                         maxlength="255" placeholder="Optional">
                                 </div>
                                 <div class="col-12 col-md-6">
                                     <label class="form-label fw-medium">Contact Person <span
                                             class="text-danger">*</span></label>
                                     <input type="text" name="contact_person" id="edit_vendor_contact_person"
-                                        class="form-control" required pattern="[a-zA-Z0-9\s\-]+" maxlength="255"
+                                        class="form-control form-control-sm" required pattern="[a-zA-Z0-9\s\-]+" maxlength="255"
                                         autocomplete="off">
                                     <div class="text-danger small mt-1" id="edit_vendor_contact_person_error"
                                         role="alert"></div>
                                 </div>
                                 <div class="col-12 col-md-6">
                                     <label class="form-label fw-medium">Phone <span class="text-danger">*</span></label>
-                                    <input type="text" name="phone" id="edit_vendor_phone" class="form-control" required
+                                    <input type="text" name="phone" id="edit_vendor_phone" class="form-control form-control-sm" required
                                         inputmode="numeric" pattern="[0-9]{10}" maxlength="10"
                                         placeholder="10 digit mobile number">
                                     <div class="text-danger small mt-1" id="edit_phone_error" role="alert"></div>
@@ -312,7 +335,7 @@
                                 <div class="col-12">
                                     <label class="form-label fw-medium">Address <span
                                             class="text-danger">*</span></label>
-                                    <textarea name="address" id="edit_vendor_address" class="form-control" rows="3"
+                                    <textarea name="address" id="edit_vendor_address" class="form-control form-control-sm" rows="3"
                                         required maxlength="2000" autocomplete="off"
                                         placeholder="Up to 2000 characters"></textarea>
                                     <div class="text-danger small mt-1" id="edit_vendor_address_error" role="alert">
@@ -321,13 +344,13 @@
                                 <div class="col-12 col-md-6">
                                     <label class="form-label fw-medium">GST Number</label>
                                     <input type="text" name="gst_number" id="edit_vendor_gst_number"
-                                        class="form-control" maxlength="15" pattern="[A-Za-z0-9]+"
+                                        class="form-control form-control-sm" maxlength="15" pattern="[A-Za-z0-9]+"
                                         placeholder="Letters & numbers, max 15">
                                     <div class="text-danger small mt-1" id="edit_gst_number_error" role="alert"></div>
                                 </div>
                                 <div class="col-12 col-md-6">
                                     <label class="form-label fw-medium">Bank Name</label>
-                                    <input type="text" name="bank_name" id="edit_vendor_bank_name" class="form-control"
+                                    <input type="text" name="bank_name" id="edit_vendor_bank_name" class="form-control form-control-sm"
                                         maxlength="255" pattern="[a-zA-Z0-9\s\-]+"
                                         placeholder="No special characters, max 255">
                                     <div class="text-danger small mt-1" id="edit_bank_name_error" role="alert"></div>
@@ -335,29 +358,29 @@
                                 <div class="col-12 col-md-6">
                                     <label class="form-label fw-medium">IFSC Code</label>
                                     <input type="text" name="ifsc_code" id="edit_vendor_ifsc_code"
-                                        class="form-control text-uppercase" maxlength="11" pattern="[A-Za-z0-9]+"
+                                        class="form-control form-control-sm text-uppercase" maxlength="11" pattern="[A-Za-z0-9]+"
                                         placeholder="Letters & numbers, max 11">
                                     <div class="text-danger small mt-1" id="edit_ifsc_code_error" role="alert"></div>
                                 </div>
                                 <div class="col-12 col-md-6">
                                     <label class="form-label fw-medium">Account Number</label>
                                     <input type="text" name="account_number" id="edit_vendor_account_number"
-                                        class="form-control" inputmode="numeric" pattern="[0-9]*" maxlength="18"
+                                        class="form-control form-control-sm" inputmode="numeric" pattern="[0-9]*" maxlength="18"
                                         placeholder="Digits only, max 18">
                                     <div class="text-danger small mt-1" id="edit_account_number_error" role="alert">
                                     </div>
                                 </div>
                                 <div class="col-12 col-md-6">
                                     <label class="form-label fw-medium">Upload Licence</label>
-                                    <input type="file" name="licence_document" class="form-control">
+                                    <input type="file" name="licence_document" class="form-control form-control-sm">
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer bg-white border-0 pt-2 px-4 pb-4">
-                    <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary px-4">Update</button>
+                <div class="modal-footer bg-body border-top py-3 px-3 px-lg-4 position-sticky bottom-0 z-3">
+                    <button type="button" class="btn btn-outline-secondary btn-sm px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary btn-sm px-4">Update</button>
                 </div>
             </form>
         </div>

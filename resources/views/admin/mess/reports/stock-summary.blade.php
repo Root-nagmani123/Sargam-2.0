@@ -115,7 +115,7 @@
                 <tr>
                     <th rowspan="2" class="text-center align-middle">SR.<br>No</th>
                     <th rowspan="2" class="text-center align-middle">Item Name</th>
-                    <th rowspan="2" class="text-center align-middle">Unit</th>
+                    <th rowspan="2" class="align-middle">Unit</th>
                     <th colspan="3" class="text-center">Opening</th>
                     <th colspan="3" class="text-center">Purchase</th>
                     <th colspan="3" class="text-center">Sale</th>
@@ -363,10 +363,64 @@ function printStockSummary() {
         font-size: 14px;
     }
 
-    /* Table fits in single view: no scroll, auto height/width */
+    /* Fixed table height with inner vertical + horizontal scroll */
     .stock-summary-report .table-fit-single-view {
-        overflow: visible;
+        overflow-x: auto;
+        overflow-y: auto;
         max-width: 100%;
+        height: 70vh;
+        border-radius: .5rem;
+    }
+
+    .stock-summary-report .table-fit {
+        position: relative;
+        border-collapse: separate;
+        border-spacing: 0;
+        table-layout: auto;
+        width: max-content;
+        min-width: 100%;
+    }
+
+    /* Sticky table header on scroll (2-row header) */
+    .stock-summary-report .table-fit thead th {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        background: #0b4a7e; /* deep blue like screenshot */
+        color: #fff;
+    }
+
+    /* 2nd header row should sit below the 1st header row */
+    .stock-summary-report .table-fit thead tr:nth-child(2) th {
+        top: var(--ssr-sticky-row1, 34px); /* row1 height (auto-set by JS) */
+        z-index: 21;
+    }
+
+    /* Keep borders clean while sticky */
+    .stock-summary-report .table-fit thead th {
+        box-shadow: 0 1px 0 rgba(0,0,0,.08);
+    }
+
+    .stock-summary-report .table-fit thead th {
+        border-color: rgba(255,255,255,.25);
+    }
+
+    /* Robust sticky header (cloned THEAD) */
+    .stock-summary-report .ssr-sticky-head {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        background: #0b4a7e;
+        overflow: hidden;
+    }
+    .stock-summary-report .ssr-sticky-head table {
+        margin-bottom: 0;
+    }
+    .stock-summary-report .ssr-sticky-head th {
+        background: #0b4a7e !important;
+        color: #fff !important;
+        border-color: rgba(255,255,255,.25) !important;
+        box-shadow: 0 1px 0 rgba(0,0,0,.08);
     }
 
     .stock-summary-report .table-fit {
@@ -436,6 +490,72 @@ function printStockSummary() {
                 }
             });
         }
+
+        // Set CSS var for 2-row sticky header offset (match actual first row height)
+        try {
+            const table = document.querySelector('.stock-summary-report .table-fit');
+            if (table) {
+                const row1 = table.querySelector('thead tr:first-child');
+                if (row1) {
+                    const h = row1.getBoundingClientRect().height;
+                    table.style.setProperty('--ssr-sticky-row1', Math.ceil(h) + 'px');
+                }
+            }
+        } catch (e) {}
+
+        // Robust sticky header inside scroll container (matches screenshot)
+        try {
+            const scroller = document.querySelector('.stock-summary-report .table-fit-single-view');
+            const table = scroller ? scroller.querySelector('table.table-fit') : null;
+            const thead = table ? table.querySelector('thead') : null;
+            if (scroller && table && thead) {
+                // Remove previous sticky head if any (hot reload safety)
+                const old = scroller.querySelector('.ssr-sticky-head');
+                if (old) old.remove();
+
+                const stickyWrap = document.createElement('div');
+                stickyWrap.className = 'ssr-sticky-head';
+
+                const stickyTable = document.createElement('table');
+                stickyTable.className = table.className;
+                // Let width be auto; we'll sync actual column widths below
+
+                // Clone THEAD only
+                stickyTable.appendChild(thead.cloneNode(true));
+                stickyWrap.appendChild(stickyTable);
+
+                // Insert before original table so it sits above it
+                scroller.insertBefore(stickyWrap, table);
+
+                // Sync column widths (original table layout -> sticky header)
+                const syncWidths = function() {
+                    const origThs = table.querySelectorAll('thead th');
+                    const stickyThs = stickyTable.querySelectorAll('thead th');
+                    if (!origThs.length || origThs.length !== stickyThs.length) return;
+                    stickyTable.style.width = table.scrollWidth + 'px';
+                    for (let i = 0; i < origThs.length; i++) {
+                        const w = origThs[i].getBoundingClientRect().width;
+                        stickyThs[i].style.width = w + 'px';
+                        stickyThs[i].style.minWidth = w + 'px';
+                        stickyThs[i].style.maxWidth = w + 'px';
+                    }
+                };
+                syncWidths();
+                window.addEventListener('resize', syncWidths);
+
+                // Sync horizontal scroll: translate sticky header table
+                scroller.addEventListener('scroll', function() {
+                    if (scroller.scrollWidth > scroller.clientWidth) {
+                        stickyTable.style.transform = 'translateX(' + (-scroller.scrollLeft) + 'px)';
+                    } else {
+                        stickyTable.style.transform = '';
+                    }
+                });
+
+                // Hide original THEAD visually (keep it for layout/calcs)
+                thead.style.visibility = 'hidden';
+            }
+        } catch (e) {}
     });
 </script>
 

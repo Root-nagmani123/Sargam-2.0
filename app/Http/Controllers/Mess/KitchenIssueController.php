@@ -381,10 +381,28 @@ class KitchenIssueController extends Controller
 
             DB::commit();
 
+            // AJAX request: return JSON so frontend can keep modal open without full page reload
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Selling Voucher created successfully',
+                    'voucher_id' => $master->pk,
+                ]);
+            }
+
             return redirect()->route('admin.mess.material-management.index')
-                ->with('success', 'Selling Voucher created successfully');
+                ->with('success', 'Selling Voucher created successfully')
+                ->with('open_selling_voucher_modal', true);
         } catch (ValidationException $e) {
             DB::rollBack();
+
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed.',
+                    'errors' => $e->errors(),
+                ], 422);
+            }
 
             return redirect()->route('admin.mess.material-management.index')
                 ->withErrors($e->errors())
@@ -392,6 +410,14 @@ class KitchenIssueController extends Controller
                 ->with('open_selling_voucher_modal', true);
         } catch (\Exception $e) {
             DB::rollBack();
+
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to create Selling Voucher: ' . $e->getMessage(),
+                ], 500);
+            }
+
             return redirect()->route('admin.mess.material-management.index')
                 ->withInput()
                 ->with('error', 'Failed to create Selling Voucher: ' . $e->getMessage())

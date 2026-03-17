@@ -227,6 +227,15 @@ class SellingVoucherDateRangeController extends Controller
         }
         if (!empty($qtyErrors)) {
             $bag = new MessageBag(['items' => implode(' ', $qtyErrors)]);
+
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed.',
+                    'errors' => ['items' => [implode(' ', $qtyErrors)]],
+                ], 422);
+            }
+
             return redirect()->route('admin.mess.selling-voucher-date-range.index')
                 ->withInput()
                 ->withErrors($bag)
@@ -328,10 +337,29 @@ class SellingVoucherDateRangeController extends Controller
 
             DB::commit();
 
+            // AJAX request: return JSON so frontend can keep modal open without full page reload
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Date Range Report created successfully.',
+                    'report_id' => $report->id,
+                ]);
+            }
+
+            // Normal request: redirect back and reopen Add modal
             return redirect()->route('admin.mess.selling-voucher-date-range.index')
-                ->with('success', 'Date Range Report created successfully.');
+                ->with('success', 'Date Range Report created successfully.')
+                ->with('open_add_modal', true);
         } catch (\Exception $e) {
             DB::rollBack();
+
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to create report: ' . $e->getMessage(),
+                ], 500);
+            }
+
             return redirect()->route('admin.mess.selling-voucher-date-range.index')
                 ->withInput()
                 ->with('error', 'Failed to create report: ' . $e->getMessage())
