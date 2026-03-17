@@ -111,8 +111,34 @@ class KitchenIssueController extends Controller
         $clientTypes = ClientType::clientTypes();
         $clientNamesByType = ClientType::active()->orderBy('client_type')->orderBy('client_name')->get()
             ->groupBy('client_type');
-        $faculties = FacultyMaster::whereNotNull('full_name')->where('full_name', '!=', '')->orderBy('full_name')->get(['pk', 'full_name']);
+
+        // Same split as Selling Voucher Date Range:
+        // - Faculty Staff: from FacultyMaster (linked via employee_master_pk)
+        // - Academy Staff: active employees excluding Mess staff + faculty-mapped employees
+        $officersMessDept = DepartmentMaster::where('department_name', 'Officers Mess')->first();
+
+        $faculties = FacultyMaster::whereNotNull('full_name')
+            ->where('full_name', '!=', '')
+            ->orderBy('full_name')
+            ->get(['pk', 'full_name', 'employee_master_pk']);
+
+        $facultyEmployeePks = $faculties
+            ->pluck('employee_master_pk')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
         $employees = EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn($q) => $q->where('status', 1))
+            ->when($officersMessDept, function ($q) use ($officersMessDept) {
+                $q->where(function ($sub) use ($officersMessDept) {
+                    $sub->whereNull('department_master_pk')
+                        ->orWhere('department_master_pk', '!=', $officersMessDept->pk);
+                });
+            })
+            ->when(!empty($facultyEmployeePks), function ($q) use ($facultyEmployeePks) {
+                $q->whereNotIn('pk', $facultyEmployeePks);
+            })
             ->orderBy('first_name')->orderBy('last_name')
             ->get(['pk', 'first_name', 'middle_name', 'last_name'])
             ->map(function ($e) {
@@ -121,8 +147,6 @@ class KitchenIssueController extends Controller
             })
             ->filter(fn($e) => $e->full_name !== '—')
             ->values();
-
-        $officersMessDept = DepartmentMaster::where('department_name', 'Officers Mess')->first();
         $messStaff = $officersMessDept
             ? EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn($q) => $q->where('status', 1))
                 ->where('department_master_pk', $officersMessDept->pk)

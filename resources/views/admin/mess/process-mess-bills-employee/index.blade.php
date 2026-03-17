@@ -1123,15 +1123,13 @@ document.addEventListener('DOMContentLoaded', function() {
             if (slug === 'employee') {
                 var selectedOpt = modalClientTypePk.options[modalClientTypePk.selectedIndex];
                 var dataClientName = selectedOpt && selectedOpt.dataset ? (selectedOpt.dataset.clientName || '') : '';
-                if (dataClientName && employeeNames[dataClientName]) {
+                if (dataClientName && employeeNames[dataClientName] && employeeNames[dataClientName].length) {
                     addBuyerOptions(employeeNames[dataClientName]);
                 } else {
-                    // koi specific client_type_pk select nahi hai – saare employees dikhao
-                    var allEmps = []
-                        .concat(employeeNames['academy staff'] || [])
-                        .concat(employeeNames['faculty'] || [])
-                        .concat(employeeNames['mess staff'] || []);
-                    addBuyerOptions(allEmps);
+                    // Fallback: show all employee-type buyers if specific group not found
+                    Object.keys(employeeNames || {}).forEach(function (key) {
+                        addBuyerOptions(employeeNames[key] || []);
+                    });
                 }
             } else if (slug === 'ot' && selectedPk) {
                 // OT + specific course: students by course
