@@ -2876,6 +2876,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 .then(function(data) {
                     document.getElementById('returnTransferFromStore').textContent = data.store_name || '—';
                     const issueDate = data.issue_date || '';
+                    const todayYmd = new Date().toISOString().slice(0, 10);
                     const tbody = document.getElementById('returnItemModalBody');
                     tbody.innerHTML = '';
                     (data.items || []).forEach(function(item, i) {
@@ -2889,7 +2890,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         tbody.insertAdjacentHTML('beforeend',
                             '<tr><td>' + name + '<input type="hidden" name="items[' + i + '][id]" value="' + id + '"></td><td>' + qty + '</td><td>' + unit + '</td>' +
                             '<td><input type="number" name="items[' + i + '][return_quantity]" class="form-control  dr-return-qty" step="0.01" min="0" max="' + issuedQty + '" data-issued="' + issuedQty + '" value="' + retQty + '"><div class="invalid-feedback">Return Qty cannot exceed Issued Qty.</div></td>' +
-                            '<td><input type="date" name="items[' + i + '][return_date]" class="form-control  dr-return-date" ' + (issueDate ? ('min="' + issueDate + '" data-issue-date="' + issueDate + '"') : '') + ' value="' + retDate + '"><div class="invalid-feedback">Return date cannot be earlier than issue date.</div></td></tr>');
+                            '<td><input type="date" name="items[' + i + '][return_date]" class="form-control  dr-return-date" max="' + todayYmd + '" ' + (issueDate ? ('min="' + issueDate + '" data-issue-date="' + issueDate + '"') : '') + ' value="' + retDate + '"><div class="invalid-feedback">Return date must be between issue date and today.</div></td></tr>');
                     });
                     document.getElementById('returnItemForm').action = baseUrl + '/' + reportId + '/return';
                     new bootstrap.Modal(document.getElementById('returnItemModal')).show();
@@ -2924,12 +2925,19 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!inputEl) return;
             const issue = inputEl.dataset.issueDate || '';
             const raw = inputEl.value;
-            if (!issue || !raw) {
+            const today = new Date().toISOString().slice(0, 10);
+            inputEl.max = today;
+            if (!raw) {
                 inputEl.setCustomValidity('');
                 inputEl.classList.remove('is-invalid');
                 return;
             }
-            if (raw < issue) {
+            if (raw > today) {
+                inputEl.setCustomValidity('Return date cannot be in the future.');
+                inputEl.classList.add('is-invalid');
+                return;
+            }
+            if (issue && raw < issue) {
                 inputEl.setCustomValidity('Return date cannot be earlier than issue date.');
                 inputEl.classList.add('is-invalid');
             } else {

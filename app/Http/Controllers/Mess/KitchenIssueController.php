@@ -883,7 +883,7 @@ class KitchenIssueController extends Controller
             'items' => 'required|array|min:1',
             'items.*.id' => 'required|exists:kitchen_issue_items,pk',
             'items.*.return_quantity' => 'required|numeric|min:0',
-            'items.*.return_date' => 'nullable|date',
+            'items.*.return_date' => 'nullable|date|before_or_equal:today',
         ]);
 
         $itemIds = $kitchenIssue->items->pluck('pk')->toArray();
@@ -910,9 +910,25 @@ class KitchenIssueController extends Controller
                     try {
                         $ret = Carbon::parse($returnDate)->startOfDay();
                         $iss = Carbon::parse($kitchenIssue->issue_date)->startOfDay();
+                        if ($ret->gt(now()->startOfDay())) {
+                            DB::rollBack();
+                            return back()->withInput()->with('error', 'Return date cannot be in the future.');
+                        }
                         if ($ret->lt($iss)) {
                             DB::rollBack();
                             return back()->withInput()->with('error', 'Return date cannot be earlier than issue date.');
+                        }
+                    } catch (\Exception $e) {
+                        DB::rollBack();
+                        return back()->withInput()->with('error', 'Invalid return date.');
+                    }
+                }
+                if (!empty($returnDate) && !$kitchenIssue->issue_date) {
+                    try {
+                        $ret = Carbon::parse($returnDate)->startOfDay();
+                        if ($ret->gt(now()->startOfDay())) {
+                            DB::rollBack();
+                            return back()->withInput()->with('error', 'Return date cannot be in the future.');
                         }
                     } catch (\Exception $e) {
                         DB::rollBack();
