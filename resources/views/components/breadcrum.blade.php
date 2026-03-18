@@ -479,10 +479,107 @@
 </style>
 
 <script>
+// Keep a lightweight navigation history so "Back" goes to last click reliably.
+(function initBreadcrumbBackStack() {
+    const NAV_STACK_KEY = 'sargam_breadcrumb_back_stack_v1';
+    const currentUrl = window.location.href;
+
+    function isSameOrigin(url) {
+        try {
+            return new URL(url).origin === window.location.origin;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function safeParse(json, fallback) {
+        try {
+            const val = JSON.parse(json);
+            return val ?? fallback;
+        } catch (e) {
+            return fallback;
+        }
+    }
+
+    function getStack() {
+        const raw = sessionStorage.getItem(NAV_STACK_KEY);
+        return safeParse(raw, []);
+    }
+
+    function setStack(stack) {
+        // Limit size to avoid unbounded growth.
+        const trimmed = Array.isArray(stack) ? stack.slice(-20) : [];
+        sessionStorage.setItem(NAV_STACK_KEY, JSON.stringify(trimmed));
+    }
+
+    try {
+        if (!isSameOrigin(currentUrl)) return;
+        const stack = getStack();
+        const last = stack[stack.length - 1];
+        if (last !== currentUrl) {
+            // Avoid duplicates while preserving order.
+            const deduped = stack.filter((u) => u !== currentUrl);
+            deduped.push(currentUrl);
+            setStack(deduped);
+        }
+    } catch (e) {
+        // If storage is blocked, fall back to referrer/history logic.
+    }
+})();
+
 function handleBackNavigation() {
+    const NAV_STACK_KEY = 'sargam_breadcrumb_back_stack_v1';
+    const currentUrl = window.location.href;
+
+    function isSameOrigin(url) {
+        try {
+            return new URL(url).origin === window.location.origin;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function safeParse(json, fallback) {
+        try {
+            const val = JSON.parse(json);
+            return val ?? fallback;
+        } catch (e) {
+            return fallback;
+        }
+    }
+
+    function getStack() {
+        const raw = sessionStorage.getItem(NAV_STACK_KEY);
+        return safeParse(raw, []);
+    }
+
+    function setStack(stack) {
+        const trimmed = Array.isArray(stack) ? stack.slice(-20) : [];
+        sessionStorage.setItem(NAV_STACK_KEY, JSON.stringify(trimmed));
+    }
+
+    // Priority 0: Use our localStorage stack (best for "last click" behavior).
+    try {
+        if (isSameOrigin(currentUrl)) {
+            const stack = getStack();
+            if (Array.isArray(stack) && stack.length) {
+                if (stack[stack.length - 1] === currentUrl) {
+                    stack.pop();
+                }
+                const target = stack.length ? stack[stack.length - 1] : null;
+                if (target && target !== currentUrl) {
+                    setStack(stack);
+                    window.location.href = target;
+                    return;
+                }
+            }
+        }
+    } catch (e) {
+        // Ignore and continue with fallbacks.
+    }
+
     // Priority 1: Use document.referrer (most reliable for actual last click)
     const referrer = document.referrer;
-    const currentUrl = window.location.href;
     
     // Check if referrer exists and is not the current page
     if (referrer && referrer !== currentUrl && referrer.includes(window.location.hostname)) {

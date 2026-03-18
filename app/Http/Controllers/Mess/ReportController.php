@@ -29,6 +29,8 @@ use App\Exports\Mess\SellingVoucherPrintSlipExport;
 use App\Exports\Mess\CategoryWisePrintSlipExport;
 use Maatwebsite\Excel\Facades\Excel;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Cache;
 use DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -186,13 +188,71 @@ class ReportController extends Controller
             }
         }
 
-        [$reportData, $selectedStoreName] = $this->getStockSummaryReportData($fromDate, $toDate, $storeId, $storeType);
+        // This report is expensive to compute; cache the computed dataset for repeated pagination
+        $cacheTtlSeconds = 600; // 10 minutes
+        $cacheKey = 'stock-summary:v2:' . implode(':', [
+            (string) $fromDate,
+            (string) $toDate,
+            (string) $storeType,
+            (string) $storeId,
+        ]);
+
+        [$reportData, $selectedStoreName, $cachedTotals] = Cache::remember($cacheKey, $cacheTtlSeconds, function () use ($fromDate, $toDate, $storeId, $storeType) {
+            [$data, $storeName] = $this->getStockSummaryReportData($fromDate, $toDate, $storeId, $storeType);
+            $totals = [
+                'opening_amount' => (float) collect($data)->sum('opening_amount'),
+                'purchase_amount' => (float) collect($data)->sum('purchase_amount'),
+                'sale_amount' => (float) collect($data)->sum('sale_amount'),
+                'closing_amount' => (float) collect($data)->sum('closing_amount'),
+            ];
+            return [$data, $storeName, $totals];
+        });
+
+        // Convert report data to collection for convenient pagination & totals
+        $reportCollection = collect($reportData);
+
+        // Simple server-side pagination (per-page can be tuned)
+        $perPage = 25;
+        $currentPage = LengthAwarePaginator::resolveCurrentPage();
+        $pageItems = $reportCollection
+            ->slice(($currentPage - 1) * $perPage, $perPage)
+            ->values();
+
+        $reportPage = new LengthAwarePaginator(
+            $pageItems,
+            $reportCollection->count(),
+            $perPage,
+            $currentPage,
+            [
+                'path' => $request->url(),
+                'query' => $request->query(),
+            ]
+        );
+
+        // Grand totals across all items (not just current page) - cached to speed up pagination
+        $reportTotals = $cachedTotals ?? [
+            'opening_amount' => (float) $reportCollection->sum('opening_amount'),
+            'purchase_amount' => (float) $reportCollection->sum('purchase_amount'),
+            'sale_amount' => (float) $reportCollection->sum('sale_amount'),
+            'closing_amount' => (float) $reportCollection->sum('closing_amount'),
+        ];
 
         $stores = Store::where('status', 'active')->get();
         $subStores = SubStore::where('status', 'active')->get();
 
+        // If AJAX request (or ajax=1 flag), return only the table partial
+        if ($request->ajax() || $request->boolean('ajax')) {
+            return view('admin.mess.reports.partials.stock-summary-table', compact(
+                'reportData',
+                'reportPage',
+                'reportTotals'
+            ));
+        }
+
         return view('admin.mess.reports.stock-summary', compact(
             'reportData',
+            'reportPage',
+            'reportTotals',
             'stores',
             'subStores',
             'fromDate',
