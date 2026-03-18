@@ -132,34 +132,6 @@
                                     @endif
                                 </a>
                             </li>
-
-                            <!-- Communications -->
-                            <li class="nav-item" role="none">
-                                <a href="#tab-communications"
-                                    class="nav-link header-nav-link px-3 py-2 {{ $activeNavTab === '#tab-communications' ? 'active' : '' }}"
-                                    data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-communications' ? 'true' : 'false' }}"
-                                    aria-controls="communications-panel" id="communications-tab">
-                                    <span>Communications</span>
-                                </a>
-                            </li>
-
-                            <!-- Academics -->
-                            <li class="nav-item" role="none">
-                                <a href="#tab-academics"
-                                    class="nav-link header-nav-link px-3 py-2 {{ $activeNavTab === '#tab-academics' ? 'active' : '' }}"
-                                    data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-academics' ? 'true' : 'false' }}"
-                                    aria-controls="academics-panel" id="academics-tab">
-                                    <span>Academics</span>
-                                </a>
-                            </li>
-
-                            <!-- Search -->
-                            <li class="nav-item" role="none">
-                                <button type="button" class="nav-link header-search-btn search-trigger"
-                                    aria-label="Open search" aria-expanded="false" aria-controls="searchModal">
-                                    <i class="material-icons material-symbols-rounded" aria-hidden="true">search</i>
-                                </button>
-                            </li>
                         </ul>
                     </div>
 
@@ -288,51 +260,6 @@
                             @endif
                         </a>
                     </li>
-
-                    <!-- Communications -->
-                    <li class="nav-item" role="none">
-                        <a href="#tab-communications" class="nav-link mobile-tab-link {{ $activeNavTab === '#tab-communications' ? 'active' : '' }}"
-                            data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-communications' ? 'true' : 'false' }}"
-                            aria-controls="communications-panel" id="communications-tab-mobile">
-                            <i class="material-icons material-symbols-rounded" aria-hidden="true">forum</i>
-                            <span>Comms</span>
-                        </a>
-                    </li>
-
-                    <!-- Material Management -->
-                    <li class="nav-item" role="none">
-                        <a href="#tab-material-management" class="nav-link mobile-tab-link {{ $activeNavTab === '#tab-material-management' ? 'active' : '' }}"
-                            data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-material-management' ? 'true' : 'false' }}"
-                            aria-controls="material-management-panel" id="material-management-tab-mobile">
-                            <i class="material-icons material-symbols-rounded" aria-hidden="true">inventory_2</i>
-                            <span>Material</span>
-                        </a>
-                    </li>
-
-                    <!-- Financial Dropdown -->
-                    <li class="nav-item dropup" role="none">
-                        <a class="nav-link mobile-tab-link dropdown-toggle-custom" href="#"
-                            id="financialDropdownMobile" role="menuitem" aria-haspopup="true"
-                            aria-expanded="false" data-bs-toggle="dropdown">
-                            <i class="material-icons material-symbols-rounded" aria-hidden="true">account_balance_wallet</i>
-                            <span>Finance</span>
-                        </a>
-
-                        <ul class="dropdown-menu shadow-lg border-0 rounded-xl p-2 mt-1"
-                            style="min-width: 180px; border: 1px solid rgba(0, 0, 0, 0.08);"
-                            aria-labelledby="financialDropdownMobile" role="menu">
-                            <li role="none">
-                                <a class="dropdown-item d-flex align-items-center gap-2 px-3 py-2 rounded-lg hover-lift"
-                                    href="#" role="menuitem">
-                                    <span>Budget</span>
-                                </a>
-                            </li>
-                            <li role="none">
-                                <a class="dropdown-item d-flex align-items-center gap-2 px-3 py-2 rounded-lg hover-lift"
-                                    href="#" role="menuitem">
-                                    <span>Accounts</span>
-                                </a>
-                            </li>
                         </ul>
                     </li>
 
@@ -352,15 +279,6 @@
                             </span>
                             @endif
                             <span>Notifications</span>
-                        </button>
-                    </li>
-
-                    <!-- Search -->
-                    <li class="nav-item" role="none">
-                        <button type="button" class="nav-link mobile-tab-link search-trigger"
-                            aria-label="Open search" aria-expanded="false" aria-controls="searchModal">
-                            <i class="material-icons material-symbols-rounded" aria-hidden="true">search</i>
-                            <span>Search</span>
                         </button>
                     </li>
                 </ul>
