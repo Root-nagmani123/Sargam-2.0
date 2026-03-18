@@ -86,7 +86,7 @@
                 </div>
             </div>
             <div class="table-responsive d-inline-block" style="max-width: 100%;">
-                <table class="table align-middle mb-0 voucher-table w-auto" id="sellingVoucherDateRangeTable">
+                <table class="table align-middle mb-0 voucher-table w-100" id="sellingVoucherDateRangeTable">
                     <thead>
                         <tr>
                             <th>S. No.</th>
@@ -251,6 +251,26 @@ document.addEventListener('DOMContentLoaded', function () {
 
 {{-- Add Report Modal --}}
 <style>
+    /* Hide number input up/down arrows for qty/rate fields in add/edit modals */
+    #addReportModal input.dr-qty,
+    #addReportModal input.dr-rate,
+    #editSellingVoucherModal input.edit-dr-qty,
+    #editSellingVoucherModal input.edit-dr-rate {
+        -moz-appearance: textfield;
+    }
+
+    #addReportModal input.dr-qty::-webkit-outer-spin-button,
+    #addReportModal input.dr-qty::-webkit-inner-spin-button,
+    #addReportModal input.dr-rate::-webkit-outer-spin-button,
+    #addReportModal input.dr-rate::-webkit-inner-spin-button,
+    #editSellingVoucherModal input.edit-dr-qty::-webkit-outer-spin-button,
+    #editSellingVoucherModal input.edit-dr-qty::-webkit-inner-spin-button,
+    #editSellingVoucherModal input.edit-dr-rate::-webkit-outer-spin-button,
+    #editSellingVoucherModal input.edit-dr-rate::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
     .voucher-table thead th {
         font-size: .76rem;
         font-weight: 700;
@@ -527,15 +547,15 @@ document.addEventListener('DOMContentLoaded', function () {
                                 <table class="table table-bordered table-sm align-middle mb-0" id="addReportItemsTable">
                                     <thead class="voucher-brand-head">
                                         <tr>
-                                            <th style="min-width: 180px;">Item Name <span class="text-white">*</span></th>
-                                            <th style="min-width: 150px;">Unit</th>
-                                            <th style="width: auto;">Available Qty</th>
-                                            <th style="width: auto;">Issue Qty <span class="text-white">*</span></th>
-                                            <th style="width: auto;">Left Qty</th>
-                                            <th style="width: auto;">Issue Date</th>
-                                            <th style="width: 110px;">Rate <span class="text-white">*</span></th>
-                                            <th style="width: auto;">Total Amount</th>
-                                            <th style="width: 50px;"></th>
+                                            <th style="min-width: 260px;">Item Name <span class="text-white">*</span></th>
+                                            <th style="min-width: 80px;">Unit</th>
+                                            <th style="min-width: 110px;">Available Qty</th>
+                                            <th style="min-width: 110px;">Issue Qty <span class="text-white">*</span></th>
+                                            <th style="min-width: 110px;">Left Qty</th>
+                                            <th style="min-width: 130px;">Issue Date</th>
+                                            <th style="min-width: 110px;">Rate <span class="text-white">*</span></th>
+                                            <th style="min-width: 130px;">Total Amount</th>
+                                            <th style="min-width: 50px;"></th>
                                         </tr>
                                     </thead>
                                     <tbody id="addModalItemsBody">
@@ -1707,7 +1727,10 @@ document.addEventListener('DOMContentLoaded', function () {
             const rateInp = row.querySelector('.dr-rate');
             const availInp = row.querySelector('.dr-avail');
             if (unitInp) unitInp.value = (opt && opt.dataset.unit) ? opt.dataset.unit : '—';
-            if (rateInp && opt && opt.dataset.rate) rateInp.value = opt.dataset.rate;
+            // Only auto-set rate if user has not manually overridden it
+            if (rateInp && rateInp.dataset.manualRate !== '1' && opt && opt.dataset.rate) {
+                rateInp.value = opt.dataset.rate;
+            }
             if (availInp && opt && opt.dataset.available) availInp.value = opt.dataset.available;
             if (availInp) availInp.readOnly = true;
             refreshAllAvailable();
@@ -1737,6 +1760,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const qty = parseFloat(row.querySelector('.dr-qty').value) || 0;
             const rateInp = row.querySelector('.dr-rate');
             let rate = parseFloat(rateInp.value) || 0;
+            const isManualRate = rateInp && rateInp.dataset.manualRate === '1';
             const totalInp = row.querySelector('.dr-total');
             const sel = row.querySelector('.dr-item-select');
             const opt = getSelectSelectedOption(sel);
@@ -1749,7 +1773,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             })() : null;
             let total;
-            if (tiers && tiers.length > 0 && qty > 0) {
+            if (!isManualRate && tiers && tiers.length > 0 && qty > 0) {
                 const fifoAmount = calcDrFifoAmount(tiers, qty);
                 if (fifoAmount !== null) {
                     total = fifoAmount;
@@ -1824,10 +1848,15 @@ document.addEventListener('DOMContentLoaded', function () {
                 updateAddGrandTotal();
             });
             newTr.querySelector('.dr-rate').addEventListener('input', function() {
+                // Mark that the user has manually set the rate so it is not auto-overwritten
+                this.dataset.manualRate = '1';
                 updateAddRowTotal(newTr);
                 updateAddGrandTotal();
             });
             newTr.querySelector('.dr-item-select').addEventListener('change', function() {
+                // On item change, allow auto-rate again until user edits manually
+                const rateInp = newTr.querySelector('.dr-rate');
+                if (rateInp) rateInp.dataset.manualRate = '';
                 updateAddRowUnit(newTr);
             });
             newTr.querySelector('.dr-remove-row').addEventListener('click', function() {
@@ -1844,6 +1873,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
         document.querySelectorAll('#addModalItemsBody .dr-item-row').forEach(function(row) {
             row.querySelector('.dr-item-select').addEventListener('change', function() {
+                const rateInp = row.querySelector('.dr-rate');
+                if (rateInp) rateInp.dataset.manualRate = '';
                 updateAddRowUnit(row);
             });
             row.querySelector('.dr-avail').addEventListener('input', function() {
@@ -1855,6 +1886,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 updateAddGrandTotal();
             });
             row.querySelector('.dr-rate').addEventListener('input', function() {
+                const rateInp = row.querySelector('.dr-rate');
+                if (rateInp) rateInp.dataset.manualRate = '1';
                 updateAddRowTotal(row);
                 updateAddGrandTotal();
             });
@@ -2627,11 +2660,11 @@ document.addEventListener('DOMContentLoaded', function () {
             return '<tr class="edit-dr-item-row"' + originalQtyAttr + '>' +
                 '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select  edit-dr-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
                 '<td><input type="text" name="items[' + index + '][unit]" class="form-control  edit-dr-unit" readonly placeholder="—" value="' + (item.unit || '').replace(/"/g, '&quot;') + '"></td>' +
-                '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control  edit-dr-avail bg-light" step="0.01" min="0" value="' + avail + '" readonly></td>' +
-                '<td><input type="number" name="items[' + index + '][quantity]" class="form-control  edit-dr-qty" step="0.01" min="0.01" required value="' + qty + '"><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
+                '<td><input type="text" name="items[' + index + '][available_quantity]" class="form-control  edit-dr-avail bg-light" value="' + avail + '" readonly></td>' +
+                '<td><input type="text" name="items[' + index + '][quantity]" class="form-control  edit-dr-qty" required value="' + qty + '"><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
                 '<td><input type="text" class="form-control  edit-dr-left bg-light" readonly value="' + left + '"></td>' +
                 '<td><input type="date" name="items[' + index + '][issue_date]" class="form-control  edit-dr-issue-date" value="' + issueDate + '"></td>' +
-                '<td><input type="number" name="items[' + index + '][rate]" class="form-control  edit-dr-rate" step="0.01" min="0" required value="' + rate + '"></td>' +
+                '<td><input type="text" name="items[' + index + '][rate]" class="form-control  edit-dr-rate" required value="' + rate + '"></td>' +
                 '<td><input type="text" class="form-control  edit-dr-total bg-light" readonly value="' + total + '"></td>' +
                 '<td><button type="button" class="btn  btn-outline-danger edit-dr-remove-row voucher-icon-btn" title="Remove">×</button></td>' +
                 '</tr>';
@@ -2843,6 +2876,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 .then(function(data) {
                     document.getElementById('returnTransferFromStore').textContent = data.store_name || '—';
                     const issueDate = data.issue_date || '';
+                    const todayYmd = new Date().toISOString().slice(0, 10);
                     const tbody = document.getElementById('returnItemModalBody');
                     tbody.innerHTML = '';
                     (data.items || []).forEach(function(item, i) {
@@ -2856,7 +2890,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         tbody.insertAdjacentHTML('beforeend',
                             '<tr><td>' + name + '<input type="hidden" name="items[' + i + '][id]" value="' + id + '"></td><td>' + qty + '</td><td>' + unit + '</td>' +
                             '<td><input type="number" name="items[' + i + '][return_quantity]" class="form-control  dr-return-qty" step="0.01" min="0" max="' + issuedQty + '" data-issued="' + issuedQty + '" value="' + retQty + '"><div class="invalid-feedback">Return Qty cannot exceed Issued Qty.</div></td>' +
-                            '<td><input type="date" name="items[' + i + '][return_date]" class="form-control  dr-return-date" ' + (issueDate ? ('min="' + issueDate + '" data-issue-date="' + issueDate + '"') : '') + ' value="' + retDate + '"><div class="invalid-feedback">Return date cannot be earlier than issue date.</div></td></tr>');
+                            '<td><input type="date" name="items[' + i + '][return_date]" class="form-control  dr-return-date" max="' + todayYmd + '" ' + (issueDate ? ('min="' + issueDate + '" data-issue-date="' + issueDate + '"') : '') + ' value="' + retDate + '"><div class="invalid-feedback">Return date must be between issue date and today.</div></td></tr>');
                     });
                     document.getElementById('returnItemForm').action = baseUrl + '/' + reportId + '/return';
                     new bootstrap.Modal(document.getElementById('returnItemModal')).show();
@@ -2891,12 +2925,19 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!inputEl) return;
             const issue = inputEl.dataset.issueDate || '';
             const raw = inputEl.value;
-            if (!issue || !raw) {
+            const today = new Date().toISOString().slice(0, 10);
+            inputEl.max = today;
+            if (!raw) {
                 inputEl.setCustomValidity('');
                 inputEl.classList.remove('is-invalid');
                 return;
             }
-            if (raw < issue) {
+            if (raw > today) {
+                inputEl.setCustomValidity('Return date cannot be in the future.');
+                inputEl.classList.add('is-invalid');
+                return;
+            }
+            if (issue && raw < issue) {
                 inputEl.setCustomValidity('Return date cannot be earlier than issue date.');
                 inputEl.classList.add('is-invalid');
             } else {

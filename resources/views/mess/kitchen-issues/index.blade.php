@@ -80,96 +80,104 @@
     <div class="card border-0 shadow-sm rounded-3">
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table w-100" id="sellingVouchersTable">
-            <thead>
-            <tr>
-                    <th>S. No.</th>
-                    <th>Item Name</th>
-                    <th>Item Quantity</th>
-                    <th>Return Quantity</th>
-                    <th>Transfer From Store</th>
-                    <th>Client Type</th>
-                    <th>Client Name</th>
-                    <th>Name</th>
-                    <th>Payment Type</th>
-                    <th>Request Date</th>
-                    <th>Status</th>
-                    <th>Return Item</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            @php($serial = 1)
-            <tbody>
-                @forelse($kitchenIssues as $voucher)
-                    @forelse($voucher->items as $item)
-                        <tr>
-                            <td>{{ $serial++ }}</td>
-                            <td>{{ $item->item_name ?: ($item->itemSubcategory->item_name ?? '—') }}</td>
-                            <td>{{ $item->quantity }}</td>
-                            <td>{{ $item->return_quantity ?? 0 }}</td>
-                            <td>{{ $voucher->resolved_store_name }}</td>
-                            <td>{{ $voucher->client_type_label ?? '—' }}</td>
-                            <td>{{ $voucher->display_client_name }}</td>
-                            <td>{{ $voucher->client_name ?? '—' }}</td>
-                            <td>{{ $voucher->payment_type == 1 ? 'Credit' : ($voucher->payment_type == 0 ? 'Cash' : ($voucher->payment_type == 2 ? 'UPI' : '—')) }}</td>
-                            <td>{{ $voucher->created_at ? $voucher->created_at->format('d/m/Y') : '—' }}</td>
-                            <td>
-                                @if($voucher->status == 0)<span class="badge bg-warning">Pending</span>
-                                @elseif($voucher->status == 2)<span class="badge bg-success">Approved</span>
-                                @elseif($voucher->status == 4)<span class="badge bg-primary">Completed</span>
-                                @else<span class="badge bg-secondary">{{ $voucher->status }}</span>@endif
-                            </td>
-                            <td>
-                                @if(($item->return_quantity ?? 0) > 0)
-                                    <span class="badge bg-info">Returned</span>
-                                @endif
-                                <button type="button" class="btn btn-sm btn-outline-secondary ms-1 btn-return-sv" data-voucher-id="{{ $voucher->pk }}" title="Return">Return</button>
-                            </td>
-                            <td>
-                                <button type="button" class="btn btn-sm btn-info btn-view-sv" data-voucher-id="{{ $voucher->pk }}" title="View">View</button>
-                                <button type="button" class="btn btn-sm btn-warning btn-edit-sv" data-voucher-id="{{ $voucher->pk }}" title="{{ $voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED ? 'Edit is disabled for approved voucher' : 'Edit' }}" @if($voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED) disabled @endif>Edit</button>
-                                <form action="{{ route('admin.mess.material-management.destroy', $voucher->pk) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this Selling Voucher?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger" title="Delete" style="display: none;">Delete</button>
-                                </form>
-                            </td>
+                <table class="table w-100 " id="sellingVouchersTable">
+                    <thead>
+                         <tr>
+                            <th>S. No.</th>
+                            <th>Item Name</th>
+                            <th>Item Quantity</th>
+                            <th>Return Quantity</th>
+                            <th>Transfer From Store</th>
+                            <th>Client Type</th>
+                            <th>Client Name</th>
+                            <th>Name</th>
+                            <th>Payment Type</th>
+                            <th>Request Date</th>
+                            <th>Status</th>
+                            <th>Return Item</th>
+                            <th>Action</th>
                         </tr>
-                    @empty
-                        <tr>
-                            <td>{{ $serial++ }}</td>
-                            <td>—</td>
-                            <td>—</td>
-                            <td>—</td>
-                            <td>{{ $voucher->resolved_store_name }}</td>
-                            <td>{{ $voucher->client_type_label ?? '—' }}</td>
-                            <td>{{ $voucher->display_client_name }}</td>
-                            <td>{{ $voucher->client_name ?? '—' }}</td>
-                            <td>—</td>
-                            <td>{{ $voucher->created_at ? $voucher->created_at->format('d/m/Y') : '—' }}</td>
-                            <td><span class="badge bg-secondary">{{ $voucher->status }}</span></td>
-                            <td>
-                                <button type="button" class="btn btn-sm btn-outline-secondary btn-return-sv" data-voucher-id="{{ $voucher->pk }}" title="Return">Return</button>
-                            </td>
-                            <td class="d-flex justify-content-center gap-2">
-                                <button type="button" class="btn btn-sm btn-info btn-view-sv" data-voucher-id="{{ $voucher->pk }}" title="View">View</button>
-                                <button type="button" class="btn btn-sm btn-warning btn-edit-sv" data-voucher-id="{{ $voucher->pk }}" title="{{ $voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED ? 'Edit is disabled for approved voucher' : 'Edit' }}" @if($voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED) disabled @endif>Edit</button>
-                                <form action="{{ route('admin.mess.material-management.destroy', $voucher->pk) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this Selling Voucher?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger" title="Delete" style="display: none;">Delete</button>
-                                </form>
-                            </td>
-                        </tr>
-                    @endforelse
-                @empty
-                    <tr>
-                        <td class="text-center py-4" colspan="12">No kitchen issues found.</td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
+                    </thead>
+                    @php($serial = 1)
+                    <tbody>
+                        @forelse($kitchenIssues as $voucher)
+                            @forelse($voucher->items as $item)
+                                <tr>
+                                    <td>{{ $serial++ }}</td>
+                                    <td>{{ $item->item_name ?: ($item->itemSubcategory->item_name ?? '—') }}</td>
+                                    <td>{{ $item->quantity }}</td>
+                                    <td>{{ $item->return_quantity ?? 0 }}</td>
+                                    <td>{{ $voucher->resolved_store_name }}</td>
+                                    <td>{{ $voucher->client_type_label ?? '—' }}</td>
+                                    <td>{{ $voucher->display_client_name }}</td>
+                                    <td>{{ $voucher->client_name ?? '—' }}</td>
+                                    <td>{{ $voucher->payment_type == 1 ? 'Credit' : ($voucher->payment_type == 0 ? 'Cash' : ($voucher->payment_type == 2 ? 'UPI' : '—')) }}</td>
+                                    <td>{{ $voucher->created_at ? $voucher->created_at->format('d/m/Y') : '—' }}</td>
+                                    <td>
+                                        @if($voucher->status == 0)<span class="badge bg-warning">Pending</span>
+                                        @elseif($voucher->status == 2)<span class="badge bg-success">Approved</span>
+                                        @elseif($voucher->status == 4)<span class="badge bg-primary">Completed</span>
+                                        @else<span class="badge bg-secondary">{{ $voucher->status }}</span>@endif
+                                    </td>
+                                    <td>
+                                        <div class="d-flex flex-wrap gap-2 align-items-center justify-content-center">
+                                            @if(($item->return_quantity ?? 0) > 0)
+                                                <span class="badge bg-info">Returned</span>
+                                            @endif
+                                            <button type="button" class="btn btn-sm btn-outline-secondary btn-return-sv" data-voucher-id="{{ $voucher->pk }}" title="Return">Return</button>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex flex-wrap gap-2 align-items-center justify-content-center">
+                                            <button type="button" class="btn btn-sm btn-info btn-view-sv" data-voucher-id="{{ $voucher->pk }}" title="View">View</button>
+                                            <button type="button" class="btn btn-sm btn-warning btn-edit-sv" data-voucher-id="{{ $voucher->pk }}" title="{{ $voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED ? 'Edit is disabled for approved voucher' : 'Edit' }}" @if($voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED) disabled @endif>Edit</button>
+                                            <form action="{{ route('admin.mess.material-management.destroy', $voucher->pk) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this Selling Voucher?');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-danger" title="Delete" style="display: none;">Delete</button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td>{{ $serial++ }}</td>
+                                    <td>—</td>
+                                    <td>—</td>
+                                    <td>—</td>
+                                    <td>{{ $voucher->resolved_store_name }}</td>
+                                    <td>{{ $voucher->client_type_label ?? '—' }}</td>
+                                    <td>{{ $voucher->display_client_name }}</td>
+                                    <td>{{ $voucher->client_name ?? '—' }}</td>
+                                    <td>—</td>
+                                    <td>{{ $voucher->created_at ? $voucher->created_at->format('d/m/Y') : '—' }}</td>
+                                    <td><span class="badge bg-secondary">{{ $voucher->status }}</span></td>
+                                    <td>
+                                        <div class="d-flex flex-wrap gap-2 align-items-center justify-content-center">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary btn-return-sv" data-voucher-id="{{ $voucher->pk }}" title="Return">Return</button>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex flex-wrap gap-2 align-items-center justify-content-center">
+                                        <button type="button" class="btn btn-sm btn-info btn-view-sv" data-voucher-id="{{ $voucher->pk }}" title="View">View</button>
+                                        <button type="button" class="btn btn-sm btn-warning btn-edit-sv" data-voucher-id="{{ $voucher->pk }}" title="{{ $voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED ? 'Edit is disabled for approved voucher' : 'Edit' }}" @if($voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED) disabled @endif>Edit</button>
+                                        <form action="{{ route('admin.mess.material-management.destroy', $voucher->pk) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this Selling Voucher?');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-sm btn-danger" title="Delete" style="display: none;">Delete</button>
+                                        </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforelse
+                        @empty
+                            <tr>
+                                <td class="text-center py-4" colspan="12">No kitchen issues found.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
     </div>
    </div>
 
@@ -1663,7 +1671,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const rateInp = row.querySelector('.sv-rate');
         const availInp = row.querySelector('.sv-avail');
         if (unitInp) unitInp.value = opt && opt.dataset.unit ? opt.dataset.unit : '';
-        if (rateInp && opt && opt.dataset.rate) rateInp.value = opt.dataset.rate;
+        // Only auto-set rate if user has not manually overridden it
+        if (rateInp && rateInp.dataset.manualRate !== '1' && opt && opt.dataset.rate) {
+            rateInp.value = opt.dataset.rate;
+        }
         if (availInp && opt && opt.dataset.available) availInp.value = opt.dataset.available;
         if (availInp) availInp.readOnly = true;
         if (row.closest('#editModalItemsBody')) {
@@ -1691,12 +1702,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const qty = parseFloat(row.querySelector('.sv-qty').value) || 0;
         const rateInp = row.querySelector('.sv-rate');
         let rate = parseFloat(rateInp.value) || 0;
+        const isManualRate = rateInp && rateInp.dataset.manualRate === '1';
         const sel = row.querySelector('.sv-item-select');
         const opt = sel && sel.options[sel.selectedIndex];
         const tiersJson = opt && opt.getAttribute('data-price-tiers');
         const tiers = tiersJson ? (function(){ try { return JSON.parse(tiersJson); } catch(e) { return null; } })() : null;
         let total;
-        if (tiers && tiers.length > 0 && qty > 0) {
+        if (!isManualRate && tiers && tiers.length > 0 && qty > 0) {
             const fifoAmount = calcFifoAmount(tiers, qty);
             if (fifoAmount !== null) {
                 total = fifoAmount;
@@ -1813,7 +1825,13 @@ document.addEventListener('DOMContentLoaded', function() {
         modalItemsBody.addEventListener('change', function(e) {
             if (e.target.classList.contains('sv-item-select')) {
                 const row = e.target.closest('.sv-item-row');
-                if (row) { updateUnit(row); calcRow(row); updateGrandTotal(); }
+                if (row) {
+                    const rateInp = row.querySelector('.sv-rate');
+                    if (rateInp) rateInp.dataset.manualRate = '';
+                    updateUnit(row);
+                    calcRow(row);
+                    updateGrandTotal();
+                }
             }
         });
 
@@ -1821,6 +1839,10 @@ document.addEventListener('DOMContentLoaded', function() {
             if (e.target.classList.contains('sv-avail') || e.target.classList.contains('sv-qty') || e.target.classList.contains('sv-rate')) {
                 const row = e.target.closest('.sv-item-row');
                 if (row) {
+                    if (e.target.classList.contains('sv-rate')) {
+                        const rateInp = row.querySelector('.sv-rate');
+                        if (rateInp) rateInp.dataset.manualRate = '1';
+                    }
                     refreshAllAvailable();
                     enforceQtyWithinAvailable(row);
                     calcRow(row);
@@ -2678,6 +2700,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.log('Return data:', data);
                     document.getElementById('returnTransferFromStore').textContent = data.store_name || '—';
                     const issueDate = data.issue_date || '';
+                    const todayYmd = new Date().toISOString().slice(0, 10);
                     const tbody = document.getElementById('returnItemModalBody');
                     tbody.innerHTML = '';
                     (data.items || []).forEach(function(item, i) {
@@ -2691,7 +2714,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         tbody.insertAdjacentHTML('beforeend',
                             '<tr><td>' + name + '<input type="hidden" name="items[' + i + '][id]" value="' + id + '"></td><td>' + qty + '</td><td>' + unit + '</td>' +
                             '<td><input type="number" name="items[' + i + '][return_quantity]" class="form-control  sv-return-qty" step="0.01" min="0" max="' + issuedQty + '" data-issued="' + issuedQty + '" value="' + retQty + '"><div class="invalid-feedback">Return Qty cannot exceed Issued Qty.</div></td>' +
-                            '<td><input type="date" name="items[' + i + '][return_date]" class="form-control  sv-return-date" ' + (issueDate ? ('min="' + issueDate + '" data-issue-date="' + issueDate + '"') : '') + ' value="' + retDate + '"><div class="invalid-feedback">Return date cannot be earlier than issue date.</div></td></tr>');
+                            '<td><input type="date" name="items[' + i + '][return_date]" class="form-control  sv-return-date" max="' + todayYmd + '" ' + (issueDate ? ('min="' + issueDate + '" data-issue-date="' + issueDate + '"') : '') + ' value="' + retDate + '"><div class="invalid-feedback">Return date must be between issue date and today.</div></td></tr>');
                     });
                     document.getElementById('returnItemForm').action = returnSvBaseUrl + '/' + voucherId + '/return';
                     const modal = new bootstrap.Modal(document.getElementById('returnItemModal'));
@@ -2724,23 +2747,31 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    function enforceReturnDateNotBeforeIssue(inputEl) {
+    function enforceReturnDateWithinRange(inputEl) {
         if (!inputEl) return;
         const issue = inputEl.dataset.issueDate || '';
         const raw = inputEl.value;
-        if (!issue || !raw) {
+        const today = new Date().toISOString().slice(0, 10);
+        inputEl.max = today;
+
+        if (!raw) {
             inputEl.setCustomValidity('');
             inputEl.classList.remove('is-invalid');
             return;
         }
-        // yyyy-mm-dd safe lexical compare
-        if (raw < issue) {
+        if (raw > today) {
+            inputEl.setCustomValidity('Return date cannot be in the future.');
+            inputEl.classList.add('is-invalid');
+            return;
+        }
+        if (issue && raw < issue) {
             inputEl.setCustomValidity('Return date cannot be earlier than issue date.');
             inputEl.classList.add('is-invalid');
-        } else {
-            inputEl.setCustomValidity('');
-            inputEl.classList.remove('is-invalid');
+            return;
         }
+
+        inputEl.setCustomValidity('');
+        inputEl.classList.remove('is-invalid');
     }
 
     const returnItemModalBody = document.getElementById('returnItemModalBody');
@@ -2750,7 +2781,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 enforceReturnQtyWithinIssued(e.target);
             }
             if (e.target && e.target.classList.contains('sv-return-date')) {
-                enforceReturnDateNotBeforeIssue(e.target);
+                enforceReturnDateWithinRange(e.target);
             }
         });
     }
@@ -2759,7 +2790,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (returnItemForm) {
         returnItemForm.addEventListener('submit', function(e) {
             this.querySelectorAll('.sv-return-qty').forEach(enforceReturnQtyWithinIssued);
-            this.querySelectorAll('.sv-return-date').forEach(enforceReturnDateNotBeforeIssue);
+            this.querySelectorAll('.sv-return-date').forEach(enforceReturnDateWithinRange);
             if (!this.checkValidity()) {
                 e.preventDefault();
                 e.stopPropagation();

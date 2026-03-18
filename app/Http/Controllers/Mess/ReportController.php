@@ -29,11 +29,60 @@ use App\Exports\Mess\SellingVoucherPrintSlipExport;
 use App\Exports\Mess\CategoryWisePrintSlipExport;
 use Maatwebsite\Excel\Facades\Excel;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Cache;
 use DB;
 use Illuminate\Support\Facades\Schema;
 
 class ReportController extends Controller
 {
+    /**
+     * Academy Staff list for report filters.
+     * Excludes Officers Mess department staff and employees that are mapped as Faculty.
+     *
+     * @return \Illuminate\Support\Collection<int, object{pk:mixed, full_name:string}>
+     */
+    private function academyStaffEmployees(?DepartmentMaster $officersMessDept)
+    {
+        $facultyEmployeePks = [];
+
+        // Some deployments may not have employee_master_pk column; guard it.
+        try {
+            $facultyTable = (new FacultyMaster())->getTable();
+            if (Schema::hasColumn($facultyTable, 'employee_master_pk')) {
+                $facultyEmployeePks = FacultyMaster::query()
+                    ->whereNotNull('employee_master_pk')
+                    ->pluck('employee_master_pk')
+                    ->filter()
+                    ->unique()
+                    ->values()
+                    ->all();
+            }
+        } catch (\Throwable $e) {
+            $facultyEmployeePks = [];
+        }
+
+        return EmployeeMaster::query()
+            ->when(Schema::hasColumn('employee_master', 'status'), fn ($q) => $q->where('status', 1))
+            ->when($officersMessDept, function ($q) use ($officersMessDept) {
+                $q->where(function ($sub) use ($officersMessDept) {
+                    $sub->whereNull('department_master_pk')
+                        ->orWhere('department_master_pk', '!=', $officersMessDept->pk);
+                });
+            })
+            ->when(!empty($facultyEmployeePks), function ($q) use ($facultyEmployeePks) {
+                $q->whereNotIn('pk', $facultyEmployeePks);
+            })
+            ->orderBy('first_name')->orderBy('last_name')
+            ->get(['pk', 'first_name', 'middle_name', 'last_name'])
+            ->map(function ($e) {
+                $fullName = trim(($e->first_name ?? '') . ' ' . ($e->middle_name ?? '') . ' ' . ($e->last_name ?? ''));
+                return (object) ['pk' => $e->pk, 'full_name' => $fullName ?: '—'];
+            })
+            ->filter(fn ($e) => $e->full_name !== '—')
+            ->values();
+    }
+
     /**
      * Stock Purchase Details Report
      * Shows detailed purchase information grouped by bill (Purchase Order)
@@ -139,13 +188,71 @@ class ReportController extends Controller
             }
         }
 
-        [$reportData, $selectedStoreName] = $this->getStockSummaryReportData($fromDate, $toDate, $storeId, $storeType);
+        // This report is expensive to compute; cache the computed dataset for repeated pagination
+        $cacheTtlSeconds = 600; // 10 minutes
+        $cacheKey = 'stock-summary:v2:' . implode(':', [
+            (string) $fromDate,
+            (string) $toDate,
+            (string) $storeType,
+            (string) $storeId,
+        ]);
+
+        [$reportData, $selectedStoreName, $cachedTotals] = Cache::remember($cacheKey, $cacheTtlSeconds, function () use ($fromDate, $toDate, $storeId, $storeType) {
+            [$data, $storeName] = $this->getStockSummaryReportData($fromDate, $toDate, $storeId, $storeType);
+            $totals = [
+                'opening_amount' => (float) collect($data)->sum('opening_amount'),
+                'purchase_amount' => (float) collect($data)->sum('purchase_amount'),
+                'sale_amount' => (float) collect($data)->sum('sale_amount'),
+                'closing_amount' => (float) collect($data)->sum('closing_amount'),
+            ];
+            return [$data, $storeName, $totals];
+        });
+
+        // Convert report data to collection for convenient pagination & totals
+        $reportCollection = collect($reportData);
+
+        // Simple server-side pagination (per-page can be tuned)
+        $perPage = 25;
+        $currentPage = LengthAwarePaginator::resolveCurrentPage();
+        $pageItems = $reportCollection
+            ->slice(($currentPage - 1) * $perPage, $perPage)
+            ->values();
+
+        $reportPage = new LengthAwarePaginator(
+            $pageItems,
+            $reportCollection->count(),
+            $perPage,
+            $currentPage,
+            [
+                'path' => $request->url(),
+                'query' => $request->query(),
+            ]
+        );
+
+        // Grand totals across all items (not just current page) - cached to speed up pagination
+        $reportTotals = $cachedTotals ?? [
+            'opening_amount' => (float) $reportCollection->sum('opening_amount'),
+            'purchase_amount' => (float) $reportCollection->sum('purchase_amount'),
+            'sale_amount' => (float) $reportCollection->sum('sale_amount'),
+            'closing_amount' => (float) $reportCollection->sum('closing_amount'),
+        ];
 
         $stores = Store::where('status', 'active')->get();
         $subStores = SubStore::where('status', 'active')->get();
 
+        // If AJAX request (or ajax=1 flag), return only the table partial
+        if ($request->ajax() || $request->boolean('ajax')) {
+            return view('admin.mess.reports.partials.stock-summary-table', compact(
+                'reportData',
+                'reportPage',
+                'reportTotals'
+            ));
+        }
+
         return view('admin.mess.reports.stock-summary', compact(
             'reportData',
+            'reportPage',
+            'reportTotals',
             'stores',
             'subStores',
             'fromDate',
@@ -1090,17 +1197,9 @@ class ReportController extends Controller
                 ->orderBy('client_name')
                 ->get()
                 ->groupBy('client_type');
-            $faculties = FacultyMaster::whereNotNull('full_name')->where('full_name', '!=', '')->orderBy('full_name')->get(['pk', 'full_name']);
-            $employees = EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn ($q) => $q->where('status', 1))
-                ->orderBy('first_name')->orderBy('last_name')
-                ->get(['pk', 'first_name', 'middle_name', 'last_name'])
-                ->map(function ($e) {
-                    $fullName = trim(($e->first_name ?? '') . ' ' . ($e->middle_name ?? '') . ' ' . ($e->last_name ?? ''));
-                    return (object) ['pk' => $e->pk, 'full_name' => $fullName ?: '—'];
-                })
-                ->filter(fn ($e) => $e->full_name !== '—')
-                ->values();
             $officersMessDept = DepartmentMaster::where('department_name', 'Officers Mess')->first();
+            $faculties = FacultyMaster::whereNotNull('full_name')->where('full_name', '!=', '')->orderBy('full_name')->get(['pk', 'full_name']);
+            $employees = $this->academyStaffEmployees($officersMessDept);
             $messStaff = $officersMessDept
                 ? EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn ($q) => $q->where('status', 1))
                     ->where('department_master_pk', $officersMessDept->pk)
@@ -1290,17 +1389,9 @@ class ReportController extends Controller
             ->get()
             ->groupBy('client_type');
 
-        $faculties = FacultyMaster::whereNotNull('full_name')->where('full_name', '!=', '')->orderBy('full_name')->get(['pk', 'full_name']);
-        $employees = EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn ($q) => $q->where('status', 1))
-            ->orderBy('first_name')->orderBy('last_name')
-            ->get(['pk', 'first_name', 'middle_name', 'last_name'])
-            ->map(function ($e) {
-                $fullName = trim(($e->first_name ?? '') . ' ' . ($e->middle_name ?? '') . ' ' . ($e->last_name ?? ''));
-                return (object) ['pk' => $e->pk, 'full_name' => $fullName ?: '—'];
-            })
-            ->filter(fn ($e) => $e->full_name !== '—')
-            ->values();
         $officersMessDept = DepartmentMaster::where('department_name', 'Officers Mess')->first();
+        $faculties = FacultyMaster::whereNotNull('full_name')->where('full_name', '!=', '')->orderBy('full_name')->get(['pk', 'full_name']);
+        $employees = $this->academyStaffEmployees($officersMessDept);
         $messStaff = $officersMessDept
             ? EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn ($q) => $q->where('status', 1))
                 ->where('department_master_pk', $officersMessDept->pk)
