@@ -801,7 +801,7 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                                                 <div class="fw-semibold text-dark text-truncate">{{ $fullName }}</div>
                                                 <div class="small text-body-secondary text-truncate">{{ $employee->designation_name }}</div>
                                             </div>
-                                            <div class="d-flex gap-2 flex-shrink-0">
+                                         <!-- <div class="d-flex gap-2 flex-shrink-0">
                                                 @if($email !== '')
                                                     <a class="btn btn-sm btn-primary"
                                                         href="mailto:{{ $email }}?subject={{ $subject }}&body={{ $body }}"
@@ -815,7 +815,7 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                                                         <span class="d-none d-sm-inline ms-1">Send wishes</span>
                                                     </button>
                                                 @endif
-                                            </div>
+                                            </div> -->
                                         </div>
 
                                         <div class="mt-2 d-flex flex-wrap gap-2 small text-body-secondary">
