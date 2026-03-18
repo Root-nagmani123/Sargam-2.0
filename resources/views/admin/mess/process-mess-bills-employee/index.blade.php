@@ -850,7 +850,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 modalBillsData = data.bills || [];
                 renderModalTable();
 
-                // Also refresh Buyer Name dropdown in modal based on loaded bills
+                // Also refresh Buyer Name dropdown in modal based on loaded bills.
+                // IMPORTANT: Only do this when no client type is selected, otherwise it
+                // overrides the dependent "Client Type -> Buyer Name" behavior.
+                if (clientType) {
+                    return;
+                }
                 try {
                     var buyerSelect = document.getElementById('modal_buyer_name');
                     if (buyerSelect) {
@@ -1061,6 +1066,11 @@ document.addEventListener('DOMContentLoaded', function() {
         var sectionBuyerNames = {!! json_encode(($sectionBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
         var allBuyerNames = {!! json_encode(($allBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
 
+        // NOTE: Choices.js may recreate <option> nodes and drop custom dataset attributes.
+        // Keep an explicit mapping from client_type_pk -> client group key (academy staff/faculty/mess staff)
+        // so Buyer Name filtering stays correct inside the modal.
+        var modalPkToClientGroupKey = {};
+
         function fillModalClientTypePk() {
             var slug = modalClientType.value;
             modalClientTypePk.innerHTML = '<option value=\"\">All</option>';
@@ -1070,6 +1080,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 choicesPk.clearStore();
                 choicesPk.setChoices([{ value: '', label: 'All', selected: true }], 'value', 'label', true);
             }
+
+            modalPkToClientGroupKey = {};
 
             if ((slug === 'ot' || slug === 'course') && otCourseOptions.length) {
                 otCourseOptions.forEach(function (o) {
@@ -1085,6 +1097,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     opt.textContent = o.text;
                     if (o.dataClientName) {
                         opt.dataset.clientName = o.dataClientName;
+                        modalPkToClientGroupKey[String(o.value)] = String(o.dataClientName);
                     }
                     modalClientTypePk.appendChild(opt);
                 });
@@ -1122,11 +1135,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (slug === 'employee') {
                 var selectedOpt = modalClientTypePk.options[modalClientTypePk.selectedIndex];
-                var dataClientName = selectedOpt && selectedOpt.dataset ? (selectedOpt.dataset.clientName || '') : '';
+                var dataClientName = '';
+                if (selectedPk && modalPkToClientGroupKey[String(selectedPk)]) {
+                    dataClientName = modalPkToClientGroupKey[String(selectedPk)];
+                } else if (selectedOpt && selectedOpt.dataset && selectedOpt.dataset.clientName) {
+                    dataClientName = selectedOpt.dataset.clientName || '';
+                }
+
                 if (dataClientName && employeeNames[dataClientName] && employeeNames[dataClientName].length) {
                     addBuyerOptions(employeeNames[dataClientName]);
-                } else {
-                    // Fallback: show all employee-type buyers if specific group not found
+                } else if (!selectedPk) {
+                    // No subgroup selected: show all employee groups
                     Object.keys(employeeNames || {}).forEach(function (key) {
                         addBuyerOptions(employeeNames[key] || []);
                     });
