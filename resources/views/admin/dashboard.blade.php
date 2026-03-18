@@ -636,7 +636,6 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                         <li class="mb-2">
                             <button type="button"
                                 class="dashboard-notification-item {{ empty($notification->is_read) ? 'dashboard-notification-item-unread' : '' }}"
-                                aria-label="Open notification: {{ $notification->title ?? 'Notification' }}"
                                 onclick="window.markAsReadDashboard({{ $notification->pk }}, this)">
                                 <div class="d-flex gap-3 flex-grow-1 min-w-0">
                                     <span class="notification-icon-wrap"><span class="material-icons material-symbols-rounded">notifications</span></span>
@@ -744,7 +743,7 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                                         <small class="d-block dashboard-notice-date">{{ $noticeDate ? date('d M, Y', strtotime($noticeDate)) : '—' }}</small>
                                         @if($notice->document)
                                         <a href="{{ asset('storage/' . $notice->document) }}" target="_blank" class="dashboard-notice-attachment text-danger text-decoration-none">
-                                            <span class="material-icons material-symbols-rounded fs-6">attach_file</span>View attachment
+                                            <span class="material-icons material-symbols-rounded" style="font-size: 1rem;">attach_file</span>View attachment
                                         </a>
                                         @endif
                                     </div>
