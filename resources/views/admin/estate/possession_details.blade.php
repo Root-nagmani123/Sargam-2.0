@@ -16,10 +16,10 @@
                 </div>
                 <div class="d-flex flex-wrap gap-2 flex-shrink-0">
                     @if(hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'))
-                    <!-- <a href="{{ route('admin.estate.possession-details.create') }}" class="btn btn-success btn-sm d-inline-flex align-items-center gap-2" title="Add possession">
+                    <a href="{{ route('admin.estate.possession-details.create') }}" class="btn btn-success btn-sm d-inline-flex align-items-center gap-2" title="Add possession details">
                         <i class="bi bi-plus-lg"></i>
-                        <span>Add</span>
-                    </a> -->
+                        <span>Add Possession</span>
+                    </a>
                                         <a href="{{ route('admin.estate.update-meter-reading') }}" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-2">
                         <i class="bi bi-arrow-right-circle"></i>
                         <span>Update Reading</span>

@@ -311,12 +311,12 @@
                                         <span class="hide-menu small small-sm-normal text-nowrap">Estate Bill Report - Grid View</span>
                                     </a>
                                 </li>
-                                <li class="sidebar-item">
+                                <!-- <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.reports.bill-report-print') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.reports.bill-report-print') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Estate Bill Report for Print</span>
                                     </a>
-                                </li>
+                                </li> -->
                                 <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.reports.migration-report') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.reports.migration-report') }}">

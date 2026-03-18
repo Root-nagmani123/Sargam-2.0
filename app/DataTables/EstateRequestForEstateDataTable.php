@@ -178,7 +178,7 @@ class EstateRequestForEstateDataTable extends DataTable
                 $canAllot = (int) ($row->hac_status ?? 0) === 1
                     && (int) ($row->change_status ?? 0) === 0
                     && ! $hasActive
-                    && ! $hasReturned;
+                    && ! $isReturnedEffective;
                 $canShowPossessionButtonForRole = ! (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'));
                 if ($canAllot && $canShowPossessionButtonForRole) {
                     // Always open generic Add Possession page; no preselected requester in URL.
@@ -295,11 +295,14 @@ class EstateRequestForEstateDataTable extends DataTable
                 'estate_home_request_details.change_status',
                 'estate_home_request_details.hac_status',
                 // Derived flags from estate_possession_details:
-                // has_active_possession: at least one possession row with house and not returned.
+                // has_active_possession: at least one *completed* possession row with house and not returned.
+                // Pending possessions (created at allotment time) use sentinel dates (1900-01-01) and should NOT
+                // be treated as "possession already created" for self-service users.
                 DB::raw("CASE WHEN EXISTS (
                     SELECT 1 FROM estate_possession_details epd
                     WHERE epd.estate_home_request_details = estate_home_request_details.pk
                       AND epd.estate_house_master_pk IS NOT NULL
+                      AND epd.possession_date > '1900-01-01'
                       AND (epd.return_home_status IS NULL OR epd.return_home_status = 0)
                 ) THEN 1 ELSE 0 END AS has_active_possession"),
                 // has_any_returned: at least one possession row with house and return_home_status = 1.
@@ -307,6 +310,7 @@ class EstateRequestForEstateDataTable extends DataTable
                     SELECT 1 FROM estate_possession_details epd2
                     WHERE epd2.estate_home_request_details = estate_home_request_details.pk
                       AND epd2.estate_house_master_pk IS NOT NULL
+                      AND epd2.possession_date > '1900-01-01'
                       AND epd2.return_home_status = 1
                 ) THEN 1 ELSE 0 END AS has_any_returned"),
                 // Latest change request status (0=Pending, 1=Approved, 2=Disapproved) for user visibility.
@@ -393,7 +397,7 @@ class EstateRequestForEstateDataTable extends DataTable
             Column::computed('name_id')->title('NAME / ID')->orderable(true)->searchable(true),
             Column::make('status')->title('STATUS OF REQUEST')->orderable(false)->searchable(false),
             Column::make('change_req_status')->title('CHANGE REQ. STATUS')->orderable(false)->searchable(false)->addClass('text-center'),
-            Column::computed('change')->title('CHANGE')->addClass('text-center')->orderable(false)->searchable(false)->width('100px'),
+            Column::computed('change')->title('ACTION')->addClass('text-center')->orderable(false)->searchable(false)->width('100px'),
         ];
     }
 

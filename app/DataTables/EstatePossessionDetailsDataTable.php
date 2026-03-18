@@ -31,7 +31,14 @@ class EstatePossessionDetailsDataTable extends DataTable
             })
             ->editColumn('possession_date', function ($row) {
                 $d = $row->possession_date ?? null;
-                return $d ? \Carbon\Carbon::parse($d)->format('d-m-Y') : '—';
+                if (! $d) return '—';
+                try {
+                    $dt = \Carbon\Carbon::parse($d);
+                    if ($dt->format('Y-m-d') <= '1900-01-01') return '—';
+                    return $dt->format('d-m-Y');
+                } catch (\Throwable $e) {
+                    return '—';
+                }
             })
             ->editColumn('electric_meter_reading', function ($row) {
                 $v = $row->electric_meter_reading;
@@ -109,6 +116,10 @@ class EstatePossessionDetailsDataTable extends DataTable
                 'epd.possession_date',
                 'epd.electric_meter_reading',
             ]);
+
+        // Show only *completed* possessions in listing.
+        // Pending possessions (created at allotment time) store a sentinel date: 1900-01-01.
+        $query->where('epd.possession_date', '>', '1900-01-01');
 
         // RBAC: Only Admin / Estate / Super Admin / Training-* / IST can see full list.
         // All other roles (including Staff / HAC Person etc.) should only see their own possessions.
