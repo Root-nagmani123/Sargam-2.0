@@ -15,14 +15,14 @@
                     <div class="input-group">
                         <input type="month" class="form-control" id="bill_month" name="bill_month" value="{{ date('Y-m') }}" max="{{ date('Y-m') }}" required>
                     </div>
-                    <small class="text-muted">
-                        <i class="bi bi-info-circle"></i> Select Bill Month and click Show to load data.
-                    </small>
                 </div>
                 <div class="col-md-2 mt-3 mt-md-0">
                     <button type="button" id="showPendingBtn" class="btn btn-primary rounded-1 px-3 w-100">Show</button>
                 </div>
             </div>
+            <small class="text-muted d-block mt-2">
+                <i class="bi bi-info-circle"></i> Select Bill Month and click Show to load data.
+            </small>
         </div>
     </div>
 

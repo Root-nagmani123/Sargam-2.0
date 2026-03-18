@@ -15,12 +15,12 @@
                     <p class="text-muted small mb-0">LBSNAA employee possession records (allotted via HAC Approved flow).</p>
                 </div>
                 <div class="d-flex flex-wrap gap-2 flex-shrink-0">
-                    <a href="{{ route('admin.estate.possession-details.create') }}" class="btn btn-success btn-sm d-inline-flex align-items-center gap-2" title="Add possession">
+                    @if(hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'))
+                    <!-- <a href="{{ route('admin.estate.possession-details.create') }}" class="btn btn-success btn-sm d-inline-flex align-items-center gap-2" title="Add possession">
                         <i class="bi bi-plus-lg"></i>
                         <span>Add</span>
-                    </a>
-                    @if(hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'))
-                    <a href="{{ route('admin.estate.update-meter-reading') }}" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-2">
+                    </a> -->
+                                        <a href="{{ route('admin.estate.update-meter-reading') }}" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-2">
                         <i class="bi bi-arrow-right-circle"></i>
                         <span>Update Reading</span>
                     </a>
