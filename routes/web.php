@@ -383,6 +383,7 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
     Route::post('/approve3/{id}', 'approve3')->name('approve3');
     Route::post('/reject1/{id}', 'reject1')->name('reject1');
     Route::post('/reject2/{id}', 'reject2')->name('reject2');
+    Route::post('/reject3/{id}', 'reject3')->name('reject3');
 });
 
 // ID Card - Card Type Master (sec_id_cardno_master)

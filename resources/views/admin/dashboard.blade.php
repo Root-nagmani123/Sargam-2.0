@@ -251,6 +251,25 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
             @endif
         </div>
 
+        @if(($todayApproval1SecurityRequests ?? 0) > 0)
+        <div class="col-xl-3 col-md-6">
+            <a href="{{ route('admin.security.employee_idcard_approval.approval1') }}" class="text-decoration-none d-block h-100">
+                <div class="card dashboard-stat-card shadow-sm rounded-4 card-blue h-100">
+                    <div class="card-body d-flex align-items-start justify-content-between gap-2">
+                        <div>
+                            <p class="small text-dark mb-1">Today's Pending Security Requests (Approval I)</p>
+                            <div class="dashboard-stat-value fw-semibold text-primary">{{ $todayApproval1SecurityRequests }}</div>
+                            <span class="stat-link-hint text-primary">Go to approvals
+                                <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span>
+                            </span>
+                        </div>
+                        <span class="stat-icon"><span class="material-icons material-symbols-rounded">shield_person</span></span>
+                    </div>
+                </div>
+            </a>
+        </div>
+        @endif
+
         <div class="col-xl-3 col-md-6">
             @if(hasRole('Student-OT'))
             <a href="{{ route('ot.mdo.escrot.exemption.view') }}" class="text-decoration-none d-block h-100">

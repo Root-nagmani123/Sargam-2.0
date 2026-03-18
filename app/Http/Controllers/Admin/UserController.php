@@ -205,6 +205,7 @@ class UserController extends Controller
         $todayFamilyApprovals = $this->getTodayPendingFamilyApprovalsCount();
         $todayVehicleApprovals = $this->getTodayPendingVehicleApprovalsCount();
         $todayIdCardRequests = $this->getTodayPendingIdCardRequestsCount();
+        $todayApproval1SecurityRequests = $this->getTodayPendingSecurityApproval1Count();
         $todayDuplicatePermIdCardRequests = $this->getTodayDuplicatePermanentIdCardRequestsCount();
         $todayDuplicateContractualIdCardRequests = $this->getTodayDuplicateContractualIdCardRequestsCount();
 
@@ -226,6 +227,7 @@ class UserController extends Controller
             'todayFamilyApprovals',
             'todayVehicleApprovals',
             'todayIdCardRequests',
+            'todayApproval1SecurityRequests',
             'todayDuplicatePermIdCardRequests',
             'todayDuplicateContractualIdCardRequests'
         ));
@@ -398,6 +400,63 @@ class UserController extends Controller
                     ->where('a.status', 2);
             })
             ->count();
+    }
+
+    /**
+     * Today's pending Security Approval-I requests (contractual regular + duplicate)
+     * for the logged-in department approval authority.
+     */
+    private function getTodayPendingSecurityApproval1Count(): int
+    {
+        $user = Auth::user();
+        if (! $user) {
+            return 0;
+        }
+
+        $employeePk = $user->user_id ?? $user->pk ?? null;
+        if (! $employeePk) {
+            return 0;
+        }
+
+        $start = Carbon::today()->startOfDay()->toDateTimeString();
+        $end = Carbon::today()->endOfDay()->toDateTimeString();
+
+        // Contractual regular: pending at Approval-I for this authority
+        $contQuery = DB::table('security_con_oth_id_apply')
+            ->whereBetween('created_date', [$start, $end])
+            ->where('id_status', 1)
+            ->where('depart_approval_status', 1)
+            ->where('department_approval_emp_pk', $employeePk);
+
+        // Exclude those where Approval-I already done (status=1 in approval table)
+        $contA1Done = DB::table('security_con_oth_id_apply_approval')
+            ->where('status', 1)
+            ->pluck('security_parm_id_apply_pk');
+        if ($contA1Done->isNotEmpty()) {
+            $contQuery->whereNotIn('emp_id_apply', $contA1Done);
+        }
+
+        $contCount = (int) $contQuery->count();
+
+        // Contractual duplicate: pending at Approval-I for this authority
+        $dupA1Done = DB::table('security_dup_other_id_apply_approval')
+            ->where('status', 1)
+            ->pluck('security_con_id_apply_pk');
+
+        $dupQuery = DB::table('security_dup_other_id_apply')
+            ->whereBetween('created_date', [$start, $end])
+            ->where('id_status', 1)
+            ->where('card_type', 'Contractual')
+            ->where('depart_approval_status', 1)
+            ->where('department_approval_emp_pk', $employeePk);
+
+        if ($dupA1Done->isNotEmpty()) {
+            $dupQuery->whereNotIn('emp_id_apply', $dupA1Done);
+        }
+
+        $dupCount = (int) $dupQuery->count();
+
+        return $contCount + $dupCount;
     }
 
     private function getTodayDuplicatePermanentIdCardRequestsCount(): int

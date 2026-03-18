@@ -23,7 +23,7 @@
                     <h4 class="mb-0">Request #{{ $request->id }} - {{ $request->name }}</h4>
                     <small class="text-muted">
                         Approval Level:
-                        <span class="fw-semibold">{{ $stage === 2 ? 'Approval II' : 'Approval I' }}</span>
+                        <span class="fw-semibold">{{ $stage === 3 ? 'Approval III' : ($stage === 2 ? 'Approval II' : 'Approval I') }}</span>
                     </small>
                 </div>
                 @if($request->status === 'Pending' && ($canApprove ?? true))
@@ -36,13 +36,15 @@
                                 Approve ({{ $stage === 3 ? 'Level 3' : ($stage === 2 ? 'Level 2' : 'Level 1') }})
                             </button>
                         </form>
-                        <button type="button"
-                                class="btn btn-outline-danger"
-                                data-bs-toggle="modal"
-                                data-bs-target="#rejectModal">
-                            <i class="material-icons material-symbols-rounded" style="font-size:18px;vertical-align:middle;">cancel</i>
-                            Reject
-                        </button>
+                        @if(in_array($stage, [1, 2, 3], true))
+                            <button type="button"
+                                    class="btn btn-outline-danger"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#rejectModal">
+                                <i class="material-icons material-symbols-rounded" style="font-size:18px;vertical-align:middle;">cancel</i>
+                                Reject
+                            </button>
+                        @endif
                     </div>
                 @endif
             </div>
@@ -212,6 +214,12 @@
                                 <tr><th>Status</th>
                                     <td>
                                         @php
+                                            $statusText = $request->status;
+                                            // At Approval-II, once a request is already recommended/approved at Level-2,
+                                            // it remains "Pending" in master until final approval. Show a clearer label.
+                                            if (($statusText ?? '') === 'Pending' && (int) $stage === 2 && !($canApprove ?? true)) {
+                                                $statusText = 'Pending from Final Approval';
+                                            }
                                             $statusClass = match($request->status) {
                                                 'Pending' => 'warning',
                                                 'Approved' => 'success',
@@ -220,7 +228,7 @@
                                                 default => 'secondary'
                                             };
                                         @endphp
-                                        <span class="badge bg-{{ $statusClass }}">{{ $request->status }}</span>
+                                        <span class="badge bg-{{ $statusClass }}">{{ $statusText }}</span>
                                     </td>
                                 </tr>
                             </table>
@@ -234,7 +242,7 @@
     </div>
 </div>
 
-@if(($canApprove ?? true) && (($request->approved_by_a1 === null && $request->rejected_by === null) || ($request->approved_by_a2 === null && $request->rejected_by === null && $request->approved_by_a1 !== null)))
+@if($request->status === 'Pending' && ($canApprove ?? true) && in_array($stage, [1, 2, 3], true))
 <div class="modal fade" id="rejectModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -242,7 +250,7 @@
                 <h5 class="modal-title">Rejection Reason</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ $stage === 2 ? route('admin.security.employee_idcard_approval.reject2', encrypt($request->id)) : route('admin.security.employee_idcard_approval.reject1', encrypt($request->id)) }}" method="POST">
+            <form action="{{ $stage === 3 ? route('admin.security.employee_idcard_approval.reject3', encrypt($request->id)) : ($stage === 2 ? route('admin.security.employee_idcard_approval.reject2', encrypt($request->id)) : route('admin.security.employee_idcard_approval.reject1', encrypt($request->id))) }}" method="POST">
                 @csrf
                 <div class="modal-body">
                     <div class="mb-3">

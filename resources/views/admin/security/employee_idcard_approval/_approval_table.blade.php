@@ -38,23 +38,28 @@
                     </td>
                     <td class="text-center">
                         @php
+                            // PERF: Avoid per-row storage existence checks (slow on Windows/network disks).
+                            // Use a deterministic URL and fall back to dummy image on load error.
                             $photoPath = null;
-                            $photoExists = false;
                             if ($req->photo) {
                                 $photoPath = str_starts_with($req->photo, 'idcard/')
                                     ? $req->photo
                                     : 'idcard/photos/' . $req->photo;
-                                $photoExists = \Storage::disk('public')->exists($photoPath);
                             }
+                            $photoUrl = $photoPath ? asset('storage/' . $photoPath) : asset('images/dummypic.jpeg');
+                            $dummyUrl = asset('images/dummypic.jpeg');
                         @endphp
-                        @if($photoExists)
-                            <a href="{{ asset('storage/' . $photoPath) }}" target="_blank" class="d-inline-block">
-                                <img src="{{ asset('storage/' . $photoPath) }}" alt="Photo" style="width:50px; height:50px; object-fit:cover; border-radius:4px; border:1px solid #dee2e6; cursor:pointer;" title="Click to view full photo">
+                        @if($photoPath)
+                            <a href="{{ $photoUrl }}" target="_blank" class="d-inline-block">
+                                <img src="{{ $photoUrl }}" alt="Photo"
+                                     onerror="this.onerror=null;this.src='{{ $dummyUrl }}';"
+                                     style="width:50px; height:50px; object-fit:cover; border-radius:4px; border:1px solid #dee2e6; cursor:pointer;"
+                                     title="Click to view full photo">
                             </a>
-                        @elseif($req->photo)
-                            <img src="{{ asset('images/dummypic.jpeg') }}" alt="No Photo" style="width:50px; height:50px; object-fit:cover; border-radius:4px; border:1px solid #dee2e6;" title="No file available in storage">
                         @else
-                            <img src="{{ asset('images/dummypic.jpeg') }}" alt="No Photo" style="width:50px; height:50px; object-fit:cover; border-radius:4px; border:1px solid #dee2e6;" title="No photo available">
+                            <img src="{{ $dummyUrl }}" alt="No Photo"
+                                 style="width:50px; height:50px; object-fit:cover; border-radius:4px; border:1px solid #dee2e6;"
+                                 title="No photo available">
                         @endif
                     </td>
                     <td>{{ $req->mobile_number ?? $req->telephone_number ?? '--' }}</td>
@@ -104,7 +109,9 @@
                                                 : route('admin.security.employee_idcard_approval.approve3', $encryptedId));
                                         $rejectRoute = $approvalStage === 1
                                             ? route('admin.security.employee_idcard_approval.reject1', $encryptedId)
-                                            : route('admin.security.employee_idcard_approval.reject2', $encryptedId);
+                                            : ($approvalStage === 2
+                                                ? route('admin.security.employee_idcard_approval.reject2', $encryptedId)
+                                                : route('admin.security.employee_idcard_approval.reject3', $encryptedId));
                                     @endphp
                                     <form action="{{ $approveRoute }}" method="POST" class="d-inline">
                                         @csrf
@@ -126,7 +133,7 @@
             @empty
                 <tr>
                     <td colspan="11" class="text-center text-muted py-4">
-                        No pending requests for {{ $approvalStage === 1 ? 'Approval I' : 'Approval II' }}.
+                        No requests found for {{ $approvalStage === 1 ? 'Approval I' : ($approvalStage === 2 ? 'Approval II' : 'Approval III') }}.
                     </td>
                 </tr>
             @endforelse

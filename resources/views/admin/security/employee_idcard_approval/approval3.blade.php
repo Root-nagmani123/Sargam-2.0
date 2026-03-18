@@ -84,8 +84,43 @@
     </div>
 </div>
 
+<!-- Reject Modal -->
+<div class="modal fade" id="rejectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Rejection Reason</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="rejectForm" method="POST">
+                @csrf
+                <div class="modal-body">
+                    <p class="text-muted small" id="rejectModalEmployeeName"></p>
+                    <div class="mb-3">
+                        <label for="rejection_reason" class="form-label">Enter Reason <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="rejection_reason" name="rejection_reason" rows="3" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Submit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 @push('scripts')
 <script>
+document.querySelectorAll('.reject-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        document.getElementById('rejectModalEmployeeName').textContent = 'Rejecting: ' + (this.dataset.name || '');
+        document.getElementById('rejectForm').action = this.dataset.url || '#';
+        document.getElementById('rejection_reason').value = '';
+        new bootstrap.Modal(document.getElementById('rejectModal')).show();
+    });
+});
+
 // Auto-submit when per_page changes
 document.getElementById('per_page').addEventListener('change', function() {
     document.getElementById('filterForm3').submit();
