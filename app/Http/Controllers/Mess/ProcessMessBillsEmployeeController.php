@@ -161,6 +161,14 @@ class ProcessMessBillsEmployeeController extends Controller
             ? $bySlug['section']->pluck('client_name')->filter()->unique()->sort()->values()
             : collect();
 
+        // All distinct buyer names across both sources (for modal fallback)
+        $allBuyerNames = $combinedBills
+            ->pluck('client_name')
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values();
+
         // Optional status filter on combined bills (0=Unpaid, 1=Partial, 2=Paid)
         if ($statusFilter !== null && $statusFilter !== '') {
             $statusMap = [
@@ -256,7 +264,8 @@ class ProcessMessBillsEmployeeController extends Controller
             'otCourses',
             'courseBuyerNames',
             'otherBuyerNames',
-            'sectionBuyerNames'
+            'sectionBuyerNames',
+            'allBuyerNames'
         ));
     }
 
