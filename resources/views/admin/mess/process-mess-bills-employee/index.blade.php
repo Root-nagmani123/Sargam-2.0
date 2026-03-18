@@ -100,36 +100,36 @@
         <div class="card-body p-3 p-lg-4">
             <form method="GET" action="{{ route('admin.mess.process-mess-bills-employee.index') }}" id="mainFilterForm">
                 <div class="row g-3 align-items-end">
-                    <div class="col-md-2">
+                    <div class="col-md-3">
                         <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">event</i>Date From <span class="text-danger">*</span></label>
-                        <input type="text" name="date_from" id="date_from" class="form-control shadow-sm border-0"
+                        <input type="text" name="date_from" id="date_from" class="form-select"
                                value="{{ $effectiveDateFrom ?? request('date_from', now()->startOfMonth()->format('d-m-Y')) }}"
                                data-default-ymd="{{ $effectiveDateFromYmd ?? now()->startOfMonth()->format('Y-m-d') }}"
                                placeholder="dd-mm-yyyy" autocomplete="off">
                     </div>
-                    <div class="col-md-2">
+                    <div class="col-md-3">
                         <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">event</i>Date To <span class="text-danger">*</span></label>
-                        <input type="text" name="date_to" id="date_to" class="form-control shadow-sm border-0"
+                        <input type="text" name="date_to" id="date_to" class="form-select"
                                value="{{ $effectiveDateTo ?? request('date_to', now()->endOfMonth()->format('d-m-Y')) }}"
                                data-default-ymd="{{ $effectiveDateToYmd ?? now()->endOfMonth()->format('Y-m-d') }}"
                                placeholder="dd-mm-yyyy" autocomplete="off">
                     </div>
-                    <div class="col-md-2">
+                    <div class="col-md-3">
                         <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">person</i>Employee / OT / Course</label>
-                        <select name="client_type" id="filterClientTypeSlug" class="form-select shadow-sm border-0 choices-select" data-placeholder="All client types">
+                        <select name="client_type" id="filterClientTypeSlug" class="form-select choices-select" data-placeholder="All client types">
                             <option value="">All Client Types</option>
                             @foreach($clientTypes ?? [] as $key => $label)
                                 <option value="{{ $key }}" {{ ($clientType ?? request('client_type')) === $key ? 'selected' : '' }}>{{ $label }}</option>
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-md-2">
+                    <div class="col-md-3">
                         <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">category</i>Client Type</label>
-                        <select name="client_type_pk" id="filterClientTypePk" class="form-select shadow-sm border-0 choices-select" data-placeholder="All">
+                        <select name="client_type_pk" id="filterClientTypePk" class="form-select choices-select" data-placeholder="All">
                             <option value="">All</option>
                         </select>
                     </div>
-                    <div class="col-md-2">
+                        <div class="col-md-3">
                         <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">badge</i>Buyer Name</label>
                         <select name="buyer_name" id="filterBuyerName" class="form-select shadow-sm border-0 choices-select">
                             <option value="">All Buyers</option>
@@ -148,17 +148,7 @@
                             @endif
                         </select>
                     </div>
-                    <div class="col-md-2">
-                        <label class="form-label small fw-semibold">Status</label>
-                        @php $currentStatus = $statusFilter ?? request('status', ''); @endphp
-                        <select name="status" id="filterStatus" class="form-select">
-                            <option value="">All Status</option>
-                            <option value="unpaid" {{ $currentStatus === 'unpaid' ? 'selected' : '' }}>Unpaid</option>
-                            <option value="partial" {{ $currentStatus === 'partial' ? 'selected' : '' }}>Partial</option>
-                            <option value="paid" {{ $currentStatus === 'paid' ? 'selected' : '' }}>Paid</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
+                    <div class="col-md-3">
                         <label class="form-label small fw-semibold">Status</label>
                         @php $currentStatus = $statusFilter ?? request('status', ''); @endphp
                         <select name="status" id="filterStatus" class="form-select">
@@ -565,12 +555,12 @@
                     <div class="row g-3 mb-3">
                         <div class="col-md-3">
                             <label class="form-label small fw-semibold text-dark mb-2\"><i class=\"material-symbols-rounded align-middle me-1\" style=\"font-size: 1rem;\">event</i>Date From <span class="text-danger">*</span></label>
-                            <input type="text" name="modal_date_from" id="modal_date_from" class="form-control form-control-sm shadow-sm border-0"
+                            <input type="text" name="modal_date_from" id="modal_date_from" class="form-control "
                                    value="{{ now()->startOfMonth()->format('d-m-Y') }}" placeholder="dd-mm-yyyy" autocomplete="off" required>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1rem;">event</i>Date To <span class="text-danger">*</span></label>
-                            <input type="text" name="modal_date_to" id="modal_date_to" class="form-control form-control-sm shadow-sm border-0"
+                            <input type="text" name="modal_date_to" id="modal_date_to" class="form-control "
                                    value="{{ now()->endOfMonth()->format('d-m-Y') }}" placeholder="dd-mm-yyyy" autocomplete="off" required>
                         </div>
                         <div class="col-md-3">
@@ -584,24 +574,37 @@
                         </div>
                         <div class="col-md-3">
                             <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1rem;">category</i>Client Type</label>
-                            <select name="modal_client_type_pk" id="modal_client_type_pk" class="form-select shadow-sm border-0 choices-select" data-placeholder="All">
+                            <select name="modal_client_type_pk" id="modal_client_type_pk" class="form-select choices-select" data-placeholder="All">
                                 <option value="">All</option>
                             </select>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1rem;">badge</i>Buyer Name</label>
-                            <select name="modal_buyer_name" id="modal_buyer_name" class="form-select shadow-sm border-0 choices-select" data-placeholder="All Buyers">
-                                <option value="">All Buyers</option>
-                            </select>
-                        </div>
+                        <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">badge</i>Buyer Name</label>
+                        <select name="modal_buyer_name" id="modal_buyer_name" class="form-select choices-select">
+                            <option value="">All Buyers</option>
+                            @if(($clientType ?? request('client_type')) === 'course' && isset($courseBuyerNames) && $courseBuyerNames->isNotEmpty())
+                                @foreach($courseBuyerNames as $buyer)
+                                    <option value="{{ $buyer }}" {{ ($buyerName ?? request('buyer_name')) === $buyer ? 'selected' : '' }}>{{ $buyer }}</option>
+                                @endforeach
+                            @elseif(($clientType ?? request('client_type')) === 'other' && isset($otherBuyerNames) && $otherBuyerNames->isNotEmpty())
+                                @foreach($otherBuyerNames as $buyer)
+                                    <option value="{{ $buyer }}" {{ ($buyerName ?? request('buyer_name')) === $buyer ? 'selected' : '' }}>{{ $buyer }}</option>
+                                @endforeach
+                            @elseif(($clientType ?? request('client_type')) === 'section' && isset($sectionBuyerNames) && $sectionBuyerNames->isNotEmpty())
+                                @foreach($sectionBuyerNames as $buyer)
+                                    <option value="{{ $buyer }}" {{ ($buyerName ?? request('buyer_name')) === $buyer ? 'selected' : '' }}>{{ $buyer }}</option>
+                                @endforeach
+                            @endif
+                        </select>
+                    </div>
                         <div class="col-md-3">
                             <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1rem;">receipt</i>Invoice Date</label>
-                            <input type="text" name="modal_invoice_date" id="modal_invoice_date" class="form-control form-control-sm shadow-sm border-0"
+                            <input type="text" name="modal_invoice_date" id="modal_invoice_date" class="form-control"
                                    value="{{ now()->format('d-m-Y') }}" placeholder="dd-mm-yyyy" autocomplete="off">
                         </div>
                         <div class="col-md-3">
                             <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1rem;">payments</i>Mode of Payment</label>
-                            <select name="mode_of_payment" id="modal_mode_of_payment" class="form-select shadow-sm border-0 choices-select" data-placeholder="Select mode">
+                            <select name="mode_of_payment" id="modal_mode_of_payment" class="form-select choices-select" data-placeholder="Select mode">
                                 <option value="deduct_from_salary" selected>Deduct From Salary</option>
                                 <option value="cash">Cash</option>
                                 <option value="online">Online</option>
@@ -632,7 +635,7 @@
                 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
                     <div class="d-flex align-items-center gap-2">
                         <span class="small text-muted fw-semibold">Show</span>
-                        <select id="modalPerPage" class="form-select form-select-sm shadow-sm border-0" style="width: auto;">
+                        <select id="modalPerPage" class="form-select form-select-sm" style="width: auto;">
                             <option value="10" selected>10</option>
                             <option value="25">25</option>
                             <option value="50">50</option>
@@ -846,6 +849,42 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(function(data) {
                 modalBillsData = data.bills || [];
                 renderModalTable();
+
+                // Also refresh Buyer Name dropdown in modal based on loaded bills.
+                // IMPORTANT: Only do this when no client type is selected, otherwise it
+                // overrides the dependent "Client Type -> Buyer Name" behavior.
+                if (clientType) {
+                    return;
+                }
+                try {
+                    var buyerSelect = document.getElementById('modal_buyer_name');
+                    if (buyerSelect) {
+                        var buyers = Array.from(new Set(
+                            (modalBillsData || [])
+                                .map(function (b) { return b.buyer_name || b.client_name || ''; })
+                                .filter(function (name) { return !!name; })
+                        ));
+
+                        buyerSelect.innerHTML = '<option value=\"\">All Buyers</option>';
+
+                        buyers.forEach(function (name) {
+                            var opt = document.createElement('option');
+                            opt.value = name;
+                            opt.textContent = name;
+                            buyerSelect.appendChild(opt);
+                        });
+
+                        if (buyerSelect.choicesInstance) {
+                            var values = Array.from(buyerSelect.options).map(function (o) {
+                                return { value: o.value, label: o.text, selected: o.selected };
+                            });
+                            buyerSelect.choicesInstance.clearStore();
+                            buyerSelect.choicesInstance.setChoices(values, 'value', 'label', true);
+                        }
+                    }
+                } catch (e) {
+                    console.error('Failed to refresh modal_buyer_name options:', e);
+                }
             })
             .catch(function() {
                 modalBillsData = [];
@@ -1025,6 +1064,12 @@ document.addEventListener('DOMContentLoaded', function() {
         var courseBuyerNames = {!! json_encode(($courseBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
         var otherBuyerNames = {!! json_encode(($otherBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
         var sectionBuyerNames = {!! json_encode(($sectionBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
+        var allBuyerNames = {!! json_encode(($allBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
+
+        // NOTE: Choices.js may recreate <option> nodes and drop custom dataset attributes.
+        // Keep an explicit mapping from client_type_pk -> client group key (academy staff/faculty/mess staff)
+        // so Buyer Name filtering stays correct inside the modal.
+        var modalPkToClientGroupKey = {};
 
         function fillModalClientTypePk() {
             var slug = modalClientType.value;
@@ -1035,6 +1080,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 choicesPk.clearStore();
                 choicesPk.setChoices([{ value: '', label: 'All', selected: true }], 'value', 'label', true);
             }
+
+            modalPkToClientGroupKey = {};
 
             if ((slug === 'ot' || slug === 'course') && otCourseOptions.length) {
                 otCourseOptions.forEach(function (o) {
@@ -1050,6 +1097,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     opt.textContent = o.text;
                     if (o.dataClientName) {
                         opt.dataset.clientName = o.dataClientName;
+                        modalPkToClientGroupKey[String(o.value)] = String(o.dataClientName);
                     }
                     modalClientTypePk.appendChild(opt);
                 });
@@ -1087,11 +1135,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (slug === 'employee') {
                 var selectedOpt = modalClientTypePk.options[modalClientTypePk.selectedIndex];
-                var dataClientName = selectedOpt && selectedOpt.dataset ? (selectedOpt.dataset.clientName || '') : '';
-                if (dataClientName && employeeNames[dataClientName]) {
+                var dataClientName = '';
+                if (selectedPk && modalPkToClientGroupKey[String(selectedPk)]) {
+                    dataClientName = modalPkToClientGroupKey[String(selectedPk)];
+                } else if (selectedOpt && selectedOpt.dataset && selectedOpt.dataset.clientName) {
+                    dataClientName = selectedOpt.dataset.clientName || '';
+                }
+
+                if (dataClientName && employeeNames[dataClientName] && employeeNames[dataClientName].length) {
                     addBuyerOptions(employeeNames[dataClientName]);
+                } else if (!selectedPk) {
+                    // No subgroup selected: show all employee groups
+                    Object.keys(employeeNames || {}).forEach(function (key) {
+                        addBuyerOptions(employeeNames[key] || []);
+                    });
                 }
             } else if (slug === 'ot' && selectedPk) {
+                // OT + specific course: students by course
                 fetch(studentsByCourseUrl + '/' + selectedPk, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
                     .then(function (r) { return r.json(); })
                     .then(function (data) {
@@ -1101,8 +1161,14 @@ document.addEventListener('DOMContentLoaded', function() {
                         addBuyerOptions(students);
                     })
                     .catch(function () {
-                        // ignore error; keep only "All Buyers"
+                        // ignore error; All Buyers hi rahe
                     });
+            } else if (slug === 'ot' && !selectedPk) {
+                // Sirf OT select hai – OT ke liye jo buyer names controllers se aaye hain unko dikhao
+                var listOt = (courseBuyerNames || []).map(function (name) {
+                    return { value: name, text: name };
+                });
+                addBuyerOptions(listOt);
             } else if (slug === 'course') {
                 var listCourse = (courseBuyerNames || []).map(function (name) {
                     return { value: name, text: name };
@@ -1118,11 +1184,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     return { value: name, text: name };
                 });
                 addBuyerOptions(listSection);
-            } else if (slug && clientTypeOptions[slug]) {
-                var list3 = clientTypeOptions[slug].map(function (o) {
-                    return { value: o.text, text: o.text };
+            } else if (!slug && (allBuyerNames || []).length) {
+                // koi client type select nahi – saare distinct buyer names (course/other/section etc.) dikhado
+                var listAll = (allBuyerNames || []).map(function (name) {
+                    return { value: name, text: name };
                 });
-                addBuyerOptions(list3);
+                addBuyerOptions(listAll);
             }
 
             if (choicesBuyer) {
@@ -1994,3 +2061,13 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 @endsection
+
+@push('styles')
+    {{-- Choices.js via CDN --}}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
+@endpush
+
+@push('scripts')
+    {{-- Choices.js via CDN --}}
+    <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+@endpush

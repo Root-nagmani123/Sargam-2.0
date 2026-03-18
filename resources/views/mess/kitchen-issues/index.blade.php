@@ -1663,7 +1663,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const rateInp = row.querySelector('.sv-rate');
         const availInp = row.querySelector('.sv-avail');
         if (unitInp) unitInp.value = opt && opt.dataset.unit ? opt.dataset.unit : '';
-        if (rateInp && opt && opt.dataset.rate) rateInp.value = opt.dataset.rate;
+        // Only auto-set rate if user has not manually overridden it
+        if (rateInp && rateInp.dataset.manualRate !== '1' && opt && opt.dataset.rate) {
+            rateInp.value = opt.dataset.rate;
+        }
         if (availInp && opt && opt.dataset.available) availInp.value = opt.dataset.available;
         if (availInp) availInp.readOnly = true;
         if (row.closest('#editModalItemsBody')) {
@@ -1691,12 +1694,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const qty = parseFloat(row.querySelector('.sv-qty').value) || 0;
         const rateInp = row.querySelector('.sv-rate');
         let rate = parseFloat(rateInp.value) || 0;
+        const isManualRate = rateInp && rateInp.dataset.manualRate === '1';
         const sel = row.querySelector('.sv-item-select');
         const opt = sel && sel.options[sel.selectedIndex];
         const tiersJson = opt && opt.getAttribute('data-price-tiers');
         const tiers = tiersJson ? (function(){ try { return JSON.parse(tiersJson); } catch(e) { return null; } })() : null;
         let total;
-        if (tiers && tiers.length > 0 && qty > 0) {
+        if (!isManualRate && tiers && tiers.length > 0 && qty > 0) {
             const fifoAmount = calcFifoAmount(tiers, qty);
             if (fifoAmount !== null) {
                 total = fifoAmount;
@@ -1813,7 +1817,13 @@ document.addEventListener('DOMContentLoaded', function() {
         modalItemsBody.addEventListener('change', function(e) {
             if (e.target.classList.contains('sv-item-select')) {
                 const row = e.target.closest('.sv-item-row');
-                if (row) { updateUnit(row); calcRow(row); updateGrandTotal(); }
+                if (row) {
+                    const rateInp = row.querySelector('.sv-rate');
+                    if (rateInp) rateInp.dataset.manualRate = '';
+                    updateUnit(row);
+                    calcRow(row);
+                    updateGrandTotal();
+                }
             }
         });
 
@@ -1821,6 +1831,10 @@ document.addEventListener('DOMContentLoaded', function() {
             if (e.target.classList.contains('sv-avail') || e.target.classList.contains('sv-qty') || e.target.classList.contains('sv-rate')) {
                 const row = e.target.closest('.sv-item-row');
                 if (row) {
+                    if (e.target.classList.contains('sv-rate')) {
+                        const rateInp = row.querySelector('.sv-rate');
+                        if (rateInp) rateInp.dataset.manualRate = '1';
+                    }
                     refreshAllAvailable();
                     enforceQtyWithinAvailable(row);
                     calcRow(row);
@@ -2678,6 +2692,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.log('Return data:', data);
                     document.getElementById('returnTransferFromStore').textContent = data.store_name || '—';
                     const issueDate = data.issue_date || '';
+                    const todayYmd = new Date().toISOString().slice(0, 10);
                     const tbody = document.getElementById('returnItemModalBody');
                     tbody.innerHTML = '';
                     (data.items || []).forEach(function(item, i) {
@@ -2691,7 +2706,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         tbody.insertAdjacentHTML('beforeend',
                             '<tr><td>' + name + '<input type="hidden" name="items[' + i + '][id]" value="' + id + '"></td><td>' + qty + '</td><td>' + unit + '</td>' +
                             '<td><input type="number" name="items[' + i + '][return_quantity]" class="form-control  sv-return-qty" step="0.01" min="0" max="' + issuedQty + '" data-issued="' + issuedQty + '" value="' + retQty + '"><div class="invalid-feedback">Return Qty cannot exceed Issued Qty.</div></td>' +
-                            '<td><input type="date" name="items[' + i + '][return_date]" class="form-control  sv-return-date" ' + (issueDate ? ('min="' + issueDate + '" data-issue-date="' + issueDate + '"') : '') + ' value="' + retDate + '"><div class="invalid-feedback">Return date cannot be earlier than issue date.</div></td></tr>');
+                            '<td><input type="date" name="items[' + i + '][return_date]" class="form-control  sv-return-date" max="' + todayYmd + '" ' + (issueDate ? ('min="' + issueDate + '" data-issue-date="' + issueDate + '"') : '') + ' value="' + retDate + '"><div class="invalid-feedback">Return date must be between issue date and today.</div></td></tr>');
                     });
                     document.getElementById('returnItemForm').action = returnSvBaseUrl + '/' + voucherId + '/return';
                     const modal = new bootstrap.Modal(document.getElementById('returnItemModal'));
@@ -2724,23 +2739,31 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    function enforceReturnDateNotBeforeIssue(inputEl) {
+    function enforceReturnDateWithinRange(inputEl) {
         if (!inputEl) return;
         const issue = inputEl.dataset.issueDate || '';
         const raw = inputEl.value;
-        if (!issue || !raw) {
+        const today = new Date().toISOString().slice(0, 10);
+        inputEl.max = today;
+
+        if (!raw) {
             inputEl.setCustomValidity('');
             inputEl.classList.remove('is-invalid');
             return;
         }
-        // yyyy-mm-dd safe lexical compare
-        if (raw < issue) {
+        if (raw > today) {
+            inputEl.setCustomValidity('Return date cannot be in the future.');
+            inputEl.classList.add('is-invalid');
+            return;
+        }
+        if (issue && raw < issue) {
             inputEl.setCustomValidity('Return date cannot be earlier than issue date.');
             inputEl.classList.add('is-invalid');
-        } else {
-            inputEl.setCustomValidity('');
-            inputEl.classList.remove('is-invalid');
+            return;
         }
+
+        inputEl.setCustomValidity('');
+        inputEl.classList.remove('is-invalid');
     }
 
     const returnItemModalBody = document.getElementById('returnItemModalBody');
@@ -2750,7 +2773,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 enforceReturnQtyWithinIssued(e.target);
             }
             if (e.target && e.target.classList.contains('sv-return-date')) {
-                enforceReturnDateNotBeforeIssue(e.target);
+                enforceReturnDateWithinRange(e.target);
             }
         });
     }
@@ -2759,7 +2782,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (returnItemForm) {
         returnItemForm.addEventListener('submit', function(e) {
             this.querySelectorAll('.sv-return-qty').forEach(enforceReturnQtyWithinIssued);
-            this.querySelectorAll('.sv-return-date').forEach(enforceReturnDateNotBeforeIssue);
+            this.querySelectorAll('.sv-return-date').forEach(enforceReturnDateWithinRange);
             if (!this.checkValidity()) {
                 e.preventDefault();
                 e.stopPropagation();
