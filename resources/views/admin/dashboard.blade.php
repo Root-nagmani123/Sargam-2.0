@@ -506,7 +506,12 @@ table>thead{
 
 @php
 $user = Auth::user();
-$notifications = $user ? notification()->getNotifications($user->user_id, 10) : collect();
+$isAdminSummary = hasRole('Admin');
+$daysOld = $isAdminSummary ? 10 : null;
+$notifications = $user ? notification()->getNotifications($user->user_id, 10, false, $daysOld) : collect();
+$notificationBadgeCount = $user
+    ? ($isAdminSummary ? notification()->getUnreadCount($user->user_id, $daysOld) : $notifications->count())
+    : 0;
 $notices = get_notice_notification_by_role();
 $hour = (int) date('G');
 $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good evening');
@@ -690,7 +695,7 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                         <span class="material-icons material-symbols-rounded text-primary">notifications</span>
                         {{ hasRole('Admin') ? 'Admin Summary' : 'Notifications' }}
                     </h5>
-                    <span class="badge text-bg-primary rounded-pill">{{ $notifications->count() }}</span>
+                    <span class="badge text-bg-primary rounded-pill">{{ $notificationBadgeCount }}</span>
                 </div>
                 <div class="card-body p-3 p-md-4 dashboard-list-scroll">
                     @if($notifications->isEmpty())

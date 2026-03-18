@@ -154,7 +154,10 @@
             </i>
 
             @php
-                $unreadCount = notification()->getUnreadCount(Auth::user()->user_id ?? 0);
+                $unreadCount = notification()->getUnreadCount(
+                    Auth::user()->user_id ?? 0,
+                    hasRole('Admin') ? 10 : null
+                );
             @endphp
 
             @if($unreadCount > 0)
@@ -182,7 +185,12 @@
 
             <div id="notificationList" class="notification-list">
                 @php
-                    $notifications = notification()->getNotifications(Auth::user()->user_id ?? 0, 10, false);
+                    $notifications = notification()->getNotifications(
+                        Auth::user()->user_id ?? 0,
+                        10,
+                        false,
+                        hasRole('Admin') ? 10 : null
+                    );
                 @endphp
 
                 @if($notifications->count() > 0)
@@ -190,7 +198,7 @@
                         <li class="notification-list-item">
                             <a class="notification-item {{ $notification->is_read ? '' : 'notification-item-unread' }}"
                                href="javascript:void(0)"
-                               onclick="markAsRead({{ $notification->pk }})">
+                                   data-notification-id="{{ $notification->pk }}">
                                 <div class="notification-item-body">
                                     <div class="d-flex align-items-start justify-content-between gap-2">
                                         <span class="notification-item-title">{{ $notification->title ?? 'Notification' }}</span>
@@ -294,12 +302,17 @@
                 <div class="offcanvas-body p-0 overflow-y-auto notification-mobile-list" style="max-height: calc(70vh - 60px);">
                     <div id="notificationListMobile">
                         @php
-                        $notificationsMobile = notification()->getNotifications(Auth::user()->user_id ?? 0, 10, false);
+                        $notificationsMobile = notification()->getNotifications(
+                            Auth::user()->user_id ?? 0,
+                            10,
+                            false,
+                            hasRole('Admin') ? 10 : null
+                        );
                         @endphp
                         @if($notificationsMobile->count() > 0)
                         @foreach($notificationsMobile as $notification)
                         <a class="notification-item notification-mobile-item {{ $notification->is_read ? '' : 'notification-item-unread' }}"
-                            href="javascript:void(0)" onclick="markAsRead({{ $notification->pk }})">
+                            href="javascript:void(0)" data-notification-id="{{ $notification->pk }}">
                             <div class="notification-item-body">
                                 <div class="d-flex align-items-start justify-content-between gap-2">
                                     <span class="notification-item-title">{{ $notification->title ?? 'Notification' }}</span>
@@ -1305,6 +1318,17 @@
                         window.location.href = '{{ route("admin.dashboard") }}';
                     });
             }
+
+            // Notification click (avoid inline onclick to prevent Blade JS parsing issues)
+            document.addEventListener('click', function (e) {
+                const target = e.target && e.target.closest ? e.target.closest('[data-notification-id]') : null;
+                if (!target) return;
+
+                const id = target.getAttribute('data-notification-id');
+                if (!id) return;
+
+                markAsRead(id);
+            });
 
             function markAllAsRead() {
                 fetch('/admin/notifications/mark-all-read', {
