@@ -35,6 +35,53 @@ use Illuminate\Support\Facades\Schema;
 class ReportController extends Controller
 {
     /**
+     * Academy Staff list for report filters.
+     * Excludes Officers Mess department staff and employees that are mapped as Faculty.
+     *
+     * @return \Illuminate\Support\Collection<int, object{pk:mixed, full_name:string}>
+     */
+    private function academyStaffEmployees(?DepartmentMaster $officersMessDept)
+    {
+        $facultyEmployeePks = [];
+
+        // Some deployments may not have employee_master_pk column; guard it.
+        try {
+            $facultyTable = (new FacultyMaster())->getTable();
+            if (Schema::hasColumn($facultyTable, 'employee_master_pk')) {
+                $facultyEmployeePks = FacultyMaster::query()
+                    ->whereNotNull('employee_master_pk')
+                    ->pluck('employee_master_pk')
+                    ->filter()
+                    ->unique()
+                    ->values()
+                    ->all();
+            }
+        } catch (\Throwable $e) {
+            $facultyEmployeePks = [];
+        }
+
+        return EmployeeMaster::query()
+            ->when(Schema::hasColumn('employee_master', 'status'), fn ($q) => $q->where('status', 1))
+            ->when($officersMessDept, function ($q) use ($officersMessDept) {
+                $q->where(function ($sub) use ($officersMessDept) {
+                    $sub->whereNull('department_master_pk')
+                        ->orWhere('department_master_pk', '!=', $officersMessDept->pk);
+                });
+            })
+            ->when(!empty($facultyEmployeePks), function ($q) use ($facultyEmployeePks) {
+                $q->whereNotIn('pk', $facultyEmployeePks);
+            })
+            ->orderBy('first_name')->orderBy('last_name')
+            ->get(['pk', 'first_name', 'middle_name', 'last_name'])
+            ->map(function ($e) {
+                $fullName = trim(($e->first_name ?? '') . ' ' . ($e->middle_name ?? '') . ' ' . ($e->last_name ?? ''));
+                return (object) ['pk' => $e->pk, 'full_name' => $fullName ?: '—'];
+            })
+            ->filter(fn ($e) => $e->full_name !== '—')
+            ->values();
+    }
+
+    /**
      * Stock Purchase Details Report
      * Shows detailed purchase information grouped by bill (Purchase Order)
      */
@@ -1090,17 +1137,9 @@ class ReportController extends Controller
                 ->orderBy('client_name')
                 ->get()
                 ->groupBy('client_type');
-            $faculties = FacultyMaster::whereNotNull('full_name')->where('full_name', '!=', '')->orderBy('full_name')->get(['pk', 'full_name']);
-            $employees = EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn ($q) => $q->where('status', 1))
-                ->orderBy('first_name')->orderBy('last_name')
-                ->get(['pk', 'first_name', 'middle_name', 'last_name'])
-                ->map(function ($e) {
-                    $fullName = trim(($e->first_name ?? '') . ' ' . ($e->middle_name ?? '') . ' ' . ($e->last_name ?? ''));
-                    return (object) ['pk' => $e->pk, 'full_name' => $fullName ?: '—'];
-                })
-                ->filter(fn ($e) => $e->full_name !== '—')
-                ->values();
             $officersMessDept = DepartmentMaster::where('department_name', 'Officers Mess')->first();
+            $faculties = FacultyMaster::whereNotNull('full_name')->where('full_name', '!=', '')->orderBy('full_name')->get(['pk', 'full_name']);
+            $employees = $this->academyStaffEmployees($officersMessDept);
             $messStaff = $officersMessDept
                 ? EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn ($q) => $q->where('status', 1))
                     ->where('department_master_pk', $officersMessDept->pk)
@@ -1290,17 +1329,9 @@ class ReportController extends Controller
             ->get()
             ->groupBy('client_type');
 
-        $faculties = FacultyMaster::whereNotNull('full_name')->where('full_name', '!=', '')->orderBy('full_name')->get(['pk', 'full_name']);
-        $employees = EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn ($q) => $q->where('status', 1))
-            ->orderBy('first_name')->orderBy('last_name')
-            ->get(['pk', 'first_name', 'middle_name', 'last_name'])
-            ->map(function ($e) {
-                $fullName = trim(($e->first_name ?? '') . ' ' . ($e->middle_name ?? '') . ' ' . ($e->last_name ?? ''));
-                return (object) ['pk' => $e->pk, 'full_name' => $fullName ?: '—'];
-            })
-            ->filter(fn ($e) => $e->full_name !== '—')
-            ->values();
         $officersMessDept = DepartmentMaster::where('department_name', 'Officers Mess')->first();
+        $faculties = FacultyMaster::whereNotNull('full_name')->where('full_name', '!=', '')->orderBy('full_name')->get(['pk', 'full_name']);
+        $employees = $this->academyStaffEmployees($officersMessDept);
         $messStaff = $officersMessDept
             ? EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn ($q) => $q->where('status', 1))
                 ->where('department_master_pk', $officersMessDept->pk)
