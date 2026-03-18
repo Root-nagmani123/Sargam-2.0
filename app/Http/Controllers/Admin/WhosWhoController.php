@@ -30,14 +30,23 @@ class WhosWhoController extends Controller
 
     /**
      * Get courses list (AJAX)
+     * Supports course_type: 'active' (end_date >= today) or 'archive' (end_date < today)
      */
-    public function getCourses()
+    public function getCourses(Request $request)
     {
         try {
+            $courseType = $request->input('course_type', 'active');
             $currentDate = Carbon::now()->format('Y-m-d');
-            $courses = CourseMaster::where('active_inactive', 1)
-                ->where('end_date', '>=', $currentDate)
-                ->orderBy('course_name')
+
+            $query = CourseMaster::where('active_inactive', 1);
+
+            if ($courseType === 'archive') {
+                $query->where('end_date', '<', $currentDate);
+            } else {
+                $query->where('end_date', '>=', $currentDate);
+            }
+
+            $courses = $query->orderBy('course_name')
                 ->get(['pk', 'course_name', 'couse_short_name']);
 
             return response()->json([
@@ -48,6 +57,90 @@ class WhosWhoController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error fetching courses: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get cadres list for filter (AJAX)
+     * Filtered by course_type and optionally course_id
+     */
+    public function getCadres(Request $request)
+    {
+        try {
+            $courseType = $request->input('course_type', 'active');
+            $courseId = $request->input('course_id', '');
+            $currentDate = Carbon::now()->format('Y-m-d');
+
+            $studentPks = StudentMasterCourseMap::where('active_inactive', 1)
+                ->whereHas('studentMaster', fn($q) => $q->where('status', 1))
+                ->whereHas('course', function($q) use ($courseType, $currentDate) {
+                    $q->where('active_inactive', 1);
+                    $courseType === 'archive'
+                        ? $q->where('end_date', '<', $currentDate)
+                        : $q->where('end_date', '>=', $currentDate);
+                })
+                ->when($courseId, fn($q) => $q->where('course_master_pk', $courseId))
+                ->pluck('student_master_pk')
+                ->unique();
+
+            $cadres = DB::table('cadre_master as c')
+                ->join('student_master as sm', 'sm.cadre_master_pk', '=', 'c.pk')
+                ->whereIn('sm.pk', $studentPks)
+                ->whereNotNull('sm.cadre_master_pk')
+                ->select('c.pk', 'c.cadre_name')
+                ->distinct()
+                ->orderBy('c.cadre_name')
+                ->get();
+
+            return response()->json(['success' => true, 'cadres' => $cadres]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error fetching cadres: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get counsellor groups list for filter (AJAX)
+     * Returns groups from group_type_master_course_master_map, filtered by course_type and optionally course_id
+     */
+    public function getCounsellorGroups(Request $request)
+    {
+        try {
+            $courseType = $request->input('course_type', 'active');
+            $courseId = $request->input('course_id', '');
+            $currentDate = Carbon::now()->format('Y-m-d');
+
+            $query = DB::table('group_type_master_course_master_map as gmap')
+                ->join('course_master as cm', 'gmap.course_name', '=', 'cm.pk')
+                ->leftJoin('course_group_type_master as cgt', 'gmap.type_name', '=', 'cgt.pk')
+                ->where('gmap.active_inactive', 1)
+                ->where('cm.active_inactive', 1)
+                ->whereNotNull('gmap.group_name')
+                ->where('gmap.group_name', '!=', '');
+
+            if ($courseType === 'archive') {
+                $query->where('cm.end_date', '<', $currentDate);
+            } else {
+                $query->where('cm.end_date', '>=', $currentDate);
+            }
+            if ($courseId) {
+                $query->where('gmap.course_name', $courseId);
+            }
+
+            $groups = $query
+                ->select('gmap.pk as group_pk', 'gmap.group_name', 'cgt.type_name as counsellor_type_name')
+                ->distinct()
+                ->orderBy('gmap.group_name')
+                ->get();
+
+            return response()->json(['success' => true, 'groups' => $groups]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error fetching counsellor groups: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -66,6 +159,9 @@ class WhosWhoController extends Controller
         try {
             $name = $request->input('name', '');
             $courseId = $request->input('course_id', '');
+            $courseType = $request->input('course_type', 'active');
+            $cadreId = $request->input('cadre_id', '');
+            $groupId = $request->input('group_id', '');
             $category = $request->input('category', '');
             $status = $request->input('status', '');
             $page = $request->input('page', 1);
@@ -96,8 +192,14 @@ class WhosWhoController extends Controller
             ->whereHas('studentMaster', function($q) {
                 $q->where('status', 1); // Only active students from student_master
             })
-            ->whereHas('course', function($q) {
-                $q->where('active_inactive', 1); // Only active courses from course_master
+            ->whereHas('course', function($q) use ($courseType) {
+                $q->where('active_inactive', 1);
+                $currentDate = Carbon::now()->format('Y-m-d');
+                if ($courseType === 'archive') {
+                    $q->where('end_date', '<', $currentDate);
+                } else {
+                    $q->where('end_date', '>=', $currentDate);
+                }
             });
 
             /**
@@ -109,10 +211,15 @@ class WhosWhoController extends Controller
                 // Filter by course_master_pk column in student_master_course__map table
                 $query->where('student_master_course__map.course_master_pk', $courseId);
                 
-                // Verify the course exists and is active
-                $courseExists = CourseMaster::where('pk', $courseId)
-                    ->where('active_inactive', 1)
-                    ->exists();
+                // Verify the course exists and matches the course type (active/archive)
+                $currentDate = Carbon::now()->format('Y-m-d');
+                $courseQuery = CourseMaster::where('pk', $courseId)->where('active_inactive', 1);
+                if ($courseType === 'archive') {
+                    $courseQuery->where('end_date', '<', $currentDate);
+                } else {
+                    $courseQuery->where('end_date', '>=', $currentDate);
+                }
+                $courseExists = $courseQuery->exists();
                     
                 if (!$courseExists) {
                     return response()->json([
@@ -131,6 +238,23 @@ class WhosWhoController extends Controller
                       ->orWhere('first_name', 'like', '%' . $name . '%')
                       ->orWhere('last_name', 'like', '%' . $name . '%')
                       ->orWhere('generated_OT_code', 'like', '%' . $name . '%');
+                });
+            }
+
+            // Filter by cadre
+            if (!empty($cadreId) && $cadreId > 0) {
+                $query->whereHas('studentMaster', function($q) use ($cadreId) {
+                    $q->where('cadre_master_pk', $cadreId);
+                });
+            }
+
+            // Filter by counsellor group (student must be in this group for the course)
+            if (!empty($groupId) && $groupId > 0) {
+                $query->whereExists(function($sub) use ($groupId) {
+                    $sub->select(DB::raw(1))
+                        ->from('student_course_group_map as scgm')
+                        ->whereColumn('scgm.student_master_pk', 'student_master_course__map.student_master_pk')
+                        ->where('scgm.group_type_master_course_master_map_pk', $groupId);
                 });
             }
 
@@ -297,13 +421,19 @@ class WhosWhoController extends Controller
                     continue;
                 }
 
-                // If no course filter and course is missing, try to get first active course for this student
+                // If no course filter and course is missing, try to get first course for this student matching course_type
                 if (!$course && empty($courseId)) {
+                    $fallbackDate = Carbon::now()->format('Y-m-d');
                     $firstCourseMap = StudentMasterCourseMap::with('course')
                         ->where('student_master_pk', $student->pk)
                         ->where('active_inactive', 1)
-                        ->whereHas('course', function($q) {
+                        ->whereHas('course', function($q) use ($courseType, $fallbackDate) {
                             $q->where('active_inactive', 1);
+                            if ($courseType === 'archive') {
+                                $q->where('end_date', '<', $fallbackDate);
+                            } else {
+                                $q->where('end_date', '>=', $fallbackDate);
+                            }
                         })
                         ->first();
                     $course = $firstCourseMap ? $firstCourseMap->course : null;
@@ -318,11 +448,17 @@ class WhosWhoController extends Controller
                  * Get all courses this student is enrolled in from student_master_course__map
                  * This queries the mapping table to find all course_master_pk values for this student
                  */
+                $enrolledCoursesDate = Carbon::now()->format('Y-m-d');
                 $enrolledCourses = StudentMasterCourseMap::with('course')
                     ->where('student_master_pk', $student->pk)
                     ->where('active_inactive', 1)
-                    ->whereHas('course', function($q) {
+                    ->whereHas('course', function($q) use ($courseType, $enrolledCoursesDate) {
                         $q->where('active_inactive', 1);
+                        if ($courseType === 'archive') {
+                            $q->where('end_date', '<', $enrolledCoursesDate);
+                        } else {
+                            $q->where('end_date', '>=', $enrolledCoursesDate);
+                        }
                     })
                     ->get();
 
@@ -407,6 +543,9 @@ class WhosWhoController extends Controller
                 ],
                 'filters' => [
                     'course_id' => $courseId,
+                    'course_type' => $courseType,
+                    'cadre_id' => $cadreId,
+                    'group_id' => $groupId,
                     'name' => $name,
                     'category' => $category,
                     'status' => $status

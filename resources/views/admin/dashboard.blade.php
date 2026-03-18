@@ -445,7 +445,8 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
 $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
 @endphp
 
-<div class="container-fluid px-3 px-md-4 py-3 pb-4 admin-dashboard-surface">
+<div class="admin-dashboard-surface py-3 py-lg-4">
+<div class="container-fluid px-3 px-lg-4">
     <div class="dashboard-welcome shadow-sm bg-gradient d-flex flex-wrap align-items-center justify-content-between gap-2">
         <div>
             <h2 class="mb-0 text-white">{{ $greeting }}, {{ $userName }}</h2>
@@ -457,15 +458,15 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
         </div>
     </div>
 
-    <div class="row g-3 mb-4">
+    <div class="row g-3 g-lg-4 mb-4">
         <div class="col-xl-3 col-md-6">
             <a href="{{ route('admin.dashboard.active_course') }}" class="text-decoration-none d-block h-100">
                 <div class="card dashboard-stat-card shadow-sm rounded-4 card-blue h-100">
                     <div class="card-body d-flex align-items-start justify-content-between gap-2">
                         <div>
-                            <p class="small text-dark mb-1">Total Active Courses</p>
+                            <p class="small text-body-secondary mb-1">Total Active Courses</p>
                             <div class="dashboard-stat-value fw-semibold text-primary">{{ $totalActiveCourses }}</div>
-                            <span class="stat-link-hint text-primary">View <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
+                            <span class="stat-link-hint text-primary">View <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
                         </div>
                         <span class="stat-icon"><span class="material-icons material-symbols-rounded">menu_book</span></span>
                     </div>
@@ -478,9 +479,9 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                 <div class="card dashboard-stat-card shadow-sm rounded-4 card-green h-100">
                     <div class="card-body d-flex align-items-start justify-content-between gap-2">
                         <div>
-                            <p class="small text-dark mb-1">Upcoming Courses</p>
+                            <p class="small text-body-secondary mb-1">Upcoming Courses</p>
                             <div class="dashboard-stat-value fw-semibold text-success">{{ $upcomingCourses }}</div>
-                            <span class="stat-link-hint text-success">View <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
+                            <span class="stat-link-hint text-success">View <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
                         </div>
                         <span class="stat-icon"><span class="material-icons material-symbols-rounded">event</span></span>
                     </div>
@@ -493,9 +494,9 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                 <div class="card dashboard-stat-card shadow-sm rounded-4 card-amber h-100">
                     <div class="card-body d-flex align-items-start justify-content-between gap-2">
                         <div>
-                            <p class="small text-dark mb-1">Upcoming Events</p>
+                            <p class="small text-body-secondary mb-1">Upcoming Events</p>
                             <div class="dashboard-stat-value fw-semibold text-warning-emphasis">2</div>
-                            <span class="stat-link-hint text-warning">View <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
+                            <span class="stat-link-hint text-warning">View <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
                         </div>
                         <span class="stat-icon"><span class="material-icons material-symbols-rounded">campaign</span></span>
                     </div>
@@ -509,9 +510,9 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                 <div class="card dashboard-stat-card shadow-sm rounded-4 card-rose h-100">
                     <div class="card-body d-flex align-items-start justify-content-between gap-2">
                         <div>
-                            <p class="small text-dark mb-1">Medical Exception</p>
+                            <p class="small text-body-secondary mb-1">Medical Exception</p>
                             <div class="dashboard-stat-value fw-semibold text-danger">{{ $exemptionCount }}</div>
-                            <span class="stat-link-hint text-danger">View <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
+                            <span class="stat-link-hint text-danger">View <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
                         </div>
                         <span class="stat-icon"><span class="material-icons material-symbols-rounded">monitor_heart</span></span>
                     </div>
@@ -522,9 +523,9 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                 <div class="card dashboard-stat-card shadow-sm rounded-4 card-rose h-100">
                     <div class="card-body d-flex align-items-start justify-content-between gap-2">
                         <div>
-                            <p class="small text-dark mb-1">Total Guest Faculty</p>
+                            <p class="small text-body-secondary mb-1">Total Guest Faculty</p>
                             <div class="dashboard-stat-value fw-semibold text-danger">{{ $total_guest_faculty }}</div>
-                            <span class="stat-link-hint text-danger">View <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
+                            <span class="stat-link-hint text-danger">View <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
                         </div>
                         <span class="stat-icon"><span class="material-icons material-symbols-rounded">badge</span></span>
                     </div>
@@ -539,9 +540,9 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                 <div class="card dashboard-stat-card shadow-sm rounded-4 card-blue h-100">
                     <div class="card-body d-flex align-items-start justify-content-between gap-2">
                         <div>
-                            <p class="small text-dark mb-1">OT MDO/Escort</p>
+                            <p class="small text-body-secondary mb-1">OT MDO/Escort</p>
                             <div class="dashboard-stat-value fw-semibold text-primary">{{ $MDO_count }}</div>
-                            <span class="stat-link-hint text-primary">View <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
+                            <span class="stat-link-hint text-primary">View <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
                         </div>
                         <span class="stat-icon"><span class="material-icons material-symbols-rounded">manage_accounts</span></span>
                     </div>
@@ -552,9 +553,9 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                 <div class="card dashboard-stat-card shadow-sm rounded-4 card-blue h-100">
                     <div class="card-body d-flex align-items-start justify-content-between gap-2">
                         <div>
-                            <p class="small text-dark mb-1">Total Inhouse Faculty</p>
+                            <p class="small text-body-secondary mb-1">Total Inhouse Faculty</p>
                             <div class="dashboard-stat-value fw-semibold text-primary">{{ $total_internal_faculty }}</div>
-                            <span class="stat-link-hint text-primary">View <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
+                            <span class="stat-link-hint text-primary">View <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
                         </div>
                         <span class="stat-icon"><span class="material-icons material-symbols-rounded">groups</span></span>
                     </div>
@@ -569,9 +570,9 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                 <div class="card dashboard-stat-card shadow-sm rounded-4 card-green h-100">
                     <div class="card-body d-flex align-items-start justify-content-between gap-2">
                         <div>
-                            <p class="small text-dark mb-1">Session Details</p>
+                            <p class="small text-body-secondary mb-1">Session Details</p>
                             <div class="dashboard-stat-value fw-semibold text-success">{{ $totalSessions }}</div>
-                            <span class="stat-link-hint text-success">View <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
+                            <span class="stat-link-hint text-success">View <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
                         </div>
                         <span class="stat-icon"><span class="material-icons material-symbols-rounded">history</span></span>
                     </div>
@@ -586,11 +587,26 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                 <div class="card dashboard-stat-card shadow-sm rounded-4 card-amber h-100">
                     <div class="card-body d-flex align-items-start justify-content-between gap-2">
                         <div>
-                            <p class="small text-dark mb-1">Total Students</p>
+                            <p class="small text-body-secondary mb-1">Total Students</p>
                             <div class="dashboard-stat-value fw-semibold text-warning-emphasis">{{ $totalStudents }}</div>
-                            <span class="stat-link-hint text-warning">View <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
+                            <span class="stat-link-hint text-warning">View <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
                         </div>
                         <span class="stat-icon"><span class="material-icons material-symbols-rounded">contacts</span></span>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <a href="{{ route('admin.dashboard.my-counselee') }}" class="text-decoration-none d-block h-100">
+                <div class="card dashboard-stat-card shadow-sm rounded-4 card-blue h-100">
+                    <div class="card-body d-flex align-items-start justify-content-between gap-2">
+                        <div>
+                            <p class="small text-body-secondary mb-1">My Counselee</p>
+                            <div class="dashboard-stat-value fw-semibold text-primary">View</div>
+                            <span class="stat-link-hint text-primary">View list <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
+                        </div>
+                        <span class="stat-icon"><span class="material-icons material-symbols-rounded">person_search</span></span>
                     </div>
                 </div>
             </a>
@@ -598,8 +614,8 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
         @endif
     </div>
 
-    <div class="row g-4">
-        <div class="col-lg-8">
+    <div class="row g-3 g-lg-4">
+        <div class="col-lg-7">
         @if(hasRole('Admin') || hasRole('Training-Induction'))
             <div class="card dashboard-panel shadow-sm rounded-4 mb-4">
                 <div class="card-header py-3 px-4 d-flex justify-content-between align-items-center">
@@ -621,6 +637,7 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                         <li class="mb-2">
                             <button type="button"
                                 class="dashboard-notification-item {{ empty($notification->is_read) ? 'dashboard-notification-item-unread' : '' }}"
+                                aria-label="Open notification: {{ $notification->title ?? 'Notification' }}"
                                 onclick="window.markAsReadDashboard({{ $notification->pk }}, this)">
                                 <div class="d-flex gap-3 flex-grow-1 min-w-0">
                                     <span class="notification-icon-wrap"><span class="material-icons material-symbols-rounded">notifications</span></span>
@@ -728,7 +745,7 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                                         <small class="d-block dashboard-notice-date">{{ $noticeDate ? date('d M, Y', strtotime($noticeDate)) : '—' }}</small>
                                         @if($notice->document)
                                         <a href="{{ asset('storage/' . $notice->document) }}" target="_blank" class="dashboard-notice-attachment text-danger text-decoration-none">
-                                            <span class="material-icons material-symbols-rounded" style="font-size: 1rem;">attach_file</span>View attachment
+                                            <span class="material-icons material-symbols-rounded fs-6">attach_file</span>View attachment
                                         </a>
                                         @endif
                                     </div>
@@ -796,6 +813,7 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
             </div>
         </div>
     </div>
+</div>
 </div>
 
 @push('scripts')
