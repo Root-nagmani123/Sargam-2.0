@@ -31,7 +31,6 @@
                         <option value="">All</option>
                         <option value="0">Pending</option>
                         <option value="1">Allotted</option>
-                        <option value="2">Rejected</option>
                         <option value="3">Returned</option>
                     </select>
                 </div>
@@ -247,6 +246,9 @@
 @endpush
 
 @push('scripts')
+    <script>
+        window.requestEstateSelfEmployeePk = @json($selfEmployeePk ?? null);
+    </script>
     {!! $dataTable->scripts() !!}
     <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
     <script>
@@ -365,7 +367,15 @@
             clearEmployeeDerivedFields();
             $('#addEditRequestEstateFormErrors').addClass('d-none').find('#addEditRequestEstateFormErrorsText').empty();
             $('#formAddEditRequestEstate').find('.field-error').empty().end().find('.is-invalid').removeClass('is-invalid');
-            loadRequestEstateEmployees();
+            var selfPk = (typeof window.requestEstateSelfEmployeePk !== 'undefined' && window.requestEstateSelfEmployeePk)
+                ? String(window.requestEstateSelfEmployeePk)
+                : null;
+            loadRequestEstateEmployees(null, selfPk, function() {
+                if (selfPk) {
+                    // Ensure change handler runs so derived fields (designation, pay scale, DOJ, eligibility type) are filled.
+                    $('#modal_employee_pk').trigger('change');
+                }
+            });
             $.get('{{ route("admin.estate.request-for-estate.next-req-id") }}', function(res) {
                 if (res.next_req_id) $('#modal_req_id').val(res.next_req_id);
                 if (addEditModal) addEditModal.show();

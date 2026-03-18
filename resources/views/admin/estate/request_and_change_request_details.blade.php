@@ -96,6 +96,42 @@
                     <label class="form-label fw-semibold small text-uppercase text-body-secondary">Remarks</label>
                     <p class="mb-0 fw-medium">{{ $requestForHouse->remarks }}</p>
                 </div>
+                @if(!empty($houseDetails))
+                <div class="col-12">
+                    <hr class="my-4">
+                    <h3 class="h6 fw-bold text-dark mb-3">
+                        <i class="bi bi-building me-2"></i> House Details
+                    </h3>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <label class="form-label fw-semibold small text-uppercase text-body-secondary">Campus</label>
+                    <p class="mb-0 fw-medium">{{ $houseDetails->campus_name ?? '—' }}</p>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <label class="form-label fw-semibold small text-uppercase text-body-secondary">Block / Building</label>
+                    <p class="mb-0 fw-medium">{{ $houseDetails->block_name ?? '—' }}</p>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <label class="form-label fw-semibold small text-uppercase text-body-secondary">Unit Type</label>
+                    <p class="mb-0 fw-medium">{{ $houseDetails->unit_type ?? '—' }}</p>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <label class="form-label fw-semibold small text-uppercase text-body-secondary">Unit Sub Type</label>
+                    <p class="mb-0 fw-medium">{{ $houseDetails->unit_sub_type ?? '—' }}</p>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <label class="form-label fw-semibold small text-uppercase text-body-secondary">House / Quarter No.</label>
+                    <p class="mb-0 fw-medium">{{ $houseDetails->house_no ?? '—' }}</p>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <label class="form-label fw-semibold small text-uppercase text-body-secondary">Allotment Date</label>
+                    <p class="mb-0 fw-medium">{{ $houseDetails->allotment_date ?? '—' }}</p>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <label class="form-label fw-semibold small text-uppercase text-body-secondary">Possession Date</label>
+                    <p class="mb-0 fw-medium">{{ $houseDetails->possession_date ?? '—' }}</p>
+                </div>
+                @endif
             </div>
         </div>
     </div>
@@ -113,6 +149,7 @@
             @php
                 $hasCurrentAlot = trim((string) ($requestForHouse->current_alot ?? '')) !== '' && (string) ($requestForHouse->current_alot ?? '') !== '—';
                 $hasAnyChangeRequest = ! $changeRequestDetails->isEmpty();
+                $canEditChangeRequest = hasRole('Admin') || hasRole('Estate') || hasRole('Super Admin');
             @endphp
             @if($hasCurrentAlot && ! $hasAnyChangeRequest && (hasRole('Estate') || hasRole('Admin')))
                 <a href="{{ route('admin.estate.raise-change-request', ['id' => $requestForHouse->pk]) }}" class="btn btn-info btn-sm">
@@ -122,7 +159,7 @@
         </div>
         <div class="card-body p-4">
             @if($changeRequestDetails->isEmpty())
-                <p class="text-body-secondary mb-0">No change request has been raised for this house request. Change request is applicable only when the employee already has a house allotted (<code>current_alot</code> is set). Use <strong>Raise Change Request</strong> above when the employee has a current allotment.</p>
+                <p class="text-body-secondary mb-0">No change request has been raised for this house request. Change request is applicable only when the employee already has a house allotted (<code>current_alot</code> is set). Use <strong>Raise Change Request</strong> above when the employee has a current allotment. <strong>If you have already returned the house</strong>, you cannot raise a change request for this request.</p>
             @else
                 <p class="text-body-secondary small mb-4">Change request(s) linked to this house request from.</p>
                 <div class="table-responsive">
@@ -138,7 +175,9 @@
                                 <th class="fw-semibold small text-uppercase">Unit Sub Type</th>
                                 <th class="fw-semibold small text-uppercase">Status</th>
                                 <th class="fw-semibold small text-uppercase">Remarks</th>
+                                @if($canEditChangeRequest)
                                 <th class="fw-semibold small text-uppercase text-center">Action</th>
+                                @endif
                             </tr>
                         </thead>
                         <tbody>
@@ -160,14 +199,15 @@
                                             };
                                         @endphp
                                         <span class="badge bg-{{ $statusClass }}">{{ $chg->change_ap_dis_status_label }}</span>
-                                        <span class="badge bg-light text-dark border ms-1">{{ $chg->f_status_label }}</span>
                                     </td>
                                     <td class="small">{{ \Illuminate\Support\Str::limit($chg->remarks, 40) }}</td>
+                                    @if($canEditChangeRequest)
                                     <td class="text-center">
                                         <a href="{{ $chg->edit_url }}" class="btn btn-sm btn-outline-primary" title="Edit change request details">
                                             <i class="material-icons">edit</i>
                                         </a>
                                     </td>
+                                    @endif
                                 </tr>
                             @endforeach
                         </tbody>

@@ -23,12 +23,13 @@
             </h2>
         </div>
         <div class="card-body p-4">
-            <form method="get" action="{{ route('admin.estate.generate-estate-bill') }}" class="row g-3 g-md-4 align-items-end">
+            <form method="get" action="{{ route('admin.estate.generate-estate-bill') }}" class="row g-3 g-md-4 align-items-center">
                 <div class="col-12 col-sm-6 col-md-4 col-lg-3">
                     <label for="bill_month" class="form-label fw-medium">Bill Month <span class="text-danger">*</span></label>
                     <input type="month" class="form-control" id="bill_month" name="bill_month" value="{{ old('bill_month', $billMonth) }}" max="{{ date('Y-m') }}" required aria-describedby="bill_month_help">
                     <div id="bill_month_help" class="form-text small">Select the month for billing</div>
                 </div>
+                @if(hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'))
                 <div class="col-12 col-sm-6 col-md-4 col-lg-3">
                     <label for="unit_sub_type_pk" class="form-label fw-medium">Unit Sub Type </label>
                     <select class="form-select" id="unit_sub_type_pk" name="unit_sub_type_pk" aria-label="Select Unit Sub Type" aria-describedby="unit_sub_type_help">
@@ -39,14 +40,13 @@
                     </select>
                     <div id="unit_sub_type_help" class="form-text small">Filter by unit category</div>
                 </div>
-                <div class="col-12 col-sm-6 col-md-4 col-lg-2 d-flex align-items-center pb-1">
-                    <div class="form-check form-check-inline">
+                @endif
+                <div class="col-12 col-sm-6 col-md-4 col-lg-4 d-flex align-items-center gap-3">
+                    <div class="form-check form-check-inline mb-0 mt-2">
                         <input class="form-check-input" type="checkbox" id="check_all" name="check_all" aria-describedby="check_all_help">
                         <label class="form-check-label" for="check_all">Check All</label>
                     </div>
                     <span id="check_all_help" class="visually-hidden">Select or clear all bill checkboxes</span>
-                </div>
-                <div class="col-12 col-sm-6 col-md-4 col-lg-2">
                     <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-2">
                         <i class="material-symbols-rounded" style="font-size: 1.1rem;">visibility</i>
                         Show

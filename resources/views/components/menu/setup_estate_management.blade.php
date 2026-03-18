@@ -43,13 +43,20 @@
                                 $isHACPerson = hasRole('HAC Person');
                                 $canSeeAllEstate = $isEstateAdmin || $showUserManagement;
                                 $estateManagementOpen = request()->routeIs('admin.estate.*');
-                                // HAC menus (Put In HAC / HAC Approved) visible to HAC Person + Estate/Admin (same as main sidebar).
+                                // HAC menus (Put In HAC / HAC Approved) visible ONLY to HAC Person + Estate/Admin.
                                 $canSeeHAC = $isHACPerson || $canSeeAllEstate;
+                                // Staff/self-service: Request For Estate + Generate Estate Bill only. HAC Person (without Staff) sees only Put In HAC + HAC Approved.
+                                $canSeeRequestAndBill = $canSeeAllEstate || $estateSelfServiceRoles;
                                 $canSeeSelfOnly = $canSeeAllEstate || $isHACPerson || $estateSelfServiceRoles;
+                                // Restricted menus: visible ONLY to Admin/Estate/Super Admin.
+                                $canSeeUpdateMeterNo = hasRole('Admin') || hasRole('Estate') || hasRole('Super Admin');
+                                $canSeeListMeterReading = hasRole('Admin') || hasRole('Estate') || hasRole('Super Admin');
                                 // "Other" estate operations (for other employees, Return House, Define House, etc.) are restricted strictly to Admin / Estate / Super Admin.
                                 $canManageOthersEstate = $isEstateAdmin || hasRole('Admin') || hasRole('Super Admin');
-                                // But Return House list should also be visible to permanent estate self-service employees (same as main sidebar).
-                                $canSeeReturnHouse = $canManageOthersEstate || $isPermanentEstateEmployee;
+                                // For client requirement: Return House menu should NOT appear for self-service users.
+                                $canSeeReturnHouse = $canManageOthersEstate;
+                                // Admin/Super Admin/Estate see "Generate Estate Bill"; everyone else sees "My Estate Bill".
+                                $estateBillMenuLabel = (hasRole('Admin') || hasRole('Super Admin') || hasRole('Estate')) ? 'Generate Estate Bill' : 'My Estate Bill';
                             @endphp
 
                             @if($showEstateSection)
@@ -68,8 +75,8 @@
                                     </a>
                                 </li>
                                 <ul class="collapse list-unstyled ps-3 {{ $estateManagementOpen ? 'show' : '' }}" id="estateManagementMiniCollapse">
-                                    {{-- User: own data | HAC Person: HAC items | Estate / Admin: all --}}
-                                    @if($canSeeSelfOnly)
+                                    {{-- Staff/self-service: Request For Estate + Generate Estate Bill. HAC Person: only Put In HAC + HAC Approved. --}}
+                                    @if($canSeeRequestAndBill)
                                     <li class="sidebar-item">
                                         <a class="sidebar-link {{ request()->routeIs('admin.estate.request-for-estate') ? 'active' : '' }}"
                                             href="{{ route('admin.estate.request-for-estate') }}">
@@ -102,7 +109,7 @@
                                     </li>
                                     @endif
 
-                                    @if($canSeeSelfOnly)
+                                    @if($canSeeUpdateMeterNo)
                                     <li class="sidebar-item">
                                         <a class="sidebar-link {{ request()->routeIs('admin.estate.update-meter-no') ? 'active' : '' }}"
                                             href="{{ route('admin.estate.update-meter-no') }}">
@@ -132,17 +139,20 @@
                                     </li>
                                     @endif
 
-                                    @if($canSeeSelfOnly)
+                                    @if($canSeeListMeterReading)
                                     <li class="sidebar-item">
                                         <a class="sidebar-link {{ request()->routeIs('admin.estate.list-meter-reading*') ? 'active' : '' }}"
                                             href="{{ route('admin.estate.list-meter-reading') }}">
                                             <span class="hide-menu small small-sm-normal text-nowrap">List Meter Reading</span>
                                         </a>
                                     </li>
+                                    @endif
+
+                                    @if($canSeeRequestAndBill)
                                     <li class="sidebar-item">
                                         <a class="sidebar-link {{ request()->routeIs('admin.estate.generate-estate-bill') ? 'active' : '' }}"
                                             href="{{ route('admin.estate.generate-estate-bill') }}">
-                                            <span class="hide-menu small small-sm-normal text-nowrap">Generate Estate Bill</span>
+                                            <span class="hide-menu small small-sm-normal text-nowrap">{{ $estateBillMenuLabel }}</span>
                                         </a>
                                     </li>
                                     @endif
@@ -177,7 +187,7 @@
                                     </li>
                                     @endif
 
-                                    @if($canSeeSelfOnly)
+                                    @if($canSeeAllEstate)
                                     <li class="sidebar-item">
                                         <a class="sidebar-link {{ request()->routeIs('admin.estate.request-for-house') ? 'active' : '' }}"
                                             href="{{ route('admin.estate.request-for-house') }}">

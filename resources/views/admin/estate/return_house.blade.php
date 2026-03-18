@@ -60,6 +60,18 @@
         @endif
     </div>
 
+    {{-- User-friendly flow: Change Request vs Return House --}}
+    <!-- <div class="alert alert-info border-0 rounded-3 shadow-sm mb-4 d-flex align-items-start" role="alert">
+        <i class="bi bi-info-circle-fill me-2 flex-shrink-0 mt-1"></i>
+        <div>
+            <strong>Change Request and Return House</strong>
+            <ul class="mb-0 mt-1 small">
+                <li>If you have a <strong>pending Change Request</strong> (request for change of house), your name will not appear in the Return House list. Please wait for the request to be <strong>approved or disapproved</strong> before you can return the house.</li>
+                <li>If you <strong>return the house first</strong>, you cannot raise a Change Request later for that request (Change Request is only when you currently have a house allotted).</li>
+            </ul>
+        </div>
+    </div> -->
+
     <!-- Request House Modal - Add Request Details (dynamic dropdowns from DB) -->
     <div class="modal fade" id="requestHouseModal" tabindex="-1" aria-labelledby="requestHouseModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
         <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
@@ -273,6 +285,12 @@
 
     var urlEmployees = '{{ route("admin.estate.return-house.employees") }}';
     var urlRequestDetails = '{{ route("admin.estate.return-house.request-details") }}';
+    var preselectRequestId = (function() {
+        try {
+            var params = new URLSearchParams(window.location.search || '');
+            return params.get('request_id') || '';
+        } catch (e) { return ''; }
+    })();
     var campusesList = @json($campuses ?? []);
 
     var tsEmployee = null, tsEstate = null, tsUnit = null, tsBuilding = null, tsUnitSub = null;
@@ -382,6 +400,20 @@
                 if (empEl && typeof TomSelect !== 'undefined') tsEmployee = initReturnHouseTs(empEl, '--Select--');
                 $('#request_section_name').val('');
                 clearRequestDetailsFields();
+
+                // Auto-select requester for self-service flow when request_id is present in URL.
+                if (type === 'LBSNAA' && preselectRequestId) {
+                    var targetVal = String(preselectRequestId);
+                    var selEl = document.getElementById('request_employee_name');
+                    if (selEl && selEl.tomselect) {
+                        if (selEl.tomselect.options[targetVal]) {
+                            // false = NOT silent → change events fire, so details prefill.
+                            selEl.tomselect.setValue(targetVal, false);
+                        }
+                    } else if ($sel.find('option[value="' + targetVal.replace(/"/g, '\\"') + '"]').length) {
+                        $sel.val(targetVal).trigger('change');
+                    }
+                }
             }).always(function() {
                 $('#request_employee_loading').hide();
             });
@@ -547,6 +579,21 @@
         $('#request_employee_name').attr('name', 'estate_other_req_pk');
         $('input[name="employee_type"]:checked').trigger('change');
         syncNocClearButton();
+
+        // If request_id query param present (self-service Return from Request For Estate),
+        // open modal directly and let employee dropdown auto-select via preselectRequestId logic above.
+        (function autoOpenReturnModalFromRequestId() {
+            if (!preselectRequestId) return;
+
+            var modalEl = document.getElementById('requestHouseModal');
+            if (!modalEl || typeof bootstrap === 'undefined') return;
+
+            var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            modal.show();
+
+            // Force LBSNAA employee type (main flow) and trigger employees load
+            $('input[name="employee_type"][value="LBSNAA"]').prop('checked', true).trigger('change');
+        })();
 
         $(document).on('change', '#request_estate_name', function() {
             if (isFillingFromRequest) return;
