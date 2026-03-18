@@ -24,6 +24,30 @@
             </div>
 
             <div id="request-for-estate-card-body">
+            @php
+                $showUserActionHelp = !(
+                    hasRole('Estate') ||
+                    hasRole('Admin') ||
+                    hasRole('Super Admin') ||
+                    hasRole('Training-Induction') ||
+                    hasRole('Training-MCTP') ||
+                    hasRole('IST')
+                );
+            @endphp
+
+            @if($showUserActionHelp)
+            <div class="alert alert-light border request-action-help shadow-sm mb-3" role="note">
+                <div class="fw-semibold text-dark mb-1">Action buttons</div>
+                <div class="small text-body-secondary d-flex flex-wrap gap-3">
+                    <span><i class="material-icons material-symbols-rounded align-middle text-primary">visibility</i> View request details</span>
+                    <span><i class="material-icons material-symbols-rounded align-middle text-success">add_home</i> Add possession</span>
+                    <span><i class="material-icons material-symbols-rounded align-middle text-success">check_circle</i> Possession already done</span>
+                    <span><i class="material-icons material-symbols-rounded align-middle text-warning">logout</i> Return house</span>
+                    <span><i class="material-icons material-symbols-rounded align-middle text-info">swap_horiz</i> Raise change request</span>
+                </div>
+            </div>
+            @endif
+
             <div class="row align-items-end mb-3">
                 <div class="col-12 col-md-4 col-lg-3">
                     <label for="estateStatusFilter" class="form-label fw-semibold small mb-1">Status</label>
@@ -236,6 +260,14 @@
         padding-top: 0.5rem;
         font-size: 0.875rem;
         color: var(--bs-body-secondary);
+    }
+    .request-action-help {
+        background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+        border-color: #d8e7ff !important;
+    }
+    .request-action-help .material-icons {
+        font-size: 1rem;
+        vertical-align: text-bottom;
     }
     @media (max-width: 767.98px) {
         #requestForEstateTable_wrapper .col-md-6,

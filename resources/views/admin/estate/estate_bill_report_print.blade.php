@@ -16,9 +16,35 @@
     .estate-bill-print.bill-page { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; background: #fff; }
     .no-print { display: none !important; }
     .bill-doc { break-inside: avoid; page-break-inside: avoid; }
-    @page { size: A4; margin: 12mm; }
+    @page { size: A4; margin: 8mm; }
+    html, body { margin: 0 !important; padding: 0 !important; }
     body { background: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .bill-doc { box-shadow: none !important; }
+    .bill-page { font-size: 10pt; line-height: 1.28; }
+    .bill-header { padding: 12px 18px 14px; }
+    .bill-header::after { margin-top: 10px; }
+    .bill-header .org-name { font-size: 12pt; margin-bottom: 2px; }
+    .bill-header .org-sub { font-size: 9pt; }
+    .bill-header .bill-title { font-size: 11pt; margin-top: 10px; }
+    .bill-badge { top: 10px; right: 14px; font-size: 8pt; padding: 4px 10px; }
+    .bill-emblem { width: 38px; height: 38px; margin-bottom: 8px; font-size: 9pt; }
+    .bill-meta-bar { padding: 10px 18px; gap: 8px; font-size: 9.5pt; }
+    .bill-meta-bar .bill-no { font-size: 10.5pt; padding: 3px 10px; }
+    .bill-consumer { padding: 12px 18px; }
+    .bill-consumer-title { margin-bottom: 8px; padding-bottom: 4px; }
+    .bill-consumer-table td { padding: 4px 10px 4px 0; font-size: 9.5pt; }
+    .bill-section-title { margin: 14px 18px 8px; padding: 6px 0 6px 10px; font-size: 9.5pt; }
+    .bill-table-wrap { padding: 0 18px 6px; }
+    .bill-table { margin-bottom: 12px; font-size: 9.25pt; }
+    .bill-table th, .bill-table td { padding: 6px 8px; }
+    .bill-total-wrap { padding: 0 18px 16px; }
+    .bill-total-box { margin-top: 4px; padding: 12px 14px; }
+    .bill-total-box .grand-total { font-size: 15pt; }
+    .bill-amount-words, .bill-pay-by { margin-top: 6px; font-size: 8.5pt; }
+    .bill-footer { padding: 12px 18px 14px; font-size: 8.25pt; }
+    .bill-footer .footer-note { margin-bottom: 6px; line-height: 1.35; }
+    .bill-footer .sign-block { margin-top: 18px; gap: 28px; }
+    .bill-footer .sign-line { width: 150px; }
 }
 /* --- Bill document frame --- */
 .bill-page { font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; font-size: 11pt; color: #1a202c; line-height: 1.45; }

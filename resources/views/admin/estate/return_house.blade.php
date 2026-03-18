@@ -44,20 +44,7 @@
     </div>
 
     <div id="return-house-alerts">
-        @if(session('success'))
-            <div class="alert alert-success alert-dismissible fade show d-flex align-items-center rounded-3 shadow-sm" role="alert">
-                <i class="bi bi-check-circle-fill me-2 flex-shrink-0"></i>
-                <span class="flex-grow-1">{{ session('success') }}</span>
-                <button type="button" class="btn-close flex-shrink-0" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        @endif
-        @if(session('error'))
-            <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center rounded-3 shadow-sm" role="alert">
-                <i class="bi bi-exclamation-triangle-fill me-2 flex-shrink-0"></i>
-                <span class="flex-grow-1">{{ session('error') }}</span>
-                <button type="button" class="btn-close flex-shrink-0" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        @endif
+        <x-session_message />
     </div>
 
     {{-- User-friendly flow: Change Request vs Return House --}}

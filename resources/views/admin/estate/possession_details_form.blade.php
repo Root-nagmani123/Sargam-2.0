@@ -331,10 +331,18 @@ $(document).ready(function() {
             .prop('disabled', locked)
             .toggleClass('bg-body-secondary', locked);
 
+        // Dates:
+        // - For Admin/Super Admin/Estate: always editable.
+        // - For self-service users: editable ONLY when dates are not yet filled (pending).
+        //   Once dates exist, keep them readonly.
+        const allotVal = String($('#allotment_date').val() || '').trim();
+        const possVal = String($('#possession_date').val() || '').trim();
+        const hasExistingDates = allotVal !== '' || possVal !== '';
+        const shouldReadonlyDates = locked && !canEditDates && hasExistingDates;
+
         $('#allotment_date, #possession_date')
-            // Dates should remain editable only for Admin / Super Admin / Estate.
-            .prop('readonly', locked && !canEditDates)
-            .toggleClass('bg-body-secondary', locked && !canEditDates);
+            .prop('readonly', shouldReadonlyDates)
+            .toggleClass('bg-body-secondary', shouldReadonlyDates);
 
         setLockedFieldNames(locked);
         syncLockedHiddenSelects();
