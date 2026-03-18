@@ -7,61 +7,53 @@
 <div class="container-fluid py-4">
     <x-breadcrum title="Who's Who"></x-breadcrum>
 
-    <!-- Filter Section (sticky on scroll) -->
-    <div class="card border-0 shadow-sm rounded-3 mb-4 overflow-hidden" id="filterBarSticky">
-        <div class="card-header bg-body-tertiary border-0 py-3 px-4 d-flex flex-wrap align-items-center justify-content-between gap-2">
-            <div>
-                <h2 class="h6 mb-0 fw-semibold text-body-emphasis d-flex align-items-center gap-2">
-                    <i class="bi bi-people-fill text-primary fs-5"></i>
-                    Find Participants
-                </h2>
-                <p class="small text-body-secondary mb-0">Use smart filters, sorting and paging to quickly locate any participant.</p>
-            </div>
-            <button type="button" class="btn btn-outline-secondary  d-inline-flex align-items-center gap-1" id="resetFilters">
-                <i class="bi bi-arrow-clockwise"></i>
-                <span>Reset all</span>
-            </button>
-        </div>
-        <div class="card-body p-4 pt-3">
-            <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-6 g-3 align-items-end">
-                <div class="col">
-                    <label for="courseTypeFilter" class="form-label fw-semibold small text-body-secondary text-uppercase">Course Status</label>
-                    <select class="form-select  rounded-1" id="courseTypeFilter">
-                        <option value="active" selected>Active</option>
-                        <option value="archive">Archive</option>
-                    </select>
+    <!-- Filter Section -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body p-4">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label for="nameFilter" class="form-label fw-semibold">Name</label>
+                    <input type="text" class="form-control" id="nameFilter" placeholder="Enter name to search">
                 </div>
-                <div class="col">
-                    <label for="nameFilter" class="form-label fw-semibold small text-body-secondary text-uppercase">Name</label>
-                    <input type="text" class="form-control rounded-1" id="nameFilter" placeholder="Search by name">
-                </div>
-                <div class="col">
-                    <label for="courseFilter" class="form-label fw-semibold small text-body-secondary text-uppercase">Course Name</label>
-                    <select class="form-select  rounded-1" id="courseFilter" data-loaded-type="active">
+                <div class="col-md-3">
+                    <label for="courseFilter" class="form-label fw-semibold">Course Name</label>
+                    <select class="form-select" id="courseFilter">
                         <option value="">All Courses</option>
                         @foreach($courses as $course)
                             <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
                         @endforeach
                     </select>
                 </div>
-                <div class="col">
-                    <label for="cadreFilter" class="form-label fw-semibold small text-body-secondary text-uppercase">Cadre</label>
-                    <select class="form-select  rounded-1" id="cadreFilter">
-                        <option value="">All Cadres</option>
+                <div class="col-md-2">
+                    <label for="categoryFilter" class="form-label fw-semibold">Category</label>
+                    <select class="form-select" id="categoryFilter">
+                        <option value="">All Categories</option>
+                        <option value="ABCD">ABCD</option>
+                        <option value="EFGH">EFGH</option>
+                        <option value="IJKL">IJKL</option>
                     </select>
                 </div>
-                <div class="col">
-                    <label for="counsellorFilter" class="form-label fw-semibold small text-body-secondary text-uppercase">Counsellor</label>
-                    <select class="form-select  rounded-1" id="counsellorFilter">
-                        <option value="">All Counsellors</option>
+                <div class="col-md-2">
+                    <label for="statusFilter" class="form-label fw-semibold">Status</label>
+                    <select class="form-select" id="statusFilter">
+                        <option value="">All Status</option>
+                        <option value="ABCD">ABCD</option>
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
                     </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="button" class="btn btn-outline-secondary w-100" id="resetFilters">
+                        <i class="bi bi-arrow-clockwise me-1"></i> Reset
+                    </button>
                 </div>
             </div>
-
-            <div class="row row-cols-1 row-cols-md-4 g-3 align-items-end mt-3 pt-3 border-to1">
-                <div class="col">
-                    <label for="sortBy" class="form-label fw-semibold small text-body-secondary text-uppercase">Sort By</label>
-                    <select class="form-select  rounded-1" id="sortBy">
+            
+            <!-- Sorting and Per Page Controls -->
+            <div class="row g-3 align-items-end mt-3 pt-3 border-top">
+                <div class="col-md-4">
+                    <label for="sortBy" class="form-label fw-semibold">Sort By</label>
+                    <select class="form-select" id="sortBy">
                         <option value="name_asc">Name (A-Z)</option>
                         <option value="name_desc">Name (Z-A)</option>
                         <option value="roll_asc">Roll Number (Low to High)</option>
@@ -72,23 +64,9 @@
                         <option value="course_desc">Course (Z-A)</option>
                     </select>
                 </div>
-                <div class="col">
-                    <label for="categoryFilter" class="form-label fw-semibold small text-body-secondary text-uppercase">Service / Category</label>
-                    <select class="form-select  rounded-1" id="categoryFilter">
-                        <option value="">All Services</option>
-                    </select>
-                </div>
-                <div class="col">
-                    <label for="statusFilter" class="form-label fw-semibold small text-body-secondary text-uppercase">Status</label>
-                    <select class="form-select  rounded-1" id="statusFilter">
-                        <option value="">All Status</option>
-                        <option value="1">Active</option>
-                        <option value="0">Inactive</option>
-                    </select>
-                </div>
-                <div class="col col-md-6 d-flex align-items-end">
-                    <label for="perPage" class="form-label fw-semibold small text-body-secondary text-uppercase">Items Per Page</label>
-                    <select class="form-select  rounded-1 w-auto" id="perPage">
+                <div class="col-md-3">
+                    <label for="perPage" class="form-label fw-semibold">Items Per Page</label>
+                    <select class="form-select" id="perPage">
                         <option value="5">5</option>
                         <option value="10" selected>10</option>
                         <option value="25">25</option>
@@ -96,28 +74,13 @@
                         <option value="100">100</option>
                     </select>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Summary strip (participants count + course) -->
-    <div id="summaryStrip" class="d-none mb-3">
-        <div class="d-flex flex-wrap align-items-center gap-3 py-2 px-3 rounded-3 bg-body-tertiary borde1">
-            <span class="d-flex align-items-center gap-2 fw-semibold text-body-emphasis">
-                <i class="bi bi-people-fill text-primary"></i>
-                <span id="summaryCount">0 participants</span>
-            </span>
-            <span id="summaryCourse" class="d-none small text-body-secondary">
-                <i class="bi bi-mortarboard-fill me-1"></i>
-                <span id="summaryCourseName">Course name</span>
-            </span>
-            <div class="ms-auto d-flex align-items-center gap-2">
-                <span class="small text-body-secondary">View:</span>
-                <div class="btn-group btn-group-sm" role="group" aria-label="View mode">
-                    <input type="radio" class="btn-check" name="viewMode" id="viewModeFull" value="full" checked>
-                    <label class="btn btn-outline-primary rounded-2" for="viewModeFull">Full</label>
-                    <input type="radio" class="btn-check" name="viewMode" id="viewModeCompact" value="compact">
-                    <label class="btn btn-outline-primary rounded-2" for="viewModeCompact">Compact</label>
+                <div class="col-md-5">
+                    <div class="d-flex align-items-end h-100">
+                        <div class="text-muted small">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Use filters above and sorting options to find students
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -190,216 +153,152 @@
 
 <!-- Profile Template (Hidden) -->
 <template id="profileTemplate">
-    <article class="card border-0 shadow-sm rounded-4 mb-4 overflow-hidden">
+    <div class="card shadow-lg mb-4">
         <!-- Profile Header -->
-        <header class="card-header border-0 bg-gradient d-flex flex-wrap align-items-center gap-3 py-3 px-4"
-                style="background: linear-gradient(135deg, #004a93, #0d6efd);">
-            <div class="d-flex align-items-center gap-3 flex-grow-1">
-                <div class="rounded-circle bg-white bg-opacity-10 d-flex align-items-center justify-content-center"
-                     style="width: 44px; height: 44px;">
-                    <span class="fw-semibold fs-5" id="profileInitials">A</span>
+        <div class="card-header bg-primary text-white p-4">
+            <div class="row align-items-center g-3">
+                <div class="col-md-4">
+                    <h3 class="h4 mb-0 fw-bold" id="profileName">Aakash Garg</h3>
                 </div>
-                <div class="text-body-emphasis">
-                    <h2 class="h5 mb-0 fw-semibold" id="profileName">Participant Name</h2>
-                    <p class="mb-0 small">
-                        <span id="profileService">Service</span>
-                        <span class="mx-1">•</span>
-                        <span id="profileCourseCode">Course Code</span>
-                    </p>
+                <div class="col-md-4 text-center">
+                    <div class="fs-5 fw-semibold" id="profileRoll">Roll 5</div>
+                </div>
+                <div class="col-md-4 text-md-end">
+                    <div class="small fw-medium opacity-90" id="profileService">INDIAN ADMINISTRATIVE SERVICE</div>
                 </div>
             </div>
-            <div class="d-flex flex-wrap align-items-center gap-2 ms-auto">
-                <span class="badge bg-body-tertiary text-primary px-3 py-2 rounded-pill fw-semibold" id="profileRoll">Roll</span>
-                <span class="badge bg-body-tertiary text-primary border border-0 rounded-pill px-3 py-2 fw-semibold"
-                      id="profileIdBadge">ID</span>
-                <a href="#" class="btn btn-body-tertiary  rounded-pill fw-semibold d-flex align-items-center gap-1"
-                   id="profileHistoryBtn" title="View participant history">
-                    <i class="bi bi-clock-history"></i>
-                    <span>History</span>
-                </a>
-            </div>
-        </header>
-
+        </div>
+        
         <!-- Profile Body -->
         <div class="card-body p-4">
-            <!-- Compact view: single row (hidden by default, shown when view = compact) -->
-            <div class="profile-card-compact-block d-none align-items-center gap-3 py-2 flex-wrap">
-                <div class="ratio ratio-1x1 rounded-3 overflow-hidden bg-body-secondary flex-shrink-0" style="width: 48px; height: 48px;">
-                    <img src="" alt="" class="img-fluid object-fit-cover" id="profileCompactImage">
-                </div>
-                <div class="flex-grow-1 min-w-0">
-                    <span class="fw-semibold text-body-emphasis d-block" id="profileCompactName">Name</span>
-                    <span class="small text-body-secondary"><span id="profileCompactService">Service</span> · <span id="profileCompactCourseCode">Course</span></span>
-                </div>
-                <span class="badge bg-primary-subtle text-primary rounded-pill" id="profileCompactRoll">Roll</span>
-                <span class="badge bg-body-tertiary text-body-emphasis rounded-pill" id="profileCompactIdBadge">ID</span>
-                <a href="#" class="btn btn-outline-primary btn-sm rounded-pill ms-auto" id="profileCompactHistoryBtn" title="View history"><i class="bi bi-clock-history"></i> History</a>
-            </div>
-            <!-- Full view: full detail (default) -->
-            <div class="profile-card-detail-block">
-            <!-- Tutor & House info (chips row) -->
-            <section class="mb-4 pb-3 border-botto1">
-                <div class="d-flex flex-wrap gap-2">
-                    <span class="badge rounded-pill bg-body-tertiary border text-body-secondary d-flex align-items-center gap-1 px-3 py-2">
-                        <i class="bi bi-people-fill text-primary"></i>
-                        <span class="small text-uppercase fw-semibold">Tutor Group:</span>
-                        <span class="fw-semibold text-body-emphasis" id="profileTutorGroup">0</span>
-                    </span>
-                    <span class="badge rounded-pill bg-body-tertiary border text-body-secondary d-flex align-items-center gap-1 px-3 py-2">
-                        <i class="bi bi-person-workspace text-success"></i>
-                        <span class="small text-uppercase fw-semibold">Tutor:</span>
-                        <span class="fw-semibold text-body-emphasis small" id="profileTutorName">N/A</span>
-                    </span>
-                    <span class="badge rounded-pill bg-body-tertiary border text-body-secondary d-flex align-items-center gap-1 px-3 py-2">
-                        <i class="bi bi-house-door-fill text-info"></i>
-                        <span class="small text-uppercase fw-semibold">House:</span>
-                        <span class="fw-semibold text-body-emphasis" id="profileHouseName">N/A</span>
-                    </span>
-                    <span class="badge rounded-pill bg-body-tertiary border text-body-secondary d-flex align-items-center gap-1 px-3 py-2">
-                        <i class="bi bi-people text-warning"></i>
-                        <span class="small text-uppercase fw-semibold">House Tutors:</span>
-                        <span class="fw-semibold text-body-emphasis small" id="profileHouseTutors">N/A</span>
-                    </span>
-                </div>
-            </section>
-
             <div class="row g-4">
-                <!-- Profile Image & quick facts -->
-                <aside class="col-12 col-md-3 col-lg-2">
+                <!-- Profile Image Section -->
+                <div class="col-md-3 col-lg-2">
                     <div class="d-flex flex-column align-items-center gap-3">
-                        <div class="ratio ratio-1x1 rounded-4 overflow-hidden bg-body-secondary shadow-sm w-100"
-                             style="max-width: 160px;">
-                            <img src="" alt="Profile Image" class="img-fluid object-fit-cover" id="profileImage">
+                        <div class="ratio ratio-1x1 w-75 mx-auto">
+                            <img src="" alt="Profile Image" class="img-fluid rounded border border-3 border-light shadow-sm object-fit-cover" id="profileImage">
                         </div>
-                        <div class="w-100 d-flex flex-column gap-1">
-                            <div class="d-flex align-items-center justify-content-between small text-body-secondary">
-                                <span class="text-uppercase fw-semibold">Batch</span>
-                                <span class="fw-semibold text-body-emphasis" id="profileBatch">—</span>
-                            </div>
-                            <div class="d-flex align-items-center justify-content-between small text-body-secondary">
-                                <span class="text-uppercase fw-semibold">Room</span>
-                                <span class="fw-semibold text-body-emphasis" id="profileRoom">—</span>
-                            </div>
-                        </div>
+                        <div class="badge bg-danger fs-6 px-3 py-2" id="profileIdBadge">O30</div>
                     </div>
-                </aside>
-
+                </div>
+                
                 <!-- Profile Content -->
                 <div class="col-md-9 col-lg-10">
                     <div class="row g-4">
                         <!-- Left Column -->
                         <div class="col-lg-6">
                             <!-- Course Information -->
-                            <section class="mb-4">
-                                <h3 class="h6 fw-bold text-primary text-uppercase mb-3 d-flex align-items-center gap-2">
-                                    <i class="bi bi-mortarboard-fill"></i>
-                                    <span>Course Information</span>
-                                </h3>
-                                <div class="row g-3">
-                                    <div class="col-12">
-                                        <span class="d-block small text-uppercase fw-semibold text-body-secondary">Course Name</span>
-                                        <span class="fw-medium text-body-emphasis" id="profileCourseName">FC-100</span>
+                            <div class="mb-4">
+                                <h4 class="h5 fw-bold text-primary text-uppercase border-bottom border-primary border-2 pb-2 mb-3">Course Information</h4>
+                                <div class="d-flex flex-column gap-3">
+                                    <div class="d-flex flex-column">
+                                        <span class="small text-uppercase fw-bold text-secondary">Course Name</span>
+                                        <span class="fs-6 fw-medium text-dark" id="profileCourseName">FC-100</span>
                                     </div>
-                                    <div class="col-6">
-                                        <span class="d-block small text-uppercase fw-semibold text-body-secondary">Course Code</span>
-                                        <span class="fw-medium text-body-emphasis" id="profileCourseCode">FC-100</span>
+                                    <div class="d-flex flex-column">
+                                        <span class="small text-uppercase fw-bold text-secondary">Course Code</span>
+                                        <span class="fs-6 fw-medium text-dark" id="profileCourseCode">FC-100</span>
                                     </div>
-                                    <div class="col-6">
-                                        <span class="d-block small text-uppercase fw-semibold text-body-secondary">Attempts</span>
-                                        <span class="fw-medium text-body-emphasis" id="profileAttempts">2</span>
+                                    <div class="d-flex flex-column">
+                                        <span class="small text-uppercase fw-bold text-secondary">Batch</span>
+                                        <span class="fs-6 fw-medium text-dark" id="profileBatch">2024-2025</span>
                                     </div>
                                 </div>
-                            </section>
-
+                            </div>
+                            
                             <!-- Basic Information -->
-                            <section class="mb-4">
-                                <h3 class="h6 fw-bold text-primary text-uppercase mb-3 d-flex align-items-center gap-2">
-                                    <i class="bi bi-person-vcard-fill"></i>
-                                    <span>Basic Information</span>
-                                </h3>
-                                <div class="row g-3">
-                                    <div class="col-6">
-                                        <span class="d-block small text-uppercase fw-semibold text-body-secondary">Date of Birth</span>
-                                        <span class="fw-medium text-body-emphasis" id="profileDob">—</span>
+                            <div class="mb-4">
+                                <h4 class="h5 fw-bold text-primary text-uppercase border-bottom border-primary border-2 pb-2 mb-3">Basic Information</h4>
+                                <div class="d-flex flex-column gap-3">
+                                    <div class="d-flex flex-column">
+                                        <span class="small text-uppercase fw-bold text-secondary">Date of Birth</span>
+                                        <span class="fs-6 fw-medium text-dark" id="profileDob">9/22/2000</span>
                                     </div>
-                                    <div class="col-6">
-                                        <span class="d-block small text-uppercase fw-semibold text-body-secondary">Domicile State</span>
-                                        <span class="fw-medium text-body-emphasis" id="profileDomicile">—</span>
+                                    <div class="d-flex flex-column">
+                                        <span class="small text-uppercase fw-bold text-secondary">Domicile State</span>
+                                        <span class="fs-6 fw-medium text-dark" id="profileDomicile">DELHI</span>
                                     </div>
-                                    <div class="col-12">
-                                        <span class="d-block small text-uppercase fw-semibold text-body-secondary">Highest Stream</span>
-                                        <span class="fw-medium text-body-emphasis" id="profileStream">—</span>
+                                    <div class="d-flex flex-column">
+                                        <span class="small text-uppercase fw-bold text-secondary">No. of Attempts</span>
+                                        <span class="fs-6 fw-medium text-dark" id="profileAttempts">2</span>
+                                    </div>
+                                    <div class="d-flex flex-column">
+                                        <span class="small text-uppercase fw-bold text-secondary">Highest Stream</span>
+                                        <span class="fs-6 fw-medium text-dark" id="profileStream">Engineering</span>
+                                    </div>
+                                    <div class="d-flex flex-column">
+                                        <span class="small text-uppercase fw-bold text-secondary">Room No.</span>
+                                        <span class="fs-6 fw-medium text-dark" id="profileRoom">SW-309</span>
                                     </div>
                                 </div>
-                            </section>
-
+                            </div>
+                            
                             <!-- Hobbies & Interests -->
-                            <section>
-                                <h3 class="h6 fw-bold text-primary text-uppercase mb-3 d-flex align-items-center gap-2">
-                                    <i class="bi bi-stars"></i>
-                                    <span>Hobbies & Interests</span>
-                                </h3>
-                                <ul class="list-unstyled d-flex flex-column gap-2 mb-0" id="profileHobbies">
-                                    <li class="p-2 rounded-3 bg-body-tertiary border-start border-3 border-primary">
-                                        <span class="small text-body-emphasis">Sample hobby</span>
+                            <div>
+                                <h4 class="h5 fw-bold text-primary text-uppercase border-bottom border-primary border-2 pb-2 mb-3">Hobbies & Interests</h4>
+                                <ul class="list-unstyled d-flex flex-column gap-2" id="profileHobbies">
+                                    <li class="p-2 bg-light rounded border-start border-primary border-3">
+                                        <span class="small text-dark">Formula 1 Racing</span>
+                                    </li>
+                                    <li class="p-2 bg-light rounded border-start border-primary border-3">
+                                        <span class="small text-dark">Science Fiction</span>
+                                    </li>
+                                    <li class="p-2 bg-light rounded border-start border-primary border-3">
+                                        <span class="small text-dark">Movies</span>
                                     </li>
                                 </ul>
-                            </section>
+                            </div>
                         </div>
                         
                         <!-- Right Column -->
                         <div class="col-lg-6">
                             <!-- Contact Information -->
-                            <section class="mb-4">
-                                <h3 class="h6 fw-bold text-primary text-uppercase mb-3 d-flex align-items-center gap-2">
-                                    <i class="bi bi-envelope-fill"></i>
-                                    <span>Contact Information</span>
-                                </h3>
-                                <div class="d-flex flex-column gap-2">
-                                    <div>
-                                        <span class="d-block small text-uppercase fw-semibold text-body-secondary">Email Address</span>
-                                        <span class="fw-medium text-body-emphasis" id="profileEmail">—</span>
+                            <div class="mb-4">
+                                <h4 class="h5 fw-bold text-primary text-uppercase border-bottom border-primary border-2 pb-2 mb-3">Contact Information</h4>
+                                <div class="d-flex flex-column gap-3">
+                                    <div class="d-flex flex-column">
+                                        <span class="small text-uppercase fw-bold text-secondary">EMAIL ADDRESS</span>
+                                        <span class="fs-6 fw-medium text-dark" id="profileEmail">aakashgarg01@gmail.com</span>
                                     </div>
-                                    <div>
-                                        <span class="d-block small text-uppercase fw-semibold text-body-secondary">Contact Number</span>
-                                        <span class="fw-medium text-body-emphasis" id="profileContact">—</span>
+                                    <div class="d-flex flex-column">
+                                        <span class="small text-uppercase fw-bold text-secondary">CONTACT NUMBER</span>
+                                        <span class="fs-6 fw-medium text-dark" id="profileContact">8800372932</span>
                                     </div>
-                                    <div>
-                                        <span class="d-block small text-uppercase fw-semibold text-body-secondary">Last Service</span>
-                                        <span class="fw-medium text-body-emphasis" id="profileLastService">—</span>
+                                    <div class="d-flex flex-column">
+                                        <span class="small text-uppercase fw-bold text-secondary">LAST SERVICE</span>
+                                        <span class="fs-6 fw-medium text-dark" id="profileLastService">N/A</span>
                                     </div>
                                 </div>
-                            </section>
-
+                            </div>
+                            
                             <!-- Educational Qualifications -->
-                            <section>
-                                <h3 class="h6 fw-bold text-primary text-uppercase mb-3 d-flex align-items-center gap-2">
-                                    <i class="bi bi-journal-bookmark-fill"></i>
-                                    <span>Educational Qualifications</span>
-                                </h3>
-                                <ul class="list-unstyled d-flex flex-column gap-2 mb-0" id="profileEducation">
-                                    <li class="p-3 rounded-3 bg-body-tertiary border-start border-3 border-success">
-                                        <div class="fw-semibold text-body-emphasis mb-1">Degree</div>
-                                        <div class="small text-body-secondary">Institution</div>
-                                        <div class="small text-body-secondary fst-italic mt-1">Year</div>
+                            <div>
+                                <h4 class="h5 fw-bold text-primary text-uppercase border-bottom border-primary border-2 pb-2 mb-3">Educational Qualifications</h4>
+                                <ul class="list-unstyled d-flex flex-column gap-3" id="profileEducation">
+                                    <li class="p-3 bg-light rounded border-start border-success border-3">
+                                        <div class="fw-bold text-dark mb-1">Bachelors of Technology(B.Tech)</div>
+                                        <div class="small text-secondary">Maharaja Agrasen Institute of Technology</div>
+                                        <div class="small text-secondary fst-italic mt-1">To year 2022</div>
+                                    </li>
+                                    <li class="p-3 bg-light rounded border-start border-success border-3">
+                                        <div class="fw-bold text-dark mb-1">Senior Secondary(12th)</div>
+                                        <div class="small text-secondary">CRPF Public School, Rohini</div>
+                                        <div class="small text-secondary fst-italic mt-1">To year 2018</div>
+                                    </li>
+                                    <li class="p-3 bg-light rounded border-start border-success border-3">
+                                        <div class="fw-bold text-dark mb-1">Higher Secondary(10th)</div>
+                                        <div class="small text-secondary">Gitarattan Jindal Public School, Rohini</div>
+                                        <div class="small text-secondary fst-italic mt-1">To year 2016</div>
                                     </li>
                                 </ul>
-                            </section>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-            </div>
         </div>
-    </article>
+    </div>
 </template>
-
-<style>
-.whos-who-filter-sticky { position: sticky; top: 0; z-index: 1020; background: var(--bs-body-bg); transition: box-shadow 0.2s ease; }
-.whos-who-filter-sticky.is-scrolled { box-shadow: 0 0.25rem 0.75rem rgba(0,0,0,0.08); }
-.profile-view-compact .profile-card-detail-block { display: none !important; }
-.profile-view-compact .profile-card-compact-block { display: flex !important; }
-</style>
 
 @endsection
 
@@ -413,7 +312,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const paginationInfo = document.getElementById('paginationInfo');
     const nameFilter = document.getElementById('nameFilter');
     const courseFilter = document.getElementById('courseFilter');
-    const courseTypeFilter = document.getElementById('courseTypeFilter');
     const categoryFilter = document.getElementById('categoryFilter');
     const statusFilter = document.getElementById('statusFilter');
     const sortBy = document.getElementById('sortBy');
@@ -426,17 +324,11 @@ document.addEventListener('DOMContentLoaded', function() {
     let totalStudents = 0;
     let allProfiles = [];
     let currentSort = 'name_asc';
-    // Static tutor/house info shown on each participant card (updated by loadStaticInfo)
-    let lastStaticInfo = { tutorGroup: '0', tutorName: 'N/A', houseName: 'N/A', houseTutors: 'N/A' };
-    let lastRenderedStudents = [];
-    let lastRenderedPagination = null;
-    let viewMode = 'full'; // 'full' | 'compact'
 
     // Function to render all students
     function renderStudents(students, pagination, customMessage = null) {
         if (!students || students.length === 0) {
             const message = customMessage || 'Please adjust your filters to find students.';
-            document.getElementById('summaryStrip').classList.add('d-none');
             studentsContainer.innerHTML = `
                 <div class="text-center py-5">
                     <i class="bi bi-person-x display-1 text-secondary opacity-50"></i>
@@ -448,27 +340,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // Update summary strip
-        const summaryStrip = document.getElementById('summaryStrip');
-        const summaryCount = document.getElementById('summaryCount');
-        const summaryCourse = document.getElementById('summaryCourse');
-        const summaryCourseName = document.getElementById('summaryCourseName');
-        if (summaryStrip && summaryCount) {
-            summaryStrip.classList.remove('d-none');
-            const total = pagination ? pagination.total : students.length;
-            summaryCount.textContent = total === 1 ? '1 participant' : total + ' participants';
-            if (summaryCourse && summaryCourseName && courseFilter) {
-                const courseText = courseFilter.options[courseFilter.selectedIndex]?.text || '';
-                if (courseText && courseFilter.value) {
-                    summaryCourseName.textContent = courseText;
-                    summaryCourse.classList.remove('d-none');
-                } else {
-                    summaryCourse.classList.add('d-none');
-                }
-            }
-        }
-
-        // Update pagination info and cache for re-render when static info loads
+        // Update pagination info
         if (pagination) {
             currentPage = pagination.current_page;
             totalPages = pagination.total_pages;
@@ -501,41 +373,6 @@ document.addEventListener('DOMContentLoaded', function() {
             clone.getElementById('profileEmail').textContent = profile.email;
             clone.getElementById('profileContact').textContent = profile.contact;
             clone.getElementById('profileLastService').textContent = profile.lastService;
-            // Tutor & House info on every card (from lastStaticInfo)
-            clone.getElementById('profileTutorGroup').textContent = lastStaticInfo.tutorGroup;
-            clone.getElementById('profileTutorName').textContent = lastStaticInfo.tutorName;
-            clone.getElementById('profileHouseName').textContent = lastStaticInfo.houseName;
-            clone.getElementById('profileHouseTutors').textContent = lastStaticInfo.houseTutors;
-            // History button – link to participant history
-            const historyBtn = clone.getElementById('profileHistoryBtn');
-            historyBtn.href = profile.historyUrl || '#';
-
-            // Initials for header avatar (querySelector works on fragment)
-            const initialsEl = clone.querySelector('#profileInitials');
-            if (initialsEl && profile.name) {
-                const parts = profile.name.trim().split(/\s+/);
-                initialsEl.textContent = parts.length >= 2 ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase() : (profile.name[0] || '?').toUpperCase();
-            }
-
-            // Compact block content (same data)
-            const compactImg = clone.querySelector('#profileCompactImage');
-            const compactName = clone.querySelector('#profileCompactName');
-            const compactService = clone.querySelector('#profileCompactService');
-            const compactCourseCode = clone.querySelector('#profileCompactCourseCode');
-            const compactRoll = clone.querySelector('#profileCompactRoll');
-            const compactIdBadge = clone.querySelector('#profileCompactIdBadge');
-            const compactHistoryBtn = clone.querySelector('#profileCompactHistoryBtn');
-            if (compactImg) compactImg.src = profile.image; if (compactImg) compactImg.alt = profile.name;
-            if (compactName) compactName.textContent = profile.name;
-            if (compactService) compactService.textContent = profile.service || 'N/A';
-            if (compactCourseCode) compactCourseCode.textContent = profile.courseCode || profile.courseName || 'N/A';
-            if (compactRoll) compactRoll.textContent = profile.roll || '—';
-            if (compactIdBadge) compactIdBadge.textContent = profile.id || '—';
-            if (compactHistoryBtn) compactHistoryBtn.href = profile.historyUrl || '#';
-
-            // Apply view mode: compact adds class to hide detail and show compact row
-            const article = clone.querySelector('article');
-            if (article && viewMode === 'compact') article.classList.add('profile-view-compact');
 
             // Render hobbies
             const hobbiesList = clone.getElementById('profileHobbies');
@@ -709,7 +546,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             if (category && category !== '') params.append('category', category);
             if (status && status !== '') params.append('status', status);
-            params.append('course_type', courseTypeFilter && courseTypeFilter.value ? courseTypeFilter.value : 'active');
             params.append('page', page);
             params.append('per_page', perPage);
             params.append('sort_by', sortValue);
@@ -903,28 +739,6 @@ document.addEventListener('DOMContentLoaded', function() {
     perPageSelect.addEventListener('change', handlePerPageChange);
     
     resetFilters.addEventListener('click', resetAllFilters);
-
-    // View mode toggle: re-render with same data
-    document.querySelectorAll('input[name="viewMode"]').forEach(function(radio) {
-        radio.addEventListener('change', function() {
-            viewMode = this.value;
-            if (lastRenderedStudents.length > 0 && lastRenderedPagination) {
-                renderStudents(lastRenderedStudents, lastRenderedPagination);
-            }
-        });
-    });
-
-    // Sticky filter bar: add shadow when scrolled
-    (function() {
-        const stickyEl = document.getElementById('filterBarSticky');
-        if (!stickyEl) return;
-        function updateSticky() {
-            if (window.scrollY > 20) stickyEl.classList.add('is-scrolled');
-            else stickyEl.classList.remove('is-scrolled');
-        }
-        window.addEventListener('scroll', updateSticky, { passive: true });
-        updateSticky();
-    })();
 
     // Initial load - courses are already loaded from backend, just fetch students
     // Only reload courses if dropdown is empty

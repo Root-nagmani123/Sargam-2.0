@@ -36,7 +36,6 @@ use App\Http\Controllers\Admin\{
     MemoDisciplineController,
     DashboardController,
     CourseRepositoryController,
-    EstateController,
     WhosWhoController,
 };
 use App\Http\Controllers\Dashboard\Calendar1Controller;
