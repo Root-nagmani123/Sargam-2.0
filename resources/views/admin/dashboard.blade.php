@@ -5,8 +5,32 @@
 @section('content')
 <style>
 .admin-dashboard-surface {
-    background: linear-gradient(180deg, #f8f9fb 0%, #f3f5f9 100%);
+    background: linear-gradient(160deg, #f0f4f9 0%, #e8eef6 50%, #f5f7fb 100%);
     min-height: 100%;
+}
+.dashboard-panel {
+    border: 0;
+    border-radius: 1rem;
+    background: var(--bs-body-bg);
+    box-shadow: 0 2px 12px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+}
+.dashboard-panel .card-header {
+    border-bottom: 1px solid var(--bs-border-color-translucent);
+    background: linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.98) 100%);
+    padding-top: 1rem !important;
+    padding-bottom: 1rem !important;
+}
+.dashboard-panel .card-header .material-icons.material-symbols-rounded {
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 0.6rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(var(--bs-primary-rgb), 0.12);
+    color: var(--bs-primary);
+    font-size: 1.2rem !important;
 }
 
 .dashboard-stat-card {
@@ -53,28 +77,20 @@
     background: var(--bs-danger-bg-subtle);
 }
 
-.dashboard-panel {
-    border: 0;
-    border-radius: 0.9rem;
-    background: var(--bs-body-bg);
-    box-shadow: 0 2px 8px rgba(16, 24, 40, 0.07);
-}
-
-.dashboard-panel .card-header {
-    border-bottom: 1px solid var(--bs-border-color-translucent);
-    background: transparent;
-    padding-top: 0.9rem !important;
-    padding-bottom: 0.9rem !important;
-}
 
 .dashboard-birthday-item {
-    border: 1px solid #b7cdf9;
-    background: #f7f9ff;
-    border-radius: 0.5rem;
+    border: 1px solid rgba(var(--bs-primary-rgb), 0.2);
+    background: linear-gradient(180deg, #f7f9ff 0%, rgba(var(--bs-primary-rgb), 0.04) 100%);
+    border-radius: 12px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+    transition: all 0.2s ease;
 }
-
+.dashboard-birthday-item:hover {
+    box-shadow: 0 2px 8px rgba(var(--bs-primary-rgb), 0.12);
+    transform: translateY(-1px);
+}
 .dashboard-birthday-item .card-body {
-    padding: 0.8rem !important;
+    padding: 0.9rem 1rem !important;
 }
 
 .dashboard-avatar {
@@ -95,14 +111,28 @@
 }
 
 .dashboard-welcome {
-    background: #004a93 !important;
-    border-radius: 0.9rem;
+    background: linear-gradient(135deg, #004a93 0%, #003a75 50%, #002d5c 100%) !important;
+    border-radius: 1rem;
     color: #fff;
-    padding: 1rem 1.25rem;
-    margin-bottom: 1.25rem;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 4px 20px rgba(0, 74, 147, 0.25);
+    position: relative;
+    overflow: hidden;
 }
-.dashboard-welcome h2 { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.25rem; }
-.dashboard-welcome .text-white { font-size: 0.9rem; }
+.dashboard-welcome::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 40%;
+    height: 200%;
+    background: radial-gradient(ellipse, rgba(255,255,255,0.08) 0%, transparent 70%);
+    pointer-events: none;
+}
+.dashboard-welcome h2 { font-size: 1.3rem; font-weight: 600; margin-bottom: 0.25rem; letter-spacing: -0.01em; }
+.dashboard-welcome .text-white { font-size: 0.9rem; opacity: 0.95; }
+.dashboard-welcome .material-icons { opacity: 0.9; }
 
 .dashboard-stat-card .stat-icon {
     width: 2.5rem;
@@ -131,19 +161,271 @@
 
 .dashboard-empty-state {
     text-align: center;
-    padding: 1.5rem 1rem;
+    padding: 2rem 1.25rem;
     color: var(--bs-secondary);
+    background: linear-gradient(180deg, rgba(var(--bs-primary-rgb), 0.03) 0%, transparent 100%);
+    border-radius: 0.75rem;
+    border: 1px dashed var(--bs-border-color-translucent);
 }
-.dashboard-empty-state .material-icons { font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5; }
+.dashboard-empty-state .material-icons {
+    font-size: 2.75rem;
+    margin-bottom: 0.75rem;
+    opacity: 0.4;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 4rem;
+    height: 4rem;
+    border-radius: 50%;
+    background: rgba(var(--bs-primary-rgb), 0.06);
+}
+.dashboard-empty-state p { font-size: 0.875rem; }
 
 .dashboard-tweet-item {
-    border-left: 3px solid var(--bs-primary);
-    padding-left: 0.75rem;
-    margin-bottom: 0.75rem;
+    padding: 12px 14px 12px 16px;
+    margin-bottom: 10px;
+    border-radius: 10px;
+    border-left: 4px solid var(--bs-primary);
+    background: linear-gradient(90deg, rgba(var(--bs-primary-rgb), 0.05) 0%, transparent 100%);
+    transition: background 0.2s ease, transform 0.15s ease;
+}
+.dashboard-tweet-item:hover {
+    background: linear-gradient(90deg, rgba(var(--bs-primary-rgb), 0.08) 0%, transparent 100%);
+    transform: translateX(2px);
 }
 .dashboard-tweet-item:last-child { margin-bottom: 0; }
 
-.dashboard-panel .card-header .badge { font-size: 0.75rem; }
+/* Today's Classes cards */
+.dashboard-class-card {
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-left: 4px solid var(--bs-primary);
+    background: linear-gradient(180deg, #fff 0%, rgba(248,250,252,0.7) 100%);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
+}
+.dashboard-class-card:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+}
+.dashboard-class-icon {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.5rem;
+    background: rgba(var(--bs-primary-rgb), 0.12);
+    color: var(--bs-primary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem !important;
+}
+.dashboard-class-topic {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--bs-body-color);
+    margin-bottom: 8px;
+    padding-left: 2.5rem;
+}
+.dashboard-class-meta {
+    font-size: 0.8125rem;
+    color: var(--bs-secondary);
+    padding-left: 2.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 16px;
+}
+.dashboard-class-meta span { white-space: nowrap; }
+
+.dashboard-list-scroll::-webkit-scrollbar { width: 6px; }
+.dashboard-list-scroll::-webkit-scrollbar-track { background: rgba(0,0,0,0.04); border-radius: 3px; }
+.dashboard-list-scroll::-webkit-scrollbar-thumb { background: rgba(var(--bs-primary-rgb), 0.25); border-radius: 3px; }
+.dashboard-list-scroll::-webkit-scrollbar-thumb:hover { background: rgba(var(--bs-primary-rgb), 0.4); }
+
+.dashboard-panel .card-header .badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.35em 0.65em;
+    min-width: 1.75rem;
+    text-align: center;
+}
+
+/* Notifications panel - item design and blinking "New" tag */
+.dashboard-notification-item {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    width: 100%;
+    padding: 16px 18px;
+    margin-bottom: 10px;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-left: 4px solid transparent;
+    background: linear-gradient(180deg, #fff 0%, rgba(248,250,252,0.8) 100%);
+    text-align: left;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+    cursor: pointer;
+}
+.dashboard-notification-item:hover {
+    background: linear-gradient(180deg, #fff 0%, rgba(248,250,252,1) 100%);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+    transform: translateY(-1px);
+}
+.dashboard-notification-item-unread {
+    background: linear-gradient(180deg, rgba(var(--bs-primary-rgb), 0.08) 0%, rgba(var(--bs-primary-rgb), 0.02) 100%);
+    border-left-color: var(--bs-primary);
+    border-color: rgba(var(--bs-primary-rgb), 0.15);
+}
+.dashboard-notification-item-unread:hover {
+    background: linear-gradient(180deg, rgba(var(--bs-primary-rgb), 0.12) 0%, rgba(var(--bs-primary-rgb), 0.04) 100%);
+}
+.dashboard-notification-item .notification-icon-wrap {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 0.65rem;
+    background: rgba(var(--bs-primary-rgb), 0.12);
+    color: var(--bs-primary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 1.2rem !important;
+}
+.dashboard-notification-body {
+    flex-grow: 1;
+    min-width: 0;
+}
+.dashboard-notification-title {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--bs-body-color);
+    line-height: 1.35;
+}
+.dashboard-notification-message {
+    font-size: 0.8125rem;
+    color: var(--bs-secondary);
+    margin: 4px 0 0 0;
+    line-height: 1.45;
+}
+.dashboard-notification-time {
+    font-size: 0.6875rem;
+    color: var(--bs-secondary);
+    margin-top: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.dashboard-notification-time::before {
+    content: '';
+    display: inline-block;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--bs-secondary);
+    opacity: 0.6;
+}
+/* Blinking "New" tag for unread notifications */
+.dashboard-notification-new-tag {
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    padding: 0.3em 0.6em;
+    flex-shrink: 0;
+    animation: dashboard-notification-blink 1s ease-in-out infinite;
+}
+@keyframes dashboard-notification-blink {
+    0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 rgba(var(--bs-danger-rgb), 0.5); }
+    50% { opacity: 0.9; transform: scale(1.03); box-shadow: 0 0 0 6px rgba(var(--bs-danger-rgb), 0); }
+}
+
+/* Notices panel - item design and blinking "New" tag */
+.dashboard-notice-item {
+    display: block;
+    padding: 16px 18px;
+    margin-bottom: 10px;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-left: 4px solid transparent;
+    background: linear-gradient(180deg, #fff 0%, rgba(248,250,252,0.8) 100%);
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+.dashboard-notice-item:hover {
+    background: linear-gradient(180deg, #fff 0%, rgba(248,250,252,1) 100%);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+    transform: translateY(-1px);
+}
+.dashboard-notice-item-new {
+    background: linear-gradient(180deg, rgba(var(--bs-primary-rgb), 0.08) 0%, rgba(var(--bs-primary-rgb), 0.02) 100%);
+    border-left-color: var(--bs-primary);
+    border-color: rgba(var(--bs-primary-rgb), 0.15);
+}
+.dashboard-notice-item-new:hover {
+    background: linear-gradient(180deg, rgba(var(--bs-primary-rgb), 0.12) 0%, rgba(var(--bs-primary-rgb), 0.04) 100%);
+}
+.dashboard-notice-item .notice-icon-wrap {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 0.65rem;
+    background: rgba(var(--bs-primary-rgb), 0.12);
+    color: var(--bs-primary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 1.2rem !important;
+}
+.dashboard-notice-title {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--bs-body-color);
+    line-height: 1.35;
+}
+.dashboard-notice-date {
+    font-size: 0.8125rem;
+    color: var(--bs-secondary);
+    margin-top: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.dashboard-notice-date::before {
+    content: '';
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--bs-secondary);
+    opacity: 0.6;
+}
+.dashboard-notice-attachment {
+    font-size: 0.8125rem;
+    margin-top: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: rgba(var(--bs-danger-rgb), 0.08);
+    transition: background 0.2s ease;
+}
+.dashboard-notice-attachment:hover {
+    background: rgba(var(--bs-danger-rgb), 0.14);
+}
+.dashboard-notice-new-tag {
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    padding: 0.3em 0.6em;
+    animation: dashboard-notice-blink 1.2s ease-in-out infinite;
+}
+@keyframes dashboard-notice-blink {
+    0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 rgba(var(--bs-danger-rgb), 0.45); }
+    50% { opacity: 0.9; transform: scale(1.03); box-shadow: 0 0 0 6px rgba(var(--bs-danger-rgb), 0); }
+}
 
 .dashboard-stat-card:focus-visible {
     outline: 2px solid var(--bs-primary);
@@ -334,18 +616,29 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                         <p class="mb-0 small">No notifications available.</p>
                     </div>
                     @else
-                    <div class="list-group list-group-flush">
+                    <ul class="list-unstyled mb-0 ps-0">
                         @foreach($notifications as $notification)
-                        <button type="button"
-                            class="list-group-item list-group-item-action border-0 rounded-3 mb-1 bg-body shadow-sm"
-                            onclick="window.markAsReadDashboard({{ $notification->pk }}, this)">
-                            <div class="d-flex gap-2">
-                                <span class="material-icons material-symbols-rounded text-primary mt-1" style="font-size: .5rem; line-height: 1;">lens</span>
-                                <span class="small text-start">{{ $notification->message }}</span>
-                            </div>
-                        </button>
+                        <li class="mb-2">
+                            <button type="button"
+                                class="dashboard-notification-item {{ empty($notification->is_read) ? 'dashboard-notification-item-unread' : '' }}"
+                                onclick="window.markAsReadDashboard({{ $notification->pk }}, this)">
+                                <div class="d-flex gap-3 flex-grow-1 min-w-0">
+                                    <span class="notification-icon-wrap"><span class="material-icons material-symbols-rounded">notifications</span></span>
+                                    <div class="dashboard-notification-body">
+                                        <div class="d-flex align-items-start justify-content-between gap-2 flex-wrap">
+                                            <span class="dashboard-notification-title">{{ $notification->title ?? 'Notification' }}</span>
+                                            @if(empty($notification->is_read))
+                                            <span class="badge bg-danger dashboard-notification-new-tag">New</span>
+                                            @endif
+                                        </div>
+                                        <p class="dashboard-notification-message mb-0">{{ Str::limit($notification->message ?? '', 80) }}</p>
+                                        <span class="dashboard-notification-time">{{ isset($notification->created_at) ? \Carbon\Carbon::parse($notification->created_at)->diffForHumans() : '—' }}</span>
+                                    </div>
+                                </div>
+                            </button>
+                        </li>
                         @endforeach
-                    </div>
+                    </ul>
                     @endif
                 </div>
             </div>
@@ -379,16 +672,16 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                     @if($todayTimetable && $todayTimetable->isNotEmpty())
                     <div class="dashboard-list-scroll pe-2">
                         @foreach($todayTimetable as $entry)
-                        <div class="pb-3 mb-3 border-bottom border-secondary-subtle">
-                            <div class="row g-2 mb-2">
-                                <div class="col-md-6 text-primary fw-medium">{{ $entry['session_date'] }}</div>
-                                <div class="col-md-6 text-primary fw-medium">{{ $entry['topic'] }}</div>
+                        <div class="dashboard-class-card">
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <span class="dashboard-class-icon"><span class="material-icons material-symbols-rounded">schedule</span></span>
+                                <span class="text-primary fw-semibold">{{ $entry['session_date'] }} · {{ $entry['session_time'] }}</span>
                             </div>
-                            <div class="row g-2 text-body-secondary">
-                                <div class="col-md-6">Faculty - {{ $entry['faculty_name'] }}</div>
-                                <div class="col-md-6">Group Name - {{ $entry['group_name'] ?? 'N/A' }}</div>
-                                <div class="col-md-6">Session - {{ $entry['session_time'] }}</div>
-                                <div class="col-md-6">Venue - {{ $entry['session_venue'] }}</div>
+                            <div class="dashboard-class-topic">{{ $entry['topic'] }}</div>
+                            <div class="dashboard-class-meta">
+                                <span>Faculty: {{ $entry['faculty_name'] }}</span>
+                                <span>Group: {{ $entry['group_name'] ?? 'N/A' }}</span>
+                                <span>Venue: {{ $entry['session_venue'] }}</span>
                             </div>
                         </div>
                         @endforeach
@@ -415,16 +708,31 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                         <p class="mb-0 small">No notices available.</p>
                     </div>
                     @else
-                    <ul class="list-unstyled mb-0">
+                    <ul class="list-unstyled mb-0 ps-0">
                         @foreach($notices as $notice)
-                        <li class="mb-3 pb-2 border-bottom border-light-subtle d-flex gap-2 align-items-start">
-                            <span class="material-icons material-symbols-rounded text-primary mt-1 flex-shrink-0" style="font-size: 0.9rem;">description</span>
-                            <div>
-                                <span class="text-body fw-medium">{{ $notice->notice_title }}</span>
-                                <small class="d-block text-body-secondary">{{ date('d M, Y', strtotime($notice->created_at)) }}</small>
-                                @if($notice->document)
-                                <a href="{{ asset('storage/' . $notice->document) }}" target="_blank" class="small text-danger text-decoration-none"><span class="material-icons material-symbols-rounded align-middle me-1" style="font-size: 1rem;">attach_file</span>View attachment</a>
-                                @endif
+                        @php
+                            $noticeDate = $notice->created_at ?? $notice->display_date ?? null;
+                            $isNewNotice = $noticeDate && \Carbon\Carbon::parse($noticeDate)->diffInDays(now()) < 7;
+                        @endphp
+                        <li class="mb-2">
+                            <div class="dashboard-notice-item {{ $isNewNotice ? 'dashboard-notice-item-new' : '' }}">
+                                <div class="d-flex align-items-start gap-3">
+                                    <span class="notice-icon-wrap"><span class="material-icons material-symbols-rounded">description</span></span>
+                                    <div class="flex-grow-1 min-w-0">
+                                        <div class="d-flex align-items-start justify-content-between gap-2 flex-wrap">
+                                            <span class="dashboard-notice-title">{{ $notice->notice_title }}</span>
+                                            @if($isNewNotice)
+                                            <span class="badge bg-danger dashboard-notice-new-tag flex-shrink-0">New</span>
+                                            @endif
+                                        </div>
+                                        <small class="d-block dashboard-notice-date">{{ $noticeDate ? date('d M, Y', strtotime($noticeDate)) : '—' }}</small>
+                                        @if($notice->document)
+                                        <a href="{{ asset('storage/' . $notice->document) }}" target="_blank" class="dashboard-notice-attachment text-danger text-decoration-none">
+                                            <span class="material-icons material-symbols-rounded" style="font-size: 1rem;">attach_file</span>View attachment
+                                        </a>
+                                        @endif
+                                    </div>
+                                </div>
                             </div>
                         </li>
                         @endforeach

@@ -10,14 +10,14 @@
     <x-session_message />
     <div class="card" style="border-left: 4px solid #004a93;">
         @if ($errors->any())
-    <div class="alert alert-danger">
-        <ul>
-            @foreach ($errors->all() as $error)
+        <div class="alert alert-danger">
+            <ul>
+                @foreach ($errors->all() as $error)
                 <li>{{ $error }}</li>
-            @endforeach
-        </ul>
-    </div>
-@endif
+                @endforeach
+            </ul>
+        </div>
+        @endif
 
 
         <div class="card-body">
@@ -25,61 +25,72 @@
             <hr>
             <form method="POST" action="{{ route('admin.notice.store') }}" enctype="multipart/form-data">
                 @csrf
-
-                <div class="mb-3">
-                    <label class="form-label">Notice Title <span class="text-danger">*</span></label>
-                    <input type="text" name="notice_title" class="form-control" value="{{ old('notice_title') }}">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="mb-3">
+                            <label class="form-label">Notice Title <span class="text-danger">*</span></label>
+                            <input type="text" name="notice_title" class="form-control" value="{{ old('notice_title') }}">
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="mb-3">
+                            <label class="form-label">Description <span class="text-danger">*</span></label>
+                            <textarea id="editor" name="description" class="form-control">{{ old('description') }}</textarea>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="mb-3">
+                            <label class="form-label">Notice Type <span class="text-danger">*</span></label>
+                            <select name="notice_type" class="form-control">
+                                <option value="">Select Notice Type</option>
+                                @foreach($types as $t)
+                                <option value="{{ $t }}" {{ old('notice_type') == $t ? 'selected' : '' }}>{{ $t }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="mb-3">
+                            <label class="form-label">Display Date <span class="text-danger">*</span></label>
+                            <input type="date" name="display_date" class="form-control" value="{{ old('display_date') }}">
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="mb-3">
+                            <label class="form-label">Expiry Date <span class="text-danger">*</span></label>
+                            <input type="date" name="expiry_date" class="form-control" value="{{ old('expiry_date') }}">
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="mb-3">
+                            <label class="form-label">Upload Document</label>
+                            <input type="file" name="document" class="form-control">
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="mb-3">
+                            <label class="form-label">Target Audience <span class="text-danger">*</span></label>
+                            <select name="target_audience" id="targetAudience" class="form-control">
+                                <option value="">Select Target Audience</option>
+                                @foreach($target as $t)
+                                <option value="{{ $t }}" {{ old('target_audience') == $t ? 'selected' : '' }}>{{ $t }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="mb-3 d-none" id="courseBox">
+                            <label class="form-label">Select Course</label>
+                            <select name="course_master_pk" id="courseSelect" class="form-control">
+                                <option value="">Select Course</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-end gap-2">
+                        <button class="btn btn-primary">Save</button>
+                        <a href="{{ route('admin.notice.index') }}" class="btn btn-secondary">Cancel</a>
+                    </div>
                 </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Description <span class="text-danger">*</span></label>
-                    <textarea id="editor" name="description" class="form-control">{{ old('description') }}</textarea>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Notice Type <span class="text-danger">*</span></label>
-                    <select name="notice_type" class="form-control">
-                        <option value="">Select Notice Type</option>
-                        @foreach($types as $t)
-                        <option value="{{ $t }}" {{ old('notice_type') == $t ? 'selected' : '' }}>{{ $t }}</option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Display Date <span class="text-danger">*</span></label>
-                   <input type="date" name="display_date" class="form-control" value="{{ old('display_date') }}">
-                 </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Expiry Date <span class="text-danger">*</span></label>
-                    <input type="date" name="expiry_date" class="form-control" value="{{ old('expiry_date') }}">
-                </div>
-    
-                <div class="mb-3">
-                    <label class="form-label">Upload Document</label>
-                    <input type="file" name="document" class="form-control">
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Target Audience <span class="text-danger">*</span></label>
-                    <select name="target_audience" id="targetAudience" class="form-control">
-                        <option value="">Select Target Audience</option>
-                        @foreach($target as $t)
-                        <option value="{{ $t }}" {{ old('target_audience') == $t ? 'selected' : '' }}>{{ $t }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                 <div class="mb-3 d-none" id="courseBox">
-                    <label class="form-label">Select Course</label>
-                    <select name="course_master_pk" id="courseSelect" class="form-control" >
-                        <option value="">Select Course</option>
-                    </select>
-                </div>
-
-                <button class="btn btn-primary">Save</button>
-                <a href="{{ route('admin.notice.index') }}" class="btn btn-secondary">Cancel</a>
-
             </form>
         </div>
     </div>
@@ -92,98 +103,98 @@
 
 
 <script>
-$(document).ready(function() {
-     $('#editor').summernote({
-        height: 200,
-      toolbar: [
-    ['style', ['style']],
-    ['font', ['bold', 'italic', 'underline', 'clear']],
-    ['font2', ['strikethrough', 'superscript', 'subscript']],
-    ['fontsize', ['fontsize']],
-    ['color', ['color']],
-    ['para', ['ul', 'ol', 'paragraph']],
-    ['height', ['height']],
-    ['table', ['table']],
-    ['insert', ['link', 'picture', 'video', 'hr', 'pdfUpload']],
-    ['view', ['fullscreen', 'codeview', 'help']]
-],
+    $(document).ready(function() {
+        $('#editor').summernote({
+            height: 200,
+            toolbar: [
+                ['style', ['style']],
+                ['font', ['bold', 'italic', 'underline', 'clear']],
+                ['font2', ['strikethrough', 'superscript', 'subscript']],
+                ['fontsize', ['fontsize']],
+                ['color', ['color']],
+                ['para', ['ul', 'ol', 'paragraph']],
+                ['height', ['height']],
+                ['table', ['table']],
+                ['insert', ['link', 'picture', 'video', 'hr', 'pdfUpload']],
+                ['view', ['fullscreen', 'codeview', 'help']]
+            ],
 
-        buttons: {
-            pdfUpload: function (context) {
-                var ui = $.summernote.ui;
+            buttons: {
+                pdfUpload: function(context) {
+                    var ui = $.summernote.ui;
 
-                // create button
-                var button = ui.button({
-                    contents: '<i class="note-icon-paperclip"></i> PDF',
-                    tooltip: 'Upload PDF',
-                    click: function () {
+                    // create button
+                    var button = ui.button({
+                        contents: '<i class="note-icon-paperclip"></i> PDF',
+                        tooltip: 'Upload PDF',
+                        click: function() {
 
-                        let fileInput = $('<input type="file" accept="application/pdf">');
-                        fileInput.trigger('click');
+                            let fileInput = $('<input type="file" accept="application/pdf">');
+                            fileInput.trigger('click');
 
-                        fileInput.on('change', function () {
+                            fileInput.on('change', function() {
 
-                            let file = this.files[0];
-                            let formData = new FormData();
-                            formData.append("file", file);
+                                let file = this.files[0];
+                                let formData = new FormData();
+                                formData.append("file", file);
 
-                            $.ajax({
-                                url: "{{ route('admin.summernote.upload') }}",
-                                type: "POST",
-                                data: formData,
-                                processData: false,
-                                contentType: false,
-                                headers: {
-                                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                                },
-                                success: function (data) {
-                                    let url = data.location;
+                                $.ajax({
+                                    url: "{{ route('admin.summernote.upload') }}",
+                                    type: "POST",
+                                    data: formData,
+                                    processData: false,
+                                    contentType: false,
+                                    headers: {
+                                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                                    },
+                                    success: function(data) {
+                                        let url = data.location;
 
-                                    // context.invoke('insertLink', url, file.name);
+                                        // context.invoke('insertLink', url, file.name);
 
-                                    context.invoke('editor.insertText', url);
-                                },
-                                error: function (xhr) {
-                                    alert("PDF Upload Failed: " + xhr.responseJSON.error);
-                                }
+                                        context.invoke('editor.insertText', url);
+                                    },
+                                    error: function(xhr) {
+                                        alert("PDF Upload Failed: " + xhr.responseJSON.error);
+                                    }
+                                });
+
                             });
+                        }
+                    });
 
+                    return button.render();
+                }
+            }
+        });
+
+        $('#targetAudience').on('change', function() {
+            let val = $(this).val();
+
+            if (val === 'Office trainee') {
+
+                $('#courseBox').removeClass('d-none');
+
+                $.ajax({
+                    url: "{{ route('admin.notice.getCourses') }}",
+                    type: "GET",
+                    success: function(res) {
+                        $('#courseSelect').empty().append('<option value="">Select Course</option>');
+
+                        $.each(res.data, function(index, item) {
+                            $('#courseSelect').append(
+                                `<option value="${item.pk}">${item.course_name}</option>`
+                            );
                         });
                     }
                 });
 
-                return button.render();
+            } else {
+                $('#courseBox').addClass('d-none');
+                $('#courseSelect').empty();
             }
-        }
+        });
+
     });
-
-    $('#targetAudience').on('change', function() {
-        let val = $(this).val();
-
-        if (val === 'Office trainee') {
-
-            $('#courseBox').removeClass('d-none');  
-
-            $.ajax({
-                url: "{{ route('admin.notice.getCourses') }}",
-                type: "GET",
-                success: function(res) {
-                    $('#courseSelect').empty().append('<option value="">Select Course</option>');
-
-                    $.each(res.data, function(index, item) {
-                        $('#courseSelect').append(
-                            `<option value="${item.pk}">${item.course_name}</option>`
-                        );
-                    });
-                }
-            });
-
-        } else {
-            $('#courseBox').addClass('d-none');
-            $('#courseSelect').empty();
-        }
-    });
-
-});
 </script>
 @endsection
