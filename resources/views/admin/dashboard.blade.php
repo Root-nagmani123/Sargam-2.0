@@ -80,24 +80,91 @@
 
 
 .dashboard-birthday-item {
-    border: 1px solid rgba(var(--bs-primary-rgb), 0.2);
-    background: linear-gradient(180deg, #f7f9ff 0%, rgba(var(--bs-primary-rgb), 0.04) 100%);
-    border-radius: 12px;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
-    transition: all 0.2s ease;
+    border: 1px solid rgba(var(--bs-primary-rgb), 0.18);
+    background: linear-gradient(180deg, rgba(var(--bs-primary-rgb), 0.10) 0%, rgba(var(--bs-primary-rgb), 0.03) 60%, rgba(255, 255, 255, 0.85) 100%);
+    border-radius: 16px;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.04);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    position: relative;
+    overflow: hidden;
+}
+.dashboard-birthday-item::before {
+    content: '🎂';
+    position: absolute;
+    top: -18px;
+    right: -12px;
+    font-size: 4rem;
+    opacity: 0.07;
+    transform: rotate(12deg);
+    pointer-events: none;
 }
 .dashboard-birthday-item:hover {
-    box-shadow: 0 2px 8px rgba(var(--bs-primary-rgb), 0.12);
-    transform: translateY(-1px);
+    box-shadow: 0 10px 22px rgba(16, 24, 40, 0.08);
+    transform: translateY(-2px);
+    border-color: rgba(var(--bs-primary-rgb), 0.38);
 }
 .dashboard-birthday-item .card-body {
-    padding: 0.9rem 1rem !important;
+    padding: 0.95rem 1rem !important;
 }
 
 .dashboard-avatar {
-    width: 3rem;
-    height: 3rem;
-    font-size: 1.05rem;
+    width: 3.35rem;
+    height: 3.35rem;
+    font-size: 1.15rem;
+    border: 4px solid #fff;
+    box-shadow: 0 6px 16px rgba(16, 24, 40, 0.08);
+}
+
+.dashboard-birthday-name {
+    font-weight: 850;
+    color: var(--bs-body-color);
+    line-height: 1.15;
+    font-size: 1.02rem;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dashboard-birthday-designation {
+    font-size: 0.82rem;
+    color: rgba(33, 37, 41, 0.65);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dashboard-birthday-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.6rem;
+    border-radius: 999px;
+    background: rgba(var(--bs-primary-rgb), 0.08);
+    border: 1px solid rgba(var(--bs-primary-rgb), 0.18);
+    color: var(--bs-primary);
+    font-weight: 700;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+}
+
+.dashboard-birthday-contact {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.75rem;
+    margin-top: 0.5rem;
+}
+.dashboard-birthday-contact span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: rgba(33, 37, 41, 0.62);
+    font-size: 0.78rem;
+}
+
+.dashboard-birthday-contact span .material-icons {
+    font-size: 1rem !important;
+    opacity: 0.75;
 }
 
 .dashboard-list-scroll {
@@ -637,7 +704,7 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                         <li class="mb-2">
                             <button type="button"
                                 class="dashboard-notification-item {{ empty($notification->is_read) ? 'dashboard-notification-item-unread' : '' }}"
-                                onclick="window.markAsReadDashboard({{ $notification->pk }}, this)">
+                                data-notification-id="{{ $notification->pk }}">
                                 <div class="d-flex gap-3 flex-grow-1 min-w-0">
                                     <span class="notification-icon-wrap"><span class="material-icons material-symbols-rounded">notifications</span></span>
                                     <div class="dashboard-notification-body">
@@ -785,45 +852,42 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                         $subject = rawurlencode('Happy Birthday ' . ($fullName ?: ''));
                         $body = rawurlencode("Dear " . ($fullName ?: '') . ",\n\nWishing you a very Happy Birthday!\n\nRegards,");
                         @endphp
-                        <div class="card dashboard-birthday-item border-0 shadow-sm rounded-3">
+                        <div class="card dashboard-birthday-item border-0 shadow-sm rounded-4">
                             <div class="card-body p-3">
                                 <div class="d-flex align-items-start gap-3">
-                                @if($photo)
-                                    <img src="{{ $photo }}" alt="" class="rounded-circle object-fit-cover flex-shrink-0 dashboard-avatar">
-                                @else
-                                    <div class="rounded-circle {{ $avClass }} fw-semibold d-inline-flex align-items-center justify-content-center flex-shrink-0 dashboard-avatar">
-                                        {{ strtoupper(substr($employee->first_name, 0, 1)) }}
-                                    </div>
-                                @endif
+                                    @if($photo)
+                                        <img src="{{ $photo }}" alt="" class="rounded-circle object-fit-cover flex-shrink-0 dashboard-avatar">
+                                    @else
+                                        <div class="rounded-circle {{ $avClass }} fw-semibold d-inline-flex align-items-center justify-content-center flex-shrink-0 dashboard-avatar">
+                                            {{ strtoupper(substr($employee->first_name, 0, 1)) }}
+                                        </div>
+                                    @endif
+
                                     <div class="flex-grow-1 min-w-0">
                                         <div class="d-flex align-items-start justify-content-between gap-2">
                                             <div class="min-w-0">
-                                                <div class="fw-semibold text-dark text-truncate">{{ $fullName }}</div>
-                                                <div class="small text-body-secondary text-truncate">{{ $employee->designation_name }}</div>
+                                                <div class="dashboard-birthday-name text-truncate">{{ $fullName }}</div>
+                                                <div class="dashboard-birthday-designation text-truncate">{{ $employee->designation_name }}</div>
                                             </div>
-                                         <!-- <div class="d-flex gap-2 flex-shrink-0">
-                                                @if($email !== '')
-                                                    <a class="btn btn-sm btn-primary"
-                                                        href="mailto:{{ $email }}?subject={{ $subject }}&body={{ $body }}"
-                                                        title="Send birthday wishes">
-                                                        <span class="material-icons material-symbols-rounded align-middle" style="font-size: 18px;">send</span>
-                                                        <span class="d-none d-sm-inline ms-1">Send wishes</span>
-                                                    </a>
-                                                @else
-                                                    <button class="btn btn-sm btn-outline-secondary" type="button" disabled title="No email available">
-                                                        <span class="material-icons material-symbols-rounded align-middle" style="font-size: 18px;">mail</span>
-                                                        <span class="d-none d-sm-inline ms-1">Send wishes</span>
-                                                    </button>
-                                                @endif
-                                            </div> -->
+
+                                            <div class="dashboard-birthday-badge" title="Wish them">
+                                                <span class="material-icons material-symbols-rounded" style="font-size: 16px;">cake</span>
+                                                Birthday
+                                            </div>
                                         </div>
 
-                                        <div class="mt-2 d-flex flex-wrap gap-2 small text-body-secondary">
+                                        <div class="dashboard-birthday-contact">
                                             @if($email !== '')
-                                                <span class="text-truncate"><span class="material-icons material-symbols-rounded align-middle me-1" style="font-size: 16px;">mail</span>{{ $email }}</span>
+                                                <span class="text-truncate">
+                                                    <span class="material-icons material-symbols-rounded align-middle">mail</span>
+                                                    {{ $email }}
+                                                </span>
                                             @endif
                                             @if(!empty($employee->mobile))
-                                                <span><span class="material-icons material-symbols-rounded align-middle me-1" style="font-size: 16px;">call</span>{{ $employee->mobile }}</span>
+                                                <span class="text-truncate">
+                                                    <span class="material-icons material-symbols-rounded align-middle">call</span>
+                                                    {{ $employee->mobile }}
+                                                </span>
                                             @endif
                                         </div>
                                     </div>
@@ -895,6 +959,15 @@ window.markAsReadDashboard = function(notificationId, clickedElement) {
 };
 
 window.markAsRead = window.markAsReadDashboard;
+
+// Use event delegation to avoid inline onclick (also helps JS linters in Blade).
+document.addEventListener('click', function (e) {
+    const btn = e.target && e.target.closest ? e.target.closest('.dashboard-notification-item[data-notification-id]') : null;
+    if (!btn) return;
+    const id = btn.dataset.notificationId;
+    if (!id) return;
+    window.markAsReadDashboard(id, btn);
+});
 
 document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.calendar-component').forEach(function(comp) {
