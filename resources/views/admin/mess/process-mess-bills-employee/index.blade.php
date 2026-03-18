@@ -1170,8 +1170,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         // ignore error; All Buyers hi rahe
                     });
             } else if (slug === 'ot' && !selectedPk) {
-                // OT + All: use distinct OT buyer names if available
-                var listOt = (otBuyerNames || []).map(function (name) {
+                // Sirf OT select hai – OT ke liye jo buyer names controllers se aaye hain unko dikhao
+                var listOt = (courseBuyerNames || []).map(function (name) {
+                    return { value: name, text: name };
+                });
+                addBuyerOptions(listOt);
+            } else if (slug === 'course') {
+                var listCourse = (courseBuyerNames || []).map(function (name) {
                     return { value: name, text: name };
                 });
                 addBuyerOptions(listOt);
@@ -1200,23 +1205,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
                 addBuyerOptions(listOther);
             } else if (slug === 'section') {
-                // Requirement (modal):
-                // - Section selected + Client Type = All => Buyer Name = ALL section names
-                // - Section selected + specific Client Type PK => Buyer Name = that section only
-                var sectionOptions = clientTypeOptions['section'] || [];
-                if (!selectedPk) {
-                    var listSectionAll = sectionOptions.map(function (o) {
-                        return { value: o.text, text: o.text };
-                    });
-                    addBuyerOptions(listSectionAll);
-                } else {
-                    var matchSection = sectionOptions.find(function (o) {
-                        return String(o.value) === String(selectedPk);
-                    });
-                    if (matchSection) {
-                        addBuyerOptions([{ value: matchSection.text, text: matchSection.text }]);
-                    }
-                }
+                var listSection = (sectionBuyerNames || []).map(function (name) {
+                    return { value: name, text: name };
+                });
+                addBuyerOptions(listSection);
             } else if (!slug && (allBuyerNames || []).length) {
                 // koi client type select nahi – saare distinct buyer names (course/other/section etc.) dikhado
                 var listAll = (allBuyerNames || []).map(function (name) {
