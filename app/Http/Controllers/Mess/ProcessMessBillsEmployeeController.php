@@ -147,10 +147,13 @@ class ProcessMessBillsEmployeeController extends Controller
         // Group by buyer so one combined bill per user (Selling Voucher + Selling Voucher with Date Range)
         $combinedBills = $this->groupBillsByBuyer($bills);
 
-        // Distinct buyer names per type for filters (Course / Other / Section etc.)
+        // Distinct buyer names per type for filters (Employee / OT / Course / Other / Section etc.)
         $bySlug = $bills->groupBy(function ($bill) {
             return $this->getBillClientTypeSlug($bill);
         });
+        $otBuyerNames = isset($bySlug[ClientType::TYPE_OT])
+            ? $bySlug[ClientType::TYPE_OT]->pluck('client_name')->filter()->unique()->sort()->values()
+            : collect();
         $courseBuyerNames = isset($bySlug[ClientType::TYPE_COURSE])
             ? $bySlug[ClientType::TYPE_COURSE]->pluck('client_name')->filter()->unique()->sort()->values()
             : collect();
@@ -262,6 +265,7 @@ class ProcessMessBillsEmployeeController extends Controller
             'employees',
             'messStaff',
             'otCourses',
+            'otBuyerNames',
             'courseBuyerNames',
             'otherBuyerNames',
             'sectionBuyerNames',
@@ -279,6 +283,7 @@ class ProcessMessBillsEmployeeController extends Controller
             'ot' => KitchenIssueMaster::CLIENT_OT,
             'course' => KitchenIssueMaster::CLIENT_COURSE,
             'other' => KitchenIssueMaster::CLIENT_OTHER,
+            'section' => KitchenIssueMaster::CLIENT_SECTION,
         ];
         return $map[$slug] ?? KitchenIssueMaster::CLIENT_EMPLOYEE;
     }
@@ -296,6 +301,7 @@ class ProcessMessBillsEmployeeController extends Controller
             KitchenIssueMaster::CLIENT_OT => 'ot',
             KitchenIssueMaster::CLIENT_COURSE => 'course',
             KitchenIssueMaster::CLIENT_OTHER => 'other',
+            KitchenIssueMaster::CLIENT_SECTION => 'section',
         ];
         return $map[(int) ($bill->client_type ?? 0)] ?? 'employee';
     }

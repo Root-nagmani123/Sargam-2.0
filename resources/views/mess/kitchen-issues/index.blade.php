@@ -80,96 +80,104 @@
     <div class="card border-0 shadow-sm rounded-3">
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table w-100" id="sellingVouchersTable">
-            <thead>
-            <tr>
-                    <th>S. No.</th>
-                    <th>Item Name</th>
-                    <th>Item Quantity</th>
-                    <th>Return Quantity</th>
-                    <th>Transfer From Store</th>
-                    <th>Client Type</th>
-                    <th>Client Name</th>
-                    <th>Name</th>
-                    <th>Payment Type</th>
-                    <th>Request Date</th>
-                    <th>Status</th>
-                    <th>Return Item</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            @php($serial = 1)
-            <tbody>
-                @forelse($kitchenIssues as $voucher)
-                    @forelse($voucher->items as $item)
-                        <tr>
-                            <td>{{ $serial++ }}</td>
-                            <td>{{ $item->item_name ?: ($item->itemSubcategory->item_name ?? '—') }}</td>
-                            <td>{{ $item->quantity }}</td>
-                            <td>{{ $item->return_quantity ?? 0 }}</td>
-                            <td>{{ $voucher->resolved_store_name }}</td>
-                            <td>{{ $voucher->client_type_label ?? '—' }}</td>
-                            <td>{{ $voucher->display_client_name }}</td>
-                            <td>{{ $voucher->client_name ?? '—' }}</td>
-                            <td>{{ $voucher->payment_type == 1 ? 'Credit' : ($voucher->payment_type == 0 ? 'Cash' : ($voucher->payment_type == 2 ? 'UPI' : '—')) }}</td>
-                            <td>{{ $voucher->created_at ? $voucher->created_at->format('d/m/Y') : '—' }}</td>
-                            <td>
-                                @if($voucher->status == 0)<span class="badge bg-warning">Pending</span>
-                                @elseif($voucher->status == 2)<span class="badge bg-success">Approved</span>
-                                @elseif($voucher->status == 4)<span class="badge bg-primary">Completed</span>
-                                @else<span class="badge bg-secondary">{{ $voucher->status }}</span>@endif
-                            </td>
-                            <td>
-                                @if(($item->return_quantity ?? 0) > 0)
-                                    <span class="badge bg-info">Returned</span>
-                                @endif
-                                <button type="button" class="btn btn-sm btn-outline-secondary ms-1 btn-return-sv" data-voucher-id="{{ $voucher->pk }}" title="Return">Return</button>
-                            </td>
-                            <td>
-                                <button type="button" class="btn btn-sm btn-info btn-view-sv" data-voucher-id="{{ $voucher->pk }}" title="View">View</button>
-                                <button type="button" class="btn btn-sm btn-warning btn-edit-sv" data-voucher-id="{{ $voucher->pk }}" title="{{ $voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED ? 'Edit is disabled for approved voucher' : 'Edit' }}" @if($voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED) disabled @endif>Edit</button>
-                                <form action="{{ route('admin.mess.material-management.destroy', $voucher->pk) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this Selling Voucher?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger" title="Delete" style="display: none;">Delete</button>
-                                </form>
-                            </td>
+                <table class="table w-100 " id="sellingVouchersTable">
+                    <thead>
+                         <tr>
+                            <th>S. No.</th>
+                            <th>Item Name</th>
+                            <th>Item Quantity</th>
+                            <th>Return Quantity</th>
+                            <th>Transfer From Store</th>
+                            <th>Client Type</th>
+                            <th>Client Name</th>
+                            <th>Name</th>
+                            <th>Payment Type</th>
+                            <th>Request Date</th>
+                            <th>Status</th>
+                            <th>Return Item</th>
+                            <th>Action</th>
                         </tr>
-                    @empty
-                        <tr>
-                            <td>{{ $serial++ }}</td>
-                            <td>—</td>
-                            <td>—</td>
-                            <td>—</td>
-                            <td>{{ $voucher->resolved_store_name }}</td>
-                            <td>{{ $voucher->client_type_label ?? '—' }}</td>
-                            <td>{{ $voucher->display_client_name }}</td>
-                            <td>{{ $voucher->client_name ?? '—' }}</td>
-                            <td>—</td>
-                            <td>{{ $voucher->created_at ? $voucher->created_at->format('d/m/Y') : '—' }}</td>
-                            <td><span class="badge bg-secondary">{{ $voucher->status }}</span></td>
-                            <td>
-                                <button type="button" class="btn btn-sm btn-outline-secondary btn-return-sv" data-voucher-id="{{ $voucher->pk }}" title="Return">Return</button>
-                            </td>
-                            <td class="d-flex justify-content-center gap-2">
-                                <button type="button" class="btn btn-sm btn-info btn-view-sv" data-voucher-id="{{ $voucher->pk }}" title="View">View</button>
-                                <button type="button" class="btn btn-sm btn-warning btn-edit-sv" data-voucher-id="{{ $voucher->pk }}" title="{{ $voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED ? 'Edit is disabled for approved voucher' : 'Edit' }}" @if($voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED) disabled @endif>Edit</button>
-                                <form action="{{ route('admin.mess.material-management.destroy', $voucher->pk) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this Selling Voucher?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger" title="Delete" style="display: none;">Delete</button>
-                                </form>
-                            </td>
-                        </tr>
-                    @endforelse
-                @empty
-                    <tr>
-                        <td class="text-center py-4" colspan="12">No kitchen issues found.</td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
+                    </thead>
+                    @php($serial = 1)
+                    <tbody>
+                        @forelse($kitchenIssues as $voucher)
+                            @forelse($voucher->items as $item)
+                                <tr>
+                                    <td>{{ $serial++ }}</td>
+                                    <td>{{ $item->item_name ?: ($item->itemSubcategory->item_name ?? '—') }}</td>
+                                    <td>{{ $item->quantity }}</td>
+                                    <td>{{ $item->return_quantity ?? 0 }}</td>
+                                    <td>{{ $voucher->resolved_store_name }}</td>
+                                    <td>{{ $voucher->client_type_label ?? '—' }}</td>
+                                    <td>{{ $voucher->display_client_name }}</td>
+                                    <td>{{ $voucher->client_name ?? '—' }}</td>
+                                    <td>{{ $voucher->payment_type == 1 ? 'Credit' : ($voucher->payment_type == 0 ? 'Cash' : ($voucher->payment_type == 2 ? 'UPI' : '—')) }}</td>
+                                    <td>{{ $voucher->created_at ? $voucher->created_at->format('d/m/Y') : '—' }}</td>
+                                    <td>
+                                        @if($voucher->status == 0)<span class="badge bg-warning">Pending</span>
+                                        @elseif($voucher->status == 2)<span class="badge bg-success">Approved</span>
+                                        @elseif($voucher->status == 4)<span class="badge bg-primary">Completed</span>
+                                        @else<span class="badge bg-secondary">{{ $voucher->status }}</span>@endif
+                                    </td>
+                                    <td>
+                                        <div class="d-flex flex-wrap gap-2 align-items-center justify-content-center">
+                                            @if(($item->return_quantity ?? 0) > 0)
+                                                <span class="badge bg-info">Returned</span>
+                                            @endif
+                                            <button type="button" class="btn btn-sm btn-outline-secondary btn-return-sv" data-voucher-id="{{ $voucher->pk }}" title="Return">Return</button>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex flex-wrap gap-2 align-items-center justify-content-center">
+                                            <button type="button" class="btn btn-sm btn-info btn-view-sv" data-voucher-id="{{ $voucher->pk }}" title="View">View</button>
+                                            <button type="button" class="btn btn-sm btn-warning btn-edit-sv" data-voucher-id="{{ $voucher->pk }}" title="{{ $voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED ? 'Edit is disabled for approved voucher' : 'Edit' }}" @if($voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED) disabled @endif>Edit</button>
+                                            <form action="{{ route('admin.mess.material-management.destroy', $voucher->pk) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this Selling Voucher?');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-danger" title="Delete" style="display: none;">Delete</button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td>{{ $serial++ }}</td>
+                                    <td>—</td>
+                                    <td>—</td>
+                                    <td>—</td>
+                                    <td>{{ $voucher->resolved_store_name }}</td>
+                                    <td>{{ $voucher->client_type_label ?? '—' }}</td>
+                                    <td>{{ $voucher->display_client_name }}</td>
+                                    <td>{{ $voucher->client_name ?? '—' }}</td>
+                                    <td>—</td>
+                                    <td>{{ $voucher->created_at ? $voucher->created_at->format('d/m/Y') : '—' }}</td>
+                                    <td><span class="badge bg-secondary">{{ $voucher->status }}</span></td>
+                                    <td>
+                                        <div class="d-flex flex-wrap gap-2 align-items-center justify-content-center">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary btn-return-sv" data-voucher-id="{{ $voucher->pk }}" title="Return">Return</button>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex flex-wrap gap-2 align-items-center justify-content-center">
+                                        <button type="button" class="btn btn-sm btn-info btn-view-sv" data-voucher-id="{{ $voucher->pk }}" title="View">View</button>
+                                        <button type="button" class="btn btn-sm btn-warning btn-edit-sv" data-voucher-id="{{ $voucher->pk }}" title="{{ $voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED ? 'Edit is disabled for approved voucher' : 'Edit' }}" @if($voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED) disabled @endif>Edit</button>
+                                        <form action="{{ route('admin.mess.material-management.destroy', $voucher->pk) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this Selling Voucher?');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-sm btn-danger" title="Delete" style="display: none;">Delete</button>
+                                        </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforelse
+                        @empty
+                            <tr>
+                                <td class="text-center py-4" colspan="12">No kitchen issues found.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
     </div>
    </div>
 
