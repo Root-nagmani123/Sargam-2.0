@@ -112,6 +112,27 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard/my-counselee', [UserController::class, 'myCounselee'])->name('admin.dashboard.my-counselee');
     Route::get('/dashboard/students/{id}/detail', [UserController::class, 'studentDetail'])->name('admin.dashboard.students.detail');
 
+    // Dashboard Statistics (Batch Profile)
+    // NOTE: Currently served by a Blade view; replace with controller when business logic is ready.
+    Route::prefix('dashboard-statistics')->name('admin.dashboard-statistics.')->group(function () {
+        Route::get('/', function () {
+            return redirect()->route('admin.dashboard-statistics.charts');
+        })->name('index');
+
+        Route::get('/charts', function () {
+            return view('admin.dashboard_statistics.charts', [
+                'courses' => [],
+                'course' => null,
+                'snapshot' => null,
+                'chartData' => [],
+            ]);
+        })->name('charts');
+
+        Route::post('/save-from-course', function () {
+            return redirect()->back()->withErrors(['snapshot_date' => 'Snapshot saving is not configured yet.']);
+        })->name('save-from-course');
+    });
+
 
     Route::get('/calendar', [Calendar1Controller::class, 'index'])->name('calendar.index');
 

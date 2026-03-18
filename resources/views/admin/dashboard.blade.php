@@ -40,6 +40,7 @@
     box-shadow: 0 2px 8px rgba(16, 24, 40, 0.08);
     overflow: hidden;
     transition: transform 0.15s ease, box-shadow 0.15s ease;
+    min-height: 84px;
 }
 
 .dashboard-stat-card:hover {
@@ -48,11 +49,11 @@
 }
 
 .dashboard-stat-card .card-body {
-    padding: 0.7rem 0.8rem;
+    padding: 0.55rem 0.7rem;
 }
 
 .dashboard-stat-value {
-    font-size: clamp(1.55rem, 1.9vw, 2.1rem);
+    font-size: clamp(1.35rem, 1.55vw, 1.85rem);
     line-height: 1.05;
     letter-spacing: -0.02em;
 }
@@ -94,9 +95,9 @@
 }
 
 .dashboard-avatar {
-    width: 2rem;
-    height: 2rem;
-    font-size: 0.8rem;
+    width: 3rem;
+    height: 3rem;
+    font-size: 1.05rem;
 }
 
 .dashboard-list-scroll {
@@ -135,13 +136,13 @@
 .dashboard-welcome .material-icons { opacity: 0.9; }
 
 .dashboard-stat-card .stat-icon {
-    width: 2.5rem;
-    height: 2.5rem;
+    width: 2.15rem;
+    height: 2.15rem;
     border-radius: 0.5rem;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.15rem;
+    font-size: 1.05rem;
     opacity: 0.9;
 }
 .dashboard-stat-card.card-blue .stat-icon { background: rgba(var(--bs-primary-rgb), 0.2); color: var(--bs-primary); }
@@ -457,106 +458,106 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
         </div>
     </div>
 
-    <div class="row g-3 g-lg-4 mb-4">
-        <div class="col-xl-3 col-md-6">
+    <div class="row g-2 g-md-3 mb-4 row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 row-cols-xxl-5">
+        <div class="col">
             <a href="{{ route('admin.dashboard.active_course') }}" class="text-decoration-none d-block h-100">
                 <div class="card dashboard-stat-card shadow-sm rounded-4 card-blue h-100">
-                    <div class="card-body d-flex align-items-start justify-content-between gap-2">
-                        <div>
-                            <p class="small text-body-secondary mb-1">Total Active Courses</p>
+                    <div class="card-body d-flex align-items-center justify-content-between gap-3">
+                        <div class="min-w-0">
+                            <p class="small text-body-secondary mb-1 text-truncate">Total Active Courses</p>
                             <div class="dashboard-stat-value fw-semibold text-primary">{{ $totalActiveCourses }}</div>
-                            <span class="stat-link-hint text-primary">View <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
+                            <span class="stat-link-hint text-primary small">View <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
                         </div>
-                        <span class="stat-icon"><span class="material-icons material-symbols-rounded">menu_book</span></span>
+                        <span class="stat-icon flex-shrink-0" aria-hidden="true"><span class="material-icons material-symbols-rounded">menu_book</span></span>
                     </div>
                 </div>
             </a>
         </div>
 
-        <div class="col-xl-3 col-md-6">
+        <div class="col">
             <a href="{{ route('admin.dashboard.incoming_course') }}" class="text-decoration-none d-block h-100">
                 <div class="card dashboard-stat-card shadow-sm rounded-4 card-green h-100">
-                    <div class="card-body d-flex align-items-start justify-content-between gap-2">
-                        <div>
-                            <p class="small text-body-secondary mb-1">Upcoming Courses</p>
+                    <div class="card-body d-flex align-items-center justify-content-between gap-3">
+                        <div class="min-w-0">
+                            <p class="small text-body-secondary mb-1 text-truncate">Upcoming Courses</p>
                             <div class="dashboard-stat-value fw-semibold text-success">{{ $upcomingCourses }}</div>
-                            <span class="stat-link-hint text-success">View <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
+                            <span class="stat-link-hint text-success small">View <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
                         </div>
-                        <span class="stat-icon"><span class="material-icons material-symbols-rounded">event</span></span>
+                        <span class="stat-icon flex-shrink-0" aria-hidden="true"><span class="material-icons material-symbols-rounded">event</span></span>
                     </div>
                 </div>
             </a>
         </div>
 
-        <div class="col-xl-3 col-md-6">
+        <div class="col">
             <a href="{{ route('admin.dashboard.upcoming_events') }}" class="text-decoration-none d-block h-100">
                 <div class="card dashboard-stat-card shadow-sm rounded-4 card-amber h-100">
-                    <div class="card-body d-flex align-items-start justify-content-between gap-2">
-                        <div>
-                            <p class="small text-body-secondary mb-1">Upcoming Events</p>
+                    <div class="card-body d-flex align-items-center justify-content-between gap-3">
+                        <div class="min-w-0">
+                            <p class="small text-body-secondary mb-1 text-truncate">Upcoming Events</p>
                             <div class="dashboard-stat-value fw-semibold text-warning-emphasis">2</div>
-                            <span class="stat-link-hint text-warning">View <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
+                            <span class="stat-link-hint text-warning small">View <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
                         </div>
-                        <span class="stat-icon"><span class="material-icons material-symbols-rounded">campaign</span></span>
+                        <span class="stat-icon flex-shrink-0" aria-hidden="true"><span class="material-icons material-symbols-rounded">campaign</span></span>
                     </div>
                 </div>
             </a>
         </div>
 
-        <div class="col-xl-3 col-md-6">
+        <div class="col">
             @if(hasRole('Student-OT'))
             <a href="{{ route('medical.exception.ot.view') }}" class="text-decoration-none d-block h-100">
                 <div class="card dashboard-stat-card shadow-sm rounded-4 card-rose h-100">
-                    <div class="card-body d-flex align-items-start justify-content-between gap-2">
-                        <div>
-                            <p class="small text-body-secondary mb-1">Medical Exception</p>
+                    <div class="card-body d-flex align-items-center justify-content-between gap-3">
+                        <div class="min-w-0">
+                            <p class="small text-body-secondary mb-1 text-truncate">Medical Exception</p>
                             <div class="dashboard-stat-value fw-semibold text-danger">{{ $exemptionCount }}</div>
-                            <span class="stat-link-hint text-danger">View <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
+                            <span class="stat-link-hint text-danger small">View <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
                         </div>
-                        <span class="stat-icon"><span class="material-icons material-symbols-rounded">monitor_heart</span></span>
+                        <span class="stat-icon flex-shrink-0" aria-hidden="true"><span class="material-icons material-symbols-rounded">monitor_heart</span></span>
                     </div>
                 </div>
             </a>
             @else
             <a href="{{ route('admin.dashboard.guest_faculty') }}" class="text-decoration-none d-block h-100">
                 <div class="card dashboard-stat-card shadow-sm rounded-4 card-rose h-100">
-                    <div class="card-body d-flex align-items-start justify-content-between gap-2">
-                        <div>
-                            <p class="small text-body-secondary mb-1">Total Guest Faculty</p>
+                    <div class="card-body d-flex align-items-center justify-content-between gap-3">
+                        <div class="min-w-0">
+                            <p class="small text-body-secondary mb-1 text-truncate">Total Guest Faculty</p>
                             <div class="dashboard-stat-value fw-semibold text-danger">{{ $total_guest_faculty }}</div>
-                            <span class="stat-link-hint text-danger">View <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
+                            <span class="stat-link-hint text-danger small">View <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
                         </div>
-                        <span class="stat-icon"><span class="material-icons material-symbols-rounded">badge</span></span>
+                        <span class="stat-icon flex-shrink-0" aria-hidden="true"><span class="material-icons material-symbols-rounded">badge</span></span>
                     </div>
                 </div>
             </a>
             @endif
         </div>
 
-        <div class="col-xl-3 col-md-6">
+        <div class="col">
             @if(hasRole('Student-OT'))
             <a href="{{ route('ot.mdo.escrot.exemption.view') }}" class="text-decoration-none d-block h-100">
                 <div class="card dashboard-stat-card shadow-sm rounded-4 card-blue h-100">
-                    <div class="card-body d-flex align-items-start justify-content-between gap-2">
-                        <div>
-                            <p class="small text-body-secondary mb-1">OT MDO/Escort</p>
+                    <div class="card-body d-flex align-items-center justify-content-between gap-3">
+                        <div class="min-w-0">
+                            <p class="small text-body-secondary mb-1 text-truncate">OT MDO/Escort</p>
                             <div class="dashboard-stat-value fw-semibold text-primary">{{ $MDO_count }}</div>
-                            <span class="stat-link-hint text-primary">View <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
+                            <span class="stat-link-hint text-primary small">View <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
                         </div>
-                        <span class="stat-icon"><span class="material-icons material-symbols-rounded">manage_accounts</span></span>
+                        <span class="stat-icon flex-shrink-0" aria-hidden="true"><span class="material-icons material-symbols-rounded">manage_accounts</span></span>
                     </div>
                 </div>
             </a>
             @else
             <a href="{{ route('admin.dashboard.inhouse_faculty') }}" class="text-decoration-none d-block h-100">
                 <div class="card dashboard-stat-card shadow-sm rounded-4 card-blue h-100">
-                    <div class="card-body d-flex align-items-start justify-content-between gap-2">
-                        <div>
-                            <p class="small text-body-secondary mb-1">Total Inhouse Faculty</p>
+                    <div class="card-body d-flex align-items-center justify-content-between gap-3">
+                        <div class="min-w-0">
+                            <p class="small text-body-secondary mb-1 text-truncate">Total Inhouse Faculty</p>
                             <div class="dashboard-stat-value fw-semibold text-primary">{{ $total_internal_faculty }}</div>
-                            <span class="stat-link-hint text-primary">View <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
+                            <span class="stat-link-hint text-primary small">View <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
                         </div>
-                        <span class="stat-icon"><span class="material-icons material-symbols-rounded">groups</span></span>
+                        <span class="stat-icon flex-shrink-0" aria-hidden="true"><span class="material-icons material-symbols-rounded">groups</span></span>
                     </div>
                 </div>
             </a>
@@ -564,16 +565,16 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
         </div>
 
         @if(hasRole('Internal Faculty') || hasRole('Guest Faculty'))
-        <div class="col-xl-3 col-md-6">
+        <div class="col">
             <a href="{{ route('admin.dashboard.sessions') }}" class="text-decoration-none d-block h-100">
                 <div class="card dashboard-stat-card shadow-sm rounded-4 card-green h-100">
-                    <div class="card-body d-flex align-items-start justify-content-between gap-2">
-                        <div>
-                            <p class="small text-body-secondary mb-1">Session Details</p>
+                    <div class="card-body d-flex align-items-center justify-content-between gap-3">
+                        <div class="min-w-0">
+                            <p class="small text-body-secondary mb-1 text-truncate">Session Details</p>
                             <div class="dashboard-stat-value fw-semibold text-success">{{ $totalSessions }}</div>
-                            <span class="stat-link-hint text-success">View <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
+                            <span class="stat-link-hint text-success small">View <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
                         </div>
-                        <span class="stat-icon"><span class="material-icons material-symbols-rounded">history</span></span>
+                        <span class="stat-icon flex-shrink-0" aria-hidden="true"><span class="material-icons material-symbols-rounded">history</span></span>
                     </div>
                 </div>
             </a>
@@ -581,31 +582,31 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
         @endif
 
         @if(isset($isCCorACC) && $isCCorACC)
-        <div class="col-xl-3 col-md-6">
+        <div class="col">
             <a href="{{ route('admin.dashboard.students') }}" class="text-decoration-none d-block h-100">
                 <div class="card dashboard-stat-card shadow-sm rounded-4 card-amber h-100">
-                    <div class="card-body d-flex align-items-start justify-content-between gap-2">
-                        <div>
-                            <p class="small text-body-secondary mb-1">Total Students</p>
+                    <div class="card-body d-flex align-items-center justify-content-between gap-3">
+                        <div class="min-w-0">
+                            <p class="small text-body-secondary mb-1 text-truncate">Total Students</p>
                             <div class="dashboard-stat-value fw-semibold text-warning-emphasis">{{ $totalStudents }}</div>
-                            <span class="stat-link-hint text-warning">View <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
+                            <span class="stat-link-hint text-warning small">View <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
                         </div>
-                        <span class="stat-icon"><span class="material-icons material-symbols-rounded">contacts</span></span>
+                        <span class="stat-icon flex-shrink-0" aria-hidden="true"><span class="material-icons material-symbols-rounded">contacts</span></span>
                     </div>
                 </div>
             </a>
         </div>
 
-        <div class="col-xl-3 col-md-6">
+        <div class="col">
             <a href="{{ route('admin.dashboard.my-counselee') }}" class="text-decoration-none d-block h-100">
                 <div class="card dashboard-stat-card shadow-sm rounded-4 card-blue h-100">
-                    <div class="card-body d-flex align-items-start justify-content-between gap-2">
-                        <div>
-                            <p class="small text-body-secondary mb-1">My Counselee</p>
+                    <div class="card-body d-flex align-items-center justify-content-between gap-3">
+                        <div class="min-w-0">
+                            <p class="small text-body-secondary mb-1 text-truncate">My Counselee</p>
                             <div class="dashboard-stat-value fw-semibold text-primary">View</div>
-                            <span class="stat-link-hint text-primary">View list <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
+                            <span class="stat-link-hint text-primary small">View list <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
                         </div>
-                        <span class="stat-icon"><span class="material-icons material-symbols-rounded">person_search</span></span>
+                        <span class="stat-icon flex-shrink-0" aria-hidden="true"><span class="material-icons material-symbols-rounded">person_search</span></span>
                     </div>
                 </div>
             </a>
@@ -757,11 +758,14 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
             </div>
         </div>
 
-        <div class="col-lg-4">
+        <div class="col-lg-5">
             <div class="card dashboard-panel shadow-sm rounded-4 mb-4">
                 <div class="card-header py-3 px-4 d-flex align-items-center gap-2">
                     <span class="material-icons material-symbols-rounded text-primary">cake</span>
                     <h4 class="mb-0 fw-semibold text-primary">Today's Birthday</h4>
+                    <span class="ms-auto badge rounded-pill text-bg-primary-subtle text-primary border border-primary-subtle">
+                        {{ $emp_dob_data->count() }}
+                    </span>
                 </div>
                 <div class="card-body p-3 dashboard-list-scroll">
                     @if($emp_dob_data->isEmpty())
@@ -776,21 +780,53 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                         $avClasses = ['text-bg-primary', 'text-bg-info', 'text-bg-success', 'text-bg-warning', 'text-bg-danger', 'text-bg-secondary'];
                         $avClass = $avClasses[$loop->index % count($avClasses)];
                         $photo = !empty($employee->profile_picture) ? asset('storage/' . $employee->profile_picture) : null;
+                        $email = trim((string)($employee->email ?? ''));
+                        $fullName = trim(($employee->first_name ?? '') . ' ' . ($employee->last_name ?? ''));
+                        $subject = rawurlencode('Happy Birthday ' . ($fullName ?: ''));
+                        $body = rawurlencode("Dear " . ($fullName ?: '') . ",\n\nWishing you a very Happy Birthday!\n\nRegards,");
                         @endphp
                         <div class="card dashboard-birthday-item border-0 shadow-sm rounded-3">
-                            <div class="card-body p-3 d-flex align-items-start gap-2">
+                            <div class="card-body p-3">
+                                <div class="d-flex align-items-start gap-3">
                                 @if($photo)
-                                <img src="{{ $photo }}" alt="" class="rounded-circle object-fit-cover flex-shrink-0 dashboard-avatar">
+                                    <img src="{{ $photo }}" alt="" class="rounded-circle object-fit-cover flex-shrink-0 dashboard-avatar">
                                 @else
-                                <div class="rounded-circle {{ $avClass }} fw-semibold d-inline-flex align-items-center justify-content-center flex-shrink-0 dashboard-avatar">
-                                    {{ strtoupper(substr($employee->first_name, 0, 1)) }}
-                                </div>
+                                    <div class="rounded-circle {{ $avClass }} fw-semibold d-inline-flex align-items-center justify-content-center flex-shrink-0 dashboard-avatar">
+                                        {{ strtoupper(substr($employee->first_name, 0, 1)) }}
+                                    </div>
                                 @endif
-                                <div class="small lh-sm">
-                                    <div class="fw-semibold text-body mb-1">{{ $employee->first_name }} {{ $employee->last_name }}</div>
-                                    <div class="text-body-secondary">{{ $employee->designation_name }}</div>
-                                    <div class="text-body-secondary text-break">{{ $employee->email }}</div>
-                                    <div class="text-body-secondary">{{ $employee->mobile }}</div>
+                                    <div class="flex-grow-1 min-w-0">
+                                        <div class="d-flex align-items-start justify-content-between gap-2">
+                                            <div class="min-w-0">
+                                                <div class="fw-semibold text-dark text-truncate">{{ $fullName }}</div>
+                                                <div class="small text-body-secondary text-truncate">{{ $employee->designation_name }}</div>
+                                            </div>
+                                            <div class="d-flex gap-2 flex-shrink-0">
+                                                @if($email !== '')
+                                                    <a class="btn btn-sm btn-primary"
+                                                        href="mailto:{{ $email }}?subject={{ $subject }}&body={{ $body }}"
+                                                        title="Send birthday wishes">
+                                                        <span class="material-icons material-symbols-rounded align-middle" style="font-size: 18px;">send</span>
+                                                        <span class="d-none d-sm-inline ms-1">Send wishes</span>
+                                                    </a>
+                                                @else
+                                                    <button class="btn btn-sm btn-outline-secondary" type="button" disabled title="No email available">
+                                                        <span class="material-icons material-symbols-rounded align-middle" style="font-size: 18px;">mail</span>
+                                                        <span class="d-none d-sm-inline ms-1">Send wishes</span>
+                                                    </button>
+                                                @endif
+                                            </div>
+                                        </div>
+
+                                        <div class="mt-2 d-flex flex-wrap gap-2 small text-body-secondary">
+                                            @if($email !== '')
+                                                <span class="text-truncate"><span class="material-icons material-symbols-rounded align-middle me-1" style="font-size: 16px;">mail</span>{{ $email }}</span>
+                                            @endif
+                                            @if(!empty($employee->mobile))
+                                                <span><span class="material-icons material-symbols-rounded align-middle me-1" style="font-size: 16px;">call</span>{{ $employee->mobile }}</span>
+                                            @endif
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -804,6 +840,9 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                 <div class="card-header py-3 px-4 d-flex align-items-center gap-2">
                     <span class="material-icons material-symbols-rounded text-primary">calendar_month</span>
                     <h5 class="mb-0 fw-semibold">Calendar</h5>
+                    <span class="ms-auto text-body-secondary fw-semibold">
+                        {{ now()->format('d M Y') }}
+                    </span>
                 </div>
                 <div class="card-body p-3 p-md-4">
                     <x-calendar :year="$year" :month="$month" :selected="now()->toDateString()" :events="$events" theme="gov-red" />
