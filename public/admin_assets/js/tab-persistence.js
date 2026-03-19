@@ -45,6 +45,14 @@
             console.log('Not from login - skipping force home activation');
             return; // Don't force home tab on regular navigation
         }
+
+        // If server already resolved a non-home route tab, do not override it.
+        const routeTab = window.SARGAM_ACTIVE_NAV_TAB || '#home';
+        if (routeTab !== '#home') {
+            console.log('Fresh login but route is non-home - skipping force home activation:', routeTab);
+            deleteCookie('fresh_login');
+            return;
+        }
         
         console.log('Fresh login detected - activating home tab');
         deleteCookie('fresh_login'); // Clear the flag
@@ -102,7 +110,7 @@
                     });
 
                     // Activate home sidebar pane
-                    const homeSidebarPane = sidebarTabContent.querySelector('#home.tab-pane');
+                    const homeSidebarPane = sidebarTabContent.querySelector('#sidebar-home.tab-pane');
                     if (homeSidebarPane) {
                         homeSidebarPane.classList.add('show', 'active');
                         console.log('Home sidebar pane activated');
