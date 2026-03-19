@@ -1389,6 +1389,21 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.warn('Employee: No employees found for dataClientName:', dataClientName);
                     console.warn('Available keys:', Object.keys(employeeNames));
                 }
+            } else if (slug === 'employee' && !selectedPk) {
+                // Employee selected but no subgroup chosen: show ALL employees (academy staff + faculty + mess staff)
+                var all = []
+                    .concat(employeeNames['academy staff'] || [])
+                    .concat(employeeNames['faculty'] || [])
+                    .concat(employeeNames['mess staff'] || []);
+                var seen = {};
+                var deduped = all.filter(function (o) {
+                    var key = String((o && o.value) ? o.value : '').trim().toLowerCase();
+                    if (!key) return false;
+                    if (seen[key]) return false;
+                    seen[key] = true;
+                    return true;
+                });
+                addOptions(deduped);
             } else if (slug === 'ot' && selectedPk) {
                 fetch(studentsByCourseUrl + '/' + selectedPk, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
                     .then(function (r) { return r.json(); })
@@ -1427,11 +1442,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     return { value: name, text: name };
                 });
                 addOptions(listSection);
-            } else if (slug && clientTypeOptions[slug]) {
-                var list3 = clientTypeOptions[slug].map(function (o) {
-                    return { value: o.text, text: o.text };
-                });
-                addOptions(list3);
             }
             
             console.log('fillBuyerSelect - Total options in buyerSelect:', buyerSelect.options.length);

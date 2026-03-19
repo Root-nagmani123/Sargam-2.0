@@ -105,10 +105,6 @@
                                 @foreach($sectionBuyerNames as $buyerName)
                                     <option value="{{ $buyerName }}" {{ request('buyer_name') == $buyerName ? 'selected' : '' }}>{{ $buyerName }}</option>
                                 @endforeach
-                            @elseif(request('client_type_slug') && isset($clientTypeCategories[request('client_type_slug')]))
-                                @foreach($clientTypeCategories[request('client_type_slug')] as $category)
-                                    <option value="{{ $category->client_name }}" {{ request('buyer_name') == $category->client_name ? 'selected' : '' }}>{{ $category->client_name }}</option>
-                                @endforeach
                             @endif
                         </select>
                     </div>
@@ -663,13 +659,32 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (preserveValue) {
                     clientTypePkBuyer.value = preserveValue;
                 }
+                // Disable buyer list when it cannot be meaningfully selected yet
+                clientTypePkBuyer.disabled = (clientTypePkBuyer.options.length <= 1);
                 initChoices(clientTypePkBuyer);
             }
 
             if (slug === 'employee' && dataClientName && employeeNames[dataClientName]) {
                 setBuyerChoices(employeeNames[dataClientName], preservedBuyerName);
+            } else if (slug === 'employee') {
+                // Employee selected but no specific category chosen:
+                // show ALL employee names (academy staff + faculty + mess staff) to allow direct buyer selection.
+                const all = []
+                    .concat(employeeNames['academy staff'] || [])
+                    .concat(employeeNames['faculty'] || [])
+                    .concat(employeeNames['mess staff'] || []);
+                const seen = new Set();
+                const deduped = all.filter(function(o) {
+                    const key = String(o && o.value ? o.value : '').trim().toLowerCase();
+                    if (!key) return false;
+                    if (seen.has(key)) return false;
+                    seen.add(key);
+                    return true;
+                });
+                setBuyerChoices(deduped, preservedBuyerName);
             } else if (slug === 'ot' && selectedValue) {
                 clientTypePkBuyer.innerHTML = '<option value="">Loading...</option>';
+                clientTypePkBuyer.disabled = true;
                 fetch(studentsByCourseUrl + '/' + selectedValue, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
                     .then(function(r) { return r.json(); })
                     .then(function(data) {
@@ -681,10 +696,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     .catch(function() {
                         setBuyerChoices([], preservedBuyerName);
                     });
+            } else if (slug === 'ot') {
+                // Require Course selection for OT before loading students.
+                setBuyerChoices([], preservedBuyerName);
             } else if (slug === 'course') {
                 // Course: load buyer names dynamically by selected course (no Apply Filters needed)
                 if (selectedValue) {
                     clientTypePkBuyer.innerHTML = '<option value="">Loading...</option>';
+                    clientTypePkBuyer.disabled = true;
                     const qs = new URLSearchParams();
                     if (document.querySelector('input[name="from_date"]')?.value) qs.set('from_date', document.querySelector('input[name="from_date"]').value);
                     if (document.querySelector('input[name="to_date"]')?.value) qs.set('to_date', document.querySelector('input[name="to_date"]').value);
@@ -752,11 +771,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         });
                         setBuyerChoices(list, preservedBuyerName);
                     });
-            } else if (slug && clientTypeOptions[slug]) {
-                const list = clientTypeOptions[slug].map(function(o) {
-                    return { value: o.text, text: o.text };
-                });
-                setBuyerChoices(list, preservedBuyerName);
             } else {
                 setBuyerChoices([], preservedBuyerName);
             }
