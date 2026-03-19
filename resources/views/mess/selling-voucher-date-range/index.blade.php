@@ -568,7 +568,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                             </td>
                                             <td><input type="text" class="form-control  dr-left bg-light" readonly></td>
                                             <td><input type="date" name="items[0][issue_date]" class="form-control  dr-issue-date" value="{{ date('Y-m-d') }}"></td>
-                                            <td><input type="text" name="items[0][rate]" class="form-control  dr-rate" required></td>
+                                            <td><input type="number" name="items[0][rate]" class="form-control  dr-rate" step="0.01" min="0" required></td>
                                             <td><input type="text" class="form-control  dr-total bg-light" readonly></td>
                                             <td><button type="button" class="btn  btn-outline-danger dr-remove-row voucher-icon-btn" disabled title="Remove">×</button></td>
                                         </tr>
@@ -1698,7 +1698,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 '<td><input type="number" name="items[' + index + '][quantity]" class="form-control  dr-qty" step="0.01" required><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
                 '<td><input type="text" class="form-control  dr-left bg-light" readonly placeholder="0"></td>' +
                 '<td><input type="date" name="items[' + index + '][issue_date]" class="form-control  dr-issue-date" value="' + new Date().toISOString().slice(0, 10) + '"></td>' +
-                '<td><input type="number" name="items[' + index + '][rate]" class="form-control  dr-rate" required></td>' +
+                '<td><input type="number" name="items[' + index + '][rate]" class="form-control  dr-rate" step="0.01" min="0" required></td>' +
                 '<td><input type="text" class="form-control  dr-total bg-light" readonly></td>' +
                 '<td><button type="button" class="btn  btn-outline-danger dr-remove-row voucher-icon-btn" title="Remove">×</button></td>' +
                 '</tr>';
