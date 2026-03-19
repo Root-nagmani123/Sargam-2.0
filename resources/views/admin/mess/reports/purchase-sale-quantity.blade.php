@@ -224,14 +224,43 @@ document.addEventListener('DOMContentLoaded', function() {
     var categoryIdWrap = document.getElementById('categoryIdWrap');
     var categorySelect = document.querySelector('select[name="category_id"]');
     var itemSelectEl = document.querySelector('select[name="item_id"]');
+    var rebuildItemChoicesFn = null; // will be assigned once Choices + items are initialised
 
     if (viewType && categoryIdWrap) {
         function toggleCategory() {
-            categoryIdWrap.style.display = viewType.value === 'category_wise' ? 'block' : 'none';
+            var isCategoryWise = viewType.value === 'category_wise';
+            categoryIdWrap.style.display = isCategoryWise ? 'block' : 'none';
+
+            // If view is not category_wise, clear category filter and show all items
+            if (!isCategoryWise && categorySelect) {
+                if (categorySelect.value) {
+                    categorySelect.value = '';
+                    if (typeof categorySelect.dispatchEvent === 'function') {
+                        // let any listeners (including Choices) react
+                        categorySelect.dispatchEvent(new Event('change'));
+                    }
+                }
+                // Reset item dropdown also
+                if (itemSelectEl) {
+                    itemSelectEl.value = '';
+                }
+                if (typeof rebuildItemChoicesFn === 'function') {
+                    rebuildItemChoicesFn();
+                }
+            }
         }
         toggleCategory();
         viewType.addEventListener('change', function () {
             toggleCategory();
+            // Requirement: View change => dependent filters (Category -> Item) reset
+            if (viewType.value === 'category_wise') {
+                if (categorySelect) {
+                    categorySelect.value = '';
+                    categorySelect.dispatchEvent(new Event('change'));
+                }
+                if (itemSelectEl) itemSelectEl.value = '';
+                if (typeof rebuildItemChoicesFn === 'function') rebuildItemChoicesFn();
+            }
         });
     }
 
@@ -245,12 +274,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 el.dataset.choices = 'initialized';
 
                 var placeholder = el.getAttribute('data-placeholder') || 'Select';
+                var isItemSelect = el.getAttribute('name') === 'item_id';
 
                 var instance = new Choices(el, {
                     searchEnabled: true,
                     shouldSort: false,
-                    placeholder: true,
-                    placeholderValue: placeholder,
+                    // For item dropdown we already have an explicit "All Items" option,
+                    // so disable Choices' own placeholder to avoid duplicate "All Items".
+                    placeholder: !isItemSelect,
+                    placeholderValue: isItemSelect ? '' : placeholder,
                     itemSelectText: '',
                     allowHTML: false,
                     removeItemButton: false,
@@ -279,11 +311,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Keep current selection if still valid after filtering.
                 var currentValue = itemSelectEl.value || '';
 
-                var filtered = originalItemOptions.filter(function (opt) {
-                    // Always include empty ("All Items") option
-                    if (!opt.value) return true;
-                    if (!selectedCategoryId) return true;
-                    return String(opt.categoryId || '') === selectedCategoryId;
+                // Build filtered list, ensuring ONLY ONE "All Items" (empty value) entry
+                var filtered = [];
+                originalItemOptions.forEach(function (opt) {
+                    if (!opt.value) {
+                        // Only push the first empty option
+                        if (!filtered.some(function (f) { return !f.value; })) {
+                            filtered.push(opt);
+                        }
+                        return;
+                    }
+                    if (!selectedCategoryId) {
+                        filtered.push(opt);
+                    } else if (String(opt.categoryId || '') === selectedCategoryId) {
+                        filtered.push(opt);
+                    }
                 });
 
                 itemChoices.clearChoices();
@@ -307,11 +349,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
 
+            // Expose for viewType toggle logic
+            rebuildItemChoicesFn = rebuildItemChoices;
+
             // Run once on load (handles pre-selected category on page load)
             rebuildItemChoices();
 
             if (categorySelect) {
-                categorySelect.addEventListener('change', rebuildItemChoices);
+                categorySelect.addEventListener('change', function() {
+                    // Requirement: when Category changes, reset Item dropdown to "All Items"
+                    if (itemSelectEl) itemSelectEl.value = '';
+                    rebuildItemChoices();
+                });
             }
         }
     }

@@ -133,7 +133,11 @@
                         <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">badge</i>Buyer Name</label>
                         <select name="buyer_name" id="filterBuyerName" class="form-select shadow-sm border-0 choices-select">
                             <option value="">All Buyers</option>
-                            @if(($clientType ?? request('client_type')) === 'course' && isset($courseBuyerNames) && $courseBuyerNames->isNotEmpty())
+                            @if(($clientType ?? request('client_type')) === 'ot' && isset($otBuyerNames) && $otBuyerNames->isNotEmpty())
+                                @foreach($otBuyerNames as $buyer)
+                                    <option value="{{ $buyer }}" {{ ($buyerName ?? request('buyer_name')) === $buyer ? 'selected' : '' }}>{{ $buyer }}</option>
+                                @endforeach
+                            @elseif(($clientType ?? request('client_type')) === 'course' && isset($courseBuyerNames) && $courseBuyerNames->isNotEmpty())
                                 @foreach($courseBuyerNames as $buyer)
                                     <option value="{{ $buyer }}" {{ ($buyerName ?? request('buyer_name')) === $buyer ? 'selected' : '' }}>{{ $buyer }}</option>
                                 @endforeach
@@ -1018,6 +1022,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var modalClientTypePk = document.getElementById('modal_client_type_pk');
         var modalBuyerName = document.getElementById('modal_buyer_name');
         var studentsByCourseUrl = "{{ url('/admin/mess/selling-voucher-date-range/students-by-course') }}";
+        var buyersForReportUrl = "{{ route('admin.mess.reports.category-wise-print-slip.buyers') }}";
 
         if (!modalClientType || !modalClientTypePk || !modalBuyerName) {
             return;
@@ -1061,6 +1066,7 @@ document.addEventListener('DOMContentLoaded', function() {
             ]
         };
 
+        var otBuyerNames = {!! json_encode(($otBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
         var courseBuyerNames = {!! json_encode(($courseBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
         var otherBuyerNames = {!! json_encode(($otherBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
         var sectionBuyerNames = {!! json_encode(($sectionBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
@@ -1173,8 +1179,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 var listCourse = (courseBuyerNames || []).map(function (name) {
                     return { value: name, text: name };
                 });
-                addBuyerOptions(listCourse);
+                addBuyerOptions(listOt);
+            } else if (slug === 'course') {
+                // Requirement (modal):
+                // - Course selected + Client Type = All => Buyer Name = ALL course names
+                // - Course selected + specific Client Type PK => Buyer Name = that course name only
+                var courses = (otCourseOptions || []);
+                if (!selectedPk) {
+                    var listCourseAll = courses.map(function (o) {
+                        return { value: o.text, text: o.text };
+                    });
+                    addBuyerOptions(listCourseAll);
+                } else {
+                    var matchCourse = courses.find(function (o) {
+                        return String(o.value) === String(selectedPk);
+                    });
+                    if (matchCourse) {
+                        addBuyerOptions([{ value: matchCourse.text, text: matchCourse.text }]);
+                    }
+                }
             } else if (slug === 'other') {
+                // Other: use distinct buyer names list
                 var listOther = (otherBuyerNames || []).map(function (name) {
                     return { value: name, text: name };
                 });
@@ -1214,6 +1239,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var clientTypePk = document.getElementById('filterClientTypePk');
         var buyerSelect = document.getElementById('filterBuyerName');
         var studentsByCourseUrl = "{{ url('/admin/mess/selling-voucher-date-range/students-by-course') }}";
+        var buyersForReportUrl = "{{ route('admin.mess.reports.category-wise-print-slip.buyers') }}";
         var preservedClientTypePk = {!! json_encode($clientTypePk ?? request('client_type_pk', '')) !!};
         var preservedBuyerName = {!! json_encode($buyerName ?? request('buyer_name', '')) !!};
 
@@ -1373,6 +1399,71 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
 
+            function loadBuyersFromReportEndpoint(slugToLoad) {
+                // Uses existing report endpoint to return distinct buyers (optionally date-filtered)
+                var df = document.getElementById('date_from');
+                var dt = document.getElementById('date_to');
+                var dateFromYmd = (df && df.value) ? toYmd(df.value) : '';
+                var dateToYmd = (dt && dt.value) ? toYmd(dt.value) : '';
+
+                function fallbackFromServerLists() {
+                    if (slugToLoad === 'course') {
+                        var listCourse = (courseBuyerNames || []).map(function (name) { return { value: name, text: name }; });
+                        addOptions(listCourse);
+                        return;
+                    }
+                    if (slugToLoad === 'other') {
+                        var listOther = (otherBuyerNames || []).map(function (name) { return { value: name, text: name }; });
+                        addOptions(listOther);
+                        return;
+                    }
+                    if (slugToLoad === 'section') {
+                        var listSection = (sectionBuyerNames || []).map(function (name) { return { value: name, text: name }; });
+                        addOptions(listSection);
+                        return;
+                    }
+                }
+
+                var qs = new URLSearchParams();
+                qs.set('client_type_slug', slugToLoad);
+                if (dateFromYmd) qs.set('from_date', dateFromYmd);
+                if (dateToYmd) qs.set('to_date', dateToYmd);
+                // Add PK if selected (course/ot => course_master_pk, others => client_type_pk)
+                if (selectedPk) {
+                    if (slugToLoad === 'course' || slugToLoad === 'ot') {
+                        qs.set('course_master_pk', selectedPk);
+                    } else {
+                        qs.set('client_type_pk', selectedPk);
+                    }
+                }
+
+                fetch(buyersForReportUrl + '?' + qs.toString(), { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        var buyers = (data.buyers || []).map(function (name) {
+                            return { value: name || '', text: name || '—' };
+                        }).filter(function (o) { return !!o.value; });
+                        if (!buyers.length) {
+                            fallbackFromServerLists();
+                        } else {
+                        addOptions(buyers);
+                        }
+                        if (typeof window.Choices !== 'undefined') {
+                            initChoicesElement(buyerSelect);
+                            if (currentBuyer && buyerSelect.choicesInstance) {
+                                buyerSelect.choicesInstance.setChoiceByValue(currentBuyer);
+                            }
+                        }
+                    })
+                    .catch(function () {
+                        fallbackFromServerLists();
+                        // still init Choices
+                        if (typeof window.Choices !== 'undefined') {
+                            initChoicesElement(buyerSelect);
+                        }
+                    });
+            }
+
             if (slug === 'employee' && selectedPk) {
                 var selectedOpt = clientTypePk.options[clientTypePk.selectedIndex];
                 var dataClientName = selectedOpt && selectedOpt.dataset ? (selectedOpt.dataset.clientName || '') : '';
@@ -1390,20 +1481,23 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.warn('Available keys:', Object.keys(employeeNames));
                 }
             } else if (slug === 'employee' && !selectedPk) {
-                // Employee selected but no subgroup chosen: show ALL employees (academy staff + faculty + mess staff)
+                // Employee selected but Client Type = All => show all employee groups
                 var all = []
                     .concat(employeeNames['academy staff'] || [])
                     .concat(employeeNames['faculty'] || [])
                     .concat(employeeNames['mess staff'] || []);
-                var seen = {};
-                var deduped = all.filter(function (o) {
-                    var key = String((o && o.value) ? o.value : '').trim().toLowerCase();
-                    if (!key) return false;
-                    if (seen[key]) return false;
-                    seen[key] = true;
-                    return true;
+
+                // De-duplicate + sort (by name)
+                var map = new Map();
+                all.forEach(function (o) {
+                    var key = String(o.value || '').trim().toLowerCase();
+                    if (!key) return;
+                    if (!map.has(key)) map.set(key, { value: o.value, text: o.text });
                 });
-                addOptions(deduped);
+                var unique = Array.from(map.values()).sort(function (a, b) {
+                    return String(a.text || '').localeCompare(String(b.text || ''), undefined, { sensitivity: 'base' });
+                });
+                addOptions(unique);
             } else if (slug === 'ot' && selectedPk) {
                 fetch(studentsByCourseUrl + '/' + selectedPk, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
                     .then(function (r) { return r.json(); })
@@ -1427,21 +1521,58 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     });
                 return; // Exit early for async case
-            } else if (slug === 'course') {
-                var listCourse = (courseBuyerNames || []).map(function (name) {
+            } else if (slug === 'ot' && !selectedPk) {
+                // OT selected but Course = All => show all OT buyers from precomputed list
+                var listOt = (otBuyerNames || []).map(function (name) {
                     return { value: name, text: name };
                 });
-                addOptions(listCourse);
+                addOptions(listOt);
+            } else if (slug === 'course') {
+                // Requirement:
+                // - If Course selected AND Client Type = All => Buyer Name should list ALL course names
+                // - If specific course selected => Buyer Name should be that course name
+                if (!selectedPk) {
+                    var listCourseAll = (otCourseOptions || []).map(function (o) {
+                        return { value: o.text, text: o.text };
+                    });
+                    addOptions(listCourseAll);
+                } else {
+                    var matchCourse = (otCourseOptions || []).find(function (o) {
+                        return String(o.value) === String(selectedPk);
+                    });
+                    if (matchCourse) {
+                        addOptions([{ value: matchCourse.text, text: matchCourse.text }]);
+                    }
+                }
+            } else if (slug === 'section') {
+                // Requirement:
+                // - If Section selected AND Client Type = All => Buyer Name should list ALL section names
+                // - If specific section selected => Buyer Name should be that section's name
+                var sectionOptions = clientTypeOptions['section'] || [];
+                if (!selectedPk) {
+                    var listSectionAll = sectionOptions.map(function (o) {
+                        return { value: o.text, text: o.text };
+                    });
+                    addOptions(listSectionAll);
+                } else {
+                    var matchSection = sectionOptions.find(function (o) {
+                        return String(o.value) === String(selectedPk);
+                    });
+                    if (matchSection) {
+                        addOptions([{ value: matchSection.text, text: matchSection.text }]);
+                    }
+                }
             } else if (slug === 'other') {
+                // For "other" we can still rely on precomputed distinct buyer names
                 var listOther = (otherBuyerNames || []).map(function (name) {
                     return { value: name, text: name };
                 });
                 addOptions(listOther);
-            } else if (slug === 'section') {
-                var listSection = (sectionBuyerNames || []).map(function (name) {
-                    return { value: name, text: name };
+            } else if (slug && clientTypeOptions[slug]) {
+                var list3 = clientTypeOptions[slug].map(function (o) {
+                    return { value: o.text, text: o.text };
                 });
-                addOptions(listSection);
+                addOptions(list3);
             }
             
             console.log('fillBuyerSelect - Total options in buyerSelect:', buyerSelect.options.length);

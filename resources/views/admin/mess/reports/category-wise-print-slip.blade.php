@@ -46,7 +46,7 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-12 col-md-3 col-lg-2">
+                    <div class="col-12 col-md-3 col-lg-3">
                         <label class="form-label fw-semibold small text-uppercase text-muted mb-1">Client Type</label>
                         <select id="clientTypePk" class="form-select" name="{{ in_array(request('client_type_slug'), ['ot', 'course']) ? 'course_master_pk' : 'client_type_pk' }}">
                             <option value="">All</option>
@@ -69,7 +69,7 @@
                             @endif
                         </select>
                     </div>
-                    <div class="col-12 col-md-3 col-lg-4">
+                    <div class="col-12 col-md-3 col-lg-3">
                         <label class="form-label fw-semibold small text-uppercase text-muted mb-1">Buyer Name (Selling Voucher)</label>
                         <select name="buyer_name" id="clientTypePkBuyer" class="form-select">
                             <option value="">All Buyers</option>
@@ -664,41 +664,76 @@ document.addEventListener('DOMContentLoaded', function() {
                 initChoices(clientTypePkBuyer);
             }
 
-            if (slug === 'employee' && dataClientName && employeeNames[dataClientName]) {
-                setBuyerChoices(employeeNames[dataClientName], preservedBuyerName);
-            } else if (slug === 'employee') {
-                // Employee selected but no specific category chosen:
-                // show ALL employee names (academy staff + faculty + mess staff) to allow direct buyer selection.
-                const all = []
-                    .concat(employeeNames['academy staff'] || [])
-                    .concat(employeeNames['faculty'] || [])
-                    .concat(employeeNames['mess staff'] || []);
-                const seen = new Set();
-                const deduped = all.filter(function(o) {
-                    const key = String(o && o.value ? o.value : '').trim().toLowerCase();
-                    if (!key) return false;
-                    if (seen.has(key)) return false;
-                    seen.add(key);
-                    return true;
-                });
-                setBuyerChoices(deduped, preservedBuyerName);
-            } else if (slug === 'ot' && selectedValue) {
+            function loadBuyersFromReportEndpoint(slugToLoad, preserveValue) {
                 clientTypePkBuyer.innerHTML = '<option value="">Loading...</option>';
-                clientTypePkBuyer.disabled = true;
-                fetch(studentsByCourseUrl + '/' + selectedValue, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                const qs = new URLSearchParams();
+                qs.set('client_type_slug', slugToLoad);
+                const fromEl = document.querySelector('input[name="from_date"]');
+                const toEl = document.querySelector('input[name="to_date"]');
+                if (fromEl && fromEl.value) qs.set('from_date', fromEl.value);
+                if (toEl && toEl.value) qs.set('to_date', toEl.value);
+
+                // For course/ot, the PK is course_master_pk; for others it's client_type_pk
+                if ((slugToLoad === 'course' || slugToLoad === 'ot') && selectedValue) {
+                    qs.set('course_master_pk', selectedValue);
+                } else if (selectedValue) {
+                    qs.set('client_type_pk', selectedValue);
+                }
+
+                fetch(buyersForReportUrl + '?' + qs.toString(), { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
                     .then(function(r) { return r.json(); })
                     .then(function(data) {
-                        const students = (data.students || []).map(function(s) {
-                            return { value: s.display_name || '', text: s.display_name || '—' };
-                        });
-                        setBuyerChoices(students, preservedBuyerName);
+                        const buyers = (data.buyers || []).map(function(name) {
+                            return { value: name || '', text: name || '—' };
+                        }).filter(function(o) { return o.value; });
+                        setBuyerChoices(buyers, preserveValue);
                     })
                     .catch(function() {
-                        setBuyerChoices([], preservedBuyerName);
+                        setBuyerChoices([], preserveValue);
                     });
+            }
+
+            if (slug === 'employee') {
+                if (dataClientName && employeeNames[dataClientName]) {
+                    // Employee + specific category selected
+                    setBuyerChoices(employeeNames[dataClientName], preservedBuyerName);
+                } else {
+                    // Employee + "All" selected => show all employee-type buyers
+                    const all = []
+                        .concat(employeeNames['academy staff'] || [])
+                        .concat(employeeNames['faculty'] || [])
+                        .concat(employeeNames['mess staff'] || []);
+                    // De-duplicate + sort
+                    const map = new Map();
+                    all.forEach(function(o) {
+                        const key = String(o.value || '').trim().toLowerCase();
+                        if (!key) return;
+                        if (!map.has(key)) map.set(key, { value: o.value, text: o.text });
+                    });
+                    const unique = Array.from(map.values()).sort(function(a, b) {
+                        return String(a.text || '').localeCompare(String(b.text || ''), undefined, { sensitivity: 'base' });
+                    });
+                    setBuyerChoices(unique, preservedBuyerName);
+                }
             } else if (slug === 'ot') {
-                // Require Course selection for OT before loading students.
-                setBuyerChoices([], preservedBuyerName);
+                if (selectedValue) {
+                    // OT: prefer accurate per-course student list
+                    clientTypePkBuyer.innerHTML = '<option value="">Loading...</option>';
+                    fetch(studentsByCourseUrl + '/' + selectedValue, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                        .then(function(r) { return r.json(); })
+                        .then(function(data) {
+                            const students = (data.students || []).map(function(s) {
+                                return { value: s.display_name || '', text: s.display_name || '—' };
+                            });
+                            setBuyerChoices(students, preservedBuyerName);
+                        })
+                        .catch(function() {
+                            setBuyerChoices([], preservedBuyerName);
+                        });
+                } else {
+                    // OT + "All" selected => load buyers across all OT vouchers (respects date filters)
+                    loadBuyersFromReportEndpoint('ot', preservedBuyerName);
+                }
             } else if (slug === 'course') {
                 // Course: load buyer names dynamically by selected course (no Apply Filters needed)
                 if (selectedValue) {
@@ -724,53 +759,20 @@ document.addEventListener('DOMContentLoaded', function() {
                             setBuyerChoices(list, preservedBuyerName);
                         });
                 } else {
-                    // No course selected yet
-                    setBuyerChoices([], preservedBuyerName);
+                    // Course + "All" selected => load buyers across all course vouchers (respects date filters)
+                    loadBuyersFromReportEndpoint('course', preservedBuyerName);
                 }
             } else if (slug === 'other') {
                 // Other: load buyer names dynamically (optionally filtered by selected client_type_pk)
-                clientTypePkBuyer.innerHTML = '<option value="">Loading...</option>';
-                const qs = new URLSearchParams();
-                qs.set('client_type_slug', 'other');
-                if (document.querySelector('input[name="from_date"]')?.value) qs.set('from_date', document.querySelector('input[name="from_date"]').value);
-                if (document.querySelector('input[name="to_date"]')?.value) qs.set('to_date', document.querySelector('input[name="to_date"]').value);
-                if (selectedValue) qs.set('client_type_pk', selectedValue);
-                fetch(buyersForReportUrl + '?' + qs.toString(), { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
-                    .then(function(r) { return r.json(); })
-                    .then(function(data) {
-                        const buyers = (data.buyers || []).map(function(name) {
-                            return { value: name || '', text: name || '—' };
-                        }).filter(function(o) { return o.value; });
-                        setBuyerChoices(buyers, preservedBuyerName);
-                    })
-                    .catch(function() {
-                        const list = (otherBuyerNames || []).map(function(name) {
-                            return { value: name, text: name };
-                        });
-                        setBuyerChoices(list, preservedBuyerName);
-                    });
+                loadBuyersFromReportEndpoint('other', preservedBuyerName);
             } else if (slug === 'section') {
                 // Section: load buyer names dynamically (optionally filtered by selected client_type_pk)
-                clientTypePkBuyer.innerHTML = '<option value="">Loading...</option>';
-                const qs = new URLSearchParams();
-                qs.set('client_type_slug', 'section');
-                if (document.querySelector('input[name="from_date"]')?.value) qs.set('from_date', document.querySelector('input[name="from_date"]').value);
-                if (document.querySelector('input[name="to_date"]')?.value) qs.set('to_date', document.querySelector('input[name="to_date"]').value);
-                if (selectedValue) qs.set('client_type_pk', selectedValue);
-                fetch(buyersForReportUrl + '?' + qs.toString(), { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
-                    .then(function(r) { return r.json(); })
-                    .then(function(data) {
-                        const buyers = (data.buyers || []).map(function(name) {
-                            return { value: name || '', text: name || '—' };
-                        }).filter(function(o) { return o.value; });
-                        setBuyerChoices(buyers, preservedBuyerName);
-                    })
-                    .catch(function() {
-                        const list = (sectionBuyerNames || []).map(function(name) {
-                            return { value: name, text: name };
-                        });
-                        setBuyerChoices(list, preservedBuyerName);
-                    });
+                loadBuyersFromReportEndpoint('section', preservedBuyerName);
+            } else if (slug && clientTypeOptions[slug]) {
+                const list = clientTypeOptions[slug].map(function(o) {
+                    return { value: o.text, text: o.text };
+                });
+                setBuyerChoices(list, preservedBuyerName);
             } else {
                 setBuyerChoices([], preservedBuyerName);
             }

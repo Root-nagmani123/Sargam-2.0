@@ -100,112 +100,12 @@
     </div>
 
     <!-- Report Table -->
-    <div class="card border-0 shadow-sm">
-        <div class="card-header bg-light d-flex justify-content-between align-items-center py-2 flex-wrap gap-2">
-            <div class="d-flex align-items-center gap-2 flex-wrap">
-                <span class="fw-semibold text-dark">Stock Movement Summary</span>
-            </div>
-            <span class="text-muted small">
-                Total items: {{ count($reportData) }}
-            </span>
-        </div>
-        <div class="table-responsive table-fit-single-view">
-        <table class="table table-fit align-middle mb-0 w-100">
-            <thead>
-                <tr>
-                    <th rowspan="2" class="text-center align-middle">SR.<br>No</th>
-                    <th rowspan="2" class="text-center align-middle">Item Name</th>
-                    <th rowspan="2" class="align-middle text-end">Unit</th>
-                    <th colspan="3" class="text-center">Opening</th>
-                    <th colspan="3" class="text-center">Purchase</th>
-                    <th colspan="3" class="text-center">Sale</th>
-                    <th colspan="3" class="text-center">Closing</th>
-                </tr>
-                <tr>
-                    <!-- Opening -->
-                    <th class="text-end">Qty</th>
-                    <th class="text-end">Rate</th>
-                    <th class="text-end">Amount</th>
-                    <!-- Purchase -->
-                    <th class="text-end">Qty</th>
-                    <th class="text-end">Rate</th>
-                    <th class="text-end">Amount</th>
-                    <!-- Sale -->
-                    <th class="text-end">Qty</th>
-                    <th class="text-end">Rate</th>
-                    <th class="text-end">Amount</th>
-                    <!-- Closing -->
-                    <th class="text-end">Qty</th>
-                    <th class="text-end">Rate</th>
-                    <th class="text-end">Amount</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($reportData as $index => $item)
-                    <tr>
-                        <td class="text-center">{{ $index + 1 }}</td>
-                        <td class="fw-bold" style="font-size: 1rem;">{{ $item['item_name'] }}</td>
-                        <td class="text-end">{{ isset($item['unit']) && is_numeric($item['unit']) ? number_format((float)$item['unit'], 2) : ($item['unit'] ?? '—') }}</td>
-                        <!-- Opening -->
-                        <td class="text-end">{{ number_format($item['opening_qty'], 2) }}</td>
-                        <td class="text-end">₹{{ number_format($item['opening_rate'], 2) }}</td>
-                        <td class="text-end">₹{{ number_format($item['opening_amount'], 2) }}</td>
-                        <!-- Purchase -->
-                        <td class="text-end">{{ number_format($item['purchase_qty'], 2) }}</td>
-                        <td class="text-end">₹{{ number_format($item['purchase_rate'], 2) }}</td>
-                        <td class="text-end">₹{{ number_format($item['purchase_amount'], 2) }}</td>
-                        <!-- Sale -->
-                        <td class="text-end">{{ number_format($item['sale_qty'], 2) }}</td>
-                        <td class="text-end">₹{{ number_format($item['sale_rate'], 2) }}</td>
-                        <td class="text-end">₹{{ number_format($item['sale_amount'], 2) }}</td>
-                        <!-- Closing -->
-                        <td class="text-end">{{ number_format($item['closing_qty'], 2) }}</td>
-                        <td class="text-end">₹{{ number_format($item['closing_rate'], 2) }}</td>
-                        <td class="text-end">₹{{ number_format($item['closing_amount'], 2) }}</td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="15" class="text-center py-5" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
-                            <div class="d-flex flex-column align-items-center gap-3">
-                                <div>
-                                    <h6 class="text-muted mb-1">No Stock Movement Found</h6>
-                                    <p class="text-muted small mb-0">No transactions recorded for the selected period</p>
-                                </div>
-                            </div>
-                        </td>
-                    </tr>
-                @endforelse
-                @if(count($reportData) > 0)
-                    @php
-                        $totals = [
-                            'opening_amount' => collect($reportData)->sum('opening_amount'),
-                            'purchase_amount' => collect($reportData)->sum('purchase_amount'),
-                            'sale_amount' => collect($reportData)->sum('sale_amount'),
-                            'closing_amount' => collect($reportData)->sum('closing_amount'),
-                        ];
-                    @endphp
-                    <tr class="table-primary fw-bold">
-                        <td colspan="3" class="text-end sticky-col sticky-col-total" style="font-size: 1rem; letter-spacing: 0.02em;">
-                            Total
-                        </td>
-                        <td class="text-end">—</td>
-                        <td class="text-end">—</td>
-                        <td class="text-end">₹{{ number_format($totals['opening_amount'], 2) }}</td>
-                        <td class="text-end">—</td>
-                        <td class="text-end">—</td>
-                        <td class="text-end">₹{{ number_format($totals['purchase_amount'], 2) }}</td>
-                        <td class="text-end">—</td>
-                        <td class="text-end">—</td>
-                        <td class="text-end">₹{{ number_format($totals['sale_amount'], 2) }}</td>
-                        <td class="text-end">—</td>
-                        <td class="text-end">—</td>
-                        <td class="text-end">₹{{ number_format($totals['closing_amount'], 2) }}</td>
-                    </tr>
-                @endif
-            </tbody>
-        </table>
-        </div>
-    </div>
+    <div id="stock-summary-table-wrap">
+        @include('admin.mess.reports.partials.stock-summary-table', [
+            'reportData' => $reportData,
+            'reportPage' => $reportPage,
+            'reportTotals' => $reportTotals,
+        ])
     </div>
 </div>
 </div>
@@ -317,6 +217,43 @@ function printStockSummary() {
 </html>`);
     printWindow.document.close();
 }
+
+// AJAX pagination: only reload the table section, not whole page
+document.addEventListener('DOMContentLoaded', function () {
+    var container = document.getElementById('stock-summary-table-wrap');
+    if (!container) return;
+
+    function ajaxLoad(url) {
+        if (!url) return;
+        var targetUrl = url;
+        if (!/[?&]ajax=1(?:&|$)/.test(url)) {
+            var sep = url.indexOf('?') === -1 ? '?' : '&';
+            targetUrl = url + sep + 'ajax=1';
+        }
+        fetch(targetUrl, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+            .then(function (r) { return r.text(); })
+            .then(function (html) {
+                container.innerHTML = html;
+                hookLinks();
+            })
+            .catch(function (e) {
+                console.error('Failed to load stock summary page via AJAX', e);
+            });
+    }
+
+    function hookLinks() {
+        container.querySelectorAll('.pagination a').forEach(function (a) {
+            a.addEventListener('click', function (e) {
+                e.preventDefault();
+                ajaxLoad(this.href);
+            });
+        });
+    }
+
+    hookLinks();
+});
 </script>
 
 <style>
