@@ -37,6 +37,7 @@ use App\Http\Controllers\Admin\{
     DashboardController,
     CourseRepositoryController,
     WhosWhoController,
+    EstateController,
 };
 use App\Http\Controllers\Dashboard\Calendar1Controller;
 use App\Http\Controllers\Admin\MemoNoticeController;
@@ -98,14 +99,6 @@ Route::middleware(['auth'])->group(function () {
             ->name('users.assignRoleSave');
     });
 
-    // // Dashboard
-    // Route::get('/dashboard', function () {
-    //     $year = request('year', now()->year);
-    //     $month = request('month', now()->month);
-    //     $events = []; // Add your events logic here if needed
-    //     return view('admin.dashboard', compact('year', 'month', 'events'));
-
-    // })->name('admin.dashboard');
 
     Route::get('/dashboard', [UserController::class, 'dashboard'])->name('admin.dashboard');
     Route::get('/dashboard/students', [UserController::class, 'studentList'])->name('admin.dashboard.students');
@@ -132,15 +125,6 @@ Route::middleware(['auth'])->group(function () {
             return redirect()->back()->withErrors(['snapshot_date' => 'Snapshot saving is not configured yet.']);
         })->name('save-from-course');
     });
-
-
-    Route::get('/calendar', [Calendar1Controller::class, 'index'])->name('calendar.index');
-
-    // Route::get('/home', [HomeController::class, 'index'])->name('home');
-
-    // By Dhananjay
-    //Route::post('/faculty/check-unique', [FacultyController::class, 'checkUnique'])->name('faculty.checkUnique');
-
 
     // Member Routes
     Route::prefix('member')->name('member.')->controller(MemberController::class)->group(function () {
