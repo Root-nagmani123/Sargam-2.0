@@ -481,19 +481,19 @@ document.addEventListener('DOMContentLoaded', function () {
                                     <select id="drFacultySelect" class="form-select " style="display:none;">
                                         <option value="">Select Faculty</option>
                                         @foreach($faculties ?? [] as $f)
-                                        <option value="{{ e($f->full_name) }}">{{ e($f->full_name) }}</option>
+                                        <option value="{{ e($f->full_name) }}">{{ e($f->full_name_with_code ?? $f->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="drAcademyStaffSelect" class="form-select " style="display:none;">
                                         <option value="">Select Academy Staff</option>
                                         @foreach($employees ?? [] as $e)
-                                        <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
+                                        <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="drMessStaffSelect" class="form-select " style="display:none;">
                                         <option value="">Select Mess Staff</option>
                                         @foreach($messStaff ?? [] as $e)
-                                        <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
+                                        <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="drOtStudentSelect" class="form-select " style="display:none;">
@@ -948,19 +948,19 @@ document.addEventListener('DOMContentLoaded', function () {
                                     <select id="editDrFacultySelect" class="form-select " style="display:none;">
                                         <option value="">Select Faculty</option>
                                         @foreach($faculties ?? [] as $f)
-                                        <option value="{{ e($f->full_name) }}">{{ e($f->full_name) }}</option>
+                                        <option value="{{ e($f->full_name) }}">{{ e($f->full_name_with_code ?? $f->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="editDrAcademyStaffSelect" class="form-select " style="display:none;">
                                         <option value="">Select Academy Staff</option>
                                         @foreach($employees ?? [] as $e)
-                                        <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
+                                        <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="editDrMessStaffSelect" class="form-select " style="display:none;">
                                         <option value="">Select Mess Staff</option>
                                         @foreach($messStaff ?? [] as $e)
-                                        <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
+                                        <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="editDrOtStudentSelect" class="form-select " style="display:none;">

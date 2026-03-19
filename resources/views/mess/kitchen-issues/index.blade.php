@@ -298,19 +298,19 @@ document.addEventListener('DOMContentLoaded', function () {
                                     <select id="modalFacultySelect" class="form-select" style="display:none;">
                                         <option value="">Select Faculty</option>
                                         @foreach($faculties ?? [] as $f)
-                                            <option value="{{ e($f->full_name) }}">{{ e($f->full_name) }}</option>
+                                            <option value="{{ e($f->full_name) }}">{{ e($f->full_name_with_code ?? $f->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="modalAcademyStaffSelect" class="form-select" style="display:none;">
                                         <option value="">Select Academy Staff</option>
                                         @foreach($employees ?? [] as $e)
-                                            <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
+                                            <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="modalMessStaffSelect" class="form-select" style="display:none;">
                                         <option value="">Select Mess Staff</option>
                                         @foreach($messStaff ?? [] as $e)
-                                            <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
+                                            <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="modalOtStudentSelect" class="form-select" style="display:none;">
@@ -484,19 +484,19 @@ document.addEventListener('DOMContentLoaded', function () {
                                     <select id="editModalFacultySelect" class="form-select" style="display:none;">
                                         <option value="">Select Faculty</option>
                                         @foreach($faculties ?? [] as $f)
-                                            <option value="{{ e($f->full_name) }}">{{ e($f->full_name) }}</option>
+                                            <option value="{{ e($f->full_name) }}">{{ e($f->full_name_with_code ?? $f->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="editModalAcademyStaffSelect" class="form-select" style="display:none;">
                                         <option value="">Select Academy Staff</option>
                                         @foreach($employees ?? [] as $e)
-                                            <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
+                                            <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="editModalMessStaffSelect" class="form-select" style="display:none;">
                                         <option value="">Select Mess Staff</option>
                                         @foreach($messStaff ?? [] as $e)
-                                            <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
+                                            <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="editModalCourseNameSelect" class="form-select" style="display:none;">
