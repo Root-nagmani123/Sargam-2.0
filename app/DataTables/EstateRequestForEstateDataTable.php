@@ -113,7 +113,7 @@ class EstateRequestForEstateDataTable extends DataTable
                 $map = [61 => 'I', 62 => 'II', 63 => 'III', 64 => 'IV', 65 => 'V', 66 => 'VI', 69 => 'IX', 70 => 'X', 71 => 'XI', 73 => 'XIII'];
                 return $map[$pk] ?? '—';
             })
-            ->addColumn('change', function ($row) {
+            ->addColumn('action', function ($row) {
                 $deleteUrl = route('admin.estate.request-for-estate.destroy', ['id' => $row->pk]);
                 $detailsUrl = route('admin.estate.request-details', ['id' => $row->pk]);
                 $reqDate = $row->req_date ? \Carbon\Carbon::parse($row->req_date)->format('Y-m-d') : '';
@@ -226,7 +226,7 @@ class EstateRequestForEstateDataTable extends DataTable
                     ' . $selfChangeRequestButton . '
                 </div>';
             })
-            ->rawColumns(['status', 'change_req_status', 'change'])
+            ->rawColumns(['status', 'change_req_status', 'action'])
             ->filter(function ($query) {
                 $searchValue = trim((string) request()->input('search.value', ''));
                 if ($searchValue === '') {
@@ -234,11 +234,17 @@ class EstateRequestForEstateDataTable extends DataTable
                 }
                 $searchLike = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $searchValue) . '%';
                 $query->where(function ($q) use ($searchValue, $searchLike) {
-                    $q->where('estate_home_request_details.req_id', 'like', $searchLike)
-                        ->orWhere('estate_home_request_details.emp_name', 'like', $searchLike)
-                        ->orWhere('estate_home_request_details.employee_id', 'like', $searchLike)
-                        ->orWhere('estate_home_request_details.current_alot', 'like', $searchLike)
-                        ->orWhereRaw('CONCAT(TRIM(COALESCE(estate_home_request_details.emp_name,"")), " / ", TRIM(COALESCE(estate_home_request_details.employee_id,""))) LIKE ?', [$searchLike]);
+                    $utf8Expr = static fn (string $column): string =>
+                        "CONVERT(COALESCE($column, '') USING utf8mb4) COLLATE utf8mb4_unicode_ci";
+
+                    $q->whereRaw($utf8Expr('estate_home_request_details.req_id') . ' LIKE ?', [$searchLike])
+                        ->orWhereRaw($utf8Expr('estate_home_request_details.emp_name') . ' LIKE ?', [$searchLike])
+                        ->orWhereRaw($utf8Expr('estate_home_request_details.employee_id') . ' LIKE ?', [$searchLike])
+                        ->orWhereRaw($utf8Expr('estate_home_request_details.current_alot') . ' LIKE ?', [$searchLike])
+                        ->orWhereRaw(
+                            'CONCAT(TRIM(' . $utf8Expr('estate_home_request_details.emp_name') . '), " / ", TRIM(' . $utf8Expr('estate_home_request_details.employee_id') . ')) LIKE ?',
+                            [$searchLike]
+                        );
                     $statusMap = ['pending' => 0, 'allotted' => 1];
                     $searchLower = strtolower($searchValue);
                     if (isset($statusMap[$searchLower])) {
@@ -247,21 +253,24 @@ class EstateRequestForEstateDataTable extends DataTable
                         $q->orWhere('estate_home_request_details.status', (int) $searchValue);
                     }
                 });
-            }, true)
+            }, false)
             ->filterColumn('req_id', function ($query, $keyword) {
                 $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $keyword) . '%';
-                $query->where('estate_home_request_details.req_id', 'like', $like);
+                $query->whereRaw("CONVERT(COALESCE(estate_home_request_details.req_id, '') USING utf8mb4) COLLATE utf8mb4_unicode_ci LIKE ?", [$like]);
             })
             ->filterColumn('current_alot', function ($query, $keyword) {
                 $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $keyword) . '%';
-                $query->where('estate_home_request_details.current_alot', 'like', $like);
+                $query->whereRaw("CONVERT(COALESCE(estate_home_request_details.current_alot, '') USING utf8mb4) COLLATE utf8mb4_unicode_ci LIKE ?", [$like]);
             })
             ->filterColumn('name_id', function ($query, $keyword) {
                 $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $keyword) . '%';
                 $query->where(function ($q) use ($like) {
-                    $q->where('estate_home_request_details.emp_name', 'like', $like)
-                        ->orWhere('estate_home_request_details.employee_id', 'like', $like)
-                        ->orWhereRaw('CONCAT(TRIM(COALESCE(estate_home_request_details.emp_name,"")), " / ", TRIM(COALESCE(estate_home_request_details.employee_id,""))) LIKE ?', [$like]);
+                    $q->whereRaw("CONVERT(COALESCE(estate_home_request_details.emp_name, '') USING utf8mb4) COLLATE utf8mb4_unicode_ci LIKE ?", [$like])
+                        ->orWhereRaw("CONVERT(COALESCE(estate_home_request_details.employee_id, '') USING utf8mb4) COLLATE utf8mb4_unicode_ci LIKE ?", [$like])
+                        ->orWhereRaw(
+                            "CONCAT(TRIM(CONVERT(COALESCE(estate_home_request_details.emp_name, '') USING utf8mb4) COLLATE utf8mb4_unicode_ci), \" / \", TRIM(CONVERT(COALESCE(estate_home_request_details.employee_id, '') USING utf8mb4) COLLATE utf8mb4_unicode_ci)) LIKE ?",
+                            [$like]
+                        );
                 });
             })
             ->orderColumn('pk', fn ($query, $order) => $query->reorder()->orderBy('estate_home_request_details.pk', $order))
@@ -397,7 +406,7 @@ class EstateRequestForEstateDataTable extends DataTable
             Column::computed('name_id')->title('NAME / ID')->orderable(true)->searchable(true),
             Column::make('status')->title('STATUS OF REQUEST')->orderable(false)->searchable(false),
             Column::make('change_req_status')->title('CHANGE REQ. STATUS')->orderable(false)->searchable(false)->addClass('text-center'),
-            Column::computed('change')->title('ACTION')->addClass('text-center')->orderable(false)->searchable(false)->width('100px'),
+            Column::computed('action')->title('ACTION')->addClass('text-center')->orderable(false)->searchable(false)->width('100px'),
         ];
     }
 

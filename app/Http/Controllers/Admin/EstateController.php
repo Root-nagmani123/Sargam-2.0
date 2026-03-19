@@ -1062,7 +1062,6 @@ class EstateController extends Controller
         $query = DB::table('estate_house_master as h')
             ->join('estate_block_master as b', 'h.estate_block_master_pk', '=', 'b.pk')
             ->where('h.estate_unit_sub_type_master_pk', $eligibilityTypePk)
-            ->where('h.used_home_status', 0)
             ->where('h.vacant_renovation_status', 1)
             ->select('h.pk', 'h.house_no', 'b.block_name')
             ->orderBy('b.block_name')
@@ -2373,12 +2372,33 @@ class EstateController extends Controller
                 }
                 return redirect()->route('admin.estate.change-request-hac-approved')->with('error', $msg);
             }
-            if ((int) ($houseRow->used_home_status ?? 0) !== 0) {
+            // Do not rely solely on used_home_status (can be stale). Consider occupied only if there is an active possession.
+            $isOccupied = false;
+            $activeDetails = DB::table('estate_possession_details')
+                ->where('estate_house_master_pk', $estateHouseMasterPk)
+                ->whereNotNull('estate_house_master_pk');
+            if (\Illuminate\Support\Facades\Schema::hasColumn('estate_possession_details', 'return_home_status')) {
+                $activeDetails->where('return_home_status', 0);
+            }
+            $isOccupied = $activeDetails->exists();
+            if (! $isOccupied) {
+                $activeOther = DB::table('estate_possession_other')
+                    ->where('estate_house_master_pk', $estateHouseMasterPk)
+                    ->whereNotNull('estate_house_master_pk')
+                    ->where('return_home_status', 0);
+                $isOccupied = $activeOther->exists();
+            }
+            if ($isOccupied) {
                 $msg = 'Selected house is already occupied. Please choose a vacant house from the list.';
                 if ($request->wantsJson()) {
                     return response()->json(['success' => false, 'message' => $msg], 422);
                 }
                 return redirect()->route('admin.estate.change-request-hac-approved')->with('error', $msg);
+            }
+
+            // If it's not occupied but still marked used, sync the flag.
+            if ((int) ($houseRow->used_home_status ?? 0) !== 0) {
+                $this->refreshHouseUsedStatusFromPossession($estateHouseMasterPk);
             }
         }
 
@@ -2506,7 +2526,7 @@ class EstateController extends Controller
                 ->with('error', 'Employee could not be resolved for this request. Please ensure the request has employee_pk or a valid employee_id linked in employee_master.');
         }
 
-        // Align with Define House: only Vacant and not already used houses can be allotted
+        // Align with Define House: only Vacant and not already occupied houses can be allotted
         $houseRow = DB::table('estate_house_master')->where('pk', $estateHouseMasterPk)->first();
         if ($houseRow) {
             if ((int) ($houseRow->vacant_renovation_status ?? 1) !== 1) {
@@ -2516,12 +2536,31 @@ class EstateController extends Controller
                 }
                 return redirect()->route('admin.estate.change-request-hac-approved')->with('error', $msg);
             }
-            if ((int) ($houseRow->used_home_status ?? 0) !== 0) {
+            $isOccupied = false;
+            $activeDetails = DB::table('estate_possession_details')
+                ->where('estate_house_master_pk', $estateHouseMasterPk)
+                ->whereNotNull('estate_house_master_pk');
+            if (\Illuminate\Support\Facades\Schema::hasColumn('estate_possession_details', 'return_home_status')) {
+                $activeDetails->where('return_home_status', 0);
+            }
+            $isOccupied = $activeDetails->exists();
+            if (! $isOccupied) {
+                $activeOther = DB::table('estate_possession_other')
+                    ->where('estate_house_master_pk', $estateHouseMasterPk)
+                    ->whereNotNull('estate_house_master_pk')
+                    ->where('return_home_status', 0);
+                $isOccupied = $activeOther->exists();
+            }
+            if ($isOccupied) {
                 $msg = 'Selected house is already occupied. Please choose a vacant house from the list.';
                 if ($request->wantsJson()) {
                     return response()->json(['success' => false, 'message' => $msg], 422);
                 }
                 return redirect()->route('admin.estate.change-request-hac-approved')->with('error', $msg);
+            }
+
+            if ((int) ($houseRow->used_home_status ?? 0) !== 0) {
+                $this->refreshHouseUsedStatusFromPossession($estateHouseMasterPk);
             }
         }
 
@@ -4070,7 +4109,6 @@ class EstateController extends Controller
             })
             ->where('h.estate_block_master_pk', $blockId)
             ->where('h.estate_unit_sub_type_master_pk', $unitSubTypeId)
-            ->where('h.used_home_status', 0)
             ->where('h.vacant_renovation_status', 1)
             ->where(function ($q) {
                 $q->whereNotNull('h.house_no')
@@ -4212,7 +4250,6 @@ class EstateController extends Controller
             })
             ->where('h.estate_block_master_pk', $blockId)
             ->where('h.estate_unit_sub_type_master_pk', $unitSubTypeId)
-            ->where('h.used_home_status', 0)
             ->where('h.vacant_renovation_status', 1)
             ->where(function ($q) {
                 $q->whereNotNull('h.house_no')
