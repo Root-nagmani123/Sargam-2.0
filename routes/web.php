@@ -37,6 +37,7 @@ use App\Http\Controllers\Admin\{
     DashboardController,
     CourseRepositoryController,
     WhosWhoController,
+    EstateController,
 };
 use App\Http\Controllers\Dashboard\Calendar1Controller;
 use App\Http\Controllers\Admin\MemoNoticeController;
@@ -98,14 +99,6 @@ Route::middleware(['auth'])->group(function () {
             ->name('users.assignRoleSave');
     });
 
-    // // Dashboard
-    // Route::get('/dashboard', function () {
-    //     $year = request('year', now()->year);
-    //     $month = request('month', now()->month);
-    //     $events = []; // Add your events logic here if needed
-    //     return view('admin.dashboard', compact('year', 'month', 'events'));
-
-    // })->name('admin.dashboard');
 
     Route::get('/dashboard', [UserController::class, 'dashboard'])->name('admin.dashboard');
     Route::get('/dashboard/students', [UserController::class, 'studentList'])->name('admin.dashboard.students');
@@ -119,12 +112,161 @@ Route::middleware(['auth'])->group(function () {
             return redirect()->route('admin.dashboard-statistics.charts');
         })->name('index');
 
-        Route::get('/charts', function () {
+        Route::get('/charts', function (\Illuminate\Http\Request $request) {
+            $courses = \App\Models\CourseMaster::query()
+                ->where('active_inactive', 1)
+                ->orderBy('course_name')
+                ->get(['pk', 'course_name']);
+
+            $course = null;
+            $chartData = [];
+            $coursePk = (int) $request->query('course_master_pk', 0);
+
+            if ($coursePk > 0) {
+                $course = \App\Models\CourseMaster::query()->where('pk', $coursePk)->first();
+
+                if ($course) {
+                    $students = \Illuminate\Support\Facades\DB::table('student_master_course__map as smcm')
+                        ->join('student_master as sm', 'sm.pk', '=', 'smcm.student_master_pk')
+                        ->leftJoin('stream_master as stm', 'stm.pk', '=', 'sm.highest_stream_pk')
+                        ->leftJoin('cadre_master as cm', 'cm.pk', '=', 'sm.cadre_master_pk')
+                        ->leftJoin('state_master as st', 'st.pk', '=', 'sm.domicile_state_pk')
+                        ->where('smcm.course_master_pk', $coursePk)
+                        ->where(function ($q) {
+                            $q->whereNull('smcm.active_inactive')->orWhere('smcm.active_inactive', 1);
+                        })
+                        ->select([
+                            'sm.gender',
+                            'sm.dob',
+                            'stm.stream_name',
+                            'st.state_name',
+                            \Illuminate\Support\Facades\DB::raw("COALESCE(cm.cadre_name, 'Unknown') as cadre_name"),
+                            \Illuminate\Support\Facades\DB::raw("'Unknown' as social_group"),
+                        ])
+                        ->get();
+
+                    $normalizeGender = function ($raw) {
+                        $v = strtolower(trim((string) $raw));
+                        if ($v === '' || $v === 'null') return 'Unknown';
+                        if (in_array($v, ['1', 'm', 'male'])) return 'Male';
+                        if (in_array($v, ['2', 'f', 'female'])) return 'Female';
+                        if ($v === 'other' || $v === '3') return 'Other';
+                        return ucfirst($v);
+                    };
+
+                    $ageBucket = function ($dob) {
+                        if (!$dob) return 'Unknown';
+                        try {
+                            $age = \Carbon\Carbon::parse($dob)->age;
+                        } catch (\Throwable $e) {
+                            return 'Unknown';
+                        }
+                        if ($age < 25) return '<25';
+                        if ($age <= 30) return '25-30';
+                        if ($age <= 35) return '31-35';
+                        if ($age <= 40) return '36-40';
+                        return '40+';
+                    };
+
+                    $femaleCount = 0;
+                    $maleCount = 0;
+                    $genderCounts = [];
+                    $socialCounts = [];
+                    $ageCounts = [];
+                    $streamCounts = [];
+                    $cadreCounts = [];
+                    $domicileCounts = [];
+
+                    foreach ($students as $s) {
+                        $gender = $normalizeGender($s->gender ?? '');
+                        $social = trim((string) ($s->social_group ?? '')) ?: 'Unknown';
+                        $age = $ageBucket($s->dob ?? null);
+                        $stream = trim((string) ($s->stream_name ?? '')) ?: 'Unknown';
+                        $cadre = trim((string) ($s->cadre_name ?? '')) ?: 'Unknown';
+                        $domicile = trim((string) ($s->state_name ?? '')) ?: 'Unknown';
+
+                        $genderCounts[$gender] = ($genderCounts[$gender] ?? 0) + 1;
+                        $socialCounts[$social] = $socialCounts[$social] ?? ['Female' => 0, 'Male' => 0];
+                        $ageCounts[$age] = $ageCounts[$age] ?? ['Female' => 0, 'Male' => 0];
+                        $cadreCounts[$cadre] = $cadreCounts[$cadre] ?? ['Female' => 0, 'Male' => 0];
+                        $streamCounts[$stream] = ($streamCounts[$stream] ?? 0) + 1;
+                        $domicileCounts[$domicile] = ($domicileCounts[$domicile] ?? 0) + 1;
+
+                        if ($gender === 'Female') {
+                            $femaleCount++;
+                            $socialCounts[$social]['Female']++;
+                            $ageCounts[$age]['Female']++;
+                            $cadreCounts[$cadre]['Female']++;
+                        } elseif ($gender === 'Male') {
+                            $maleCount++;
+                            $socialCounts[$social]['Male']++;
+                            $ageCounts[$age]['Male']++;
+                            $cadreCounts[$cadre]['Male']++;
+                        }
+                    }
+
+                    // Sort for consistent chart ordering.
+                    ksort($genderCounts);
+                    arsort($streamCounts);
+                    arsort($domicileCounts);
+                    ksort($socialCounts);
+                    ksort($cadreCounts);
+
+                    $ageOrder = ['<25', '25-30', '31-35', '36-40', '40+', 'Unknown'];
+                    $orderedAge = [];
+                    foreach ($ageOrder as $label) {
+                        if (isset($ageCounts[$label])) $orderedAge[$label] = $ageCounts[$label];
+                    }
+                    foreach ($ageCounts as $label => $v) {
+                        if (!isset($orderedAge[$label])) $orderedAge[$label] = $v;
+                    }
+                    $ageCounts = $orderedAge;
+
+                    $chartData = [
+                        'summary' => [
+                            'total_participants' => $students->count(),
+                            'female_count' => $femaleCount,
+                            'male_count' => $maleCount,
+                            'states_count' => count($domicileCounts),
+                            'cadres_count' => count($cadreCounts),
+                            'streams_count' => count($streamCounts),
+                        ],
+                        'gender' => [
+                            'labels' => array_keys($genderCounts),
+                            'values' => array_values($genderCounts),
+                        ],
+                        'social_groups' => [
+                            'categories' => array_keys($socialCounts),
+                            'female' => array_map(fn ($r) => $r['Female'] ?? 0, $socialCounts),
+                            'male' => array_map(fn ($r) => $r['Male'] ?? 0, $socialCounts),
+                        ],
+                        'age' => [
+                            'categories' => array_keys($ageCounts),
+                            'female' => array_map(fn ($r) => $r['Female'] ?? 0, $ageCounts),
+                            'male' => array_map(fn ($r) => $r['Male'] ?? 0, $ageCounts),
+                        ],
+                        'stream' => [
+                            'categories' => array_keys($streamCounts),
+                            'values' => array_values($streamCounts),
+                        ],
+                        'cadre' => [
+                            'categories' => array_keys($cadreCounts),
+                            'female' => array_map(fn ($r) => $r['Female'] ?? 0, $cadreCounts),
+                            'male' => array_map(fn ($r) => $r['Male'] ?? 0, $cadreCounts),
+                        ],
+                        'domicile' => [
+                            'categories' => array_keys($domicileCounts),
+                            'values' => array_values($domicileCounts),
+                        ],
+                    ];
+                }
+            }
+
             return view('admin.dashboard_statistics.charts', [
-                'courses' => [],
-                'course' => null,
+                'courses' => $courses,
+                'course' => $course,
                 'snapshot' => null,
-                'chartData' => [],
+                'chartData' => $chartData,
             ]);
         })->name('charts');
 
@@ -132,15 +274,6 @@ Route::middleware(['auth'])->group(function () {
             return redirect()->back()->withErrors(['snapshot_date' => 'Snapshot saving is not configured yet.']);
         })->name('save-from-course');
     });
-
-
-    Route::get('/calendar', [Calendar1Controller::class, 'index'])->name('calendar.index');
-
-    // Route::get('/home', [HomeController::class, 'index'])->name('home');
-
-    // By Dhananjay
-    //Route::post('/faculty/check-unique', [FacultyController::class, 'checkUnique'])->name('faculty.checkUnique');
-
 
     // Member Routes
     Route::prefix('member')->name('member.')->controller(MemberController::class)->group(function () {
