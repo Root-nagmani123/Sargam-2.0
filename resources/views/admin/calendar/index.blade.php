@@ -2,7 +2,7 @@
 
 @section('title', 'Academic TimeTable - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
-@section('content')
+@section('setup_content')
 
 @php
     // Debug: Check if courseMaster is available
