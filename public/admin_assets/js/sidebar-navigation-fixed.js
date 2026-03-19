@@ -80,6 +80,15 @@ document.addEventListener('DOMContentLoaded', function() {
         
         console.log('Found', miniNavContainers.length, 'mini-nav containers');
         
+        function getSidebarPaneFromContainer(container) {
+            return container.closest('.tab-pane') || document;
+        }
+
+        function getStorageKeyForPane(pane) {
+            const paneId = pane && pane.id ? pane.id : 'global';
+            return 'active-mini-nav-' + paneId;
+        }
+
         // Use event delegation on each container to handle all clicks
         miniNavContainers.forEach(function(container) {
             container.addEventListener('click', function(e) {
@@ -92,24 +101,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 const itemId = miniNavItem.id;
                 console.log('Mini-nav item clicked:', itemId);
+                const paneRoot = getSidebarPaneFromContainer(container);
                 
-                // Remove selected class from ALL mini-nav items (across all containers)
-                document.querySelectorAll('.mini-nav-item').forEach(function(navItem) {
+                // Remove selected class only within current pane
+                paneRoot.querySelectorAll('.mini-nav-item').forEach(function(navItem) {
                     navItem.classList.remove('selected');
                 });
                 
                 // Add selected class to clicked item
                 miniNavItem.classList.add('selected');
                 
-                // Hide all sidebar menus
-                document.querySelectorAll('.sidebarmenu nav').forEach(function(nav) {
+                // Hide sidebar menus only within current pane
+                paneRoot.querySelectorAll('.sidebarmenu nav').forEach(function(nav) {
                     nav.classList.remove('d-block');
                     nav.style.display = 'none';
                 });
                 
                 // Show the target menu
                 const targetMenuId = 'menu-right-' + itemId;
-                const targetMenu = document.getElementById(targetMenuId);
+                let targetMenu = paneRoot.querySelector('#' + CSS.escape(targetMenuId));
+                if (!targetMenu) {
+                    targetMenu = document.getElementById(targetMenuId);
+                }
                 if (targetMenu) {
                     targetMenu.classList.add('d-block');
                     targetMenu.style.display = 'block';
@@ -119,26 +132,40 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Store active mini-nav in localStorage
                 if (itemId) {
-                    localStorage.setItem('active-mini-nav', itemId);
+                    localStorage.setItem(getStorageKeyForPane(paneRoot), itemId);
                 }
             });
         });
         
-        // Restore active mini-nav from localStorage
-        const activeId = localStorage.getItem('active-mini-nav');
-        if (activeId) {
-            const activeItem = document.getElementById(activeId);
-            if (activeItem) {
-                activeItem.classList.add('selected');
-                const targetMenuId = 'menu-right-' + activeId;
-                const targetMenu = document.getElementById(targetMenuId);
-                if (targetMenu) {
-                    targetMenu.classList.add('d-block');
-                    targetMenu.style.display = 'block';
-                }
-                console.log('Restored active mini-nav:', activeId);
+        // Restore active mini-nav per pane
+        miniNavContainers.forEach(function(container) {
+            const paneRoot = getSidebarPaneFromContainer(container);
+            const activeId = localStorage.getItem(getStorageKeyForPane(paneRoot));
+            if (!activeId) return;
+
+            const activeItem = paneRoot.querySelector('#' + CSS.escape(activeId));
+            if (!activeItem) return;
+
+            paneRoot.querySelectorAll('.mini-nav-item').forEach(function(navItem) {
+                navItem.classList.remove('selected');
+            });
+            activeItem.classList.add('selected');
+
+            const targetMenuId = 'menu-right-' + activeId;
+            let targetMenu = paneRoot.querySelector('#' + CSS.escape(targetMenuId));
+            if (!targetMenu) {
+                targetMenu = document.getElementById(targetMenuId);
             }
-        }
+            if (targetMenu) {
+                paneRoot.querySelectorAll('.sidebarmenu nav').forEach(function(nav) {
+                    nav.classList.remove('d-block');
+                    nav.style.display = 'none';
+                });
+                targetMenu.classList.add('d-block');
+                targetMenu.style.display = 'block';
+            }
+            console.log('Restored active mini-nav:', activeId, 'for pane:', paneRoot.id || 'global');
+        });
     }
     
     // ==========================================
@@ -228,21 +255,42 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function syncSidebarTab(targetId) {
-        const leftSidebar = document.querySelector('.left-sidebar');
-        if (!leftSidebar) return;
-        
-        const sidebarTabContent = leftSidebar.querySelector('.tab-content');
-        if (!sidebarTabContent) return;
+        // Prefer direct container to avoid dependency on wrapper class names.
+        const sidebarTabContent =
+            document.getElementById('sidebarTabContent') ||
+            document.querySelector('.left-sidebar .tab-content') ||
+            document.querySelector('.side-mini-panel .tab-content');
+        if (!sidebarTabContent) {
+            console.warn('Sidebar tab content not found for target:', targetId);
+            return;
+        }
         
         const allSidebarPanes = sidebarTabContent.querySelectorAll('.tab-pane');
         allSidebarPanes.forEach(function(pane) {
             pane.classList.remove('show', 'active');
         });
-        
-        const targetSidebarPane = sidebarTabContent.querySelector(targetId + '.tab-pane');
+
+        // Main header tab ids and sidebar pane ids are different.
+        // Map them explicitly to keep correct sidebar open.
+        const sidebarTabMap = {
+            '#home': '#sidebar-home',
+            '#tab-setup': '#sidebar-setup',
+            '#tab-communications': '#sidebar-communications',
+            '#tab-academics': '#sidebar-academics',
+            '#tab-material-management': '#sidebar-purchase-order'
+        };
+
+        const sidebarTargetId = sidebarTabMap[targetId] || targetId;
+        const targetSidebarPane = sidebarTabContent.querySelector(sidebarTargetId + '.tab-pane');
         if (targetSidebarPane) {
             targetSidebarPane.classList.add('show', 'active');
-            console.log('Sidebar pane activated:', targetId);
+            console.log('Sidebar pane activated:', sidebarTargetId);
+        } else {
+            // Safe fallback: keep home sidebar visible instead of leaving empty state
+            const homeSidebarPane = sidebarTabContent.querySelector('#sidebar-home.tab-pane');
+            if (homeSidebarPane) {
+                homeSidebarPane.classList.add('show', 'active');
+            }
         }
     }
     
