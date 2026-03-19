@@ -1119,6 +1119,7 @@ class ProcessMessBillsEmployeeController extends Controller
                 return response()->json(['success' => false, 'message' => 'No bills found for this buyer in the selected date range.'], 404);
             }
             $first = $bills[0];
+            $referencePk = (int) ($first->id ?? $first->pk ?? 0);
             $receiverUserId = $this->getReceiverUserIdForBill($first, !($first instanceof SellingVoucherDateRangeReport));
             if ($receiverUserId !== null && $receiverUserId > 0) {
                 try {
@@ -1126,7 +1127,7 @@ class ProcessMessBillsEmployeeController extends Controller
                         $receiverUserId,
                         'mess',
                         'MessInvoice',
-                        0,
+                        $referencePk,
                         'Mess Payment Pending',
                         'Your combined mess bill is pending. Please review and pay via Process Mess Bills.'
                     );
@@ -1386,6 +1387,7 @@ class ProcessMessBillsEmployeeController extends Controller
                 $remaining -= $payThis;
             }
             $clientName = trim((string) ($bills[0]->client_name ?? ($bills[0]->clientTypeCategory->client_name ?? '—')));
+            $referencePk = (int) ($bills[0]->id ?? $bills[0]->pk ?? 0);
             $receiverUserId = $this->getReceiverUserIdForBill($bills[0], !($bills[0] instanceof SellingVoucherDateRangeReport));
             if ($receiverUserId !== null && $receiverUserId > 0) {
                 try {
@@ -1394,7 +1396,7 @@ class ProcessMessBillsEmployeeController extends Controller
                         $receiverUserId,
                         'mess',
                         'MessPayment',
-                        0,
+                        $referencePk,
                         $isFullPayment ? 'Payment Successfully Done' : 'Partial Payment Received',
                         $isFullPayment
                             ? 'Your combined payment of ₹' . number_format($amount, 2) . ' has been successfully completed.'
