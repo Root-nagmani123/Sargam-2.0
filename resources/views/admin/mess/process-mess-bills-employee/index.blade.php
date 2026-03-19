@@ -100,40 +100,44 @@
         <div class="card-body p-3 p-lg-4">
             <form method="GET" action="{{ route('admin.mess.process-mess-bills-employee.index') }}" id="mainFilterForm">
                 <div class="row g-3 align-items-end">
-                    <div class="col-md-2">
+                    <div class="col-md-3">
                         <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">event</i>Date From <span class="text-danger">*</span></label>
-                        <input type="text" name="date_from" id="date_from" class="form-control shadow-sm border-0"
+                        <input type="text" name="date_from" id="date_from" class="form-select"
                                value="{{ $effectiveDateFrom ?? request('date_from', now()->startOfMonth()->format('d-m-Y')) }}"
                                data-default-ymd="{{ $effectiveDateFromYmd ?? now()->startOfMonth()->format('Y-m-d') }}"
                                placeholder="dd-mm-yyyy" autocomplete="off">
                     </div>
-                    <div class="col-md-2">
+                    <div class="col-md-3">
                         <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">event</i>Date To <span class="text-danger">*</span></label>
-                        <input type="text" name="date_to" id="date_to" class="form-control shadow-sm border-0"
+                        <input type="text" name="date_to" id="date_to" class="form-select"
                                value="{{ $effectiveDateTo ?? request('date_to', now()->endOfMonth()->format('d-m-Y')) }}"
                                data-default-ymd="{{ $effectiveDateToYmd ?? now()->endOfMonth()->format('Y-m-d') }}"
                                placeholder="dd-mm-yyyy" autocomplete="off">
                     </div>
-                    <div class="col-md-2">
+                    <div class="col-md-3">
                         <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">person</i>Employee / OT / Course</label>
-                        <select name="client_type" id="filterClientTypeSlug" class="form-select shadow-sm border-0 choices-select" data-placeholder="All client types">
+                        <select name="client_type" id="filterClientTypeSlug" class="form-select choices-select" data-placeholder="All client types">
                             <option value="">All Client Types</option>
                             @foreach($clientTypes ?? [] as $key => $label)
                                 <option value="{{ $key }}" {{ ($clientType ?? request('client_type')) === $key ? 'selected' : '' }}>{{ $label }}</option>
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-md-2">
+                    <div class="col-md-3">
                         <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">category</i>Client Type</label>
-                        <select name="client_type_pk" id="filterClientTypePk" class="form-select shadow-sm border-0 choices-select" data-placeholder="All">
+                        <select name="client_type_pk" id="filterClientTypePk" class="form-select choices-select" data-placeholder="All">
                             <option value="">All</option>
                         </select>
                     </div>
-                    <div class="col-md-2">
+                        <div class="col-md-3">
                         <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">badge</i>Buyer Name</label>
                         <select name="buyer_name" id="filterBuyerName" class="form-select shadow-sm border-0 choices-select">
                             <option value="">All Buyers</option>
-                            @if(($clientType ?? request('client_type')) === 'course' && isset($courseBuyerNames) && $courseBuyerNames->isNotEmpty())
+                            @if(($clientType ?? request('client_type')) === 'ot' && isset($otBuyerNames) && $otBuyerNames->isNotEmpty())
+                                @foreach($otBuyerNames as $buyer)
+                                    <option value="{{ $buyer }}" {{ ($buyerName ?? request('buyer_name')) === $buyer ? 'selected' : '' }}>{{ $buyer }}</option>
+                                @endforeach
+                            @elseif(($clientType ?? request('client_type')) === 'course' && isset($courseBuyerNames) && $courseBuyerNames->isNotEmpty())
                                 @foreach($courseBuyerNames as $buyer)
                                     <option value="{{ $buyer }}" {{ ($buyerName ?? request('buyer_name')) === $buyer ? 'selected' : '' }}>{{ $buyer }}</option>
                                 @endforeach
@@ -148,17 +152,7 @@
                             @endif
                         </select>
                     </div>
-                    <div class="col-md-2">
-                        <label class="form-label small fw-semibold">Status</label>
-                        @php $currentStatus = $statusFilter ?? request('status', ''); @endphp
-                        <select name="status" id="filterStatus" class="form-select">
-                            <option value="">All Status</option>
-                            <option value="unpaid" {{ $currentStatus === 'unpaid' ? 'selected' : '' }}>Unpaid</option>
-                            <option value="partial" {{ $currentStatus === 'partial' ? 'selected' : '' }}>Partial</option>
-                            <option value="paid" {{ $currentStatus === 'paid' ? 'selected' : '' }}>Paid</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
+                    <div class="col-md-3">
                         <label class="form-label small fw-semibold">Status</label>
                         @php $currentStatus = $statusFilter ?? request('status', ''); @endphp
                         <select name="status" id="filterStatus" class="form-select">
@@ -565,12 +559,12 @@
                     <div class="row g-3 mb-3">
                         <div class="col-md-3">
                             <label class="form-label small fw-semibold text-dark mb-2\"><i class=\"material-symbols-rounded align-middle me-1\" style=\"font-size: 1rem;\">event</i>Date From <span class="text-danger">*</span></label>
-                            <input type="text" name="modal_date_from" id="modal_date_from" class="form-control form-control-sm shadow-sm border-0"
+                            <input type="text" name="modal_date_from" id="modal_date_from" class="form-control "
                                    value="{{ now()->startOfMonth()->format('d-m-Y') }}" placeholder="dd-mm-yyyy" autocomplete="off" required>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1rem;">event</i>Date To <span class="text-danger">*</span></label>
-                            <input type="text" name="modal_date_to" id="modal_date_to" class="form-control form-control-sm shadow-sm border-0"
+                            <input type="text" name="modal_date_to" id="modal_date_to" class="form-control "
                                    value="{{ now()->endOfMonth()->format('d-m-Y') }}" placeholder="dd-mm-yyyy" autocomplete="off" required>
                         </div>
                         <div class="col-md-3">
@@ -584,24 +578,37 @@
                         </div>
                         <div class="col-md-3">
                             <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1rem;">category</i>Client Type</label>
-                            <select name="modal_client_type_pk" id="modal_client_type_pk" class="form-select shadow-sm border-0 choices-select" data-placeholder="All">
+                            <select name="modal_client_type_pk" id="modal_client_type_pk" class="form-select choices-select" data-placeholder="All">
                                 <option value="">All</option>
                             </select>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1rem;">badge</i>Buyer Name</label>
-                            <select name="modal_buyer_name" id="modal_buyer_name" class="form-select shadow-sm border-0 choices-select" data-placeholder="All Buyers">
-                                <option value="">All Buyers</option>
-                            </select>
-                        </div>
+                        <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">badge</i>Buyer Name</label>
+                        <select name="modal_buyer_name" id="modal_buyer_name" class="form-select choices-select">
+                            <option value="">All Buyers</option>
+                            @if(($clientType ?? request('client_type')) === 'course' && isset($courseBuyerNames) && $courseBuyerNames->isNotEmpty())
+                                @foreach($courseBuyerNames as $buyer)
+                                    <option value="{{ $buyer }}" {{ ($buyerName ?? request('buyer_name')) === $buyer ? 'selected' : '' }}>{{ $buyer }}</option>
+                                @endforeach
+                            @elseif(($clientType ?? request('client_type')) === 'other' && isset($otherBuyerNames) && $otherBuyerNames->isNotEmpty())
+                                @foreach($otherBuyerNames as $buyer)
+                                    <option value="{{ $buyer }}" {{ ($buyerName ?? request('buyer_name')) === $buyer ? 'selected' : '' }}>{{ $buyer }}</option>
+                                @endforeach
+                            @elseif(($clientType ?? request('client_type')) === 'section' && isset($sectionBuyerNames) && $sectionBuyerNames->isNotEmpty())
+                                @foreach($sectionBuyerNames as $buyer)
+                                    <option value="{{ $buyer }}" {{ ($buyerName ?? request('buyer_name')) === $buyer ? 'selected' : '' }}>{{ $buyer }}</option>
+                                @endforeach
+                            @endif
+                        </select>
+                    </div>
                         <div class="col-md-3">
                             <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1rem;">receipt</i>Invoice Date</label>
-                            <input type="text" name="modal_invoice_date" id="modal_invoice_date" class="form-control form-control-sm shadow-sm border-0"
+                            <input type="text" name="modal_invoice_date" id="modal_invoice_date" class="form-control"
                                    value="{{ now()->format('d-m-Y') }}" placeholder="dd-mm-yyyy" autocomplete="off">
                         </div>
                         <div class="col-md-3">
                             <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1rem;">payments</i>Mode of Payment</label>
-                            <select name="mode_of_payment" id="modal_mode_of_payment" class="form-select shadow-sm border-0 choices-select" data-placeholder="Select mode">
+                            <select name="mode_of_payment" id="modal_mode_of_payment" class="form-select choices-select" data-placeholder="Select mode">
                                 <option value="deduct_from_salary" selected>Deduct From Salary</option>
                                 <option value="cash">Cash</option>
                                 <option value="online">Online</option>
@@ -632,7 +639,7 @@
                 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
                     <div class="d-flex align-items-center gap-2">
                         <span class="small text-muted fw-semibold">Show</span>
-                        <select id="modalPerPage" class="form-select form-select-sm shadow-sm border-0" style="width: auto;">
+                        <select id="modalPerPage" class="form-select form-select-sm" style="width: auto;">
                             <option value="10" selected>10</option>
                             <option value="25">25</option>
                             <option value="50">50</option>
@@ -846,6 +853,42 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(function(data) {
                 modalBillsData = data.bills || [];
                 renderModalTable();
+
+                // Also refresh Buyer Name dropdown in modal based on loaded bills.
+                // IMPORTANT: Only do this when no client type is selected, otherwise it
+                // overrides the dependent "Client Type -> Buyer Name" behavior.
+                if (clientType) {
+                    return;
+                }
+                try {
+                    var buyerSelect = document.getElementById('modal_buyer_name');
+                    if (buyerSelect) {
+                        var buyers = Array.from(new Set(
+                            (modalBillsData || [])
+                                .map(function (b) { return b.buyer_name || b.client_name || ''; })
+                                .filter(function (name) { return !!name; })
+                        ));
+
+                        buyerSelect.innerHTML = '<option value=\"\">All Buyers</option>';
+
+                        buyers.forEach(function (name) {
+                            var opt = document.createElement('option');
+                            opt.value = name;
+                            opt.textContent = name;
+                            buyerSelect.appendChild(opt);
+                        });
+
+                        if (buyerSelect.choicesInstance) {
+                            var values = Array.from(buyerSelect.options).map(function (o) {
+                                return { value: o.value, label: o.text, selected: o.selected };
+                            });
+                            buyerSelect.choicesInstance.clearStore();
+                            buyerSelect.choicesInstance.setChoices(values, 'value', 'label', true);
+                        }
+                    }
+                } catch (e) {
+                    console.error('Failed to refresh modal_buyer_name options:', e);
+                }
             })
             .catch(function() {
                 modalBillsData = [];
@@ -979,6 +1022,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var modalClientTypePk = document.getElementById('modal_client_type_pk');
         var modalBuyerName = document.getElementById('modal_buyer_name');
         var studentsByCourseUrl = "{{ url('/admin/mess/selling-voucher-date-range/students-by-course') }}";
+        var buyersForReportUrl = "{{ route('admin.mess.reports.category-wise-print-slip.buyers') }}";
 
         if (!modalClientType || !modalClientTypePk || !modalBuyerName) {
             return;
@@ -1022,9 +1066,16 @@ document.addEventListener('DOMContentLoaded', function() {
             ]
         };
 
+        var otBuyerNames = {!! json_encode(($otBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
         var courseBuyerNames = {!! json_encode(($courseBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
         var otherBuyerNames = {!! json_encode(($otherBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
         var sectionBuyerNames = {!! json_encode(($sectionBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
+        var allBuyerNames = {!! json_encode(($allBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
+
+        // NOTE: Choices.js may recreate <option> nodes and drop custom dataset attributes.
+        // Keep an explicit mapping from client_type_pk -> client group key (academy staff/faculty/mess staff)
+        // so Buyer Name filtering stays correct inside the modal.
+        var modalPkToClientGroupKey = {};
 
         function fillModalClientTypePk() {
             var slug = modalClientType.value;
@@ -1035,6 +1086,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 choicesPk.clearStore();
                 choicesPk.setChoices([{ value: '', label: 'All', selected: true }], 'value', 'label', true);
             }
+
+            modalPkToClientGroupKey = {};
 
             if ((slug === 'ot' || slug === 'course') && otCourseOptions.length) {
                 otCourseOptions.forEach(function (o) {
@@ -1050,6 +1103,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     opt.textContent = o.text;
                     if (o.dataClientName) {
                         opt.dataset.clientName = o.dataClientName;
+                        modalPkToClientGroupKey[String(o.value)] = String(o.dataClientName);
                     }
                     modalClientTypePk.appendChild(opt);
                 });
@@ -1087,11 +1141,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (slug === 'employee') {
                 var selectedOpt = modalClientTypePk.options[modalClientTypePk.selectedIndex];
-                var dataClientName = selectedOpt && selectedOpt.dataset ? (selectedOpt.dataset.clientName || '') : '';
-                if (dataClientName && employeeNames[dataClientName]) {
+                var dataClientName = '';
+                if (selectedPk && modalPkToClientGroupKey[String(selectedPk)]) {
+                    dataClientName = modalPkToClientGroupKey[String(selectedPk)];
+                } else if (selectedOpt && selectedOpt.dataset && selectedOpt.dataset.clientName) {
+                    dataClientName = selectedOpt.dataset.clientName || '';
+                }
+
+                if (dataClientName && employeeNames[dataClientName] && employeeNames[dataClientName].length) {
                     addBuyerOptions(employeeNames[dataClientName]);
+                } else if (!selectedPk) {
+                    // No subgroup selected: show all employee groups
+                    Object.keys(employeeNames || {}).forEach(function (key) {
+                        addBuyerOptions(employeeNames[key] || []);
+                    });
                 }
             } else if (slug === 'ot' && selectedPk) {
+                // OT + specific course: students by course
                 fetch(studentsByCourseUrl + '/' + selectedPk, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
                     .then(function (r) { return r.json(); })
                     .then(function (data) {
@@ -1101,14 +1167,39 @@ document.addEventListener('DOMContentLoaded', function() {
                         addBuyerOptions(students);
                     })
                     .catch(function () {
-                        // ignore error; keep only "All Buyers"
+                        // ignore error; All Buyers hi rahe
                     });
+            } else if (slug === 'ot' && !selectedPk) {
+                // Sirf OT select hai – OT ke liye jo buyer names controllers se aaye hain unko dikhao
+                var listOt = (courseBuyerNames || []).map(function (name) {
+                    return { value: name, text: name };
+                });
+                addBuyerOptions(listOt);
             } else if (slug === 'course') {
                 var listCourse = (courseBuyerNames || []).map(function (name) {
                     return { value: name, text: name };
                 });
-                addBuyerOptions(listCourse);
+                addBuyerOptions(listOt);
+            } else if (slug === 'course') {
+                // Requirement (modal):
+                // - Course selected + Client Type = All => Buyer Name = ALL course names
+                // - Course selected + specific Client Type PK => Buyer Name = that course name only
+                var courses = (otCourseOptions || []);
+                if (!selectedPk) {
+                    var listCourseAll = courses.map(function (o) {
+                        return { value: o.text, text: o.text };
+                    });
+                    addBuyerOptions(listCourseAll);
+                } else {
+                    var matchCourse = courses.find(function (o) {
+                        return String(o.value) === String(selectedPk);
+                    });
+                    if (matchCourse) {
+                        addBuyerOptions([{ value: matchCourse.text, text: matchCourse.text }]);
+                    }
+                }
             } else if (slug === 'other') {
+                // Other: use distinct buyer names list
                 var listOther = (otherBuyerNames || []).map(function (name) {
                     return { value: name, text: name };
                 });
@@ -1118,11 +1209,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     return { value: name, text: name };
                 });
                 addBuyerOptions(listSection);
-            } else if (slug && clientTypeOptions[slug]) {
-                var list3 = clientTypeOptions[slug].map(function (o) {
-                    return { value: o.text, text: o.text };
+            } else if (!slug && (allBuyerNames || []).length) {
+                // koi client type select nahi – saare distinct buyer names (course/other/section etc.) dikhado
+                var listAll = (allBuyerNames || []).map(function (name) {
+                    return { value: name, text: name };
                 });
-                addBuyerOptions(list3);
+                addBuyerOptions(listAll);
             }
 
             if (choicesBuyer) {
@@ -1147,6 +1239,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var clientTypePk = document.getElementById('filterClientTypePk');
         var buyerSelect = document.getElementById('filterBuyerName');
         var studentsByCourseUrl = "{{ url('/admin/mess/selling-voucher-date-range/students-by-course') }}";
+        var buyersForReportUrl = "{{ route('admin.mess.reports.category-wise-print-slip.buyers') }}";
         var preservedClientTypePk = {!! json_encode($clientTypePk ?? request('client_type_pk', '')) !!};
         var preservedBuyerName = {!! json_encode($buyerName ?? request('buyer_name', '')) !!};
 
@@ -1306,6 +1399,71 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
 
+            function loadBuyersFromReportEndpoint(slugToLoad) {
+                // Uses existing report endpoint to return distinct buyers (optionally date-filtered)
+                var df = document.getElementById('date_from');
+                var dt = document.getElementById('date_to');
+                var dateFromYmd = (df && df.value) ? toYmd(df.value) : '';
+                var dateToYmd = (dt && dt.value) ? toYmd(dt.value) : '';
+
+                function fallbackFromServerLists() {
+                    if (slugToLoad === 'course') {
+                        var listCourse = (courseBuyerNames || []).map(function (name) { return { value: name, text: name }; });
+                        addOptions(listCourse);
+                        return;
+                    }
+                    if (slugToLoad === 'other') {
+                        var listOther = (otherBuyerNames || []).map(function (name) { return { value: name, text: name }; });
+                        addOptions(listOther);
+                        return;
+                    }
+                    if (slugToLoad === 'section') {
+                        var listSection = (sectionBuyerNames || []).map(function (name) { return { value: name, text: name }; });
+                        addOptions(listSection);
+                        return;
+                    }
+                }
+
+                var qs = new URLSearchParams();
+                qs.set('client_type_slug', slugToLoad);
+                if (dateFromYmd) qs.set('from_date', dateFromYmd);
+                if (dateToYmd) qs.set('to_date', dateToYmd);
+                // Add PK if selected (course/ot => course_master_pk, others => client_type_pk)
+                if (selectedPk) {
+                    if (slugToLoad === 'course' || slugToLoad === 'ot') {
+                        qs.set('course_master_pk', selectedPk);
+                    } else {
+                        qs.set('client_type_pk', selectedPk);
+                    }
+                }
+
+                fetch(buyersForReportUrl + '?' + qs.toString(), { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        var buyers = (data.buyers || []).map(function (name) {
+                            return { value: name || '', text: name || '—' };
+                        }).filter(function (o) { return !!o.value; });
+                        if (!buyers.length) {
+                            fallbackFromServerLists();
+                        } else {
+                        addOptions(buyers);
+                        }
+                        if (typeof window.Choices !== 'undefined') {
+                            initChoicesElement(buyerSelect);
+                            if (currentBuyer && buyerSelect.choicesInstance) {
+                                buyerSelect.choicesInstance.setChoiceByValue(currentBuyer);
+                            }
+                        }
+                    })
+                    .catch(function () {
+                        fallbackFromServerLists();
+                        // still init Choices
+                        if (typeof window.Choices !== 'undefined') {
+                            initChoicesElement(buyerSelect);
+                        }
+                    });
+            }
+
             if (slug === 'employee' && selectedPk) {
                 var selectedOpt = clientTypePk.options[clientTypePk.selectedIndex];
                 var dataClientName = selectedOpt && selectedOpt.dataset ? (selectedOpt.dataset.clientName || '') : '';
@@ -1322,6 +1480,24 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.warn('Employee: No employees found for dataClientName:', dataClientName);
                     console.warn('Available keys:', Object.keys(employeeNames));
                 }
+            } else if (slug === 'employee' && !selectedPk) {
+                // Employee selected but Client Type = All => show all employee groups
+                var all = []
+                    .concat(employeeNames['academy staff'] || [])
+                    .concat(employeeNames['faculty'] || [])
+                    .concat(employeeNames['mess staff'] || []);
+
+                // De-duplicate + sort (by name)
+                var map = new Map();
+                all.forEach(function (o) {
+                    var key = String(o.value || '').trim().toLowerCase();
+                    if (!key) return;
+                    if (!map.has(key)) map.set(key, { value: o.value, text: o.text });
+                });
+                var unique = Array.from(map.values()).sort(function (a, b) {
+                    return String(a.text || '').localeCompare(String(b.text || ''), undefined, { sensitivity: 'base' });
+                });
+                addOptions(unique);
             } else if (slug === 'ot' && selectedPk) {
                 fetch(studentsByCourseUrl + '/' + selectedPk, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
                     .then(function (r) { return r.json(); })
@@ -1345,21 +1521,53 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     });
                 return; // Exit early for async case
-            } else if (slug === 'course') {
-                var listCourse = (courseBuyerNames || []).map(function (name) {
+            } else if (slug === 'ot' && !selectedPk) {
+                // OT selected but Course = All => show all OT buyers from precomputed list
+                var listOt = (otBuyerNames || []).map(function (name) {
                     return { value: name, text: name };
                 });
-                addOptions(listCourse);
+                addOptions(listOt);
+            } else if (slug === 'course') {
+                // Requirement:
+                // - If Course selected AND Client Type = All => Buyer Name should list ALL course names
+                // - If specific course selected => Buyer Name should be that course name
+                if (!selectedPk) {
+                    var listCourseAll = (otCourseOptions || []).map(function (o) {
+                        return { value: o.text, text: o.text };
+                    });
+                    addOptions(listCourseAll);
+                } else {
+                    var matchCourse = (otCourseOptions || []).find(function (o) {
+                        return String(o.value) === String(selectedPk);
+                    });
+                    if (matchCourse) {
+                        addOptions([{ value: matchCourse.text, text: matchCourse.text }]);
+                    }
+                }
+            } else if (slug === 'section') {
+                // Requirement:
+                // - If Section selected AND Client Type = All => Buyer Name should list ALL section names
+                // - If specific section selected => Buyer Name should be that section's name
+                var sectionOptions = clientTypeOptions['section'] || [];
+                if (!selectedPk) {
+                    var listSectionAll = sectionOptions.map(function (o) {
+                        return { value: o.text, text: o.text };
+                    });
+                    addOptions(listSectionAll);
+                } else {
+                    var matchSection = sectionOptions.find(function (o) {
+                        return String(o.value) === String(selectedPk);
+                    });
+                    if (matchSection) {
+                        addOptions([{ value: matchSection.text, text: matchSection.text }]);
+                    }
+                }
             } else if (slug === 'other') {
+                // For "other" we can still rely on precomputed distinct buyer names
                 var listOther = (otherBuyerNames || []).map(function (name) {
                     return { value: name, text: name };
                 });
                 addOptions(listOther);
-            } else if (slug === 'section') {
-                var listSection = (sectionBuyerNames || []).map(function (name) {
-                    return { value: name, text: name };
-                });
-                addOptions(listSection);
             } else if (slug && clientTypeOptions[slug]) {
                 var list3 = clientTypeOptions[slug].map(function (o) {
                     return { value: o.text, text: o.text };
@@ -1994,3 +2202,13 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 @endsection
+
+@push('styles')
+    {{-- Choices.js via CDN --}}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
+@endpush
+
+@push('scripts')
+    {{-- Choices.js via CDN --}}
+    <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+@endpush

@@ -19,12 +19,19 @@
                                 </a>
                             </li>
                             @if(hasRole('Admin') || hasRole('Training-Induction'))
-                            <!-- Notice Notification Route -->
+                            <!-- Participant / Dashboard Statistics -->
+                            <li class="sidebar-item">
+                                <a class="sidebar-link {{ request()->routeIs('admin.dashboard-statistics.*') ? 'active' : '' }}"
+                                    href="{{ route('admin.dashboard-statistics.index') }}">
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Batch Profile</span>
+                                </a>
+                            </li>
+                                    @endif
+                                      <!-- Notice Notification Route -->
                              <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('admin.notice.index') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Notice Notifications</span>
                                     </a></li>
-                                    @endif
 
                             <!-- Faculty Dashboard Route -->
                             @if(hasRole('Doctor'))
@@ -51,71 +58,28 @@
                                     </a>
                                 </li>
                                 <ul class="collapse list-unstyled ps-3" id="generalCollapse">
-                                    <li class="sidebar-item"><a class="sidebar-link" href="#">
+                                    <li class="sidebar-item"><a class="sidebar-link" href="https://eoffice.lbsnaa.gov.in/" target="_blank">
                                             <span class="hide-menu small small-sm-normal text-nowrap">E-Office</span>
                                         </a></li>
-                                    <li class="sidebar-item"><a class="sidebar-link" href="#">
+                                    <li class="sidebar-item"><a class="sidebar-link" href="http://cghs.lbsnaa.gov.in/" target="_blank">
                                             <span class="hide-menu small small-sm-normal text-nowrap">Medical Center</span>
                                         </a></li>
-                                    <li class="sidebar-item"><a class="sidebar-link" href="#">
+                                    <!-- <li class="sidebar-item"><a class="sidebar-link" href="#">
                                             <span class="hide-menu small small-sm-normal text-nowrap">E-Learning</span>
-                                        </a></li>
-                                    <li class="sidebar-item"><a class="sidebar-link" href="#">
+                                        </a></li> -->
+                                    <li class="sidebar-item"><a class="sidebar-link" href=" https://idpbridge.myloft.xyz/simplesaml/module.php/core/loginuserpass?AuthState=_13df360546d97777e748e8ded7bf639c5c8c45d3d7%3Ahttps%3A%2F%2Fidpbridge.myloft.xyz%2Fsimplesaml%2Fmodule.php%2Fsaml%2Fidp%2FsingleSignOnService%3Fspentityid%3Dhttps%253A%252F%252Felibrarylbsnaa.myloft.xyz%26cookieTime%3D1688360911" target="_blank">
                                             <span class="hide-menu small small-sm-normal text-nowrap">Library</span>
                                         </a></li>
-                                    <li class="sidebar-item"><a class="sidebar-link" href="#">
+                                    <!-- <li class="sidebar-item"><a class="sidebar-link" href="#">
                                             <span class="hide-menu small small-sm-normal text-nowrap">OM & Circular of DOPT</span>
-                                        </a></li>
-                                    <li class="sidebar-item"><a class="sidebar-link" href="#">
+                                        </a></li> -->
+                                    <li class="sidebar-item"><a class="sidebar-link" href="https://rcentre.lbsnaa.gov.in/web/" target="_blank">
                                             <span class="hide-menu small small-sm-normal text-nowrap">Photo Gallery</span>
                                         </a></li>
-                                    <li class="sidebar-item"><a class="sidebar-link" href="#">
+                                    <!-- <li class="sidebar-item"><a class="sidebar-link" href="#">
                                             <span class="hide-menu small small-sm-normal text-nowrap">OT Missconduct Complaint</span>
-                                        </a></li>
+                                        </a></li> -->
                                 </ul>
-
-                                {{-- COURSE --}}
-                                <li class="sidebar-item" style="background: #4077ad;
-    border-radius: 30px 0px 0px 30px;
-    width: 100%;
-    box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
-    min-width: 250px;">
-                                    <a class="sidebar-link d-flex justify-content-between align-items-center"
-                                        data-bs-toggle="collapse" href="#courseCollapse" role="button"
-                                        aria-expanded="false" aria-controls="courseCollapse">
-                                        <span class="hide-menu fw-bold small small-sm-normal text-nowrap">Usefull Links</span>
-                                        <i class="material-icons menu-icon material-symbols-rounded"
-                                            style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
-                                    </a>
-                                </li>
-                                <ul class="collapse list-unstyled ps-3" id="courseCollapse">
-                                    <li class="sidebar-item"><a class="sidebar-link" href="#">
-                                            <span class="hide-menu small small-sm-normal text-nowrap">About Academy</span>
-                                        </a></li>
-                                    <li class="sidebar-item"><a class="sidebar-link" href="#">
-                                            <span class="hide-menu small small-sm-normal text-nowrap">About Mussoorie</span>
-                                        </a></li>
-                                    <li class="sidebar-item"><a class="sidebar-link" href="#">
-                                            <span class="hide-menu small small-sm-normal text-nowrap">SOP</span>
-                                        </a></li>
-                                    <li class="sidebar-item"><a class="sidebar-link" href="#">
-                                            <span class="hide-menu small small-sm-normal text-nowrap">Required Items Mess</span>
-                                        </a></li>
-                                    <li class="sidebar-item"><a class="sidebar-link" href="#">
-                                            <span class="hide-menu small small-sm-normal text-nowrap">LBSNAA Telephone Director</span>
-                                        </a></li>
-                                    <li class="sidebar-item"><a class="sidebar-link" href="#">
-                                            <span class="hide-menu small small-sm-normal text-nowrap">Organisation Structure</span>
-                                        </a></li>
-                                    <li class="sidebar-item"><a class="sidebar-link" href="#">
-                                            <span class="hide-menu small small-sm-normal text-nowrap">LBSNAA Website</span>
-                                        </a></li>
-                                </ul>
-                            </ul>
-                            <!-- OTs Dashboard Route -->
-                            <ul class="sidebar-menu" id="sidebarnav">
-
-                            </ul>
                     </div>
                 </div>
             </div>

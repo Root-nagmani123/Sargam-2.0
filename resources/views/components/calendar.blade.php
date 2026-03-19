@@ -47,6 +47,34 @@
         background-color: #e7f3ff;
         border: 2px solid #0d6efd;
     }
+
+    /* Blink current date */
+    @keyframes calendar-today-blink {
+        0%,
+        45% {
+            opacity: 1;
+        }
+        55%,
+        100% {
+            opacity: 0.25;
+        }
+    }
+
+    .calendar-cell.is-today {
+        background-color: rgba(255, 193, 7, 0.14);
+        border: 2px solid rgba(255, 193, 7, 0.55);
+    }
+
+    .calendar-cell.is-today .day-number {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 1.75rem;
+        height: 1.75rem;
+        border-radius: 999px;
+        background: rgba(255, 193, 7, 0.35);
+        animation: calendar-today-blink 1s linear infinite;
+    }
     
     .holiday-badge {
         font-size: 0.65rem;
@@ -161,11 +189,12 @@ $globalDayIndex = $cellIndex - ($startWeekDay - 1);
 
 @php
 $isSelected = $selected && $selected->toDateString() === $iso;
+$isToday = $d->isToday();
 $hasEvent = array_key_exists($iso, $events);
 @endphp
 
 
-<td tabindex="0" role="button" class="calendar-cell {{ $isSelected ? 'is-selected' : '' }} {{ $hasEvent ? 'has-event' : '' }}" data-date="{{ $iso }}" aria-pressed="{{ $isSelected ? 'true' : 'false' }}">
+<td tabindex="0" role="button" class="calendar-cell {{ $isSelected ? 'is-selected' : '' }} {{ $isToday ? 'is-today' : '' }} {{ $hasEvent ? 'has-event' : '' }}" data-date="{{ $iso }}" aria-pressed="{{ $isSelected ? 'true' : 'false' }}" aria-current="{{ $isToday ? 'date' : 'false' }}">
 <span class="day-number">{{ $d->day }}</span>
 @if($hasEvent)
     @foreach($events[$iso] as $event)
