@@ -105,10 +105,6 @@
                                 @foreach($sectionBuyerNames as $buyerName)
                                     <option value="{{ $buyerName }}" {{ request('buyer_name') == $buyerName ? 'selected' : '' }}>{{ $buyerName }}</option>
                                 @endforeach
-                            @elseif(request('client_type_slug') && isset($clientTypeCategories[request('client_type_slug')]))
-                                @foreach($clientTypeCategories[request('client_type_slug')] as $category)
-                                    <option value="{{ $category->client_name }}" {{ request('buyer_name') == $category->client_name ? 'selected' : '' }}>{{ $category->client_name }}</option>
-                                @endforeach
                             @endif
                         </select>
                     </div>
@@ -663,6 +659,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (preserveValue) {
                     clientTypePkBuyer.value = preserveValue;
                 }
+                // Disable buyer list when it cannot be meaningfully selected yet
+                clientTypePkBuyer.disabled = (clientTypePkBuyer.options.length <= 1);
                 initChoices(clientTypePkBuyer);
             }
 
@@ -740,6 +738,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Course: load buyer names dynamically by selected course (no Apply Filters needed)
                 if (selectedValue) {
                     clientTypePkBuyer.innerHTML = '<option value="">Loading...</option>';
+                    clientTypePkBuyer.disabled = true;
                     const qs = new URLSearchParams();
                     if (document.querySelector('input[name="from_date"]')?.value) qs.set('from_date', document.querySelector('input[name="from_date"]').value);
                     if (document.querySelector('input[name="to_date"]')?.value) qs.set('to_date', document.querySelector('input[name="to_date"]').value);
