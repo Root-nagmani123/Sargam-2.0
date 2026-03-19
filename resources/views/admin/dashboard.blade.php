@@ -5,8 +5,32 @@
 @section('content')
 <style>
 .admin-dashboard-surface {
-    background: linear-gradient(180deg, #f8f9fb 0%, #f3f5f9 100%);
+    background: linear-gradient(160deg, #f0f4f9 0%, #e8eef6 50%, #f5f7fb 100%);
     min-height: 100%;
+}
+.dashboard-panel {
+    border: 0;
+    border-radius: 1rem;
+    background: var(--bs-body-bg);
+    box-shadow: 0 2px 12px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+}
+.dashboard-panel .card-header {
+    border-bottom: 1px solid var(--bs-border-color-translucent);
+    background: linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.98) 100%);
+    padding-top: 1rem !important;
+    padding-bottom: 1rem !important;
+}
+.dashboard-panel .card-header .material-icons.material-symbols-rounded {
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 0.6rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(var(--bs-primary-rgb), 0.12);
+    color: var(--bs-primary);
+    font-size: 1.2rem !important;
 }
 
 .dashboard-stat-card {
@@ -16,6 +40,7 @@
     box-shadow: 0 2px 8px rgba(16, 24, 40, 0.08);
     overflow: hidden;
     transition: transform 0.15s ease, box-shadow 0.15s ease;
+    min-height: 84px;
 }
 
 .dashboard-stat-card:hover {
@@ -24,11 +49,11 @@
 }
 
 .dashboard-stat-card .card-body {
-    padding: 0.7rem 0.8rem;
+    padding: 0.55rem 0.7rem;
 }
 
 .dashboard-stat-value {
-    font-size: clamp(1.55rem, 1.9vw, 2.1rem);
+    font-size: clamp(1.35rem, 1.55vw, 1.85rem);
     line-height: 1.05;
     letter-spacing: -0.02em;
 }
@@ -53,34 +78,93 @@
     background: var(--bs-danger-bg-subtle);
 }
 
-.dashboard-panel {
-    border: 0;
-    border-radius: 0.9rem;
-    background: var(--bs-body-bg);
-    box-shadow: 0 2px 8px rgba(16, 24, 40, 0.07);
-}
-
-.dashboard-panel .card-header {
-    border-bottom: 1px solid var(--bs-border-color-translucent);
-    background: transparent;
-    padding-top: 0.9rem !important;
-    padding-bottom: 0.9rem !important;
-}
 
 .dashboard-birthday-item {
-    border: 1px solid #b7cdf9;
-    background: #f7f9ff;
-    border-radius: 0.5rem;
+    border: 1px solid rgba(var(--bs-primary-rgb), 0.18);
+    background: linear-gradient(180deg, rgba(var(--bs-primary-rgb), 0.10) 0%, rgba(var(--bs-primary-rgb), 0.03) 60%, rgba(255, 255, 255, 0.85) 100%);
+    border-radius: 16px;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.04);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    position: relative;
+    overflow: hidden;
 }
-
+.dashboard-birthday-item::before {
+    content: '🎂';
+    position: absolute;
+    top: -18px;
+    right: -12px;
+    font-size: 4rem;
+    opacity: 0.07;
+    transform: rotate(12deg);
+    pointer-events: none;
+}
+.dashboard-birthday-item:hover {
+    box-shadow: 0 10px 22px rgba(16, 24, 40, 0.08);
+    transform: translateY(-2px);
+    border-color: rgba(var(--bs-primary-rgb), 0.38);
+}
 .dashboard-birthday-item .card-body {
-    padding: 0.8rem !important;
+    padding: 0.95rem 1rem !important;
 }
 
 .dashboard-avatar {
-    width: 2rem;
-    height: 2rem;
-    font-size: 0.8rem;
+    width: 3.35rem;
+    height: 3.35rem;
+    font-size: 1.15rem;
+    border: 4px solid #fff;
+    box-shadow: 0 6px 16px rgba(16, 24, 40, 0.08);
+}
+
+.dashboard-birthday-name {
+    font-weight: 850;
+    color: var(--bs-body-color);
+    line-height: 1.15;
+    font-size: 1.02rem;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dashboard-birthday-designation {
+    font-size: 0.82rem;
+    color: rgba(33, 37, 41, 0.65);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dashboard-birthday-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.6rem;
+    border-radius: 999px;
+    background: rgba(var(--bs-primary-rgb), 0.08);
+    border: 1px solid rgba(var(--bs-primary-rgb), 0.18);
+    color: var(--bs-primary);
+    font-weight: 700;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+}
+
+.dashboard-birthday-contact {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.75rem;
+    margin-top: 0.5rem;
+}
+.dashboard-birthday-contact span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: rgba(33, 37, 41, 0.62);
+    font-size: 0.78rem;
+}
+
+.dashboard-birthday-contact span .material-icons {
+    font-size: 1rem !important;
+    opacity: 0.75;
 }
 
 .dashboard-list-scroll {
@@ -95,23 +179,37 @@
 }
 
 .dashboard-welcome {
-    background: #004a93 !important;
-    border-radius: 0.9rem;
+    background: linear-gradient(135deg, #004a93 0%, #003a75 50%, #002d5c 100%) !important;
+    border-radius: 1rem;
     color: #fff;
-    padding: 1rem 1.25rem;
-    margin-bottom: 1.25rem;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 4px 20px rgba(0, 74, 147, 0.25);
+    position: relative;
+    overflow: hidden;
 }
-.dashboard-welcome h2 { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.25rem; }
-.dashboard-welcome .text-white { font-size: 0.9rem; }
+.dashboard-welcome::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 40%;
+    height: 200%;
+    background: radial-gradient(ellipse, rgba(255,255,255,0.08) 0%, transparent 70%);
+    pointer-events: none;
+}
+.dashboard-welcome h2 { font-size: 1.3rem; font-weight: 600; margin-bottom: 0.25rem; letter-spacing: -0.01em; }
+.dashboard-welcome .text-white { font-size: 0.9rem; opacity: 0.95; }
+.dashboard-welcome .material-icons { opacity: 0.9; }
 
 .dashboard-stat-card .stat-icon {
-    width: 2.5rem;
-    height: 2.5rem;
+    width: 2.15rem;
+    height: 2.15rem;
     border-radius: 0.5rem;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.15rem;
+    font-size: 1.05rem;
     opacity: 0.9;
 }
 .dashboard-stat-card.card-blue .stat-icon { background: rgba(var(--bs-primary-rgb), 0.2); color: var(--bs-primary); }
@@ -131,19 +229,271 @@
 
 .dashboard-empty-state {
     text-align: center;
-    padding: 1.5rem 1rem;
+    padding: 2rem 1.25rem;
     color: var(--bs-secondary);
+    background: linear-gradient(180deg, rgba(var(--bs-primary-rgb), 0.03) 0%, transparent 100%);
+    border-radius: 0.75rem;
+    border: 1px dashed var(--bs-border-color-translucent);
 }
-.dashboard-empty-state .material-icons { font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5; }
+.dashboard-empty-state .material-icons {
+    font-size: 2.75rem;
+    margin-bottom: 0.75rem;
+    opacity: 0.4;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 4rem;
+    height: 4rem;
+    border-radius: 50%;
+    background: rgba(var(--bs-primary-rgb), 0.06);
+}
+.dashboard-empty-state p { font-size: 0.875rem; }
 
 .dashboard-tweet-item {
-    border-left: 3px solid var(--bs-primary);
-    padding-left: 0.75rem;
-    margin-bottom: 0.75rem;
+    padding: 12px 14px 12px 16px;
+    margin-bottom: 10px;
+    border-radius: 10px;
+    border-left: 4px solid var(--bs-primary);
+    background: linear-gradient(90deg, rgba(var(--bs-primary-rgb), 0.05) 0%, transparent 100%);
+    transition: background 0.2s ease, transform 0.15s ease;
+}
+.dashboard-tweet-item:hover {
+    background: linear-gradient(90deg, rgba(var(--bs-primary-rgb), 0.08) 0%, transparent 100%);
+    transform: translateX(2px);
 }
 .dashboard-tweet-item:last-child { margin-bottom: 0; }
 
-.dashboard-panel .card-header .badge { font-size: 0.75rem; }
+/* Today's Classes cards */
+.dashboard-class-card {
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-left: 4px solid var(--bs-primary);
+    background: linear-gradient(180deg, #fff 0%, rgba(248,250,252,0.7) 100%);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
+}
+.dashboard-class-card:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+}
+.dashboard-class-icon {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.5rem;
+    background: rgba(var(--bs-primary-rgb), 0.12);
+    color: var(--bs-primary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem !important;
+}
+.dashboard-class-topic {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--bs-body-color);
+    margin-bottom: 8px;
+    padding-left: 2.5rem;
+}
+.dashboard-class-meta {
+    font-size: 0.8125rem;
+    color: var(--bs-secondary);
+    padding-left: 2.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 16px;
+}
+.dashboard-class-meta span { white-space: nowrap; }
+
+.dashboard-list-scroll::-webkit-scrollbar { width: 6px; }
+.dashboard-list-scroll::-webkit-scrollbar-track { background: rgba(0,0,0,0.04); border-radius: 3px; }
+.dashboard-list-scroll::-webkit-scrollbar-thumb { background: rgba(var(--bs-primary-rgb), 0.25); border-radius: 3px; }
+.dashboard-list-scroll::-webkit-scrollbar-thumb:hover { background: rgba(var(--bs-primary-rgb), 0.4); }
+
+.dashboard-panel .card-header .badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.35em 0.65em;
+    min-width: 1.75rem;
+    text-align: center;
+}
+
+/* Notifications panel - item design and blinking "New" tag */
+.dashboard-notification-item {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    width: 100%;
+    padding: 16px 18px;
+    margin-bottom: 10px;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-left: 4px solid transparent;
+    background: linear-gradient(180deg, #fff 0%, rgba(248,250,252,0.8) 100%);
+    text-align: left;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+    cursor: pointer;
+}
+.dashboard-notification-item:hover {
+    background: linear-gradient(180deg, #fff 0%, rgba(248,250,252,1) 100%);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+    transform: translateY(-1px);
+}
+.dashboard-notification-item-unread {
+    background: linear-gradient(180deg, rgba(var(--bs-primary-rgb), 0.08) 0%, rgba(var(--bs-primary-rgb), 0.02) 100%);
+    border-left-color: var(--bs-primary);
+    border-color: rgba(var(--bs-primary-rgb), 0.15);
+}
+.dashboard-notification-item-unread:hover {
+    background: linear-gradient(180deg, rgba(var(--bs-primary-rgb), 0.12) 0%, rgba(var(--bs-primary-rgb), 0.04) 100%);
+}
+.dashboard-notification-item .notification-icon-wrap {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 0.65rem;
+    background: rgba(var(--bs-primary-rgb), 0.12);
+    color: var(--bs-primary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 1.2rem !important;
+}
+.dashboard-notification-body {
+    flex-grow: 1;
+    min-width: 0;
+}
+.dashboard-notification-title {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--bs-body-color);
+    line-height: 1.35;
+}
+.dashboard-notification-message {
+    font-size: 0.8125rem;
+    color: var(--bs-secondary);
+    margin: 4px 0 0 0;
+    line-height: 1.45;
+}
+.dashboard-notification-time {
+    font-size: 0.6875rem;
+    color: var(--bs-secondary);
+    margin-top: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.dashboard-notification-time::before {
+    content: '';
+    display: inline-block;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--bs-secondary);
+    opacity: 0.6;
+}
+/* Blinking "New" tag for unread notifications */
+.dashboard-notification-new-tag {
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    padding: 0.3em 0.6em;
+    flex-shrink: 0;
+    animation: dashboard-notification-blink 1s ease-in-out infinite;
+}
+@keyframes dashboard-notification-blink {
+    0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 rgba(var(--bs-danger-rgb), 0.5); }
+    50% { opacity: 0.9; transform: scale(1.03); box-shadow: 0 0 0 6px rgba(var(--bs-danger-rgb), 0); }
+}
+
+/* Notices panel - item design and blinking "New" tag */
+.dashboard-notice-item {
+    display: block;
+    padding: 16px 18px;
+    margin-bottom: 10px;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-left: 4px solid transparent;
+    background: linear-gradient(180deg, #fff 0%, rgba(248,250,252,0.8) 100%);
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+.dashboard-notice-item:hover {
+    background: linear-gradient(180deg, #fff 0%, rgba(248,250,252,1) 100%);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+    transform: translateY(-1px);
+}
+.dashboard-notice-item-new {
+    background: linear-gradient(180deg, rgba(var(--bs-primary-rgb), 0.08) 0%, rgba(var(--bs-primary-rgb), 0.02) 100%);
+    border-left-color: var(--bs-primary);
+    border-color: rgba(var(--bs-primary-rgb), 0.15);
+}
+.dashboard-notice-item-new:hover {
+    background: linear-gradient(180deg, rgba(var(--bs-primary-rgb), 0.12) 0%, rgba(var(--bs-primary-rgb), 0.04) 100%);
+}
+.dashboard-notice-item .notice-icon-wrap {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 0.65rem;
+    background: rgba(var(--bs-primary-rgb), 0.12);
+    color: var(--bs-primary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 1.2rem !important;
+}
+.dashboard-notice-title {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--bs-body-color);
+    line-height: 1.35;
+}
+.dashboard-notice-date {
+    font-size: 0.8125rem;
+    color: var(--bs-secondary);
+    margin-top: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.dashboard-notice-date::before {
+    content: '';
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--bs-secondary);
+    opacity: 0.6;
+}
+.dashboard-notice-attachment {
+    font-size: 0.8125rem;
+    margin-top: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: rgba(var(--bs-danger-rgb), 0.08);
+    transition: background 0.2s ease;
+}
+.dashboard-notice-attachment:hover {
+    background: rgba(var(--bs-danger-rgb), 0.14);
+}
+.dashboard-notice-new-tag {
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    padding: 0.3em 0.6em;
+    animation: dashboard-notice-blink 1.2s ease-in-out infinite;
+}
+@keyframes dashboard-notice-blink {
+    0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 rgba(var(--bs-danger-rgb), 0.45); }
+    50% { opacity: 0.9; transform: scale(1.03); box-shadow: 0 0 0 6px rgba(var(--bs-danger-rgb), 0); }
+}
 
 .dashboard-stat-card:focus-visible {
     outline: 2px solid var(--bs-primary);
@@ -156,14 +506,19 @@ table>thead{
 
 @php
 $user = Auth::user();
-$notifications = $user ? notification()->getNotifications($user->user_id, 10) : collect();
+$isAdminSummary = hasRole('Admin');
+$daysOld = $isAdminSummary ? 10 : null;
+$notifications = $user ? notification()->getNotifications($user->user_id, 10, false, $daysOld) : collect();
+$notificationBadgeCount = $user
+    ? ($isAdminSummary ? notification()->getUnreadCount($user->user_id, $daysOld) : $notifications->count())
+    : 0;
 $notices = get_notice_notification_by_role();
 $hour = (int) date('G');
 $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good evening');
 $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
 @endphp
 
-<div class="container-fluid px-3 px-md-4 py-3 pb-4 admin-dashboard-surface">
+<div class="container-fluid px-3 px-lg-4">
     <div class="dashboard-welcome shadow-sm bg-gradient d-flex flex-wrap align-items-center justify-content-between gap-2">
         <div>
             <h2 class="mb-0 text-white">{{ $greeting }}, {{ $userName }}</h2>
@@ -175,106 +530,106 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
         </div>
     </div>
 
-    <div class="row g-3 mb-4">
-        <div class="col-xl-3 col-md-6">
+    <div class="row g-2 g-md-3 mb-4 row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 row-cols-xxl-5">
+        <div class="col">
             <a href="{{ route('admin.dashboard.active_course') }}" class="text-decoration-none d-block h-100">
                 <div class="card dashboard-stat-card shadow-sm rounded-4 card-blue h-100">
-                    <div class="card-body d-flex align-items-start justify-content-between gap-2">
-                        <div>
-                            <p class="small text-dark mb-1">Total Active Courses</p>
+                    <div class="card-body d-flex align-items-center justify-content-between gap-3">
+                        <div class="min-w-0">
+                            <p class="small text-body-secondary mb-1 text-truncate">Total Active Courses</p>
                             <div class="dashboard-stat-value fw-semibold text-primary">{{ $totalActiveCourses }}</div>
-                            <span class="stat-link-hint text-primary">View <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
+                            <span class="stat-link-hint text-primary small">View <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
                         </div>
-                        <span class="stat-icon"><span class="material-icons material-symbols-rounded">menu_book</span></span>
+                        <span class="stat-icon flex-shrink-0" aria-hidden="true"><span class="material-icons material-symbols-rounded">menu_book</span></span>
                     </div>
                 </div>
             </a>
         </div>
 
-        <div class="col-xl-3 col-md-6">
+        <div class="col">
             <a href="{{ route('admin.dashboard.incoming_course') }}" class="text-decoration-none d-block h-100">
                 <div class="card dashboard-stat-card shadow-sm rounded-4 card-green h-100">
-                    <div class="card-body d-flex align-items-start justify-content-between gap-2">
-                        <div>
-                            <p class="small text-dark mb-1">Upcoming Courses</p>
+                    <div class="card-body d-flex align-items-center justify-content-between gap-3">
+                        <div class="min-w-0">
+                            <p class="small text-body-secondary mb-1 text-truncate">Upcoming Courses</p>
                             <div class="dashboard-stat-value fw-semibold text-success">{{ $upcomingCourses }}</div>
-                            <span class="stat-link-hint text-success">View <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
+                            <span class="stat-link-hint text-success small">View <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
                         </div>
-                        <span class="stat-icon"><span class="material-icons material-symbols-rounded">event</span></span>
+                        <span class="stat-icon flex-shrink-0" aria-hidden="true"><span class="material-icons material-symbols-rounded">event</span></span>
                     </div>
                 </div>
             </a>
         </div>
 
-        <div class="col-xl-3 col-md-6">
+        <div class="col">
             <a href="{{ route('admin.dashboard.upcoming_events') }}" class="text-decoration-none d-block h-100">
                 <div class="card dashboard-stat-card shadow-sm rounded-4 card-amber h-100">
-                    <div class="card-body d-flex align-items-start justify-content-between gap-2">
-                        <div>
-                            <p class="small text-dark mb-1">Upcoming Events</p>
+                    <div class="card-body d-flex align-items-center justify-content-between gap-3">
+                        <div class="min-w-0">
+                            <p class="small text-body-secondary mb-1 text-truncate">Upcoming Events</p>
                             <div class="dashboard-stat-value fw-semibold text-warning-emphasis">2</div>
-                            <span class="stat-link-hint text-warning">View <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
+                            <span class="stat-link-hint text-warning small">View <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
                         </div>
-                        <span class="stat-icon"><span class="material-icons material-symbols-rounded">campaign</span></span>
+                        <span class="stat-icon flex-shrink-0" aria-hidden="true"><span class="material-icons material-symbols-rounded">campaign</span></span>
                     </div>
                 </div>
             </a>
         </div>
 
-        <div class="col-xl-3 col-md-6">
+        <div class="col">
             @if(hasRole('Student-OT'))
             <a href="{{ route('medical.exception.ot.view') }}" class="text-decoration-none d-block h-100">
                 <div class="card dashboard-stat-card shadow-sm rounded-4 card-rose h-100">
-                    <div class="card-body d-flex align-items-start justify-content-between gap-2">
-                        <div>
-                            <p class="small text-dark mb-1">Medical Exception</p>
+                    <div class="card-body d-flex align-items-center justify-content-between gap-3">
+                        <div class="min-w-0">
+                            <p class="small text-body-secondary mb-1 text-truncate">Medical Exception</p>
                             <div class="dashboard-stat-value fw-semibold text-danger">{{ $exemptionCount }}</div>
-                            <span class="stat-link-hint text-danger">View <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
+                            <span class="stat-link-hint text-danger small">View <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
                         </div>
-                        <span class="stat-icon"><span class="material-icons material-symbols-rounded">monitor_heart</span></span>
+                        <span class="stat-icon flex-shrink-0" aria-hidden="true"><span class="material-icons material-symbols-rounded">monitor_heart</span></span>
                     </div>
                 </div>
             </a>
             @else
             <a href="{{ route('admin.dashboard.guest_faculty') }}" class="text-decoration-none d-block h-100">
                 <div class="card dashboard-stat-card shadow-sm rounded-4 card-rose h-100">
-                    <div class="card-body d-flex align-items-start justify-content-between gap-2">
-                        <div>
-                            <p class="small text-dark mb-1">Total Guest Faculty</p>
+                    <div class="card-body d-flex align-items-center justify-content-between gap-3">
+                        <div class="min-w-0">
+                            <p class="small text-body-secondary mb-1 text-truncate">Total Guest Faculty</p>
                             <div class="dashboard-stat-value fw-semibold text-danger">{{ $total_guest_faculty }}</div>
-                            <span class="stat-link-hint text-danger">View <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
+                            <span class="stat-link-hint text-danger small">View <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
                         </div>
-                        <span class="stat-icon"><span class="material-icons material-symbols-rounded">badge</span></span>
+                        <span class="stat-icon flex-shrink-0" aria-hidden="true"><span class="material-icons material-symbols-rounded">badge</span></span>
                     </div>
                 </div>
             </a>
             @endif
         </div>
 
-        <div class="col-xl-3 col-md-6">
+        <div class="col">
             @if(hasRole('Student-OT'))
             <a href="{{ route('ot.mdo.escrot.exemption.view') }}" class="text-decoration-none d-block h-100">
                 <div class="card dashboard-stat-card shadow-sm rounded-4 card-blue h-100">
-                    <div class="card-body d-flex align-items-start justify-content-between gap-2">
-                        <div>
-                            <p class="small text-dark mb-1">OT MDO/Escort</p>
+                    <div class="card-body d-flex align-items-center justify-content-between gap-3">
+                        <div class="min-w-0">
+                            <p class="small text-body-secondary mb-1 text-truncate">OT MDO/Escort</p>
                             <div class="dashboard-stat-value fw-semibold text-primary">{{ $MDO_count }}</div>
-                            <span class="stat-link-hint text-primary">View <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
+                            <span class="stat-link-hint text-primary small">View <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
                         </div>
-                        <span class="stat-icon"><span class="material-icons material-symbols-rounded">manage_accounts</span></span>
+                        <span class="stat-icon flex-shrink-0" aria-hidden="true"><span class="material-icons material-symbols-rounded">manage_accounts</span></span>
                     </div>
                 </div>
             </a>
             @else
             <a href="{{ route('admin.dashboard.inhouse_faculty') }}" class="text-decoration-none d-block h-100">
                 <div class="card dashboard-stat-card shadow-sm rounded-4 card-blue h-100">
-                    <div class="card-body d-flex align-items-start justify-content-between gap-2">
-                        <div>
-                            <p class="small text-dark mb-1">Total Inhouse Faculty</p>
+                    <div class="card-body d-flex align-items-center justify-content-between gap-3">
+                        <div class="min-w-0">
+                            <p class="small text-body-secondary mb-1 text-truncate">Total Inhouse Faculty</p>
                             <div class="dashboard-stat-value fw-semibold text-primary">{{ $total_internal_faculty }}</div>
-                            <span class="stat-link-hint text-primary">View <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
+                            <span class="stat-link-hint text-primary small">View <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
                         </div>
-                        <span class="stat-icon"><span class="material-icons material-symbols-rounded">groups</span></span>
+                        <span class="stat-icon flex-shrink-0" aria-hidden="true"><span class="material-icons material-symbols-rounded">groups</span></span>
                     </div>
                 </div>
             </a>
@@ -282,16 +637,16 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
         </div>
 
         @if(hasRole('Internal Faculty') || hasRole('Guest Faculty'))
-        <div class="col-xl-3 col-md-6">
+        <div class="col">
             <a href="{{ route('admin.dashboard.sessions') }}" class="text-decoration-none d-block h-100">
                 <div class="card dashboard-stat-card shadow-sm rounded-4 card-green h-100">
-                    <div class="card-body d-flex align-items-start justify-content-between gap-2">
-                        <div>
-                            <p class="small text-dark mb-1">Session Details</p>
+                    <div class="card-body d-flex align-items-center justify-content-between gap-3">
+                        <div class="min-w-0">
+                            <p class="small text-body-secondary mb-1 text-truncate">Session Details</p>
                             <div class="dashboard-stat-value fw-semibold text-success">{{ $totalSessions }}</div>
-                            <span class="stat-link-hint text-success">View <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
+                            <span class="stat-link-hint text-success small">View <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
                         </div>
-                        <span class="stat-icon"><span class="material-icons material-symbols-rounded">history</span></span>
+                        <span class="stat-icon flex-shrink-0" aria-hidden="true"><span class="material-icons material-symbols-rounded">history</span></span>
                     </div>
                 </div>
             </a>
@@ -299,16 +654,31 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
         @endif
 
         @if(isset($isCCorACC) && $isCCorACC)
-        <div class="col-xl-3 col-md-6">
+        <div class="col">
             <a href="{{ route('admin.dashboard.students') }}" class="text-decoration-none d-block h-100">
                 <div class="card dashboard-stat-card shadow-sm rounded-4 card-amber h-100">
-                    <div class="card-body d-flex align-items-start justify-content-between gap-2">
-                        <div>
-                            <p class="small text-dark mb-1">Total Students</p>
+                    <div class="card-body d-flex align-items-center justify-content-between gap-3">
+                        <div class="min-w-0">
+                            <p class="small text-body-secondary mb-1 text-truncate">Total Students</p>
                             <div class="dashboard-stat-value fw-semibold text-warning-emphasis">{{ $totalStudents }}</div>
-                            <span class="stat-link-hint text-warning">View <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
+                            <span class="stat-link-hint text-warning small">View <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
                         </div>
-                        <span class="stat-icon"><span class="material-icons material-symbols-rounded">contacts</span></span>
+                        <span class="stat-icon flex-shrink-0" aria-hidden="true"><span class="material-icons material-symbols-rounded">contacts</span></span>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <div class="col">
+            <a href="{{ route('admin.dashboard.my-counselee') }}" class="text-decoration-none d-block h-100">
+                <div class="card dashboard-stat-card shadow-sm rounded-4 card-blue h-100">
+                    <div class="card-body d-flex align-items-center justify-content-between gap-3">
+                        <div class="min-w-0">
+                            <p class="small text-body-secondary mb-1 text-truncate">My Counselee</p>
+                            <div class="dashboard-stat-value fw-semibold text-primary">View</div>
+                            <span class="stat-link-hint text-primary small">View list <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
+                        </div>
+                        <span class="stat-icon flex-shrink-0" aria-hidden="true"><span class="material-icons material-symbols-rounded">person_search</span></span>
                     </div>
                 </div>
             </a>
@@ -316,8 +686,8 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
         @endif
     </div>
 
-    <div class="row g-4">
-        <div class="col-lg-8">
+    <div class="row g-3 g-lg-4">
+        <div class="col-lg-7">
         @if(hasRole('Admin') || hasRole('Training-Induction'))
             <div class="card dashboard-panel shadow-sm rounded-4 mb-4">
                 <div class="card-header py-3 px-4 d-flex justify-content-between align-items-center">
@@ -325,7 +695,7 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                         <span class="material-icons material-symbols-rounded text-primary">notifications</span>
                         {{ hasRole('Admin') ? 'Admin Summary' : 'Notifications' }}
                     </h5>
-                    <span class="badge text-bg-primary rounded-pill">{{ $notifications->count() }}</span>
+                    <span class="badge text-bg-primary rounded-pill">{{ $notificationBadgeCount }}</span>
                 </div>
                 <div class="card-body p-3 p-md-4 dashboard-list-scroll">
                     @if($notifications->isEmpty())
@@ -334,18 +704,29 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                         <p class="mb-0 small">No notifications available.</p>
                     </div>
                     @else
-                    <div class="list-group list-group-flush">
+                    <ul class="list-unstyled mb-0 ps-0">
                         @foreach($notifications as $notification)
-                        <button type="button"
-                            class="list-group-item list-group-item-action border-0 rounded-3 mb-1 bg-body shadow-sm"
-                            onclick="window.markAsReadDashboard({{ $notification->pk }}, this)">
-                            <div class="d-flex gap-2">
-                                <span class="material-icons material-symbols-rounded text-primary mt-1" style="font-size: .5rem; line-height: 1;">lens</span>
-                                <span class="small text-start">{{ $notification->message }}</span>
-                            </div>
-                        </button>
+                        <li class="mb-2">
+                            <button type="button"
+                                class="dashboard-notification-item {{ empty($notification->is_read) ? 'dashboard-notification-item-unread' : '' }}"
+                                data-notification-id="{{ $notification->pk }}">
+                                <div class="d-flex gap-3 flex-grow-1 min-w-0">
+                                    <span class="notification-icon-wrap"><span class="material-icons material-symbols-rounded">notifications</span></span>
+                                    <div class="dashboard-notification-body">
+                                        <div class="d-flex align-items-start justify-content-between gap-2 flex-wrap">
+                                            <span class="dashboard-notification-title">{{ $notification->title ?? 'Notification' }}</span>
+                                            @if(empty($notification->is_read))
+                                            <span class="badge bg-danger dashboard-notification-new-tag">New</span>
+                                            @endif
+                                        </div>
+                                        <p class="dashboard-notification-message mb-0">{{ Str::limit($notification->message ?? '', 80) }}</p>
+                                        <span class="dashboard-notification-time">{{ isset($notification->created_at) ? \Carbon\Carbon::parse($notification->created_at)->diffForHumans() : '—' }}</span>
+                                    </div>
+                                </div>
+                            </button>
+                        </li>
                         @endforeach
-                    </div>
+                    </ul>
                     @endif
                 </div>
             </div>
@@ -379,16 +760,16 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                     @if($todayTimetable && $todayTimetable->isNotEmpty())
                     <div class="dashboard-list-scroll pe-2">
                         @foreach($todayTimetable as $entry)
-                        <div class="pb-3 mb-3 border-bottom border-secondary-subtle">
-                            <div class="row g-2 mb-2">
-                                <div class="col-md-6 text-primary fw-medium">{{ $entry['session_date'] }}</div>
-                                <div class="col-md-6 text-primary fw-medium">{{ $entry['topic'] }}</div>
+                        <div class="dashboard-class-card">
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <span class="dashboard-class-icon"><span class="material-icons material-symbols-rounded">schedule</span></span>
+                                <span class="text-primary fw-semibold">{{ $entry['session_date'] }} · {{ $entry['session_time'] }}</span>
                             </div>
-                            <div class="row g-2 text-body-secondary">
-                                <div class="col-md-6">Faculty - {{ $entry['faculty_name'] }}</div>
-                                <div class="col-md-6">Group Name - {{ $entry['group_name'] ?? 'N/A' }}</div>
-                                <div class="col-md-6">Session - {{ $entry['session_time'] }}</div>
-                                <div class="col-md-6">Venue - {{ $entry['session_venue'] }}</div>
+                            <div class="dashboard-class-topic">{{ $entry['topic'] }}</div>
+                            <div class="dashboard-class-meta">
+                                <span>Faculty: {{ $entry['faculty_name'] }}</span>
+                                <span>Group: {{ $entry['group_name'] ?? 'N/A' }}</span>
+                                <span>Venue: {{ $entry['session_venue'] }}</span>
                             </div>
                         </div>
                         @endforeach
@@ -415,16 +796,31 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                         <p class="mb-0 small">No notices available.</p>
                     </div>
                     @else
-                    <ul class="list-unstyled mb-0">
+                    <ul class="list-unstyled mb-0 ps-0">
                         @foreach($notices as $notice)
-                        <li class="mb-3 pb-2 border-bottom border-light-subtle d-flex gap-2 align-items-start">
-                            <span class="material-icons material-symbols-rounded text-primary mt-1 flex-shrink-0" style="font-size: 0.9rem;">description</span>
-                            <div>
-                                <span class="text-body fw-medium">{{ $notice->notice_title }}</span>
-                                <small class="d-block text-body-secondary">{{ date('d M, Y', strtotime($notice->created_at)) }}</small>
-                                @if($notice->document)
-                                <a href="{{ asset('storage/' . $notice->document) }}" target="_blank" class="small text-danger text-decoration-none"><span class="material-icons material-symbols-rounded align-middle me-1" style="font-size: 1rem;">attach_file</span>View attachment</a>
-                                @endif
+                        @php
+                            $noticeDate = $notice->created_at ?? $notice->display_date ?? null;
+                            $isNewNotice = $noticeDate && \Carbon\Carbon::parse($noticeDate)->diffInDays(now()) < 7;
+                        @endphp
+                        <li class="mb-2">
+                            <div class="dashboard-notice-item {{ $isNewNotice ? 'dashboard-notice-item-new' : '' }}">
+                                <div class="d-flex align-items-start gap-3">
+                                    <span class="notice-icon-wrap"><span class="material-icons material-symbols-rounded">description</span></span>
+                                    <div class="flex-grow-1 min-w-0">
+                                        <div class="d-flex align-items-start justify-content-between gap-2 flex-wrap">
+                                            <span class="dashboard-notice-title">{{ $notice->notice_title }}</span>
+                                            @if($isNewNotice)
+                                            <span class="badge bg-danger dashboard-notice-new-tag flex-shrink-0">New</span>
+                                            @endif
+                                        </div>
+                                        <small class="d-block dashboard-notice-date">{{ $noticeDate ? date('d M, Y', strtotime($noticeDate)) : '—' }}</small>
+                                        @if($notice->document)
+                                        <a href="{{ asset('storage/' . $notice->document) }}" target="_blank" class="dashboard-notice-attachment text-danger text-decoration-none">
+                                            <span class="material-icons material-symbols-rounded" style="font-size: 1rem;">attach_file</span>View attachment
+                                        </a>
+                                        @endif
+                                    </div>
+                                </div>
                             </div>
                         </li>
                         @endforeach
@@ -434,11 +830,14 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
             </div>
         </div>
 
-        <div class="col-lg-4">
+        <div class="col-lg-5">
             <div class="card dashboard-panel shadow-sm rounded-4 mb-4">
                 <div class="card-header py-3 px-4 d-flex align-items-center gap-2">
                     <span class="material-icons material-symbols-rounded text-primary">cake</span>
                     <h4 class="mb-0 fw-semibold text-primary">Today's Birthday</h4>
+                    <span class="ms-auto badge rounded-pill text-bg-primary-subtle text-primary border border-primary-subtle">
+                        {{ $emp_dob_data->count() }}
+                    </span>
                 </div>
                 <div class="card-body p-3 dashboard-list-scroll">
                     @if($emp_dob_data->isEmpty())
@@ -453,21 +852,50 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                         $avClasses = ['text-bg-primary', 'text-bg-info', 'text-bg-success', 'text-bg-warning', 'text-bg-danger', 'text-bg-secondary'];
                         $avClass = $avClasses[$loop->index % count($avClasses)];
                         $photo = !empty($employee->profile_picture) ? asset('storage/' . $employee->profile_picture) : null;
+                        $email = trim((string)($employee->email ?? ''));
+                        $fullName = trim(($employee->first_name ?? '') . ' ' . ($employee->last_name ?? ''));
+                        $subject = rawurlencode('Happy Birthday ' . ($fullName ?: ''));
+                        $body = rawurlencode("Dear " . ($fullName ?: '') . ",\n\nWishing you a very Happy Birthday!\n\nRegards,");
                         @endphp
-                        <div class="card dashboard-birthday-item border-0 shadow-sm rounded-3">
-                            <div class="card-body p-3 d-flex align-items-start gap-2">
-                                @if($photo)
-                                <img src="{{ $photo }}" alt="" class="rounded-circle object-fit-cover flex-shrink-0 dashboard-avatar">
-                                @else
-                                <div class="rounded-circle {{ $avClass }} fw-semibold d-inline-flex align-items-center justify-content-center flex-shrink-0 dashboard-avatar">
-                                    {{ strtoupper(substr($employee->first_name, 0, 1)) }}
-                                </div>
-                                @endif
-                                <div class="small lh-sm">
-                                    <div class="fw-semibold text-body mb-1">{{ $employee->first_name }} {{ $employee->last_name }}</div>
-                                    <div class="text-body-secondary">{{ $employee->designation_name }}</div>
-                                    <div class="text-body-secondary text-break">{{ $employee->email }}</div>
-                                    <div class="text-body-secondary">{{ $employee->mobile }}</div>
+                        <div class="card dashboard-birthday-item border-0 shadow-sm rounded-4">
+                            <div class="card-body p-3">
+                                <div class="d-flex align-items-start gap-3">
+                                    @if($photo)
+                                        <img src="{{ $photo }}" alt="" class="rounded-circle object-fit-cover flex-shrink-0 dashboard-avatar">
+                                    @else
+                                        <div class="rounded-circle {{ $avClass }} fw-semibold d-inline-flex align-items-center justify-content-center flex-shrink-0 dashboard-avatar">
+                                            {{ strtoupper(substr($employee->first_name, 0, 1)) }}
+                                        </div>
+                                    @endif
+
+                                    <div class="flex-grow-1 min-w-0">
+                                        <div class="d-flex align-items-start justify-content-between gap-2">
+                                            <div class="min-w-0">
+                                                <div class="dashboard-birthday-name text-truncate">{{ $fullName }}</div>
+                                                <div class="dashboard-birthday-designation text-truncate">{{ $employee->designation_name }}</div>
+                                            </div>
+
+                                            <div class="dashboard-birthday-badge" title="Wish them">
+                                                <span class="material-icons material-symbols-rounded" style="font-size: 16px;">cake</span>
+                                                Birthday
+                                            </div>
+                                        </div>
+
+                                        <div class="dashboard-birthday-contact">
+                                            @if($email !== '')
+                                                <span class="text-truncate">
+                                                    <span class="material-icons material-symbols-rounded align-middle">mail</span>
+                                                    {{ $email }}
+                                                </span>
+                                            @endif
+                                            @if(!empty($employee->mobile))
+                                                <span class="text-truncate">
+                                                    <span class="material-icons material-symbols-rounded align-middle">call</span>
+                                                    {{ $employee->mobile }}
+                                                </span>
+                                            @endif
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -481,6 +909,9 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                 <div class="card-header py-3 px-4 d-flex align-items-center gap-2">
                     <span class="material-icons material-symbols-rounded text-primary">calendar_month</span>
                     <h5 class="mb-0 fw-semibold">Calendar</h5>
+                    <span class="ms-auto text-body-secondary fw-semibold">
+                        {{ now()->format('d M Y') }}
+                    </span>
                 </div>
                 <div class="card-body p-3 p-md-4">
                     <x-calendar :year="$year" :month="$month" :selected="now()->toDateString()" :events="$events" theme="gov-red" />
@@ -533,6 +964,15 @@ window.markAsReadDashboard = function(notificationId, clickedElement) {
 };
 
 window.markAsRead = window.markAsReadDashboard;
+
+// Use event delegation to avoid inline onclick (also helps JS linters in Blade).
+document.addEventListener('click', function (e) {
+    const btn = e.target && e.target.closest ? e.target.closest('.dashboard-notification-item[data-notification-id]') : null;
+    if (!btn) return;
+    const id = btn.dataset.notificationId;
+    if (!id) return;
+    window.markAsReadDashboard(id, btn);
+});
 
 document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.calendar-component').forEach(function(comp) {

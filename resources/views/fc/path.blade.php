@@ -2,7 +2,7 @@
 
 @section('title', 'Foundation Course | Lal Bahadur Shastri National Academy of Administration')
 
-@section('setup_content')
+@section('content')
     @php
 
         $regStart = $pathPage->registration_start_date

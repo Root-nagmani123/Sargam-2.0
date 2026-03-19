@@ -177,12 +177,16 @@ class NotificationService
      * @param bool $unreadOnly If true, only return unread notifications
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function getNotifications(int $userId, ?int $limit = null, bool $unreadOnly = false)
+    public function getNotifications(int $userId, ?int $limit = null, bool $unreadOnly = false, ?int $daysOld = null)
     {
         $query = Notification::where('receiver_user_id', $userId);
 
         if ($unreadOnly) {
             $query->where('is_read', 0);
+        }
+
+        if ($daysOld !== null) {
+            $query->where('created_at', '>=', now()->subDays($daysOld));
         }
 
         $query->orderBy('created_at', 'desc');
@@ -200,11 +204,16 @@ class NotificationService
      * @param int $userId User ID
      * @return int
      */
-    public function getUnreadCount(int $userId): int
+    public function getUnreadCount(int $userId, ?int $daysOld = null): int
     {
-        return Notification::where('receiver_user_id', $userId)
-            ->where('is_read', 0)
-            ->count();
+        $query = Notification::where('receiver_user_id', $userId)
+            ->where('is_read', 0);
+
+        if ($daysOld !== null) {
+            $query->where('created_at', '>=', now()->subDays($daysOld));
+        }
+
+        return $query->count();
     }
 
     /**

@@ -36,7 +36,7 @@ use App\Http\Controllers\Admin\{
     MemoDisciplineController,
     DashboardController,
     CourseRepositoryController,
-    EstateController,
+    WhosWhoController,
 };
 use App\Http\Controllers\Dashboard\Calendar1Controller;
 use App\Http\Controllers\Admin\MemoNoticeController;
@@ -109,7 +109,29 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/dashboard', [UserController::class, 'dashboard'])->name('admin.dashboard');
     Route::get('/dashboard/students', [UserController::class, 'studentList'])->name('admin.dashboard.students');
+    Route::get('/dashboard/my-counselee', [UserController::class, 'myCounselee'])->name('admin.dashboard.my-counselee');
     Route::get('/dashboard/students/{id}/detail', [UserController::class, 'studentDetail'])->name('admin.dashboard.students.detail');
+
+    // Dashboard Statistics (Batch Profile)
+    // NOTE: Currently served by a Blade view; replace with controller when business logic is ready.
+    Route::prefix('dashboard-statistics')->name('admin.dashboard-statistics.')->group(function () {
+        Route::get('/', function () {
+            return redirect()->route('admin.dashboard-statistics.charts');
+        })->name('index');
+
+        Route::get('/charts', function () {
+            return view('admin.dashboard_statistics.charts', [
+                'courses' => [],
+                'course' => null,
+                'snapshot' => null,
+                'chartData' => [],
+            ]);
+        })->name('charts');
+
+        Route::post('/save-from-course', function () {
+            return redirect()->back()->withErrors(['snapshot_date' => 'Snapshot saving is not configured yet.']);
+        })->name('save-from-course');
+    });
 
 
     Route::get('/calendar', [Calendar1Controller::class, 'index'])->name('calendar.index');
@@ -763,6 +785,12 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/incoming-course', [DashboardController::class, 'incoming_course'])->name('admin.dashboard.incoming_course');
     Route::get('/guest-faculty', [DashboardController::class, 'guest_faculty'])->name('admin.dashboard.guest_faculty');
     Route::get('/inhouse-faculty', [DashboardController::class, 'inhouse_faculty'])->name('admin.dashboard.inhouse_faculty');
+    
+    // Who's Who Routes
+    Route::get('/faculty/whos-who', [WhosWhoController::class, 'index'])->name('admin.faculty.whos-who');
+    Route::get('/faculty/whos-who/courses', [WhosWhoController::class, 'getCourses'])->name('admin.faculty.whos-who.courses');
+    Route::get('/faculty/whos-who/students', [WhosWhoController::class, 'getStudents'])->name('admin.faculty.whos-who.students');
+    Route::get('/faculty/whos-who/static-info', [WhosWhoController::class, 'getStaticInfo'])->name('admin.faculty.whos-who.static-info');
     Route::get('/sessions', [DashboardController::class, 'sessions'])->name('admin.dashboard.sessions');
 
     Route::get('/upcoming-events', function () {

@@ -30,9 +30,7 @@
                                             <li class="mini-nav-item {{ (request()->routeIs('admin.dashboard') || request()->is('dashboard')) ? 'selected' : '' }}"
                                                 id="mini-1">
                                                 <a href="javascript:void(0)"
-                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3"
-                                                    data-bs-toggle="tooltip" data-bs-custom-class="custom-tooltip"
-                                                    data-bs-placement="right" data-bs-title="General">
+                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3">
                                                     <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
                                                         <i class="material-icons menu-icon material-symbols-rounded">apps</i>
                                                     </span>
