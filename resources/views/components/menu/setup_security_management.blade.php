@@ -16,7 +16,12 @@
                             </li>
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="{{ route('admin.employee_idcard.create') }}">
-                                    <span class="hide-menu small small-sm-normal text-nowrap">Generate New ID Card</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Request New ID Card</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-item">
+                                <a class="sidebar-link" href="{{ route('admin.duplicate_idcard.index') }}">
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Request Duplicate ID Card</span>
                                 </a>
                             </li>
                             <li class="sidebar-item">
@@ -24,18 +29,16 @@
                                     <span class="hide-menu small small-sm-normal text-nowrap">Request Family ID Card</span>
                                 </a>
                             </li>
-                            @if (hasRole('Security Card') || hasRole('Admin Security'))
+                           
+                            
+                            
+                             @if (hasRole('Security Card') || hasRole('Admin Security'))
                                 <li class="sidebar-item">
                                     <a class="sidebar-link" href="{{ route('admin.security.family_idcard_approval.index') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Family ID Card Approval</span>
                                     </a>
                                 </li>
                             @endif
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('admin.duplicate_idcard.index') }}">
-                                    <span class="hide-menu small small-sm-normal text-nowrap">Request Duplicate ID Card</span>
-                                </a>
-                            </li>
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="{{ route('admin.security.vehicle_pass.index') }}">
                                     <span class="hide-menu small small-sm-normal text-nowrap">Vehicle Pass Request</span>
@@ -53,6 +56,7 @@
                                     </a>
                                 </li>
                             @endif
+                            
                             @if (!hasRole('Security Card') && !hasRole('Admin Security'))
                             <li class="sidebar-item">
                                 <a class="sidebar-link {{ request()->routeIs('admin.security.employee_idcard_approval.approval1') ? 'active' : '' }}"
