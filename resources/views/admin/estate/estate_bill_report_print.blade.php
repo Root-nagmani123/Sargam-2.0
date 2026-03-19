@@ -15,36 +15,51 @@
     .estate-bill-print.bill-page, .estate-bill-print.bill-page * { visibility: visible; }
     .estate-bill-print.bill-page { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; background: #fff; }
     .no-print { display: none !important; }
-    .bill-doc { break-inside: avoid; page-break-inside: avoid; }
-    @page { size: A4; margin: 8mm; }
+    .bill-doc {
+        break-inside: avoid;
+        page-break-inside: avoid;
+        width: 100%;
+        max-width: 206mm;
+        margin: 0 auto;
+        border-width: 1.5px;
+    }
+    @page { size: A4 portrait; margin: 2mm; }
     html, body { margin: 0 !important; padding: 0 !important; }
     body { background: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .bill-doc { box-shadow: none !important; }
-    .bill-page { font-size: 10pt; line-height: 1.28; }
-    .bill-header { padding: 12px 18px 14px; }
-    .bill-header::after { margin-top: 10px; }
-    .bill-header .org-name { font-size: 12pt; margin-bottom: 2px; }
-    .bill-header .org-sub { font-size: 9pt; }
-    .bill-header .bill-title { font-size: 11pt; margin-top: 10px; }
-    .bill-badge { top: 10px; right: 14px; font-size: 8pt; padding: 4px 10px; }
-    .bill-emblem { width: 38px; height: 38px; margin-bottom: 8px; font-size: 9pt; }
-    .bill-meta-bar { padding: 10px 18px; gap: 8px; font-size: 9.5pt; }
-    .bill-meta-bar .bill-no { font-size: 10.5pt; padding: 3px 10px; }
-    .bill-consumer { padding: 12px 18px; }
-    .bill-consumer-title { margin-bottom: 8px; padding-bottom: 4px; }
-    .bill-consumer-table td { padding: 4px 10px 4px 0; font-size: 9.5pt; }
-    .bill-section-title { margin: 14px 18px 8px; padding: 6px 0 6px 10px; font-size: 9.5pt; }
-    .bill-table-wrap { padding: 0 18px 6px; }
-    .bill-table { margin-bottom: 12px; font-size: 9.25pt; }
-    .bill-table th, .bill-table td { padding: 6px 8px; }
-    .bill-total-wrap { padding: 0 18px 16px; }
-    .bill-total-box { margin-top: 4px; padding: 12px 14px; }
-    .bill-total-box .grand-total { font-size: 15pt; }
-    .bill-amount-words, .bill-pay-by { margin-top: 6px; font-size: 8.5pt; }
-    .bill-footer { padding: 12px 18px 14px; font-size: 8.25pt; }
-    .bill-footer .footer-note { margin-bottom: 6px; line-height: 1.35; }
-    .bill-footer .sign-block { margin-top: 18px; gap: 28px; }
-    .bill-footer .sign-line { width: 150px; }
+    .bill-page {
+        font-size: 8.4pt;
+        line-height: 1.12;
+        width: 100%;
+    }
+    .bill-header { padding: 7px 10px 8px; }
+    .bill-header::after { margin-top: 4px; height: 1px; }
+    .bill-header .org-name { font-size: 9.1pt; margin-bottom: 1px; }
+    .bill-header .org-sub { font-size: 7pt; }
+    .bill-header .bill-title { font-size: 8.3pt; margin-top: 5px; letter-spacing: 0.06em; }
+    .bill-badge { top: 5px; right: 7px; font-size: 6.2pt; padding: 2px 6px; }
+    .bill-emblem { width: 24px; height: 24px; margin-bottom: 4px; font-size: 6.5pt; border-width: 1px; }
+    .bill-meta-bar { padding: 5px 10px; gap: 4px; font-size: 7.1pt; border-bottom-width: 1px; }
+    .bill-meta-bar .bill-no { font-size: 7.8pt; padding: 1px 6px; border-width: 1px; }
+    .bill-consumer { padding: 5px 10px; border-left-width: 2px; }
+    .bill-consumer-title { margin-bottom: 3px; padding-bottom: 2px; font-size: 7.1pt; border-bottom-width: 1px; }
+    .bill-consumer-table td { padding: 2px 6px 2px 0; font-size: 7pt; }
+    .bill-section-title { margin: 6px 10px 3px; padding: 2px 0 2px 5px; font-size: 7.1pt; border-left-width: 2px; }
+    .bill-table-wrap { padding: 0 10px 2px; }
+    .bill-table { margin-bottom: 4px; font-size: 6.9pt; }
+    .bill-table th, .bill-table td { padding: 2px 4px; }
+    .bill-total-wrap { padding: 0 10px 5px; }
+    .bill-total-box { margin-top: 1px; padding: 5px 7px; border-width: 1.5px; }
+    .bill-total-box::before { height: 1px; }
+    .bill-total-label { font-size: 6.8pt; margin-bottom: 2px; }
+    .bill-total-box .grand-total { font-size: 10pt; }
+    .bill-amount-words, .bill-pay-by { margin-top: 2px; font-size: 6.3pt; line-height: 1.15; }
+    .bill-footer { padding: 5px 10px 6px; font-size: 6.2pt; border-top-width: 1px; }
+    .bill-footer .footer-note { margin-bottom: 2px; line-height: 1.15; }
+    .bill-footer p { margin-bottom: 2px; }
+    .bill-footer .sign-block { margin-top: 6px; gap: 10px; }
+    .bill-footer .sign-line { width: 95px; padding-top: 2px; border-top-width: 1px; font-size: 6.2pt; }
+    .bill-footer .sign-sub { font-size: 5.8pt; margin-top: 1px; }
 }
 /* --- Bill document frame --- */
 .bill-page { font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; font-size: 11pt; color: #1a202c; line-height: 1.45; }
