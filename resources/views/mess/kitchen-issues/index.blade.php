@@ -337,16 +337,8 @@ document.addEventListener('DOMContentLoaded', function () {
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Remarks</label>
-                                    <input type="text" name="remarks" class="form-control" value="{{ old('remarks') }}" placeholder="Remarks (optional)">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Reference Number</label>
-                                    <input type="text" name="reference_number" class="form-control" value="{{ old('reference_number') }}" placeholder="Reference number (optional)" maxlength="100">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Order By</label>
-                                    <input type="text" name="order_by" class="form-control" value="{{ old('order_by') }}" placeholder="Order by (optional)" maxlength="100">
+                                    <label class="form-label">Remarks / Reference Number / Order By</label>
+                                    <input type="text" name="remarks" class="form-control" value="{{ old('remarks') }}" placeholder="Remarks / Reference Number / Order By (optional)">
                                 </div>
                             </div>
                         </div>
@@ -528,16 +520,8 @@ document.addEventListener('DOMContentLoaded', function () {
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Remarks</label>
-                                    <input type="text" name="remarks" class="form-control edit-remarks" placeholder="Remarks (optional)">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Reference Number</label>
-                                    <input type="text" name="reference_number" class="form-control edit-reference-number" placeholder="Reference number (optional)" maxlength="100">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Order By</label>
-                                    <input type="text" name="order_by" class="form-control edit-order-by" placeholder="Order by (optional)" maxlength="100">
+                                    <label class="form-label">Remarks / Reference Number / Order By</label>
+                                    <input type="text" name="remarks" class="form-control edit-remarks" placeholder="Remarks / Reference Number / Order By (optional)">
                                 </div>
                             </div>
                         </div>
