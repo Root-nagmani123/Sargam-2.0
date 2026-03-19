@@ -3098,7 +3098,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (editWrap2) editWrap2.style.display = '';
                     const isOt = slug === 'ot';
                     const isCourse = slug === 'course';
-                    const editClientSelect = document.getElementById('editDrClientNameSelect');
+                    let editClientSelect = document.getElementById('editDrClientNameSelect');
                     const editOtSelect = document.getElementById('editDrOtCourseSelect');
                     const editCourseSelect = document.getElementById('editDrCourseSelect');
                     const editCourseNameSelect = document.getElementById('editDrCourseNameSelect');
