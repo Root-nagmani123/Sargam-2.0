@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin\Security;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 
 class CardSubTypeMasterController extends Controller
@@ -23,9 +24,11 @@ class CardSubTypeMasterController extends Controller
 
     public function create(Request $request)
     {
-        $cardTypes = DB::table('sec_id_cardno_master')
-            ->orderBy('sec_card_name')
-            ->pluck('sec_card_name', 'pk');
+        $ctQuery = DB::table('sec_id_cardno_master')->orderBy('sec_card_name');
+        if (Schema::hasColumn('sec_id_cardno_master', 'active_inactive')) {
+            $ctQuery->where('active_inactive', 1);
+        }
+        $cardTypes = $ctQuery->pluck('sec_card_name', 'pk');
 
         if ($request->ajax()) {
             return view('admin.security.idcard_master.sub_type._form', compact('cardTypes'));
@@ -57,8 +60,7 @@ class CardSubTypeMasterController extends Controller
             'sec_id_cardno_master' => $validated['sec_id_cardno_master'],
             'card_name'            => $validated['card_name'],
             'config_name'          => $validated['config_name'],
-            'created_date'         => $now,
-            'modified_date'        => $now,
+           
         ]);
 
         if ($request->ajax()) {
@@ -97,9 +99,11 @@ class CardSubTypeMasterController extends Controller
             abort(404);
         }
 
-        $cardTypes = DB::table('sec_id_cardno_master')
-            ->orderBy('sec_card_name')
-            ->pluck('sec_card_name', 'pk');
+        $ctQuery = DB::table('sec_id_cardno_master')->orderBy('sec_card_name');
+        if (Schema::hasColumn('sec_id_cardno_master', 'active_inactive')) {
+            $ctQuery->where('active_inactive', 1);
+        }
+        $cardTypes = $ctQuery->pluck('sec_card_name', 'pk');
 
         if ($request->ajax()) {
             return view('admin.security.idcard_master.sub_type._form', compact('subType', 'cardTypes'));
@@ -143,7 +147,6 @@ class CardSubTypeMasterController extends Controller
                 'sec_id_cardno_master' => $validated['sec_id_cardno_master'],
                 'card_name'            => $validated['card_name'],
                 'config_name'          => $validated['config_name'],
-                'modified_date'        => now()->format('Y-m-d H:i:s'),
             ]);
 
         if ($request->ajax()) {
@@ -175,6 +178,25 @@ class CardSubTypeMasterController extends Controller
             $pk = decrypt($id);
         } catch (\Exception $e) {
             abort(404);
+        }
+
+        $row = DB::table('sec_id_cardno_config_map')->where('pk', $pk)->first(['pk', 'active_inactive']);
+        if (! $row) {
+            abort(404);
+        }
+
+        // Restrict deletion of active records.
+        if ((int) ($row->active_inactive ?? 1) === 1) {
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Active sub type cannot be deleted. Please set it inactive first.',
+                ], 422);
+            }
+
+            return redirect()
+                ->route('admin.security.idcard_sub_type.index')
+                ->with('error', 'Active sub type cannot be deleted. Please set it inactive first.');
         }
 
         DB::table('sec_id_cardno_config_map')->where('pk', $pk)->delete();

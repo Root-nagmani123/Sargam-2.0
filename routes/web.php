@@ -393,6 +393,7 @@ Route::prefix('security/idcard-card-type')->name('admin.security.idcard_card_typ
     Route::post('/store', 'store')->name('store');
     Route::get('/edit/{id}', 'edit')->name('edit');
     Route::post('/update/{id}', 'update')->name('update');
+    Route::post('/toggle-status/{id}', 'toggleStatus')->name('toggleStatus');
     Route::delete('/delete/{id}', 'delete')->name('delete');
 });
 

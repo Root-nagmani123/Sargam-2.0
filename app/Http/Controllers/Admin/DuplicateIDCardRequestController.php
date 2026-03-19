@@ -892,7 +892,8 @@ class DuplicateIDCardRequestController extends Controller
         if ($source === 'perm') {
             $rej = SecurityDupPermIdApplyApproval::where('security_parm_id_apply_pk', $applyId)->where('status', 3)->latest('pk')->first();
             if ($rej) {
-                return 'Rejected';
+                $name = EmployeeMaster::where('pk', $rej->approval_emp_pk)->value(DB::raw("TRIM(CONCAT(IFNULL(first_name,''),' ',IFNULL(last_name,'')))"));
+                return $name ? ('Rejected By ' . $name) : 'Rejected';
             }
             $a2 = SecurityDupPermIdApplyApproval::where('security_parm_id_apply_pk', $applyId)->where('status', 2)->latest('pk')->first();
             if ($a2) {
@@ -904,7 +905,8 @@ class DuplicateIDCardRequestController extends Controller
 
         $rej = SecurityDupOtherIdApplyApproval::where('security_con_id_apply_pk', $applyId)->where('status', 3)->latest('pk')->first();
         if ($rej) {
-            return 'Rejected';
+            $name = EmployeeMaster::where('pk', $rej->approval_emp_pk)->value(DB::raw("TRIM(CONCAT(IFNULL(first_name,''),' ',IFNULL(last_name,'')))"));
+            return $name ? ('Rejected By ' . $name) : 'Rejected';
         }
         $a2 = SecurityDupOtherIdApplyApproval::where('security_con_id_apply_pk', $applyId)->where('status', 2)->latest('pk')->first();
         if ($a2) {

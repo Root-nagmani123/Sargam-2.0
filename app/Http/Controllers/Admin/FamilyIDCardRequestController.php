@@ -708,6 +708,12 @@ class FamilyIDCardRequestController extends Controller
     public function destroy($id)
     {
         $row = SecurityFamilyIdApply::where('fml_id_apply', $id)->firstOrFail();
+
+        if ((int) $row->id_status === 2) {
+            return redirect()->route('admin.family_idcard.index')
+                ->with('error', 'Approved requests cannot be deleted.');
+        }
+
         $row->delete();
         return redirect()->route('admin.family_idcard.index')
             ->with('success', 'Family ID Card request archived successfully!');

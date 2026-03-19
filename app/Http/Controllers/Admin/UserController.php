@@ -376,8 +376,9 @@ class UserController extends Controller
         }
 
         if ($isApproval2) {
-            // Approval II actionable: pending without Approval II record (status=2) yet
-            return (int) DB::table('security_parm_id_apply as spa')
+            // Permanent regular actionable at Approval II:
+            // pending without Approval II record yet.
+            $permCount = (int) DB::table('security_parm_id_apply as spa')
                 ->whereBetween('spa.created_date', [$start, $end])
                 ->where('spa.id_status', SecurityParmIdApply::ID_STATUS_PENDING)
                 ->whereNotExists(function ($q) {
@@ -387,10 +388,29 @@ class UserController extends Controller
                         ->where('a.status', 2);
                 })
                 ->count();
+
+            // Contractual regular actionable at Approval II:
+            // pending, department approved, and having pending row (status=0).
+            $contPendingIds = DB::table('security_con_oth_id_apply_approval')
+                ->where('status', 0)
+                ->pluck('security_parm_id_apply_pk');
+
+            $contCount = 0;
+            if ($contPendingIds->isNotEmpty()) {
+                $contCount = (int) DB::table('security_con_oth_id_apply as sco')
+                    ->whereBetween('sco.created_date', [$start, $end])
+                    ->where('sco.id_status', 1)
+                    ->where('sco.depart_approval_status', 2)
+                    ->whereIn('sco.emp_id_apply', $contPendingIds)
+                    ->count();
+            }
+
+            return $permCount + $contCount;
         }
 
-        // Approval III final pending: pending with Approval II already done
-        return (int) DB::table('security_parm_id_apply as spa')
+        // Approval III final pending:
+        // 1) permanent regular pending with Approval II already done
+        $permFinalPending = (int) DB::table('security_parm_id_apply as spa')
             ->whereBetween('spa.created_date', [$start, $end])
             ->where('spa.id_status', SecurityParmIdApply::ID_STATUS_PENDING)
             ->whereExists(function ($q) {
@@ -400,6 +420,33 @@ class UserController extends Controller
                     ->where('a.status', 2);
             })
             ->count();
+
+        // 2) contractual regular pending final:
+        // pending, department approved, recommended (status=1 + recommend_status=1), and not final/rejected.
+        $contRecommendedIds = DB::table('security_con_oth_id_apply_approval')
+            ->where('status', 1)
+            ->where('recommend_status', 1)
+            ->pluck('security_parm_id_apply_pk');
+        $contFinalDoneIds = DB::table('security_con_oth_id_apply_approval')
+            ->whereIn('status', [2, 3])
+            ->pluck('security_parm_id_apply_pk');
+
+        $contFinalPending = 0;
+        if ($contRecommendedIds->isNotEmpty()) {
+            $contQuery = DB::table('security_con_oth_id_apply as sco')
+                ->whereBetween('sco.created_date', [$start, $end])
+                ->where('sco.id_status', 1)
+                ->where('sco.depart_approval_status', 2)
+                ->whereIn('sco.emp_id_apply', $contRecommendedIds);
+
+            if ($contFinalDoneIds->isNotEmpty()) {
+                $contQuery->whereNotIn('sco.emp_id_apply', $contFinalDoneIds);
+            }
+
+            $contFinalPending = (int) $contQuery->count();
+        }
+
+        return $permFinalPending + $contFinalPending;
     }
 
     /**

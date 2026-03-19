@@ -26,6 +26,7 @@
                         <tr>
                             <th style="width:70px;">S.No.</th>
                             <th>Card Type Name</th>
+                            <th style="width:140px;">Status</th>
                             <th style="width:140px;">Actions</th>
                         </tr>
                     </thead>
@@ -35,8 +36,28 @@
                                 <td>{{ $cardTypes->firstItem() + $index }}</td>
                                 <td>{{ $ct->sec_card_name }}</td>
                                 <td>
+                                    @php
+                                        $hasStatus = property_exists($ct, 'active_inactive');
+                                        $isActive = $hasStatus ? ((int) $ct->active_inactive === 1) : true;
+                                    @endphp
+                                    @if($hasStatus)
+                                        <div class="form-check form-switch d-inline-block">
+                                            <input class="form-check-input status-toggle"
+                                                   type="checkbox"
+                                                   role="switch"
+                                                   data-table="sec_id_cardno_master"
+                                                   data-column="active_inactive"
+                                                   data-id="{{ $ct->pk }}"
+                                                   data-id_column="pk"
+                                                   {{ $isActive ? 'checked' : '' }}>
+                                        </div>
+                                    @else
+                                        <span class="badge bg-secondary">N/A</span>
+                                    @endif
+                                </td>
+                                <td>
                                     <div class="d-flex gap-2">
-                                        <a href="{{ route('admin.security.idcard_card_type.edit', encrypt($ct->pk)) }}" class="text-success" title="Edit">
+                                        <a href="{{ route('admin.security.idcard_card_type.edit', encrypt($ct->pk)) }}" class="text-success openEditCardType" title="Edit">
                                             <i class="material-icons material-symbols-rounded" style="font-size:22px;">edit</i>
                                         </a>
                                         <form action="{{ route('admin.security.idcard_card_type.delete', encrypt($ct->pk)) }}" method="POST" onsubmit="return confirm('Delete this Card Type?');">
@@ -51,7 +72,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="3" class="text-center text-muted">No Card Types found.</td>
+                                <td colspan="4" class="text-center text-muted">No Card Types found.</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -83,6 +104,16 @@ $(document).ready(function () {
             $('#cardTypeModal').modal('show');
         });
     });
+
+    // Edit: open same modal via AJAX (controller returns _form only for AJAX)
+    $(document).on('click', '.openEditCardType', function (e) {
+        e.preventDefault();
+        $.get($(this).attr('href'), function (data) {
+            $('#cardTypeModalContent').html(data);
+            $('#cardTypeModal').modal('show');
+        });
+    });
+
 });
 </script>
 @endpush

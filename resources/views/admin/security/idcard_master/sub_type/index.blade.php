@@ -61,7 +61,7 @@
                                 </td>
                                 <td>
                                     <div class="d-flex gap-2">
-                                        <a href="{{ route('admin.security.idcard_sub_type.edit', encrypt($st->pk)) }}" class="text-success" title="Edit">
+                                        <a href="{{ route('admin.security.idcard_sub_type.edit', encrypt($st->pk)) }}" class="text-success openEditSubType" title="Edit">
                                             <i class="material-icons material-symbols-rounded" style="font-size:22px;">edit</i>
                                         </a>
                                         <form action="{{ route('admin.security.idcard_sub_type.delete', encrypt($st->pk)) }}" method="POST" onsubmit="return confirm('Delete this Sub Type mapping?');">
@@ -102,6 +102,15 @@
 <script>
 $(document).ready(function () {
     $('#openCreateSubType').on('click', function (e) {
+        e.preventDefault();
+        $.get($(this).attr('href'), function (data) {
+            $('#subTypeModalContent').html(data);
+            $('#subTypeModal').modal('show');
+        });
+    });
+
+    // Edit: open modal via AJAX (controller returns _form only for AJAX)
+    $(document).on('click', '.openEditSubType', function (e) {
         e.preventDefault();
         $.get($(this).attr('href'), function (data) {
             $('#subTypeModalContent').html(data);

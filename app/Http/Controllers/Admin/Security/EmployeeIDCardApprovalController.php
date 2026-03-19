@@ -73,11 +73,23 @@ class EmployeeIDCardApprovalController extends Controller
         $contA1DoneArr = $contA1Done->toArray();
         $contDtos = $contRows->map(function ($r) use ($contA1DoneArr) {
             $dto = IdCardSecurityMapper::toContractualRequestDto($r);
+
+            // Normalize status fields so the shared approval table can hide action buttons
+            // once a request is Approved / Rejected.
+            $dto->id_status = (int) ($dto->id_status ?? $r->id_status ?? 0);
+            $dto->status = match ((int) ($dto->id_status ?? 0)) {
+                1 => 'Pending',
+                2 => 'Approved',
+                3 => 'Rejected',
+                default => 'Unknown',
+            };
+
             // If already approved at Level 1 (A1 exists) but master status still Pending,
             // show as view-only in Approval-I list.
             if ((int) ($dto->id_status ?? 0) === 1 && in_array(($r->emp_id_apply ?? ''), $contA1DoneArr, true)) {
                 $dto->is_view_only = true;
             }
+
             return $dto;
         });
 
@@ -194,7 +206,10 @@ class EmployeeIDCardApprovalController extends Controller
         // Non-pending rows will be view-only in the table.
         $dupPermQuery = DB::table('security_dup_perm_id_apply as dup')
             ->leftJoin('employee_master as emp', 'dup.employee_master_pk', '=', 'emp.pk')
-            ->leftJoin('designation_master as desig', 'dup.designation_pk', '=', 'desig.pk')
+            ->leftJoin('designation_master as desig', function ($j) {
+                $j->on('dup.designation_pk', '=', 'desig.pk')
+                    ->orOn('emp.designation_master_pk', '=', 'desig.pk');
+            })
             ->leftJoin('department_master as dept', 'emp.department_master_pk', '=', 'dept.pk');
         $dupPermQuery->orderByDesc('dup.created_date')
             ->select([
@@ -307,7 +322,7 @@ class EmployeeIDCardApprovalController extends Controller
                 'designation' => $r->designation_name ?? null,
                 'father_name' => null,
                 'id_card_number' => $r->id_card_no,
-                'card_type' => null,
+                'card_type' => $r->card_type ?? '--',
                 'date_of_birth' => $r->employee_dob,
                 'blood_group' => $r->blood_group,
                 'mobile_number' => $r->mobile_no,
@@ -456,7 +471,7 @@ class EmployeeIDCardApprovalController extends Controller
                 'designation' => $r->designation_name ?? '--',
                 'father_name' => null,
                 'id_card_number' => $r->id_card_no,
-                'card_type' => null,
+                'card_type' => $r->card_type ?? '--',
                 'date_of_birth' => $r->employee_dob,
                 'blood_group' => $r->blood_group,
                 'mobile_number' => $r->mobile_no,
@@ -499,8 +514,8 @@ class EmployeeIDCardApprovalController extends Controller
     }
 
     /**
-     * Approval III: Final approval for Permanent Employee ID Cards.
-     * Shows only Permanent requests which are still Pending but already have Approval II.
+     * Approval III: Final approval + history view.
+     * Shows Pending/Approved/Rejected records that have reached Level 3 flow.
      */
     public function approval3(Request $request)
     {
@@ -515,7 +530,11 @@ class EmployeeIDCardApprovalController extends Controller
             ->where('status', SecurityParmIdApplyApproval::STATUS_APPROVAL_2);
 
         $permQuery = SecurityParmIdApply::with(['employee.designation', 'employee.department', 'creator.department', 'approvals.approver'])
-            ->where('id_status', SecurityParmIdApply::ID_STATUS_PENDING)
+            ->whereIn('id_status', [
+                SecurityParmIdApply::ID_STATUS_PENDING,
+                SecurityParmIdApply::ID_STATUS_APPROVED,
+                SecurityParmIdApply::ID_STATUS_REJECTED,
+            ])
             ->whereIn('emp_id_apply', $hasA2)
             ->orderBy('created_date', 'desc');
 
@@ -542,23 +561,19 @@ class EmployeeIDCardApprovalController extends Controller
             ->where('status', 1)
             ->where('recommend_status', 1)
             ->pluck('security_parm_id_apply_pk');
-        $dupPermFinalDone = DB::table('security_dup_perm_id_apply_approval')
-            ->where('status', 2)
-            ->pluck('security_parm_id_apply_pk');
-
         $dupPermQuery = DB::table('security_dup_perm_id_apply as dup')
             ->leftJoin('employee_master as emp', 'dup.employee_master_pk', '=', 'emp.pk')
-            ->leftJoin('designation_master as desig', 'dup.designation_pk', '=', 'desig.pk')
+            ->leftJoin('designation_master as desig', function ($j) {
+                $j->on('dup.designation_pk', '=', 'desig.pk')
+                    ->orOn('emp.designation_master_pk', '=', 'desig.pk');
+            })
             ->leftJoin('department_master as dept', 'emp.department_master_pk', '=', 'dept.pk')
-            ->where('dup.id_status', 1);
+            ->whereIn('dup.id_status', [1, 2, 3]);
 
         if ($dupPermRecommended->isNotEmpty()) {
             $dupPermQuery->whereIn('dup.emp_id_apply', $dupPermRecommended);
         } else {
             $dupPermQuery->whereRaw('0 = 1');
-        }
-        if ($dupPermFinalDone->isNotEmpty()) {
-            $dupPermQuery->whereNotIn('dup.emp_id_apply', $dupPermFinalDone);
         }
 
         if ($searchLike) {
@@ -587,6 +602,12 @@ class EmployeeIDCardApprovalController extends Controller
             if ($fullName === '') {
                 $fullName = $r->employee_name ?? '--';
             }
+            $status = match ((int) ($r->id_status ?? 0)) {
+                1 => 'Pending',
+                2 => 'Approved',
+                3 => 'Rejected',
+                default => 'Unknown',
+            };
             return (object) [
                 // keep base id as emp_id_apply; _approval_table will add p-dup- prefix for duplicates
                 'id' => $r->emp_id_apply,
@@ -595,7 +616,7 @@ class EmployeeIDCardApprovalController extends Controller
                 'designation' => $r->designation_name ?? null,
                 'father_name' => null,
                 'id_card_number' => $r->id_card_no,
-                'card_type' => null,
+                'card_type' => $r->card_type ?? '--',
                 'date_of_birth' => $r->employee_dob,
                 'blood_group' => $r->blood_group,
                 'mobile_number' => $r->mobile_no,
@@ -607,6 +628,7 @@ class EmployeeIDCardApprovalController extends Controller
                 'requested_by' => $fullName,
                 'requested_section' => $r->department_name ?? null,
                 'request_type' => 'duplicate',
+                'status' => $status,
             ];
         });
 
@@ -617,7 +639,7 @@ class EmployeeIDCardApprovalController extends Controller
             ->pluck('security_parm_id_apply_pk');
 
         $contQuery = DB::table('security_con_oth_id_apply')
-            ->where('id_status', 1);
+            ->whereIn('id_status', [1, 2, 3]);
         if ($contHasA2->isNotEmpty()) {
             $contQuery->whereIn('emp_id_apply', $contHasA2);
         } else {
@@ -645,20 +667,13 @@ class EmployeeIDCardApprovalController extends Controller
             ->where('status', 1)
             ->where('recommend_status', 1)
             ->pluck('security_con_id_apply_pk');
-        $dupContFinalDone = DB::table('security_dup_other_id_apply_approval')
-            ->whereIn('status', [2, 3])
-            ->pluck('security_con_id_apply_pk');
-
         $dupContQuery = DB::table('security_dup_other_id_apply')
-            ->where('id_status', 1)
+            ->whereIn('id_status', [1, 2, 3])
             ->where('depart_approval_status', 2);
         if ($dupContRecommended->isNotEmpty()) {
             $dupContQuery->whereIn('emp_id_apply', $dupContRecommended);
         } else {
             $dupContQuery->whereRaw('0 = 1');
-        }
-        if ($dupContFinalDone->isNotEmpty()) {
-            $dupContQuery->whereNotIn('emp_id_apply', $dupContFinalDone);
         }
         if ($searchLike) {
             $dupContQuery->where(function ($q) use ($searchLike) {
@@ -679,6 +694,12 @@ class EmployeeIDCardApprovalController extends Controller
             if (!empty($r->section) && isset($deptMap[$r->section])) {
                 $requestedSection = $deptMap[$r->section];
             }
+            $status = match ((int) ($r->id_status ?? 0)) {
+                1 => 'Pending',
+                2 => 'Approved',
+                3 => 'Rejected',
+                default => 'Unknown',
+            };
             return (object) [
                 // base id is "c-<applyId>" so _approval_table can build "c-dup-<applyId>"
                 'id' => 'c-' . $r->emp_id_apply,
@@ -687,7 +708,7 @@ class EmployeeIDCardApprovalController extends Controller
                 'designation' => $r->designation_name ?? '--',
                 'father_name' => $r->father_name ?? null,
                 'id_card_number' => $r->id_card_no,
-                'card_type' => null,
+                'card_type' => $r->card_type ?? '--',
                 'date_of_birth' => $r->employee_dob,
                 'blood_group' => $r->blood_group,
                 'mobile_number' => $r->mobile_no,
@@ -699,6 +720,7 @@ class EmployeeIDCardApprovalController extends Controller
                 'requested_by' => null,
                 'requested_section' => $requestedSection,
                 'request_type' => 'duplicate',
+                'status' => $status,
             ];
         });
 
@@ -931,6 +953,26 @@ class EmployeeIDCardApprovalController extends Controller
                 abort(404);
             }
             $request = IdCardSecurityMapper::toContractualRequestDto($row);
+
+            // Contractual regular requests: compute actionable state per stage.
+            $approvals = DB::table('security_con_oth_id_apply_approval')
+                ->where('security_parm_id_apply_pk', $row->emp_id_apply)
+                ->get();
+            $hasA1 = $approvals->where('status', 1)->isNotEmpty();
+            $hasRecommended = $approvals->where('status', 1)->where('recommend_status', 1)->isNotEmpty();
+            $hasFinal = $approvals->where('status', 2)->isNotEmpty();
+            $hasRej = $approvals->where('status', 3)->isNotEmpty();
+            $hasPending = $approvals->where('status', 0)->isNotEmpty();
+
+            if ($stage === 1) {
+                $canApprove = !$hasA1 && !$hasRecommended && !$hasFinal && !$hasRej && (int) $row->id_status === 1;
+            } elseif ($stage === 2) {
+                $canApprove = $hasPending && !$hasRecommended && !$hasFinal && !$hasRej && (int) $row->id_status === 1;
+            } elseif ($stage === 3) {
+                $canApprove = $hasPending && $hasRecommended && !$hasFinal && !$hasRej && (int) $row->id_status === 1;
+            } else {
+                $canApprove = false;
+            }
         } else {
             $row = SecurityParmIdApply::with(['employee.designation', 'employee.department', 'creator.department', 'approvals.approver'])
                 ->findOrFail($decrypted);
@@ -1422,8 +1464,7 @@ class EmployeeIDCardApprovalController extends Controller
             // Update latest pending row (status=0) to final approved (status=2)
             DB::table('security_dup_other_id_apply_approval')
                 ->where('security_con_id_apply_pk', $applyId)
-                ->where('status', 1)
-                ->where('recommend_status', null)
+                ->where('status', 0)
                 ->orderByDesc('pk')
                 ->limit(1)
                 ->update([

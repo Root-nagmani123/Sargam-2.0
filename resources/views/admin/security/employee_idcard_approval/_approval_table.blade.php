@@ -14,7 +14,7 @@
                 <th>REQUEST TYPE</th>
                 <th style="width:70px;" class="text-center">PHOTO</th>
                 <th>CONTACT NO</th>
-                <th>APPROVED/REJECT</th>
+                <th class="text-center">APPROVED/REJECT</th>
                 <th>REQUEST DATE</th>
                 <th>REQUESTED SECTION</th>
             </tr>
@@ -29,7 +29,7 @@
                     <td>{{ $req->id_card_number ?? '--' }}</td>
                     <td>{{ $req->card_type ?? '--' }}</td>
                     
-                    <td>
+                    <td class="text-center">
                         @if(isset($req->request_type) && $req->request_type === 'duplicate')
                             <span class="badge bg-info">Duplicate</span>
                         @else
@@ -79,7 +79,7 @@
                             $encryptedId = encrypt($encryptKey);
                         @endphp
 
-                        <div class="d-flex flex-column gap-1">
+                        <div class="d-flex flex-column gap-1 align-items-center">
                             <a href="{{ route('admin.security.employee_idcard_approval.show', ['id' => $encryptedId, 'stage' => $approvalStage]) }}"
                                class="btn btn-link p-0 text-primary text-decoration-none"
                                title="View full request details">
@@ -88,19 +88,27 @@
 
                             @if(($req->status ?? 'Pending') !== 'Pending')
                                 {{-- Non-pending requests are always view-only --}}
-                                <span class="badge bg-secondary align-self-start">{{ $req->status }}</span>
+                                @php
+                                    $statusLabel = (string) ($req->status ?? '');
+                                    $statusBadgeClass = match ($statusLabel) {
+                                        'Approved' => 'bg-success',
+                                        'Rejected' => 'bg-danger',
+                                        default => 'bg-secondary',
+                                    };
+                                @endphp
+                                <span class="badge {{ $statusBadgeClass }}">{{ $statusLabel }}</span>
                                 <small class="text-muted">No further actions available</small>
                             @elseif(isset($req->is_view_only) && $req->is_view_only)
                                 @if($approvalStage === 2 && in_array(($req->employee_type ?? ''), ['Permanent Employee', 'Contractual Employee']))
-                                    <span class="badge bg-warning align-self-start">Pending from Final Approval</span>
+                                    <span class="badge bg-warning">Pending from Final Approval</span>
                                     <small class="text-muted">{{ $req->final_status_hint ?? 'Recommended at Level 2' }}</small>
                                 @else
                                     {{-- View-only rows (e.g. other non-actionable rows) --}}
-                                    <span class="badge bg-info align-self-start">View Only</span>
+                                    <span class="badge bg-info">View Only</span>
                                     <small class="text-muted">Approved at Level 1</small>
                                 @endif
                             @else
-                                <div class="d-flex gap-1 flex-wrap">
+                                <div class="d-flex gap-1 flex-wrap justify-content-center align-items-center">
                                     @php
                                         $approveRoute = $approvalStage === 1
                                             ? route('admin.security.employee_idcard_approval.approve1', $encryptedId)

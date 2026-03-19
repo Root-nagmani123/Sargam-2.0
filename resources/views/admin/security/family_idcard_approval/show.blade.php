@@ -10,9 +10,15 @@
                     <small class="text-muted">Request ID: <code>{{ $application->fml_id_apply }}</code></small>
                 </div>
                 <div>
-                    <a href="{{ route('admin.security.family_idcard_approval.index') }}" class="btn btn-secondary">
+                    @php
+                        $prev = url()->previous();
+                        $safeBackUrl = (is_string($prev) && str_contains($prev, '/security/family-idcard-approval'))
+                            ? $prev
+                            : route('admin.security.family_idcard_approval.index');
+                    @endphp
+                    <a href="{{ $safeBackUrl }}" class="btn btn-secondary">
                         <i class="material-icons material-symbols-rounded" style="font-size:20px;vertical-align:middle;">arrow_back</i>
-                        Back to Pending
+                        Back to Approval List
                     </a>
                 </div>
             </div>

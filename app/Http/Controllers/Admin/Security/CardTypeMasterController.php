@@ -5,15 +5,19 @@ namespace App\Http\Controllers\Admin\Security;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 
 class CardTypeMasterController extends Controller
 {
     public function index()
     {
-        $cardTypes = DB::table('sec_id_cardno_master')
-            ->orderBy('sec_card_name')
-            ->paginate(15);
+        $query = DB::table('sec_id_cardno_master')->orderBy('sec_card_name');
+        // If status column exists, include it for display/toggle.
+        if (Schema::hasColumn('sec_id_cardno_master', 'active_inactive')) {
+            $query->select(['pk', 'sec_card_name', 'active_inactive']);
+        }
+        $cardTypes = $query->paginate(15);
 
         return view('admin.security.idcard_master.card_type.index', compact('cardTypes'));
     }
@@ -43,7 +47,7 @@ class CardTypeMasterController extends Controller
         $pk = DB::table('sec_id_cardno_master')->insertGetId([
             'sec_card_name' => $validated['sec_card_name'],
             'created_date'  => $now,
-            'modified_date' => $now,
+            
         ]);
 
         if ($request->ajax()) {
@@ -109,7 +113,6 @@ class CardTypeMasterController extends Controller
             ->where('pk', $pk)
             ->update([
                 'sec_card_name' => $validated['sec_card_name'],
-                'modified_date' => now()->format('Y-m-d H:i:s'),
             ]);
 
         if ($request->ajax()) {
@@ -127,6 +130,38 @@ class CardTypeMasterController extends Controller
         return redirect()
             ->route('admin.security.idcard_card_type.index')
             ->with('success', 'Card Type updated successfully.');
+    }
+
+    public function toggleStatus(Request $request, $id)
+    {
+        try {
+            $pk = decrypt($id);
+        } catch (\Exception $e) {
+            abort(404);
+        }
+
+        if (! Schema::hasColumn('sec_id_cardno_master', 'active_inactive')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Status column not available. Please run migrations.',
+            ], 400);
+        }
+
+        $row = DB::table('sec_id_cardno_master')->where('pk', $pk)->first(['pk', 'active_inactive']);
+        if (! $row) {
+            abort(404);
+        }
+
+        $newStatus = ((int) ($row->active_inactive ?? 1)) === 1 ? 0 : 1;
+        DB::table('sec_id_cardno_master')->where('pk', $pk)->update(['active_inactive' => $newStatus]);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'pk' => $pk,
+                'active_inactive' => $newStatus,
+            ],
+        ]);
     }
 
     public function delete(Request $request, $id)
