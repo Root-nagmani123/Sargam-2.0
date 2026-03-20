@@ -1,6 +1,9 @@
 @extends('admin.layouts.master')
 @section('title', 'Sub Store Master')
 @section('setup_content')
+@php
+    $canDeleteSubStore = hasRole('Admin') || hasRole('Mess-Admin');
+@endphp
 <div class="container-fluid">
     <x-breadcrum title="Sub Store Master"></x-breadcrum>
     <div class="datatables">
@@ -49,14 +52,16 @@
                                                 data-sub-store-name="{{ e($subStore->sub_store_name) }}"
                                                 data-status="{{ e($subStore->status ?? 'active') }}"
                                                 title="Edit"><i class="material-icons material-symbol-rounded">edit</i></button>
-                                        <form method="POST" action="{{ route('admin.mess.sub-stores.destroy', $subStore->id) }}" class="d-inline"
-                                              onsubmit="return confirm('Are you sure you want to delete this sub store?');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="text-primary bg-transparent border-0 p-0" title="Delete">
-                                                <i class="material-icons material-symbol-rounded">delete</i>
-                                            </button>
-                                        </form>
+                                        @if($canDeleteSubStore)
+                                            <form method="POST" action="{{ route('admin.mess.sub-stores.destroy', $subStore->id) }}" class="d-inline"
+                                                  onsubmit="return confirm('Are you sure you want to delete this sub store?');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="text-primary bg-transparent border-0 p-0" title="Delete">
+                                                    <i class="material-icons material-symbol-rounded">delete</i>
+                                                </button>
+                                            </form>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>

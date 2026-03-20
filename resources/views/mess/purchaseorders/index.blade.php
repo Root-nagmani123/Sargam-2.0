@@ -1,6 +1,9 @@
 @extends('admin.layouts.master')
 @section('title', 'Purchase Orders')
 @section('setup_content')
+@php
+    $canDeletePurchaseOrder = hasRole('Admin') || hasRole('Mess-Admin');
+@endphp
 <div class="container-fluid py-3 py-md-4">
     <x-breadcrum title="Purchase Orders"></x-breadcrum>
     <div class="datatables">
@@ -113,13 +116,15 @@
                                     <button type="button" class="btn  btn-outline-primary btn-edit-po bg-transparent border-0 p-0" data-po-id="{{ $po->id }}" title="Edit">
                                         <i class="material-icons material-symbol-rounded">edit</i>
                                     </button>
-                                    <form action="{{ route('admin.mess.purchaseorders.destroy', $po->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this purchase order?');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn  btn-outline-danger d-none" title="Delete">
-                                            <i class="material-icons material-symbol-rounded">delete</i>
-                                        </button>
-                                    </form>
+                                    @if($canDeletePurchaseOrder)
+                                        <form action="{{ route('admin.mess.purchaseorders.destroy', $po->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this purchase order?');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn  btn-outline-danger" title="Delete">
+                                                <i class="material-icons material-symbol-rounded">delete</i>
+                                            </button>
+                                        </form>
+                                    @endif
                                     </div>
                                 </td>
                             </tr>

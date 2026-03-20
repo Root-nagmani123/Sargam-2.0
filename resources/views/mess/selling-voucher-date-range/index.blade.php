@@ -1,6 +1,9 @@
 @extends('admin.layouts.master')
 @section('title', 'Selling Voucher with Date Range')
 @section('setup_content')
+@php
+    $canDeleteSellingVoucherDateRange = hasRole('Admin') || hasRole('Mess-Admin');
+@endphp
 <div class="container-fluid">
     <x-breadcrum title="Selling Voucher with Date Range"></x-breadcrum>
 
@@ -146,11 +149,13 @@
                                         <i class="material-symbols-rounded">edit</i>
                                     </button>
                                 </div>
-                                <form action="{{ route('admin.mess.selling-voucher-date-range.destroy', $report->id) }}" method="POST" class="d-inline d-none" onsubmit="return confirm('Are you sure you want to delete this report?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn  btn-danger d-none" title="Delete"><i class="material-symbols-rounded">delete</i></button>
-                                </form>
+                                @if($canDeleteSellingVoucherDateRange)
+                                    <form action="{{ route('admin.mess.selling-voucher-date-range.destroy', $report->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this report?');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn  btn-danger" title="Delete"><i class="material-symbols-rounded">delete</i></button>
+                                    </form>
+                                @endif
                                 @endif
                             </td>
                         </tr>
@@ -182,11 +187,13 @@
                                     <button type="button" class="btn  btn-outline-primary btn-view-report voucher-icon-btn" data-report-id="{{ $report->id }}" title="View"><i class="material-symbols-rounded">visibility</i></button>
                                     <button type="button" class="btn  btn-outline-warning btn-edit-report voucher-icon-btn" data-report-id="{{ $report->id }}" title="{{ $report->status == \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED ? 'Edit is disabled for approved voucher' : 'Edit' }}" @if($report->status == \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED) disabled @endif><i class="material-symbols-rounded">edit</i></button>
                                 </div>
-                                <form action="{{ route('admin.mess.selling-voucher-date-range.destroy', $report->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this report?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn  btn-outline-danger voucher-icon-btn" title="Delete"><i class="material-symbols-rounded">delete</i></button>
-                                </form>
+                                @if($canDeleteSellingVoucherDateRange)
+                                    <form action="{{ route('admin.mess.selling-voucher-date-range.destroy', $report->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this report?');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn  btn-outline-danger voucher-icon-btn" title="Delete"><i class="material-symbols-rounded">delete</i></button>
+                                    </form>
+                                @endif
                             </td>
                         </tr>
                         @endforelse

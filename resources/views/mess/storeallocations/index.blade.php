@@ -1,6 +1,9 @@
 @extends('admin.layouts.master')
 @section('title', 'Mess Store Allocation')
 @section('setup_content')
+@php
+    $canDeleteStoreAllocation = hasRole('Admin') || hasRole('Mess-Admin');
+@endphp
 <div class="container-fluid mess-store-allocation-page">
     <x-breadcrum title="Mess Store Allocation"></x-breadcrum>
 
@@ -70,6 +73,15 @@
                         <button type="button" class="btn btn-sm btn-info btn-edit-allocation text-primary bg-transparent border-0" data-allocation-id="{{ $allocation->id }}" title="Edit allocation">
                             <span class="material-symbols-rounded" style="font-size: 1.1rem;">edit</span>
                         </button>
+                        @if($canDeleteStoreAllocation)
+                            <form action="{{ route('admin.mess.storeallocations.destroy', $allocation->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this store allocation?');">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn btn-sm btn-outline-danger bg-transparent border-0" title="Delete allocation">
+                                    <span class="material-symbols-rounded" style="font-size: 1.1rem;">delete</span>
+                                </button>
+                            </form>
+                        @endif
                     </td>
                 </tr>
                 @endforeach
