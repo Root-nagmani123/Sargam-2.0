@@ -454,7 +454,7 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
 
             @if(hasRole('Security Card') || hasRole('Admin Security'))
             <div class="row g-3 mb-3">
-                <div class="col-xl-4 col-md-6">
+                <div class="col-xl-3 col-md-6">
                     @php
                         $idCardApprovalRoute = hasRole('Admin Security')
                             ? route('admin.security.employee_idcard_approval.approval3')
@@ -464,8 +464,8 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                         <div class="card dashboard-stat-card shadow-sm rounded-4 card-blue">
                             <div class="card-body d-flex align-items-center justify-content-between gap-2">
                                 <div>
-                                    <p class="small text-dark mb-1">Today's Pending Employee ID Requests</p>
-                                    <div class="dashboard-stat-value fw-semibold text-primary">{{ $todayIdCardRequests ?? 0 }}</div>
+                                    <p class="small text-dark mb-1">Today's Pending Permanent ID Requests</p>
+                                    <div class="dashboard-stat-value fw-semibold text-primary">{{ $todayPendingPermanentIdCardRequests ?? 0 }}</div>
                                     <span class="stat-link-hint text-primary">Go to approvals <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
                                 </div>
                                 <span class="stat-icon"><span class="material-icons material-symbols-rounded">badge</span></span>
@@ -473,7 +473,21 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                         </div>
                     </a>
                 </div>
-                <div class="col-xl-4 col-md-6">
+                <div class="col-xl-3 col-md-6">
+                    <a href="{{ $idCardApprovalRoute }}" class="text-decoration-none">
+                        <div class="card dashboard-stat-card shadow-sm rounded-4 card-blue">
+                            <div class="card-body d-flex align-items-center justify-content-between gap-2">
+                                <div>
+                                    <p class="small text-dark mb-1">Today's Pending Contractual ID Requests</p>
+                                    <div class="dashboard-stat-value fw-semibold text-primary">{{ $todayPendingContractualIdCardRequests ?? 0 }}</div>
+                                    <span class="stat-link-hint text-primary">Go to approvals <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
+                                </div>
+                                <span class="stat-icon"><span class="material-icons material-symbols-rounded">badge</span></span>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-xl-3 col-md-6">
                     <a href="{{ $idCardApprovalRoute }}" class="text-decoration-none">
                         <div class="card dashboard-stat-card shadow-sm rounded-4 card-amber">
                             <div class="card-body d-flex align-items-center justify-content-between gap-2">
@@ -487,7 +501,7 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                         </div>
                     </a>
                 </div>
-                <div class="col-xl-4 col-md-6">
+                <div class="col-xl-3 col-md-6">
                     <a href="{{ $idCardApprovalRoute }}" class="text-decoration-none">
                         <div class="card dashboard-stat-card shadow-sm rounded-4 card-amber">
                             <div class="card-body d-flex align-items-center justify-content-between gap-2">

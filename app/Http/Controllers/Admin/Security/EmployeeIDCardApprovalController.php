@@ -328,7 +328,7 @@ class EmployeeIDCardApprovalController extends Controller
                 'designation' => $r->designation_name ?? null,
                 'father_name' => null,
                 'id_card_number' => $r->id_card_no,
-                'card_type' => $dupPermCardLabels[$applyKey] ?? '--',
+                'card_type' => trim((string) ($dupPermCardLabels[$applyKey] ?? '--')) ?: '--',
                 'date_of_birth' => $r->employee_dob,
                 'blood_group' => $r->blood_group,
                 'mobile_number' => $r->mobile_no,
@@ -626,7 +626,7 @@ class EmployeeIDCardApprovalController extends Controller
                 'designation' => $r->designation_name ?? null,
                 'father_name' => null,
                 'id_card_number' => $r->id_card_no,
-                'card_type' => $dupPermCardLabels[$applyKey] ?? '--',
+                'card_type' => trim((string) ($dupPermCardLabels[$applyKey] ?? '--')) ?: '--',
                 'date_of_birth' => $r->employee_dob,
                 'blood_group' => $r->blood_group,
                 'mobile_number' => $r->mobile_no,
@@ -2202,7 +2202,12 @@ class EmployeeIDCardApprovalController extends Controller
 
     /**
      * Resolve ID Type label (sec_id_cardno_master.sec_card_name) for permanent duplicate rows
-     * shown on Approval II / III lists. Uses dup.permanent_type when set, else parent SecurityParmIdApply.permanent_type.
+     * shown on Approval II / III lists.
+     *
+     * Important:
+     * For permanent duplicates, `security_dup_perm_id_apply` rows may NOT store `permanent_type` / `parent_id`.
+     * In that case, we must resolve ID Type from the *first time apply* record in `security_parm_id_apply`
+     * using (employee_master_pk + id_card_no).
      *
      * @param  \Illuminate\Support\Collection|array<int, object>  $dupPermRows
      * @return array<string, string>  keyed by emp_id_apply
@@ -2213,6 +2218,7 @@ class EmployeeIDCardApprovalController extends Controller
             return [];
         }
 
+        // 1) Optional fallback (older data): use dup.parent_id -> security_parm_id_apply.permanent_type
         $parentIds = $dupPermRows->pluck('parent_id')->filter()->unique()->values();
         $permTypeByParent = [];
         if ($parentIds->isNotEmpty()) {
@@ -2222,36 +2228,92 @@ class EmployeeIDCardApprovalController extends Controller
                 ->all();
         }
 
+        // 2) Primary resolution: use *first apply* record from security_parm_id_apply
+        // using (employee_master_pk + id_card_no).
+        $empPks = $dupPermRows->pluck('employee_master_pk')->filter()->unique()->values();
+        $cardNos = $dupPermRows->pluck('id_card_no')
+            ->filter()
+            ->map(fn ($n) => trim((string) $n))
+            ->unique()
+            ->values();
+
+        $permTypeByEmpCard = [];
+        if ($empPks->isNotEmpty() && $cardNos->isNotEmpty()) {
+            $candidates = DB::table('security_parm_id_apply')
+                ->whereIn('employee_master_pk', $empPks->all())
+                ->whereIn('id_card_no', $cardNos->all())
+                ->select(['employee_master_pk', 'id_card_no', 'permanent_type', 'created_date'])
+                ->orderBy('created_date', 'asc')
+                ->get();
+
+            foreach ($candidates as $c) {
+                $empPk = (int) ($c->employee_master_pk ?? 0);
+                $cardNo = trim((string) ($c->id_card_no ?? ''));
+                $key = $empPk . '|' . $cardNo;
+
+                if ($empPk <= 0 || $cardNo === '') {
+                    continue;
+                }
+                if (! isset($permTypeByEmpCard[$key]) && !empty($c->permanent_type)) {
+                    $permTypeByEmpCard[$key] = (int) $c->permanent_type;
+                }
+            }
+        }
+
+        // Collect all possible master pks so we can map to sec_card_name.
         $masterPks = [];
         foreach ($dupPermRows as $r) {
+            $applyKey = (string) ($r->emp_id_apply ?? '');
+            if ($applyKey === '') {
+                continue;
+            }
+
             $pk = $r->permanent_type ?? null;
             if (empty($pk) && ! empty($r->parent_id)) {
                 $pk = $permTypeByParent[$r->parent_id] ?? null;
             }
-            if ($pk !== null && $pk !== '') {
+            if ((empty($pk) || $pk === null) && !empty($r->employee_master_pk) && !empty($r->id_card_no)) {
+                $key = (int) $r->employee_master_pk . '|' . trim((string) $r->id_card_no);
+                $pk = $permTypeByEmpCard[$key] ?? null;
+            }
+            if ($pk !== null && $pk !== '' && (int) $pk > 0) {
                 $masterPks[] = (int) $pk;
             }
         }
         $masterPks = array_values(array_unique(array_filter($masterPks)));
+
         $namesByPk = $masterPks !== []
-            ? DB::table('sec_id_cardno_master')->whereIn('pk', $masterPks)->pluck('sec_card_name', 'pk')->all()
+            ? DB::table('sec_id_cardno_master')
+                ->whereIn('pk', $masterPks)
+                ->pluck('sec_card_name', 'pk')
+                ->all()
             : [];
 
+        // Final labels: keyed by dup.emp_id_apply
         $labels = [];
         foreach ($dupPermRows as $r) {
             $applyKey = (string) ($r->emp_id_apply ?? '');
+
             $pk = $r->permanent_type ?? null;
             if (empty($pk) && ! empty($r->parent_id)) {
                 $pk = $permTypeByParent[$r->parent_id] ?? null;
             }
+            if ((empty($pk) || $pk === null) && !empty($r->employee_master_pk) && !empty($r->id_card_no)) {
+                $key = (int) $r->employee_master_pk . '|' . trim((string) $r->id_card_no);
+                $pk = $permTypeByEmpCard[$key] ?? null;
+            }
+
             $label = null;
-            if ($pk !== null && $pk !== '' && isset($namesByPk[(int) $pk])) {
-                $label = $namesByPk[(int) $pk];
+            if ($pk !== null && $pk !== '' && (int) $pk > 0 && isset($namesByPk[(int) $pk])) {
+                $label = is_string($namesByPk[(int) $pk]) ? trim($namesByPk[(int) $pk]) : $namesByPk[(int) $pk];
             }
-            if ($label === null && ! empty($r->card_type) && ! in_array((string) $r->card_type, ['Permanent', 'Contractual', 'Family'], true)) {
-                $label = (string) $r->card_type;
+
+            // Last fallback to whatever string is stored.
+            if (($label === null || $label === '') && ! empty($r->card_type) && ! in_array((string) $r->card_type, ['Permanent', 'Contractual', 'Family'], true)) {
+                $label = is_string($r->card_type) ? trim($r->card_type) : (string) $r->card_type;
             }
-            $labels[$applyKey] = $label ?: '--';
+
+            $labels[$applyKey] = ($label === null || $label === '') ? '--' : $label;
         }
 
         return $labels;

@@ -205,6 +205,9 @@ class UserController extends Controller
         $todayFamilyApprovals = $this->getTodayPendingFamilyApprovalsCount();
         $todayVehicleApprovals = $this->getTodayPendingVehicleApprovalsCount();
         $todayIdCardRequests = $this->getTodayPendingIdCardRequestsCount();
+        $todayPendingSplit = $this->getTodayPendingIdCardRequestsSplit();
+        $todayPendingPermanentIdCardRequests = (int) ($todayPendingSplit['perm'] ?? 0);
+        $todayPendingContractualIdCardRequests = (int) ($todayPendingSplit['cont'] ?? 0);
         $todayApproval1SecurityRequests = $this->getTodayPendingSecurityApproval1Count();
         $todayDuplicatePermIdCardRequests = $this->getTodayDuplicatePermanentIdCardRequestsCount();
         $todayDuplicateContractualIdCardRequests = $this->getTodayDuplicateContractualIdCardRequestsCount();
@@ -227,10 +230,108 @@ class UserController extends Controller
             'todayFamilyApprovals',
             'todayVehicleApprovals',
             'todayIdCardRequests',
+            'todayPendingPermanentIdCardRequests',
+            'todayPendingContractualIdCardRequests',
             'todayApproval1SecurityRequests',
             'todayDuplicatePermIdCardRequests',
             'todayDuplicateContractualIdCardRequests'
         ));
+    }
+
+    /**
+     * Split "today pending employee id requests" into:
+     * - perm: pending Permanent ID cards
+     * - cont: pending Contractual ID cards
+     *
+     * Logic matches existing getTodayPendingIdCardRequestsCount(), but returns both parts separately.
+     */
+    private function getTodayPendingIdCardRequestsSplit(): array
+    {
+        $user = Auth::user();
+        if (! $user) {
+            return ['perm' => 0, 'cont' => 0];
+        }
+
+        if (! (hasRole('Security Card') || hasRole('Admin Security'))) {
+            return ['perm' => 0, 'cont' => 0];
+        }
+
+        $start = Carbon::today()->startOfDay()->toDateTimeString();
+        $end = Carbon::today()->endOfDay()->toDateTimeString();
+
+        $isApproval2 = hasRole('Security Card') && !hasRole('Admin Security');
+        $isApproval3 = hasRole('Admin Security') && !hasRole('Security Card');
+
+        // If user has both roles, fall back to Approval II "actionable" definition.
+        if (! $isApproval2 && ! $isApproval3) {
+            $isApproval2 = true;
+        }
+
+        if ($isApproval2) {
+            $permCount = (int) DB::table('security_parm_id_apply as spa')
+                ->whereBetween('spa.created_date', [$start, $end])
+                ->where('spa.id_status', SecurityParmIdApply::ID_STATUS_PENDING)
+                ->whereNotExists(function ($q) {
+                    $q->select(DB::raw(1))
+                        ->from('security_parm_id_apply_approval as a')
+                        ->whereColumn('a.security_parm_id_apply_pk', 'spa.emp_id_apply')
+                        ->where('a.status', 2);
+                })
+                ->count();
+
+            $contPendingIds = DB::table('security_con_oth_id_apply_approval')
+                ->where('status', 0)
+                ->pluck('security_parm_id_apply_pk');
+
+            $contCount = 0;
+            if ($contPendingIds->isNotEmpty()) {
+                $contCount = (int) DB::table('security_con_oth_id_apply as sco')
+                    ->whereBetween('sco.created_date', [$start, $end])
+                    ->where('sco.id_status', 1)
+                    ->where('sco.depart_approval_status', 2)
+                    ->whereIn('sco.emp_id_apply', $contPendingIds)
+                    ->count();
+            }
+
+            return ['perm' => $permCount, 'cont' => $contCount];
+        }
+
+        // Approval III final pending
+        $permFinalPending = (int) DB::table('security_parm_id_apply as spa')
+            ->whereBetween('spa.created_date', [$start, $end])
+            ->where('spa.id_status', SecurityParmIdApply::ID_STATUS_PENDING)
+            ->whereExists(function ($q) {
+                $q->select(DB::raw(1))
+                    ->from('security_parm_id_apply_approval as a')
+                    ->whereColumn('a.security_parm_id_apply_pk', 'spa.emp_id_apply')
+                    ->where('a.status', 2);
+            })
+            ->count();
+
+        $contRecommendedIds = DB::table('security_con_oth_id_apply_approval')
+            ->where('status', 1)
+            ->where('recommend_status', 1)
+            ->pluck('security_parm_id_apply_pk');
+        $contFinalDoneIds = DB::table('security_con_oth_id_apply_approval')
+            ->whereIn('status', [2, 3])
+            ->pluck('security_parm_id_apply_pk');
+
+        $contFinalPending = 0;
+        if ($contRecommendedIds->isNotEmpty()) {
+            $contQuery = DB::table('security_con_oth_id_apply as sco')
+                ->whereBetween('sco.created_date', [$start, $end])
+                ->where('sco.id_status', 1)
+                ->where('sco.depart_approval_status', 2)
+                ->whereIn('sco.emp_id_apply', $contRecommendedIds);
+
+            if ($contFinalDoneIds->isNotEmpty()) {
+                $contQuery->whereNotIn('sco.emp_id_apply', $contFinalDoneIds);
+            }
+
+            $contFinalPending = (int) $contQuery->count();
+        }
+
+        return ['perm' => $permFinalPending, 'cont' => $contFinalPending];
     }
 
     private function getTodayPendingFamilyApprovalsCount(): int
@@ -352,101 +453,8 @@ class UserController extends Controller
 
     private function getTodayPendingIdCardRequestsCount(): int
     {
-        $user = Auth::user();
-        if (! $user) {
-            return 0;
-        }
-
-        if (! (hasRole('Security Card') || hasRole('Admin Security'))) {
-            return 0;
-        }
-
-        $start = Carbon::today()->startOfDay()->toDateTimeString();
-        $end = Carbon::today()->endOfDay()->toDateTimeString();
-
-        $isApproval2 = hasRole('Security Card') && !hasRole('Admin Security');
-        $isApproval3 = hasRole('Admin Security') && !hasRole('Security Card');
-
-        // If user has both roles, show combined pending counts (keep it simple).
-        if (! $isApproval2 && ! $isApproval3) {
-            return (int) DB::table('security_parm_id_apply')
-                ->whereBetween('created_date', [$start, $end])
-                ->where('id_status', SecurityParmIdApply::ID_STATUS_PENDING)
-                ->count();
-        }
-
-        if ($isApproval2) {
-            // Permanent regular actionable at Approval II:
-            // pending without Approval II record yet.
-            $permCount = (int) DB::table('security_parm_id_apply as spa')
-                ->whereBetween('spa.created_date', [$start, $end])
-                ->where('spa.id_status', SecurityParmIdApply::ID_STATUS_PENDING)
-                ->whereNotExists(function ($q) {
-                    $q->select(DB::raw(1))
-                        ->from('security_parm_id_apply_approval as a')
-                        ->whereColumn('a.security_parm_id_apply_pk', 'spa.emp_id_apply')
-                        ->where('a.status', 2);
-                })
-                ->count();
-
-            // Contractual regular actionable at Approval II:
-            // pending, department approved, and having pending row (status=0).
-            $contPendingIds = DB::table('security_con_oth_id_apply_approval')
-                ->where('status', 0)
-                ->pluck('security_parm_id_apply_pk');
-
-            $contCount = 0;
-            if ($contPendingIds->isNotEmpty()) {
-                $contCount = (int) DB::table('security_con_oth_id_apply as sco')
-                    ->whereBetween('sco.created_date', [$start, $end])
-                    ->where('sco.id_status', 1)
-                    ->where('sco.depart_approval_status', 2)
-                    ->whereIn('sco.emp_id_apply', $contPendingIds)
-                    ->count();
-            }
-
-            return $permCount + $contCount;
-        }
-
-        // Approval III final pending:
-        // 1) permanent regular pending with Approval II already done
-        $permFinalPending = (int) DB::table('security_parm_id_apply as spa')
-            ->whereBetween('spa.created_date', [$start, $end])
-            ->where('spa.id_status', SecurityParmIdApply::ID_STATUS_PENDING)
-            ->whereExists(function ($q) {
-                $q->select(DB::raw(1))
-                    ->from('security_parm_id_apply_approval as a')
-                    ->whereColumn('a.security_parm_id_apply_pk', 'spa.emp_id_apply')
-                    ->where('a.status', 2);
-            })
-            ->count();
-
-        // 2) contractual regular pending final:
-        // pending, department approved, recommended (status=1 + recommend_status=1), and not final/rejected.
-        $contRecommendedIds = DB::table('security_con_oth_id_apply_approval')
-            ->where('status', 1)
-            ->where('recommend_status', 1)
-            ->pluck('security_parm_id_apply_pk');
-        $contFinalDoneIds = DB::table('security_con_oth_id_apply_approval')
-            ->whereIn('status', [2, 3])
-            ->pluck('security_parm_id_apply_pk');
-
-        $contFinalPending = 0;
-        if ($contRecommendedIds->isNotEmpty()) {
-            $contQuery = DB::table('security_con_oth_id_apply as sco')
-                ->whereBetween('sco.created_date', [$start, $end])
-                ->where('sco.id_status', 1)
-                ->where('sco.depart_approval_status', 2)
-                ->whereIn('sco.emp_id_apply', $contRecommendedIds);
-
-            if ($contFinalDoneIds->isNotEmpty()) {
-                $contQuery->whereNotIn('sco.emp_id_apply', $contFinalDoneIds);
-            }
-
-            $contFinalPending = (int) $contQuery->count();
-        }
-
-        return $permFinalPending + $contFinalPending;
+        $split = $this->getTodayPendingIdCardRequestsSplit();
+        return (int) ($split['perm'] ?? 0) + (int) ($split['cont'] ?? 0);
     }
 
     /**

@@ -134,6 +134,30 @@ $(document).ready(function () {
             $('#subTypeModal').modal('show');
         });
     });
+
+    // After status toggle success (global custom.js posts to /admin/toggle-status),
+    // reload the page so Active/Inactive UI + delete restrictions match DB.
+    $(document).ajaxSuccess(function (event, xhr, settings) {
+        if (!settings || !settings.url) return;
+
+        var url = String(settings.url);
+        var isToggleRequest = url.includes('toggle-status') || url.includes('toggleStatus');
+        if (!isToggleRequest) return;
+
+        var tableName = null;
+        var data = settings.data;
+
+        if (typeof data === 'string') {
+            var m = data.match(/[&?]table=([^&]+)/);
+            if (m && m[1]) tableName = decodeURIComponent(m[1]);
+        } else if (data && typeof data === 'object') {
+            tableName = data.table ?? null;
+        }
+
+        if (window.location.pathname.includes('idcard-sub-type') || tableName === 'sec_id_cardno_config_map') {
+            window.location.reload();
+        }
+    });
 });
 </script>
 @endpush

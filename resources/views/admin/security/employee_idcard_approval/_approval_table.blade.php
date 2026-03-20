@@ -31,7 +31,19 @@
                     
                     <td class="text-center">
                         @if(isset($req->request_type) && $req->request_type === 'duplicate')
-                            <span class="badge bg-info">Duplicate</span>
+                            @php
+                                $empType = $req->employee_type ?? null;
+                                $empTypeShort = match ($empType) {
+                                    'Permanent Employee' => 'Permanent',
+                                    'Contractual Employee' => 'Contractual',
+                                    default => null,
+                                };
+                            @endphp
+                            @if($empTypeShort)
+                                <span class="badge bg-info">Duplicate ({{ $empTypeShort }})</span>
+                            @else
+                                <span class="badge bg-info">Duplicate</span>
+                            @endif
                         @else
                             <span class="badge bg-secondary">Fresh</span>
                         @endif
