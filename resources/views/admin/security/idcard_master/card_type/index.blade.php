@@ -1,5 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Card Type Master - Security')
+
 @section('setup_content')
 <div class="container-fluid">
     @include('components.breadcrum', ['title' => 'ID Card - Card Types'])
