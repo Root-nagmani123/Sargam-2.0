@@ -56,6 +56,8 @@ class ItemCategoryController extends Controller
 
     public function destroy($id)
     {
+        abort_if(! $this->canDeleteItemCategory(), 403, 'You are not authorized to delete item categories.');
+
         $itemcategory = ItemCategory::findOrFail($id);
         $itemcategory->delete();
         return redirect()->route('admin.mess.itemcategories.index')->with('success', 'Item Category deleted successfully');
@@ -109,5 +111,16 @@ class ItemCategoryController extends Controller
         }
 
         return $data;
+    }
+
+    protected function canDeleteItemCategory(): bool
+    {
+        $user = auth()->user();
+        if (! $user) {
+            return false;
+        }
+
+        return hasRole('Main Admin')
+            || (hasRole('Mess Admin') && strcasecmp((string) $user->name, 'Rohit Aggarwal') === 0);
     }
 }

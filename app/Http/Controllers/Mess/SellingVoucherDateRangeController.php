@@ -15,6 +15,7 @@ use App\Models\EmployeeMaster;
 use App\Models\DepartmentMaster;
 use App\Models\CourseMaster;
 use App\Models\StudentMaster;
+use App\Models\KitchenIssueMaster;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -47,6 +48,12 @@ class SellingVoucherDateRangeController extends Controller
         if ($request->filled('start_date') && $request->filled('end_date')) {
             // Filter strictly by Request Date (date_from) falling within the selected range
             $query->whereBetween('date_from', [$request->start_date, $request->end_date]);
+        } elseif ($request->filled('start_date')) {
+            // Partial filter: only start date provided – show vouchers from this date onward
+            $query->whereDate('date_from', '>=', $request->start_date);
+        } elseif ($request->filled('end_date')) {
+            // Partial filter: only end date provided – show vouchers up to this date
+            $query->whereDate('date_from', '<=', $request->end_date);
         }
 
         // DataTables handles pagination/search on the client; return full filtered set.
@@ -85,13 +92,61 @@ class SellingVoucherDateRangeController extends Controller
         });
         $clientTypes = ClientType::clientTypes();
         $clientNamesByType = ClientType::active()->orderBy('client_type')->orderBy('client_name')->get()->groupBy('client_type');
-        $faculties = FacultyMaster::whereNotNull('full_name')->where('full_name', '!=', '')->orderBy('full_name')->get(['pk', 'full_name']);
+
+        // Academy Staff should exclude:
+        // 1) Mess Staff (Officers Mess department)
+        // 2) Employees mapped as Faculty (FacultyMaster.employee_master_pk)
+        $officersMessDept = DepartmentMaster::where('department_name', 'Officers Mess')->first();
+
+        $faculties = FacultyMaster::whereNotNull('full_name')
+            ->where('full_name', '!=', '')
+            ->orderBy('full_name')
+            ->get(['pk', 'full_name', 'faculty_code', 'employee_master_pk'])
+            ->map(function ($f) {
+                $fullName = trim((string) ($f->full_name ?? ''));
+                $facultyCode = trim((string) ($f->faculty_code ?? ''));
+                $f->full_name_with_code = $facultyCode !== '' ? ($fullName . ' (' . $facultyCode . ')') : $fullName;
+                return $f;
+            });
+
+        $facultyEmployeePks = $faculties
+            ->pluck('employee_master_pk')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        $departmentNamesByPk = DepartmentMaster::pluck('department_name', 'pk');
+
+        $buildEmployeeLabel = function ($fullName, $departmentPk) use ($departmentNamesByPk) {
+            $fullName = trim((string) $fullName);
+            if ($fullName === '') {
+                $fullName = '—';
+            }
+            $departmentName = trim((string) ($departmentNamesByPk[$departmentPk] ?? ''));
+            return $departmentName !== '' ? ($fullName . ' (' . $departmentName . ')') : $fullName;
+        };
+
         $employees = EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn($q) => $q->where('status', 1))
+            ->when($officersMessDept, function ($q) use ($officersMessDept) {
+                $q->where(function ($sub) use ($officersMessDept) {
+                    $sub->whereNull('department_master_pk')
+                        ->orWhere('department_master_pk', '!=', $officersMessDept->pk);
+                });
+            })
+            ->when(!empty($facultyEmployeePks), function ($q) use ($facultyEmployeePks) {
+                $q->whereNotIn('pk', $facultyEmployeePks);
+            })
             ->orderBy('first_name')->orderBy('last_name')
-            ->get(['pk', 'first_name', 'middle_name', 'last_name'])
-            ->map(function ($e) {
+            ->get(['pk', 'first_name', 'middle_name', 'last_name', 'department_master_pk'])
+            ->map(function ($e) use ($buildEmployeeLabel) {
                 $fullName = trim(($e->first_name ?? '') . ' ' . ($e->middle_name ?? '') . ' ' . ($e->last_name ?? ''));
-                return (object) ['pk' => $e->pk, 'full_name' => $fullName ?: '—'];
+                $fullName = $fullName ?: '—';
+                return (object) [
+                    'pk' => $e->pk,
+                    'full_name' => $fullName,
+                    'full_name_with_department' => $buildEmployeeLabel($fullName, $e->department_master_pk ?? null),
+                ];
             })
             ->filter(fn($e) => $e->full_name !== '—')
             ->values();
@@ -102,16 +157,19 @@ class SellingVoucherDateRangeController extends Controller
             })
             ->orderBy('course_name')
             ->get(['pk', 'course_name']);
-
-        $officersMessDept = DepartmentMaster::where('department_name', 'Officers Mess')->first();
         $messStaff = $officersMessDept
             ? EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn($q) => $q->where('status', 1))
                 ->where('department_master_pk', $officersMessDept->pk)
                 ->orderBy('first_name')->orderBy('last_name')
-                ->get(['pk', 'first_name', 'middle_name', 'last_name'])
-                ->map(function ($e) {
+                ->get(['pk', 'first_name', 'middle_name', 'last_name', 'department_master_pk'])
+                ->map(function ($e) use ($buildEmployeeLabel) {
                     $fullName = trim(($e->first_name ?? '') . ' ' . ($e->middle_name ?? '') . ' ' . ($e->last_name ?? ''));
-                    return (object) ['pk' => $e->pk, 'full_name' => $fullName ?: '—'];
+                    $fullName = $fullName ?: '—';
+                    return (object) [
+                        'pk' => $e->pk,
+                        'full_name' => $fullName,
+                        'full_name_with_department' => $buildEmployeeLabel($fullName, $e->department_master_pk ?? null),
+                    ];
                 })
                 ->filter(fn($e) => $e->full_name !== '—')
                 ->values()
@@ -143,6 +201,60 @@ class SellingVoucherDateRangeController extends Controller
                 return ['pk' => $s->pk, 'display_name' => $displayName];
             })->filter(fn($s) => $s['display_name'] !== '—')->values(),
         ]);
+    }
+
+    /**
+     * AJAX: previously used buyer names for Selling Voucher (Date Range).
+     *
+     * Query params:
+     * - client_type_slug: course|section|other
+     * - client_type_pk: for course => course_master.pk, for section/other => mess_client_types.id
+     */
+    public function getBuyerNames(Request $request)
+    {
+        $slug = strtolower(trim((string) $request->query('client_type_slug', '')));
+        if (!in_array($slug, ['course', 'section', 'other'], true)) {
+            return response()->json(['buyers' => []]);
+        }
+
+        $clientTypePk = (int) $request->query('client_type_pk', 0);
+        if ($clientTypePk <= 0) {
+            return response()->json(['buyers' => []]);
+        }
+
+        $svBuyers = SellingVoucherDateRangeReport::query()
+            ->where('client_type_slug', $slug)
+            ->where('client_type_pk', $clientTypePk)
+            ->whereHas('items')
+            ->whereNotNull('client_name')
+            ->where('client_name', '!=', '')
+            ->distinct()
+            ->pluck('client_name')
+            ->map(fn ($n) => trim((string) $n));
+
+        $slugToKiType = [
+            'course' => KitchenIssueMaster::CLIENT_COURSE,
+            'section' => KitchenIssueMaster::CLIENT_SECTION,
+            'other' => KitchenIssueMaster::CLIENT_OTHER,
+        ];
+        $kiBuyers = KitchenIssueMaster::query()
+            ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+            ->where('client_type', $slugToKiType[$slug])
+            ->where('client_type_pk', $clientTypePk)
+            ->whereHas('items')
+            ->whereNotNull('client_name')
+            ->where('client_name', '!=', '')
+            ->distinct()
+            ->pluck('client_name')
+            ->map(fn ($n) => trim((string) $n));
+
+        $buyers = $svBuyers->concat($kiBuyers)
+            ->filter(fn ($n) => $n !== '')
+            ->unique()
+            ->sort()
+            ->values();
+
+        return response()->json(['buyers' => $buyers]);
     }
 
     public function create()
@@ -221,6 +333,15 @@ class SellingVoucherDateRangeController extends Controller
         }
         if (!empty($qtyErrors)) {
             $bag = new MessageBag(['items' => implode(' ', $qtyErrors)]);
+
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed.',
+                    'errors' => ['items' => [implode(' ', $qtyErrors)]],
+                ], 422);
+            }
+
             return redirect()->route('admin.mess.selling-voucher-date-range.index')
                 ->withInput()
                 ->withErrors($bag)
@@ -322,10 +443,29 @@ class SellingVoucherDateRangeController extends Controller
 
             DB::commit();
 
+            // AJAX request: return JSON so frontend can keep modal open without full page reload
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Date Range Report created successfully.',
+                    'report_id' => $report->id,
+                ]);
+            }
+
+            // Normal request: redirect back and reopen Add modal
             return redirect()->route('admin.mess.selling-voucher-date-range.index')
-                ->with('success', 'Date Range Report created successfully.');
+                ->with('success', 'Date Range Report created successfully.')
+                ->with('open_add_modal', true);
         } catch (\Exception $e) {
             DB::rollBack();
+
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to create report: ' . $e->getMessage(),
+                ], 500);
+            }
+
             return redirect()->route('admin.mess.selling-voucher-date-range.index')
                 ->withInput()
                 ->with('error', 'Failed to create report: ' . $e->getMessage())
@@ -671,7 +811,7 @@ class SellingVoucherDateRangeController extends Controller
             'items' => 'required|array|min:1',
             'items.*.id' => 'required|exists:sv_date_range_report_items,id',
             'items.*.return_quantity' => 'required|numeric|min:0',
-            'items.*.return_date' => 'nullable|date',
+            'items.*.return_date' => 'nullable|date|before_or_equal:today',
         ]);
 
         $itemIds = $report->items->pluck('id')->toArray();
@@ -698,9 +838,25 @@ class SellingVoucherDateRangeController extends Controller
                     try {
                         $ret = Carbon::parse($returnDate)->startOfDay();
                         $iss = Carbon::parse($report->issue_date)->startOfDay();
+                        if ($ret->gt(now()->startOfDay())) {
+                            DB::rollBack();
+                            return back()->withInput()->with('error', 'Return date cannot be in the future.');
+                        }
                         if ($ret->lt($iss)) {
                             DB::rollBack();
                             return back()->withInput()->with('error', 'Return date cannot be earlier than issue date.');
+                        }
+                    } catch (\Exception $e) {
+                        DB::rollBack();
+                        return back()->withInput()->with('error', 'Invalid return date.');
+                    }
+                }
+                if (!empty($returnDate) && !$report->issue_date) {
+                    try {
+                        $ret = Carbon::parse($returnDate)->startOfDay();
+                        if ($ret->gt(now()->startOfDay())) {
+                            DB::rollBack();
+                            return back()->withInput()->with('error', 'Return date cannot be in the future.');
                         }
                     } catch (\Exception $e) {
                         DB::rollBack();

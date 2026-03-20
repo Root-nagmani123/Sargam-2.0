@@ -1,7 +1,7 @@
 @extends('admin.layouts.master')
 @section('title', 'Process Mess Bills')
 @section('setup_content')
-<div class="container-fluid process-mess-bills-employee-report">
+<div class="container-fluid py-3 py-md-4 process-mess-bills-employee-report">
     <x-breadcrum title="Process Mess Bills"></x-breadcrum>
     {{-- Report Header (Print Only) --}}
     @php
@@ -22,13 +22,16 @@
     </div>
 
     {{-- Page header --}}
-    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4 no-print">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4 no-print p-4 rounded-3 shadow-sm" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
         <div>
-            <h4 class="mb-1 fw-bold">Process Mess Bills</h4>
-            <p class="text-muted small mb-0">View mess bills for Employee, OT, Course & Other, generate invoices, and mark payments. Filter by date to see bills from Selling Voucher and Date Range reports.</p>
+            <h4 class="mb-2 fw-bold d-flex align-items-center gap-2">
+                <i class="material-symbols-rounded" style="font-size: 2rem;">receipt_long</i>
+                Process Mess Bills
+            </h4>
+            <p class="mb-0 small opacity-90">View mess bills for Employee, OT, Course & Other, generate invoices, and mark payments. Filter by date to see bills from Selling Voucher and Date Range reports.</p>
         </div>
-        <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#addProcessMessBillsModal">
-            <i class="material-symbols-rounded" style="font-size: 1.25rem;">receipt_long</i>
+        <button type="button" class="btn btn-light shadow d-inline-flex align-items-center gap-2 px-4" data-bs-toggle="modal" data-bs-target="#addProcessMessBillsModal" style="font-weight: 600;">
+            <i class="material-symbols-rounded" style="font-size: 1.3rem;">add_circle</i>
             Generate Invoice
         </button>
     </div>
@@ -36,55 +39,55 @@
     {{-- Summary cards --}}
     <div class="no-print">
     @php $stats = $stats ?? ['total_bills' => 0, 'paid_count' => 0, 'unpaid_count' => 0, 'total_amount' => 0]; @endphp
-    <div class="row g-3 mb-4">
-        <div class="col-sm-6 col-lg-3">
-            <div class="card border-0 shadow-sm h-100">
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3 mb-4 animate__animated animate__fadeIn">
+        <div class="col">
+            <div class="card border-0 shadow h-100 hover-lift transition-all">
                 <div class="card-body d-flex align-items-center gap-3">
-                    <div class="rounded-3 bg-primary bg-opacity-10 p-2">
-                        <i class="material-symbols-rounded text-primary" style="font-size: 1.75rem;">description</i>
+                    <div class="rounded-3 bg-primary bg-opacity-10 p-3 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
+                        <i class="material-symbols-rounded text-primary" style="font-size: 2rem;">description</i>
                     </div>
                     <div>
-                        <div class="text-muted small text-uppercase fw-semibold">Total Bills</div>
-                        <div class="fs-4 fw-bold">{{ number_format($stats['total_bills']) }}</div>
+                        <div class="text-muted small text-uppercase fw-semibold mb-1">Total Bills</div>
+                        <div class="fs-3 fw-bold text-dark">{{ number_format($stats['total_bills']) }}</div>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-sm-6 col-lg-3">
-            <div class="card border-0 shadow-sm h-100">
+        <div class="col">
+            <div class="card border-0 shadow h-100 hover-lift transition-all">
                 <div class="card-body d-flex align-items-center gap-3">
-                    <div class="rounded-3 bg-warning bg-opacity-10 p-2">
-                        <i class="material-symbols-rounded text-warning" style="font-size: 1.75rem;">schedule</i>
+                    <div class="rounded-3 bg-warning bg-opacity-10 p-3 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
+                        <i class="material-symbols-rounded text-warning" style="font-size: 2rem;">schedule</i>
                     </div>
                     <div>
-                        <div class="text-muted small text-uppercase fw-semibold">Unpaid</div>
-                        <div class="fs-4 fw-bold">{{ number_format($stats['unpaid_count']) }}</div>
+                        <div class="text-muted small text-uppercase fw-semibold mb-1">Unpaid</div>
+                        <div class="fs-3 fw-bold text-dark">{{ number_format($stats['unpaid_count']) }}</div>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-sm-6 col-lg-3">
-            <div class="card border-0 shadow-sm h-100">
+        <div class="col">
+            <div class="card border-0 shadow h-100 hover-lift transition-all">
                 <div class="card-body d-flex align-items-center gap-3">
-                    <div class="rounded-3 bg-success bg-opacity-10 p-2">
-                        <i class="material-symbols-rounded text-success" style="font-size: 1.75rem;">check_circle</i>
+                    <div class="rounded-3 bg-success bg-opacity-10 p-3 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
+                        <i class="material-symbols-rounded text-success" style="font-size: 2rem;">check_circle</i>
                     </div>
                     <div>
-                        <div class="text-muted small text-uppercase fw-semibold">Paid</div>
-                        <div class="fs-4 fw-bold">{{ number_format($stats['paid_count']) }}</div>
+                        <div class="text-muted small text-uppercase fw-semibold mb-1">Paid</div>
+                        <div class="fs-3 fw-bold text-dark">{{ number_format($stats['paid_count']) }}</div>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-sm-6 col-lg-3">
-            <div class="card border-0 shadow-sm h-100">
+        <div class="col">
+            <div class="card border-0 shadow h-100 hover-lift transition-all">
                 <div class="card-body d-flex align-items-center gap-3">
-                    <div class="rounded-3 bg-info bg-opacity-10 p-2">
-                        <i class="material-symbols-rounded text-info" style="font-size: 1.75rem;">payments</i>
+                    <div class="rounded-3 bg-info bg-opacity-10 p-3 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
+                        <i class="material-symbols-rounded text-info" style="font-size: 2rem;">payments</i>
                     </div>
                     <div>
-                        <div class="text-muted small text-uppercase fw-semibold">Total Amount</div>
-                        <div class="fs-4 fw-bold">₹ {{ number_format($stats['total_amount'], 2) }}</div>
+                        <div class="text-muted small text-uppercase fw-semibold mb-1">Total Amount</div>
+                        <div class="fs-3 fw-bold text-dark">₹ {{ number_format($stats['total_amount'], 2) }}</div>
                     </div>
                 </div>
             </div>
@@ -93,43 +96,70 @@
     </div>
 
     {{-- Filters card --}}
-    <div class="card border-0 shadow-sm mb-4 no-print">
-        <div class="card-body">
+    <div class="card border-0 shadow mb-4 no-print" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
+        <div class="card-body p-3 p-lg-4">
             <form method="GET" action="{{ route('admin.mess.process-mess-bills-employee.index') }}" id="mainFilterForm">
                 <div class="row g-3 align-items-end">
-                    <div class="col-md-2">
-                        <label class="form-label small fw-semibold">Date From <span class="text-danger">*</span></label>
-                        <input type="text" name="date_from" id="date_from" class="form-control "
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">event</i>Date From <span class="text-danger">*</span></label>
+                        <input type="text" name="date_from" id="date_from" class="form-select"
                                value="{{ $effectiveDateFrom ?? request('date_from', now()->startOfMonth()->format('d-m-Y')) }}"
                                data-default-ymd="{{ $effectiveDateFromYmd ?? now()->startOfMonth()->format('Y-m-d') }}"
                                placeholder="dd-mm-yyyy" autocomplete="off">
                     </div>
-                    <div class="col-md-2">
-                        <label class="form-label small fw-semibold">Date To <span class="text-danger">*</span></label>
-                        <input type="text" name="date_to" id="date_to" class="form-control "
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">event</i>Date To <span class="text-danger">*</span></label>
+                        <input type="text" name="date_to" id="date_to" class="form-select"
                                value="{{ $effectiveDateTo ?? request('date_to', now()->endOfMonth()->format('d-m-Y')) }}"
                                data-default-ymd="{{ $effectiveDateToYmd ?? now()->endOfMonth()->format('Y-m-d') }}"
                                placeholder="dd-mm-yyyy" autocomplete="off">
                     </div>
-                    <div class="col-md-2">
-                        <label class="form-label small fw-semibold">Employee / OT / Course Employee</label>
-                        <select name="client_type" id="filterClientTypeSlug" class="form-select  choices-select" data-placeholder="All client types">
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">person</i>Employee / OT / Course</label>
+                        <select name="client_type" id="filterClientTypeSlug" class="form-select choices-select" data-placeholder="All client types">
                             <option value="">All Client Types</option>
                             @foreach($clientTypes ?? [] as $key => $label)
                                 <option value="{{ $key }}" {{ ($clientType ?? request('client_type')) === $key ? 'selected' : '' }}>{{ $label }}</option>
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-md-2">
-                        <label class="form-label small fw-semibold">Client Type</label>
-                        <select id="filterClientTypePk" class="form-select choices-select">
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">category</i>Client Type</label>
+                        <select name="client_type_pk" id="filterClientTypePk" class="form-select choices-select" data-placeholder="All">
                             <option value="">All</option>
                         </select>
                     </div>
-                    <div class="col-md-2">
-                        <label class="form-label small fw-semibold">Buyer Name</label>
-                        <select name="buyer_name" id="filterBuyerName" class="form-select choices-select">
+                        <div class="col-md-3">
+                        <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">badge</i>Buyer Name</label>
+                        <select name="buyer_name" id="filterBuyerName" class="form-select shadow-sm border-0 choices-select">
                             <option value="">All Buyers</option>
+                            @if(($clientType ?? request('client_type')) === 'ot' && isset($otBuyerNames) && $otBuyerNames->isNotEmpty())
+                                @foreach($otBuyerNames as $buyer)
+                                    <option value="{{ $buyer }}" {{ ($buyerName ?? request('buyer_name')) === $buyer ? 'selected' : '' }}>{{ $buyer }}</option>
+                                @endforeach
+                            @elseif(($clientType ?? request('client_type')) === 'course' && isset($courseBuyerNames) && $courseBuyerNames->isNotEmpty())
+                                @foreach($courseBuyerNames as $buyer)
+                                    <option value="{{ $buyer }}" {{ ($buyerName ?? request('buyer_name')) === $buyer ? 'selected' : '' }}>{{ $buyer }}</option>
+                                @endforeach
+                            @elseif(($clientType ?? request('client_type')) === 'other' && isset($otherBuyerNames) && $otherBuyerNames->isNotEmpty())
+                                @foreach($otherBuyerNames as $buyer)
+                                    <option value="{{ $buyer }}" {{ ($buyerName ?? request('buyer_name')) === $buyer ? 'selected' : '' }}>{{ $buyer }}</option>
+                                @endforeach
+                            @elseif(($clientType ?? request('client_type')) === 'section' && isset($sectionBuyerNames) && $sectionBuyerNames->isNotEmpty())
+                                @foreach($sectionBuyerNames as $buyer)
+                                    <option value="{{ $buyer }}" {{ ($buyerName ?? request('buyer_name')) === $buyer ? 'selected' : '' }}>{{ $buyer }}</option>
+                                @endforeach
+                            @endif
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold">Status</label>
+                        @php $currentStatus = $statusFilter ?? request('status', ''); @endphp
+                        <select name="status" id="filterStatus" class="form-select">
+                            <option value="">All Status</option>
+                            <option value="unpaid" {{ $currentStatus === 'unpaid' ? 'selected' : '' }}>Unpaid</option>
+                            <option value="partial" {{ $currentStatus === 'partial' ? 'selected' : '' }}>Partial</option>
+                            <option value="paid" {{ $currentStatus === 'paid' ? 'selected' : '' }}>Paid</option>
                         </select>
                     </div>
                     <div class="col-md-2 d-flex gap-1">
@@ -140,7 +170,9 @@
                         @php
                             $clearFilterParams = [];
                         @endphp
-                        <a href="{{ route('admin.mess.process-mess-bills-employee.index', $clearFilterParams) }}" class="btn btn-outline-secondary ">Clear filters</a>
+                        <a href="{{ route('admin.mess.process-mess-bills-employee.index', $clearFilterParams) }}" class="btn btn-outline-secondary shadow-sm" title="Clear all filters">
+                            <i class="material-symbols-rounded" style="font-size: 1.1rem;">filter_list_off</i>
+                        </a>
                     </div>
                 </div>
             </form>
@@ -148,20 +180,22 @@
     </div>
 
     {{-- Table card – DataTables client-side search/sort like mess master --}}
-    <div class="card border-0 shadow-sm">
-        <div class="card-body">
+    <div class="card border-0 shadow">
+        <div class="card-body p-3 p-lg-4">
             <form method="GET" action="{{ route('admin.mess.process-mess-bills-employee.index') }}" id="filterForm" class="no-print">
                 <input type="hidden" name="date_from" value="{{ $effectiveDateFrom ?? request('date_from') }}">
                 <input type="hidden" name="date_to" value="{{ $effectiveDateTo ?? request('date_to') }}">
                 <input type="hidden" name="client_type" value="{{ $clientType ?? request('client_type') }}">
+                <input type="hidden" name="client_type_pk" value="{{ $clientTypePk ?? request('client_type_pk') }}">
                 <input type="hidden" name="buyer_name" value="{{ $buyerName ?? request('buyer_name') }}">
+                <input type="hidden" name="status" value="{{ $statusFilter ?? request('status') }}">
                 <div class="d-flex flex-wrap justify-content-end align-items-right mb-3 gap-2">
                     <div class="d-flex align-items-center gap-2">
-                        <a href="{{ route('admin.mess.process-mess-bills-employee.export') }}?{{ http_build_query(request()->only(['date_from', 'date_to', 'client_type', 'buyer_name', 'search'])) }}" class="btn btn-outline-secondary  d-inline-flex align-items-center gap-1" title="Export to Excel">
+                        <a href="{{ route('admin.mess.process-mess-bills-employee.export') }}?{{ http_build_query(request()->only(['date_from', 'date_to', 'client_type', 'client_type_pk', 'buyer_name', 'status', 'search'])) }}" class="btn btn-outline-success shadow-sm d-inline-flex align-items-center gap-2 px-3" title="Export to Excel">
                             <i class="material-symbols-rounded" style="font-size: 1.1rem;">file_download</i>
                             <span>Export</span>
                         </a>
-                        <button type="button" class="btn btn-outline-primary  d-inline-flex align-items-center gap-1" title="Print" onclick="printProcessMessBillsMainTable()">
+                        <button type="button" class="btn btn-outline-primary shadow-sm d-inline-flex align-items-center gap-2 px-3" title="Print" onclick="printProcessMessBillsMainTable()">
                             <i class="material-symbols-rounded" style="font-size: 1.1rem;">print</i>
                             <span>Print</span>
                         </button>
@@ -169,9 +203,9 @@
                 </div>
             </form>
 
-            <div class="table-responsive rounded-3 border bg-white">
-                <table class="table table-striped table-hover text-nowrap align-middle mb-0" id="processMessBillsTable">
-                    <thead>
+            <div class="table-responsive">
+                <table class="table table-sm table-striped table-hover text-nowrap align-middle mb-0" id="processMessBillsTable">
+                    <thead class="table-light">
                         <tr>
                             <th class="text-nowrap py-2">S.No.</th>
                             <th class="text-nowrap py-2">Buyer Name</th>
@@ -200,25 +234,27 @@
                                 <td>{{ $cb->payment_type ?? '—' }}</td>
                                 <td>
                                     @if(($cb->status ?? 0) == 2)
-                                        <span class="badge bg-success">Paid</span>
+                                        <span class="badge rounded-pill text-bg-success shadow-sm px-3 py-2">✓ Paid</span>
                                     @elseif(($cb->status ?? 0) == 1)
-                                        <span class="badge bg-warning text-dark">Partial</span>
+                                        <span class="badge rounded-pill text-bg-warning text-dark shadow-sm px-3 py-2">⏱ Partial</span>
                                     @else
-                                        <span class="badge bg-secondary">Unpaid</span>
+                                        <span class="badge rounded-pill text-bg-secondary shadow-sm px-3 py-2">○ Unpaid</span>
                                     @endif
                                 </td>
                                 <td class="text-center no-print">
                                     <a href="{{ route('admin.mess.process-mess-bills-employee.print-receipt', ['id' => $cb->combined_id]) }}?date_from={{ urlencode($effectiveDateFromYmd ?? '') }}&date_to={{ urlencode($effectiveDateToYmd ?? '') }}" target="_blank"
-                                       class="btn  btn-outline-primary text-primary bg-transparent border-0" title="Print receipt ({{ $cb->combined_invoice_no ?? 'Invoice' }})">
-                                        <i class="material-symbols-rounded">receipt</i>
+                                       class="btn btn-sm btn-outline-primary shadow-sm d-inline-flex align-items-center justify-content-center gap-1 px-3" title="Print receipt ({{ $cb->combined_invoice_no ?? 'Invoice' }})">
+                                        <i class="material-symbols-rounded" style="font-size: 1.1rem;">receipt</i>
+                                        <span class="d-none d-sm-inline">Receipt</span>
                                     </a>
                                 </td>
                             </tr>
                         @empty
                             <tr>
                                 <td colspan="9" class="text-center py-5 text-muted">
-                                    <i class="material-symbols-rounded d-block mb-2" style="font-size: 2.5rem;">inbox</i>
-                                    No bills found for the selected date range.
+                                    <i class="material-symbols-rounded d-block mb-3 text-primary" style="font-size: 4rem;">inbox</i>
+                                    <div class="fw-semibold fs-5 mb-1">No bills found</div>
+                                    <div class="small">Try adjusting your filters or date range</div>
                                 </td>
                             </tr>
                         @endforelse
@@ -280,7 +316,7 @@
                     <div class="payment-detail-grid">
                         <div class="payment-detail-row">
                             <label class="payment-detail-label">Payment Mode</label>
-                            <select name="payment_mode" id="payNowPaymentMode" class="payment-detail-input form-select form-select-sm choices-select" data-placeholder="Select mode">
+                            <select name="payment_mode" id="payNowPaymentMode" class="payment-detail-input form-select  choices-select" data-placeholder="Select mode">
                                 <option value="cash">Cash</option>
                                 <option value="cheque">Cheque</option>
                                 <option value="deduct_from_salary">Deduct From Salary</option>
@@ -455,9 +491,58 @@
         size: auto;
     }
 }
+
+/* Modern UI/UX Enhancements */
+.hover-lift {
+    transition: all 0.3s ease;
+}
+.hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.15) !important;
+}
+.transition-all {
+    transition: all 0.3s ease-in-out;
+}
+.animate__animated {
+    animation-duration: 0.6s;
+}
+.animate__fadeIn {
+    animation-name: fadeIn;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.form-control:focus, .form-select:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+}
+.btn {
+    transition: all 0.2s ease-in-out;
+}
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.15);
+}
+.btn:active {
+    transform: translateY(0);
+}
+.badge {
+    padding: 0.35em 0.65em;
+    font-weight: 600;
+}
+.table tbody tr {
+    transition: all 0.2s ease;
+}
+.table tbody tr:hover {
+    background-color: rgba(13, 110, 253, 0.05);
+}
+.card {
+    transition: all 0.3s ease;
+}
 </style>
 <div class="modal fade" id="addProcessMessBillsModal" tabindex="-1" aria-labelledby="addProcessMessBillsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered modal-fullscreen-md-down">
         <div class="modal-content border-0 shadow-lg rounded-3">
             <div class="modal-header bg-light border-0 py-3">
                 <h5 class="modal-title fw-semibold d-flex align-items-center gap-2" id="addProcessMessBillsModalLabel">
@@ -468,23 +553,23 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body bg-body-tertiary">
+            <div class="modal-body bg-body-tertiary p-3 p-lg-4">
                 <form id="addModalFilterForm" class="mb-3">
                     @csrf
                     <div class="row g-3 mb-3">
-                        <div class="col-md-2">
-                            <label class="form-label small fw-semibold">Date From <span class="text-danger">*</span></label>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-semibold text-dark mb-2\"><i class=\"material-symbols-rounded align-middle me-1\" style=\"font-size: 1rem;\">event</i>Date From <span class="text-danger">*</span></label>
                             <input type="text" name="modal_date_from" id="modal_date_from" class="form-control "
                                    value="{{ now()->startOfMonth()->format('d-m-Y') }}" placeholder="dd-mm-yyyy" autocomplete="off" required>
                         </div>
-                        <div class="col-md-2">
-                            <label class="form-label small fw-semibold">Date To <span class="text-danger">*</span></label>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1rem;">event</i>Date To <span class="text-danger">*</span></label>
                             <input type="text" name="modal_date_to" id="modal_date_to" class="form-control "
                                    value="{{ now()->endOfMonth()->format('d-m-Y') }}" placeholder="dd-mm-yyyy" autocomplete="off" required>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label small fw-semibold">Employee / OT / Course Employee</label>
-                            <select name="modal_client_type" id="modal_client_type" class="form-select form-select-sm">
+                            <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1rem;">person</i>Employee / OT / Course</label>
+                            <select name="modal_client_type" id="modal_client_type" class="form-select shadow-sm border-0 choices-select" data-placeholder="All Client Types">
                                 <option value="">All Client Types</option>
                                 @foreach($clientTypes ?? [] as $key => $label)
                                     <option value="{{ $key }}">{{ $label }}</option>
@@ -492,105 +577,121 @@
                             </select>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label small fw-semibold">Client Type</label>
-                            <select name="modal_client_type_pk" id="modal_client_type_pk" class="form-select form-select-sm">
+                            <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1rem;">category</i>Client Type</label>
+                            <select name="modal_client_type_pk" id="modal_client_type_pk" class="form-select choices-select" data-placeholder="All">
                                 <option value="">All</option>
                             </select>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label small fw-semibold">Buyer Name</label>
-                            <select name="modal_buyer_name" id="modal_buyer_name" class="form-select form-select-sm">
-                                <option value="">All Buyers</option>
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label small fw-semibold">Invoice Date</label>
-                            <input type="text" name="modal_invoice_date" id="modal_invoice_date" class="form-control "
+                        <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">badge</i>Buyer Name</label>
+                        <select name="modal_buyer_name" id="modal_buyer_name" class="form-select choices-select">
+                            <option value="">All Buyers</option>
+                            @if(($clientType ?? request('client_type')) === 'course' && isset($courseBuyerNames) && $courseBuyerNames->isNotEmpty())
+                                @foreach($courseBuyerNames as $buyer)
+                                    <option value="{{ $buyer }}" {{ ($buyerName ?? request('buyer_name')) === $buyer ? 'selected' : '' }}>{{ $buyer }}</option>
+                                @endforeach
+                            @elseif(($clientType ?? request('client_type')) === 'other' && isset($otherBuyerNames) && $otherBuyerNames->isNotEmpty())
+                                @foreach($otherBuyerNames as $buyer)
+                                    <option value="{{ $buyer }}" {{ ($buyerName ?? request('buyer_name')) === $buyer ? 'selected' : '' }}>{{ $buyer }}</option>
+                                @endforeach
+                            @elseif(($clientType ?? request('client_type')) === 'section' && isset($sectionBuyerNames) && $sectionBuyerNames->isNotEmpty())
+                                @foreach($sectionBuyerNames as $buyer)
+                                    <option value="{{ $buyer }}" {{ ($buyerName ?? request('buyer_name')) === $buyer ? 'selected' : '' }}>{{ $buyer }}</option>
+                                @endforeach
+                            @endif
+                        </select>
+                    </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1rem;">receipt</i>Invoice Date</label>
+                            <input type="text" name="modal_invoice_date" id="modal_invoice_date" class="form-control"
                                    value="{{ now()->format('d-m-Y') }}" placeholder="dd-mm-yyyy" autocomplete="off">
                         </div>
-                        <div class="col-md-2">
-                            <label class="form-label small fw-semibold">Mode of Payment</label>
-                            <select name="mode_of_payment" id="modal_mode_of_payment" class="form-select form-select-sm choices-select" data-placeholder="Select mode">
+                        <div class="col-md-3">
+                            <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1rem;">payments</i>Mode of Payment</label>
+                            <select name="mode_of_payment" id="modal_mode_of_payment" class="form-select choices-select" data-placeholder="Select mode">
                                 <option value="deduct_from_salary" selected>Deduct From Salary</option>
                                 <option value="cash">Cash</option>
                                 <option value="online">Online</option>
                             </select>
                         </div>
-                    </div>
-                    <div class="row g-2 mb-4">
-                        <div class="col-md-12 d-flex flex-wrap gap-2 align-items-center">
-                            <button type="button" class="btn btn-primary  d-inline-flex align-items-center gap-1" id="modalLoadBillsBtn">
-                                <i class="material-symbols-rounded align-middle" style="font-size: 1rem;">search</i>
+                        <div class="col-md-3 d-flex align-items-end justify-content-md-end">
+                            <div class="d-flex flex-wrap gap-2 w-100 justify-content-start justify-content-md-end">
+                            <button type="button" class="btn btn-primary shadow btn-sm d-inline-flex align-items-center gap-2 px-3" id="modalLoadBillsBtn">
+                                <i class="material-symbols-rounded" style="font-size: 1rem;">search</i>
                                 <span>Load Bills</span>
                             </button>
-                            <button type="button" class="btn btn-outline-secondary  d-inline-flex align-items-center gap-1" id="modalClearFiltersBtn">
-                                <i class="material-symbols-rounded align-middle" style="font-size: 1rem;">filter_list_off</i>
+                            <button type="button" class="btn btn-outline-secondary shadow-sm btn-sm d-inline-flex align-items-center gap-2 px-3" id="modalClearFiltersBtn">
+                                <i class="material-symbols-rounded" style="font-size: 1rem;">filter_list_off</i>
                                 <span>Clear Filters</span>
                             </button>
+                            </div>
                         </div>
                     </div>
                 </form>
 
                 {{-- Bulk actions (shown when rows selected) --}}
-                <div class="d-none align-items-center gap-2 mb-3 p-2 rounded-3 bg-light border border-dashed" id="modalBulkActionsBar">
-                    <span class="small fw-semibold" id="modalSelectedCount">0 selected</span>
-                    <button type="button" class="btn  btn-outline-primary" id="modalBulkInvoiceBtn">Generate Invoice (selected)</button>
-                    <button type="button" class="btn  btn-outline-success" id="modalBulkPaymentBtn">Mark as Paid (selected)</button>
+                <div class="d-none align-items-center gap-2 mb-3 p-3 rounded-3 bg-light border border-primary border-opacity-25" id="modalBulkActionsBar">
+                    <span class="small fw-bold text-primary" id="modalSelectedCount">0 selected</span>
+                    <button type="button" class="btn btn-sm btn-outline-primary shadow-sm" id="modalBulkInvoiceBtn">Generate Invoice (selected)</button>
+                    <button type="button" class="btn btn-sm btn-outline-success shadow-sm" id="modalBulkPaymentBtn">Mark as Paid (selected)</button>
                 </div>
 
                 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
                     <div class="d-flex align-items-center gap-2">
-                        <span class="small text-muted">Show</span>
+                        <span class="small text-muted fw-semibold">Show</span>
                         <select id="modalPerPage" class="form-select form-select-sm" style="width: auto;">
                             <option value="10" selected>10</option>
                             <option value="25">25</option>
                             <option value="50">50</option>
                             <option value="100">100</option>
                         </select>
-                        <span class="small text-muted">entries</span>
+                        <span class="small text-muted fw-semibold">entries</span>
                     </div>
                     <div class="d-flex align-items-center gap-2">
-                        <div class="input-group input-group-sm" style="width: 220px; max-width: 100%;">
-                            <span class="input-group-text bg-transparent border-end-0">
-                                <i class="material-symbols-rounded align-middle" style="font-size: 1rem;">search</i>
+                        <div class="input-group input-group-sm shadow-sm" style="width: 240px; max-width: 100%;">
+                            <span class="input-group-text bg-white border-end-0">
+                                <i class="material-symbols-rounded text-muted" style="font-size: 1.1rem;">search</i>
                             </span>
-                            <input type="text" id="modalSearch" class="form-control  border-start-0" placeholder="Search bills...">
+                            <input type="text" id="modalSearch" class="form-control border-start-0" placeholder="Search bills...">
                         </div>
-                        <button type="button" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1" onclick="printProcessMessBillsTable()" title="Print bills list">
+                        <button type="button" class="btn btn-outline-primary shadow-sm btn-sm d-inline-flex align-items-center gap-2 px-3" onclick="printProcessMessBillsTable()" title="Print bills list">
                             <i class="material-symbols-rounded align-middle" style="font-size: 1rem;">print</i>
                             <span>Print</span>
                         </button>
                     </div>
                 </div>
 
-                <div class="table-responsive rounded-3 border bg-white">
-                <table id="modalBillsTable" class="table table-sm table-striped table-hover align-middle mb-0">
-                        <thead class="table-light">
+                <div class="table-responsive rounded-3 border shadow-sm bg-white">
+                <table id="modalBillsTable" class="table table-sm table-hover align-middle mb-0">
+                        <thead style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
                             <tr>
-                                <th class="text-nowrap py-2" style="width: 40px;"><input type="checkbox" id="modalSelectAll" class="form-check-input" title="Select all"></th>
-                                <th class="text-nowrap py-2">S.No.</th>
-                                <th class="text-nowrap py-2">Buyer Name</th>
-                                <th class="text-nowrap py-2">Invoice No.</th>
-                                <th class="text-nowrap py-2">Payment Type</th>
-                                <th class="text-nowrap py-2 text-end">Total</th>
-                                <th class="text-nowrap py-2 text-center">Actions</th>
-                                <th class="text-nowrap py-2 text-center">Receipt</th>
+                                <th class="text-nowrap py-3 fw-semibold" style="width: 40px;"><input type="checkbox" id="modalSelectAll" class="form-check-input" title="Select all"></th>
+                                <th class="text-nowrap py-3 fw-semibold">S.No.</th>
+                                <th class="text-nowrap py-3 fw-semibold">Buyer Name</th>
+                                <th class="text-nowrap py-3 fw-semibold">Invoice No.</th>
+                                <th class="text-nowrap py-3 fw-semibold">Payment Type</th>
+                                <th class="text-nowrap py-3 fw-semibold text-end">Total</th>
+                                <th class="text-nowrap py-3 fw-semibold text-center">Actions</th>
+                                <th class="text-nowrap py-3 fw-semibold text-center">Receipt</th>
                             </tr>
                         </thead>
                         <tbody id="modalBillsTableBody">
                             <tr>
-                                <td colspan="8" class="text-center py-4 text-muted">Select date range and click <strong>Load Bills</strong> to load unpaid bills.</td>
+                                <td colspan="8" class="text-center py-5 text-muted">
+                                    <i class="material-symbols-rounded d-block mb-2 text-primary" style="font-size: 3rem;">description</i>
+                                    <div class="fw-semibold">Select date range and click <strong class="text-primary">Load Bills</strong> to load unpaid bills.</div>
+                                </td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
 
-                <div class="d-flex flex-wrap justify-content-between align-items-center mt-3 pt-2 border-top">
-                    <div class="small text-muted" id="modalPaginationInfo">Showing 0 to 0 of 0 entries</div>
+                <div class="d-flex flex-wrap justify-content-between align-items-center mt-3 pt-3 border-top">
+                    <div class="small text-muted fw-semibold" id="modalPaginationInfo">Showing 0 to 0 of 0 entries</div>
                 </div>
             </div>
-            <div class="modal-footer bg-light border-0 rounded-bottom-3">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+            <div class="modal-footer bg-light border-0 rounded-bottom-3 py-3">
+                <button type="button" class="btn btn-outline-secondary shadow-sm px-4" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -599,8 +700,13 @@
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/styles/choices.min.css"/>
-<script src="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/scripts/choices.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+<style>
+    .choices__list--dropdown {
+        z-index: 2000;
+    }
+</style>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     if (typeof flatpickr !== 'undefined') {
@@ -639,24 +745,64 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Initialize Choices.js on all dropdowns within this report
+    function initChoicesElement(el) {
+        if (!el || typeof window.Choices === 'undefined') return;
+        if (el.dataset.choicesInitialized === 'true') return;
+
+        var placeholder = el.getAttribute('data-placeholder') || 'Select';
+        var shouldSearch = (el.options && el.options.length > 10);
+
+        var instance = new Choices(el, {
+            searchEnabled: shouldSearch,
+            removeItemButton: false,
+            itemSelectText: '',
+            shouldSort: false,
+            placeholderValue: placeholder,
+            allowHTML: false
+        });
+
+        el.dataset.choicesInitialized = 'true';
+        el.choicesInstance = instance;
+    }
+
+    function refreshChoicesFromSelect(el, selectedValue) {
+        console.log('refreshChoicesFromSelect called - el:', el, 'selectedValue:', selectedValue);
+        console.log('choicesInstance exists?', !!el.choicesInstance);
+        if (!el || !el.choicesInstance) {
+            console.warn('No choicesInstance found for element:', el);
+            return;
+        }
+        var instance = el.choicesInstance;
+        var values = Array.from(el.options).map(function (o) {
+            return { value: o.value, label: o.text, selected: selectedValue != null ? String(o.value) === String(selectedValue) : o.selected };
+        });
+        console.log('Refreshing choices with', values.length, 'options');
+        instance.clearStore();
+        instance.setChoices(values, 'value', 'label', true);
+        try {
+            instance.setChoiceByValue(selectedValue != null ? String(selectedValue) : (el.value || ''));
+        } catch (e) {
+            console.error('Error setting choice value:', e);
+        }
+    }
+
     if (typeof window.Choices !== 'undefined') {
         document
             .querySelectorAll('.process-mess-bills-employee-report select.choices-select')
             .forEach(function (el) {
-                if (el.dataset.choicesInitialized === 'true') return;
-
-                var placeholder = el.getAttribute('data-placeholder') || 'Select';
-
-                new Choices(el, {
-                    shouldSort: false,
-                    placeholder: true,
-                    placeholderValue: placeholder,
-                    searchPlaceholderValue: 'Search...',
-                    itemSelectText: '',
-                });
-
-                el.dataset.choicesInitialized = 'true';
+                initChoicesElement(el);
             });
+    }
+
+    // Ensure modal dropdowns are (re)initialized with Choices when the modal opens
+    var addProcessMessBillsModalEl = document.getElementById('addProcessMessBillsModal');
+    if (addProcessMessBillsModalEl && typeof bootstrap !== 'undefined') {
+        addProcessMessBillsModalEl.addEventListener('shown.bs.modal', function () {
+            ['modal_client_type', 'modal_client_type_pk', 'modal_buyer_name', 'modal_mode_of_payment'].forEach(function (id) {
+                var el = document.getElementById(id);
+                initChoicesElement(el);
+            });
+        });
     }
 
     var modalBillsData = [];
@@ -691,19 +837,58 @@ document.addEventListener('DOMContentLoaded', function() {
         var df = document.getElementById('modal_date_from');
         var dt = document.getElementById('modal_date_to');
         var ct = document.getElementById('modal_client_type');
+        var ctp = document.getElementById('modal_client_type_pk');
         var bn = document.getElementById('modal_buyer_name');
         var dateFrom = (df && df.value) ? toYmd(df.value) : '';
         var dateTo = (dt && dt.value) ? toYmd(dt.value) : '';
         var clientType = (ct && ct.value) ? ct.value : '';
+        var clientTypePk = (ctp && ctp.value) ? ctp.value : '';
         var buyerName = (bn && bn.value) ? bn.value.trim() : '';
         var url = '{{ route("admin.mess.process-mess-bills-employee.modal-data") }}?date_from=' + encodeURIComponent(dateFrom) + '&date_to=' + encodeURIComponent(dateTo);
         if (clientType) url += '&client_type=' + encodeURIComponent(clientType);
+        if (clientTypePk) url += '&client_type_pk=' + encodeURIComponent(clientTypePk);
         if (buyerName) url += '&buyer_name=' + encodeURIComponent(buyerName);
         fetch(url)
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 modalBillsData = data.bills || [];
                 renderModalTable();
+
+                // Also refresh Buyer Name dropdown in modal based on loaded bills.
+                // IMPORTANT: Only do this when no client type is selected, otherwise it
+                // overrides the dependent "Client Type -> Buyer Name" behavior.
+                if (clientType) {
+                    return;
+                }
+                try {
+                    var buyerSelect = document.getElementById('modal_buyer_name');
+                    if (buyerSelect) {
+                        var buyers = Array.from(new Set(
+                            (modalBillsData || [])
+                                .map(function (b) { return b.buyer_name || b.client_name || ''; })
+                                .filter(function (name) { return !!name; })
+                        ));
+
+                        buyerSelect.innerHTML = '<option value=\"\">All Buyers</option>';
+
+                        buyers.forEach(function (name) {
+                            var opt = document.createElement('option');
+                            opt.value = name;
+                            opt.textContent = name;
+                            buyerSelect.appendChild(opt);
+                        });
+
+                        if (buyerSelect.choicesInstance) {
+                            var values = Array.from(buyerSelect.options).map(function (o) {
+                                return { value: o.value, label: o.text, selected: o.selected };
+                            });
+                            buyerSelect.choicesInstance.clearStore();
+                            buyerSelect.choicesInstance.setChoices(values, 'value', 'label', true);
+                        }
+                    }
+                } catch (e) {
+                    console.error('Failed to refresh modal_buyer_name options:', e);
+                }
             })
             .catch(function() {
                 modalBillsData = [];
@@ -790,17 +975,35 @@ document.addEventListener('DOMContentLoaded', function() {
         setDateInput('modal_invoice_date', defaultInvoiceDate);
 
         var ct = document.getElementById('modal_client_type');
-        if (ct) ct.value = '';
+        if (ct) {
+            ct.value = '';
+            if (ct.choicesInstance) {
+                ct.choicesInstance.setChoiceByValue('');
+            }
+        }
         var ctp = document.getElementById('modal_client_type_pk');
         if (ctp) {
             ctp.innerHTML = '<option value=\"\">All</option>';
+            if (ctp.choicesInstance) {
+                ctp.choicesInstance.clearStore();
+                ctp.choicesInstance.setChoices([{ value: '', label: 'All', selected: true }], 'value', 'label', true);
+            }
         }
         var bn = document.getElementById('modal_buyer_name');
         if (bn) {
             bn.innerHTML = '<option value=\"\">All Buyers</option>';
+            if (bn.choicesInstance) {
+                bn.choicesInstance.clearStore();
+                bn.choicesInstance.setChoices([{ value: '', label: 'All Buyers', selected: true }], 'value', 'label', true);
+            }
         }
         var mp = document.getElementById('modal_mode_of_payment');
-        if (mp) mp.value = 'deduct_from_salary';
+        if (mp) {
+            mp.value = 'deduct_from_salary';
+            if (mp.choicesInstance) {
+                mp.choicesInstance.setChoiceByValue('deduct_from_salary');
+            }
+        }
         var ms = document.getElementById('modalSearch');
         if (ms) ms.value = '';
 
@@ -819,6 +1022,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var modalClientTypePk = document.getElementById('modal_client_type_pk');
         var modalBuyerName = document.getElementById('modal_buyer_name');
         var studentsByCourseUrl = "{{ url('/admin/mess/selling-voucher-date-range/students-by-course') }}";
+        var buyersForReportUrl = "{{ route('admin.mess.reports.category-wise-print-slip.buyers') }}";
 
         if (!modalClientType || !modalClientTypePk || !modalBuyerName) {
             return;
@@ -862,11 +1066,30 @@ document.addEventListener('DOMContentLoaded', function() {
             ]
         };
 
+        var otBuyerNames = {!! json_encode(($otBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
+        var courseBuyerNames = {!! json_encode(($courseBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
+        var otherBuyerNames = {!! json_encode(($otherBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
+        var sectionBuyerNames = {!! json_encode(($sectionBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
+        var allBuyerNames = {!! json_encode(($allBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
+
+        // NOTE: Choices.js may recreate <option> nodes and drop custom dataset attributes.
+        // Keep an explicit mapping from client_type_pk -> client group key (academy staff/faculty/mess staff)
+        // so Buyer Name filtering stays correct inside the modal.
+        var modalPkToClientGroupKey = {};
+
         function fillModalClientTypePk() {
             var slug = modalClientType.value;
             modalClientTypePk.innerHTML = '<option value=\"\">All</option>';
 
-            if (slug === 'ot' && otCourseOptions.length) {
+            var choicesPk = modalClientTypePk.choicesInstance || null;
+            if (choicesPk) {
+                choicesPk.clearStore();
+                choicesPk.setChoices([{ value: '', label: 'All', selected: true }], 'value', 'label', true);
+            }
+
+            modalPkToClientGroupKey = {};
+
+            if ((slug === 'ot' || slug === 'course') && otCourseOptions.length) {
                 otCourseOptions.forEach(function (o) {
                     var opt = document.createElement('option');
                     opt.value = o.value;
@@ -880,9 +1103,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     opt.textContent = o.text;
                     if (o.dataClientName) {
                         opt.dataset.clientName = o.dataClientName;
+                        modalPkToClientGroupKey[String(o.value)] = String(o.dataClientName);
                     }
                     modalClientTypePk.appendChild(opt);
                 });
+            }
+
+            if (choicesPk) {
+                var newChoices = Array.from(modalClientTypePk.options).map(function (o) {
+                    return { value: o.value, label: o.text, selected: o.selected };
+                });
+                choicesPk.clearStore();
+                choicesPk.setChoices(newChoices, 'value', 'label', true);
             }
             fillModalBuyerNames();
         }
@@ -891,6 +1123,12 @@ document.addEventListener('DOMContentLoaded', function() {
             var slug = modalClientType.value;
             var selectedPk = modalClientTypePk.value;
             modalBuyerName.innerHTML = '<option value=\"\">All Buyers</option>';
+
+            var choicesBuyer = modalBuyerName.choicesInstance || null;
+            if (choicesBuyer) {
+                choicesBuyer.clearStore();
+                choicesBuyer.setChoices([{ value: '', label: 'All Buyers', selected: true }], 'value', 'label', true);
+            }
 
             function addBuyerOptions(list) {
                 (list || []).forEach(function (o) {
@@ -903,11 +1141,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (slug === 'employee') {
                 var selectedOpt = modalClientTypePk.options[modalClientTypePk.selectedIndex];
-                var dataClientName = selectedOpt && selectedOpt.dataset ? (selectedOpt.dataset.clientName || '') : '';
-                if (dataClientName && employeeNames[dataClientName]) {
+                var dataClientName = '';
+                if (selectedPk && modalPkToClientGroupKey[String(selectedPk)]) {
+                    dataClientName = modalPkToClientGroupKey[String(selectedPk)];
+                } else if (selectedOpt && selectedOpt.dataset && selectedOpt.dataset.clientName) {
+                    dataClientName = selectedOpt.dataset.clientName || '';
+                }
+
+                if (dataClientName && employeeNames[dataClientName] && employeeNames[dataClientName].length) {
                     addBuyerOptions(employeeNames[dataClientName]);
+                } else if (!selectedPk) {
+                    // No subgroup selected: show all employee groups
+                    Object.keys(employeeNames || {}).forEach(function (key) {
+                        addBuyerOptions(employeeNames[key] || []);
+                    });
                 }
             } else if (slug === 'ot' && selectedPk) {
+                // OT + specific course: students by course
                 fetch(studentsByCourseUrl + '/' + selectedPk, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
                     .then(function (r) { return r.json(); })
                     .then(function (data) {
@@ -917,25 +1167,62 @@ document.addEventListener('DOMContentLoaded', function() {
                         addBuyerOptions(students);
                     })
                     .catch(function () {
-                        // ignore error; keep only "All Buyers"
+                        // ignore error; All Buyers hi rahe
                     });
-            } else if (slug === 'course') {
-                if (clientTypeOptions['course'] && clientTypeOptions['course'].length) {
-                    var list = clientTypeOptions['course'].map(function (o) {
-                        return { value: o.text, text: o.text };
-                    });
-                    addBuyerOptions(list);
-                } else if (otCourseOptions.length) {
-                    var list2 = otCourseOptions.map(function (o) {
-                        return { value: o.text, text: o.text };
-                    });
-                    addBuyerOptions(list2);
-                }
-            } else if (slug && clientTypeOptions[slug]) {
-                var list3 = clientTypeOptions[slug].map(function (o) {
-                    return { value: o.text, text: o.text };
+            } else if (slug === 'ot' && !selectedPk) {
+                // Sirf OT select hai – OT ke liye jo buyer names controllers se aaye hain unko dikhao
+                var listOt = (courseBuyerNames || []).map(function (name) {
+                    return { value: name, text: name };
                 });
-                addBuyerOptions(list3);
+                addBuyerOptions(listOt);
+            } else if (slug === 'course') {
+                var listCourse = (courseBuyerNames || []).map(function (name) {
+                    return { value: name, text: name };
+                });
+                addBuyerOptions(listOt);
+            } else if (slug === 'course') {
+                // Requirement (modal):
+                // - Course selected + Client Type = All => Buyer Name = ALL course names
+                // - Course selected + specific Client Type PK => Buyer Name = that course name only
+                var courses = (otCourseOptions || []);
+                if (!selectedPk) {
+                    var listCourseAll = courses.map(function (o) {
+                        return { value: o.text, text: o.text };
+                    });
+                    addBuyerOptions(listCourseAll);
+                } else {
+                    var matchCourse = courses.find(function (o) {
+                        return String(o.value) === String(selectedPk);
+                    });
+                    if (matchCourse) {
+                        addBuyerOptions([{ value: matchCourse.text, text: matchCourse.text }]);
+                    }
+                }
+            } else if (slug === 'other') {
+                // Other: use distinct buyer names list
+                var listOther = (otherBuyerNames || []).map(function (name) {
+                    return { value: name, text: name };
+                });
+                addBuyerOptions(listOther);
+            } else if (slug === 'section') {
+                var listSection = (sectionBuyerNames || []).map(function (name) {
+                    return { value: name, text: name };
+                });
+                addBuyerOptions(listSection);
+            } else if (!slug && (allBuyerNames || []).length) {
+                // koi client type select nahi – saare distinct buyer names (course/other/section etc.) dikhado
+                var listAll = (allBuyerNames || []).map(function (name) {
+                    return { value: name, text: name };
+                });
+                addBuyerOptions(listAll);
+            }
+
+            if (choicesBuyer) {
+                var newChoices = Array.from(modalBuyerName.options).map(function (o) {
+                    return { value: o.value, label: o.text, selected: o.selected };
+                });
+                choicesBuyer.clearStore();
+                choicesBuyer.setChoices(newChoices, 'value', 'label', true);
             }
         }
 
@@ -952,6 +1239,8 @@ document.addEventListener('DOMContentLoaded', function() {
         var clientTypePk = document.getElementById('filterClientTypePk');
         var buyerSelect = document.getElementById('filterBuyerName');
         var studentsByCourseUrl = "{{ url('/admin/mess/selling-voucher-date-range/students-by-course') }}";
+        var buyersForReportUrl = "{{ route('admin.mess.reports.category-wise-print-slip.buyers') }}";
+        var preservedClientTypePk = {!! json_encode($clientTypePk ?? request('client_type_pk', '')) !!};
         var preservedBuyerName = {!! json_encode($buyerName ?? request('buyer_name', '')) !!};
 
         if (!clientTypeSlug || !clientTypePk || !buyerSelect) {
@@ -995,12 +1284,40 @@ document.addEventListener('DOMContentLoaded', function() {
 @endforeach
             ]
         };
+        var courseBuyerNames = {!! json_encode(($courseBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
+        var otherBuyerNames = {!! json_encode(($otherBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
+        var sectionBuyerNames = {!! json_encode(($sectionBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
 
-        function fillClientTypePk() {
+        // Debug: Log initial data
+        console.log('=== Main Filter Initialization ===');
+        console.log('clientTypeOptions:', clientTypeOptions);
+        console.log('employeeNames:', employeeNames);
+        console.log('Academy Staff count:', employeeNames['academy staff'] ? employeeNames['academy staff'].length : 0);
+        console.log('Faculty count:', employeeNames['faculty'] ? employeeNames['faculty'].length : 0);
+        console.log('Mess Staff count:', employeeNames['mess staff'] ? employeeNames['mess staff'].length : 0);
+        console.log('otCourses count:', otCourseOptions.length);
+
+        function fillClientTypePk(preserve) {
             var slug = clientTypeSlug.value;
+            var currentClientPk = preserve ? preservedClientTypePk : '';
+            console.log('=== fillClientTypePk START ===');
+            console.log('slug:', slug, 'preserve:', preserve, 'currentClientPk:', currentClientPk);
+            
+            // If Choices.js exists, destroy it first to rebuild clean
+            if (clientTypePk.choicesInstance) {
+                console.log('Destroying existing Choices.js instance for clientTypePk...');
+                try {
+                    clientTypePk.choicesInstance.destroy();
+                    clientTypePk.choicesInstance = null;
+                    clientTypePk.dataset.choicesInitialized = 'false';
+                } catch (e) {
+                    console.error('Error destroying Choices instance:', e);
+                }
+            }
+            
             clientTypePk.innerHTML = '<option value=\"\">All</option>';
 
-            if (slug === 'ot' && otCourseOptions.length) {
+            if ((slug === 'ot' || slug === 'course') && otCourseOptions.length) {
                 otCourseOptions.forEach(function (o) {
                     var opt = document.createElement('option');
                     opt.value = o.value;
@@ -1018,6 +1335,29 @@ document.addEventListener('DOMContentLoaded', function() {
                     clientTypePk.appendChild(opt);
                 });
             }
+            
+            // Restore selected value if preserving
+            if (currentClientPk) {
+                clientTypePk.value = currentClientPk;
+            }
+
+            console.log('fillClientTypePk - Re-initializing Choices.js for clientTypePk...');
+            console.log('fillClientTypePk - Total options:', clientTypePk.options.length);
+            
+            // Re-initialize Choices.js after options are added
+            if (typeof window.Choices !== 'undefined') {
+                initChoicesElement(clientTypePk);
+                if (currentClientPk && clientTypePk.choicesInstance) {
+                    console.log('fillClientTypePk - Setting choice to:', currentClientPk);
+                    try {
+                        clientTypePk.choicesInstance.setChoiceByValue(currentClientPk);
+                    } catch (e) {
+                        console.error('Error setting choice value:', e);
+                    }
+                }
+            }
+            
+            console.log('fillClientTypePk - Calling fillBuyerSelect(true)...');
             fillBuyerSelect(true);
         }
 
@@ -1025,26 +1365,139 @@ document.addEventListener('DOMContentLoaded', function() {
             var slug = clientTypeSlug.value;
             var selectedPk = clientTypePk.value;
             var currentBuyer = preserve ? preservedBuyerName : '';
-            buyerSelect.innerHTML = '<option value=\"\">All Buyers</option>';
+            console.log('=== fillBuyerSelect START ===');
+            console.log('slug:', slug, 'selectedPk:', selectedPk, 'preserve:', preserve);
+            console.log('buyerSelect.choicesInstance exists?', !!buyerSelect.choicesInstance);
+            
+            // If Choices.js exists, destroy it first to rebuild clean
+            if (buyerSelect.choicesInstance) {
+                console.log('Destroying existing Choices.js instance...');
+                try {
+                    buyerSelect.choicesInstance.destroy();
+                    buyerSelect.choicesInstance = null;
+                    buyerSelect.dataset.choicesInitialized = 'false';
+                } catch (e) {
+                    console.error('Error destroying Choices instance:', e);
+                }
+            }
+            
+            // Clear existing options
+            buyerSelect.innerHTML = '<option value="">All Buyers</option>';
 
             function addOptions(list) {
+                console.log('addOptions called with', list ? list.length : 0, 'items');
                 (list || []).forEach(function (o) {
                     var opt = document.createElement('option');
                     opt.value = o.value;
                     opt.textContent = o.text;
                     buyerSelect.appendChild(opt);
+                    console.log('Added option:', o.text);
                 });
                 if (currentBuyer) {
                     buyerSelect.value = currentBuyer;
+                    console.log('Set current buyer to:', currentBuyer);
                 }
             }
 
-            if (slug === 'employee') {
+            function loadBuyersFromReportEndpoint(slugToLoad) {
+                // Uses existing report endpoint to return distinct buyers (optionally date-filtered)
+                var df = document.getElementById('date_from');
+                var dt = document.getElementById('date_to');
+                var dateFromYmd = (df && df.value) ? toYmd(df.value) : '';
+                var dateToYmd = (dt && dt.value) ? toYmd(dt.value) : '';
+
+                function fallbackFromServerLists() {
+                    if (slugToLoad === 'course') {
+                        var listCourse = (courseBuyerNames || []).map(function (name) { return { value: name, text: name }; });
+                        addOptions(listCourse);
+                        return;
+                    }
+                    if (slugToLoad === 'other') {
+                        var listOther = (otherBuyerNames || []).map(function (name) { return { value: name, text: name }; });
+                        addOptions(listOther);
+                        return;
+                    }
+                    if (slugToLoad === 'section') {
+                        var listSection = (sectionBuyerNames || []).map(function (name) { return { value: name, text: name }; });
+                        addOptions(listSection);
+                        return;
+                    }
+                }
+
+                var qs = new URLSearchParams();
+                qs.set('client_type_slug', slugToLoad);
+                if (dateFromYmd) qs.set('from_date', dateFromYmd);
+                if (dateToYmd) qs.set('to_date', dateToYmd);
+                // Add PK if selected (course/ot => course_master_pk, others => client_type_pk)
+                if (selectedPk) {
+                    if (slugToLoad === 'course' || slugToLoad === 'ot') {
+                        qs.set('course_master_pk', selectedPk);
+                    } else {
+                        qs.set('client_type_pk', selectedPk);
+                    }
+                }
+
+                fetch(buyersForReportUrl + '?' + qs.toString(), { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        var buyers = (data.buyers || []).map(function (name) {
+                            return { value: name || '', text: name || '—' };
+                        }).filter(function (o) { return !!o.value; });
+                        if (!buyers.length) {
+                            fallbackFromServerLists();
+                        } else {
+                        addOptions(buyers);
+                        }
+                        if (typeof window.Choices !== 'undefined') {
+                            initChoicesElement(buyerSelect);
+                            if (currentBuyer && buyerSelect.choicesInstance) {
+                                buyerSelect.choicesInstance.setChoiceByValue(currentBuyer);
+                            }
+                        }
+                    })
+                    .catch(function () {
+                        fallbackFromServerLists();
+                        // still init Choices
+                        if (typeof window.Choices !== 'undefined') {
+                            initChoicesElement(buyerSelect);
+                        }
+                    });
+            }
+
+            if (slug === 'employee' && selectedPk) {
                 var selectedOpt = clientTypePk.options[clientTypePk.selectedIndex];
                 var dataClientName = selectedOpt && selectedOpt.dataset ? (selectedOpt.dataset.clientName || '') : '';
-                if (dataClientName && employeeNames[dataClientName]) {
+                console.log('Employee Debug - selectedPk:', selectedPk);
+                console.log('Employee Debug - selectedOpt:', selectedOpt);
+                console.log('Employee Debug - dataClientName:', dataClientName);
+                console.log('Employee Debug - employeeNames keys:', Object.keys(employeeNames));
+                console.log('Employee Debug - employeeNames[dataClientName]:', employeeNames[dataClientName]);
+                
+                if (dataClientName && employeeNames[dataClientName] && employeeNames[dataClientName].length > 0) {
+                    console.log('Employee Debug - Adding', employeeNames[dataClientName].length, 'employees');
                     addOptions(employeeNames[dataClientName]);
+                } else {
+                    console.warn('Employee: No employees found for dataClientName:', dataClientName);
+                    console.warn('Available keys:', Object.keys(employeeNames));
                 }
+            } else if (slug === 'employee' && !selectedPk) {
+                // Employee selected but Client Type = All => show all employee groups
+                var all = []
+                    .concat(employeeNames['academy staff'] || [])
+                    .concat(employeeNames['faculty'] || [])
+                    .concat(employeeNames['mess staff'] || []);
+
+                // De-duplicate + sort (by name)
+                var map = new Map();
+                all.forEach(function (o) {
+                    var key = String(o.value || '').trim().toLowerCase();
+                    if (!key) return;
+                    if (!map.has(key)) map.set(key, { value: o.value, text: o.text });
+                });
+                var unique = Array.from(map.values()).sort(function (a, b) {
+                    return String(a.text || '').localeCompare(String(b.text || ''), undefined, { sensitivity: 'base' });
+                });
+                addOptions(unique);
             } else if (slug === 'ot' && selectedPk) {
                 fetch(studentsByCourseUrl + '/' + selectedPk, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
                     .then(function (r) { return r.json(); })
@@ -1053,33 +1506,96 @@ document.addEventListener('DOMContentLoaded', function() {
                             return { value: s.display_name || '', text: s.display_name || '—' };
                         });
                         addOptions(students);
+                        // Re-initialize Choices.js after async data load
+                        if (typeof window.Choices !== 'undefined') {
+                            initChoicesElement(buyerSelect);
+                            if (currentBuyer) {
+                                buyerSelect.choicesInstance.setChoiceByValue(currentBuyer);
+                            }
+                        }
                     })
                     .catch(function () {
-                        // ignore; leave All Buyers only
+                        // ignore; leave All Buyers only - still need to init Choices
+                        if (typeof window.Choices !== 'undefined') {
+                            initChoicesElement(buyerSelect);
+                        }
                     });
+                return; // Exit early for async case
+            } else if (slug === 'ot' && !selectedPk) {
+                // OT selected but Course = All => show all OT buyers from precomputed list
+                var listOt = (otBuyerNames || []).map(function (name) {
+                    return { value: name, text: name };
+                });
+                addOptions(listOt);
             } else if (slug === 'course') {
-                if (clientTypeOptions['course'] && clientTypeOptions['course'].length) {
-                    var list = clientTypeOptions['course'].map(function (o) {
+                // Requirement:
+                // - If Course selected AND Client Type = All => Buyer Name should list ALL course names
+                // - If specific course selected => Buyer Name should be that course name
+                if (!selectedPk) {
+                    var listCourseAll = (otCourseOptions || []).map(function (o) {
                         return { value: o.text, text: o.text };
                     });
-                    addOptions(list);
-                } else if (otCourseOptions.length) {
-                    var list2 = otCourseOptions.map(function (o) {
-                        return { value: o.text, text: o.text };
+                    addOptions(listCourseAll);
+                } else {
+                    var matchCourse = (otCourseOptions || []).find(function (o) {
+                        return String(o.value) === String(selectedPk);
                     });
-                    addOptions(list2);
+                    if (matchCourse) {
+                        addOptions([{ value: matchCourse.text, text: matchCourse.text }]);
+                    }
                 }
+            } else if (slug === 'section') {
+                // Requirement:
+                // - If Section selected AND Client Type = All => Buyer Name should list ALL section names
+                // - If specific section selected => Buyer Name should be that section's name
+                var sectionOptions = clientTypeOptions['section'] || [];
+                if (!selectedPk) {
+                    var listSectionAll = sectionOptions.map(function (o) {
+                        return { value: o.text, text: o.text };
+                    });
+                    addOptions(listSectionAll);
+                } else {
+                    var matchSection = sectionOptions.find(function (o) {
+                        return String(o.value) === String(selectedPk);
+                    });
+                    if (matchSection) {
+                        addOptions([{ value: matchSection.text, text: matchSection.text }]);
+                    }
+                }
+            } else if (slug === 'other') {
+                // For "other" we can still rely on precomputed distinct buyer names
+                var listOther = (otherBuyerNames || []).map(function (name) {
+                    return { value: name, text: name };
+                });
+                addOptions(listOther);
             } else if (slug && clientTypeOptions[slug]) {
                 var list3 = clientTypeOptions[slug].map(function (o) {
                     return { value: o.text, text: o.text };
                 });
                 addOptions(list3);
             }
+            
+            console.log('fillBuyerSelect - Total options in buyerSelect:', buyerSelect.options.length);
+            console.log('fillBuyerSelect - Re-initializing Choices.js...');
+            
+            // Re-initialize Choices.js after options are added
+            if (typeof window.Choices !== 'undefined') {
+                initChoicesElement(buyerSelect);
+                if (currentBuyer && buyerSelect.choicesInstance) {
+                    console.log('fillBuyerSelect - Setting choice to:', currentBuyer);
+                    try {
+                        buyerSelect.choicesInstance.setChoiceByValue(currentBuyer);
+                    } catch (e) {
+                        console.error('Error setting choice value:', e);
+                    }
+                }
+            }
         }
 
         clientTypeSlug.addEventListener('change', function () {
+            preservedClientTypePk = ''; // reset when main type changes
             preservedBuyerName = ''; // reset when main type changes
-            fillClientTypePk();
+            fillClientTypePk(false);
         });
         clientTypePk.addEventListener('change', function () {
             preservedBuyerName = '';
@@ -1087,7 +1603,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         // Initial populate on page load
-        fillClientTypePk();
+        fillClientTypePk(true);
     })();
 
     document.getElementById('modalSelectAll').addEventListener('change', function() {
@@ -1171,8 +1687,15 @@ document.addEventListener('DOMContentLoaded', function() {
         var dateStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-');
         var timeStr = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
         var rows = (data.items || []).map(function(item) {
-            return '<tr><td>' + (item.store_name || '—') + '</td><td>' + (item.item_name || '—') + '</td><td>' + (item.purchase_date || '—') + '</td><td class="text-end">' + (item.price || '0') + '</td><td class="text-end">' + (item.quantity || '0') + '</td><td class="text-end">' + (item.amount || '0') + '</td></tr>';
+            return '<tr><td>' + (item.store_name || '—') + '</td><td>' + (item.item_name || '—') + '</td><td>' + (item.issue_date || '—') + '</td><td class="text-end">' + (item.price || '0') + '</td><td class="text-end">' + (item.quantity || '0') + '</td><td class="text-end">' + (item.amount || '0') + '</td></tr>';
         }).join('');
+        var clientNameCourse = data.client_name_course || (function () {
+            if (data.course_name) {
+                return (data.client_name || '—') + ' – ' + data.course_name;
+            }
+            return data.client_name || '—';
+        })();
+        var hasRefOrOrder = !!(data.reference_number || data.order_by);
         var html = '<div class="receipt-top">' +
             '<div class="receipt-logo"><span class="receipt-logo-icon"></span><span class="receipt-logo-text">Sargam</span></div>' +
             '<span class="receipt-date">Date ' + dateStr + ' ' + timeStr + '</span>' +
@@ -1188,11 +1711,20 @@ document.addEventListener('DOMContentLoaded', function() {
             '<span><span class="client-label">Invoice No</span>: <span class="client-value">' + (data.invoice_no || '—') + '</span></span>' +
             '</div>' +
             '<div class="client-row">' +
-            '<span><span class="client-label">Client Name</span>: <span class="client-value">' + (data.client_name || '—') + '</span></span>' +
+            '<span><span class="client-label">Client Name</span>: <span class="client-value">' + clientNameCourse + '</span></span>' +
             '<span><span class="client-label">Client Type</span>: <span class="client-value">' + (data.client_type || '—') + '</span></span>' +
             '</div>' +
+            (hasRefOrOrder
+                ? ('<div class="client-row">' +
+                   (data.reference_number ? '<span><span class="client-label">Reference Number</span>: <span class="client-value">' + data.reference_number + '</span></span>' : '') +
+                   (data.order_by ? '<span><span class="client-label">Order By</span>: <span class="client-value">' + data.order_by + '</span></span>' : '') +
+                   '</div>')
+                : '') +
+            (data.remarks
+                ? ('<div class="client-row"><span><span class="client-label">Remarks</span>: <span class="client-value">' + data.remarks + '</span></span></div>')
+                : '') +
             '<hr/>' +
-            '<table class="bill-table"><thead><tr><th>Store Name</th><th>Item Name</th><th>Purchase Date</th><th class="text-end">Price</th><th class="text-end">Quantity</th><th class="text-end">Amount</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+            '<table class="bill-table"><thead><tr><th>Store Name</th><th>Item Name</th><th>Issue Date</th><th class="text-end">Price</th><th class="text-end">Quantity</th><th class="text-end">Amount</th></tr></thead><tbody>' + rows + '</tbody></table>' +
             '<div class="receipt-bottom">' +
             '<div></div>' +
             '<div class="payment-summary">' +
@@ -1378,26 +1910,42 @@ document.addEventListener('DOMContentLoaded', function() {
 <script>
 function printProcessMessBillsMainTable() {
     var table = document.getElementById('processMessBillsTable');
-    if (!table) {
-        window.print();
-        return;
+    if (!table) { window.print(); return; }
+
+    // Use DataTables API so print includes ALL filtered rows, not just current page
+    var dt = null;
+    try {
+        if (window.jQuery && window.jQuery.fn && window.jQuery.fn.DataTable && window.jQuery.fn.DataTable.isDataTable('#processMessBillsTable')) {
+            dt = window.jQuery('#processMessBillsTable').DataTable();
+        }
+    } catch (e) {}
+
+    var rowsData = [];
+    if (dt) {
+        rowsData = dt.rows({ search: 'applied' }).data().toArray();
+    } else {
+        rowsData = Array.from(table.querySelectorAll('tbody tr')).map(function (tr) {
+            return Array.from(tr.children).map(function (td) { return td.innerHTML; });
+        });
     }
 
-    var printWindow = window.open('', '_blank');
-    if (!printWindow) {
-        window.print();
-        return;
-    }
-
-    var title = 'Process Mess Bills - Employee';
-    var periodText = 'Period: {{ $dateFromDisplay }} to {{ $dateToDisplay }}';
+    // Remove action column (last column) for print
+    var actionColIdx = 8;
 
     var originalThead = table.querySelector('thead');
-    var originalTbody = table.querySelector('tbody');
-    var firstHeaderRow = originalThead ? originalThead.querySelector('tr') : null;
-    var columnsCount = firstHeaderRow ? firstHeaderRow.children.length : 8;
-    var columnHeadHtml = originalThead ? originalThead.innerHTML : '';
-    var bodyHtml       = originalTbody ? originalTbody.innerHTML : table.innerHTML;
+    var headerCells = originalThead ? Array.from(originalThead.querySelectorAll('tr th')) : [];
+    var printHeaderCells = headerCells.filter(function (_, idx) { return idx !== actionColIdx; });
+    var headerHtml = '<tr>' + printHeaderCells.map(function (th) { return '<th>' + th.innerHTML + '</th>'; }).join('') + '</tr>';
+
+    var bodyRowsHtml = rowsData.map(function (row) {
+        var cells = Array.isArray(row) ? row : (row && row.length != null ? Array.from(row) : []);
+        var filteredCells = cells.filter(function (_, idx) { return idx !== actionColIdx; });
+        return '<tr>' + filteredCells.map(function (c) { return '<td>' + c + '</td>'; }).join('') + '</tr>';
+    }).join('');
+
+    var columnsCount = printHeaderCells.length || 8;
+    var title = 'Process Mess Bills - Employee';
+    var periodText = 'Period: {{ $dateFromDisplay }} to {{ $dateToDisplay }}';
 
     var printableTable = `
       <table class="table table-sm table-bordered align-middle mb-0">
@@ -1424,12 +1972,15 @@ function printProcessMessBillsMainTable() {
               </div>
             </th>
           </tr>
-          ${columnHeadHtml}
+          ${headerHtml}
         </thead>
         <tbody>
-          ${bodyHtml}
+          ${bodyRowsHtml}
         </tbody>
       </table>`;
+
+    var printWindow = window.open('', '_blank');
+    if (!printWindow) { window.print(); return; }
 
     printWindow.document.open();
     printWindow.document.write(`<!doctype html>
@@ -1513,12 +2064,27 @@ function printProcessMessBillsTable() {
         : 'All Dates';
 
     // Build printable table with LBSNAA header inside thead so it repeats on every page
+    // Print ALL rows from modal dataset (not only current "per page" view)
     var originalThead = table.querySelector('thead');
-    var originalTbody = table.querySelector('tbody');
-    var firstHeaderRow = originalThead ? originalThead.querySelector('tr') : null;
-    var columnsCount = firstHeaderRow ? firstHeaderRow.children.length : 8;
-    var columnHeadHtml = originalThead ? originalThead.innerHTML : '';
-    var bodyHtml       = originalTbody ? originalTbody.innerHTML : table.innerHTML;
+    var headerRow = originalThead ? originalThead.querySelector('tr') : null;
+    var headerCells = headerRow ? Array.from(headerRow.children) : [];
+    // Remove Checkbox (0), Actions (6) and Receipt (7) columns from print
+    var removeIdx = { 0: true, 6: true, 7: true };
+    var printHeaderCells = headerCells.filter(function (_, idx) { return !removeIdx[idx]; });
+    var columnsCount = printHeaderCells.length || 6;
+    var columnHeadHtml = '<tr>' + printHeaderCells.map(function (th) { return '<th>' + th.innerHTML + '</th>'; }).join('') + '</tr>';
+
+    var filtered = (typeof getFilteredModalBills === 'function') ? getFilteredModalBills() : [];
+    var bodyHtml = filtered.map(function (b, i) {
+        var sn = i + 1;
+        return '<tr>' +
+            '<td>' + sn + '</td>' +
+            '<td>' + (b.buyer_name || '—') + '</td>' +
+            '<td>' + (b.invoice_no || '—') + '</td>' +
+            '<td>' + (b.payment_type || '—') + '</td>' +
+            '<td class="text-end">' + (b.total || '0') + '</td>' +
+            '</tr>';
+    }).join('');
 
     var printableTable = `
       <table class="table table-sm table-bordered align-middle mb-0">
@@ -1636,3 +2202,13 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 @endsection
+
+@push('styles')
+    {{-- Choices.js via CDN --}}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
+@endpush
+
+@push('scripts')
+    {{-- Choices.js via CDN --}}
+    <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+@endpush

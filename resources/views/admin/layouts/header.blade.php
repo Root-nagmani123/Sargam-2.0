@@ -3,7 +3,7 @@
     $activeNavTab = '#home';
     $path = request()->path();
     $routeName = request()->route()?->getName() ?? '';
-    if (request()->routeIs('admin.dashboard') || request()->routeIs('admin.dashboard.*') || request()->routeIs('calendar.index')) {
+    if (request()->routeIs('admin.dashboard') || request()->routeIs('admin.dashboard.*')) {
         $activeNavTab = '#home';
     } elseif (
         request()->routeIs('admin.employee_idcard.*') || request()->routeIs('admin.issue-management*') ||
@@ -23,6 +23,7 @@
         str_starts_with($path, 'stream') || str_starts_with($path, 'subject') || str_starts_with($path, 'Venue-Master') ||
         str_starts_with($path, 'batch') || str_starts_with($path, 'curriculum') || str_starts_with($path, 'mapping') ||
         str_starts_with($path, 'admin/master') || str_contains($path, 'breadcrumb-showcase') || str_starts_with($path, 'password') ||
+        request()->routeIs('calendar.index') || str_starts_with($path, 'calendar') ||
         str_starts_with($path, 'expertise') || str_starts_with($path, 'faculty_notice') || str_starts_with($path, 'faculty_mdo')
     ) {
         $activeNavTab = '#tab-setup';
@@ -124,79 +125,13 @@
                                     data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-setup' ? 'true' : 'false' }}" aria-controls="setup-panel"
                                     id="setup-tab">
 
-                                    @if(hasRole('Admin') || hasRole('Training-Induction') ||  hasRole('Staff') || hasRole('IST'))
+                                    @if(hasRole('Admin')|| hasRole('Mess-Admin') || hasRole('Mess-Staff') || hasRole('Training-Induction') ||  hasRole('Staff') || hasRole('IST'))
                                     <span>Setup</span>
                                     @elseif(hasRole('Internal Faculty') || hasRole('Guest Faculty') ||
                                     hasRole('Student-OT'))
                                     <span>Academics</span>
                                     @endif
                                 </a>
-                            </li>
-
-                            <!-- Communications -->
-                            <li class="nav-item" role="none">
-                                <a href="#tab-communications"
-                                    class="nav-link header-nav-link px-3 py-2 {{ $activeNavTab === '#tab-communications' ? 'active' : '' }}"
-                                    data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-communications' ? 'true' : 'false' }}"
-                                    aria-controls="communications-panel" id="communications-tab">
-                                    <span>Communications</span>
-                                </a>
-                            </li>
-
-                            <!-- Academics -->
-                            <li class="nav-item" role="none">
-                                <a href="#tab-academics"
-                                    class="nav-link header-nav-link px-3 py-2 {{ $activeNavTab === '#tab-academics' ? 'active' : '' }}"
-                                    data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-academics' ? 'true' : 'false' }}"
-                                    aria-controls="academics-panel" id="academics-tab">
-                                    <span>Academics</span>
-                                </a>
-                            </li>
-
-                            <!-- Material Management -->
-                            <li class="nav-item" role="none">
-                                <a href="#tab-material-management"
-                                    class="nav-link header-nav-link px-3 py-2 {{ $activeNavTab === '#tab-material-management' ? 'active' : '' }}"
-                                    data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-material-management' ? 'true' : 'false' }}"
-                                    aria-controls="material-management-panel" id="material-management-tab">
-                                    <span>Material Management</span>
-                                </a>
-                            </li>
-
-                            <!-- Financial Dropdown -->
-                            <li class="nav-item dropdown" role="none">
-                                <a class="nav-link header-nav-link px-3 py-2 d-flex align-items-center gap-1 dropdown-toggle-custom"
-                                    href="#" id="financialDropdown" role="menuitem" aria-haspopup="true"
-                                    aria-expanded="false" data-bs-toggle="dropdown">
-                                    <span>Financial</span>
-                                    <i class="material-icons material-symbols-rounded fs-6 dropdown-arrow transition-all"
-                                        aria-hidden="true">expand_more</i>
-                                </a>
-
-                                <ul class="dropdown-menu shadow-lg border-0 rounded-xl p-2 mt-1"
-                                    style="min-width: 180px; border: 1px solid rgba(0, 0, 0, 0.08);"
-                                    aria-labelledby="financialDropdown" role="menu">
-                                    <li role="none">
-                                        <a class="dropdown-item d-flex align-items-center gap-2 px-3 py-2 rounded-lg hover-lift"
-                                            href="#" role="menuitem">
-                                            <span>Budget</span>
-                                        </a>
-                                    </li>
-                                    <li role="none">
-                                        <a class="dropdown-item d-flex align-items-center gap-2 px-3 py-2 rounded-lg hover-lift"
-                                            href="#" role="menuitem">
-                                            <span>Accounts</span>
-                                        </a>
-                                    </li>
-                                </ul>
-                            </li>
-
-                            <!-- Search -->
-                            <li class="nav-item" role="none">
-                                <button type="button" class="nav-link header-search-btn search-trigger"
-                                    aria-label="Open search" aria-expanded="false" aria-controls="searchModal">
-                                    <i class="material-icons material-symbols-rounded" aria-hidden="true">search</i>
-                                </button>
                             </li>
                         </ul>
                     </div>
@@ -220,7 +155,10 @@
             </i>
 
             @php
-                $unreadCount = notification()->getUnreadCount(Auth::user()->user_id ?? 0);
+                $unreadCount = notification()->getUnreadCount(
+                    Auth::user()->user_id ?? 0,
+                    hasRole('Admin') ? 10 : null
+                );
             @endphp
 
             @if($unreadCount > 0)
@@ -235,11 +173,11 @@
             aria-labelledby="notificationDropdown">
 
             <!-- Header -->
-            <li class="dropdown-header sticky-top bg-white d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
+            <li class="notification-dropdown-header">
                 <span class="fw-semibold">Notifications</span>
                 @if($unreadCount > 0)
                     <button type="button"
-                        class="btn btn-sm btn-link text-primary p-0"
+                        class="btn btn-sm btn-link text-primary p-0 text-nowrap"
                         onclick="markAllAsRead()">
                         Mark all as read
                     </button>
@@ -248,37 +186,37 @@
 
             <div id="notificationList" class="notification-list">
                 @php
-                    $notifications = notification()->getNotifications(Auth::user()->user_id ?? 0, 10, false);
+                    $notifications = notification()->getNotifications(
+                        Auth::user()->user_id ?? 0,
+                        10,
+                        false,
+                        hasRole('Admin') ? 10 : null
+                    );
                 @endphp
 
                 @if($notifications->count() > 0)
                     @foreach($notifications as $notification)
-                        <li>
-                            <a class="dropdown-item px-3 py-3 d-flex gap-2 notification-item
-                                {{ $notification->is_read ? '' : 'unread' }}"
+                        <li class="notification-list-item">
+                            <a class="notification-item {{ $notification->is_read ? '' : 'notification-item-unread' }}"
                                href="javascript:void(0)"
-                               onclick="markAsRead({{ $notification->pk }})">
-
-                                <div class="flex-grow-1">
-                                    <div class="fw-semibold small">
-                                        {{ $notification->title ?? 'Notification' }}
+                                   data-notification-id="{{ $notification->pk }}">
+                                <div class="notification-item-body">
+                                    <div class="d-flex align-items-start justify-content-between gap-2">
+                                        <span class="notification-item-title">{{ $notification->title ?? 'Notification' }}</span>
+                                        @if(empty($notification->is_read))
+                                        <span class="badge bg-danger notification-new-tag">New</span>
+                                        @endif
                                     </div>
-                                    <div class="text-muted small mt-1">
-                                        {{ Str::limit($notification->message ?? '', 60) }}
-                                    </div>
-                                    <div class="text-muted mt-1" style="font-size: 11px;">
-                                        {{ \Carbon\Carbon::parse($notification->created_at)->diffForHumans() }}
-                                    </div>
+                                    <p class="notification-item-message">{{ Str::limit($notification->message ?? '', 60) }}</p>
+                                    <span class="notification-item-time">{{ \Carbon\Carbon::parse($notification->created_at)->diffForHumans() }}</span>
                                 </div>
                             </a>
                         </li>
                     @endforeach
                 @else
-                    <li class="text-center px-4 py-5 text-muted">
-                        <i class="material-icons material-symbols-rounded fs-1 opacity-25">
-                            notifications_none
-                        </i>
-                        <div class="mt-2 small">No notifications</div>
+                    <li class="notification-empty-state">
+                        <i class="material-icons material-symbols-rounded">notifications_none</i>
+                        <span>No notifications</span>
                     </li>
                 @endif
             </div>
@@ -295,30 +233,6 @@
             <span class="small fw-medium">Logout</span>
         </button>
     </form>
-
-    <!-- Last Login -->
-    <div class="d-flex align-items-center gap-1 small">
-        <i class="material-icons material-symbols-rounded fs-6">
-            history
-        </i>
-        <span class="fw-semibold">Last login:</span>
-
-        @php
-            $lastLogin = Auth::user()->last_login ?? null;
-            if ($lastLogin) {
-                $date = \Carbon\Carbon::parse($lastLogin);
-                $formattedDate = $date->format('Y-m-d H:i:s');
-                $isoDate = $date->toIso8601String();
-            } else {
-                $formattedDate = 'Never';
-                $isoDate = '';
-            }
-        @endphp
-
-        <time datetime="{{ $isoDate }}" title="{{ $formattedDate }}" class="fw-medium">
-            {{ $formattedDate }}
-        </time>
-    </div>
 </div>
 
             </div>
@@ -350,51 +264,6 @@
                             @endif
                         </a>
                     </li>
-
-                    <!-- Communications -->
-                    <li class="nav-item" role="none">
-                        <a href="#tab-communications" class="nav-link mobile-tab-link {{ $activeNavTab === '#tab-communications' ? 'active' : '' }}"
-                            data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-communications' ? 'true' : 'false' }}"
-                            aria-controls="communications-panel" id="communications-tab-mobile">
-                            <i class="material-icons material-symbols-rounded" aria-hidden="true">forum</i>
-                            <span>Comms</span>
-                        </a>
-                    </li>
-
-                    <!-- Material Management -->
-                    <li class="nav-item" role="none">
-                        <a href="#tab-material-management" class="nav-link mobile-tab-link {{ $activeNavTab === '#tab-material-management' ? 'active' : '' }}"
-                            data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-material-management' ? 'true' : 'false' }}"
-                            aria-controls="material-management-panel" id="material-management-tab-mobile">
-                            <i class="material-icons material-symbols-rounded" aria-hidden="true">inventory_2</i>
-                            <span>Material</span>
-                        </a>
-                    </li>
-
-                    <!-- Financial Dropdown -->
-                    <li class="nav-item dropup" role="none">
-                        <a class="nav-link mobile-tab-link dropdown-toggle-custom" href="#"
-                            id="financialDropdownMobile" role="menuitem" aria-haspopup="true"
-                            aria-expanded="false" data-bs-toggle="dropdown">
-                            <i class="material-icons material-symbols-rounded" aria-hidden="true">account_balance_wallet</i>
-                            <span>Finance</span>
-                        </a>
-
-                        <ul class="dropdown-menu shadow-lg border-0 rounded-xl p-2 mt-1"
-                            style="min-width: 180px; border: 1px solid rgba(0, 0, 0, 0.08);"
-                            aria-labelledby="financialDropdownMobile" role="menu">
-                            <li role="none">
-                                <a class="dropdown-item d-flex align-items-center gap-2 px-3 py-2 rounded-lg hover-lift"
-                                    href="#" role="menuitem">
-                                    <span>Budget</span>
-                                </a>
-                            </li>
-                            <li role="none">
-                                <a class="dropdown-item d-flex align-items-center gap-2 px-3 py-2 rounded-lg hover-lift"
-                                    href="#" role="menuitem">
-                                    <span>Accounts</span>
-                                </a>
-                            </li>
                         </ul>
                     </li>
 
@@ -416,15 +285,6 @@
                             <span>Notifications</span>
                         </button>
                     </li>
-
-                    <!-- Search -->
-                    <li class="nav-item" role="none">
-                        <button type="button" class="nav-link mobile-tab-link search-trigger"
-                            aria-label="Open search" aria-expanded="false" aria-controls="searchModal">
-                            <i class="material-icons material-symbols-rounded" aria-hidden="true">search</i>
-                            <span>Search</span>
-                        </button>
-                    </li>
                 </ul>
             </div>
 
@@ -440,26 +300,36 @@
                     @endif
                     <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
                 </div>
-                <div class="offcanvas-body p-0 overflow-y-auto" style="max-height: calc(70vh - 60px);">
+                <div class="offcanvas-body p-0 overflow-y-auto notification-mobile-list" style="max-height: calc(70vh - 60px);">
                     <div id="notificationListMobile">
                         @php
-                        $notificationsMobile = notification()->getNotifications(Auth::user()->user_id ?? 0, 10, false);
+                        $notificationsMobile = notification()->getNotifications(
+                            Auth::user()->user_id ?? 0,
+                            10,
+                            false,
+                            hasRole('Admin') ? 10 : null
+                        );
                         @endphp
                         @if($notificationsMobile->count() > 0)
                         @foreach($notificationsMobile as $notification)
-                        <a class="d-block px-3 py-3 border-bottom text-decoration-none text-dark {{ $notification->is_read ? '' : 'bg-light' }}"
-                            href="javascript:void(0)" onclick="markAsRead({{ $notification->pk }})">
-                            <div class="fw-semibold small">{{ $notification->title ?? 'Notification' }}</div>
-                            <div class="text-muted small mt-1">{{ Str::limit($notification->message ?? '', 80) }}</div>
-                            <div class="text-muted" style="font-size: 10px; margin-top: 4px;">
-                                {{ \Carbon\Carbon::parse($notification->created_at)->diffForHumans() }}
+                        <a class="notification-item notification-mobile-item {{ $notification->is_read ? '' : 'notification-item-unread' }}"
+                            href="javascript:void(0)" data-notification-id="{{ $notification->pk }}">
+                            <div class="notification-item-body">
+                                <div class="d-flex align-items-start justify-content-between gap-2">
+                                    <span class="notification-item-title">{{ $notification->title ?? 'Notification' }}</span>
+                                    @if(empty($notification->is_read))
+                                    <span class="badge bg-danger notification-new-tag">New</span>
+                                    @endif
+                                </div>
+                                <p class="notification-item-message">{{ Str::limit($notification->message ?? '', 80) }}</p>
+                                <span class="notification-item-time">{{ \Carbon\Carbon::parse($notification->created_at)->diffForHumans() }}</span>
                             </div>
                         </a>
                         @endforeach
                         @else
-                        <div class="px-3 py-5 text-center text-muted">
-                            <i class="material-icons material-symbols-rounded" style="font-size: 48px; opacity: 0.3;">notifications_none</i>
-                            <div class="mt-2">No notifications</div>
+                        <div class="notification-empty-state">
+                            <i class="material-icons material-symbols-rounded">notifications_none</i>
+                            <span>No notifications</span>
                         </div>
                         @endif
                     </div>
@@ -467,40 +337,123 @@
             </div>
 
             <style>
+                .notification-btn {
+                    transition: background-color 0.2s ease, transform 0.2s ease;
+                }
                 .notification-btn:hover {
-    background-color: var(--bs-light);
-    transform: translateY(-1px);
-}
-
-.notification-badge {
-    font-size: 10px;
-    padding: 4px 6px;
-}
-
-.notification-dropdown {
-    width: 360px;
-    max-height: 420px;
-    overflow: hidden;
-}
-
-.notification-list {
-    max-height: 360px;
-    overflow-y: auto;
-}
-
-.notification-item {
-    border-left: 3px solid transparent;
-    transition: background-color 0.2s ease;
-}
-
-.notification-item.unread {
-    background-color: var(--bs-light);
-    border-left-color: var(--bs-primary);
-}
-
-.notification-item:hover {
-    background-color: rgba(0, 0, 0, 0.03);
-}
+                    background-color: var(--bs-light);
+                    transform: translateY(-1px);
+                }
+                .notification-badge {
+                    font-size: 10px;
+                    padding: 4px 6px;
+                }
+                .notification-dropdown {
+                    width: 380px;
+                    max-height: 440px;
+                    overflow: hidden;
+                    padding: 0;
+                }
+                .notification-dropdown-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 14px 18px;
+                    border-bottom: 1px solid var(--bs-border-color-translucent);
+                    background: var(--bs-body-bg);
+                    position: sticky;
+                    top: 0;
+                    z-index: 1;
+                }
+                .notification-list {
+                    max-height: 380px;
+                    overflow-y: auto;
+                    padding: 8px 0;
+                }
+                .notification-list-item {
+                    list-style: none;
+                    margin: 0;
+                }
+                .notification-item {
+                    display: block;
+                    padding: 14px 18px;
+                    margin: 4px 10px;
+                    border-radius: 10px;
+                    text-decoration: none;
+                    color: inherit;
+                    border-left: 3px solid transparent;
+                    transition: background-color 0.2s ease, border-color 0.2s ease;
+                }
+                .notification-item:hover {
+                    background-color: rgba(0, 0, 0, 0.04);
+                }
+                .notification-item-unread {
+                    background-color: rgba(var(--bs-primary-rgb), 0.06);
+                    border-left-color: var(--bs-primary);
+                }
+                .notification-item-unread:hover {
+                    background-color: rgba(var(--bs-primary-rgb), 0.1);
+                }
+                .notification-item-body {
+                    min-width: 0;
+                }
+                .notification-item-title {
+                    font-size: 0.875rem;
+                    font-weight: 600;
+                    color: var(--bs-primary);
+                    line-height: 1.3;
+                }
+                .notification-item-message {
+                    font-size: 0.8125rem;
+                    color: var(--bs-primary);
+                    margin: 6px 0 0 0;
+                    line-height: 1.4;
+                }
+                .notification-item-time {
+                    font-size: 0.6875rem;
+                    color: var(--bs-primary);
+                    margin-top: 6px;
+                    display: block;
+                }
+                /* Blinking "New" tag for unread notifications */
+                .notification-new-tag {
+                    font-size: 0.625rem;
+                    font-weight: 600;
+                    letter-spacing: 0.02em;
+                    padding: 0.2em 0.5em;
+                    flex-shrink: 0;
+                    animation: notification-blink 1.2s ease-in-out infinite;
+                }
+                @keyframes notification-blink {
+                    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(var(--bs-danger-rgb), 0.4); }
+                    50% { opacity: 0.85; box-shadow: 0 0 0 4px rgba(var(--bs-danger-rgb), 0); }
+                }
+                .notification-empty-state {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 48px 24px;
+                    color: var(--bs-primary);
+                    list-style: none;
+                    margin: 0;
+                }
+                .notification-empty-state .material-icons {
+                    font-size: 2.5rem;
+                    opacity: 0.35;
+                    margin-bottom: 10px;
+                }
+                .notification-empty-state span {
+                    font-size: 0.875rem;
+                }
+                /* Mobile offcanvas notifications */
+                .notification-mobile-list {
+                    padding: 8px 12px 16px;
+                }
+                .notification-mobile-item {
+                    margin: 4px 0;
+                    padding: 14px 16px;
+                }
 
                 /* Skip link visibility */
 .skip-link {
@@ -1367,6 +1320,17 @@
                     });
             }
 
+            // Notification click (avoid inline onclick to prevent Blade JS parsing issues)
+            document.addEventListener('click', function (e) {
+                const target = e.target && e.target.closest ? e.target.closest('[data-notification-id]') : null;
+                if (!target) return;
+
+                const id = target.getAttribute('data-notification-id');
+                if (!id) return;
+
+                markAsRead(id);
+            });
+
             function markAllAsRead() {
                 fetch('/admin/notifications/mark-all-read', {
                         method: 'POST',
@@ -1508,38 +1472,55 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Helper function to get cookie value
-    function getCookie(name) {
-        const nameEQ = name + '=';
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.indexOf(nameEQ) === 0) {
-                return cookie.substring(nameEQ.length);
+    // Determine initial tab.
+    // Prefer tab inferred from current URL + sidebar links,
+    // then server route tab, then localStorage fallback.
+    function inferTabFromSidebarByUrl() {
+        const current = new URL(window.location.href);
+        const currentPath = current.pathname.replace(/\/+$/, '');
+        const currentQuery = current.search || '';
+        const sidebarPanes = [
+            { pane: '#sidebar-home', tab: '#home' },
+            { pane: '#sidebar-setup', tab: '#tab-setup' },
+            { pane: '#sidebar-communications', tab: '#tab-communications' },
+            { pane: '#sidebar-academics', tab: '#tab-academics' },
+            { pane: '#sidebar-purchase-order', tab: '#tab-material-management' }
+        ];
+
+        for (const item of sidebarPanes) {
+            const links = document.querySelectorAll(`${item.pane} .sidebar-link[href]`);
+            for (const link of links) {
+                if (!link.href) continue;
+                const target = new URL(link.href, window.location.origin);
+                const targetPath = target.pathname.replace(/\/+$/, '');
+                const targetQuery = target.search || '';
+                if (targetPath === currentPath && targetQuery === currentQuery) {
+                    return item.tab;
+                }
             }
         }
         return null;
     }
 
-    // Helper function to delete cookie
-    function deleteCookie(name) {
-        document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:01 UTC; path=/;';
-    }
+    const routeTab = window.SARGAM_ACTIVE_NAV_TAB || '#home';
+    const savedTab = localStorage.getItem('activeMainTab');
+    const inferredTab = inferTabFromSidebarByUrl();
+    const hasRouteTab = !!document.querySelector(`[data-bs-toggle="tab"][href="${routeTab}"]`);
+    const hasSavedTab = !!document.querySelector(`[data-bs-toggle="tab"][href="${savedTab}"]`);
+    const hasInferredTab = !!document.querySelector(`[data-bs-toggle="tab"][href="${inferredTab}"]`);
+    let initial = '#home';
 
-    // Determine initial tab: fresh login -> home; otherwise use route-based or saved tab
-    const isFromLogin = getCookie('fresh_login');
-    let initial;
-    
-    if (isFromLogin) {
-        console.log('Fresh login detected - forcing home tab');
-        initial = '#home';
-        deleteCookie('fresh_login');
-        localStorage.removeItem('activeMainTab');
+    if (hasInferredTab) {
+        initial = inferredTab;
+        console.log('Initial tab from sidebar URL match:', initial);
+    } else if (hasRouteTab) {
+        initial = routeTab;
+        console.log('Initial tab from route:', initial);
+    } else if (hasSavedTab) {
+        initial = savedTab;
+        console.log('Initial tab from storage fallback:', initial);
     } else {
-        const routeTab = window.SARGAM_ACTIVE_NAV_TAB || '#home';
-        const savedTab = localStorage.getItem('activeMainTab');
-        initial = savedTab || routeTab || '#home';
-        console.log('Initial tab:', initial);
+        console.log('Initial tab fallback to home');
     }
     
     showPane(initial);

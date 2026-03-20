@@ -12,20 +12,20 @@
                 <span class="text-muted small">Refine results by date, vendor &amp; store</span>
             </div>
         </div>
-        <div class="card-body pt-3">
+        <div class="card-body pt-3 p-3 p-lg-4">
             <form method="GET" action="{{ route('admin.mess.reports.stock-purchase-details') }}">
                 <div class="row g-3">
                     <div class="col-md-3">
                         <label class="form-label small fw-semibold">From Date</label>
-                        <input type="date" name="from_date" class="form-control " value="{{ $fromDate }}">
+                        <input type="date" name="from_date" class="form-control form-control-sm" value="{{ $fromDate }}">
                     </div>
                     <div class="col-md-3">
                         <label class="form-label small fw-semibold">To Date</label>
-                        <input type="date" name="to_date" class="form-control " value="{{ $toDate }}">
+                        <input type="date" name="to_date" class="form-control form-control-sm" value="{{ $toDate }}">
                     </div>
                     <div class="col-md-3">
                         <label class="form-label small fw-semibold">Select Vendor Name</label>
-                        <select name="vendor_id" class="form-select rounded-1 choices-select" data-placeholder="All Vendors">
+                        <select name="vendor_id" class="form-select form-select-sm rounded-1 choices-select" data-placeholder="All Vendors">
                             <option value="">All Vendors</option>
                             @foreach($vendors as $vendor)
                                 <option value="{{ $vendor->id }}" {{ request('vendor_id') == $vendor->id ? 'selected' : '' }}>{{ $vendor->name }}</option>
@@ -34,7 +34,7 @@
                     </div>
                     <div class="col-md-3">
                         <label class="form-label small fw-semibold">Select Store Name</label>
-                        <select name="store_id" class="form-select rounded-1 choices-select" data-placeholder="All Stores">
+                        <select name="store_id" class="form-select form-select-sm rounded-1 choices-select" data-placeholder="All Stores">
                             <option value="">All Stores</option>
                             @foreach($stores as $store)
                                 <option value="{{ $store->id }}" {{ request('store_id') == $store->id ? 'selected' : '' }}>{{ $store->store_name }}</option>
@@ -74,50 +74,25 @@
 
     <!-- Report Area (full width below filters) -->
     <div class="report-area">
-            <!-- Report toolbar: pagination only (Print & Export Excel are in filter section above) -->
-            <div class="report-toolbar no-print d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 bg-white border rounded-3 px-3 py-2 shadow-sm">
-                <div class="d-flex align-items-center gap-2">
-                    @if($purchaseOrders->hasPages())
-                        <nav class="report-pagination d-flex align-items-center gap-1">
-                            <a href="{{ $purchaseOrders->url(1) }}" class="btn btn-sm btn-outline-secondary" @if($purchaseOrders->onFirstPage()) disabled @endif aria-label="First">
-                                <span class="material-symbols-rounded" style="font-size: 18px;">first_page</span>
-                            </a>
-                            <a href="{{ $purchaseOrders->previousPageUrl() }}" class="btn btn-sm btn-outline-secondary" @if($purchaseOrders->onFirstPage()) disabled @endif aria-label="Previous">
-                                <span class="material-symbols-rounded" style="font-size: 18px;">chevron_left</span>
-                            </a>
-                            <span class="px-2 small text-nowrap">Page <input type="number" min="1" max="{{ $purchaseOrders->lastPage() }}" value="{{ $purchaseOrders->currentPage() }}" data-max-page="{{ $purchaseOrders->lastPage() }}" class="form-control  text-center page-input" style="width: 3rem;" onchange="(function(input){ var max=parseInt(input.dataset.maxPage,10)||1; var p=parseInt(input.value,10); if(!isNaN(p) && p>=1 && p<=max){ var q=new URLSearchParams(window.location.search); q.set('page',p); window.location='{{ url()->current() }}?'+q.toString(); }})(this)"> of {{ $purchaseOrders->lastPage() }}</span>
-                            <a href="{{ $purchaseOrders->nextPageUrl() }}" class="btn btn-sm btn-outline-secondary" @if(!$purchaseOrders->hasMorePages()) disabled @endif aria-label="Next">
-                                <span class="material-symbols-rounded" style="font-size: 18px;">chevron_right</span>
-                            </a>
-                            <a href="{{ $purchaseOrders->url($purchaseOrders->lastPage()) }}" class="btn btn-sm btn-outline-secondary" @if(!$purchaseOrders->hasMorePages()) disabled @endif aria-label="Last">
-                                <span class="material-symbols-rounded" style="font-size: 18px;">last_page</span>
-                            </a>
-                        </nav>
-                    @else
-                        <span class="small text-muted">Page 1 of 1</span>
-                    @endif
-                </div>
-            </div>
-
             <!-- Report content -->
             <div class="report-content card border-0 shadow-sm rounded-3">
-                <div class="card-body">
+                <div class="card-body p-3 p-lg-4">
                     <!-- Report header (title centered, date bar, vendor) -->
-                    <div class="report-header mb-4 border-bottom pb-3">
+                    <div class="report-header mb-4 border-bottom pb-3 text-center">
                         <h4 class="report-title-center fw-bold mb-2 text-dark text-center text-uppercase tracking-wide">Stock Purchase Details</h4>
                         <div class="report-date-bar py-2 px-3 mb-2 text-center rounded-1 d-inline-block text-white fw-semibold justify-content-center">
                             Stock Purchase Details Report Between {{ date('d-F-Y', strtotime($fromDate)) }} To {{ date('d-F-Y', strtotime($toDate)) }}
                         </div>
-                        <div class="report-vendor-name fw-semibold mb-0 mt-2">
+                        <div class="report-vendor-name fw-semibold mb-0 mt-2 text-center">
                             <span class="text-muted">Vendor:</span>
                             <span class="ms-1">{{ $selectedVendor ? $selectedVendor->name : 'All Vendors' }}</span>
                         </div>
                     </div>
 
                     <!-- Table: grouped by bill -->
-                    <div class="table-responsive">
-                        <table class="table text-nowrap align-middle mb-0">
-                            <thead>
+                    <div class="table-responsive rounded-3 border bg-white stock-purchase-table-wrapper">
+                        <table class="table text-nowrap align-middle mb-0 stock-purchase-table">
+                            <thead class="stock-purchase-thead">
                                 <tr>
                                     <th>Item</th>
                                     <th>Item Code</th>
@@ -175,9 +150,9 @@
                                     </tr>
                                 @endforelse
                                 @if($grandTotalAmount > 0)
-                                    <tr class="grand-total-row bg-secondary text-white fw-bold">
-                                        <td colspan="7" class="text-end">Grand Total:</td>
-                                        <td class="text-end">₹{{ number_format($grandTotalAmount, 2) }}</td>
+                                    <tr class="grand-total-row bg-primary fw-bold">
+                                        <td colspan="7" class="text-end text-white">Grand Total:</td>
+                                        <td class="text-end text-white">₹{{ number_format($grandTotalAmount, 2) }}</td>
                                     </tr>
                                 @endif
                             </tbody>
@@ -193,34 +168,36 @@
                 </div>
             @endif
     </div>
-</div>
 
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/styles/choices.min.css"/>
-<script src="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/scripts/choices.min.js"></script>
-<script>
-(function () {
-    document.addEventListener('DOMContentLoaded', function () {
-        if (typeof window.Choices === 'undefined') return;
+    {{-- Tom Select for vendor & store dropdowns (shared with other mess screens) --}}
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (typeof window.TomSelect === 'undefined') return;
 
-        document
-            .querySelectorAll('.stock-purchase-report select.choices-select')
-            .forEach(function (el) {
-                if (el.dataset.choicesInitialized === 'true') return;
+            document
+                .querySelectorAll('.stock-purchase-report select.choices-select')
+                .forEach(function (el) {
+                    if (el.dataset.tomselectInitialized === 'true') return;
 
-                var placeholder = el.getAttribute('data-placeholder') || 'Select';
+                    var placeholder = el.getAttribute('data-placeholder') || 'Select';
 
-                new Choices(el, {
-                    shouldSort: false,
-                    placeholder: true,
-                    placeholderValue: placeholder,
-                    searchPlaceholderValue: 'Search...',
+                    new TomSelect(el, {
+                        placeholder: placeholder,
+                        allowEmptyOption: true,
+                        maxOptions: 500,
+                        plugins: ['dropdown_input'],
+                        sortField: {
+                            field: 'text',
+                            direction: 'asc'
+                        }
+                    });
+
+                    el.dataset.tomselectInitialized = 'true';
                 });
-
-                el.dataset.choicesInitialized = 'true';
-            });
-    });
-})();
-</script>
+        });
+    </script>
 <script>
 function printStockPurchaseTable() {
     var table = document.querySelector('.stock-purchase-report .report-content table');
@@ -360,6 +337,34 @@ function printStockPurchaseTable() {
 </script>
 
 <style>
+/* Auto height and width for report container and content */
+.stock-purchase-report {
+    width: 100%;
+    max-width: 100%;
+    min-height: 0;
+    height: auto;
+}
+.stock-purchase-report .report-area {
+    width: 100%;
+    height: auto;
+}
+.stock-purchase-report .report-content {
+    width: 100%;
+    height: auto;
+}
+.stock-purchase-report .report-content .card-body {
+    width: 100%;
+    height: auto;
+}
+.stock-purchase-report .table-responsive {
+    width: 100%;
+    overflow-x: auto;
+}
+.stock-purchase-report .table-responsive table {
+    width: 100%;
+    height: auto;
+}
+
 .stock-purchase-report .stock-purchase-table { font-size: 0.9rem; }
 .stock-purchase-report .bill-header-row .bill-header { background-color: #5a6268; color: #fff; font-weight: bold; padding: 0.5rem 0.75rem; }
 .stock-purchase-report .bill-total-row { background-color: #fff; }
@@ -367,7 +372,7 @@ function printStockPurchaseTable() {
 .stock-purchase-report .grand-total-row td { padding: 0.45rem 0.75rem; border-top: 2px solid #343a40; }
 .stock-purchase-report .stock-purchase-table td { padding: 0.35rem 0.75rem; vertical-align: middle; }
 .stock-purchase-report .page-input { display: inline-block; }
-.report-date-bar { background: #5a6268; color: #fff; font-size: 0.9rem; text-align: center; }
+.report-date-bar { background: #004a93; color: #fff; font-size: 0.9rem; text-align: center; }
 .report-vendor-name { font-size: 1rem; }
 .stock-purchase-thead th { background: #d3d6d9; font-weight: 600; padding: 0.5rem 0.75rem; text-align: left; }
 .stock-purchase-thead th.text-end { text-align: right; }

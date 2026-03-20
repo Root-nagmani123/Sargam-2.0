@@ -14,6 +14,7 @@ use App\Models\Mess\MaterialRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class PurchaseOrderController extends Controller
 {
@@ -76,87 +77,124 @@ class PurchaseOrderController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
-            'po_number' => 'required|unique:mess_purchase_orders,po_number',
-            'vendor_id' => 'required|exists:mess_vendors,id',
-            'store_id' => 'nullable|exists:mess_stores,id',
-            'po_date' => 'required|date|before_or_equal:today',
-            'delivery_date' => 'nullable|date',
-            'payment_code' => 'nullable|string|max:50',
-            'delivery_address' => 'nullable|string|max:500',
-            'contact_number' => ['nullable', 'string', 'regex:/^[0-9]{10}$/'],
-            'bill_no' => 'nullable|string|max:100',
-            'challan_no' => 'nullable|string|max:100',
-            'bill_date' => 'nullable|date|before_or_equal:today',
-            'challan_date' => 'nullable|date|before_or_equal:today',
-            'items' => 'required|array|min:1',
-            'items.*.item_subcategory_id' => 'required|exists:mess_item_subcategories,id',
-            'items.*.quantity' => 'required|numeric|min:0.01',
-            'items.*.unit_price' => 'required|numeric|min:0',
-            'items.*.tax_percent' => 'nullable|numeric|min:0|max:100',
-            'bill_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png,webp|max:5120',
-        ], [
-            'contact_number.regex' => 'The contact number must be exactly 10 digits and contain only numbers (no letters or special characters).',
-            'bill_file.mimes' => 'Bill must be PDF or image (jpg, jpeg, png, webp).',
-            'bill_file.max' => 'Bill size must not exceed 5 MB.',
-        ]);
-
-        DB::transaction(function () use ($request) {
-            $grandTotal = 0;
-            foreach ($request->items as $item) {
-                $qty = (float) $item['quantity'];
-                $unitPrice = (float) $item['unit_price'];
-                $taxPercent = isset($item['tax_percent']) ? (float) $item['tax_percent'] : 0;
-                $lineTotal = $qty * $unitPrice * (1 + $taxPercent / 100);
-                $grandTotal += $lineTotal;
-            }
-
-            $purchaseOrder = PurchaseOrder::create([
-                'po_number' => $request->po_number,
-                'vendor_id' => $request->vendor_id,
-                'store_id' => $request->store_id ?: null,
-                'po_date' => $request->po_date,
-                'delivery_date' => $request->delivery_date ?? null,
-                'total_amount' => round($grandTotal, 2),
-                'payment_code' => $request->payment_code,
-                'delivery_address' => $request->delivery_address,
-                'contact_number' => $request->contact_number,
-                'bill_no' => $request->bill_no,
-                'challan_no' => $request->challan_no,
-                'bill_date' => $request->bill_date,
-                'challan_date' => $request->challan_date,
-                'remarks' => $request->remarks,
-                'created_by' => Auth::id(),
-                'status' => 'approved',
+        try {
+            $request->validate([
+                'po_number' => 'required|unique:mess_purchase_orders,po_number',
+                'vendor_id' => 'required|exists:mess_vendors,id',
+                'store_id' => 'nullable|exists:mess_stores,id',
+                'po_date' => 'required|date|before_or_equal:today',
+                'delivery_date' => 'nullable|date',
+                'payment_code' => 'nullable|string|max:50',
+                'delivery_address' => 'nullable|string|max:500',
+                'contact_number' => ['nullable', 'string', 'regex:/^[0-9]{10}$/'],
+                'bill_no' => 'nullable|string|max:100',
+                'challan_no' => 'nullable|string|max:100',
+                'bill_date' => 'nullable|date|before_or_equal:today',
+                'challan_date' => 'nullable|date|before_or_equal:today',
+                'items' => 'required|array|min:1',
+                'items.*.item_subcategory_id' => 'required|exists:mess_item_subcategories,id',
+                'items.*.quantity' => 'required|numeric|min:0.01',
+                'items.*.unit_price' => 'required|numeric|min:0',
+                'items.*.tax_percent' => 'nullable|numeric|min:0|max:100',
+                'bill_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png,webp|max:5120',
+            ], [
+                'contact_number.regex' => 'The contact number must be exactly 10 digits and contain only numbers (no letters or special characters).',
+                'bill_file.mimes' => 'Bill must be PDF or image (jpg, jpeg, png, webp).',
+                'bill_file.max' => 'Bill size must not exceed 5 MB.',
             ]);
 
-            if ($request->hasFile('bill_file')) {
-                $file = $request->file('bill_file');
-                $path = $file->store('mess/purchase-orders/bills', 'public');
-                $purchaseOrder->update(['bill_path' => $path]);
-            }
+            $purchaseOrderId = null;
+            DB::transaction(function () use ($request, &$purchaseOrderId) {
+                $grandTotal = 0;
+                foreach ($request->items as $item) {
+                    $qty = (float) $item['quantity'];
+                    $unitPrice = (float) $item['unit_price'];
+                    $taxPercent = isset($item['tax_percent']) ? (float) $item['tax_percent'] : 0;
+                    $lineTotal = $qty * $unitPrice * (1 + $taxPercent / 100);
+                    $grandTotal += $lineTotal;
+                }
 
-            foreach ($request->items as $item) {
-                $qty = (float) $item['quantity'];
-                $unitPrice = (float) $item['unit_price'];
-                $taxPercent = isset($item['tax_percent']) ? (float) $item['tax_percent'] : 0;
-                $lineTotal = round($qty * $unitPrice * (1 + $taxPercent / 100), 2);
-                $sub = ItemSubcategory::find($item['item_subcategory_id']);
-                PurchaseOrderItem::create([
-                    'purchase_order_id' => $purchaseOrder->id,
-                    'inventory_id' => null,
-                    'item_subcategory_id' => $item['item_subcategory_id'],
-                    'quantity' => $qty,
-                    'unit' => $item['unit'] ?? ($sub ? ($sub->unit_measurement ?? null) : null),
-                    'unit_price' => $unitPrice,
-                    'tax_percent' => $taxPercent,
-                    'total_price' => $lineTotal,
-                    'description' => $item['description'] ?? null,
+                $purchaseOrder = PurchaseOrder::create([
+                    'po_number' => $request->po_number,
+                    'vendor_id' => $request->vendor_id,
+                    'store_id' => $request->store_id ?: null,
+                    'po_date' => $request->po_date,
+                    'delivery_date' => $request->delivery_date ?? null,
+                    'total_amount' => round($grandTotal, 2),
+                    'payment_code' => $request->payment_code,
+                    'delivery_address' => $request->delivery_address,
+                    'contact_number' => $request->contact_number,
+                    'bill_no' => $request->bill_no,
+                    'challan_no' => $request->challan_no,
+                    'bill_date' => $request->bill_date,
+                    'challan_date' => $request->challan_date,
+                    'remarks' => $request->remarks,
+                    'created_by' => Auth::id(),
+                    'status' => 'approved',
+                ]);
+                $purchaseOrderId = $purchaseOrder->id;
+
+                if ($request->hasFile('bill_file')) {
+                    $file = $request->file('bill_file');
+                    $path = $file->store('mess/purchase-orders/bills', 'public');
+                    $purchaseOrder->update(['bill_path' => $path]);
+                }
+
+                foreach ($request->items as $item) {
+                    $qty = (float) $item['quantity'];
+                    $unitPrice = (float) $item['unit_price'];
+                    $taxPercent = isset($item['tax_percent']) ? (float) $item['tax_percent'] : 0;
+                    $lineTotal = round($qty * $unitPrice * (1 + $taxPercent / 100), 2);
+                    $sub = ItemSubcategory::find($item['item_subcategory_id']);
+                    PurchaseOrderItem::create([
+                        'purchase_order_id' => $purchaseOrder->id,
+                        'inventory_id' => null,
+                        'item_subcategory_id' => $item['item_subcategory_id'],
+                        'quantity' => $qty,
+                        'unit' => $item['unit'] ?? ($sub ? ($sub->unit_measurement ?? null) : null),
+                        'unit_price' => $unitPrice,
+                        'tax_percent' => $taxPercent,
+                        'total_price' => $lineTotal,
+                        'description' => $item['description'] ?? null,
+                    ]);
+                }
+            });
+
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Purchase order created successfully',
+                    'purchase_order_id' => $purchaseOrderId,
                 ]);
             }
-        });
 
-        return redirect()->route('admin.mess.purchaseorders.index')->with('success', 'Purchase order created successfully');
+            return redirect()->route('admin.mess.purchaseorders.index')
+                ->with('success', 'Purchase order created successfully')
+                ->with('open_create_po_modal', true);
+        } catch (ValidationException $e) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed.',
+                    'errors' => $e->errors(),
+                ], 422);
+            }
+            return redirect()->route('admin.mess.purchaseorders.index')
+                ->withErrors($e->errors())
+                ->withInput()
+                ->with('open_create_po_modal', true);
+        } catch (\Exception $e) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to create purchase order: ' . $e->getMessage(),
+                ], 500);
+            }
+            return redirect()->route('admin.mess.purchaseorders.index')
+                ->withInput()
+                ->with('error', 'Failed to create purchase order: ' . $e->getMessage())
+                ->with('open_create_po_modal', true);
+        }
     }
 
     public function show($id)

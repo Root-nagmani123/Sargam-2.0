@@ -1,21 +1,24 @@
 @extends('admin.layouts.master')
 @section('title', 'Purchase Orders')
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid py-3 py-md-4">
     <x-breadcrum title="Purchase Orders"></x-breadcrum>
     <div class="datatables">
-        <div class="card shadow-sm border-0">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center mb-3 no-print flex-wrap gap-2">
+        <div class="card shadow-sm border-0 rounded-4">
+            <div class="card-header bg-white border-0 pb-0">
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2 no-print">
                     <div>
-                        <h4 class="mb-0">Purchase Orders</h4>
+                        <h4 class="mb-1 fw-semibold">Purchase Orders</h4>
                         <p class="mb-0 text-muted small">View, filter and manage mess purchase orders.</p>
                     </div>
-                    <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#createPurchaseOrderModal">
+                    <button type="button" class="btn btn-primary btn-sm px-3 d-inline-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#createPurchaseOrderModal">
                         <i class="material-icons material-symbol-rounded" style="font-size: 1.1rem;">add</i>
-                        <span>Create Purchase Order</span>
+                        <span class="d-none d-sm-inline">Create Purchase Order</span>
+                        <span class="d-inline d-sm-none">New</span>
                     </button>
                 </div>
+            </div>
+            <div class="card-body">
                 @if(session('success'))
                     <div class="alert alert-success alert-dismissible fade show" role="alert">
                         {{ session('success') }}
@@ -24,44 +27,44 @@
                 @endif
 
                 {{-- Filters --}}
-                <form method="GET" action="{{ route('admin.mess.purchaseorders.index') }}" class="mb-4 p-3 border rounded-3 bg-body-tertiary no-print">
-                    <div class="row g-3 align-items-end">
-                        <div class="col-md-2">
+                <form method="GET" action="{{ route('admin.mess.purchaseorders.index') }}" class="mb-4 p-3 p-md-4 border rounded-3 bg-body-tertiary no-print">
+                    <div class="row g-3 g-md-4 align-items-end mb-3">
+                        <div class="col-12 col-sm-6 col-md-3">
                             <label class="form-label small mb-1">Date From</label>
-                            <input type="date" name="date_from" class="form-control " value="{{ $filterDateFrom }}">
+                            <input type="date" name="date_from" class="form-control" value="{{ $filterDateFrom }}">
                         </div>
-                        <div class="col-md-2">
+                        <div class="col-12 col-sm-6 col-md-3">
                             <label class="form-label small mb-1">Date To</label>
-                            <input type="date" name="date_to" class="form-control " value="{{ $filterDateTo }}">
+                            <input type="date" name="date_to" class="form-control" value="{{ $filterDateTo }}">
                         </div>
-                        <div class="col-md-2">
+                        <div class="col-12 col-sm-6 col-md-3">
                             <label class="form-label small mb-1">Vendor</label>
-                            <select name="vendor_id" class="form-select ">
+                            <select name="vendor_id" class="form-select form-select-sm js-filter-select">
                                 <option value="">All Vendors</option>
                                 @foreach($vendors as $v)
                                     <option value="{{ $v->id }}" {{ (string)$filterVendorId === (string)$v->id ? 'selected' : '' }}>{{ $v->name }}</option>
                                 @endforeach
                             </select>
                         </div>
-                        <div class="col-md-2">
+                        <div class="col-12 col-sm-6 col-md-3">
                             <label class="form-label small mb-1">Store</label>
-                            <select name="store_id" class="form-select ">
+                            <select name="store_id" class="form-select form-select-sm js-filter-select">
                                 <option value="">All Stores</option>
                                 @foreach($stores as $s)
                                     <option value="{{ $s->id }}" {{ (string)$filterStoreId === (string)$s->id ? 'selected' : '' }}>{{ $s->store_name }}</option>
                                 @endforeach
                             </select>
                         </div>
-                        <div class="col-md-auto d-flex flex-wrap gap-2">
-                            <button type="submit" class="btn  btn-primary d-inline-flex align-items-center gap-1">
+                        <div class="col-12 d-flex flex-wrap gap-2 mt-3">
+                            <button type="submit" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1">
                                 <i class="material-symbols-rounded" style="font-size: 1rem;">filter_list</i>
                                 <span>Apply</span>
                             </button>
-                            <a href="{{ route('admin.mess.purchaseorders.index') }}" class="btn  btn-outline-secondary">
+                            <a href="{{ route('admin.mess.purchaseorders.index') }}" class="btn btn-outline-secondary btn-sm">
                                 Clear
                             </a>
-                            <button type="button" class="btn  btn-outline-primary d-inline-flex align-items-center gap-1" onclick="window.print()" title="Print list or Save as PDF">
-                                <i class="material-icons material-symbol-rounded">print</i>
+                            <button type="button" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1" onclick="window.print()" title="Print list or Save as PDF">
+                                <i class="material-icons material-symbol-rounded" style="font-size: 1rem;">print</i>
                                 <span>Print</span>
                             </button>
                         </div>
@@ -79,7 +82,7 @@
                 </div>
 
                 <div class="table-responsive">
-                    <table id="purchaseOrdersTable" class="table text-nowrap align-middle mb-0 w-100">
+                    <table id="purchaseOrdersTable" class="table table-hover align-middle mb-0 w-100">
                         <thead>
                             <tr>
                                 <th>S.No</th>
@@ -288,9 +291,199 @@
 #poItemsTable .table-responsive {
     overflow: visible !important;
 }
+
+/* ========================================
+   Choices.js-like Styling for Tom Select
+   ======================================== */
+
+/* Control (Input Container) - Choices.js style */
+.ts-wrapper .ts-control {
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 4px 8px;
+    min-height: 38px;
+    box-shadow: none;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.ts-wrapper.single .ts-control {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23333' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 16px 12px;
+    padding-right: 2.25rem;
+}
+
+/* Focus state - Choices.js style */
+.ts-wrapper.focus .ts-control {
+    border-color: #80bdff;
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Dropdown container - Choices.js style */
+.ts-dropdown {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    background-color: #fff;
+    margin-top: 4px;
+}
+
+/* Search input inside dropdown - Choices.js style */
+.ts-dropdown .ts-dropdown-content {
+    padding: 0;
+}
+
+.ts-control > input {
+    color: #333;
+    font-size: 14px;
+    padding: 4px 0;
+}
+
+/* Dropdown input (search field) - Choices.js style */
+.ts-dropdown-content input {
+    border: 1px solid #ddd !important;
+    border-radius: 4px;
+    padding: 8px 12px !important;
+    margin: 8px 8px 4px 8px;
+    width: calc(100% - 16px) !important;
+    font-size: 14px;
+    background-color: #f9f9f9;
+    box-sizing: border-box;
+}
+
+.ts-dropdown-content input:focus {
+    outline: none;
+    border-color: #80bdff !important;
+    background-color: #fff;
+}
+
+/* Options list - Choices.js style */
+.ts-dropdown .option {
+    padding: 10px 12px;
+    font-size: 14px;
+    color: #333;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background-color 0.15s ease;
+    background-color: transparent;
+}
+
+.ts-dropdown .option:last-child {
+    border-bottom: none;
+}
+
+/* Option hover state - Choices.js style */
+.ts-dropdown .option:hover {
+    background-color: #f5f5f5;
+    color: #333;
+}
+
+/* Prevent default active state highlighting */
+.ts-dropdown .option.active {
+    background-color: transparent;
+    color: #333;
+}
+
+/* Only show active state on hover */
+.ts-dropdown .option.active:hover {
+    background-color: #f5f5f5;
+    color: #333;
+}
+
+/* Selected option highlight - Choices.js style */
+.ts-dropdown .option.selected {
+    background-color: #e9ecef;
+    color: #333;
+}
+
+/* Aria-selected ko bhi visually normal rakho (auto selected highlight hide) */
+.ts-dropdown .option[aria-selected="true"] {
+    background-color: transparent;
+    color: #333;
+}
+
+/* No results message - Choices.js style */
+.ts-dropdown .no-results {
+    padding: 12px;
+    color: #999;
+    font-size: 14px;
+    text-align: center;
+    background-color: #f9f9f9;
+}
+
+/* Selected item (for single select) - Choices.js style */
+.ts-wrapper.single .ts-control .item {
+    color: #333;
+    padding: 2px 0;
+    font-size: 14px;
+}
+
+/* Placeholder styling - Choices.js style */
+.ts-wrapper .ts-control input::placeholder {
+    color: #999;
+    opacity: 1;
+}
+
+/* Disabled state - Choices.js style */
+.ts-wrapper.disabled .ts-control {
+    background-color: #f3f3f3;
+    border-color: #ddd;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* Scrollbar styling for dropdown */
+.ts-dropdown .ts-dropdown-content {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.ts-dropdown .ts-dropdown-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.ts-dropdown .ts-dropdown-content::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.ts-dropdown .ts-dropdown-content::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.ts-dropdown .ts-dropdown-content::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Remove default arrow for cleaner look */
+.ts-wrapper.single.input-active .ts-control {
+    background-image: none;
+}
+
+/* Optgroup styling - Choices.js style */
+.ts-dropdown .optgroup {
+    padding: 8px 12px;
+    font-weight: 600;
+    font-size: 13px;
+    color: #666;
+    background-color: #f9f9f9;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.ts-dropdown .optgroup-header {
+    padding: 8px 12px;
+    font-weight: 600;
+    font-size: 13px;
+    color: #666;
+    background-color: #f9f9f9;
+}
 </style>
 <div class="modal fade" id="createPurchaseOrderModal" tabindex="-1" aria-labelledby="createPurchaseOrderModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
         <div class="modal-content">
             <form method="POST" action="{{ route('admin.mess.purchaseorders.store') }}" id="createPOForm" enctype="multipart/form-data">
                 @csrf
@@ -396,14 +589,14 @@
                                 <table class="table text-nowrap mb-0" id="poItemsTable">
                                     <thead>
                                         <tr>
-                                            <th style="min-width: 300px;">Item Name <span class="text-white">*</span></th>
-                                            <th>Unit</th>
-                                            <th>Item Code</th>
-                                            <th>Quantity <span class="text-white">*</span></th>
-                                            <th>Unit Price <span class="text-white">*</span></th>
-                                            <th>Tax (%)</th>
-                                            <th>Total Amount</th>
-                                            <th></th>
+                                            <th style="width: 180px;">Item Name <span class="text-white">*</span></th>
+                                            <th style="width:150px;">Unit</th>
+                                            <th style="width:auto;">Item Code</th>
+                                            <th style="width:auto;">Quantity <span class="text-white">*</span></th>
+                                            <th style="width:auto;">Unit Price <span class="text-white">*</span></th>
+                                            <th style="width:auto;">Tax (%)</th>
+                                            <th style="width:auto;">Total Amount</th>
+                                            <th style="width:auto;"></th>
                                         </tr>
                                     </thead>
                                     <tbody id="poItemsBody">
@@ -418,10 +611,10 @@
                                             </td>
                                             <td><input type="text" name="items[0][unit]" class="form-control  po-unit" readonly placeholder="—"></td>
                                             <td><input type="text" name="items[0][item_code_display]" class="form-control  po-item-code" readonly placeholder="—"></td>
-                                            <td><input type="number" name="items[0][quantity]" class="form-control  po-qty" step="0.01" min="0.01" placeholder="0" required></td>
-                                            <td><input type="number" name="items[0][unit_price]" class="form-control  po-unit-price" step="0.01" min="0" placeholder="0" required></td>
-                                            <td><input type="number" name="items[0][tax_percent]" class="form-control  po-tax" step="0.01" min="0" max="100" value="0" placeholder="0"></td>
-                                            <td><input type="text" name="items[0][total_display]" class="form-control  po-line-total bg-light" readonly placeholder="0.00"></td>
+                                            <td><input type="text" name="items[0][quantity]" class="form-control  po-qty" required></td>
+                                            <td><input type="text" name="items[0][unit_price]" class="form-control  po-unit-price" required></td>
+                                            <td><input type="text" name="items[0][tax_percent]" class="form-control  po-tax"></td>
+                                            <td><input type="text" name="items[0][total_display]" class="form-control  po-line-total bg-light" readonly></td>
                                             <td><button type="button" class="btn  btn-outline-danger po-remove-row" disabled title="Remove">×</button></td>
                                         </tr>
                                     </tbody>
@@ -447,7 +640,7 @@
 
 {{-- Edit Purchase Order Modal --}}
 <div class="modal fade" id="editPurchaseOrderModal" tabindex="-1" aria-labelledby="editPurchaseOrderModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
         <div class="modal-content">
             <form method="POST" id="editPOForm" action="" enctype="multipart/form-data">
                 @csrf
@@ -552,14 +745,14 @@
                                 <table class="table text-nowrap mb-0">
                                     <thead>
                                         <tr>
-                                            <th>Item Name <span class="text-white">*</span></th>
-                                            <th>Unit</th>
-                                            <th>Item Code</th>
-                                            <th>Quantity <span class="text-white">*</span></th>
-                                            <th>Unit Price <span class="text-white">*</span></th>
-                                            <th>Tax (%)</th>
-                                            <th>Total Amount</th>
-                                            <th></th>
+                                            <th style="width:180px;">Item Name <span class="text-white">*</span></th>
+                                            <th style="width:auto;">Unit</th>
+                                            <th style="width:auto;">Item Code</th>
+                                            <th style="width:120px;">Quantity <span class="text-white">*</span></th>
+                                            <th style="width:120px;">Unit Price <span class="text-white">*</span></th>
+                                            <th style="width:120px;">Tax (%)</th>
+                                            <th style="width:120px;">Total Amount</th>
+                                            <th style="width:auto;"></th>
                                         </tr>
                                     </thead>
                                     <tbody id="editPoItemsBody"></tbody>
@@ -741,6 +934,97 @@
                 maxOptions: null,
                 closeAfterSelect: true,
                 hideSelected: false,
+                highlight: false, // Disable auto-highlighting first item
+                // Searchable dropdown input (is par hi typing se filter hota hai)
+                controlInput: '<input>',
+                searchField: ['text'],
+                openOnFocus: true,
+                selectOnTab: false, // Changed to false to prevent accidental selection
+                render: {
+                    no_results: function(data, escape) {
+                        return '<div class="no-results">No results found for "' + escape(data.input) + '"</div>';
+                    }
+                },
+                onInitialize: function() {
+                    // Remove any active option on initialize
+                    this.activeOption = null;
+                },
+                onDropdownOpen: function(dropdown) {
+                    // Dropdown ke andar jo actual search input hai usko pakdo
+                    const searchInput = dropdown.querySelector('.ts-dropdown-content input') || this.control_input;
+
+                    // Kis original <select> par ye dropdown laga hai
+                    const originalSelect = this.input || this.original_input || this.select;
+                    // Filters (Vendor/Store) + Item Name dropdowns par selection clear rakhni hai
+                    const shouldClearOnOpen =
+                        originalSelect &&
+                        originalSelect.classList &&
+                        (originalSelect.classList.contains('js-filter-select') ||
+                         originalSelect.classList.contains('js-item-select'));
+                    if (shouldClearOnOpen) {
+                        this.clear(true);
+                    }
+
+                    // Clear any previous search text so box is blank
+                    if (searchInput) {
+                        searchInput.value = '';
+                    }
+                    if (typeof this.setTextboxValue === 'function') {
+                        this.setTextboxValue('');
+                    }
+                    if (typeof this.onSearchChange === 'function') {
+                        this.onSearchChange('');
+                    }
+                    if (typeof this.refreshOptions === 'function') {
+                        this.refreshOptions(false);
+                    }
+
+                    // TomSelect apni taraf se selected/active class dobara lagata hai,
+                    // isliye thoda delay dekar unhe hata rahe hain
+                    setTimeout(() => {
+                        this.activeOption = null;
+                        if (typeof this.setActiveOption === 'function') {
+                            this.setActiveOption(null);
+                        }
+                        if (typeof this.clearActiveItems === 'function') {
+                            this.clearActiveItems();
+                        }
+
+                        const options = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"]');
+                        options.forEach(opt => {
+                            opt.classList.remove('active');
+                            opt.classList.remove('selected');
+                            opt.setAttribute('aria-selected', 'false');
+                        });
+                    }, 0);
+
+                    // Cursor ko hamesha input ke starting me le jao
+                    if (searchInput) {
+                        setTimeout(() => {
+                            searchInput.focus();
+                            try {
+                                searchInput.setSelectionRange(0, 0);
+                            } catch (e) {}
+                            searchInput.scrollLeft = 0;
+                        }, 0);
+                    }
+                },
+                onFocus: function() {
+                    // Position cursor at start when field is focused
+                    const input = this.control_input;
+                    if (input) {
+                        setTimeout(() => {
+                            input.setSelectionRange(0, 0);
+                            input.scrollLeft = 0;
+                        }, 0);
+                    }
+                },
+                onType: function(str) {
+                    // Clear active option when user starts typing
+                    if (str.length === 0) {
+                        this.setActiveOption(null);
+                    }
+                },
                 ...options
             };
             return new TomSelect(element, defaultOptions);
@@ -824,12 +1108,19 @@
     function initItemDropdownInRow(row) {
         const select = row.querySelector('.po-item-select');
         if (select && !select.tomselect) {
+            // Pehle se koi value set hai ya nahi (edit mode me hogi)
+            const hadValueBefore = !!select.value;
             const instance = initTomSelect(select, {
                 placeholder: 'Select Item',
                 maxOptions: 200
             });
             if (instance) {
                 tomSelectInstances.items.push(instance);
+                // Agar pehle koi value nahi thi (naya row / blank item),
+                // to TomSelect ke first-item auto select ko turant clear kar do
+                if (!hadValueBefore) {
+                    instance.clear(true);
+                }
             }
         }
     }
@@ -870,9 +1161,9 @@
             </td>
             <td><input type="text" name="items[${index}][unit]" class="form-control  po-unit" readonly placeholder="—" value="${unit}"></td>
             <td><input type="text" class="form-control  po-item-code" readonly placeholder="—" value="${code}"></td>
-            <td><input type="number" name="items[${index}][quantity]" class="form-control  po-qty" step="0.01" min="0.01" placeholder="0" value="${qty}" required></td>
-            <td><input type="number" name="items[${index}][unit_price]" class="form-control  po-unit-price" step="0.01" min="0" placeholder="0" value="${price}" required></td>
-            <td><input type="number" name="items[${index}][tax_percent]" class="form-control  po-tax" step="0.01" min="0" max="100" value="${tax}" placeholder="0"></td>
+            <td><input type="text" name="items[${index}][quantity]" class="form-control  po-qty" value="${qty}" required></td>
+            <td><input type="text" name="items[${index}][unit_price]" class="form-control  po-unit-price" value="${price}" required></td>
+            <td><input type="text" name="items[${index}][tax_percent]" class="form-control  po-tax" max="100" value="${tax}"></td>
             <td><input type="text" class="form-control  po-line-total bg-light" readonly placeholder="0.00" value="${lineTotal}"></td>
             <td><button type="button" class="btn  btn-outline-danger po-remove-row" title="Remove">×</button></td>
         </tr>`;
@@ -895,8 +1186,8 @@
         })
         .catch(err => {
             console.error(err);
-            alert('Failed to load vendor items.');
-            filteredItems = [];
+            filteredItems = itemSubcategories || [];
+            if (callback) callback();
         });
     }
 
@@ -1204,9 +1495,24 @@
                     document.getElementById('editPOForm').action = editPoBaseUrl + '/' + poId;
                     document.getElementById('editPoNumber').value = po.po_number || '';
                     document.getElementById('editPoDate').value = po.po_date || '';
-                    document.getElementById('editStoreId').value = po.store_id || '';
-                    document.getElementById('editVendorId').value = po.vendor_id || '';
-                    document.getElementById('editPaymentCode').value = po.payment_code || '';
+                    var storeVal = (po.store_id != null && po.store_id !== '') ? String(po.store_id) : '';
+                    var vendorVal = (po.vendor_id != null && po.vendor_id !== '') ? String(po.vendor_id) : '';
+                    var paymentVal = (po.payment_code != null && po.payment_code !== '') ? String(po.payment_code) : '';
+                    if (tomSelectInstances.edit.store) {
+                        tomSelectInstances.edit.store.setValue(storeVal, true);
+                    } else {
+                        document.getElementById('editStoreId').value = storeVal;
+                    }
+                    if (tomSelectInstances.edit.vendor) {
+                        tomSelectInstances.edit.vendor.setValue(vendorVal, true);
+                    } else {
+                        document.getElementById('editVendorId').value = vendorVal;
+                    }
+                    if (tomSelectInstances.edit.payment) {
+                        tomSelectInstances.edit.payment.setValue(paymentVal, true);
+                    } else {
+                        document.getElementById('editPaymentCode').value = paymentVal;
+                    }
                     document.getElementById('editBillNo').value = po.bill_no || '';
                     const editBillDateEl = document.getElementById('editBillDate');
                     if (editBillDateEl) editBillDateEl.value = po.bill_date || '';
@@ -1265,13 +1571,16 @@
                         new bootstrap.Modal(document.getElementById('editPurchaseOrderModal')).show();
                     }
 
+                    // Show modal immediately with all items; vendor-specific list loads in background
+                    buildEditRows(itemSubcategories);
                     if (po.vendor_id) {
                         fetchVendorItems(po.vendor_id, function() {
-                            buildEditRows(filteredItems);
+                            const tbody = document.getElementById('editPoItemsBody');
+                            if (tbody && document.getElementById('editPurchaseOrderModal').classList.contains('show')) {
+                                editModalItems = (filteredItems && filteredItems.length) ? filteredItems : itemSubcategories;
+                                updateItemDropdowns(tbody, true);
+                            }
                         });
-                    } else {
-                        editModalItems = itemSubcategories;
-                        buildEditRows(itemSubcategories);
                     }
                 })
                 .catch(err => { console.error(err); alert('Failed to load purchase order.'); });
@@ -1294,11 +1603,57 @@
         });
     }
 
+    // Bill file client-side validation (extension & size)
+    function validateBillFileInput(fileInput, pathLabelEl) {
+        if (!fileInput || !fileInput.files || !fileInput.files[0]) {
+            if (pathLabelEl) pathLabelEl.textContent = 'No file chosen';
+            return;
+        }
+        var file = fileInput.files[0];
+        var allowedExt = ['pdf', 'jpg', 'jpeg', 'png', 'webp'];
+        var nameParts = file.name.split('.');
+        var ext = nameParts.length > 1 ? nameParts.pop().toLowerCase() : '';
+        var maxBytes = 5 * 1024 * 1024; // 5 MB
+
+        if (!allowedExt.includes(ext)) {
+            alert('Only PDF, JPG, JPEG, PNG or WEBP files are allowed for Bill.');
+            fileInput.value = '';
+            if (pathLabelEl) pathLabelEl.textContent = 'No file chosen';
+            return;
+        }
+        if (file.size > maxBytes) {
+            alert('Bill file size must not exceed 5 MB.');
+            fileInput.value = '';
+            if (pathLabelEl) pathLabelEl.textContent = 'No file chosen';
+            return;
+        }
+
+        if (pathLabelEl) {
+            pathLabelEl.textContent = file.name;
+        }
+    }
+
+    if (createBillFileInputEl) {
+        createBillFileInputEl.addEventListener('change', function () {
+            // For create modal we don't show a file-name label; just validate
+            validateBillFileInput(createBillFileInputEl, null);
+        });
+    }
+
     var editBillFileInputEl = document.getElementById('editBillFileInput');
     if (editBillFileInputEl) {
         editBillFileInputEl.addEventListener('change', function() {
             var pathEl = document.getElementById('editCurrentBillPath');
-            if (pathEl) pathEl.textContent = this.files && this.files[0] ? this.files[0].name : 'No file chosen';
+            validateBillFileInput(editBillFileInputEl, pathEl);
+        });
+    }
+
+    var editBillClearBtnEl = document.getElementById('editBillClearBtn');
+    if (editBillClearBtnEl && editBillFileInputEl) {
+        editBillClearBtnEl.addEventListener('click', function () {
+            editBillFileInputEl.value = '';
+            var pathEl = document.getElementById('editCurrentBillPath');
+            if (pathEl) pathEl.textContent = 'No file chosen';
         });
     }
 
@@ -1412,6 +1767,123 @@
             return false;
         }
     });
+
+    // AJAX submit: Create Purchase Order (keep modal open until user closes)
+    (function() {
+        var form = document.getElementById('createPOForm');
+        if (!form) return;
+
+        function resetCreatePurchaseOrderForm() {
+            // Reuse existing reset logic by triggering modal show handler logic:
+            // - clears TomSelect selections
+            // - resets items table to one row
+            // - clears bill file input
+            var createModal = document.getElementById('createPurchaseOrderModal');
+            if (!createModal) return;
+
+            // Reset vendor selection + filtered items
+            currentVendorId = null;
+            filteredItems = itemSubcategories;
+
+            // Reset native form fields
+            form.reset();
+
+            // Reset Tom Select dropdowns
+            if (tomSelectInstances && tomSelectInstances.create) {
+                if (tomSelectInstances.create.vendor) tomSelectInstances.create.vendor.clear();
+                if (tomSelectInstances.create.store) tomSelectInstances.create.store.clear();
+                if (tomSelectInstances.create.payment) tomSelectInstances.create.payment.clear();
+            }
+
+            // Clear selected bill file (if any)
+            if (createBillFileInputEl) createBillFileInputEl.value = '';
+
+            // Reset items table to a single fresh row
+            destroyAllItemDropdowns();
+            var tbody = document.getElementById('poItemsBody');
+            if (tbody) {
+                tbody.innerHTML = '';
+                tbody.insertAdjacentHTML('beforeend', getItemRowHtml(0, null, false));
+                itemRowIndex = 1;
+                initAllItemDropdowns(tbody);
+                updateGrandTotal();
+                updateRemoveButtons();
+            }
+        }
+
+        form.addEventListener('submit', function(e) {
+            // If any earlier listener prevented default, do nothing.
+            if (e.defaultPrevented) return;
+
+            if (!form.checkValidity()) {
+                // Let browser/Bootstrap validations do their job
+                return;
+            }
+
+            e.preventDefault();
+
+            var btn = form.querySelector('button[type="submit"]');
+            if (btn && btn.disabled) return;
+            if (btn) {
+                if (!btn.dataset.originalText) btn.dataset.originalText = btn.textContent || '';
+                btn.disabled = true;
+                btn.textContent = 'Creating...';
+            }
+
+            var action = form.getAttribute('action') || window.location.href;
+            var method = (form.getAttribute('method') || 'POST').toUpperCase();
+            var formData = new FormData(form);
+            var csrf = form.querySelector('input[name="_token"]');
+
+            fetch(action, {
+                method: method,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': csrf ? csrf.value : '',
+                    'Accept': 'application/json'
+                },
+                body: formData
+            })
+                .then(function(response) {
+                    return response.json().then(function(payload) {
+                        return { ok: response.ok, status: response.status, payload: payload };
+                    }).catch(function() {
+                        return { ok: response.ok, status: response.status, payload: null };
+                    });
+                })
+                .then(function(res) {
+                    var data = res.payload;
+                    if (res.ok && data && data.success) {
+                        resetCreatePurchaseOrderForm();
+                        if (window.toastr && data.message) {
+                            toastr.success(data.message);
+                        } else if (data.message) {
+                            alert(data.message);
+                        }
+                    } else {
+                        var msg = (data && data.message) ? data.message : 'Failed to create purchase order. Please try again.';
+                        if (res.status === 422 && data && data.errors) {
+                            try {
+                                var firstKey = Object.keys(data.errors)[0];
+                                if (firstKey && data.errors[firstKey] && data.errors[firstKey][0]) {
+                                    msg = data.errors[firstKey][0];
+                                }
+                            } catch (e) {}
+                        }
+                        alert(msg);
+                    }
+                })
+                .catch(function() {
+                    alert('Failed to create purchase order. Please try again.');
+                })
+                .finally(function() {
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.textContent = btn.dataset.originalText || 'Create Purchase Order';
+                    }
+                });
+        });
+    })();
     document.getElementById('editPOForm').addEventListener('submit', function(e) {
         const input = document.getElementById('editContactNumber');
         if (input && !validateContactNumber(input.value)) {
@@ -1430,7 +1902,7 @@
     });
 
     // Auto-open create modal when validation errors exist (e.g. after failed submit)
-    @if($errors->any())
+    @if($errors->any() || session('open_create_po_modal'))
     document.addEventListener('DOMContentLoaded', function() {
         const createModal = document.getElementById('createPurchaseOrderModal');
         if (createModal && (document.getElementById('createPOForm') || document.querySelector('[name="po_number"]'))) {
@@ -1596,4 +2068,3 @@
 })();
 </script>
 @endsection
-

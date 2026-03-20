@@ -1,5 +1,5 @@
 @extends('admin.layouts.master')
-
+@section('title', 'Stock Summary Report')
 @section('setup_content')
 <div class="container-fluid stock-summary-report">
     <x-breadcrum title="Stock Summary Report"></x-breadcrum>
@@ -11,29 +11,29 @@
                 <span class="text-muted small">Refine results by date, store type &amp; store</span>
             </div>
         </div>
-        <div class="card-body">
+        <div class="card-body p-3 p-lg-4">
             <form method="GET" action="{{ route('admin.mess.reports.stock-summary') }}">
                 <div class="row g-3">
                     <div class="col-md-3">
-                        <label class="form-label">From Date</label>
+                        <label class="form-label small fw-semibold text-uppercase mb-1 text-muted">From Date</label>
                         <input type="date" name="from_date" class="form-control" 
                                value="{{ $fromDate }}" required>
                     </div>
                     <div class="col-md-3">
-                        <label class="form-label">To Date</label>
+                        <label class="form-label small fw-semibold text-uppercase mb-1 text-muted">To Date</label>
                         <input type="date" name="to_date" class="form-control" 
                                value="{{ $toDate }}" required>
                     </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Store Type</label>
-                        <select name="store_type" id="store_type" class="form-select choices-select" data-placeholder="Select Store Type">
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold text-uppercase mb-1 text-muted">Store Type</label>
+                        <select name="store_type" id="store_type" class="form-select" data-placeholder="Select Store Type">
                             <option value="main" {{ $storeType == 'main' ? 'selected' : '' }}>Main Store</option>
                             <option value="sub" {{ $storeType == 'sub' ? 'selected' : '' }}>Sub Store</option>
                         </select>
                     </div>
-                    <div class="col-md-4" id="main_store_div" style="display: {{ $storeType == 'main' ? 'block' : 'none' }};">
-                        <label class="form-label">Main Store</label>
-                        <select name="store_id" class="form-select choices-select" data-placeholder="All Main Stores">
+                    <div class="col-md-3" id="main_store_div" style="display: {{ $storeType == 'main' ? 'block' : 'none' }};">
+                        <label class="form-label small fw-semibold text-uppercase mb-1 text-muted">Main Store</label>
+                        <select name="main_store_id" class="form-select form-select-sm" data-placeholder="All Main Stores">
                             <option value="">All Main Stores</option>
                             @foreach($stores as $store)
                                 <option value="{{ $store->id }}" {{ $storeId == $store->id && $storeType == 'main' ? 'selected' : '' }}>
@@ -42,9 +42,9 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-md-4" id="sub_store_div" style="display: {{ $storeType == 'sub' ? 'block' : 'none' }};">
-                        <label class="form-label">Sub Store</label>
-                        <select name="store_id" class="form-select choices-select" data-placeholder="All Sub Stores">
+                    <div class="col-md-3" id="sub_store_div" style="display: {{ $storeType == 'sub' ? 'block' : 'none' }};">
+                        <label class="form-label small fw-semibold text-uppercase mb-1 text-muted">Sub Store</label>
+                        <select name="sub_store_id" class="form-select form-select-sm" data-placeholder="All Sub Stores">
                             <option value="">All Sub Stores</option>
                             @foreach($subStores as $subStore)
                                 <option value="{{ $subStore->id }}" {{ $storeId == $subStore->id && $storeType == 'sub' ? 'selected' : '' }}>
@@ -55,24 +55,24 @@
                     </div>
                 </div>
                 <div class="mt-3 d-flex flex-wrap gap-2 align-items-center">
-                    <button type="submit" class="btn btn-primary d-inline-flex align-items-center">
+                    <button type="submit" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1">
                         <span class="material-symbols-rounded me-1" style="font-size: 18px;">filter_list</span>
                         Apply Filters
                     </button>
-                    <a href="{{ route('admin.mess.reports.stock-summary') }}" class="btn btn-outline-secondary d-inline-flex align-items-center">
+                    <a href="{{ route('admin.mess.reports.stock-summary') }}" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1">
                         <span class="material-symbols-rounded me-1" style="font-size: 18px;">refresh</span>
                         Reset
                     </a>
-                    <button type="button" class="btn btn-outline-primary d-inline-flex align-items-center" onclick="printStockSummary()" title="Print report or choose Save as PDF in print dialog">
+                    <button type="button" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1" onclick="printStockSummary()" title="Print report or choose Save as PDF in print dialog">
                         <span class="material-symbols-rounded me-1" style="font-size: 18px;">print</span>
                         Print
                     </button>
-                    <a href="{{ route('admin.mess.reports.stock-summary.pdf', request()->query()) }}" class="btn btn-outline-danger d-inline-flex align-items-center" title="Download PDF">
+                    <a href="{{ route('admin.mess.reports.stock-summary.pdf', request()->query()) }}" class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1" title="Download PDF">
                         <span class="material-symbols-rounded me-1" style="font-size: 18px;">picture_as_pdf</span>
                         PDF
                     </a>
 
-                    <a href="{{ route('admin.mess.reports.stock-summary.excel', request()->query()) }}" class="btn btn-success d-inline-flex align-items-center" title="Export to Excel">
+                    <a href="{{ route('admin.mess.reports.stock-summary.excel', request()->query()) }}" class="btn btn-success btn-sm d-inline-flex align-items-center gap-1" title="Export to Excel">
                         <span class="material-symbols-rounded me-1" style="font-size: 18px;">table_view</span>
                         Export Excel
                     </a>
@@ -81,8 +81,8 @@
         </div>
     </div>
 
-<div class="card">
-    <div class="card-body">
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-3 p-lg-4">
             <!-- Report Header -->
     <div class="report-header text-center mb-4">
         <h4 class="fw-bold text-uppercase mb-1">Stock Summary Report</h4>
@@ -100,108 +100,16 @@
     </div>
 
     <!-- Report Table -->
-    <div class="card border-0 shadow-sm">
-        <div class="card-header bg-light d-flex justify-content-between align-items-center py-2">
-            <span class="fw-semibold text-dark">Stock Movement Summary</span>
-            <span class="text-muted small">
-                Total items: {{ count($reportData) }}
-            </span>
-        </div>
-        <div class="table-responsive">
-        <table class="table text-nowrap align-middle mb-0">
-            <thead>
-                <tr>
-                    <th rowspan="2" class="text-center align-middle" style="width: 60px;">SR.<br>No</th>
-                    <th rowspan="2" class="text-center align-middle" style="min-width: 150px;">Item Name</th>
-                    <th rowspan="2" class="text-center align-middle" style="min-width: 100px;">Item Code</th>
-                    <th rowspan="2" class="text-center align-middle" style="min-width: 80px;">Unit</th>
-                    <th colspan="3" class="text-center">Opening</th>
-                    <th colspan="3" class="text-center">Purchase</th>
-                    <th colspan="3" class="text-center">Sale</th>
-                    <th colspan="3" class="text-center">Closing</th>
-                </tr>
-                <tr>
-                    <!-- Opening -->
-                    <th class="text-center">Qty</th>
-                    <th class="text-center">Rate</th>
-                    <th class="text-center">Amount</th>
-                    <!-- Purchase -->
-                    <th class="text-center">Qty</th>
-                    <th class="text-center">Rate</th>
-                    <th class="text-center">Amount</th>
-                    <!-- Sale -->
-                    <th class="text-center">Qty</th>
-                    <th class="text-center">Rate</th>
-                    <th class="text-center">Amount</th>
-                    <!-- Closing -->
-                    <th class="text-center">Qty</th>
-                    <th class="text-center">Rate</th>
-                    <th class="text-center">Amount</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($reportData as $index => $item)
-                    <tr>
-                        <td class="text-center">{{ $index + 1 }}</td>
-                        <td>{{ $item['item_name'] }}</td>
-                        <td>{{ $item['item_code'] ?? '—' }}</td>
-                        <td>{{ $item['unit'] ?? '—' }}</td>
-                        <!-- Opening -->
-                        <td class="text-end">{{ number_format($item['opening_qty'], 2) }}</td>
-                        <td class="text-end">₹{{ number_format($item['opening_rate'], 2) }}</td>
-                        <td class="text-end">₹{{ number_format($item['opening_amount'], 2) }}</td>
-                        <!-- Purchase -->
-                        <td class="text-end">{{ number_format($item['purchase_qty'], 2) }}</td>
-                        <td class="text-end">₹{{ number_format($item['purchase_rate'], 2) }}</td>
-                        <td class="text-end">₹{{ number_format($item['purchase_amount'], 2) }}</td>
-                        <!-- Sale -->
-                        <td class="text-end">{{ number_format($item['sale_qty'], 2) }}</td>
-                        <td class="text-end">₹{{ number_format($item['sale_rate'], 2) }}</td>
-                        <td class="text-end">₹{{ number_format($item['sale_amount'], 2) }}</td>
-                        <!-- Closing -->
-                        <td class="text-end">{{ number_format($item['closing_qty'], 2) }}</td>
-                        <td class="text-end">₹{{ number_format($item['closing_rate'], 2) }}</td>
-                        <td class="text-end">₹{{ number_format($item['closing_amount'], 2) }}</td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="16" class="text-center text-muted py-4">
-                            No stock movement found for the selected period
-                        </td>
-                    </tr>
-                @endforelse
-                @if(count($reportData) > 0)
-                    @php
-                        $totals = [
-                            'opening_amount' => collect($reportData)->sum('opening_amount'),
-                            'purchase_amount' => collect($reportData)->sum('purchase_amount'),
-                            'sale_amount' => collect($reportData)->sum('sale_amount'),
-                            'closing_amount' => collect($reportData)->sum('closing_amount'),
-                        ];
-                    @endphp
-                    <tr class="table-secondary fw-bold">
-                        <td colspan="4" class="text-end">Total</td>
-                        <td class="text-end">—</td>
-                        <td class="text-end">—</td>
-                        <td class="text-end">₹{{ number_format($totals['opening_amount'], 2) }}</td>
-                        <td class="text-end">—</td>
-                        <td class="text-end">—</td>
-                        <td class="text-end">₹{{ number_format($totals['purchase_amount'], 2) }}</td>
-                        <td class="text-end">—</td>
-                        <td class="text-end">—</td>
-                        <td class="text-end">₹{{ number_format($totals['sale_amount'], 2) }}</td>
-                        <td class="text-end">—</td>
-                        <td class="text-end">—</td>
-                        <td class="text-end">₹{{ number_format($totals['closing_amount'], 2) }}</td>
-                    </tr>
-                @endif
-            </tbody>
-        </table>
-        </div>
-    </div>
+    <div id="stock-summary-table-wrap">
+        @include('admin.mess.reports.partials.stock-summary-table', [
+            'reportData' => $reportData,
+            'reportPage' => $reportPage,
+            'reportTotals' => $reportTotals,
+        ])
     </div>
 </div>
 </div>
+
 
 <script>
 function printStockSummary() {
@@ -309,6 +217,43 @@ function printStockSummary() {
 </html>`);
     printWindow.document.close();
 }
+
+// AJAX pagination: only reload the table section, not whole page
+document.addEventListener('DOMContentLoaded', function () {
+    var container = document.getElementById('stock-summary-table-wrap');
+    if (!container) return;
+
+    function ajaxLoad(url) {
+        if (!url) return;
+        var targetUrl = url;
+        if (!/[?&]ajax=1(?:&|$)/.test(url)) {
+            var sep = url.indexOf('?') === -1 ? '?' : '&';
+            targetUrl = url + sep + 'ajax=1';
+        }
+        fetch(targetUrl, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+            .then(function (r) { return r.text(); })
+            .then(function (html) {
+                container.innerHTML = html;
+                hookLinks();
+            })
+            .catch(function (e) {
+                console.error('Failed to load stock summary page via AJAX', e);
+            });
+    }
+
+    function hookLinks() {
+        container.querySelectorAll('.pagination a').forEach(function (a) {
+            a.addEventListener('click', function (e) {
+                e.preventDefault();
+                ajaxLoad(this.href);
+            });
+        });
+    }
+
+    hookLinks();
+});
 </script>
 
 <style>
@@ -355,14 +300,48 @@ function printStockSummary() {
         font-size: 14px;
     }
 
-    /* Table styling for better visibility */
-    .table th {
-        font-weight: 600;
-        white-space: nowrap;
+    /* Fixed table height with inner scroll */
+    .stock-summary-report .table-fit-single-view {
+        overflow-x: auto;
+        overflow-y: auto;
+        max-width: 100%;
+        height: 70vh;
+        border-radius: .5rem;
     }
 
-    .table td {
-        white-space: nowrap;
+    .stock-summary-report .table-fit {
+        width: 100%;
+        table-layout: fixed;
+        font-size: 0.8rem;
+    }
+
+    .stock-summary-report .table-fit th,
+    .stock-summary-report .table-fit td {
+        padding: 0.4rem 0.5rem;
+        white-space: normal;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        vertical-align: middle;
+    }
+
+    /* Robust sticky header (cloned THEAD) */
+    .stock-summary-report .ssr-sticky-head {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        background: #0b4a7e;
+        overflow: hidden;
+    }
+    .stock-summary-report .ssr-sticky-head table {
+        width: 100%;
+        table-layout: fixed;
+        margin: 0;
+    }
+    .stock-summary-report .ssr-sticky-head th {
+        background: #0b4a7e !important;
+        color: #fff !important;
+        box-shadow: 0 1px 0 rgba(0,0,0,.08);
+        border-color: rgba(255,255,255,.25) !important;
     }
 
     /* Error highlighting */
@@ -413,34 +392,101 @@ function printStockSummary() {
                 }
             });
         }
+
+        // Robust sticky header inside scroll container (works reliably with rowspan/colspan headers)
+        try {
+            const scroller = document.querySelector('.stock-summary-report .table-fit-single-view');
+            const table = scroller ? scroller.querySelector('table.table-fit') : null;
+            const thead = table ? table.querySelector('thead') : null;
+            if (!scroller || !table || !thead) return;
+
+            // Remove existing sticky header (if any)
+            const old = scroller.querySelector('.ssr-sticky-head');
+            if (old) old.remove();
+
+            const stickyWrap = document.createElement('div');
+            stickyWrap.className = 'ssr-sticky-head';
+
+            const stickyTable = document.createElement('table');
+            stickyTable.className = table.className;
+
+            // Clone THEAD only
+            stickyTable.appendChild(thead.cloneNode(true));
+            stickyWrap.appendChild(stickyTable);
+
+            // Insert sticky header before the real table
+            scroller.insertBefore(stickyWrap, table);
+
+            const syncWidths = function() {
+                // Ensure sticky table matches the visible width of the scroller
+                stickyTable.style.width = scroller.clientWidth + 'px';
+
+                // Map widths from ORIGINAL thead th to sticky th
+                const origThs = thead.querySelectorAll('th');
+                const stickyThs = stickyTable.querySelectorAll('th');
+                if (!origThs.length || origThs.length !== stickyThs.length) return;
+
+                for (let i = 0; i < origThs.length; i++) {
+                    const w = origThs[i].getBoundingClientRect().width;
+                    stickyThs[i].style.width = w + 'px';
+                    stickyThs[i].style.minWidth = w + 'px';
+                    stickyThs[i].style.maxWidth = w + 'px';
+                }
+
+                // Also set the first row height so header looks consistent
+                const row1 = stickyTable.querySelector('thead tr:first-child');
+                if (row1) {
+                    row1.style.height = row1.getBoundingClientRect().height + 'px';
+                }
+            };
+
+            // Sync once before hiding original THEAD
+            syncWidths();
+
+            // Hide original THEAD so there is no blank space under sticky header
+            thead.style.display = 'none';
+
+            // Re-sync on resize (layout changes)
+            window.addEventListener('resize', function() {
+                // Temporarily show THEAD to measure widths again
+                thead.style.display = '';
+                syncWidths();
+                thead.style.display = 'none';
+            });
+
+            // Sync horizontal scroll by translating sticky table
+            scroller.addEventListener('scroll', function() {
+                stickyTable.style.transform = 'translateX(' + (-scroller.scrollLeft) + 'px)';
+            });
+        } catch (e) {}
     });
 </script>
 
-{{-- Choices.js (enhanced dropdowns) --}}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/styles/choices.min.css"/>
-<script src="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/scripts/choices.min.js"></script>
+{{-- Tom Select (enhanced dropdowns) --}}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css">
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 <script>
-    (function () {
-        document.addEventListener('DOMContentLoaded', function () {
-            if (typeof window.Choices === 'undefined') return;
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof window.TomSelect === 'undefined') return;
 
-            document
-                .querySelectorAll('.stock-summary-report select.choices-select')
-                .forEach(function (el) {
-                    if (el.dataset.choicesInitialized === 'true') return;
+        document
+            .querySelectorAll('.stock-summary-report select')
+            .forEach(function (el) {
+                if (el.tomselect) return;
 
-                    var placeholder = el.getAttribute('data-placeholder') || 'Select';
+                var placeholder = el.getAttribute('data-placeholder') || 'Select';
 
-                    new Choices(el, {
-                        shouldSort: false,
-                        placeholder: true,
-                        placeholderValue: placeholder,
-                        searchPlaceholderValue: 'Search...',
-                    });
-
-                    el.dataset.choicesInitialized = 'true';
+                new TomSelect(el, {
+                    create: false,
+                    allowEmptyOption: true,
+                    placeholder: placeholder,
+                    plugins: ['dropdown_input'],
+                    sortField: {
+                        field: 'text',
+                        direction: 'asc'
+                    }
                 });
-        });
-    })();
+            });
+    });
 </script>
 @endsection

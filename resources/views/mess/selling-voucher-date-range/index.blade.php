@@ -74,8 +74,19 @@
 
     <div class="card selling-voucher-card">
         <div class="card-body">
-            <div class="table-responsive">
-                <table class="table align-middle mb-0 voucher-table" id="sellingVoucherDateRangeTable">
+            <div class="d-flex justify-content-end mb-2">
+                <div class="input-group input-group-sm selling-voucher-search-wrapper" style="max-width: 260px;">
+                    <span class="input-group-text">
+                        <i class="material-symbols-rounded" style="font-size: 1rem;">search</i>
+                    </span>
+                    <input type="text"
+                           id="sellingVoucherCustomSearch"
+                           class="form-control"
+                           placeholder="Search selling vouchers...">
+                </div>
+            </div>
+            <div class="table-responsive d-inline-block" style="max-width: 100%;">
+                <table class="table align-middle mb-0 voucher-table w-100" id="sellingVoucherDateRangeTable">
                     <thead>
                         <tr>
                             <th>S. No.</th>
@@ -193,14 +204,43 @@
         </div>
     </div>
 
-    @include('components.mess-master-datatables', [
-    'tableId' => 'sellingVoucherDateRangeTable',
-    'searchPlaceholder' => 'Search selling vouchers...',
-    'ordering' => false,
-    'actionColumnIndex' => 12,
-    'infoLabel' => 'selling vouchers',
-    'searchDelay' => 0
-    ])
+@include('components.mess-master-datatables', [
+'tableId' => 'sellingVoucherDateRangeTable',
+'searchPlaceholder' => 'Search selling vouchers...',
+'ordering' => false,
+'actionColumnIndex' => 12,
+'infoLabel' => 'selling vouchers',
+'searchDelay' => 0
+])
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    if (typeof window.jQuery === 'undefined' || !window.jQuery.fn.DataTable) return;
+    var $ = window.jQuery;
+    var $table = $('#sellingVoucherDateRangeTable');
+    if (!$table.length) return;
+
+    function bindSellingVoucherSearch(dtApi) {
+        var $input = $('#sellingVoucherCustomSearch');
+        if (!$input.length) return;
+        $input.on('keyup change', function () {
+            var val = this.value;
+            dtApi.search(val).draw();
+        });
+    }
+
+    if ($.fn.DataTable.isDataTable($table)) {
+        bindSellingVoucherSearch($table.DataTable());
+    } else {
+        $table.on('init.dt', function (e, settings) {
+            var api = new $.fn.dataTable.Api(settings);
+            bindSellingVoucherSearch(api);
+        });
+    }
+});
+</script>
+@endpush
 </div>
 
 {{-- Tom Select CSS --}}
@@ -211,6 +251,26 @@
 
 {{-- Add Report Modal --}}
 <style>
+    /* Hide number input up/down arrows for qty/rate fields in add/edit modals */
+    #addReportModal input.dr-qty,
+    #addReportModal input.dr-rate,
+    #editSellingVoucherModal input.edit-dr-qty,
+    #editSellingVoucherModal input.edit-dr-rate {
+        -moz-appearance: textfield;
+    }
+
+    #addReportModal input.dr-qty::-webkit-outer-spin-button,
+    #addReportModal input.dr-qty::-webkit-inner-spin-button,
+    #addReportModal input.dr-rate::-webkit-outer-spin-button,
+    #addReportModal input.dr-rate::-webkit-inner-spin-button,
+    #editSellingVoucherModal input.edit-dr-qty::-webkit-outer-spin-button,
+    #editSellingVoucherModal input.edit-dr-qty::-webkit-inner-spin-button,
+    #editSellingVoucherModal input.edit-dr-rate::-webkit-outer-spin-button,
+    #editSellingVoucherModal input.edit-dr-rate::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
     .voucher-table thead th {
         font-size: .76rem;
         font-weight: 700;
@@ -249,14 +309,6 @@
     .voucher-section-card .card-header {
         background: var(--bs-tertiary-bg);
         border-bottom: 1px solid var(--bs-border-color-translucent);
-    }
-
-    .voucher-brand-head th {
-        background-color: #af2910 !important;
-        color: #fff !important;
-        border-color: #af2910 !important;
-        font-weight: 600;
-        white-space: nowrap;
     }
 
     #addReportModal .modal-dialog {
@@ -311,10 +363,10 @@
         box-shadow: var(--bs-box-shadow-sm);
     }
 
-    /* Mobile: enable horizontal scroll for wide table */
+    /* Mobile: enable horizontal scroll for wide table (only table scrolls, controls stay fixed) */
     @media (max-width: 991.98px) {
         .selling-voucher-card .card-body {
-            overflow-x: auto;
+            overflow-x: visible;
         }
 
         .selling-voucher-card .table-responsive {
@@ -325,6 +377,29 @@
         #sellingVoucherDateRangeTable {
             min-width: 1200px;
         }
+    }
+
+    /* Keep DataTable search box pinned and not floating while scrolling */
+    .selling-voucher-card .dataTables_wrapper {
+        position: relative;
+    }
+
+    .selling-voucher-card .dataTables_wrapper .dataTables_filter {
+        display: none; /* hide default DataTables search for this table */
+    }
+
+    .selling-voucher-search-wrapper {
+        max-width: 260px;
+    }
+
+    /* Keep length dropdown, info text and pagination pinned on horizontal scroll */
+    .selling-voucher-card .dataTables_wrapper .dataTables_length,
+    .selling-voucher-card .dataTables_wrapper .dataTables_info,
+    .selling-voucher-card .dataTables_wrapper .dataTables_paginate {
+        position: sticky;
+        left: 0;
+        z-index: 5;
+        background-color: #fff;
     }
 </style>
 <div class="modal fade" id="addReportModal" tabindex="-1" aria-labelledby="addReportModalLabel" aria-hidden="true">
@@ -401,22 +476,24 @@
                                 <div class="col-md-4" id="drNameFieldWrap" style="display:none;">
                                     <label class="form-label voucher-label">Name <span class="text-danger">*</span></label>
                                     <input type="text" name="client_name" id="drClientNameInput" class="form-control " value="{{ old('client_name') }}" placeholder="Client / section / role name" required>
+                                    <datalist id="drCourseBuyerNames"></datalist>
+                                    <datalist id="drGenericBuyerNames"></datalist>
                                     <select id="drFacultySelect" class="form-select " style="display:none;">
                                         <option value="">Select Faculty</option>
                                         @foreach($faculties ?? [] as $f)
-                                        <option value="{{ e($f->full_name) }}">{{ e($f->full_name) }}</option>
+                                        <option value="{{ e($f->full_name) }}">{{ e($f->full_name_with_code ?? $f->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="drAcademyStaffSelect" class="form-select " style="display:none;">
                                         <option value="">Select Academy Staff</option>
                                         @foreach($employees ?? [] as $e)
-                                        <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
+                                        <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="drMessStaffSelect" class="form-select " style="display:none;">
                                         <option value="">Select Mess Staff</option>
                                         @foreach($messStaff ?? [] as $e)
-                                        <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
+                                        <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="drOtStudentSelect" class="form-select " style="display:none;">
@@ -439,40 +516,14 @@
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label voucher-label">Remarks</label>
-                                    <input type="text" name="remarks" class="form-control " value="{{ old('remarks') }}" placeholder="Remarks (optional)">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label voucher-label">Reference Number</label>
-                                    <input type="text" name="reference_number" class="form-control " value="{{ old('reference_number') }}" placeholder="Reference number (optional)" maxlength="100">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label voucher-label">Order By</label>
-                                    <input type="text" name="order_by" class="form-control " value="{{ old('order_by') }}" placeholder="Order by (optional)" maxlength="100">
+                                    <label class="form-label voucher-label">Remarks / Reference Number / Order By</label>
+                                    <input type="text" name="remarks" class="form-control " value="{{ old('remarks') }}" placeholder="Remarks / Reference Number / Order By (optional)">
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {{-- Bill / Attachment (Upload) --}}
-                    <div class="card mb-4 voucher-section-card border-primary-subtle">
-                        <div class="card-header py-3">
-                            <h6 class="mb-0 fw-semibold text-primary">Upload Bill (PDF / Image)</h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-12">
-                                    <label class="form-label voucher-label">Bill / Attachment <small class="text-muted">(Optional)</small></label>
-                                    <input type="file" name="bill_file" class="form-control " accept=".pdf,.jpg,.jpeg,.png,.webp" id="addDrBillFileInput">
-                                    <div id="addDrBillFileChosenWrap" class="d-flex align-items-center gap-2 mt-1 d-none">
-                                        <span id="addDrBillFileChosenName" class="text-muted small"></span>
-                                        <button type="button" class="btn  btn-outline-danger" id="addDrBillFileRemove">Remove</button>
-                                    </div>
-                                    <small class="text-muted d-block mt-1">PDF, JPG, JPEG, PNG or WEBP. Max 5 MB.</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    {{-- Bill upload removed as per requirement --}}
 
                     {{-- Item Details (exactly same as Add Selling Voucher) --}}
                     <div class="card mb-4 voucher-section-card">
@@ -488,15 +539,15 @@
                                 <table class="table table-bordered table-sm align-middle mb-0" id="addReportItemsTable">
                                     <thead class="voucher-brand-head">
                                         <tr>
-                                            <th style="min-width: 180px;">Item Name <span class="text-white">*</span></th>
+                                            <th style="min-width: 260px;">Item Name <span class="text-white">*</span></th>
                                             <th style="min-width: 80px;">Unit</th>
-                                            <th style="min-width: 100px;">Available Qty</th>
-                                            <th style="min-width: 90px;">Issue Qty <span class="text-white">*</span></th>
-                                            <th style="min-width: 90px;">Left Qty</th>
-                                            <th style="min-width: 120px;">Issue Date</th>
-                                            <th style="min-width: 100px;">Rate <span class="text-white">*</span></th>
-                                            <th style="min-width: 110px;">Total Amount</th>
-                                            <th style="width: 50px;"></th>
+                                            <th style="min-width: 110px;">Available Qty</th>
+                                            <th style="min-width: 110px;">Issue Qty <span class="text-white">*</span></th>
+                                            <th style="min-width: 110px;">Left Qty</th>
+                                            <th style="min-width: 130px;">Issue Date</th>
+                                            <th style="min-width: 110px;">Rate <span class="text-white">*</span></th>
+                                            <th style="min-width: 130px;">Total Amount</th>
+                                            <th style="min-width: 50px;"></th>
                                         </tr>
                                     </thead>
                                     <tbody id="addModalItemsBody">
@@ -510,15 +561,15 @@
                                                 </select>
                                             </td>
                                             <td><input type="text" name="items[0][unit]" class="form-control  dr-unit" readonly placeholder="—"></td>
-                                            <td><input type="number" name="items[0][available_quantity]" class="form-control  dr-avail bg-light" step="0.01" min="0" value="0" placeholder="0" readonly></td>
+                                            <td><input type="text" name="items[0][available_quantity]" class="form-control  dr-avail bg-light" readonly></td>
                                             <td>
-                                                <input type="number" name="items[0][quantity]" class="form-control  dr-qty" step="0.01" min="0.01" placeholder="0" required>
+                                                <input type="text" name="items[0][quantity]" class="form-control  dr-qty" required>
                                                 <div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div>
                                             </td>
-                                            <td><input type="text" class="form-control  dr-left bg-light" readonly placeholder="0"></td>
+                                            <td><input type="text" class="form-control  dr-left bg-light" readonly></td>
                                             <td><input type="date" name="items[0][issue_date]" class="form-control  dr-issue-date" value="{{ date('Y-m-d') }}"></td>
-                                            <td><input type="number" name="items[0][rate]" class="form-control  dr-rate" step="0.01" min="0" placeholder="0" required></td>
-                                            <td><input type="text" class="form-control  dr-total bg-light" readonly placeholder="0.00"></td>
+                                            <td><input type="number" name="items[0][rate]" class="form-control  dr-rate" step="0.01" min="0" required></td>
+                                            <td><input type="text" class="form-control  dr-total bg-light" readonly></td>
                                             <td><button type="button" class="btn  btn-outline-danger dr-remove-row voucher-icon-btn" disabled title="Remove">×</button></td>
                                         </tr>
                                     </tbody>
@@ -717,7 +768,6 @@
                             </div>
                         </div>
                         <p class="mb-0 mt-3" id="viewRemarksWrap" style="display:none;"><strong>Remarks:</strong> <span id="viewRemarks"></span></p>
-                        <p class="mb-0 mt-2"><strong>Bill:</strong> <span id="viewBillWrap"><a href="#" id="viewBillLink" target="_blank" rel="noopener" class="btn  btn-outline-primary ms-1" style="display: none;">View / Download Bill</a><span id="viewBillNone" class="text-muted">No bill uploaded</span></span></p>
                     </div>
                 </div>
                 {{-- Item Details (same as Selling Voucher view modal + one extra column Issue Date) --}}
@@ -893,22 +943,24 @@
                                 <div class="col-md-4" id="editDrNameFieldWrap" style="display:none;">
                                     <label class="form-label voucher-label">Name <span class="text-danger">*</span></label>
                                     <input type="text" name="client_name" class="form-control  edit-client-name" id="editDrClientNameInput" placeholder="Client / section / role name" required>
+                                    <datalist id="editDrCourseBuyerNames"></datalist>
+                                    <datalist id="editDrGenericBuyerNames"></datalist>
                                     <select id="editDrFacultySelect" class="form-select " style="display:none;">
                                         <option value="">Select Faculty</option>
                                         @foreach($faculties ?? [] as $f)
-                                        <option value="{{ e($f->full_name) }}">{{ e($f->full_name) }}</option>
+                                        <option value="{{ e($f->full_name) }}">{{ e($f->full_name_with_code ?? $f->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="editDrAcademyStaffSelect" class="form-select " style="display:none;">
                                         <option value="">Select Academy Staff</option>
                                         @foreach($employees ?? [] as $e)
-                                        <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
+                                        <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="editDrMessStaffSelect" class="form-select " style="display:none;">
                                         <option value="">Select Mess Staff</option>
                                         @foreach($messStaff ?? [] as $e)
-                                        <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
+                                        <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="editDrOtStudentSelect" class="form-select " style="display:none;">
@@ -931,44 +983,13 @@
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label voucher-label">Remarks</label>
-                                    <input type="text" name="remarks" class="form-control  edit-remarks" placeholder="Remarks (optional)">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label voucher-label">Reference Number</label>
-                                    <input type="text" name="reference_number" class="form-control  edit-reference-number" placeholder="Reference number (optional)" maxlength="100">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label voucher-label">Order By</label>
-                                    <input type="text" name="order_by" class="form-control  edit-order-by" placeholder="Order by (optional)" maxlength="100">
+                                    <label class="form-label voucher-label">Remarks / Reference Number / Order By</label>
+                                    <input type="text" name="remarks" class="form-control  edit-remarks" placeholder="Remarks / Reference Number / Order By (optional)">
                                 </div>
                             </div>
                         </div>
                     </div>
-                    {{-- Bill / Attachment (Upload) --}}
-                    <div class="card mb-4 voucher-section-card border-primary-subtle">
-                        <div class="card-header py-3">
-                            <h6 class="mb-0 fw-semibold text-primary">Upload Bill (PDF / Image)</h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-12">
-                                    <label class="form-label voucher-label">Bill / Attachment <small class="text-muted">(Optional – leave empty to keep existing)</small></label>
-                                    <input type="hidden" name="remove_bill" id="editDrRemoveBillFlag" value="0">
-                                    <div class="d-flex align-items-center border rounded px-2 py-1 bg-white" style="min-height: 38px;">
-                                        <span id="editSvCurrentBillPath" class="flex-grow-1 text-muted small text-break me-2" style="min-width: 0;">No file chosen</span>
-                                        <label class="mb-0 btn  btn-outline-secondary py-1 px-2 me-1" style="cursor: pointer;">
-                                            Choose file
-                                            <input type="file" name="bill_file" class="d-none" accept=".pdf,.jpg,.jpeg,.png,.webp" id="editSvBillFileInput">
-                                        </label>
-                                        <button type="button" class="btn  btn-outline-danger py-1 px-2" id="editDrBillFileRemove">Remove</button>
-                                    </div>
-                                    <small class="text-muted d-block mt-1">PDF, JPG, JPEG, PNG or WEBP. Max 5 MB.</small>
-                                    <p class="mb-0 mt-2 small" id="editCurrentBillLink"></p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    {{-- Bill upload removed as per requirement --}}
                     <div class="card mb-4 voucher-section-card">
                         <div class="card-header d-flex justify-content-between align-items-center py-3">
                             <h6 class="mb-0 fw-semibold text-primary">Item Details</h6>
@@ -1033,21 +1054,31 @@
             var addSel = document.getElementById('drClientNameSelect');
             if (addSel) {
                 addSel.querySelectorAll('option[value]').forEach(function(opt) {
-                    clientNameOptionsAdd.push({ value: opt.value, text: (opt.textContent || '').trim(), type: (opt.dataset.type || '').toLowerCase(), clientName: (opt.dataset.clientName || '').toLowerCase() });
+                    clientNameOptionsAdd.push({
+                        value: opt.value,
+                        text: (opt.textContent || '').trim(),
+                        type: ((opt.dataset.type || '').toLowerCase().trim()),
+                        clientName: ((opt.dataset.clientName || '').toLowerCase().trim())
+                    });
                 });
             }
             var editSel = document.getElementById('editDrClientNameSelect');
             if (editSel) {
                 editSel.querySelectorAll('option[value]').forEach(function(opt) {
-                    clientNameOptionsEdit.push({ value: opt.value, text: (opt.textContent || '').trim(), type: (opt.dataset.type || '').toLowerCase(), clientName: (opt.dataset.clientName || '').toLowerCase() });
+                    clientNameOptionsEdit.push({
+                        value: opt.value,
+                        text: (opt.textContent || '').trim(),
+                        type: ((opt.dataset.type || '').toLowerCase().trim()),
+                        clientName: ((opt.dataset.clientName || '').toLowerCase().trim())
+                    });
                 });
             }
         });
 
         function rebuildClientNameSelect(selectEl, optionsList, slug) {
             if (!selectEl || !Array.isArray(optionsList)) return;
-            var slugLower = (slug || '').toLowerCase();
-            var filtered = optionsList.filter(function(o) { return o.type === slugLower; });
+            var slugLower = (slug || '').toLowerCase().trim();
+            var filtered = optionsList.filter(function(o) { return (o.type || '').toLowerCase().trim() === slugLower; });
             if (selectEl.tomselect) { try { selectEl.tomselect.destroy(); } catch (e) {} }
             if (selectEl.id === 'drClientNameSelect') addModalTomSelectInstances.client = null;
             selectEl.innerHTML = '<option value="">Select Client Name</option>';
@@ -1055,38 +1086,50 @@
                 var opt = document.createElement('option');
                 opt.value = o.value;
                 opt.textContent = o.text;
-                opt.setAttribute('data-type', o.type);
-                opt.setAttribute('data-client-name', o.clientName);
+                opt.setAttribute('data-type', ((o.type || '').toLowerCase().trim()));
+                opt.setAttribute('data-client-name', ((o.clientName || '').toLowerCase().trim()));
                 selectEl.appendChild(opt);
             });
             if (typeof TomSelect !== 'undefined') {
-                var inst = new TomSelect(selectEl, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Client Name' });
+                var inst = new TomSelect(selectEl, createBlankSearchConfig({
+                    placeholder: 'Select Client Name',
+                    clearOnOpen: true
+                }));
                 if (selectEl.id === 'drClientNameSelect') addModalTomSelectInstances.client = inst;
             }
         }
         function rebuildEditClientNameSelect(slug) {
             var editSel = document.getElementById('editDrClientNameSelect');
             if (!editSel || !clientNameOptionsEdit.length) return;
-            var slugLower = (slug || '').toLowerCase();
-            var filtered = clientNameOptionsEdit.filter(function(o) { return o.type === slugLower; });
+            var slugLower = (slug || '').toLowerCase().trim();
+            var filtered = clientNameOptionsEdit.filter(function(o) { return (o.type || '').toLowerCase().trim() === slugLower; });
             if (editSel.tomselect) { try { editSel.tomselect.destroy(); } catch (e) {} editModalTomSelectInstances.client = null; }
             editSel.innerHTML = '<option value="">Select Client Name</option>';
             filtered.forEach(function(o) {
                 var opt = document.createElement('option');
                 opt.value = o.value;
                 opt.textContent = o.text;
-                opt.setAttribute('data-type', o.type);
-                opt.setAttribute('data-client-name', o.clientName);
+                opt.setAttribute('data-type', ((o.type || '').toLowerCase().trim()));
+                opt.setAttribute('data-client-name', ((o.clientName || '').toLowerCase().trim()));
                 editSel.appendChild(opt);
             });
             if (typeof TomSelect !== 'undefined') {
-                editModalTomSelectInstances.client = new TomSelect(editSel, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Client Name' });
+                editModalTomSelectInstances.client = new TomSelect(editSel, createBlankSearchConfig({
+                    placeholder: 'Select Client Name',
+                    clearOnOpen: true
+                }));
             }
         }
 
         function getSelectValue(select) {
             if (!select) return '';
             return select.tomselect ? select.tomselect.getValue() : select.value;
+        }
+        function setSelectValue(select, value) {
+            if (!select) return;
+            var v = (value === null || value === undefined) ? '' : String(value);
+            if (select.tomselect) select.tomselect.setValue(v);
+            else select.value = v;
         }
         function getSelectSelectedOption(select) {
             if (!select) return null;
@@ -1128,26 +1171,88 @@
                 if (el.tomselect) { try { el.tomselect.destroy(); } catch (e) {} }
             });
         }
+        function createBlankSearchConfig(extra) {
+            return Object.assign({
+                allowEmptyOption: true,
+                dropdownParent: 'body',
+                searchField: ['text'],
+                controlInput: '<input>',
+                highlight: false,
+                onInitialize: function () {
+                    this.activeOption = null;
+                },
+                onDropdownOpen: function (dropdown) {
+                    var self = this;
+                    function clearInputAndCursor() {
+                        var input = self.control_input || (dropdown && dropdown.querySelector('input'));
+                        if (typeof self.setTextboxValue === 'function') self.setTextboxValue('');
+                        if (typeof self.onSearchChange === 'function') self.onSearchChange('');
+                        if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
+                        if (input) {
+                            input.value = '';
+                            input.focus();
+                            try { input.setSelectionRange(0, 0); } catch (e) {}
+                            input.scrollLeft = 0;
+                        }
+                    }
+                    // Agar clearOnOpen true hai to har open par selection bhi hatao
+                    if (self.settings && self.settings.clearOnOpen) {
+                        self.clear(true);
+                    }
+                    clearInputAndCursor();
+                    setTimeout(clearInputAndCursor, 0);
+                    setTimeout(clearInputAndCursor, 50);
+                    setTimeout(clearInputAndCursor, 100);
+                    if (dropdown) {
+                        setTimeout(function () {
+                            var opts = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"]');
+                            opts.forEach(function (opt) {
+                                opt.classList.remove('active');
+                                opt.classList.remove('selected');
+                                opt.setAttribute('aria-selected', 'false');
+                            });
+                        }, 0);
+                    }
+                }
+            }, extra || {});
+        }
+
         function initAddModalTomSelects() {
             if (typeof TomSelect === 'undefined') return;
             var paymentSel = document.querySelector('#addReportModal select[name="payment_type"]');
-            if (paymentSel && !paymentSel.tomselect) addModalTomSelectInstances.payment = new TomSelect(paymentSel, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Payment Type' });
+            if (paymentSel && !paymentSel.tomselect) {
+                addModalTomSelectInstances.payment = new TomSelect(paymentSel, createBlankSearchConfig({
+                    placeholder: 'Payment Type',
+                    clearOnOpen: true
+                }));
+            }
             var clientSel = document.getElementById('drClientNameSelect');
             var clientTypeRadio = document.querySelector('#addReportModal .dr-client-type-radio:checked');
             var slug = clientTypeRadio ? (clientTypeRadio.value || '').toLowerCase() : 'employee';
             if (clientSel && slug !== 'ot' && slug !== 'course' && clientNameOptionsAdd.length) {
                 rebuildClientNameSelect(clientSel, clientNameOptionsAdd, slug);
             } else if (clientSel && !clientSel.tomselect) {
-                addModalTomSelectInstances.client = new TomSelect(clientSel, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Client Name' });
+                addModalTomSelectInstances.client = new TomSelect(clientSel, createBlankSearchConfig({
+                    placeholder: 'Select Client Name',
+                    clearOnOpen: true
+                }));
             }
             var storeSel = document.querySelector('#addReportModal select[name="inve_store_master_pk"]');
-            if (storeSel && !storeSel.tomselect) addModalTomSelectInstances.store = new TomSelect(storeSel, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Store' });
+            if (storeSel && !storeSel.tomselect) {
+                addModalTomSelectInstances.store = new TomSelect(storeSel, createBlankSearchConfig({
+                    placeholder: 'Select Store',
+                    clearOnOpen: true
+                }));
+            }
             var nameSelectIds = ['drOtCourseSelect', 'drCourseSelect', 'drFacultySelect', 'drAcademyStaffSelect', 'drMessStaffSelect', 'drOtStudentSelect', 'drCourseNameSelect'];
             nameSelectIds.forEach(function(id) {
                 var sel = document.getElementById(id);
                 if (!sel || sel.tomselect) return;
                 var ph = id.indexOf('Faculty') !== -1 ? 'Select Faculty' : id.indexOf('Academy') !== -1 ? 'Select Academy Staff' : id.indexOf('Mess') !== -1 ? 'Select Mess Staff' : id.indexOf('OtStudent') !== -1 ? 'Select Student' : 'Select Course';
-                new TomSelect(sel, { allowEmptyOption: true, dropdownParent: 'body', placeholder: ph });
+                new TomSelect(sel, createBlankSearchConfig({
+                    placeholder: ph,
+                    clearOnOpen: true
+                }));
             });
             var otCourseSel = document.getElementById('drOtCourseSelect');
             var drCourseSel = document.getElementById('drCourseSelect');
@@ -1156,7 +1261,11 @@
             if (clientSel) setSelectVisible(clientSel, slug !== 'ot' && slug !== 'course');
             document.querySelectorAll('#addModalItemsBody .dr-item-select').forEach(function(select) {
                 if (select.tomselect) return;
-                new TomSelect(select, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Item', maxOptions: null });
+                new TomSelect(select, createBlankSearchConfig({
+                    placeholder: 'Select Item',
+                    maxOptions: null,
+                    clearOnOpen: true
+                }));
             });
             if (typeof updateDrNameField === 'function') updateDrNameField();
             var addChecked = document.querySelector('#addReportModal .dr-client-type-radio:checked');
@@ -1170,7 +1279,12 @@
         function initEditModalTomSelects() {
             if (typeof TomSelect === 'undefined') return;
             var paymentSel = document.querySelector('#editReportModal select.edit-payment-type');
-            if (paymentSel && !paymentSel.tomselect) editModalTomSelectInstances.payment = new TomSelect(paymentSel, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Payment Type' });
+            if (paymentSel && !paymentSel.tomselect) {
+                editModalTomSelectInstances.payment = new TomSelect(paymentSel, createBlankSearchConfig({
+                    placeholder: 'Payment Type',
+                    clearOnOpen: true
+                }));
+            }
             var clientSel = document.getElementById('editDrClientNameSelect');
             var editRadio = document.querySelector('#editReportModal .edit-dr-client-type-radio:checked');
             var editSlug = editRadio ? (editRadio.value || '').toLowerCase() : 'employee';
@@ -1183,10 +1297,18 @@
                     else clientSel.value = preservedPk;
                 }
             } else if (clientSel && !clientSel.tomselect) {
-                editModalTomSelectInstances.client = new TomSelect(clientSel, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Client Name' });
+                editModalTomSelectInstances.client = new TomSelect(clientSel, createBlankSearchConfig({
+                    placeholder: 'Select Client Name',
+                    clearOnOpen: true
+                }));
             }
             var storeSel = document.querySelector('#editReportModal select.edit-store-id');
-            if (storeSel && !storeSel.tomselect) editModalTomSelectInstances.store = new TomSelect(storeSel, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Store' });
+            if (storeSel && !storeSel.tomselect) {
+                editModalTomSelectInstances.store = new TomSelect(storeSel, createBlankSearchConfig({
+                    placeholder: 'Select Store',
+                    clearOnOpen: true
+                }));
+            }
             var editNameInpForInit = document.getElementById('editDrClientNameInput');
             var nameValForInit = (editNameInpForInit && editNameInpForInit.value) ? String(editNameInpForInit.value).trim() : '';
             if (nameValForInit) {
@@ -1202,11 +1324,18 @@
                 var sel = document.getElementById(id);
                 if (!sel || sel.tomselect) return;
                 var ph = id.indexOf('Faculty') !== -1 ? 'Select Faculty' : id.indexOf('Academy') !== -1 ? 'Select Academy Staff' : id.indexOf('Mess') !== -1 ? 'Select Mess Staff' : 'Select Course';
-                new TomSelect(sel, { allowEmptyOption: true, dropdownParent: 'body', placeholder: ph });
+                new TomSelect(sel, createBlankSearchConfig({
+                    placeholder: ph,
+                    clearOnOpen: true
+                }));
             });
             document.querySelectorAll('#editModalItemsBody .edit-dr-item-select').forEach(function(select) {
                 if (select.tomselect) return;
-                new TomSelect(select, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Item', maxOptions: null });
+                new TomSelect(select, createBlankSearchConfig({
+                    placeholder: 'Select Item',
+                    maxOptions: null,
+                    clearOnOpen: true
+                }));
             });
             if (typeof updateEditDrNameField === 'function') updateEditDrNameField();
             var editChecked = document.querySelector('#editReportModal .edit-dr-client-type-radio:checked');
@@ -1266,8 +1395,116 @@
             if (typeof TomSelect === 'undefined') return;
             var filterStatus = document.querySelector('form[method="GET"] select[name="status"]');
             var filterStore = document.querySelector('form[method="GET"] select[name="store"]');
-            if (filterStatus) { if (filterStatus.tomselect) filterStatus.tomselect.destroy(); new TomSelect(filterStatus, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'All Status' }); }
-            if (filterStore) { if (filterStore.tomselect) filterStore.tomselect.destroy(); new TomSelect(filterStore, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'All Stores' }); }
+
+            if (filterStatus) {
+                if (filterStatus.tomselect) filterStatus.tomselect.destroy();
+                new TomSelect(filterStatus, {
+                    allowEmptyOption: true,
+                    dropdownParent: 'body',
+                    placeholder: 'All Status',
+                    searchField: ['text'],
+                    controlInput: '<input>',
+                    highlight: false,
+                    onInitialize: function () {
+                        this.activeOption = null;
+                    },
+                    onDropdownOpen: function (dropdown) {
+                        var self = this;
+                        function clearInputAndCursor() {
+                            var input = self.control_input || (dropdown && dropdown.querySelector('input'));
+                            if (typeof self.setTextboxValue === 'function') self.setTextboxValue('');
+                            if (typeof self.onSearchChange === 'function') self.onSearchChange('');
+                            if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
+                            if (input) {
+                                input.value = '';
+                                input.focus();
+                                try { input.setSelectionRange(0, 0); } catch (e) {}
+                                input.scrollLeft = 0;
+                            }
+                        }
+                        // Har open par selection + search ko blank karo
+                        self.clear(true);
+                        clearInputAndCursor();
+                        setTimeout(function () {
+                            self.clear(true);
+                            clearInputAndCursor();
+                        }, 0);
+                        setTimeout(function () {
+                            self.clear(true);
+                            clearInputAndCursor();
+                        }, 50);
+                        setTimeout(function () {
+                            self.clear(true);
+                            clearInputAndCursor();
+                        }, 100);
+                        if (dropdown) {
+                            setTimeout(function () {
+                                var opts = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"]');
+                                opts.forEach(function (opt) {
+                                    opt.classList.remove('active');
+                                    opt.classList.remove('selected');
+                                    opt.setAttribute('aria-selected', 'false');
+                                });
+                            }, 0);
+                        }
+                    }
+                });
+            }
+
+            if (filterStore) {
+                if (filterStore.tomselect) filterStore.tomselect.destroy();
+                new TomSelect(filterStore, {
+                    allowEmptyOption: true,
+                    dropdownParent: 'body',
+                    placeholder: 'All Stores',
+                    searchField: ['text'],
+                    controlInput: '<input>',
+                    highlight: false,
+                    onInitialize: function () {
+                        this.activeOption = null;
+                    },
+                    onDropdownOpen: function (dropdown) {
+                        var self = this;
+                        function clearInputAndCursor() {
+                            var input = self.control_input || (dropdown && dropdown.querySelector('input'));
+                            if (typeof self.setTextboxValue === 'function') self.setTextboxValue('');
+                            if (typeof self.onSearchChange === 'function') self.onSearchChange('');
+                            if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
+                            if (input) {
+                                input.value = '';
+                                input.focus();
+                                try { input.setSelectionRange(0, 0); } catch (e) {}
+                                input.scrollLeft = 0;
+                            }
+                        }
+                        // Har open par selection + search ko blank karo
+                        self.clear(true);
+                        clearInputAndCursor();
+                        setTimeout(function () {
+                            self.clear(true);
+                            clearInputAndCursor();
+                        }, 0);
+                        setTimeout(function () {
+                            self.clear(true);
+                            clearInputAndCursor();
+                        }, 50);
+                        setTimeout(function () {
+                            self.clear(true);
+                            clearInputAndCursor();
+                        }, 100);
+                        if (dropdown) {
+                            setTimeout(function () {
+                                var opts = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"]');
+                                opts.forEach(function (opt) {
+                                    opt.classList.remove('active');
+                                    opt.classList.remove('selected');
+                                    opt.setAttribute('aria-selected', 'false');
+                                });
+                            }, 0);
+                        }
+                    }
+                });
+            }
         });
 
         function enforceQtyWithinAvailable(row, availSelector, qtySelector) {
@@ -1457,12 +1694,12 @@
             return '<tr class="dr-item-row">' +
                 '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select  dr-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
                 '<td><input type="text" name="items[' + index + '][unit]" class="form-control  dr-unit" readonly placeholder="—"></td>' +
-                '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control  dr-avail bg-light" step="0.01" min="0" value="0" placeholder="0" readonly></td>' +
-                '<td><input type="number" name="items[' + index + '][quantity]" class="form-control  dr-qty" step="0.01" min="0.01" placeholder="0" required><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
+                '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control  dr-avail bg-light" readonly></td>' +
+                '<td><input type="number" name="items[' + index + '][quantity]" class="form-control  dr-qty" step="0.01" required><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
                 '<td><input type="text" class="form-control  dr-left bg-light" readonly placeholder="0"></td>' +
                 '<td><input type="date" name="items[' + index + '][issue_date]" class="form-control  dr-issue-date" value="' + new Date().toISOString().slice(0, 10) + '"></td>' +
-                '<td><input type="number" name="items[' + index + '][rate]" class="form-control  dr-rate" step="0.01" min="0" placeholder="0" required></td>' +
-                '<td><input type="text" class="form-control  dr-total bg-light" readonly placeholder="0.00"></td>' +
+                '<td><input type="number" name="items[' + index + '][rate]" class="form-control  dr-rate" step="0.01" min="0" required></td>' +
+                '<td><input type="text" class="form-control  dr-total bg-light" readonly></td>' +
                 '<td><button type="button" class="btn  btn-outline-danger dr-remove-row voucher-icon-btn" title="Remove">×</button></td>' +
                 '</tr>';
         }
@@ -1474,7 +1711,10 @@
             const rateInp = row.querySelector('.dr-rate');
             const availInp = row.querySelector('.dr-avail');
             if (unitInp) unitInp.value = (opt && opt.dataset.unit) ? opt.dataset.unit : '—';
-            if (rateInp && opt && opt.dataset.rate) rateInp.value = opt.dataset.rate;
+            // Only auto-set rate if user has not manually overridden it
+            if (rateInp && rateInp.dataset.manualRate !== '1' && opt && opt.dataset.rate) {
+                rateInp.value = opt.dataset.rate;
+            }
             if (availInp && opt && opt.dataset.available) availInp.value = opt.dataset.available;
             if (availInp) availInp.readOnly = true;
             refreshAllAvailable();
@@ -1504,6 +1744,7 @@
             const qty = parseFloat(row.querySelector('.dr-qty').value) || 0;
             const rateInp = row.querySelector('.dr-rate');
             let rate = parseFloat(rateInp.value) || 0;
+            const isManualRate = rateInp && rateInp.dataset.manualRate === '1';
             const totalInp = row.querySelector('.dr-total');
             const sel = row.querySelector('.dr-item-select');
             const opt = getSelectSelectedOption(sel);
@@ -1516,7 +1757,7 @@
                 }
             })() : null;
             let total;
-            if (tiers && tiers.length > 0 && qty > 0) {
+            if (!isManualRate && tiers && tiers.length > 0 && qty > 0) {
                 const fifoAmount = calcDrFifoAmount(tiers, qty);
                 if (fifoAmount !== null) {
                     total = fifoAmount;
@@ -1572,7 +1813,15 @@
             tbody.appendChild(newTr);
             addRowIndex++;
             var newItemSelect = newTr.querySelector('.dr-item-select');
-            if (newItemSelect && typeof TomSelect !== 'undefined') new TomSelect(newItemSelect, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Item', maxOptions: null });
+            if (newItemSelect && typeof TomSelect !== 'undefined') {
+                new TomSelect(newItemSelect, createBlankSearchConfig({
+                    allowEmptyOption: true,
+                    dropdownParent: 'body',
+                    placeholder: 'Select Item',
+                    maxOptions: null,
+                    clearOnOpen: true
+                }));
+            }
             updateAddRowUnit(newTr);
             newTr.querySelector('.dr-avail').addEventListener('input', function() {
                 updateAddRowLeft(newTr);
@@ -1583,10 +1832,15 @@
                 updateAddGrandTotal();
             });
             newTr.querySelector('.dr-rate').addEventListener('input', function() {
+                // Mark that the user has manually set the rate so it is not auto-overwritten
+                this.dataset.manualRate = '1';
                 updateAddRowTotal(newTr);
                 updateAddGrandTotal();
             });
             newTr.querySelector('.dr-item-select').addEventListener('change', function() {
+                // On item change, allow auto-rate again until user edits manually
+                const rateInp = newTr.querySelector('.dr-rate');
+                if (rateInp) rateInp.dataset.manualRate = '';
                 updateAddRowUnit(newTr);
             });
             newTr.querySelector('.dr-remove-row').addEventListener('click', function() {
@@ -1603,6 +1857,8 @@
 
         document.querySelectorAll('#addModalItemsBody .dr-item-row').forEach(function(row) {
             row.querySelector('.dr-item-select').addEventListener('change', function() {
+                const rateInp = row.querySelector('.dr-rate');
+                if (rateInp) rateInp.dataset.manualRate = '';
                 updateAddRowUnit(row);
             });
             row.querySelector('.dr-avail').addEventListener('input', function() {
@@ -1614,6 +1870,8 @@
                 updateAddGrandTotal();
             });
             row.querySelector('.dr-rate').addEventListener('input', function() {
+                const rateInp = row.querySelector('.dr-rate');
+                if (rateInp) rateInp.dataset.manualRate = '1';
                 updateAddRowTotal(row);
                 updateAddGrandTotal();
             });
@@ -1712,6 +1970,7 @@
             if (isOt) {
                 nameInput.style.display = 'none';
                 nameInput.removeAttribute('required');
+                nameInput.removeAttribute('list');
                 [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) {
                     if (sel) {
                         setSelectVisible(sel, false);
@@ -1732,8 +1991,9 @@
                 }
             } else if (isCourse) {
                 nameInput.style.display = 'block';
-                nameInput.placeholder = 'Course name';
+                nameInput.placeholder = 'Name';
                 nameInput.setAttribute('required', 'required');
+                nameInput.setAttribute('list', 'drCourseBuyerNames');
                 [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) {
                     if (sel) {
                         setSelectVisible(sel, false);
@@ -1755,6 +2015,7 @@
             } else {
                 nameInput.style.display = showAny ? 'none' : 'block';
                 nameInput.removeAttribute('required');
+                nameInput.setAttribute('list', 'drGenericBuyerNames');
                 [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) {
                     if (!sel) return;
                     const show = sel === facultySelect ? showFaculty : (sel === academyStaffSelect ? showAcademyStaff : showMessStaff);
@@ -1913,6 +2174,56 @@
                 updateDrNameField();
             });
         });
+
+        function loadAddDrBuyerNames() {
+            const clientTypeRadio = document.querySelector('#addReportModal .dr-client-type-radio:checked');
+            const clientNameSelect = document.getElementById('drClientNameSelect');
+            const drCourseSelect = document.getElementById('drCourseSelect');
+            const nameInput = document.getElementById('drClientNameInput');
+            const courseDl = document.getElementById('drCourseBuyerNames');
+            const genericDl = document.getElementById('drGenericBuyerNames');
+            if (!clientTypeRadio || !nameInput || !courseDl || !genericDl) return;
+
+            const slug = (clientTypeRadio.value || '').toLowerCase();
+            let pk = '';
+            let targetDl = null;
+
+            if (slug === 'course') {
+                pk = drCourseSelect ? getSelectValue(drCourseSelect) : '';
+                targetDl = courseDl;
+                nameInput.setAttribute('list', 'drCourseBuyerNames');
+                genericDl.innerHTML = '';
+            } else if (slug === 'section' || slug === 'other') {
+                pk = clientNameSelect ? getSelectValue(clientNameSelect) : '';
+                targetDl = genericDl;
+                nameInput.setAttribute('list', 'drGenericBuyerNames');
+                courseDl.innerHTML = '';
+            } else {
+                nameInput.removeAttribute('list');
+                courseDl.innerHTML = '';
+                genericDl.innerHTML = '';
+                return;
+            }
+
+            targetDl.innerHTML = '';
+            if (!pk) return;
+
+            fetch(baseUrl + '/buyer-names?client_type_slug=' + encodeURIComponent(slug) + '&client_type_pk=' + encodeURIComponent(pk), {
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+            })
+                .then(r => r.json())
+                .then(function(data) {
+                    targetDl.innerHTML = '';
+                    (data.buyers || []).forEach(function(b) {
+                        const opt = document.createElement('option');
+                        opt.value = b;
+                        targetDl.appendChild(opt);
+                    });
+                })
+                .catch(function() {
+                    targetDl.innerHTML = '';
+                });
+        }
         document.getElementById('drOtCourseSelect').addEventListener('change', function() {
             const coursePk = getSelectValue(this);
             const otStudentSelect = document.getElementById('drOtStudentSelect');
@@ -1954,12 +2265,12 @@
             if (inp) inp.value = getSelectValue(this) || '';
         });
         document.getElementById('drCourseSelect').addEventListener('change', function() {
-            const inp = document.getElementById('drClientNameInput');
-            const opt = getSelectSelectedOption(this);
-            const courseName = (opt && opt.textContent) ? opt.textContent.trim() : '';
-            if (inp) inp.value = courseName;
+            loadAddDrBuyerNames();
         });
-        document.getElementById('drClientNameSelect').addEventListener('change', updateDrNameField);
+        document.getElementById('drClientNameSelect').addEventListener('change', function() {
+            updateDrNameField();
+            loadAddDrBuyerNames();
+        });
         document.getElementById('drFacultySelect').addEventListener('change', function() {
             const inp = document.getElementById('drClientNameInput');
             if (inp) inp.value = getSelectValue(this) || '';
@@ -1976,6 +2287,7 @@
         });
         const addChecked = document.querySelector('#addReportModal .dr-client-type-radio:checked');
         if (addChecked) addChecked.dispatchEvent(new Event('change'));
+        loadAddDrBuyerNames();
 
         // Edit modal: same Faculty / Academy Staff / Mess Staff dropdown logic
         function updateEditDrNameField() {
@@ -2004,6 +2316,7 @@
             if (isOt) {
                 nameInput.style.display = 'none';
                 nameInput.removeAttribute('required');
+                nameInput.removeAttribute('list');
                 [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) {
                     if (sel) {
                         setSelectVisible(sel, false);
@@ -2023,8 +2336,9 @@
                 }
             } else if (isCourse) {
                 nameInput.style.display = 'block';
-                nameInput.placeholder = 'Course name';
+                nameInput.placeholder = 'Name';
                 nameInput.setAttribute('required', 'required');
+                nameInput.setAttribute('list', 'editDrCourseBuyerNames');
                 [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) {
                     if (sel) {
                         setSelectVisible(sel, false);
@@ -2041,6 +2355,7 @@
             } else {
                 nameInput.style.display = showAny ? 'none' : 'block';
                 nameInput.removeAttribute('required');
+                nameInput.setAttribute('list', 'editDrGenericBuyerNames');
                 [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) {
                     if (!sel) return;
                     const show = sel === facultySelect ? showFaculty : (sel === academyStaffSelect ? showAcademyStaff : showMessStaff);
@@ -2066,6 +2381,56 @@
                 }
                 if (!showAny) nameInput.setAttribute('required', 'required');
             }
+        }
+
+        function loadEditDrBuyerNames() {
+            const clientTypeRadio = document.querySelector('#editReportModal .edit-dr-client-type-radio:checked');
+            const clientNameSelect = document.getElementById('editDrClientNameSelect');
+            const drCourseSelect = document.getElementById('editDrCourseSelect');
+            const nameInput = document.getElementById('editDrClientNameInput');
+            const courseDl = document.getElementById('editDrCourseBuyerNames');
+            const genericDl = document.getElementById('editDrGenericBuyerNames');
+            if (!clientTypeRadio || !nameInput || !courseDl || !genericDl) return;
+
+            const slug = (clientTypeRadio.value || '').toLowerCase();
+            let pk = '';
+            let targetDl = null;
+
+            if (slug === 'course') {
+                pk = drCourseSelect ? getSelectValue(drCourseSelect) : '';
+                targetDl = courseDl;
+                nameInput.setAttribute('list', 'editDrCourseBuyerNames');
+                genericDl.innerHTML = '';
+            } else if (slug === 'section' || slug === 'other') {
+                pk = clientNameSelect ? getSelectValue(clientNameSelect) : '';
+                targetDl = genericDl;
+                nameInput.setAttribute('list', 'editDrGenericBuyerNames');
+                courseDl.innerHTML = '';
+            } else {
+                nameInput.removeAttribute('list');
+                courseDl.innerHTML = '';
+                genericDl.innerHTML = '';
+                return;
+            }
+
+            targetDl.innerHTML = '';
+            if (!pk) return;
+
+            fetch(baseUrl + '/buyer-names?client_type_slug=' + encodeURIComponent(slug) + '&client_type_pk=' + encodeURIComponent(pk), {
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+            })
+                .then(r => r.json())
+                .then(function(data) {
+                    targetDl.innerHTML = '';
+                    (data.buyers || []).forEach(function(b) {
+                        const opt = document.createElement('option');
+                        opt.value = b;
+                        targetDl.appendChild(opt);
+                    });
+                })
+                .catch(function() {
+                    targetDl.innerHTML = '';
+                });
         }
         document.querySelectorAll('#editReportModal .edit-dr-client-type-radio').forEach(function(radio) {
             radio.addEventListener('change', function() {
@@ -2193,6 +2558,7 @@
                     }
                 }
                 updateEditDrNameField();
+                loadEditDrBuyerNames();
             });
         });
         document.getElementById('editDrOtCourseSelect').addEventListener('change', function() {
@@ -2236,12 +2602,12 @@
             if (inp) inp.value = getSelectValue(this) || '';
         });
         document.getElementById('editDrCourseSelect').addEventListener('change', function() {
-            const inp = document.getElementById('editDrClientNameInput');
-            const opt = getSelectSelectedOption(this);
-            const courseName = (opt && opt.textContent) ? opt.textContent.trim() : '';
-            if (inp) inp.value = courseName;
+            loadEditDrBuyerNames();
         });
-        document.getElementById('editDrClientNameSelect').addEventListener('change', updateEditDrNameField);
+        document.getElementById('editDrClientNameSelect').addEventListener('change', function() {
+            updateEditDrNameField();
+            loadEditDrBuyerNames();
+        });
         document.getElementById('editDrFacultySelect').addEventListener('change', function() {
             const inp = document.getElementById('editDrClientNameInput');
             if (inp) inp.value = getSelectValue(this) || '';
@@ -2278,11 +2644,11 @@
             return '<tr class="edit-dr-item-row"' + originalQtyAttr + '>' +
                 '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select  edit-dr-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
                 '<td><input type="text" name="items[' + index + '][unit]" class="form-control  edit-dr-unit" readonly placeholder="—" value="' + (item.unit || '').replace(/"/g, '&quot;') + '"></td>' +
-                '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control  edit-dr-avail bg-light" step="0.01" min="0" value="' + avail + '" readonly></td>' +
-                '<td><input type="number" name="items[' + index + '][quantity]" class="form-control  edit-dr-qty" step="0.01" min="0.01" required value="' + qty + '"><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
+                '<td><input type="text" name="items[' + index + '][available_quantity]" class="form-control  edit-dr-avail bg-light" value="' + avail + '" readonly></td>' +
+                '<td><input type="text" name="items[' + index + '][quantity]" class="form-control  edit-dr-qty" required value="' + qty + '"><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
                 '<td><input type="text" class="form-control  edit-dr-left bg-light" readonly value="' + left + '"></td>' +
                 '<td><input type="date" name="items[' + index + '][issue_date]" class="form-control  edit-dr-issue-date" value="' + issueDate + '"></td>' +
-                '<td><input type="number" name="items[' + index + '][rate]" class="form-control  edit-dr-rate" step="0.01" min="0" required value="' + rate + '"></td>' +
+                '<td><input type="text" name="items[' + index + '][rate]" class="form-control  edit-dr-rate" required value="' + rate + '"></td>' +
                 '<td><input type="text" class="form-control  edit-dr-total bg-light" readonly value="' + total + '"></td>' +
                 '<td><button type="button" class="btn  btn-outline-danger edit-dr-remove-row voucher-icon-btn" title="Remove">×</button></td>' +
                 '</tr>';
@@ -2450,17 +2816,7 @@
                     } else {
                         document.getElementById('viewRemarksWrap').style.display = 'none';
                     }
-                    var viewBillLink = document.getElementById('viewBillLink');
-                    var viewBillNone = document.getElementById('viewBillNone');
-                    if (v.bill_url) {
-                        viewBillLink.href = v.bill_url;
-                        viewBillLink.style.display = '';
-                        if (viewBillNone) viewBillNone.style.display = 'none';
-                    } else {
-                        viewBillLink.href = '#';
-                        viewBillLink.style.display = 'none';
-                        if (viewBillNone) viewBillNone.style.display = '';
-                    }
+                    // Bill display removed; keep view logic resilient if elements are absent
                     const tbody = document.getElementById('viewReportItemsBody');
                     tbody.innerHTML = '';
                     if (data.has_items && data.items && data.items.length > 0) {
@@ -2504,6 +2860,7 @@
                 .then(function(data) {
                     document.getElementById('returnTransferFromStore').textContent = data.store_name || '—';
                     const issueDate = data.issue_date || '';
+                    const todayYmd = new Date().toISOString().slice(0, 10);
                     const tbody = document.getElementById('returnItemModalBody');
                     tbody.innerHTML = '';
                     (data.items || []).forEach(function(item, i) {
@@ -2517,7 +2874,7 @@
                         tbody.insertAdjacentHTML('beforeend',
                             '<tr><td>' + name + '<input type="hidden" name="items[' + i + '][id]" value="' + id + '"></td><td>' + qty + '</td><td>' + unit + '</td>' +
                             '<td><input type="number" name="items[' + i + '][return_quantity]" class="form-control  dr-return-qty" step="0.01" min="0" max="' + issuedQty + '" data-issued="' + issuedQty + '" value="' + retQty + '"><div class="invalid-feedback">Return Qty cannot exceed Issued Qty.</div></td>' +
-                            '<td><input type="date" name="items[' + i + '][return_date]" class="form-control  dr-return-date" ' + (issueDate ? ('min="' + issueDate + '" data-issue-date="' + issueDate + '"') : '') + ' value="' + retDate + '"><div class="invalid-feedback">Return date cannot be earlier than issue date.</div></td></tr>');
+                            '<td><input type="date" name="items[' + i + '][return_date]" class="form-control  dr-return-date" max="' + todayYmd + '" ' + (issueDate ? ('min="' + issueDate + '" data-issue-date="' + issueDate + '"') : '') + ' value="' + retDate + '"><div class="invalid-feedback">Return date must be between issue date and today.</div></td></tr>');
                     });
                     document.getElementById('returnItemForm').action = baseUrl + '/' + reportId + '/return';
                     new bootstrap.Modal(document.getElementById('returnItemModal')).show();
@@ -2552,12 +2909,19 @@
             if (!inputEl) return;
             const issue = inputEl.dataset.issueDate || '';
             const raw = inputEl.value;
-            if (!issue || !raw) {
+            const today = new Date().toISOString().slice(0, 10);
+            inputEl.max = today;
+            if (!raw) {
                 inputEl.setCustomValidity('');
                 inputEl.classList.remove('is-invalid');
                 return;
             }
-            if (raw < issue) {
+            if (raw > today) {
+                inputEl.setCustomValidity('Return date cannot be in the future.');
+                inputEl.classList.add('is-invalid');
+                return;
+            }
+            if (issue && raw < issue) {
                 inputEl.setCustomValidity('Return date cannot be earlier than issue date.');
                 inputEl.classList.add('is-invalid');
             } else {
@@ -2708,7 +3072,6 @@
                     const editDrCourseNameEl = document.getElementById('editDrCourseNameSelect');
                     if (editDrCourseNameEl) editDrCourseNameEl.value = v.client_type_pk || '';
                     document.querySelector('.edit-payment-type').value = String(v.payment_type ?? 1);
-                    document.querySelector('.edit-client-type-pk').value = v.client_type_pk || '';
                     const slug = v.client_type_slug || 'employee';
                     document.querySelectorAll('.edit-dr-client-type-radio').forEach(function(radio) {
                         radio.checked = (radio.value === slug);
@@ -2719,7 +3082,7 @@
                     if (editWrap2) editWrap2.style.display = '';
                     const isOt = slug === 'ot';
                     const isCourse = slug === 'course';
-                    const editClientSelect = document.getElementById('editDrClientNameSelect');
+                    let editClientSelect = document.getElementById('editDrClientNameSelect');
                     const editOtSelect = document.getElementById('editDrOtCourseSelect');
                     const editCourseSelect = document.getElementById('editDrCourseSelect');
                     const editCourseNameSelect = document.getElementById('editDrCourseNameSelect');
@@ -2786,14 +3149,11 @@
                             editClientSelect.style.display = 'block';
                             editClientSelect.setAttribute('required', 'required');
                             editClientSelect.setAttribute('name', 'client_type_pk');
-                            editClientSelect.value = v.client_type_pk || '';
-                            editClientSelect.querySelectorAll('option').forEach(function(opt) {
-                                if (opt.value === '') {
-                                    opt.hidden = false;
-                                    return;
-                                }
-                                opt.hidden = (opt.dataset.type || '') !== slug;
-                            });
+                            if (clientNameOptionsEdit && clientNameOptionsEdit.length) {
+                                rebuildEditClientNameSelect(slug);
+                            }
+                            editClientSelect = document.getElementById('editDrClientNameSelect');
+                            setSelectValue(editClientSelect, v.client_type_pk || '');
                         }
                         if (editOtSelect) {
                             editOtSelect.style.display = 'none';
@@ -2820,6 +3180,8 @@
                         }
                     }
                     updateEditDrNameField();
+                    // Ensure TomSelect instances exist for the final state (and preserve selected values)
+                    initEditModalTomSelects();
                     editCurrentStoreId = v.store_id || '';
                     const items = data.items || [];
                     const openEditModalWithItems = function() {
@@ -2865,49 +3227,72 @@
             editReportModal.addEventListener('hidden.bs.modal', function() { destroyEditModalTomSelects(); });
         }
 
+        // Helper: reset Add Selling Voucher (Date Range) form to default state (without closing modal)
+        function resetAddReportForm() {
+            var addReportModal = document.getElementById('addReportModal');
+            if (!addReportModal) return;
+
+            destroyAddModalTomSelects();
+
+            var form = document.getElementById('addReportForm');
+            if (form) {
+                form.reset();
+                form.classList.remove('was-validated');
+                form.querySelectorAll('.is-invalid').forEach(function(el) { el.classList.remove('is-invalid'); });
+            }
+            var storeSel = addReportModal.querySelector('select[name="inve_store_master_pk"]');
+            if (storeSel) storeSel.value = '';
+            var issueDateInp = addReportModal.querySelector('input[name="issue_date"]');
+            if (issueDateInp) issueDateInp.value = new Date().toISOString().slice(0, 10);
+            var paymentSel = addReportModal.querySelector('select[name="payment_type"]');
+            if (paymentSel) paymentSel.value = '1';
+            var empRadio = addReportModal.querySelector('.dr-client-type-radio[value="employee"]');
+            if (empRadio) { empRadio.checked = true; empRadio.dispatchEvent(new Event('change')); }
+            var clientPkSel = addReportModal.querySelector('#drClientNameSelect');
+            if (clientPkSel) clientPkSel.value = '';
+            var clientNameInp = document.getElementById('drClientNameInput');
+            if (clientNameInp) clientNameInp.value = '';
+            addReportModal.querySelectorAll('#drClientNameWrap select, #drNameFieldWrap select').forEach(function(s) {
+                if (s && typeof s.value !== 'undefined') s.value = '';
+            });
+            var billInput = document.getElementById('addDrBillFileInput');
+            if (billInput) billInput.value = '';
+            var billWrap = document.getElementById('addDrBillFileChosenWrap');
+            var billName = document.getElementById('addDrBillFileChosenName');
+            if (billWrap) billWrap.classList.add('d-none');
+            if (billName) billName.textContent = '';
+            var tbody = document.getElementById('addModalItemsBody');
+            if (tbody) {
+                tbody.innerHTML = getAddRowHtml(0);
+                addRowIndex = 1;
+                tbody.querySelectorAll('.dr-remove-row').forEach(function(btn) {
+                    btn.disabled = (tbody.querySelectorAll('.dr-item-row').length <= 1);
+                });
+                var firstRow = tbody.querySelector('.dr-item-row');
+                if (firstRow) {
+                    firstRow.querySelector('.dr-item-select').addEventListener('change', function() {
+                        updateAddRowUnit(firstRow);
+                    });
+                    firstRow.querySelector('.dr-qty').addEventListener('input', function() {
+                        refreshAllAvailable();
+                        updateAddRowTotal(firstRow);
+                        updateAddGrandTotal();
+                    });
+                    firstRow.querySelector('.dr-rate').addEventListener('input', function() {
+                        updateAddRowTotal(firstRow);
+                        updateAddGrandTotal();
+                    });
+                }
+            }
+            var grandTotalEl = document.getElementById('addModalGrandTotal');
+            if (grandTotalEl) grandTotalEl.textContent = '₹0.00';
+        }
+
         // Reset add modal when closed (so next open starts fresh)
         const addReportModal = document.getElementById('addReportModal');
         if (addReportModal) {
             addReportModal.addEventListener('hidden.bs.modal', function() {
-                destroyAddModalTomSelects();
-                const form = document.getElementById('addReportForm');
-                if (form) {
-                    form.reset();
-                    form.classList.remove('was-validated');
-                    form.querySelectorAll('.is-invalid').forEach(function(el) { el.classList.remove('is-invalid'); });
-                }
-                const storeSel = addReportModal.querySelector('select[name="inve_store_master_pk"]');
-                if (storeSel) storeSel.value = '';
-                const issueDateInp = addReportModal.querySelector('input[name="issue_date"]');
-                if (issueDateInp) issueDateInp.value = new Date().toISOString().slice(0, 10);
-                const paymentSel = addReportModal.querySelector('select[name="payment_type"]');
-                if (paymentSel) paymentSel.value = '1';
-                const empRadio = addReportModal.querySelector('.dr-client-type-radio[value="employee"]');
-                if (empRadio) { empRadio.checked = true; empRadio.dispatchEvent(new Event('change')); }
-                const clientPkSel = addReportModal.querySelector('#drClientNameSelect');
-                if (clientPkSel) clientPkSel.value = '';
-                const clientNameInp = document.getElementById('drClientNameInput');
-                if (clientNameInp) clientNameInp.value = '';
-                addReportModal.querySelectorAll('#drClientNameWrap select, #drNameFieldWrap select').forEach(function(s) { if (s.value !== undefined) s.value = ''; });
-                const billInput = document.getElementById('addDrBillFileInput');
-                if (billInput) billInput.value = '';
-                const billWrap = document.getElementById('addDrBillFileChosenWrap');
-                const billName = document.getElementById('addDrBillFileChosenName');
-                if (billWrap) billWrap.classList.add('d-none');
-                if (billName) billName.textContent = '';
-                const tbody = document.getElementById('addModalItemsBody');
-                if (tbody) {
-                    tbody.innerHTML = getAddRowHtml(0);
-                    addRowIndex = 1;
-                    tbody.querySelectorAll('.dr-remove-row').forEach(function(btn) { btn.disabled = (tbody.querySelectorAll('.dr-item-row').length <= 1); });
-                    if (tbody.querySelector('.dr-item-row')) {
-                        tbody.querySelector('.dr-item-select').addEventListener('change', function() { updateAddRowUnit(tbody.querySelector('.dr-item-row')); });
-                        tbody.querySelector('.dr-qty').addEventListener('input', function() { refreshAllAvailable(); updateAddRowTotal(tbody.querySelector('.dr-item-row')); updateAddGrandTotal(); });
-                        tbody.querySelector('.dr-rate').addEventListener('input', function() { updateAddRowTotal(tbody.querySelector('.dr-item-row')); updateAddGrandTotal(); });
-                    }
-                }
-                const grandTotalEl = document.getElementById('addModalGrandTotal');
-                if (grandTotalEl) grandTotalEl.textContent = '₹0.00';
+                resetAddReportForm();
             });
 
             addReportModal.addEventListener('show.bs.modal', function() {
@@ -2948,7 +3333,7 @@
             });
         }
 
-        // Prevent double submit on Add form (stops double entry on Save Selling Voucher)
+        // Prevent double submit on Add form (stops double entry on Save Selling Voucher) + AJAX submit
         var addReportFormEl = document.getElementById('addReportForm');
         if (addReportFormEl) {
             addReportFormEl.addEventListener('submit', function(e) {
@@ -2962,12 +3347,82 @@
                     return;
                 }
             }, true);
-            addReportFormEl.addEventListener('submit', function() {
-                var btn = this.querySelector('button[type="submit"]');
-                if (btn && !btn.disabled) {
+
+            addReportFormEl.addEventListener('submit', function(e) {
+                // If the form is invalid, the capture listener above will already have prevented default.
+                if (!this.checkValidity()) {
+                    return;
+                }
+
+                e.preventDefault();
+
+                var form = this;
+                var btn = form.querySelector('button[type="submit"]');
+                if (btn && btn.disabled) {
+                    return;
+                }
+                if (btn) {
+                    if (!btn.dataset.originalText) {
+                        btn.dataset.originalText = btn.textContent || '';
+                    }
                     btn.disabled = true;
                     btn.textContent = 'Saving...';
                 }
+
+                var action = form.getAttribute('action') || window.location.href;
+                var method = (form.getAttribute('method') || 'POST').toUpperCase();
+                var formData = new FormData(form);
+                var csrf = form.querySelector('input[name="_token"]');
+
+                fetch(action, {
+                    method: method,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': csrf ? csrf.value : '',
+                        'Accept': 'application/json'
+                    },
+                    body: formData
+                })
+                    .then(function(response) {
+                        return response.json().then(function(payload) {
+                            return { ok: response.ok, status: response.status, payload: payload };
+                        }).catch(function() {
+                            return { ok: response.ok, status: response.status, payload: null };
+                        });
+                    })
+                    .then(function(res) {
+                        var data = res.payload;
+                        if (res.ok && data && data.success) {
+                            // Reset form for next entry but keep modal open
+                            resetAddReportForm();
+
+                            if (window.toastr && data.message) {
+                                toastr.success(data.message);
+                            } else if (data.message) {
+                                alert(data.message);
+                            }
+                        } else {
+                            var msg = (data && data.message) ? data.message : 'Failed to save voucher. Please try again.';
+                            if (res.status === 422 && data && data.errors) {
+                                try {
+                                    var firstKey = Object.keys(data.errors)[0];
+                                    if (firstKey && data.errors[firstKey] && data.errors[firstKey][0]) {
+                                        msg = data.errors[firstKey][0];
+                                    }
+                                } catch (e) {}
+                            }
+                            alert(msg);
+                        }
+                    })
+                    .catch(function() {
+                        alert('Failed to save voucher. Please try again.');
+                    })
+                    .finally(function() {
+                        if (btn) {
+                            btn.disabled = false;
+                            btn.textContent = btn.dataset.originalText || 'Save Selling Voucher';
+                        }
+                    });
             });
         }
 

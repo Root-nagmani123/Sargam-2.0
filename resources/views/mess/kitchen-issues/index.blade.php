@@ -1,162 +1,183 @@
 @extends('admin.layouts.master')
 @section('title', 'Selling Voucher')
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid py-3">
     <x-breadcrum title="Selling Voucher" />
 
     @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <div class="alert alert-success alert-dismissible fade show shadow-sm border-0 mt-2" role="alert">
+            {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     @endif
     @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show">{{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <div class="alert alert-danger alert-dismissible fade show shadow-sm border-0 mt-2" role="alert">
+            {{ session('error') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     @endif
 
-    <div class="card mb-3">
+    <div class="card mb-3 border-0 shadow-sm rounded-3">
         <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4>Selling Voucher</h4>
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addSellingVoucherModal">ADD Selling Voucher</button>
-    </div>
-    <hr class="my-2">
-            <form method="GET" action="{{ route('admin.mess.material-management.index') }}">
-                <div class="row g-2">
-                    <div class="col-md-2">
-                        <label class="form-label small">Status</label>
-                        <select name="status" class="form-select">
-                            <option value="">All</option>
-                            <option value="0" {{ request('status') === '0' ? 'selected' : '' }}>Pending</option>
-                            <option value="2" {{ request('status') == '2' ? 'selected' : '' }}>Approved</option>
-                            <option value="4" {{ request('status') == '4' ? 'selected' : '' }}>Completed</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label small">Store</label>
-                        <select name="store" class="form-select">
-                            <option value="">All</option>
-                            @foreach($stores as $store)
-                                <option value="{{ $store['id'] }}" {{ request('store') == $store['id'] ? 'selected' : '' }}>{{ $store['store_name'] }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label small">Start Date</label>
-                        <input type="date" name="start_date" id="filter_start_date" class="form-control " value="{{ request('start_date') ?? date('Y-m-d') }}">
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label small">End Date</label>
-                        <input type="date" name="end_date" id="filter_end_date" class="form-control " value="{{ request('end_date') }}" min="{{ request('start_date') ?? date('Y-m-d') }}">
-                    </div>
-                    <div class="col-md-2 d-flex align-items-end gap-1">
-                        <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-1">
-                            <span class="material-symbols-rounded" style="font-size: 1rem;">filter_list</span>
-                            <span>Filter</span>
-                        </button>
-                        <a href="{{ route('admin.mess.material-management.index') }}" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1">
-                            <span class="material-symbols-rounded" style="font-size: 1rem;">refresh</span>
-                            <span>Clear</span>
-                        </a>
-                    </div>
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                <div>
+                    <h5 class="mb-1 fw-semibold">Selling Voucher</h5>
+                    <p class="text-muted mb-0 small">Quickly filter and manage selling vouchers from here.</p>
                 </div>
-            </form>
+                <button type="button"
+                        class="btn btn-primary d-inline-flex align-items-center gap-2"
+                        data-bs-toggle="modal"
+                        data-bs-target="#addSellingVoucherModal">
+                    <span class="material-symbols-rounded" style="font-size: 1.1rem;">add</span>
+                    <span class="fw-semibold">Add Selling Voucher</span>
+                </button>
+            </div>
+            <div class="border rounded-3 bg-light p-3">
+                <form method="GET" action="{{ route('admin.mess.material-management.index') }}">
+                    <div class="row g-3">
+                        <div class="col-md-2 col-sm-6">
+                            <label class="form-label small text-muted mb-1">Status</label>
+                            <select name="status" id="filter_status" class="form-select form-select-sm">
+                                <option value="">All</option>
+                                <option value="0" {{ request('status') === '0' ? 'selected' : '' }}>Pending</option>
+                                <option value="2" {{ request('status') == '2' ? 'selected' : '' }}>Approved</option>
+                                <option value="4" {{ request('status') == '4' ? 'selected' : '' }}>Completed</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 col-sm-6">
+                            <label class="form-label small text-muted mb-1">Store</label>
+                            <select name="store" id="filter_store" class="form-select form-select-sm">
+                                <option value="">All</option>
+                                @foreach($stores as $store)
+                                    <option value="{{ $store['id'] }}" {{ request('store') == $store['id'] ? 'selected' : '' }}>{{ $store['store_name'] }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-2 col-sm-6">
+                            <label class="form-label small text-muted mb-1">Start Date</label>
+                            <input type="date" name="start_date" id="filter_start_date" class="form-control form-control-sm" value="{{ request('start_date') ?? date('Y-m-d') }}">
+                        </div>
+                        <div class="col-md-2 col-sm-6">
+                            <label class="form-label small text-muted mb-1">End Date</label>
+                            <input type="date" name="end_date" id="filter_end_date" class="form-control form-control-sm" value="{{ request('end_date') }}" min="{{ request('start_date') ?? date('Y-m-d') }}">
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end justify-content-md-end gap-2">
+                            <button type="submit" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1">
+                                <span class="material-symbols-rounded" style="font-size: 1rem;">filter_list</span>
+                                <span>Filter</span>
+                            </button>
+                            <a href="{{ route('admin.mess.material-management.index') }}" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1">
+                                <span class="material-symbols-rounded" style="font-size: 1rem;">refresh</span>
+                                <span>Clear</span>
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 
-   <div class="card">
-    <div class="card-body">
-    <div class="table-responsive">
-        <table class="table align-middle" id="sellingVouchersTable">
-            <thead>
-                <tr>
-                    <th>S. No.</th>
-                    <th>Item Name</th>
-                    <th>Item Quantity</th>
-                    <th>Return Quantity</th>
-                    <th>Transfer From Store</th>
-                    <th>Client Type</th>
-                    <th>Client Name</th>
-                    <th>Name</th>
-                    <th>Payment Type</th>
-                    <th>Request Date</th>
-                    <th>Status</th>
-                    <th>Return Item</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>   
-                @forelse($kitchenIssues as $voucher)
-                    @forelse($voucher->items as $item)
-                        <tr>
-                            <td>{{ $loop->iteration }}</td>
-                            <td>{{ $item->item_name ?: ($item->itemSubcategory->item_name ?? '—') }}</td>
-                            <td>{{ $item->quantity }}</td>
-                            <td>{{ $item->return_quantity ?? 0 }}</td>
-                            <td>{{ $voucher->resolved_store_name }}</td>
-                            <td>{{ $voucher->client_type_label ?? '—' }}</td>
-                            <td>{{ $voucher->display_client_name }}</td>
-                            <td>{{ $voucher->client_name ?? '—' }}</td>
-                            <td>{{ $voucher->payment_type == 1 ? 'Credit' : ($voucher->payment_type == 0 ? 'Cash' : ($voucher->payment_type == 2 ? 'UPI' : '—')) }}</td>
-                            <td>{{ $voucher->created_at ? $voucher->created_at->format('d/m/Y') : '—' }}</td>
-                            <td>
-                                @if($voucher->status == 0)<span class="badge bg-warning">Pending</span>
-                                @elseif($voucher->status == 2)<span class="badge bg-success">Approved</span>
-                                @elseif($voucher->status == 4)<span class="badge bg-primary">Completed</span>
-                                @else<span class="badge bg-secondary">{{ $voucher->status }}</span>@endif
-                            </td>
-                            <td class="d-flex gap-2">
-                                @if(($item->return_quantity ?? 0) > 0)
-                                    <span class="badge bg-info">Returned</span>
-                                @endif
-                                <button type="button" class="btn btn-sm btn-outline-secondary ms-1 btn-return-sv" data-voucher-id="{{ $voucher->pk }}" title="Return">Return</button>
-                            </td>
-                            <td class="d-flex gap-2">
-                                <button type="button" class="btn btn-sm btn-info btn-view-sv" data-voucher-id="{{ $voucher->pk }}" title="View">View</button>
-                                <button type="button" class="btn btn-sm btn-warning btn-edit-sv" data-voucher-id="{{ $voucher->pk }}" title="{{ $voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED ? 'Edit is disabled for approved voucher' : 'Edit' }}" @if($voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED) disabled @endif>Edit</button>
-                                <form action="{{ route('admin.mess.material-management.destroy', $voucher->pk) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this Selling Voucher?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger" title="Delete" style="display: none;">Delete</button>
-                                </form>
-                            </td>
+    <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table w-100 " id="sellingVouchersTable">
+                    <thead>
+                         <tr>
+                            <th>S. No.</th>
+                            <th>Item Name</th>
+                            <th>Item Quantity</th>
+                            <th>Return Quantity</th>
+                            <th>Transfer From Store</th>
+                            <th>Client Type</th>
+                            <th>Client Name</th>
+                            <th>Name</th>
+                            <th>Payment Type</th>
+                            <th>Request Date</th>
+                            <th>Status</th>
+                            <th>Return Item</th>
+                            <th>Action</th>
                         </tr>
-                    @empty
-                        <tr>
-                            <td>{{ $serial++ }}</td>
-                            <td>—</td>
-                            <td>—</td>
-                            <td>—</td>
-                            <td>{{ $voucher->resolved_store_name }}</td>
-                            <td>{{ $voucher->client_type_label ?? '—' }}</td>
-                            <td>{{ $voucher->display_client_name }}</td>
-                            <td>{{ $voucher->client_name ?? '—' }}</td>
-                            <td>—</td>
-                            <td>{{ $voucher->created_at ? $voucher->created_at->format('d/m/Y') : '—' }}</td>
-                            <td><span class="badge bg-secondary">{{ $voucher->status }}</span></td>
-                            <td>
-                                <button type="button" class="btn btn-sm btn-outline-secondary btn-return-sv" data-voucher-id="{{ $voucher->pk }}" title="Return">Return</button>
-                            </td>
-                            <td>
-                                <button type="button" class="btn btn-sm btn-info btn-view-sv" data-voucher-id="{{ $voucher->pk }}" title="View">View</button>
-                                <button type="button" class="btn btn-sm btn-warning btn-edit-sv" data-voucher-id="{{ $voucher->pk }}" title="{{ $voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED ? 'Edit is disabled for approved voucher' : 'Edit' }}" @if($voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED) disabled @endif>Edit</button>
-                                <form action="{{ route('admin.mess.material-management.destroy', $voucher->pk) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this Selling Voucher?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger" title="Delete" style="display: none;">Delete</button>
-                                </form>
-                            </td>
-                        </tr>
-                    @endforelse
-                @empty
-                    <tr>
-                        <td class="text-center py-4" colspan="12">No kitchen issues found.</td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
+                    </thead>
+                    @php($serial = 1)
+                    <tbody>
+                        @forelse($kitchenIssues as $voucher)
+                            @forelse($voucher->items as $item)
+                                <tr>
+                                    <td>{{ $serial++ }}</td>
+                                    <td>{{ $item->item_name ?: ($item->itemSubcategory->item_name ?? '—') }}</td>
+                                    <td>{{ $item->quantity }}</td>
+                                    <td>{{ $item->return_quantity ?? 0 }}</td>
+                                    <td>{{ $voucher->resolved_store_name }}</td>
+                                    <td>{{ $voucher->client_type_label ?? '—' }}</td>
+                                    <td>{{ $voucher->display_client_name }}</td>
+                                    <td>{{ $voucher->client_name ?? '—' }}</td>
+                                    <td>{{ $voucher->payment_type == 1 ? 'Credit' : ($voucher->payment_type == 0 ? 'Cash' : ($voucher->payment_type == 2 ? 'UPI' : '—')) }}</td>
+                                    <td>{{ $voucher->created_at ? $voucher->created_at->format('d/m/Y') : '—' }}</td>
+                                    <td>
+                                        @if($voucher->status == 0)<span class="badge bg-warning">Pending</span>
+                                        @elseif($voucher->status == 2)<span class="badge bg-success">Approved</span>
+                                        @elseif($voucher->status == 4)<span class="badge bg-primary">Completed</span>
+                                        @else<span class="badge bg-secondary">{{ $voucher->status }}</span>@endif
+                                    </td>
+                                    <td>
+                                        <div class="d-flex flex-wrap gap-2 align-items-center justify-content-center">
+                                            @if(($item->return_quantity ?? 0) > 0)
+                                                <span class="badge bg-info">Returned</span>
+                                            @endif
+                                            <button type="button" class="btn btn-sm btn-outline-secondary btn-return-sv" data-voucher-id="{{ $voucher->pk }}" title="Return">Return</button>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex flex-wrap gap-2 align-items-center justify-content-center">
+                                            <button type="button" class="btn btn-sm btn-info btn-view-sv" data-voucher-id="{{ $voucher->pk }}" title="View">View</button>
+                                            <button type="button" class="btn btn-sm btn-warning btn-edit-sv" data-voucher-id="{{ $voucher->pk }}" title="{{ $voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED ? 'Edit is disabled for approved voucher' : 'Edit' }}" @if($voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED) disabled @endif>Edit</button>
+                                            <form action="{{ route('admin.mess.material-management.destroy', $voucher->pk) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this Selling Voucher?');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-danger" title="Delete" style="display: none;">Delete</button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td>{{ $serial++ }}</td>
+                                    <td>—</td>
+                                    <td>—</td>
+                                    <td>—</td>
+                                    <td>{{ $voucher->resolved_store_name }}</td>
+                                    <td>{{ $voucher->client_type_label ?? '—' }}</td>
+                                    <td>{{ $voucher->display_client_name }}</td>
+                                    <td>{{ $voucher->client_name ?? '—' }}</td>
+                                    <td>—</td>
+                                    <td>{{ $voucher->created_at ? $voucher->created_at->format('d/m/Y') : '—' }}</td>
+                                    <td><span class="badge bg-secondary">{{ $voucher->status }}</span></td>
+                                    <td>
+                                        <div class="d-flex flex-wrap gap-2 align-items-center justify-content-center">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary btn-return-sv" data-voucher-id="{{ $voucher->pk }}" title="Return">Return</button>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex flex-wrap gap-2 align-items-center justify-content-center">
+                                        <button type="button" class="btn btn-sm btn-info btn-view-sv" data-voucher-id="{{ $voucher->pk }}" title="View">View</button>
+                                        <button type="button" class="btn btn-sm btn-warning btn-edit-sv" data-voucher-id="{{ $voucher->pk }}" title="{{ $voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED ? 'Edit is disabled for approved voucher' : 'Edit' }}" @if($voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED) disabled @endif>Edit</button>
+                                        <form action="{{ route('admin.mess.material-management.destroy', $voucher->pk) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this Selling Voucher?');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-sm btn-danger" title="Delete" style="display: none;">Delete</button>
+                                        </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforelse
+                        @empty
+                            <tr>
+                                <td class="text-center py-4" colspan="12">No kitchen issues found.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
     </div>
    </div>
 
@@ -176,12 +197,27 @@
 {{-- Tom Select JS --}}
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    if (!window.TomSelect) return;
+    // Filter dropdowns aur Selling Voucher JS niche main script block me initialize ho raha hai.
+});
+</script>
+
 {{-- Add Selling Voucher Modal (same UI/UX as Create Purchase Order) --}}
 <style>
 #addSellingVoucherModal .modal-dialog { max-height: calc(100vh - 2rem); margin: 1rem auto; }
 #addSellingVoucherModal .modal-content { max-height: calc(100vh - 2rem); display: flex; flex-direction: column; }
 #addSellingVoucherModal .modal-body { overflow-y: auto; max-height: calc(100vh - 10rem); position: relative; }
 .ts-dropdown { z-index: 2000; }
+/* Keep keyboard navigation visible in Tom Select dropdowns */
+.ts-dropdown .option.active {
+    background: rgba(13, 110, 253, 0.12);
+}
+.ts-dropdown .option[aria-selected="true"],
+.ts-dropdown .option.selected {
+    background: rgba(13, 110, 253, 0.20);
+}
 </style>
 <div class="modal fade" id="addSellingVoucherModal" tabindex="-1" aria-labelledby="addSellingVoucherModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
@@ -257,22 +293,24 @@
                                 <div class="col-md-4" id="modalNameFieldWrap">
                                     <label class="form-label">Name <span class="text-danger">*</span></label>
                                     <input type="text" name="client_name" id="modalClientNameInput" class="form-control" value="{{ old('client_name') }}" placeholder="Client / section / role name" required>
+                                    <datalist id="modalCourseBuyerNames"></datalist>
+                                    <datalist id="modalGenericBuyerNames"></datalist>
                                     <select id="modalFacultySelect" class="form-select" style="display:none;">
                                         <option value="">Select Faculty</option>
                                         @foreach($faculties ?? [] as $f)
-                                            <option value="{{ e($f->full_name) }}">{{ e($f->full_name) }}</option>
+                                            <option value="{{ e($f->full_name) }}">{{ e($f->full_name_with_code ?? $f->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="modalAcademyStaffSelect" class="form-select" style="display:none;">
                                         <option value="">Select Academy Staff</option>
                                         @foreach($employees ?? [] as $e)
-                                            <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
+                                            <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="modalMessStaffSelect" class="form-select" style="display:none;">
                                         <option value="">Select Mess Staff</option>
                                         @foreach($messStaff ?? [] as $e)
-                                            <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
+                                            <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="modalOtStudentSelect" class="form-select" style="display:none;">
@@ -299,40 +337,14 @@
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Remarks</label>
-                                    <input type="text" name="remarks" class="form-control" value="{{ old('remarks') }}" placeholder="Remarks (optional)">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Reference Number</label>
-                                    <input type="text" name="reference_number" class="form-control" value="{{ old('reference_number') }}" placeholder="Reference number (optional)" maxlength="100">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Order By</label>
-                                    <input type="text" name="order_by" class="form-control" value="{{ old('order_by') }}" placeholder="Order by (optional)" maxlength="100">
+                                    <label class="form-label">Remarks / Reference Number / Order By</label>
+                                    <input type="text" name="remarks" class="form-control" value="{{ old('remarks') }}" placeholder="Remarks / Reference Number / Order By (optional)">
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {{-- Bill / Attachment (Upload) --}}
-                    <div class="card mb-4 border-primary">
-                        <div class="card-header bg-light py-2">
-                            <h6 class="mb-0 fw-semibold text-primary">Upload Bill (PDF / Image)</h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-12">
-                                    <label class="form-label">Bill / Attachment <small class="text-muted">(Optional)</small></label>
-                                    <input type="file" name="bill_file" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.webp" id="addSvBillFileInput">
-                                    <div id="addSvBillFileChosenWrap" class="d-flex align-items-center gap-2 mt-1 d-none">
-                                        <span id="addSvBillFileChosenName" class="text-muted small"></span>
-                                        <button type="button" class="btn btn-sm btn-outline-danger" id="addSvBillFileRemove">Remove</button>
-                                    </div>
-                                    <small class="text-muted d-block mt-1">PDF, JPG, JPEG, PNG or WEBP. Max 5 MB.</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    {{-- Bill upload removed as per requirement --}}
 
                     {{-- Item Details (same pattern as Purchase Order Item Details) --}}
                     <div class="card mb-4">
@@ -347,14 +359,14 @@
                                 <table class="table align-middle mb-0" id="svItemsTable">
                                     <thead>
                                         <tr>
-                                            <th>Item Name <span class="text-white">*</span></th>
-                                            <th>Unit</th>
-                                            <th>Available Qty</th>
-                                            <th>Issue Qty <span class="text-white">*</span></th>
-                                            <th>Left Qty</th>
-                                            <th>Rate <span class="text-white">*</span></th>
-                                            <th>Total Amount</th>
-                                            <th></th>
+                                            <th style="min-width: 280px;">Item Name <span class="text-white">*</span></th>
+                                            <th style="min-width: 80px;">Unit</th>
+                                            <th style="min-width: 100px;">Available Qty</th>
+                                            <th style="min-width: 100px;">Issue Qty <span class="text-white">*</span></th>
+                                            <th style="min-width: 100px;">Left Qty</th>
+                                            <th style="min-width: 100px;">Rate <span class="text-white">*</span></th>
+                                            <th style="min-width: 100px;">Total Amount</th>
+                                            <th style="min-width: 50px;"></th>
                                         </tr>
                                     </thead>
                                     <tbody id="modalItemsBody">
@@ -367,15 +379,15 @@
                                                     @endforeach
                                                 </select>
                                             </td>
-                                            <td><input type="text" name="items[0][unit]" class="form-control  sv-unit" readonly placeholder="—"></td>
-                                            <td><input type="number" name="items[0][available_quantity]" class="form-control  sv-avail bg-light" step="0.01" min="0" value="0" placeholder="0" readonly></td>
+                                            <td><input type="text" name="items[0][unit]" class="form-control  sv-unit" readonly></td>
+                                            <td><input type="text" name="items[0][available_quantity]" class="form-control  sv-avail bg-light" readonly></td>
                                             <td>
-                                                <input type="number" name="items[0][quantity]" class="form-control  sv-qty" step="0.01" min="0.01" placeholder="0" required>
+                                                <input type="text" name="items[0][quantity]" class="form-control  sv-qty" required>
                                                 <div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div>
                                             </td>
-                                            <td><input type="text" class="form-control  sv-left bg-light" readonly placeholder="0"></td>
-                                            <td><input type="number" name="items[0][rate]" class="form-control  sv-rate" step="0.01" min="0" placeholder="0" required></td>
-                                            <td><input type="text" class="form-control  sv-total bg-light" readonly placeholder="0.00"></td>
+                                            <td><input type="text" class="form-control  sv-left bg-light" readonly></td>
+                                            <td><input type="text" name="items[0][rate]" class="form-control  sv-rate" required></td>
+                                            <td><input type="text" class="form-control  sv-total" readonly></td>
                                             <td><button type="button" class="btn btn-sm btn-outline-danger sv-remove-row" disabled title="Remove">×</button></td>
                                         </tr>
                                     </tbody>
@@ -467,22 +479,24 @@
                                 <div class="col-md-4" id="editModalNameFieldWrap">
                                     <label class="form-label">Name <span class="text-danger">*</span></label>
                                     <input type="text" name="client_name" class="form-control edit-client-name" id="editModalClientNameInput" placeholder="Client / section / role name" required>
+                                    <datalist id="editCourseBuyerNames"></datalist>
+                                    <datalist id="editGenericBuyerNames"></datalist>
                                     <select id="editModalFacultySelect" class="form-select" style="display:none;">
                                         <option value="">Select Faculty</option>
                                         @foreach($faculties ?? [] as $f)
-                                            <option value="{{ e($f->full_name) }}">{{ e($f->full_name) }}</option>
+                                            <option value="{{ e($f->full_name) }}">{{ e($f->full_name_with_code ?? $f->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="editModalAcademyStaffSelect" class="form-select" style="display:none;">
                                         <option value="">Select Academy Staff</option>
                                         @foreach($employees ?? [] as $e)
-                                            <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
+                                            <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="editModalMessStaffSelect" class="form-select" style="display:none;">
                                         <option value="">Select Mess Staff</option>
                                         @foreach($messStaff ?? [] as $e)
-                                            <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
+                                            <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="editModalCourseNameSelect" class="form-select" style="display:none;">
@@ -506,44 +520,13 @@
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Remarks</label>
-                                    <input type="text" name="remarks" class="form-control edit-remarks" placeholder="Remarks (optional)">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Reference Number</label>
-                                    <input type="text" name="reference_number" class="form-control edit-reference-number" placeholder="Reference number (optional)" maxlength="100">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Order By</label>
-                                    <input type="text" name="order_by" class="form-control edit-order-by" placeholder="Order by (optional)" maxlength="100">
+                                    <label class="form-label">Remarks / Reference Number / Order By</label>
+                                    <input type="text" name="remarks" class="form-control edit-remarks" placeholder="Remarks / Reference Number / Order By (optional)">
                                 </div>
                             </div>
                         </div>
                     </div>
-                    {{-- Bill / Attachment (Upload) --}}
-                    <div class="card mb-4 border-primary">
-                        <div class="card-header bg-light py-2">
-                            <h6 class="mb-0 fw-semibold text-primary">Upload Bill (PDF / Image)</h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-12">
-                                    <label class="form-label">Bill / Attachment <small class="text-muted">(Optional – leave empty to keep existing)</small></label>
-                                    <input type="hidden" name="remove_bill" id="editRemoveBillFlag" value="0">
-                                    <div class="d-flex align-items-center border rounded px-2 py-1 bg-white" style="min-height: 38px;">
-                                        <span id="editBillCurrentFileName" class="flex-grow-1 text-muted small text-break me-2" style="min-width: 0;">No file chosen</span>
-                                        <label class="mb-0 btn btn-sm btn-outline-secondary py-1 px-2 me-1" style="cursor: pointer;">
-                                            Choose file
-                                            <input type="file" name="bill_file" class="d-none" accept=".pdf,.jpg,.jpeg,.png,.webp" id="editSvBillFileInput">
-                                        </label>
-                                        <button type="button" class="btn btn-sm btn-outline-danger py-1 px-2" id="editSvBillFileRemove">Remove</button>
-                                    </div>
-                                    <small class="text-muted d-block mt-1">PDF, JPG, JPEG, PNG or WEBP. Max 5 MB.</small>
-                                    <p class="mb-0 mt-2 small" id="editCurrentBillLink"></p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    {{-- Bill upload removed as per requirement --}}
                     <div class="card mb-4">
                         <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
                             <h6 class="mb-0 fw-semibold text-primary">Item Details</h6>
@@ -554,14 +537,14 @@
                                 <table class="table align-middle mb-0">
                                     <thead>
                                         <tr>
-                                            <th>Item Name <span class="text-white">*</span></th>
-                                            <th>Unit</th>
-                                            <th>Available Qty</th>
-                                            <th>Issue Qty <span class="text-white">*</span></th>
-                                            <th>Left Qty</th>
-                                            <th>Rate <span class="text-white">*</span></th>
-                                            <th>Total Amount</th>
-                                            <th></th>
+                                            <th style="min-width: 280px;">Item Name <span class="text-white">*</span></th>
+                                            <th style="min-width: 80px;">Unit</th>
+                                            <th style="min-width: 100px;">Available Qty</th>
+                                            <th style="min-width: 100px;">Issue Qty <span class="text-white">*</span></th>
+                                            <th style="min-width: 100px;">Left Qty</th>
+                                            <th style="min-width: 100px;">Rate <span class="text-white">*</span></th>
+                                            <th style="min-width: 100px;">Total Amount</th>
+                                            <th style="min-width: 50px;"></th>
                                         </tr>
                                     </thead>
                                     <tbody id="editModalItemsBody"></tbody>
@@ -644,7 +627,6 @@
                             </div>
                         </div>
                         <p class="mb-0 mt-2" id="viewRemarksWrap" style="display:none; color: #212529;"><strong>Remarks:</strong> <span id="viewRemarks"></span></p>
-                        <p class="mb-0 mt-2" style="color: #212529;"><strong>Bill:</strong> <span id="viewBillWrap"><a href="#" id="viewBillLink" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary ms-1" style="display: none;">View / Download Bill</a><span id="viewBillNone" class="text-muted">No bill uploaded</span></span></p>
                     </div>
                 </div>
                 <div class="card mb-4" id="viewItemsCard">
@@ -739,6 +721,121 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('Selling Voucher script loaded');
     console.log('Bootstrap available:', typeof bootstrap !== 'undefined');
 
+    // Cache original Client Name options so we can rebuild the select per Client Type.
+    // (TomSelect doesn't reliably respect option.hidden after init.)
+    var clientNameOptionsAdd = [];
+    var clientNameOptionsEdit = [];
+    function cacheClientNameOptions() {
+        clientNameOptionsAdd = [];
+        clientNameOptionsEdit = [];
+        var addSel = document.getElementById('modalClientNameSelect');
+        if (addSel) {
+            addSel.querySelectorAll('option[value]').forEach(function(opt) {
+                clientNameOptionsAdd.push({
+                    value: opt.value,
+                    text: (opt.textContent || '').trim(),
+                    type: ((opt.dataset.type || '').toLowerCase().trim()),
+                    clientName: ((opt.dataset.clientName || '').toLowerCase().trim())
+                });
+            });
+        }
+        var editSel = document.getElementById('editClientNameSelect');
+        if (editSel) {
+            editSel.querySelectorAll('option[value]').forEach(function(opt) {
+                clientNameOptionsEdit.push({
+                    value: opt.value,
+                    text: (opt.textContent || '').trim(),
+                    type: ((opt.dataset.type || '').toLowerCase().trim()),
+                    clientName: ((opt.dataset.clientName || '').toLowerCase().trim())
+                });
+            });
+        }
+    }
+    cacheClientNameOptions();
+
+    function rebuildClientNameSelect(selectEl, optionsList, slug) {
+        if (!selectEl || !Array.isArray(optionsList)) return;
+        var slugLower = (slug || '').toLowerCase().trim();
+        var filtered = optionsList.filter(function(o) { return (o.type || '').toLowerCase().trim() === slugLower; });
+
+        // Preserve a valid selection if possible; otherwise clear.
+        var preserved = '';
+        if (selectEl.tomselect) preserved = selectEl.tomselect.getValue() || '';
+        else preserved = selectEl.value || '';
+
+        if (selectEl.tomselect) { try { selectEl.tomselect.destroy(); } catch (e) {} }
+        selectEl.innerHTML = '<option value="">Select Client Name</option>';
+        filtered.forEach(function(o) {
+            var opt = document.createElement('option');
+            opt.value = o.value;
+            opt.textContent = o.text;
+            opt.setAttribute('data-type', (o.type || '').toLowerCase().trim());
+            opt.setAttribute('data-client-name', (o.clientName || '').toLowerCase().trim());
+            selectEl.appendChild(opt);
+        });
+
+        if (typeof TomSelect !== 'undefined') {
+            new TomSelect(selectEl, {
+                allowEmptyOption: true,
+                dropdownParent: 'body',
+                placeholder: 'Select Client Name',
+                searchField: ['text'],
+                controlInput: '<input>',
+                highlight: false,
+                onInitialize: function () {
+                    this.activeOption = null;
+                },
+                onDropdownOpen: function (dropdown) {
+                    var self = this;
+                    var input = this.control_input || (dropdown && dropdown.querySelector('input'));
+                    function clearInputAndCursor() {
+                        if (typeof self.setTextboxValue === 'function') self.setTextboxValue('');
+                        if (typeof self.onSearchChange === 'function') self.onSearchChange('');
+                        if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
+                        if (input) {
+                            input.value = '';
+                            input.focus();
+                            try { input.setSelectionRange(0, 0); } catch (e) {}
+                            input.scrollLeft = 0;
+                        }
+                    }
+                    clearInputAndCursor();
+                    setTimeout(clearInputAndCursor, 0);
+                    setTimeout(clearInputAndCursor, 50);
+                    setTimeout(clearInputAndCursor, 100);
+                    // dropdown open होते ही selection bhi clear karni hai (blank state)
+                    self.clear(true);
+                    if (dropdown) {
+                        setTimeout(function () {
+                            var opts = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"]');
+                            opts.forEach(function (opt) {
+                                opt.classList.remove('active');
+                                opt.classList.remove('selected');
+                                opt.setAttribute('aria-selected', 'false');
+                            });
+                        }, 0);
+                    }
+                }
+            });
+        }
+
+        // Restore preserved selection if it still exists.
+        if (preserved) {
+            var stillExists = Array.from(selectEl.options).some(function(o) { return String(o.value) === String(preserved); });
+            if (stillExists) {
+                if (selectEl.tomselect) selectEl.tomselect.setValue(preserved, true);
+                else selectEl.value = preserved;
+            }
+        }
+    }
+
+    function setSelectValue(selectEl, value) {
+        if (!selectEl) return;
+        var v = (value === null || value === undefined) ? '' : String(value);
+        if (selectEl.tomselect) selectEl.tomselect.setValue(v);
+        else selectEl.value = v;
+    }
+
     // When user clicks any Cancel/Close button in a modal (secondary button),
     // close the modal and refresh the page to reset all filters/state (only for Add/Edit Selling Voucher modals).
     document.querySelectorAll('#addSellingVoucherModal button.btn-secondary[data-bs-dismiss="modal"], #editSellingVoucherModal button.btn-secondary[data-bs-dismiss="modal"]').forEach(function(btn) {
@@ -760,7 +857,51 @@ document.addEventListener('DOMContentLoaded', function() {
                 new TomSelect(filterStatus, {
                     allowEmptyOption: true,
                     dropdownParent: 'body',
-                    placeholder: 'All Status'
+                    placeholder: 'All Status',
+                    searchField: ['text'],
+                    controlInput: '<input>',
+                    highlight: false,
+                    onInitialize: function () {
+                        this.activeOption = null;
+                    },
+                    onDropdownOpen: function (dropdown) {
+                        var self = this;
+                        function clearInputAndCursor() {
+                            var input = self.control_input || (dropdown && dropdown.querySelector('input'));
+                            if (typeof self.setTextboxValue === 'function') self.setTextboxValue('');
+                            if (typeof self.onSearchChange === 'function') self.onSearchChange('');
+                            if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
+                            if (input) {
+                                input.value = '';
+                                input.focus();
+                                try { input.setSelectionRange(0, 0); } catch (e) {}
+                                input.scrollLeft = 0;
+                            }
+                        }
+                        // selection + search dono ko blank karo har open par
+                        self.clear(true);
+                        clearInputAndCursor();
+                        setTimeout(function () {
+                            self.clear(true);
+                            clearInputAndCursor();
+                        }, 0);
+                        setTimeout(function () {
+                            self.clear(true);
+                            clearInputAndCursor();
+                        }, 50);
+                        setTimeout(function () {
+                            self.clear(true);
+                            clearInputAndCursor();
+                        }, 100);
+                        setTimeout(function () {
+                            var opts = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"]');
+                            opts.forEach(function (opt) {
+                                opt.classList.remove('active');
+                                opt.classList.remove('selected');
+                                opt.setAttribute('aria-selected', 'false');
+                            });
+                        }, 0);
+                    }
                 });
             } catch (e) {
                 console.error('Tom Select initialization failed for status filter:', e);
@@ -775,7 +916,51 @@ document.addEventListener('DOMContentLoaded', function() {
                 new TomSelect(filterStore, {
                     allowEmptyOption: true,
                     dropdownParent: 'body',
-                    placeholder: 'All Stores'
+                    placeholder: 'All Stores',
+                    searchField: ['text'],
+                    controlInput: '<input>',
+                    highlight: false,
+                    onInitialize: function () {
+                        this.activeOption = null;
+                    },
+                    onDropdownOpen: function (dropdown) {
+                        var self = this;
+                        function clearInputAndCursor() {
+                            var input = self.control_input || (dropdown && dropdown.querySelector('input'));
+                            if (typeof self.setTextboxValue === 'function') self.setTextboxValue('');
+                            if (typeof self.onSearchChange === 'function') self.onSearchChange('');
+                            if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
+                            if (input) {
+                                input.value = '';
+                                input.focus();
+                                try { input.setSelectionRange(0, 0); } catch (e) {}
+                                input.scrollLeft = 0;
+                            }
+                        }
+                        // selection + search dono ko blank karo har open par
+                        self.clear(true);
+                        clearInputAndCursor();
+                        setTimeout(function () {
+                            self.clear(true);
+                            clearInputAndCursor();
+                        }, 0);
+                        setTimeout(function () {
+                            self.clear(true);
+                            clearInputAndCursor();
+                        }, 50);
+                        setTimeout(function () {
+                            self.clear(true);
+                            clearInputAndCursor();
+                        }, 100);
+                        setTimeout(function () {
+                            var opts = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"]');
+                            opts.forEach(function (opt) {
+                                opt.classList.remove('active');
+                                opt.classList.remove('selected');
+                                opt.setAttribute('aria-selected', 'false');
+                            });
+                        }, 0);
+                    }
                 });
             } catch (e) {
                 console.error('Tom Select initialization failed for store filter:', e);
@@ -846,34 +1031,140 @@ document.addEventListener('DOMContentLoaded', function() {
         if (typeof TomSelect === 'undefined') return;
         var modal = document.getElementById('addSellingVoucherModal');
         if (!modal) return;
+
+        function createBlankSearchConfig(extra) {
+            return Object.assign({
+                allowEmptyOption: true,
+                dropdownParent: 'body',
+                searchField: ['text'],
+                controlInput: '<input>',
+                highlight: false,
+                onInitialize: function () {
+                    this.activeOption = null;
+                },
+                onDropdownOpen: function (dropdown) {
+                    var self = this;
+                    var input = this.control_input || (dropdown && dropdown.querySelector('input'));
+                    function clearInputAndCursor() {
+                        if (typeof self.setTextboxValue === 'function') self.setTextboxValue('');
+                        if (typeof self.onSearchChange === 'function') self.onSearchChange('');
+                        if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
+                        if (input) {
+                            input.value = '';
+                            input.focus();
+                            try { input.setSelectionRange(0, 0); } catch (e) {}
+                            input.scrollLeft = 0;
+                        }
+                    }
+                    clearInputAndCursor();
+                    setTimeout(clearInputAndCursor, 0);
+                    setTimeout(clearInputAndCursor, 50);
+                    setTimeout(clearInputAndCursor, 100);
+                    // dropdown open होते ही selection bhi clear karni hai (blank state)
+                    if (self.settings && self.settings.clearOnOpen) {
+                        self.clear(true);
+                    }
+                    if (dropdown) {
+                        setTimeout(function () {
+                            var opts = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"]');
+                            opts.forEach(function (opt) {
+                                opt.classList.remove('active');
+                                opt.classList.remove('selected');
+                                opt.setAttribute('aria-selected', 'false');
+                            });
+                        }, 0);
+                    }
+                }
+            }, extra || {});
+        }
+
         var paymentSel = modal.querySelector('select[name="payment_type"]');
         if (paymentSel && !paymentSel.tomselect) {
-            addModalTomSelectInstances.payment = new TomSelect(paymentSel, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Payment Type' });
+            addModalTomSelectInstances.payment = new TomSelect(paymentSel, createBlankSearchConfig({
+                placeholder: 'Payment Type',
+                clearOnOpen: true
+            }));
         }
         var clientSel = document.getElementById('modalClientNameSelect');
-        if (clientSel && !clientSel.tomselect) {
-            addModalTomSelectInstances.client = new TomSelect(clientSel, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Client Name' });
+        var addRadio = document.querySelector('#addSellingVoucherModal .client-type-radio:checked');
+        var addSlug = addRadio ? (addRadio.value || '').toLowerCase().trim() : 'employee';
+        if (clientSel && addSlug !== 'ot' && addSlug !== 'course' && clientNameOptionsAdd.length) {
+            rebuildClientNameSelect(clientSel, clientNameOptionsAdd, addSlug);
+        } else if (clientSel && !clientSel.tomselect) {
+            addModalTomSelectInstances.client = new TomSelect(clientSel, createBlankSearchConfig({
+                placeholder: 'Select Client Name',
+                clearOnOpen: true
+            }));
         }
         var storeSel = modal.querySelector('select[name="store_id"]');
         if (storeSel && !storeSel.tomselect) {
-            addModalTomSelectInstances.store = new TomSelect(storeSel, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Store' });
+            addModalTomSelectInstances.store = new TomSelect(storeSel, createBlankSearchConfig({
+                placeholder: 'Select Store',
+                clearOnOpen: true
+            }));
         }
         // Name-related dropdowns: Tom Select with search; visibility controlled by setSelectVisible
         var nameSelectIds = ['modalFacultySelect', 'modalAcademyStaffSelect', 'modalMessStaffSelect', 'modalOtStudentSelect', 'modalOtCourseSelect', 'modalCourseSelect', 'modalCourseNameSelect'];
         nameSelectIds.forEach(function(id) {
             var sel = document.getElementById(id);
             if (sel && !sel.tomselect) {
-                new TomSelect(sel, { allowEmptyOption: true, dropdownParent: 'body', placeholder: sel.id.indexOf('Faculty') !== -1 ? 'Select Faculty' : sel.id.indexOf('Academy') !== -1 ? 'Select Academy Staff' : sel.id.indexOf('Mess') !== -1 ? 'Select Mess Staff' : sel.id.indexOf('OtStudent') !== -1 ? 'Select Student' : 'Select Course' });
+                new TomSelect(sel, createBlankSearchConfig({
+                    placeholder: sel.id.indexOf('Faculty') !== -1 ? 'Select Faculty'
+                        : sel.id.indexOf('Academy') !== -1 ? 'Select Academy Staff'
+                        : sel.id.indexOf('Mess') !== -1 ? 'Select Mess Staff'
+                        : sel.id.indexOf('OtStudent') !== -1 ? 'Select Student'
+                        : 'Select Course',
+                    clearOnOpen: true
+                }));
             }
         });
         modal.querySelectorAll('#modalItemsBody .sv-item-select').forEach(function(select) {
             if (select.tomselect) return;
-            new TomSelect(select, {
+            var hadValue = !!select.value;
+            var ts = new TomSelect(select, {
                 allowEmptyOption: true,
                 dropdownParent: 'body',
                 placeholder: 'Select Item',
-                maxOptions: null
+                maxOptions: null,
+                highlight: false,
+                searchField: ['text'],
+                controlInput: '<input>',
+                onInitialize: function () {
+                    // prevent first option from being auto-highlighted
+                    this.activeOption = null;
+                },
+                onDropdownOpen: function (dropdown) {
+                    var self = this;
+                    var input = this.control_input || dropdown.querySelector('input');
+                    function clearInputAndCursor() {
+                        if (typeof self.setTextboxValue === 'function') self.setTextboxValue('');
+                        if (typeof self.onSearchChange === 'function') self.onSearchChange('');
+                        if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
+                        if (input) {
+                            input.value = '';
+                            input.focus();
+                            try { input.setSelectionRange(0, 0); } catch (e) {}
+                            input.scrollLeft = 0;
+                        }
+                    }
+                    clearInputAndCursor();
+                    setTimeout(clearInputAndCursor, 0);
+                    setTimeout(clearInputAndCursor, 50);
+                    setTimeout(clearInputAndCursor, 100);
+                    setTimeout(function () {
+                        var opts = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"]');
+                        opts.forEach(function (opt) {
+                            opt.classList.remove('active');
+                            opt.classList.remove('selected');
+                            opt.setAttribute('aria-selected', 'false');
+                        });
+                    }, 0);
+                }
             });
+            // agar pehle koi value nahi thi to ensure fresh blank state
+            if (!hadValue) {
+                ts.clear(true);
+            }
         });
         // Client Name & Name columns: hide until a Client Type is selected
         var clientNameWrap = document.getElementById('modalClientNameWrap');
@@ -883,12 +1174,15 @@ document.addEventListener('DOMContentLoaded', function() {
             if (clientTypeChecked) {
                 clientNameWrap.style.display = '';
                 nameFieldWrap.style.display = '';
-                if (typeof updateModalNameField === 'function') updateModalNameField();
             } else {
                 clientNameWrap.style.display = 'none';
                 nameFieldWrap.style.display = 'none';
             }
-        } else if (typeof updateModalNameField === 'function') {
+        }
+        // After all TomSelect instances (and their wrappers) are created, ensure that
+        // only the correct Name dropdown(s) are visible for the currently selected
+        // client type (especially after a validation error + old() values).
+        if (typeof updateModalNameField === 'function') {
             updateModalNameField();
         }
     }
@@ -898,34 +1192,81 @@ document.addEventListener('DOMContentLoaded', function() {
         var modal = document.getElementById('editSellingVoucherModal');
         if (!modal) return;
 
+        function createBlankSearchConfig(extra) {
+            return Object.assign({
+                allowEmptyOption: true,
+                dropdownParent: 'body',
+                searchField: ['text'],
+                controlInput: '<input>',
+                highlight: false,
+                onInitialize: function () {
+                    this.activeOption = null;
+                },
+                onDropdownOpen: function (dropdown) {
+                    var self = this;
+                    var input = this.control_input || (dropdown && dropdown.querySelector('input'));
+                    function clearInputAndCursor() {
+                        if (typeof self.setTextboxValue === 'function') self.setTextboxValue('');
+                        if (typeof self.onSearchChange === 'function') self.onSearchChange('');
+                        if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
+                        if (input) {
+                            input.value = '';
+                            input.focus();
+                            try { input.setSelectionRange(0, 0); } catch (e) {}
+                            input.scrollLeft = 0;
+                        }
+                    }
+                    clearInputAndCursor();
+                    setTimeout(clearInputAndCursor, 0);
+                    setTimeout(clearInputAndCursor, 50);
+                    setTimeout(clearInputAndCursor, 100);
+                    // dropdown open होते ही selection bhi clear karni hai (blank state)
+                    if (self.settings && self.settings.clearOnOpen) {
+                        self.clear(true);
+                    }
+                    if (dropdown) {
+                        setTimeout(function () {
+                            var opts = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"]');
+                            opts.forEach(function (opt) {
+                                opt.classList.remove('active');
+                                opt.classList.remove('selected');
+                                opt.setAttribute('aria-selected', 'false');
+                            });
+                        }, 0);
+                    }
+                }
+            }, extra || {});
+        }
+
         // Payment Type
         var paymentSel = modal.querySelector('select.edit-payment-type');
         if (paymentSel && !paymentSel.tomselect) {
-            editModalTomSelectInstances.payment = new TomSelect(paymentSel, {
-                allowEmptyOption: true,
-                dropdownParent: 'body',
-                placeholder: 'Payment Type'
-            });
+            editModalTomSelectInstances.payment = new TomSelect(paymentSel, createBlankSearchConfig({
+                placeholder: 'Payment Type',
+                clearOnOpen: true
+            }));
         }
 
-        // Client Name
+        // Client Name (filter by selected Client Type)
         var clientSel = document.getElementById('editClientNameSelect');
-        if (clientSel && !clientSel.tomselect) {
-            editModalTomSelectInstances.client = new TomSelect(clientSel, {
-                allowEmptyOption: true,
-                dropdownParent: 'body',
-                placeholder: 'Select Client Name'
-            });
+        var editRadio = document.querySelector('#editSellingVoucherModal .edit-client-type-radio:checked');
+        var editSlug = editRadio ? (editRadio.value || '').toLowerCase().trim() : 'employee';
+        if (clientSel && editSlug !== 'ot' && editSlug !== 'course' && clientNameOptionsEdit.length) {
+            rebuildClientNameSelect(clientSel, clientNameOptionsEdit, editSlug);
+        } else if (clientSel && !clientSel.tomselect) {
+            editModalTomSelectInstances.client = new TomSelect(clientSel, createBlankSearchConfig({
+                placeholder: 'Select Client Name',
+                clearOnOpen: true
+            }));
         }
 
         // Store
         var storeSel = modal.querySelector('select.edit-store');
         if (storeSel && !storeSel.tomselect) {
-            editModalTomSelectInstances.store = new TomSelect(storeSel, {
-                allowEmptyOption: true,
-                dropdownParent: 'body',
-                placeholder: 'Select Store'
-            });
+            editModalTomSelectInstances.store = new TomSelect(storeSel, createBlankSearchConfig({
+                placeholder: 'Select Store',
+                clearOnOpen: true
+            }));
         }
 
         // Name-related dropdowns (Faculty, Academy Staff, Mess Staff, OT Course, Course, Course Name)
@@ -933,8 +1274,11 @@ document.addEventListener('DOMContentLoaded', function() {
         editNameSelectIds.forEach(function(id) {
             var sel = document.getElementById(id);
             if (sel && !sel.tomselect) {
-                var placeholder = id.indexOf('Faculty') !== -1 ? 'Select Faculty' : id.indexOf('Academy') !== -1 ? 'Select Academy Staff' : id.indexOf('Mess') !== -1 ? 'Select Mess Staff' : 'Select Course';
-                new TomSelect(sel, { allowEmptyOption: true, dropdownParent: 'body', placeholder: placeholder });
+                var placeholder = id.indexOf('Faculty') !== -1 ? 'Select Faculty'
+                    : id.indexOf('Academy') !== -1 ? 'Select Academy Staff'
+                    : id.indexOf('Mess') !== -1 ? 'Select Mess Staff'
+                    : 'Select Course';
+                new TomSelect(sel, createBlankSearchConfig({ placeholder: placeholder, clearOnOpen: true }));
             }
         });
     }
@@ -975,15 +1319,122 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Prevent double submit on Add Selling Voucher form (stops double entry)
+    // Helper: reset Add Selling Voucher modal form (without closing modal)
+    function resetSellingVoucherModalForm() {
+        var modalEl = document.getElementById('addSellingVoucherModal');
+        if (!modalEl) return;
+
+        destroyAddModalTomSelects();
+
+        var form = document.getElementById('sellingVoucherModalForm');
+        if (form) {
+            form.reset();
+            form.classList.remove('was-validated');
+            form.querySelectorAll('.is-invalid').forEach(function(el) { el.classList.remove('is-invalid'); });
+        }
+        var storeSel = modalEl.querySelector('select[name="store_id"]');
+        if (storeSel) storeSel.value = '';
+        var issueDateInp = modalEl.querySelector('input[name="issue_date"]');
+        if (issueDateInp) issueDateInp.value = new Date().toISOString().slice(0, 10);
+        var paymentSel = modalEl.querySelector('select[name="payment_type"]');
+        if (paymentSel) paymentSel.value = '1';
+        var empRadio = modalEl.querySelector('.client-type-radio[value="employee"]');
+        if (empRadio) { empRadio.checked = true; empRadio.dispatchEvent(new Event('change')); }
+        var clientPkSel = modalEl.querySelector('#modalClientNameSelect');
+        if (clientPkSel) clientPkSel.value = '';
+        var clientNameInp = document.getElementById('modalClientNameInput');
+        if (clientNameInp) clientNameInp.value = '';
+        modalEl.querySelectorAll('#modalClientNameWrap select, #modalNameFieldWrap select').forEach(function(s) {
+            if (s && typeof s.value !== 'undefined') s.value = '';
+        });
+        var billInput = document.getElementById('addSvBillFileInput');
+        if (billInput) billInput.value = '';
+        var billWrap = document.getElementById('addSvBillFileChosenWrap');
+        var billName = document.getElementById('addSvBillFileChosenName');
+        if (billWrap) billWrap.classList.add('d-none');
+        if (billName) billName.textContent = '';
+        var tbody = document.getElementById('modalItemsBody');
+        if (tbody) {
+            tbody.innerHTML = getRowHtml(0);
+            rowIndex = 1;
+            updateRemoveButtons();
+        }
+        var grandTotalEl = document.getElementById('modalGrandTotal');
+        if (grandTotalEl) grandTotalEl.textContent = '₹0.00';
+    }
+
+    // Prevent double submit on Add Selling Voucher form (stops double entry) + AJAX submit
     var sellingVoucherModalForm = document.getElementById('sellingVoucherModalForm');
     if (sellingVoucherModalForm) {
-        sellingVoucherModalForm.addEventListener('submit', function() {
-            var btn = this.querySelector('button[type="submit"]');
-            if (btn && !btn.disabled) {
+        sellingVoucherModalForm.addEventListener('submit', function(e) {
+            // If invalid, the capture validation listener will have prevented default.
+            if (!this.checkValidity()) return;
+
+            e.preventDefault();
+
+            var form = this;
+            var btn = form.querySelector('button[type="submit"]');
+            if (btn && btn.disabled) return;
+            if (btn) {
+                if (!btn.dataset.originalText) {
+                    btn.dataset.originalText = btn.textContent || '';
+                }
                 btn.disabled = true;
                 btn.textContent = 'Saving...';
             }
+
+            var action = form.getAttribute('action') || window.location.href;
+            var method = (form.getAttribute('method') || 'POST').toUpperCase();
+            var formData = new FormData(form);
+            var csrf = form.querySelector('input[name="_token"]');
+
+            fetch(action, {
+                method: method,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': csrf ? csrf.value : '',
+                    'Accept': 'application/json'
+                },
+                body: formData
+            })
+                .then(function(response) {
+                    return response.json().then(function(payload) {
+                        return { ok: response.ok, status: response.status, payload: payload };
+                    }).catch(function() {
+                        return { ok: response.ok, status: response.status, payload: null };
+                    });
+                })
+                .then(function(res) {
+                    var data = res.payload;
+                    if (res.ok && data && data.success) {
+                        resetSellingVoucherModalForm();
+                        if (window.toastr && data.message) {
+                            toastr.success(data.message);
+                        } else if (data.message) {
+                            alert(data.message);
+                        }
+                    } else {
+                        var msg = (data && data.message) ? data.message : 'Failed to save voucher. Please try again.';
+                        if (res.status === 422 && data && data.errors) {
+                            try {
+                                var firstKey = Object.keys(data.errors)[0];
+                                if (firstKey && data.errors[firstKey] && data.errors[firstKey][0]) {
+                                    msg = data.errors[firstKey][0];
+                                }
+                            } catch (e) {}
+                        }
+                        alert(msg);
+                    }
+                })
+                .catch(function() {
+                    alert('Failed to save voucher. Please try again.');
+                })
+                .finally(function() {
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.textContent = btn.dataset.originalText || 'Save Selling Voucher';
+                    }
+                });
         });
     }
 
@@ -1140,7 +1591,37 @@ document.addEventListener('DOMContentLoaded', function() {
                     allowEmptyOption: true,
                     dropdownParent: 'body',
                     placeholder: 'Select Item',
-                    maxOptions: null
+                    maxOptions: null,
+                    highlight: false,
+                    controlInput: '<input>',
+                    onInitialize: function () { this.activeOption = null; },
+                    onDropdownOpen: function (dropdown) {
+                        var self = this;
+                        var input = this.control_input || (dropdown && dropdown.querySelector('input'));
+                        function clearInputAndCursor() {
+                            if (typeof self.setTextboxValue === 'function') self.setTextboxValue('');
+                            if (typeof self.onSearchChange === 'function') self.onSearchChange('');
+                            if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
+                            if (input) {
+                                input.value = '';
+                                input.focus();
+                                try { input.setSelectionRange(0, 0); } catch (e) {}
+                                input.scrollLeft = 0;
+                            }
+                        }
+                        clearInputAndCursor();
+                        setTimeout(clearInputAndCursor, 0);
+                        setTimeout(clearInputAndCursor, 50);
+                        setTimeout(clearInputAndCursor, 100);
+                        if (dropdown) setTimeout(function () {
+                            var opts = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"]');
+                            opts.forEach(function (opt) {
+                                opt.classList.remove('active');
+                                opt.classList.remove('selected');
+                                opt.setAttribute('aria-selected', 'false');
+                            });
+                        }, 0);
+                    }
                 });
             }
             updateUnit(row);
@@ -1158,10 +1639,10 @@ document.addEventListener('DOMContentLoaded', function() {
         return '<tr class="sv-item-row">' +
             '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select form-select-sm sv-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
             '<td><input type="text" name="items[' + index + '][unit]" class="form-control  sv-unit" readonly placeholder="—"></td>' +
-            '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control  sv-avail bg-light" step="0.01" min="0" value="0" placeholder="0" readonly></td>' +
-            '<td><input type="number" name="items[' + index + '][quantity]" class="form-control  sv-qty" step="0.01" min="0.01" placeholder="0" required><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
-            '<td><input type="text" class="form-control  sv-left bg-light" readonly placeholder="0"></td>' +
-            '<td><input type="number" name="items[' + index + '][rate]" class="form-control  sv-rate" step="0.01" min="0" placeholder="0" required></td>' +
+            '<td><input type="text" name="items[' + index + '][available_quantity]" class="form-control  sv-avail bg-light" readonly></td>' +
+            '<td><input type="text" name="items[' + index + '][quantity]" class="form-control  sv-qty" step="0.01" min="0.01" required><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
+            '<td><input type="text" class="form-control  sv-left bg-light" readonly></td>' +
+            '<td><input type="text" name="items[' + index + '][rate]" class="form-control  sv-rate" step="0.01" min="0" required></td>' +
             '<td><input type="text" class="form-control  sv-total bg-light" readonly placeholder="0.00"></td>' +
             '<td><button type="button" class="btn btn-sm btn-outline-danger sv-remove-row" title="Remove">×</button></td>' +
             '</tr>';
@@ -1174,7 +1655,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const rateInp = row.querySelector('.sv-rate');
         const availInp = row.querySelector('.sv-avail');
         if (unitInp) unitInp.value = opt && opt.dataset.unit ? opt.dataset.unit : '';
-        if (rateInp && opt && opt.dataset.rate) rateInp.value = opt.dataset.rate;
+        // Only auto-set rate if user has not manually overridden it
+        if (rateInp && rateInp.dataset.manualRate !== '1' && opt && opt.dataset.rate) {
+            rateInp.value = opt.dataset.rate;
+        }
         if (availInp && opt && opt.dataset.available) availInp.value = opt.dataset.available;
         if (availInp) availInp.readOnly = true;
         if (row.closest('#editModalItemsBody')) {
@@ -1202,12 +1686,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const qty = parseFloat(row.querySelector('.sv-qty').value) || 0;
         const rateInp = row.querySelector('.sv-rate');
         let rate = parseFloat(rateInp.value) || 0;
+        const isManualRate = rateInp && rateInp.dataset.manualRate === '1';
         const sel = row.querySelector('.sv-item-select');
         const opt = sel && sel.options[sel.selectedIndex];
         const tiersJson = opt && opt.getAttribute('data-price-tiers');
         const tiers = tiersJson ? (function(){ try { return JSON.parse(tiersJson); } catch(e) { return null; } })() : null;
         let total;
-        if (tiers && tiers.length > 0 && qty > 0) {
+        if (!isManualRate && tiers && tiers.length > 0 && qty > 0) {
             const fifoAmount = calcFifoAmount(tiers, qty);
             if (fifoAmount !== null) {
                 total = fifoAmount;
@@ -1280,10 +1765,41 @@ document.addEventListener('DOMContentLoaded', function() {
                         allowEmptyOption: true,
                         dropdownParent: 'body',
                         placeholder: 'Select Item',
-                        maxOptions: null
+                        maxOptions: null,
+                        highlight: false,
+                        controlInput: '<input>',
+                        onInitialize: function () { this.activeOption = null; },
+                        onDropdownOpen: function (dropdown) {
+                            var self = this;
+                            var input = this.control_input || (dropdown && dropdown.querySelector('input'));
+                            function clearInputAndCursor() {
+                                if (typeof self.setTextboxValue === 'function') self.setTextboxValue('');
+                                if (typeof self.onSearchChange === 'function') self.onSearchChange('');
+                                if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
+                                if (input) {
+                                    input.value = '';
+                                    input.focus();
+                                    try { input.setSelectionRange(0, 0); } catch (e) {}
+                                    input.scrollLeft = 0;
+                                }
+                            }
+                            clearInputAndCursor();
+                            setTimeout(clearInputAndCursor, 0);
+                            setTimeout(clearInputAndCursor, 50);
+                            setTimeout(clearInputAndCursor, 100);
+                            if (dropdown) setTimeout(function () {
+                                var opts = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"]');
+                                opts.forEach(function (opt) {
+                                    opt.classList.remove('active');
+                                    opt.classList.remove('selected');
+                                    opt.setAttribute('aria-selected', 'false');
+                                });
+                            }, 0);
+                        }
                     });
                 }
             }
+
         });
     }
 
@@ -1293,7 +1809,13 @@ document.addEventListener('DOMContentLoaded', function() {
         modalItemsBody.addEventListener('change', function(e) {
             if (e.target.classList.contains('sv-item-select')) {
                 const row = e.target.closest('.sv-item-row');
-                if (row) { updateUnit(row); calcRow(row); updateGrandTotal(); }
+                if (row) {
+                    const rateInp = row.querySelector('.sv-rate');
+                    if (rateInp) rateInp.dataset.manualRate = '';
+                    updateUnit(row);
+                    calcRow(row);
+                    updateGrandTotal();
+                }
             }
         });
 
@@ -1301,6 +1823,10 @@ document.addEventListener('DOMContentLoaded', function() {
             if (e.target.classList.contains('sv-avail') || e.target.classList.contains('sv-qty') || e.target.classList.contains('sv-rate')) {
                 const row = e.target.closest('.sv-item-row');
                 if (row) {
+                    if (e.target.classList.contains('sv-rate')) {
+                        const rateInp = row.querySelector('.sv-rate');
+                        if (rateInp) rateInp.dataset.manualRate = '1';
+                    }
                     refreshAllAvailable();
                     enforceQtyWithinAvailable(row);
                     calcRow(row);
@@ -1374,36 +1900,92 @@ document.addEventListener('DOMContentLoaded', function() {
         const showAcademyStaff = isEmployee && isAcademyStaff;
         const showMessStaff = isEmployee && isMessStaff;
         const showAny = showFaculty || showAcademyStaff || showMessStaff;
+
+        // Pehle high-level Client Name / OT Course / Course select ko control karo
         if (isOt) {
+            // OT: sirf OT Course + OT Student dikhna chahiye
+            setSelectVisible(clientNameSelect, false);
+            if (courseSelect) setSelectVisible(courseSelect, false);
+            if (otStudentSelect) { setSelectVisible(otStudentSelect, true); }
+            const otCourseSelect = document.getElementById('modalOtCourseSelect');
+            if (otCourseSelect) setSelectVisible(otCourseSelect, true);
             nameInput.style.display = 'none';
             nameInput.removeAttribute('required');
-            [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) { if (sel) { setSelectVisible(sel, false); sel.value = ''; sel.removeAttribute('required'); } });
-            if (otStudentSelect) { setSelectVisible(otStudentSelect, true); }
-            if (courseSelect) { setSelectVisible(courseSelect, false); courseSelect.value = ''; courseSelect.removeAttribute('required'); }
-            if (courseNameSelect) { setSelectVisible(courseNameSelect, false); courseNameSelect.value = ''; courseNameSelect.removeAttribute('required'); }
         } else if (isCourse) {
+            // Course: sirf Course select + text Name field
+            setSelectVisible(clientNameSelect, false);
+            const otCourseSelect = document.getElementById('modalOtCourseSelect');
+            if (otCourseSelect) setSelectVisible(otCourseSelect, false);
+            if (otStudentSelect) { setSelectVisible(otStudentSelect, false); }
+            if (courseSelect) setSelectVisible(courseSelect, true);
             nameInput.style.display = 'block';
             nameInput.placeholder = 'Course name';
             nameInput.setAttribute('required', 'required');
-            [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) { if (sel) { setSelectVisible(sel, false); sel.value = ''; sel.removeAttribute('required'); } });
-            if (otStudentSelect) { setSelectVisible(otStudentSelect, false); otStudentSelect.value = ''; otStudentSelect.removeAttribute('required'); }
-            if (courseSelect) { setSelectVisible(courseSelect, true); }
-            if (courseNameSelect) { setSelectVisible(courseNameSelect, false); courseNameSelect.removeAttribute('required'); courseNameSelect.value = ''; }
         } else {
+            // Employee / Section / Other: sirf Client Name + (Faculty/Staff/Mess) dropdown ya text field
+            setSelectVisible(clientNameSelect, true);
+            const otCourseSelect = document.getElementById('modalOtCourseSelect');
+            if (otCourseSelect) setSelectVisible(otCourseSelect, false);
+            if (otStudentSelect) { setSelectVisible(otStudentSelect, false); }
+            if (courseSelect) setSelectVisible(courseSelect, false);
             nameInput.style.display = showAny ? 'none' : 'block';
-            nameInput.removeAttribute('required');
-            [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) {
-                if (!sel) return;
-                const show = sel === facultySelect ? showFaculty : (sel === academyStaffSelect ? showAcademyStaff : showMessStaff);
-                setSelectVisible(sel, show);
-                sel.removeAttribute('required');
-                if (show) { sel.setAttribute('required', 'required'); sel.value = nameInput.value || ''; if (sel.value) nameInput.value = sel.value; } else sel.value = '';
-            });
-            if (otStudentSelect) { setSelectVisible(otStudentSelect, false); otStudentSelect.value = ''; otStudentSelect.removeAttribute('required'); }
-            if (courseSelect) { setSelectVisible(courseSelect, false); courseSelect.value = ''; courseSelect.removeAttribute('required'); }
-            if (courseNameSelect) { setSelectVisible(courseNameSelect, false); courseNameSelect.value = ''; courseNameSelect.removeAttribute('required'); }
-            if (!showAny) nameInput.setAttribute('required', 'required');
         }
+
+        // Ab niche ke detailed faculty/academy/mess/course-name dropdowns handle karo
+        [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) {
+            if (!sel) return;
+            const show = sel === facultySelect ? showFaculty : (sel === academyStaffSelect ? showAcademyStaff : showMessStaff);
+            setSelectVisible(sel, show);
+            sel.removeAttribute('required');
+            if (show) {
+                sel.setAttribute('required', 'required');
+                sel.value = nameInput.value || '';
+                if (sel.value) nameInput.value = sel.value;
+            } else {
+                sel.value = '';
+            }
+        });
+        if (otStudentSelect) { setSelectVisible(otStudentSelect, isOt); if (!isOt) { otStudentSelect.value = ''; otStudentSelect.removeAttribute('required'); } }
+        if (courseNameSelect) { setSelectVisible(courseNameSelect, false); courseNameSelect.value = ''; courseNameSelect.removeAttribute('required'); }
+        if (!showAny && !isOt && !isCourse) {
+            nameInput.setAttribute('required', 'required');
+        }
+    }
+
+    function loadAddModalGenericBuyerNames() {
+        const clientTypeRadio = document.querySelector('#addSellingVoucherModal .client-type-radio:checked');
+        const clientNameSelect = document.getElementById('modalClientNameSelect');
+        const nameInput = document.getElementById('modalClientNameInput');
+        const dataList = document.getElementById('modalGenericBuyerNames');
+        if (!clientTypeRadio || !clientNameSelect || !nameInput || !dataList) return;
+
+        const slug = (clientTypeRadio.value || '').toLowerCase();
+        if (slug !== 'section' && slug !== 'other') {
+            nameInput.removeAttribute('list');
+            dataList.innerHTML = '';
+            return;
+        }
+
+        const pk = clientNameSelect.value || '';
+        nameInput.setAttribute('list', 'modalGenericBuyerNames');
+        dataList.innerHTML = '';
+        if (!pk) return;
+
+        fetch(editSvBaseUrl + '/buyer-names?client_type_slug=' + encodeURIComponent(slug) + '&client_type_pk=' + encodeURIComponent(pk), {
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+        })
+            .then(r => r.json())
+            .then(function(data) {
+                dataList.innerHTML = '';
+                (data.buyers || []).forEach(function(b) {
+                    const opt = document.createElement('option');
+                    opt.value = b;
+                    dataList.appendChild(opt);
+                });
+            })
+            .catch(function() {
+                dataList.innerHTML = '';
+            });
     }
     document.querySelectorAll('#addSellingVoucherModal .client-type-radio').forEach(function(radio) {
         radio.addEventListener('change', function() {
@@ -1433,22 +2015,35 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (otStudentSelect) { setSelectVisible(otStudentSelect, false); otStudentSelect.removeAttribute('required'); otStudentSelect.innerHTML = '<option value="">Select Student</option>'; otStudentSelect.value = ''; }
                 if (courseSelect) { setSelectVisible(courseSelect, true); courseSelect.setAttribute('required', 'required'); courseSelect.setAttribute('name', 'client_type_pk'); courseSelect.value = ''; }
                 if (courseNameSelect) { setSelectVisible(courseNameSelect, false); courseNameSelect.removeAttribute('required'); courseNameSelect.value = ''; }
-                if (nameInput) { nameInput.style.display = 'block'; nameInput.value = ''; nameInput.placeholder = 'Course name'; nameInput.setAttribute('required', 'required'); }
+                if (nameInput) {
+                    nameInput.style.display = 'block';
+                    nameInput.value = '';
+                    nameInput.placeholder = 'Name';
+                    nameInput.setAttribute('required', 'required');
+                    nameInput.setAttribute('list', 'modalCourseBuyerNames');
+                }
+                const dl = document.getElementById('modalCourseBuyerNames');
+                if (dl) dl.innerHTML = '';
             } else {
                 if (clientSelect) { setSelectVisible(clientSelect, true); clientSelect.setAttribute('required', 'required'); clientSelect.setAttribute('name', 'client_type_pk'); }
                 if (otCourseSelect) { setSelectVisible(otCourseSelect, false); otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
                 if (otStudentSelect) { setSelectVisible(otStudentSelect, false); otStudentSelect.removeAttribute('required'); otStudentSelect.innerHTML = '<option value="">Select Student</option>'; otStudentSelect.value = ''; }
                 if (courseSelect) { setSelectVisible(courseSelect, false); courseSelect.removeAttribute('required'); courseSelect.value = ''; }
                 if (courseNameSelect) { setSelectVisible(courseNameSelect, false); courseNameSelect.removeAttribute('required'); courseNameSelect.value = ''; }
-                if (clientSelect) {
-                    clientSelect.querySelectorAll('option').forEach(function(opt) {
-                        if (opt.value === '') { opt.hidden = false; return; }
-                        opt.hidden = opt.dataset.type !== this.value;
-                    }.bind(this));
+                if (clientSelect && clientNameOptionsAdd.length) {
+                    rebuildClientNameSelect(clientSelect, clientNameOptionsAdd, this.value);
                 }
-                if (nameInput) { nameInput.style.display = 'block'; nameInput.placeholder = 'Client / section / role name'; nameInput.setAttribute('required', 'required'); }
+                if (nameInput) {
+                    nameInput.style.display = 'block';
+                    nameInput.placeholder = 'Client / section / role name';
+                    nameInput.setAttribute('required', 'required');
+                    nameInput.removeAttribute('list');
+                }
+                const dl = document.getElementById('modalCourseBuyerNames');
+                if (dl) dl.innerHTML = '';
             }
             updateModalNameField();
+            loadAddModalGenericBuyerNames();
         });
     });
     function reinitNameSelectTomSelect(select, placeholder) {
@@ -1508,15 +2103,37 @@ document.addEventListener('DOMContentLoaded', function() {
     const modalCourseSelect = document.getElementById('modalCourseSelect');
     if (modalCourseSelect) {
         modalCourseSelect.addEventListener('change', function() {
-            const inp = document.getElementById('modalClientNameInput');
-            const courseName = (this.options[this.selectedIndex] && this.options[this.selectedIndex].textContent) ? this.options[this.selectedIndex].textContent.trim() : '';
-            if (inp) inp.value = courseName;
+            const coursePk = this.value;
+            const nameInput = document.getElementById('modalClientNameInput');
+            const dataList = document.getElementById('modalCourseBuyerNames');
+            if (!nameInput || !dataList) return;
+
+            nameInput.setAttribute('list', 'modalCourseBuyerNames');
+            dataList.innerHTML = '';
+
+            if (!coursePk) return;
+            fetch(editSvBaseUrl + '/buyer-names?client_type_slug=course&client_type_pk=' + encodeURIComponent(coursePk), { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(r => r.json())
+                .then(function(data) {
+                    dataList.innerHTML = '';
+                    (data.buyers || []).forEach(function(b) {
+                        const opt = document.createElement('option');
+                        opt.value = b;
+                        dataList.appendChild(opt);
+                    });
+                })
+                .catch(function() {
+                    dataList.innerHTML = '';
+                });
         });
     }
     
     const modalClientNameSelect = document.getElementById('modalClientNameSelect');
     if (modalClientNameSelect) {
-        modalClientNameSelect.addEventListener('change', updateModalNameField);
+        modalClientNameSelect.addEventListener('change', function() {
+            updateModalNameField();
+            loadAddModalGenericBuyerNames();
+        });
     }
     
     const modalFacultySelect = document.getElementById('modalFacultySelect');
@@ -1593,6 +2210,42 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!showAny) nameInput.setAttribute('required', 'required');
         }
     }
+
+    function loadEditModalGenericBuyerNames() {
+        const clientTypeRadio = document.querySelector('#editSellingVoucherModal .edit-client-type-radio:checked');
+        const clientNameSelect = document.getElementById('editClientNameSelect');
+        const nameInput = document.getElementById('editModalClientNameInput');
+        const dataList = document.getElementById('editGenericBuyerNames');
+        if (!clientTypeRadio || !clientNameSelect || !nameInput || !dataList) return;
+
+        const slug = (clientTypeRadio.value || '').toLowerCase();
+        if (slug !== 'section' && slug !== 'other') {
+            nameInput.removeAttribute('list');
+            dataList.innerHTML = '';
+            return;
+        }
+
+        const pk = clientNameSelect.value || '';
+        nameInput.setAttribute('list', 'editGenericBuyerNames');
+        dataList.innerHTML = '';
+        if (!pk) return;
+
+        fetch(editSvBaseUrl + '/buyer-names?client_type_slug=' + encodeURIComponent(slug) + '&client_type_pk=' + encodeURIComponent(pk), {
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+        })
+            .then(r => r.json())
+            .then(function(data) {
+                dataList.innerHTML = '';
+                (data.buyers || []).forEach(function(b) {
+                    const opt = document.createElement('option');
+                    opt.value = b;
+                    dataList.appendChild(opt);
+                });
+            })
+            .catch(function() {
+                dataList.innerHTML = '';
+            });
+    }
     document.querySelectorAll('#editSellingVoucherModal .edit-client-type-radio').forEach(function(radio) {
         radio.addEventListener('change', function() {
             const isOt = (this.value || '').toLowerCase() === 'ot';
@@ -1613,21 +2266,36 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (otCourseSelect) { setSelectVisible(otCourseSelect, false); otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
                 if (editCourseSelect) { setSelectVisible(editCourseSelect, true); editCourseSelect.setAttribute('required', 'required'); editCourseSelect.setAttribute('name', 'client_type_pk'); editCourseSelect.value = ''; }
                 if (editCourseNameSelect) { setSelectVisible(editCourseNameSelect, false); editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
-                if (nameInput) { nameInput.style.display = 'block'; nameInput.readOnly = false; nameInput.placeholder = 'Course name'; nameInput.value = nameInput.value || ''; nameInput.setAttribute('required', 'required'); }
+                if (nameInput) {
+                    nameInput.style.display = 'block';
+                    nameInput.readOnly = false;
+                    nameInput.placeholder = 'Name';
+                    nameInput.value = nameInput.value || '';
+                    nameInput.setAttribute('required', 'required');
+                    nameInput.setAttribute('list', 'editCourseBuyerNames');
+                }
+                const dl = document.getElementById('editCourseBuyerNames');
+                if (dl) dl.innerHTML = '';
             } else {
                 if (clientSelect) { setSelectVisible(clientSelect, true); clientSelect.setAttribute('required', 'required'); clientSelect.setAttribute('name', 'client_type_pk'); }
                 if (otCourseSelect) { setSelectVisible(otCourseSelect, false); otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
                 if (editCourseSelect) { setSelectVisible(editCourseSelect, false); editCourseSelect.removeAttribute('required'); editCourseSelect.removeAttribute('name'); editCourseSelect.value = ''; }
                 if (editCourseNameSelect) { setSelectVisible(editCourseNameSelect, false); editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
-                if (clientSelect) {
-                    clientSelect.querySelectorAll('option').forEach(function(opt) {
-                        if (opt.value === '') { opt.hidden = false; return; }
-                        opt.hidden = (opt.dataset.type || '') !== (this.value || '');
-                    }.bind(this));
+                if (clientSelect && clientNameOptionsEdit.length) {
+                    rebuildClientNameSelect(clientSelect, clientNameOptionsEdit, this.value);
                 }
-                if (nameInput) { nameInput.style.display = 'block'; nameInput.readOnly = false; nameInput.placeholder = 'Client / section / role name'; nameInput.setAttribute('required', 'required'); }
+                if (nameInput) {
+                    nameInput.style.display = 'block';
+                    nameInput.readOnly = false;
+                    nameInput.placeholder = 'Client / section / role name';
+                    nameInput.setAttribute('required', 'required');
+                    nameInput.removeAttribute('list');
+                }
+                const dl = document.getElementById('editCourseBuyerNames');
+                if (dl) dl.innerHTML = '';
             }
             updateEditModalNameField();
+            loadEditModalGenericBuyerNames();
         });
     });
     const editModalOtCourseSelect = document.getElementById('editModalOtCourseSelect');
@@ -1643,14 +2311,36 @@ document.addEventListener('DOMContentLoaded', function() {
     if (editModalCourseSelect) {
         editModalCourseSelect.addEventListener('change', function() {
             const inp = document.getElementById('editModalClientNameInput');
-            const courseName = (this.options[this.selectedIndex] && this.options[this.selectedIndex].textContent) ? this.options[this.selectedIndex].textContent.trim() : '';
-            if (inp) inp.value = courseName;
+            const coursePk = this.value;
+            const dataList = document.getElementById('editCourseBuyerNames');
+            if (!inp || !dataList) return;
+
+            inp.setAttribute('list', 'editCourseBuyerNames');
+            dataList.innerHTML = '';
+
+            if (!coursePk) return;
+            fetch(editSvBaseUrl + '/buyer-names?client_type_slug=course&client_type_pk=' + encodeURIComponent(coursePk), { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(r => r.json())
+                .then(function(data) {
+                    dataList.innerHTML = '';
+                    (data.buyers || []).forEach(function(b) {
+                        const opt = document.createElement('option');
+                        opt.value = b;
+                        dataList.appendChild(opt);
+                    });
+                })
+                .catch(function() {
+                    dataList.innerHTML = '';
+                });
         });
     }
     
     const editClientNameSelect = document.getElementById('editClientNameSelect');
     if (editClientNameSelect) {
-        editClientNameSelect.addEventListener('change', updateEditModalNameField);
+        editClientNameSelect.addEventListener('change', function() {
+            updateEditModalNameField();
+            loadEditModalGenericBuyerNames();
+        });
     }
     
     const editModalFacultySelect = document.getElementById('editModalFacultySelect');
@@ -1795,7 +2485,37 @@ document.addEventListener('DOMContentLoaded', function() {
                     allowEmptyOption: true,
                     dropdownParent: '#editSellingVoucherModal .modal-body',
                     placeholder: 'Select Item',
-                    maxOptions: null
+                    maxOptions: null,
+                    highlight: false,
+                    controlInput: '<input>',
+                    onInitialize: function () { this.activeOption = null; },
+                    onDropdownOpen: function (dropdown) {
+                        var self = this;
+                        var input = this.control_input || (dropdown && dropdown.querySelector('input'));
+                        function clearInputAndCursor() {
+                            if (typeof self.setTextboxValue === 'function') self.setTextboxValue('');
+                            if (typeof self.onSearchChange === 'function') self.onSearchChange('');
+                            if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
+                            if (input) {
+                                input.value = '';
+                                input.focus();
+                                try { input.setSelectionRange(0, 0); } catch (e) {}
+                                input.scrollLeft = 0;
+                            }
+                        }
+                        clearInputAndCursor();
+                        setTimeout(clearInputAndCursor, 0);
+                        setTimeout(clearInputAndCursor, 50);
+                        setTimeout(clearInputAndCursor, 100);
+                        if (dropdown) setTimeout(function () {
+                            var opts = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"]');
+                            opts.forEach(function (opt) {
+                                opt.classList.remove('active');
+                                opt.classList.remove('selected');
+                                opt.setAttribute('aria-selected', 'false');
+                            });
+                        }, 0);
+                    }
                 });
             }
             updateUnit(row);
@@ -1826,7 +2546,48 @@ document.addEventListener('DOMContentLoaded', function() {
                     allowEmptyOption: true,
                     dropdownParent: '#editSellingVoucherModal .modal-body',
                     placeholder: 'Select Item',
-                    maxOptions: null
+                    maxOptions: null,
+                    highlight: false,
+                    controlInput: '<input>',
+                    onInitialize: function () { this.activeOption = null; },
+                    onDropdownOpen: function (dropdown) {
+                        var self = this;
+                        function clearInputAndCursor() {
+                            var input = self.control_input || (dropdown && dropdown.querySelector('input'));
+                            if (typeof self.setTextboxValue === 'function') self.setTextboxValue('');
+                            if (typeof self.onSearchChange === 'function') self.onSearchChange('');
+                            if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
+                            if (input) {
+                                input.value = '';
+                                input.focus();
+                                try { input.setSelectionRange(0, 0); } catch (e) {}
+                                input.scrollLeft = 0;
+                            }
+                        }
+                        // Edit modal: click karte hi blank state, isliye selection bhi clear
+                        self.clear(true);
+                        clearInputAndCursor();
+                        setTimeout(function () {
+                            self.clear(true);
+                            clearInputAndCursor();
+                        }, 0);
+                        setTimeout(function () {
+                            self.clear(true);
+                            clearInputAndCursor();
+                        }, 50);
+                        setTimeout(function () {
+                            self.clear(true);
+                            clearInputAndCursor();
+                        }, 100);
+                        if (dropdown) setTimeout(function () {
+                            var opts = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"]');
+                            opts.forEach(function (opt) {
+                                opt.classList.remove('active');
+                                opt.classList.remove('selected');
+                                opt.setAttribute('aria-selected', 'false');
+                            });
+                        }, 0);
+                    }
                 });
             });
         }
@@ -1873,16 +2634,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     } else {
                         document.getElementById('viewRemarksWrap').style.display = 'none';
                     }
-                    var viewBillLink = document.getElementById('viewBillLink');
-                    var viewBillNone = document.getElementById('viewBillNone');
-                    if (v.bill_url) {
-                        viewBillLink.href = v.bill_url;
-                        viewBillLink.style.display = 'inline-block';
-                        viewBillNone.style.display = 'none';
-                    } else {
-                        viewBillLink.style.display = 'none';
-                        viewBillNone.style.display = 'inline';
-                    }
+                    // Bill display removed; keep view logic resilient if elements are absent
                     const tbody = document.getElementById('viewModalItemsBody');
                     tbody.innerHTML = '';
                     if (data.has_items && items.length > 0) {
@@ -1932,6 +2684,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.log('Return data:', data);
                     document.getElementById('returnTransferFromStore').textContent = data.store_name || '—';
                     const issueDate = data.issue_date || '';
+                    const todayYmd = new Date().toISOString().slice(0, 10);
                     const tbody = document.getElementById('returnItemModalBody');
                     tbody.innerHTML = '';
                     (data.items || []).forEach(function(item, i) {
@@ -1945,7 +2698,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         tbody.insertAdjacentHTML('beforeend',
                             '<tr><td>' + name + '<input type="hidden" name="items[' + i + '][id]" value="' + id + '"></td><td>' + qty + '</td><td>' + unit + '</td>' +
                             '<td><input type="number" name="items[' + i + '][return_quantity]" class="form-control  sv-return-qty" step="0.01" min="0" max="' + issuedQty + '" data-issued="' + issuedQty + '" value="' + retQty + '"><div class="invalid-feedback">Return Qty cannot exceed Issued Qty.</div></td>' +
-                            '<td><input type="date" name="items[' + i + '][return_date]" class="form-control  sv-return-date" ' + (issueDate ? ('min="' + issueDate + '" data-issue-date="' + issueDate + '"') : '') + ' value="' + retDate + '"><div class="invalid-feedback">Return date cannot be earlier than issue date.</div></td></tr>');
+                            '<td><input type="date" name="items[' + i + '][return_date]" class="form-control  sv-return-date" max="' + todayYmd + '" ' + (issueDate ? ('min="' + issueDate + '" data-issue-date="' + issueDate + '"') : '') + ' value="' + retDate + '"><div class="invalid-feedback">Return date must be between issue date and today.</div></td></tr>');
                     });
                     document.getElementById('returnItemForm').action = returnSvBaseUrl + '/' + voucherId + '/return';
                     const modal = new bootstrap.Modal(document.getElementById('returnItemModal'));
@@ -1978,23 +2731,31 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    function enforceReturnDateNotBeforeIssue(inputEl) {
+    function enforceReturnDateWithinRange(inputEl) {
         if (!inputEl) return;
         const issue = inputEl.dataset.issueDate || '';
         const raw = inputEl.value;
-        if (!issue || !raw) {
+        const today = new Date().toISOString().slice(0, 10);
+        inputEl.max = today;
+
+        if (!raw) {
             inputEl.setCustomValidity('');
             inputEl.classList.remove('is-invalid');
             return;
         }
-        // yyyy-mm-dd safe lexical compare
-        if (raw < issue) {
+        if (raw > today) {
+            inputEl.setCustomValidity('Return date cannot be in the future.');
+            inputEl.classList.add('is-invalid');
+            return;
+        }
+        if (issue && raw < issue) {
             inputEl.setCustomValidity('Return date cannot be earlier than issue date.');
             inputEl.classList.add('is-invalid');
-        } else {
-            inputEl.setCustomValidity('');
-            inputEl.classList.remove('is-invalid');
+            return;
         }
+
+        inputEl.setCustomValidity('');
+        inputEl.classList.remove('is-invalid');
     }
 
     const returnItemModalBody = document.getElementById('returnItemModalBody');
@@ -2004,7 +2765,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 enforceReturnQtyWithinIssued(e.target);
             }
             if (e.target && e.target.classList.contains('sv-return-date')) {
-                enforceReturnDateNotBeforeIssue(e.target);
+                enforceReturnDateWithinRange(e.target);
             }
         });
     }
@@ -2013,7 +2774,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (returnItemForm) {
         returnItemForm.addEventListener('submit', function(e) {
             this.querySelectorAll('.sv-return-qty').forEach(enforceReturnQtyWithinIssued);
-            this.querySelectorAll('.sv-return-date').forEach(enforceReturnDateNotBeforeIssue);
+            this.querySelectorAll('.sv-return-date').forEach(enforceReturnDateWithinRange);
             if (!this.checkValidity()) {
                 e.preventDefault();
                 e.stopPropagation();
@@ -2055,9 +2816,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     
                     document.querySelector('#editSellingVoucherModal select.edit-payment-type').value = String(v.payment_type ?? 1);
-                    
-                    const clientTypePkSelect = document.querySelector('#editSellingVoucherModal select[name="client_type_pk"]');
-                    if (clientTypePkSelect) clientTypePkSelect.value = v.client_type_pk || '';
+                    const editSlug = (v.client_type_slug || 'employee');
                     
                     document.getElementById('editModalClientNameInput').value = v.client_name || '';
                     document.getElementById('editModalFacultySelect').value = v.client_name || '';
@@ -2068,7 +2827,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     const editOtCourseEl = document.getElementById('editModalOtCourseSelect');
                     if (editOtCourseEl) editOtCourseEl.value = v.client_type_pk || '';
                     const editCourseEl = document.getElementById('editModalCourseSelect');
-                    if (editCourseEl) editCourseEl.value = v.client_type_pk || '';
+                    if (editCourseEl) {
+                        editCourseEl.value = v.client_type_pk || '';
+                        if ((v.client_type_slug || '') === 'course') {
+                            editCourseEl.dispatchEvent(new Event('change'));
+                        }
+                    }
                     const editCourseNameEl = document.getElementById('editModalCourseNameSelect');
                     if (editCourseNameEl) editCourseNameEl.value = v.client_type_pk || '';
                     document.querySelector('#editSellingVoucherModal input.edit-issue-date').value = v.issue_date || '';
@@ -2111,6 +2875,14 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (typeof initEditModalTomSelects === 'function') {
                             initEditModalTomSelects();
                         }
+                        // Ensure Client Name dropdown is rebuilt for current Client Type, then select saved value.
+                        if (editSlug !== 'ot' && editSlug !== 'course') {
+                            const editClientSelect = document.getElementById('editClientNameSelect');
+                            if (editClientSelect && clientNameOptionsEdit.length) {
+                                rebuildClientNameSelect(editClientSelect, clientNameOptionsEdit, editSlug);
+                            }
+                            setSelectValue(document.getElementById('editClientNameSelect'), v.client_type_pk || '');
+                        }
                         // After Tom Select init, show only the active dropdowns in Client Name column and Name column
                         if (typeof applyEditModalClientNameColumnVisibility === 'function') {
                             applyEditModalClientNameColumnVisibility();
@@ -2150,7 +2922,15 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (editCourseNameSelect) { editCourseNameSelect.style.display = 'none'; editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
                         if (editNameInp) { editNameInp.style.display = 'block'; editNameInp.readOnly = false; editNameInp.placeholder = 'Course name'; editNameInp.value = v.client_name || ''; editNameInp.setAttribute('required', 'required'); }
                     } else {
-                        if (editClientSelect) { editClientSelect.style.display = 'block'; editClientSelect.setAttribute('required', 'required'); editClientSelect.setAttribute('name', 'client_type_pk'); editClientSelect.querySelectorAll('option').forEach(function(opt) { if (opt.value === '') { opt.hidden = false; return; } opt.hidden = (opt.dataset.type || '') !== (v.client_type_slug || 'employee'); }); }
+                        if (editClientSelect) {
+                            editClientSelect.style.display = 'block';
+                            editClientSelect.setAttribute('required', 'required');
+                            editClientSelect.setAttribute('name', 'client_type_pk');
+                            if (clientNameOptionsEdit.length) {
+                                rebuildClientNameSelect(editClientSelect, clientNameOptionsEdit, (v.client_type_slug || 'employee'));
+                            }
+                            setSelectValue(document.getElementById('editClientNameSelect'), v.client_type_pk || '');
+                        }
                         if (editOtSelect) { editOtSelect.style.display = 'none'; editOtSelect.removeAttribute('required'); editOtSelect.removeAttribute('name'); editOtSelect.value = ''; }
                         if (editCourseSelect) { editCourseSelect.style.display = 'none'; editCourseSelect.removeAttribute('required'); editCourseSelect.removeAttribute('name'); editCourseSelect.value = ''; }
                         if (editCourseNameSelect) { editCourseNameSelect.style.display = 'none'; editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
@@ -2182,7 +2962,48 @@ document.addEventListener('DOMContentLoaded', function() {
                         allowEmptyOption: true,
                         dropdownParent: '#editSellingVoucherModal .modal-body',
                         placeholder: 'Select Item',
-                        maxOptions: null
+                        maxOptions: null,
+                        highlight: false,
+                        controlInput: '<input>',
+                        onInitialize: function () { this.activeOption = null; },
+                        onDropdownOpen: function (dropdown) {
+                            var self = this;
+                            function clearInputAndCursor() {
+                                var input = self.control_input || (dropdown && dropdown.querySelector('input'));
+                                if (typeof self.setTextboxValue === 'function') self.setTextboxValue('');
+                                if (typeof self.onSearchChange === 'function') self.onSearchChange('');
+                                if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
+                                if (input) {
+                                    input.value = '';
+                                    input.focus();
+                                    try { input.setSelectionRange(0, 0); } catch (e) {}
+                                    input.scrollLeft = 0;
+                                }
+                            }
+                            // Edit modal new row: open par bhi blank state
+                            self.clear(true);
+                            clearInputAndCursor();
+                            setTimeout(function () {
+                                self.clear(true);
+                                clearInputAndCursor();
+                            }, 0);
+                            setTimeout(function () {
+                                self.clear(true);
+                                clearInputAndCursor();
+                            }, 50);
+                            setTimeout(function () {
+                                self.clear(true);
+                                clearInputAndCursor();
+                            }, 100);
+                            if (dropdown) setTimeout(function () {
+                                var opts = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"]');
+                                opts.forEach(function (opt) {
+                                    opt.classList.remove('active');
+                                    opt.classList.remove('selected');
+                                    opt.setAttribute('aria-selected', 'false');
+                                });
+                            }, 0);
+                        }
                     });
                 }
                 updateEditRemoveButtons();

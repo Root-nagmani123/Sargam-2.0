@@ -29,11 +29,60 @@ use App\Exports\Mess\SellingVoucherPrintSlipExport;
 use App\Exports\Mess\CategoryWisePrintSlipExport;
 use Maatwebsite\Excel\Facades\Excel;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Cache;
 use DB;
 use Illuminate\Support\Facades\Schema;
 
 class ReportController extends Controller
 {
+    /**
+     * Academy Staff list for report filters.
+     * Excludes Officers Mess department staff and employees that are mapped as Faculty.
+     *
+     * @return \Illuminate\Support\Collection<int, object{pk:mixed, full_name:string}>
+     */
+    private function academyStaffEmployees(?DepartmentMaster $officersMessDept)
+    {
+        $facultyEmployeePks = [];
+
+        // Some deployments may not have employee_master_pk column; guard it.
+        try {
+            $facultyTable = (new FacultyMaster())->getTable();
+            if (Schema::hasColumn($facultyTable, 'employee_master_pk')) {
+                $facultyEmployeePks = FacultyMaster::query()
+                    ->whereNotNull('employee_master_pk')
+                    ->pluck('employee_master_pk')
+                    ->filter()
+                    ->unique()
+                    ->values()
+                    ->all();
+            }
+        } catch (\Throwable $e) {
+            $facultyEmployeePks = [];
+        }
+
+        return EmployeeMaster::query()
+            ->when(Schema::hasColumn('employee_master', 'status'), fn ($q) => $q->where('status', 1))
+            ->when($officersMessDept, function ($q) use ($officersMessDept) {
+                $q->where(function ($sub) use ($officersMessDept) {
+                    $sub->whereNull('department_master_pk')
+                        ->orWhere('department_master_pk', '!=', $officersMessDept->pk);
+                });
+            })
+            ->when(!empty($facultyEmployeePks), function ($q) use ($facultyEmployeePks) {
+                $q->whereNotIn('pk', $facultyEmployeePks);
+            })
+            ->orderBy('first_name')->orderBy('last_name')
+            ->get(['pk', 'first_name', 'middle_name', 'last_name'])
+            ->map(function ($e) {
+                $fullName = trim(($e->first_name ?? '') . ' ' . ($e->middle_name ?? '') . ' ' . ($e->last_name ?? ''));
+                return (object) ['pk' => $e->pk, 'full_name' => $fullName ?: '—'];
+            })
+            ->filter(fn ($e) => $e->full_name !== '—')
+            ->values();
+    }
+
     /**
      * Stock Purchase Details Report
      * Shows detailed purchase information grouped by bill (Purchase Order)
@@ -119,16 +168,91 @@ class ReportController extends Controller
     {
         $fromDate = $request->filled('from_date') ? $request->from_date : now()->format('Y-m-d');
         $toDate = $request->filled('to_date') ? $request->to_date : now()->format('Y-m-d');
-        $storeId = $request->filled('store_id') ? $request->store_id : null;
         $storeType = $request->filled('store_type') ? $request->store_type : 'main';
 
-        [$reportData, $selectedStoreName] = $this->getStockSummaryReportData($fromDate, $toDate, $storeId, $storeType);
+        // Determine store ID based on store type and specific field names.
+        // We support both the new distinct fields (main_store_id/sub_store_id)
+        // and the legacy single store_id for backward compatibility.
+        $storeId = null;
+        if ($storeType === 'main') {
+            if ($request->filled('main_store_id')) {
+                $storeId = $request->main_store_id;
+            } elseif ($request->filled('store_id')) {
+                $storeId = $request->store_id;
+            }
+        } else {
+            if ($request->filled('sub_store_id')) {
+                $storeId = $request->sub_store_id;
+            } elseif ($request->filled('store_id')) {
+                $storeId = $request->store_id;
+            }
+        }
+
+        // This report is expensive to compute; cache the computed dataset for repeated pagination
+        $cacheTtlSeconds = 600; // 10 minutes
+        $cacheKey = 'stock-summary:v2:' . implode(':', [
+            (string) $fromDate,
+            (string) $toDate,
+            (string) $storeType,
+            (string) $storeId,
+        ]);
+
+        [$reportData, $selectedStoreName, $cachedTotals] = Cache::remember($cacheKey, $cacheTtlSeconds, function () use ($fromDate, $toDate, $storeId, $storeType) {
+            [$data, $storeName] = $this->getStockSummaryReportData($fromDate, $toDate, $storeId, $storeType);
+            $totals = [
+                'opening_amount' => (float) collect($data)->sum('opening_amount'),
+                'purchase_amount' => (float) collect($data)->sum('purchase_amount'),
+                'sale_amount' => (float) collect($data)->sum('sale_amount'),
+                'closing_amount' => (float) collect($data)->sum('closing_amount'),
+            ];
+            return [$data, $storeName, $totals];
+        });
+
+        // Convert report data to collection for convenient pagination & totals
+        $reportCollection = collect($reportData);
+
+        // Simple server-side pagination (per-page can be tuned)
+        $perPage = 25;
+        $currentPage = LengthAwarePaginator::resolveCurrentPage();
+        $pageItems = $reportCollection
+            ->slice(($currentPage - 1) * $perPage, $perPage)
+            ->values();
+
+        $reportPage = new LengthAwarePaginator(
+            $pageItems,
+            $reportCollection->count(),
+            $perPage,
+            $currentPage,
+            [
+                'path' => $request->url(),
+                'query' => $request->query(),
+            ]
+        );
+
+        // Grand totals across all items (not just current page) - cached to speed up pagination
+        $reportTotals = $cachedTotals ?? [
+            'opening_amount' => (float) $reportCollection->sum('opening_amount'),
+            'purchase_amount' => (float) $reportCollection->sum('purchase_amount'),
+            'sale_amount' => (float) $reportCollection->sum('sale_amount'),
+            'closing_amount' => (float) $reportCollection->sum('closing_amount'),
+        ];
 
         $stores = Store::where('status', 'active')->get();
         $subStores = SubStore::where('status', 'active')->get();
 
+        // If AJAX request (or ajax=1 flag), return only the table partial
+        if ($request->ajax() || $request->boolean('ajax')) {
+            return view('admin.mess.reports.partials.stock-summary-table', compact(
+                'reportData',
+                'reportPage',
+                'reportTotals'
+            ));
+        }
+
         return view('admin.mess.reports.stock-summary', compact(
             'reportData',
+            'reportPage',
+            'reportTotals',
             'stores',
             'subStores',
             'fromDate',
@@ -146,8 +270,22 @@ class ReportController extends Controller
     {
         $fromDate = $request->filled('from_date') ? $request->from_date : now()->format('Y-m-d');
         $toDate   = $request->filled('to_date') ? $request->to_date : now()->format('Y-m-d');
-        $storeId  = $request->filled('store_id') ? $request->store_id : null;
         $storeType = $request->filled('store_type') ? $request->store_type : 'main';
+
+        $storeId = null;
+        if ($storeType === 'main') {
+            if ($request->filled('main_store_id')) {
+                $storeId = $request->main_store_id;
+            } elseif ($request->filled('store_id')) {
+                $storeId = $request->store_id;
+            }
+        } else {
+            if ($request->filled('sub_store_id')) {
+                $storeId = $request->sub_store_id;
+            } elseif ($request->filled('store_id')) {
+                $storeId = $request->store_id;
+            }
+        }
 
         [$reportData, $selectedStoreName] = $this->getStockSummaryReportData($fromDate, $toDate, $storeId, $storeType);
 
@@ -165,8 +303,22 @@ class ReportController extends Controller
     {
         $fromDate = $request->filled('from_date') ? $request->from_date : now()->format('Y-m-d');
         $toDate   = $request->filled('to_date') ? $request->to_date : now()->format('Y-m-d');
-        $storeId  = $request->filled('store_id') ? $request->store_id : null;
         $storeType = $request->filled('store_type') ? $request->store_type : 'main';
+
+        $storeId = null;
+        if ($storeType === 'main') {
+            if ($request->filled('main_store_id')) {
+                $storeId = $request->main_store_id;
+            } elseif ($request->filled('store_id')) {
+                $storeId = $request->store_id;
+            }
+        } else {
+            if ($request->filled('sub_store_id')) {
+                $storeId = $request->sub_store_id;
+            } elseif ($request->filled('store_id')) {
+                $storeId = $request->store_id;
+            }
+        }
 
         [$reportData, $selectedStoreName] = $this->getStockSummaryReportData($fromDate, $toDate, $storeId, $storeType);
 
@@ -375,10 +527,18 @@ class ReportController extends Controller
         ]);
 
         if ($request->filled('from_date')) {
-            $query->whereDate('issue_date', '>=', $request->from_date);
+            $from = $request->from_date;
+            $query->where(function ($q) use ($from) {
+                $q->whereDate('issue_date', '>=', $from)
+                  ->orWhereDate('date_from', '>=', $from);
+            });
         }
         if ($request->filled('to_date')) {
-            $query->whereDate('issue_date', '<=', $request->to_date);
+            $to = $request->to_date;
+            $query->where(function ($q) use ($to) {
+                $q->whereDate('issue_date', '<=', $to)
+                  ->orWhereDate('date_to', '<=', $to);
+            });
         }
         if ($request->filled('employee_ot_filter')) {
             if ($request->employee_ot_filter === 'employee_ot') {
@@ -416,36 +576,49 @@ class ReportController extends Controller
      */
     public function categoryWisePrintSlipExcel(Request $request)
     {
+        // Normalise client_type_pk for OT/Course where the form sends course_master_pk
+        $effectiveClientTypePk = $request->filled('course_master_pk')
+            ? $request->course_master_pk
+            : ($request->filled('client_type_pk') ? $request->client_type_pk : null);
+
         $filtersApplied = $request->filled('from_date')
             || $request->filled('to_date')
             || $request->filled('client_type_slug')
-            || $request->filled('client_type_pk')
-            || $request->filled('course_master_pk')
+            || !is_null($effectiveClientTypePk)
             || $request->filled('buyer_name');
         if (! $filtersApplied) {
             return redirect()->route('admin.mess.reports.category-wise-print-slip')
                 ->with('error', 'Please apply filters before exporting.');
         }
 
-        $clientTypeSlugToInt = array_flip([
+        // Map human-readable client type slugs (used by filters / forms)
+        // to the integer codes stored in `kitchen_issue_master.client_type`.
+        // NOTE: Do NOT use array_flip here – the keys must remain the slugs
+        // so that lookups like $clientTypeSlugToInt['employee'] work correctly.
+        $clientTypeSlugToInt = [
             \App\Models\Mess\ClientType::TYPE_EMPLOYEE => KitchenIssueMaster::CLIENT_EMPLOYEE,
             \App\Models\Mess\ClientType::TYPE_OT      => KitchenIssueMaster::CLIENT_OT,
             \App\Models\Mess\ClientType::TYPE_COURSE  => KitchenIssueMaster::CLIENT_COURSE,
             \App\Models\Mess\ClientType::TYPE_OTHER   => KitchenIssueMaster::CLIENT_OTHER,
-        ]);
+            'section'                                 => KitchenIssueMaster::CLIENT_SECTION,
+        ];
 
         $svQuery = \App\Models\Mess\SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'items.itemSubcategory']);
-        if ($request->filled('from_date')) {
-            $svQuery->whereDate('issue_date', '>=', $request->from_date);
-        }
-        if ($request->filled('to_date')) {
-            $svQuery->whereDate('issue_date', '<=', $request->to_date);
+        $fromDate = $request->filled('from_date') ? $request->from_date : null;
+        $toDate   = $request->filled('to_date') ? $request->to_date : null;
+        if ($fromDate && $toDate) {
+            $svQuery->whereDate('date_from', '<=', $toDate)
+                ->whereDate('date_to', '>=', $fromDate);
+        } elseif ($fromDate) {
+            $svQuery->whereDate('date_to', '>=', $fromDate);
+        } elseif ($toDate) {
+            $svQuery->whereDate('date_from', '<=', $toDate);
         }
         if ($request->filled('client_type_slug')) {
             $svQuery->where('client_type_slug', $request->client_type_slug);
         }
-        if ($request->filled('client_type_pk')) {
-            $svQuery->where('client_type_pk', $request->client_type_pk);
+        if (!is_null($effectiveClientTypePk)) {
+            $svQuery->where('client_type_pk', $effectiveClientTypePk);
         }
         if ($request->filled('buyer_name')) {
             $svQuery->where('client_name', 'LIKE', '%' . trim($request->buyer_name) . '%');
@@ -473,8 +646,8 @@ class ReportController extends Controller
         if ($request->filled('client_type_slug') && isset($clientTypeSlugToInt[$request->client_type_slug])) {
             $kiQuery->where('client_type', $clientTypeSlugToInt[$request->client_type_slug]);
         }
-        if ($request->filled('client_type_pk')) {
-            $kiQuery->where('client_type_pk', $request->client_type_pk);
+        if (!is_null($effectiveClientTypePk)) {
+            $kiQuery->where('client_type_pk', $effectiveClientTypePk);
         }
         if ($request->filled('buyer_name')) {
             $kiQuery->where('client_name', 'LIKE', '%' . trim($request->buyer_name) . '%');
@@ -488,6 +661,12 @@ class ReportController extends Controller
         }
 
         $vouchers = $svVouchers->concat($kiVouchers)
+            ->when($request->filled('client_type_slug'), function ($collection) use ($request) {
+                // Hard filter again by slug so only the selected type appears
+                return $collection->filter(function ($v) use ($request) {
+                    return ($v->client_type_slug ?? null) === $request->client_type_slug;
+                });
+            })
             ->sortByDesc(function ($v) {
                 return $v->issue_date ? $v->issue_date->format('Y-m-d') : '';
             })
@@ -511,11 +690,15 @@ class ReportController extends Controller
      */
     public function categoryWisePrintSlipPdf(Request $request)
     {
+        // Normalise client_type_pk for OT/Course where the form sends course_master_pk
+        $effectiveClientTypePk = $request->filled('course_master_pk')
+            ? $request->course_master_pk
+            : ($request->filled('client_type_pk') ? $request->client_type_pk : null);
+
         $filtersApplied = $request->filled('from_date')
             || $request->filled('to_date')
             || $request->filled('client_type_slug')
-            || $request->filled('client_type_pk')
-            || $request->filled('course_master_pk')
+            || !is_null($effectiveClientTypePk)
             || $request->filled('buyer_name');
         if (! $filtersApplied) {
             return redirect()->route('admin.mess.reports.category-wise-print-slip')
@@ -527,6 +710,7 @@ class ReportController extends Controller
             \App\Models\Mess\ClientType::TYPE_OT      => KitchenIssueMaster::CLIENT_OT,
             \App\Models\Mess\ClientType::TYPE_COURSE  => KitchenIssueMaster::CLIENT_COURSE,
             \App\Models\Mess\ClientType::TYPE_OTHER   => KitchenIssueMaster::CLIENT_OTHER,
+            'section'                                 => KitchenIssueMaster::CLIENT_SECTION,
         ]);
 
         $svQuery = \App\Models\Mess\SellingVoucherDateRangeReport::with([
@@ -544,8 +728,8 @@ class ReportController extends Controller
         if ($request->filled('client_type_slug')) {
             $svQuery->where('client_type_slug', $request->client_type_slug);
         }
-        if ($request->filled('client_type_pk')) {
-            $svQuery->where('client_type_pk', $request->client_type_pk);
+        if (!is_null($effectiveClientTypePk)) {
+            $svQuery->where('client_type_pk', $effectiveClientTypePk);
         }
         if ($request->filled('buyer_name')) {
             $svQuery->where('client_name', 'LIKE', '%' . trim($request->buyer_name) . '%');
@@ -574,8 +758,8 @@ class ReportController extends Controller
         if ($request->filled('client_type_slug') && isset($clientTypeSlugToInt[$request->client_type_slug])) {
             $kiQuery->where('client_type', $clientTypeSlugToInt[$request->client_type_slug]);
         }
-        if ($request->filled('client_type_pk')) {
-            $kiQuery->where('client_type_pk', $request->client_type_pk);
+        if (!is_null($effectiveClientTypePk)) {
+            $kiQuery->where('client_type_pk', $effectiveClientTypePk);
         }
         if ($request->filled('buyer_name')) {
             $kiQuery->where('client_name', 'LIKE', '%' . trim($request->buyer_name) . '%');
@@ -590,6 +774,11 @@ class ReportController extends Controller
         }
 
         $vouchers = $svVouchers->concat($kiVouchers)
+            ->when($request->filled('client_type_slug'), function ($collection) use ($request) {
+                return $collection->filter(function ($v) use ($request) {
+                    return ($v->client_type_slug ?? null) === $request->client_type_slug;
+                });
+            })
             ->sortByDesc(function ($v) {
                 return $v->issue_date ? $v->issue_date->format('Y-m-d') : '';
             })
@@ -803,7 +992,177 @@ class ReportController extends Controller
             KitchenIssueMaster::CLIENT_OT      => \App\Models\Mess\ClientType::TYPE_OT,
             KitchenIssueMaster::CLIENT_COURSE  => \App\Models\Mess\ClientType::TYPE_COURSE,
             KitchenIssueMaster::CLIENT_OTHER   => \App\Models\Mess\ClientType::TYPE_OTHER,
+            KitchenIssueMaster::CLIENT_SECTION => 'section',
         ];
+    }
+
+    /**
+     * AJAX: Buyer Names for Course (Selling Voucher report filter).
+     * Returns distinct client_name values for a given course_pk, respecting optional date filters.
+     */
+    public function getCourseBuyerNamesByCourse(Request $request, $course_pk)
+    {
+        $coursePk = (int) $course_pk;
+        if ($coursePk <= 0) {
+            return response()->json(['buyers' => []]);
+        }
+
+        $fromDate = $request->filled('from_date') ? $request->from_date : null;
+        $toDate   = $request->filled('to_date') ? $request->to_date : null;
+
+        // Selling Voucher Date Range (SV)
+        $svQuery = \App\Models\Mess\SellingVoucherDateRangeReport::query()
+            ->where('client_type_slug', \App\Models\Mess\ClientType::TYPE_COURSE)
+            ->where('client_type_pk', $coursePk)
+            ->whereHas('items')
+            ->whereIn('status', [
+                \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_DRAFT,
+                \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_FINAL,
+                \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED,
+            ]);
+
+        // Date overlap logic, matching the main report
+        if ($fromDate && $toDate) {
+            $svQuery->whereDate('date_from', '<=', $toDate)
+                ->whereDate('date_to', '>=', $fromDate);
+        } elseif ($fromDate) {
+            $svQuery->whereDate('date_to', '>=', $fromDate);
+        } elseif ($toDate) {
+            $svQuery->whereDate('date_from', '<=', $toDate);
+        }
+
+        $svBuyers = (clone $svQuery)
+            ->whereNotNull('client_name')
+            ->where('client_name', '!=', '')
+            ->distinct()
+            ->pluck('client_name');
+
+        // Kitchen Issue (Selling Voucher type)
+        $kiQuery = KitchenIssueMaster::query()
+            ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+            ->whereHas('items')
+            ->where('client_type', KitchenIssueMaster::CLIENT_COURSE)
+            ->where('client_type_pk', $coursePk);
+
+        if ($fromDate) {
+            $kiQuery->whereDate('issue_date', '>=', $fromDate);
+        }
+        if ($toDate) {
+            $kiQuery->whereDate('issue_date', '<=', $toDate);
+        }
+
+        $kiBuyers = (clone $kiQuery)
+            ->whereNotNull('client_name')
+            ->where('client_name', '!=', '')
+            ->distinct()
+            ->pluck('client_name');
+
+        $buyers = $svBuyers->concat($kiBuyers)
+            ->filter()
+            ->map(fn ($n) => trim((string) $n))
+            ->filter(fn ($n) => $n !== '')
+            ->unique()
+            ->sort()
+            ->values();
+
+        return response()->json(['buyers' => $buyers]);
+    }
+
+    /**
+     * AJAX: Buyer Names for Sale Voucher Report filters.
+     * Supports: other, section (and course/ot if needed) with optional date + client_type_pk/course_master_pk.
+     */
+    public function getBuyerNamesForReportFilters(Request $request)
+    {
+        $slug = strtolower(trim((string) $request->query('client_type_slug', '')));
+        if (!in_array($slug, [\App\Models\Mess\ClientType::TYPE_COURSE, \App\Models\Mess\ClientType::TYPE_OTHER, 'section', \App\Models\Mess\ClientType::TYPE_OT, \App\Models\Mess\ClientType::TYPE_EMPLOYEE], true)) {
+            return response()->json(['buyers' => []]);
+        }
+
+        $fromDate = $request->filled('from_date') ? $request->from_date : null;
+        $toDate   = $request->filled('to_date') ? $request->to_date : null;
+
+        // Normalise PK depending on slug
+        $effectivePk = null;
+        if (in_array($slug, [\App\Models\Mess\ClientType::TYPE_COURSE, \App\Models\Mess\ClientType::TYPE_OT], true)) {
+            $effectivePk = $request->filled('course_master_pk') ? (int) $request->course_master_pk : null;
+        } else {
+            $effectivePk = $request->filled('client_type_pk') ? (int) $request->client_type_pk : null;
+        }
+
+        $svQuery = \App\Models\Mess\SellingVoucherDateRangeReport::query()
+            ->where('client_type_slug', $slug)
+            ->whereHas('items')
+            ->whereIn('status', [
+                \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_DRAFT,
+                \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_FINAL,
+                \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED,
+            ]);
+
+        if (!is_null($effectivePk)) {
+            $svQuery->where('client_type_pk', $effectivePk);
+        }
+
+        // Date overlap logic, matching the main report
+        if ($fromDate && $toDate) {
+            $svQuery->whereDate('date_from', '<=', $toDate)
+                ->whereDate('date_to', '>=', $fromDate);
+        } elseif ($fromDate) {
+            $svQuery->whereDate('date_to', '>=', $fromDate);
+        } elseif ($toDate) {
+            $svQuery->whereDate('date_from', '<=', $toDate);
+        }
+
+        $svBuyers = (clone $svQuery)
+            ->whereNotNull('client_name')
+            ->where('client_name', '!=', '')
+            ->distinct()
+            ->pluck('client_name');
+
+        // Kitchen Issue side
+        $kiQuery = KitchenIssueMaster::query()
+            ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+            ->whereHas('items');
+
+        $slugToKiType = [
+            \App\Models\Mess\ClientType::TYPE_EMPLOYEE => KitchenIssueMaster::CLIENT_EMPLOYEE,
+            \App\Models\Mess\ClientType::TYPE_OT       => KitchenIssueMaster::CLIENT_OT,
+            \App\Models\Mess\ClientType::TYPE_COURSE   => KitchenIssueMaster::CLIENT_COURSE,
+            \App\Models\Mess\ClientType::TYPE_OTHER    => KitchenIssueMaster::CLIENT_OTHER,
+            'section'                                  => KitchenIssueMaster::CLIENT_SECTION,
+        ];
+        if (isset($slugToKiType[$slug])) {
+            $kiQuery->where('client_type', $slugToKiType[$slug]);
+        } else {
+            // Unknown mapping => no buyers
+            return response()->json(['buyers' => []]);
+        }
+
+        if (!is_null($effectivePk)) {
+            $kiQuery->where('client_type_pk', $effectivePk);
+        }
+        if ($fromDate) {
+            $kiQuery->whereDate('issue_date', '>=', $fromDate);
+        }
+        if ($toDate) {
+            $kiQuery->whereDate('issue_date', '<=', $toDate);
+        }
+
+        $kiBuyers = (clone $kiQuery)
+            ->whereNotNull('client_name')
+            ->where('client_name', '!=', '')
+            ->distinct()
+            ->pluck('client_name');
+
+        $buyers = $svBuyers->concat($kiBuyers)
+            ->filter()
+            ->map(fn ($n) => trim((string) $n))
+            ->filter(fn ($n) => $n !== '')
+            ->unique()
+            ->sort()
+            ->values();
+
+        return response()->json(['buyers' => $buyers]);
     }
 
     /**
@@ -813,11 +1172,15 @@ class ReportController extends Controller
      */
     public function categoryWisePrintSlip(Request $request)
     {
+        // Normalise client_type_pk for OT/Course where the form sends course_master_pk
+        $effectiveClientTypePk = $request->filled('course_master_pk')
+            ? $request->course_master_pk
+            : ($request->filled('client_type_pk') ? $request->client_type_pk : null);
+
         $filtersApplied = $request->filled('from_date')
             || $request->filled('to_date')
             || $request->filled('client_type_slug')
-            || $request->filled('client_type_pk')
-            || $request->filled('course_master_pk')
+            || !is_null($effectiveClientTypePk)
             || $request->filled('buyer_name');
 
         if (! $filtersApplied) {
@@ -825,23 +1188,18 @@ class ReportController extends Controller
             $paginator = null;
             $allBuyersSections = collect();
             $printAll = false;
+            $courseBuyerNames = collect();
+            $otherBuyerNames = collect();
+            $sectionBuyerNames = collect();
             $clientTypes = ClientType::clientTypes();
             $clientTypeCategories = ClientType::active()
                 ->orderBy('client_type')
                 ->orderBy('client_name')
                 ->get()
                 ->groupBy('client_type');
-            $faculties = FacultyMaster::whereNotNull('full_name')->where('full_name', '!=', '')->orderBy('full_name')->get(['pk', 'full_name']);
-            $employees = EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn ($q) => $q->where('status', 1))
-                ->orderBy('first_name')->orderBy('last_name')
-                ->get(['pk', 'first_name', 'middle_name', 'last_name'])
-                ->map(function ($e) {
-                    $fullName = trim(($e->first_name ?? '') . ' ' . ($e->middle_name ?? '') . ' ' . ($e->last_name ?? ''));
-                    return (object) ['pk' => $e->pk, 'full_name' => $fullName ?: '—'];
-                })
-                ->filter(fn ($e) => $e->full_name !== '—')
-                ->values();
             $officersMessDept = DepartmentMaster::where('department_name', 'Officers Mess')->first();
+            $faculties = FacultyMaster::whereNotNull('full_name')->where('full_name', '!=', '')->orderBy('full_name')->get(['pk', 'full_name']);
+            $employees = $this->academyStaffEmployees($officersMessDept);
             $messStaff = $officersMessDept
                 ? EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn ($q) => $q->where('status', 1))
                     ->where('department_master_pk', $officersMessDept->pk)
@@ -872,7 +1230,8 @@ class ReportController extends Controller
                 'employees',
                 'messStaff',
                 'otCourses',
-                'filtersApplied'
+                'filtersApplied',
+                'courseBuyerNames'
             ));
         }
 
@@ -881,26 +1240,36 @@ class ReportController extends Controller
             \App\Models\Mess\ClientType::TYPE_OT      => KitchenIssueMaster::CLIENT_OT,
             \App\Models\Mess\ClientType::TYPE_COURSE  => KitchenIssueMaster::CLIENT_COURSE,
             \App\Models\Mess\ClientType::TYPE_OTHER   => KitchenIssueMaster::CLIENT_OTHER,
+            'section'                                 => KitchenIssueMaster::CLIENT_SECTION,
         ]);
 
         // --- 1. Selling Voucher Date Range ---
+        // Use date range overlap logic on date_from/date_to so partial overlaps also match.
         $svQuery = \App\Models\Mess\SellingVoucherDateRangeReport::with([
             'store',
             'clientTypeCategory',
             'items.itemSubcategory'
         ]);
 
-        if ($request->filled('from_date')) {
-            $svQuery->whereDate('issue_date', '>=', $request->from_date);
-        }
-        if ($request->filled('to_date')) {
-            $svQuery->whereDate('issue_date', '<=', $request->to_date);
+        $fromDate = $request->filled('from_date') ? $request->from_date : null;
+        $toDate   = $request->filled('to_date') ? $request->to_date : null;
+
+        if ($fromDate && $toDate) {
+            // Any voucher whose [date_from, date_to] overlaps [fromDate, toDate]
+            $svQuery->whereDate('date_from', '<=', $toDate)
+                ->whereDate('date_to', '>=', $fromDate);
+        } elseif ($fromDate) {
+            // Vouchers that end on/after fromDate
+            $svQuery->whereDate('date_to', '>=', $fromDate);
+        } elseif ($toDate) {
+            // Vouchers that start on/before toDate
+            $svQuery->whereDate('date_from', '<=', $toDate);
         }
         if ($request->filled('client_type_slug')) {
             $svQuery->where('client_type_slug', $request->client_type_slug);
         }
-        if ($request->filled('client_type_pk')) {
-            $svQuery->where('client_type_pk', $request->client_type_pk);
+        if (!is_null($effectiveClientTypePk)) {
+            $svQuery->where('client_type_pk', $effectiveClientTypePk);
         }
         if ($request->filled('buyer_name')) {
             $svQuery->where('client_name', 'LIKE', '%' . trim($request->buyer_name) . '%');
@@ -931,8 +1300,8 @@ class ReportController extends Controller
         if ($request->filled('client_type_slug') && isset($clientTypeSlugToInt[$request->client_type_slug])) {
             $kiQuery->where('client_type', $clientTypeSlugToInt[$request->client_type_slug]);
         }
-        if ($request->filled('client_type_pk')) {
-            $kiQuery->where('client_type_pk', $request->client_type_pk);
+        if (!is_null($effectiveClientTypePk)) {
+            $kiQuery->where('client_type_pk', $effectiveClientTypePk);
         }
         if ($request->filled('buyer_name')) {
             $kiQuery->where('client_name', 'LIKE', '%' . trim($request->buyer_name) . '%');
@@ -947,47 +1316,71 @@ class ReportController extends Controller
 
         // --- 3. Merge and sort by issue_date desc ---
         $vouchers = $svVouchers->concat($kiVouchers)
+            ->when($request->filled('client_type_slug'), function ($collection) use ($request) {
+                return $collection->filter(function ($v) use ($request) {
+                    return ($v->client_type_slug ?? null) === $request->client_type_slug;
+                });
+            })
             ->sortByDesc(function ($v) { return $v->issue_date ? $v->issue_date->format('Y-m-d') : ''; })
             ->values();
 
-        // --- 4. Paginate by BUYER: one buyer per page (or all for print_all) ---
-        $groupedByBuyer = $vouchers->groupBy('client_type_pk');
-        $totalBuyers = $groupedByBuyer->count();
+        // --- 4. Group by BUYER: load all buyers in a single view (no pagination) ---
+        // IMPORTANT:
+        // `client_type_pk` is the "client category" (e.g. Faculty/Academy Staff) for Employee type,
+        // so multiple buyers share the same pk. Grouping only by pk collapses multiple buyers into one
+        // and makes it look like some buyers/vouchers are missing in the report.
+        // We must group by buyer identity: name + type (+ pk for safety).
+        $groupedByBuyer = $vouchers->groupBy(function ($v) {
+            $name = trim((string) ($v->client_name ?? ($v->clientTypeCategory->client_name ?? '')));
+            $slug = (string) ($v->client_type_slug ?? '');
+            $pk = (string) ($v->client_type_pk ?? '');
+            return $name . '|' . $slug . '|' . $pk;
+        });
+
+        // Distinct buyer names per client_type_slug so that Buyer Name dropdown
+        // can show only valid names for the selected type (course/other/section).
+        $courseBuyerNames = collect();
+        $otherBuyerNames = collect();
+        $sectionBuyerNames = collect();
+
+        $bySlug = $vouchers->groupBy('client_type_slug');
+        if (isset($bySlug[ClientType::TYPE_COURSE])) {
+            $courseBuyerNames = $bySlug[ClientType::TYPE_COURSE]->pluck('client_name')
+                ->filter()
+                ->unique()
+                ->sort()
+                ->values();
+        }
+        if (isset($bySlug['other'])) {
+            $otherBuyerNames = $bySlug['other']->pluck('client_name')
+                ->filter()
+                ->unique()
+                ->sort()
+                ->values();
+        }
+        if (isset($bySlug['section'])) {
+            $sectionBuyerNames = $bySlug['section']->pluck('client_name')
+                ->filter()
+                ->unique()
+                ->sort()
+                ->values();
+        }
         $printAll = $request->boolean('print_all');
 
-        if ($printAll) {
-            $allBuyersSections = $groupedByBuyer->values()->map(function ($buyerVouchers) {
-                return $buyerVouchers->groupBy(function ($v) {
-                    $pk = $v->client_type_pk ?? '';
-                    $slug = $v->client_type_slug ?? '';
-                    return $pk . '-' . $slug;
-                });
-            });
-            $currentBuyerVouchers = collect();
-            $groupedSections = collect();
-            $paginator = null;
-        } else {
-            $currentPage = (int) $request->get('page', 1);
-            $perPage = 1;
-            $currentPage = max(1, min($currentPage, (int) max(1, ceil($totalBuyers / $perPage)) ?: 1));
-            $currentBuyerVouchers = $groupedByBuyer->values()->forPage($currentPage, $perPage)->first();
-            if (! $currentBuyerVouchers) {
-                $currentBuyerVouchers = collect();
-            }
-            $groupedSections = $currentBuyerVouchers->groupBy(function ($v) {
+        // For both normal view and print_all, we prepare all buyers' sections.
+        // View will iterate over $allBuyersSections so everything shows in one go.
+        $allBuyersSections = $groupedByBuyer->values()->map(function ($buyerVouchers) {
+            return $buyerVouchers->groupBy(function ($v) {
                 $pk = $v->client_type_pk ?? '';
                 $slug = $v->client_type_slug ?? '';
                 return $pk . '-' . $slug;
             });
-            $allBuyersSections = collect();
-            $paginator = new \Illuminate\Pagination\LengthAwarePaginator(
-                $groupedByBuyer->forPage($currentPage, $perPage)->values(),
-                $totalBuyers,
-                $perPage,
-                $currentPage,
-                ['path' => $request->url(), 'query' => $request->except('print_all')]
-            );
-        }
+        });
+
+        // Backwards compatibility: keep variables expected by the view.
+        // $groupedSections is no longer used for pagination but kept as empty collection.
+        $groupedSections = collect();
+        $paginator = null;
 
         $clientTypes = ClientType::clientTypes();
         $clientTypeCategories = ClientType::active()
@@ -996,17 +1389,9 @@ class ReportController extends Controller
             ->get()
             ->groupBy('client_type');
 
-        $faculties = FacultyMaster::whereNotNull('full_name')->where('full_name', '!=', '')->orderBy('full_name')->get(['pk', 'full_name']);
-        $employees = EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn ($q) => $q->where('status', 1))
-            ->orderBy('first_name')->orderBy('last_name')
-            ->get(['pk', 'first_name', 'middle_name', 'last_name'])
-            ->map(function ($e) {
-                $fullName = trim(($e->first_name ?? '') . ' ' . ($e->middle_name ?? '') . ' ' . ($e->last_name ?? ''));
-                return (object) ['pk' => $e->pk, 'full_name' => $fullName ?: '—'];
-            })
-            ->filter(fn ($e) => $e->full_name !== '—')
-            ->values();
         $officersMessDept = DepartmentMaster::where('department_name', 'Officers Mess')->first();
+        $faculties = FacultyMaster::whereNotNull('full_name')->where('full_name', '!=', '')->orderBy('full_name')->get(['pk', 'full_name']);
+        $employees = $this->academyStaffEmployees($officersMessDept);
         $messStaff = $officersMessDept
             ? EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn ($q) => $q->where('status', 1))
                 ->where('department_master_pk', $officersMessDept->pk)
@@ -1039,7 +1424,10 @@ class ReportController extends Controller
             'employees',
             'messStaff',
             'otCourses',
-            'filtersApplied'
+            'filtersApplied',
+            'courseBuyerNames',
+            'otherBuyerNames',
+            'sectionBuyerNames'
         ));
     }
     /**
@@ -1293,11 +1681,19 @@ class ReportController extends Controller
         
         // Apply filters
         if ($request->filled('from_date')) {
-            $query->whereDate('issue_date', '>=', $request->from_date);
+            $from = $request->from_date;
+            $query->where(function ($q) use ($from) {
+                $q->whereDate('issue_date', '>=', $from)
+                  ->orWhereDate('date_from', '>=', $from);
+            });
         }
         
         if ($request->filled('to_date')) {
-            $query->whereDate('issue_date', '<=', $request->to_date);
+            $to = $request->to_date;
+            $query->where(function ($q) use ($to) {
+                $q->whereDate('issue_date', '<=', $to)
+                  ->orWhereDate('date_to', '<=', $to);
+            });
         }
         
         // Employee / OT filter
@@ -1390,7 +1786,12 @@ class ReportController extends Controller
         }
 
         $categories = ItemCategory::active()->orderBy('category_name')->get();
-        $allItems = ItemSubcategory::where('status', 'active')->orderBy('name')->get();
+
+        $allItemsQuery = ItemSubcategory::where('status', 'active');
+        if ($viewType === 'category_wise' && $categoryId) {
+            $allItemsQuery->where('category_id', $categoryId);
+        }
+        $allItems = $allItemsQuery->orderBy('name')->get();
 
         return view('admin.mess.reports.purchase-sale-quantity', compact(
             'reportData',

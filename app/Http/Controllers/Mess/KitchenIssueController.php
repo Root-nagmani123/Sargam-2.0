@@ -111,26 +111,77 @@ class KitchenIssueController extends Controller
         $clientTypes = ClientType::clientTypes();
         $clientNamesByType = ClientType::active()->orderBy('client_type')->orderBy('client_name')->get()
             ->groupBy('client_type');
-        $faculties = FacultyMaster::whereNotNull('full_name')->where('full_name', '!=', '')->orderBy('full_name')->get(['pk', 'full_name']);
+
+        // Same split as Selling Voucher Date Range:
+        // - Faculty Staff: from FacultyMaster (linked via employee_master_pk)
+        // - Academy Staff: active employees excluding Mess staff + faculty-mapped employees
+        $officersMessDept = DepartmentMaster::where('department_name', 'Officers Mess')->first();
+
+        $faculties = FacultyMaster::whereNotNull('full_name')
+            ->where('full_name', '!=', '')
+            ->orderBy('full_name')
+            ->get(['pk', 'full_name', 'faculty_code', 'employee_master_pk'])
+            ->map(function ($f) {
+                $fullName = trim((string) ($f->full_name ?? ''));
+                $facultyCode = trim((string) ($f->faculty_code ?? ''));
+                $f->full_name_with_code = $facultyCode !== '' ? ($fullName . ' (' . $facultyCode . ')') : $fullName;
+                return $f;
+            });
+
+        $facultyEmployeePks = $faculties
+            ->pluck('employee_master_pk')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        $departmentNamesByPk = DepartmentMaster::pluck('department_name', 'pk');
+
+        $buildEmployeeLabel = function ($fullName, $departmentPk) use ($departmentNamesByPk) {
+            $fullName = trim((string) $fullName);
+            if ($fullName === '') {
+                $fullName = '—';
+            }
+            $departmentName = trim((string) ($departmentNamesByPk[$departmentPk] ?? ''));
+            return $departmentName !== '' ? ($fullName . ' (' . $departmentName . ')') : $fullName;
+        };
+
         $employees = EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn($q) => $q->where('status', 1))
+            ->when($officersMessDept, function ($q) use ($officersMessDept) {
+                $q->where(function ($sub) use ($officersMessDept) {
+                    $sub->whereNull('department_master_pk')
+                        ->orWhere('department_master_pk', '!=', $officersMessDept->pk);
+                });
+            })
+            ->when(!empty($facultyEmployeePks), function ($q) use ($facultyEmployeePks) {
+                $q->whereNotIn('pk', $facultyEmployeePks);
+            })
             ->orderBy('first_name')->orderBy('last_name')
-            ->get(['pk', 'first_name', 'middle_name', 'last_name'])
-            ->map(function ($e) {
+            ->get(['pk', 'first_name', 'middle_name', 'last_name', 'department_master_pk'])
+            ->map(function ($e) use ($buildEmployeeLabel) {
                 $fullName = trim(($e->first_name ?? '') . ' ' . ($e->middle_name ?? '') . ' ' . ($e->last_name ?? ''));
-                return (object) ['pk' => $e->pk, 'full_name' => $fullName ?: '—'];
+                $fullName = $fullName ?: '—';
+                return (object) [
+                    'pk' => $e->pk,
+                    'full_name' => $fullName,
+                    'full_name_with_department' => $buildEmployeeLabel($fullName, $e->department_master_pk ?? null),
+                ];
             })
             ->filter(fn($e) => $e->full_name !== '—')
             ->values();
-
-        $officersMessDept = DepartmentMaster::where('department_name', 'Officers Mess')->first();
         $messStaff = $officersMessDept
             ? EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn($q) => $q->where('status', 1))
                 ->where('department_master_pk', $officersMessDept->pk)
                 ->orderBy('first_name')->orderBy('last_name')
-                ->get(['pk', 'first_name', 'middle_name', 'last_name'])
-                ->map(function ($e) {
+                ->get(['pk', 'first_name', 'middle_name', 'last_name', 'department_master_pk'])
+                ->map(function ($e) use ($buildEmployeeLabel) {
                     $fullName = trim(($e->first_name ?? '') . ' ' . ($e->middle_name ?? '') . ' ' . ($e->last_name ?? ''));
-                    return (object) ['pk' => $e->pk, 'full_name' => $fullName ?: '—'];
+                    $fullName = $fullName ?: '—';
+                    return (object) [
+                        'pk' => $e->pk,
+                        'full_name' => $fullName,
+                        'full_name_with_department' => $buildEmployeeLabel($fullName, $e->department_master_pk ?? null),
+                    ];
                 })
                 ->filter(fn($e) => $e->full_name !== '—')
                 ->values()
@@ -167,6 +218,49 @@ class KitchenIssueController extends Controller
                 return ['pk' => $s->pk, 'display_name' => $displayName];
             })->filter(fn($s) => $s['display_name'] !== '—')->values(),
         ]);
+    }
+
+    /**
+     * AJAX: previously used buyer names for Selling Voucher.
+     *
+     * Query params:
+     * - client_type_slug: course|section|other
+     * - client_type_pk: for course => course_master.pk, for section/other => mess_client_types.id
+     */
+    public function getBuyerNames(Request $request)
+    {
+        $slug = strtolower(trim((string) $request->query('client_type_slug', '')));
+        if (!in_array($slug, ['course', 'section', 'other'], true)) {
+            return response()->json(['buyers' => []]);
+        }
+
+        $clientTypePk = (int) $request->query('client_type_pk', 0);
+        if ($clientTypePk <= 0) {
+            return response()->json(['buyers' => []]);
+        }
+
+        $clientType = match ($slug) {
+            'course' => KitchenIssueMaster::CLIENT_COURSE,
+            'section' => KitchenIssueMaster::CLIENT_SECTION,
+            'other' => KitchenIssueMaster::CLIENT_OTHER,
+        };
+
+        $buyers = KitchenIssueMaster::query()
+            ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+            ->where('client_type', $clientType)
+            ->where('client_type_pk', $clientTypePk)
+            ->whereHas('items')
+            ->whereNotNull('client_name')
+            ->where('client_name', '!=', '')
+            ->distinct()
+            ->pluck('client_name')
+            ->map(fn ($n) => trim((string) $n))
+            ->filter(fn ($n) => $n !== '')
+            ->unique()
+            ->sort()
+            ->values();
+
+        return response()->json(['buyers' => $buyers]);
     }
 
     /**
@@ -207,13 +301,38 @@ class KitchenIssueController extends Controller
         $clientTypes = ClientType::clientTypes();
         $clientNamesByType = ClientType::active()->orderBy('client_type')->orderBy('client_name')->get()
             ->groupBy('client_type');
-        $faculties = FacultyMaster::whereNotNull('full_name')->where('full_name', '!=', '')->orderBy('full_name')->get(['pk', 'full_name']);
+        $faculties = FacultyMaster::whereNotNull('full_name')
+            ->where('full_name', '!=', '')
+            ->orderBy('full_name')
+            ->get(['pk', 'full_name', 'faculty_code'])
+            ->map(function ($f) {
+                $fullName = trim((string) ($f->full_name ?? ''));
+                $facultyCode = trim((string) ($f->faculty_code ?? ''));
+                $f->full_name_with_code = $facultyCode !== '' ? ($fullName . ' (' . $facultyCode . ')') : $fullName;
+                return $f;
+            });
+        $departmentNamesByPk = DepartmentMaster::pluck('department_name', 'pk');
+
+        $buildEmployeeLabel = function ($fullName, $departmentPk) use ($departmentNamesByPk) {
+            $fullName = trim((string) $fullName);
+            if ($fullName === '') {
+                $fullName = '—';
+            }
+            $departmentName = trim((string) ($departmentNamesByPk[$departmentPk] ?? ''));
+            return $departmentName !== '' ? ($fullName . ' (' . $departmentName . ')') : $fullName;
+        };
+
         $employees = EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn($q) => $q->where('status', 1))
             ->orderBy('first_name')->orderBy('last_name')
-            ->get(['pk', 'first_name', 'middle_name', 'last_name'])
-            ->map(function ($e) {
+            ->get(['pk', 'first_name', 'middle_name', 'last_name', 'department_master_pk'])
+            ->map(function ($e) use ($buildEmployeeLabel) {
                 $fullName = trim(($e->first_name ?? '') . ' ' . ($e->middle_name ?? '') . ' ' . ($e->last_name ?? ''));
-                return (object) ['pk' => $e->pk, 'full_name' => $fullName ?: '—'];
+                $fullName = $fullName ?: '—';
+                return (object) [
+                    'pk' => $e->pk,
+                    'full_name' => $fullName,
+                    'full_name_with_department' => $buildEmployeeLabel($fullName, $e->department_master_pk ?? null),
+                ];
             })
             ->filter(fn($e) => $e->full_name !== '—')
             ->values();
@@ -223,10 +342,15 @@ class KitchenIssueController extends Controller
             ? EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn($q) => $q->where('status', 1))
                 ->where('department_master_pk', $officersMessDept->pk)
                 ->orderBy('first_name')->orderBy('last_name')
-                ->get(['pk', 'first_name', 'middle_name', 'last_name'])
-                ->map(function ($e) {
+                ->get(['pk', 'first_name', 'middle_name', 'last_name', 'department_master_pk'])
+                ->map(function ($e) use ($buildEmployeeLabel) {
                     $fullName = trim(($e->first_name ?? '') . ' ' . ($e->middle_name ?? '') . ' ' . ($e->last_name ?? ''));
-                    return (object) ['pk' => $e->pk, 'full_name' => $fullName ?: '—'];
+                    $fullName = $fullName ?: '—';
+                    return (object) [
+                        'pk' => $e->pk,
+                        'full_name' => $fullName,
+                        'full_name_with_department' => $buildEmployeeLabel($fullName, $e->department_master_pk ?? null),
+                    ];
                 })
                 ->filter(fn($e) => $e->full_name !== '—')
                 ->values()
@@ -381,13 +505,43 @@ class KitchenIssueController extends Controller
 
             DB::commit();
 
+            // AJAX request: return JSON so frontend can keep modal open without full page reload
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Selling Voucher created successfully',
+                    'voucher_id' => $master->pk,
+                ]);
+            }
+
             return redirect()->route('admin.mess.material-management.index')
-                ->with('success', 'Selling Voucher created successfully');
+                ->with('success', 'Selling Voucher created successfully')
+                ->with('open_selling_voucher_modal', true);
         } catch (ValidationException $e) {
             DB::rollBack();
-            throw $e;
+
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed.',
+                    'errors' => $e->errors(),
+                ], 422);
+            }
+
+            return redirect()->route('admin.mess.material-management.index')
+                ->withErrors($e->errors())
+                ->withInput()
+                ->with('open_selling_voucher_modal', true);
         } catch (\Exception $e) {
             DB::rollBack();
+
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to create Selling Voucher: ' . $e->getMessage(),
+                ], 500);
+            }
+
             return redirect()->route('admin.mess.material-management.index')
                 ->withInput()
                 ->with('error', 'Failed to create Selling Voucher: ' . $e->getMessage())
@@ -786,7 +940,7 @@ class KitchenIssueController extends Controller
             'items' => 'required|array|min:1',
             'items.*.id' => 'required|exists:kitchen_issue_items,pk',
             'items.*.return_quantity' => 'required|numeric|min:0',
-            'items.*.return_date' => 'nullable|date',
+            'items.*.return_date' => 'nullable|date|before_or_equal:today',
         ]);
 
         $itemIds = $kitchenIssue->items->pluck('pk')->toArray();
@@ -813,9 +967,25 @@ class KitchenIssueController extends Controller
                     try {
                         $ret = Carbon::parse($returnDate)->startOfDay();
                         $iss = Carbon::parse($kitchenIssue->issue_date)->startOfDay();
+                        if ($ret->gt(now()->startOfDay())) {
+                            DB::rollBack();
+                            return back()->withInput()->with('error', 'Return date cannot be in the future.');
+                        }
                         if ($ret->lt($iss)) {
                             DB::rollBack();
                             return back()->withInput()->with('error', 'Return date cannot be earlier than issue date.');
+                        }
+                    } catch (\Exception $e) {
+                        DB::rollBack();
+                        return back()->withInput()->with('error', 'Invalid return date.');
+                    }
+                }
+                if (!empty($returnDate) && !$kitchenIssue->issue_date) {
+                    try {
+                        $ret = Carbon::parse($returnDate)->startOfDay();
+                        if ($ret->gt(now()->startOfDay())) {
+                            DB::rollBack();
+                            return back()->withInput()->with('error', 'Return date cannot be in the future.');
                         }
                     } catch (\Exception $e) {
                         DB::rollBack();

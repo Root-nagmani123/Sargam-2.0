@@ -48692,6 +48692,15 @@ body .apexcharts-tooltip-title {
 
 .table-responsive .dataTables_wrapper .dataTables_filter {
     margin-bottom: 25px;
+    float: right !important;
+    text-align: right;
+}
+
+.table-responsive .dataTables_wrapper .dataTables_filter label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    justify-content: flex-end;
 }
 
 .table-responsive .dataTables_wrapper .dataTables_filter input {
@@ -48699,6 +48708,12 @@ body .apexcharts-tooltip-title {
     font-size: 0.765625rem;
     border-radius: 5px;
     border: 1px solid var(--bs-border-color);
+}
+
+.table-responsive .dataTables_wrapper .dataTables_filter input:focus {
+    outline: 0;
+    box-shadow: none;
+    border-color: var(--bs-border-color);
 }
 
 .table-responsive .dataTables_wrapper .dataTables_paginate .paginate_button {
@@ -48719,6 +48734,14 @@ body .apexcharts-tooltip-title {
     background-color: var(--bs-primary);
     border-color: var(--bs-primary);
 }
+
+/* Estate module: ensure Put In HAC search is right aligned */
+#putInHacTable_wrapper .dataTables_filter {
+    float: right !important;
+    text-align: right !important;
+    width: auto !important;
+}
+
 
 .wizard {
     display: block;
@@ -52082,6 +52105,12 @@ h6 {
     top: -81px;
     border-radius: 50%;
     opacity: 20%;
+}
+.sidebar-menu .sidebar-item .sidebar-link .hide-menu {
+    white-space: normal !important;
+    word-wrap: break-word;
+    overflow: visible;
+    text-overflow: unset;
 }
 .navbar-nav .nav-link.active {
     background-color: transparent;

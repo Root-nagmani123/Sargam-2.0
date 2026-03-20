@@ -28,7 +28,6 @@
                 <table id="subStoresTable" class="table  align-middle w-100">
                     <thead>
                         <tr>
-                            <th>#</th>
                             <th>Sub Store Name</th>
                             <th>Status</th>
                             <th>Action</th>
@@ -37,7 +36,6 @@
                     <tbody>
                         @foreach($subStores as $subStore)
                             <tr>
-                                <td>{{ $subStore->id }}</td>
                                 <td><div class="fw-semibold">{{ $subStore->sub_store_name }}</div></td>
                                 <td>
                                     <span class="badge bg-{{ $subStore->status_badge_class }}">
@@ -142,7 +140,7 @@
     </div>
 </div>
 
-@include('components.mess-master-datatables', ['tableId' => 'subStoresTable', 'searchPlaceholder' => 'Search sub stores...', 'orderColumn' => 1, 'actionColumnIndex' => 3, 'infoLabel' => 'sub stores'])
+@include('components.mess-master-datatables', ['tableId' => 'subStoresTable', 'searchPlaceholder' => 'Search sub stores...', 'orderColumn' => 0, 'actionColumnIndex' => 2, 'infoLabel' => 'sub stores'])
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
