@@ -101,6 +101,9 @@ class EstateController extends Controller
      */
     public function requestForEstate(EstateRequestForEstateDataTable $dataTable)
     {
+        $user = Auth::user();
+        $selfEmployeePk = null;
+
         // Only unit sub types that exist in estate_eligibility_mapping (mapped data)
         $eligibilityTypes = DB::table('estate_eligibility_mapping as eem')
             ->join('estate_unit_sub_type_master as ust', 'eem.estate_unit_sub_type_master_pk', '=', 'ust.pk')
@@ -110,9 +113,28 @@ class EstateController extends Controller
             ->orderBy('ust.unit_sub_type')
             ->pluck('ust.unit_sub_type', 'ust.pk');
 
+        // For self-service users (non-estate/admin/IST/HAC-person), resolve their own employee_master.pk
+        // so the Request For Estate form can be prefilled with their details.
+        if ($user && ! (hasRole('Estate') || hasRole('Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST') || hasRole('HAC Person'))) {
+            $employeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null);
+            if (!empty($employeeIds)) {
+                $selfEmployeePk = DB::table('employee_master')
+                    ->whereIn('pk', $employeeIds)
+                    ->orWhere(function ($q) use ($employeeIds) {
+                        if (Schema::hasColumn('employee_master', 'pk_old')) {
+                            $q->whereIn('pk_old', $employeeIds);
+                        }
+                    })
+                    ->value('pk');
+            }
+        }
+
         View::share('eligibilityTypes', $eligibilityTypes);
 
-        return $dataTable->render('admin.estate.request_for_estate', compact('eligibilityTypes'));
+        return $dataTable->render('admin.estate.request_for_estate', [
+            'eligibilityTypes' => $eligibilityTypes,
+            'selfEmployeePk' => $selfEmployeePk,
+        ]);
     }
 
     /**
@@ -1040,7 +1062,6 @@ class EstateController extends Controller
         $query = DB::table('estate_house_master as h')
             ->join('estate_block_master as b', 'h.estate_block_master_pk', '=', 'b.pk')
             ->where('h.estate_unit_sub_type_master_pk', $eligibilityTypePk)
-            ->where('h.used_home_status', 0)
             ->where('h.vacant_renovation_status', 1)
             ->select('h.pk', 'h.house_no', 'b.block_name')
             ->orderBy('b.block_name')
@@ -1160,6 +1181,66 @@ class EstateController extends Controller
             'remarks' => $homeReq->remarks ?? '—',
         ];
 
+        // Latest active house details (if possession exists) for this request.
+        $houseDetails = null;
+        if (\Illuminate\Support\Facades\Schema::hasTable('estate_possession_details')) {
+            $hasUnitTypeOnSubType = \Illuminate\Support\Facades\Schema::hasColumn('estate_unit_sub_type_master', 'estate_unit_type_master_pk');
+            $hasReturnStatus = \Illuminate\Support\Facades\Schema::hasColumn('estate_possession_details', 'return_home_status');
+
+            $rowQ = DB::table('estate_home_request_details as ehrd')
+                ->join('estate_possession_details as epd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
+                ->leftJoin('estate_house_master as ehm', 'epd.estate_house_master_pk', '=', 'ehm.pk')
+                ->leftJoin('estate_campus_master as ec', 'ehm.estate_campus_master_pk', '=', 'ec.pk')
+                ->leftJoin('estate_block_master as eb', 'ehm.estate_block_master_pk', '=', 'eb.pk')
+                ->leftJoin('estate_unit_sub_type_master as eust', 'ehm.estate_unit_sub_type_master_pk', '=', 'eust.pk')
+                ->leftJoin('estate_unit_type_master as eut', function ($join) use ($hasUnitTypeOnSubType) {
+                    if ($hasUnitTypeOnSubType) {
+                        $join->on('eust.estate_unit_type_master_pk', '=', 'eut.pk');
+                    } else {
+                        $join->on('ehm.estate_unit_master_pk', '=', 'eut.pk');
+                    }
+                })
+                ->where('ehrd.pk', $id)
+                ->whereNotNull('epd.estate_house_master_pk')
+                ->when($hasReturnStatus, function ($q) {
+                    $q->where(function ($inner) {
+                        $inner->whereNull('epd.return_home_status')
+                            ->orWhere('epd.return_home_status', 0);
+                    });
+                })
+                ->orderByDesc('epd.pk')
+                ->select(
+                    'ec.campus_name',
+                    'eb.block_name',
+                    'eut.unit_type as unit_type_name',
+                    'eust.unit_sub_type',
+                    'ehm.house_no',
+                    'epd.allotment_date',
+                    'epd.possession_date'
+                );
+
+            $row = $rowQ->first();
+            if ($row) {
+                $houseDetails = (object) [
+                    'campus_name' => $row->campus_name ?? '—',
+                    'block_name' => $row->block_name ?? '—',
+                    'unit_type' => $row->unit_type_name ?? '—',
+                    'unit_sub_type' => $row->unit_sub_type ?? '—',
+                    'house_no' => $row->house_no ?? '—',
+                    'allotment_date' => $row->allotment_date
+                        ? (is_string($row->allotment_date)
+                            ? (date('d-m-Y', strtotime($row->allotment_date)) ?: $row->allotment_date)
+                            : \Carbon\Carbon::parse($row->allotment_date)->format('d-m-Y'))
+                        : '—',
+                    'possession_date' => $row->possession_date
+                        ? (is_string($row->possession_date)
+                            ? (date('d-m-Y', strtotime($row->possession_date)) ?: $row->possession_date)
+                            : \Carbon\Carbon::parse($row->possession_date)->format('d-m-Y'))
+                        : '—',
+                ];
+            }
+        }
+
         $changeRows = DB::table('estate_change_home_req_details as ec')
             ->leftJoin('estate_campus_master as cm', 'cm.pk', '=', 'ec.estate_campus_master_pk')
             ->leftJoin('estate_block_master as bm', 'bm.pk', '=', 'ec.estate_block_master_pk')
@@ -1185,13 +1266,17 @@ class EstateController extends Controller
         $changeApDisMap = [0 => 'Pending', 1 => 'Approved', 2 => 'Disapproved'];
         $changeRequestDetails = $changeRows->map(function ($row) use ($changeApDisMap) {
             $changeApDis = (int) ($row->change_ap_dis_status ?? 0);
+            // Once Approved (1) or Disapproved (2), show "Decision made"; else use f_status for pending/forwarded
+            $fStatusLabel = ($changeApDis === 1 || $changeApDis === 2)
+                ? 'Decision made'
+                : ((int) ($row->f_status ?? 0) === 1 ? 'Pending approval' : 'Decision made');
             return (object) [
                 'pk' => (int) $row->pk,
                 'estate_change_req_ID' => $row->estate_change_req_ID ?? ('Chg-' . $row->pk),
                 'change_house_no' => $row->change_house_no ?? '—',
                 'change_req_date' => $row->change_req_date ? \Carbon\Carbon::parse($row->change_req_date)->format('d-m-Y H:i') : '—',
                 'remarks' => $row->remarks ?? '—',
-                'f_status_label' => (int) ($row->f_status ?? 0) === 1 ? 'Pending approval' : 'Decision made',
+                'f_status_label' => $fStatusLabel,
                 'change_ap_dis_status' => $changeApDis,
                 'change_ap_dis_status_label' => $changeApDisMap[$changeApDis] ?? '—',
                 'campus_name' => $row->campus_name ?? '—',
@@ -1205,6 +1290,7 @@ class EstateController extends Controller
         return view('admin.estate.request_and_change_request_details', [
             'requestForHouse' => $requestForHouse,
             'changeRequestDetails' => $changeRequestDetails,
+            'houseDetails' => $houseDetails,
         ]);
     }
 
@@ -2210,7 +2296,14 @@ class EstateController extends Controller
     }
 
     /**
-     * Allot house to new request - insert into estate_possession_details (moves to Possession Details).
+     * Allot house to new request.
+     *
+     * IMPORTANT:
+     * - Allotment should NOT auto-create a "completed possession" with today's dates.
+     * - DB columns (allotment_date / possession_date) may be NOT NULL in some environments.
+     *   So we store a sentinel pending date (1900-01-01) in possession_date.
+     * - Possession record becomes "completed" only when user submits Add Possession form
+     *   (with allotment_date + possession_date).
      */
     public function allotNewRequest(Request $request, $id)
     {
@@ -2279,12 +2372,33 @@ class EstateController extends Controller
                 }
                 return redirect()->route('admin.estate.change-request-hac-approved')->with('error', $msg);
             }
-            if ((int) ($houseRow->used_home_status ?? 0) !== 0) {
+            // Do not rely solely on used_home_status (can be stale). Consider occupied only if there is an active possession.
+            $isOccupied = false;
+            $activeDetails = DB::table('estate_possession_details')
+                ->where('estate_house_master_pk', $estateHouseMasterPk)
+                ->whereNotNull('estate_house_master_pk');
+            if (\Illuminate\Support\Facades\Schema::hasColumn('estate_possession_details', 'return_home_status')) {
+                $activeDetails->where('return_home_status', 0);
+            }
+            $isOccupied = $activeDetails->exists();
+            if (! $isOccupied) {
+                $activeOther = DB::table('estate_possession_other')
+                    ->where('estate_house_master_pk', $estateHouseMasterPk)
+                    ->whereNotNull('estate_house_master_pk')
+                    ->where('return_home_status', 0);
+                $isOccupied = $activeOther->exists();
+            }
+            if ($isOccupied) {
                 $msg = 'Selected house is already occupied. Please choose a vacant house from the list.';
                 if ($request->wantsJson()) {
                     return response()->json(['success' => false, 'message' => $msg], 422);
                 }
                 return redirect()->route('admin.estate.change-request-hac-approved')->with('error', $msg);
+            }
+
+            // If it's not occupied but still marked used, sync the flag.
+            if ((int) ($houseRow->used_home_status ?? 0) !== 0) {
+                $this->refreshHouseUsedStatusFromPossession($estateHouseMasterPk);
             }
         }
 
@@ -2305,7 +2419,7 @@ class EstateController extends Controller
             ->where('estate_home_request_details', $homeReq->pk)
             ->first();
 
-        $allotmentDate = now()->format('Y-m-d');
+        $pendingDate = '1900-01-01';
 
         if ($existingPossession) {
             $previousHousePk = (int) ($existingPossession->estate_house_master_pk ?? 0);
@@ -2314,19 +2428,21 @@ class EstateController extends Controller
                 ->update([
                     'estate_house_master_pk' => $estateHouseMasterPk,
                     'estate_change_id' => null,
+                    // keep possession pending until Add Possession form is submitted
+                    'allotment_date' => $pendingDate,
+                    'possession_date' => $pendingDate,
                 ]);
             $this->setHouseUsedStatus($estateHouseMasterPk, 1);
             if ($previousHousePk > 0 && $previousHousePk !== $estateHouseMasterPk) {
                 $this->refreshHouseUsedStatusFromPossession($previousHousePk);
             }
         } else {
-            // Insert with a valid possession_date (same as allotment_date) but meter reading = 0.
-            // "Possession pending" ko hum electric_meter_reading = 0 se identify karenge.
+            // Create a *pending* possession row (dates will be filled later from Add Possession form).
             DB::table('estate_possession_details')->insert([
                 'estate_home_request_details' => $homeReq->pk,
                 'emploee_master_pk' => $employeePk,
-                'allotment_date' => $allotmentDate,
-                'possession_date' => $allotmentDate,
+                'allotment_date' => $pendingDate,
+                'possession_date' => $pendingDate,
                 'electric_meter_reading' => 0,
                 'estate_house_master_pk' => $estateHouseMasterPk,
                 'estate_change_id' => null,
@@ -2345,11 +2461,11 @@ class EstateController extends Controller
         if ($request->wantsJson()) {
             return response()->json([
                 'success' => true,
-                'message' => 'House allotted successfully. Record is now in Possession Details.',
+                'message' => 'House allotted successfully. Now add possession details (allotment date & possession date) to complete possession.',
             ]);
         }
         return redirect()->route('admin.estate.change-request-hac-approved')
-            ->with('success', 'House allotted successfully. Record is now in Possession Details.');
+            ->with('success', 'House allotted successfully. Now add possession details (allotment date & possession date) to complete possession.');
     }
 
     /**
@@ -2410,7 +2526,7 @@ class EstateController extends Controller
                 ->with('error', 'Employee could not be resolved for this request. Please ensure the request has employee_pk or a valid employee_id linked in employee_master.');
         }
 
-        // Align with Define House: only Vacant and not already used houses can be allotted
+        // Align with Define House: only Vacant and not already occupied houses can be allotted
         $houseRow = DB::table('estate_house_master')->where('pk', $estateHouseMasterPk)->first();
         if ($houseRow) {
             if ((int) ($houseRow->vacant_renovation_status ?? 1) !== 1) {
@@ -2420,12 +2536,31 @@ class EstateController extends Controller
                 }
                 return redirect()->route('admin.estate.change-request-hac-approved')->with('error', $msg);
             }
-            if ((int) ($houseRow->used_home_status ?? 0) !== 0) {
+            $isOccupied = false;
+            $activeDetails = DB::table('estate_possession_details')
+                ->where('estate_house_master_pk', $estateHouseMasterPk)
+                ->whereNotNull('estate_house_master_pk');
+            if (\Illuminate\Support\Facades\Schema::hasColumn('estate_possession_details', 'return_home_status')) {
+                $activeDetails->where('return_home_status', 0);
+            }
+            $isOccupied = $activeDetails->exists();
+            if (! $isOccupied) {
+                $activeOther = DB::table('estate_possession_other')
+                    ->where('estate_house_master_pk', $estateHouseMasterPk)
+                    ->whereNotNull('estate_house_master_pk')
+                    ->where('return_home_status', 0);
+                $isOccupied = $activeOther->exists();
+            }
+            if ($isOccupied) {
                 $msg = 'Selected house is already occupied. Please choose a vacant house from the list.';
                 if ($request->wantsJson()) {
                     return response()->json(['success' => false, 'message' => $msg], 422);
                 }
                 return redirect()->route('admin.estate.change-request-hac-approved')->with('error', $msg);
+            }
+
+            if ((int) ($houseRow->used_home_status ?? 0) !== 0) {
+                $this->refreshHouseUsedStatusFromPossession($estateHouseMasterPk);
             }
         }
 
@@ -2434,7 +2569,7 @@ class EstateController extends Controller
             ->where('estate_home_request_details', $homeReqPk)
             ->first();
 
-        $allotmentDate = now()->format('Y-m-d');
+        $pendingDate = '1900-01-01';
 
         if ($existingPossession) {
             $previousHousePk = (int) ($existingPossession->estate_house_master_pk ?? 0);
@@ -2443,6 +2578,9 @@ class EstateController extends Controller
                 ->update([
                     'estate_house_master_pk' => $estateHouseMasterPk,
                     'estate_change_id' => $record->estate_change_req_ID ?? null,
+                    // keep possession pending until Add Possession form is submitted
+                    'allotment_date' => $pendingDate,
+                    'possession_date' => $pendingDate,
                 ]);
             $this->setHouseUsedStatus($estateHouseMasterPk, 1);
             if ($previousHousePk > 0 && $previousHousePk !== $estateHouseMasterPk) {
@@ -2452,8 +2590,8 @@ class EstateController extends Controller
             DB::table('estate_possession_details')->insert([
                 'estate_home_request_details' => $homeReqPk,
                 'emploee_master_pk' => $employeePk,
-                'allotment_date' => $allotmentDate,
-                'possession_date' => $allotmentDate,
+                'allotment_date' => $pendingDate,
+                'possession_date' => $pendingDate,
                 'electric_meter_reading' => 0,
                 'estate_house_master_pk' => $estateHouseMasterPk,
                 'estate_change_id' => $record->estate_change_req_ID ?? null,
@@ -2462,6 +2600,7 @@ class EstateController extends Controller
         }
 
         $record->change_ap_dis_status = 1;
+        $record->f_status = 0; // Decision made — no longer "pending approval"
         $record->remarks = null;
         $record->save();
 
@@ -2490,6 +2629,7 @@ class EstateController extends Controller
 
         $record = EstateChangeHomeReqDetails::where('estate_change_hac_status', 1)->findOrFail($id);
         $record->change_ap_dis_status = 2;
+        $record->f_status = 0; // Decision made — no longer "pending approval"
         $record->remarks = $request->disapprove_reason;
         $record->save();
 
@@ -2770,6 +2910,23 @@ class EstateController extends Controller
                 EstateHomeRequestDetails::where('pk', $homeReqPk)->update($homeReqUpdate);
             }
 
+            // Auto-cancel any pending Change Request when house is returned (keeps data consistent).
+            $pendingChangeRows = DB::table('estate_change_home_req_details')
+                ->where('estate_home_req_details_pk', $homeReqPk)
+                ->where('change_ap_dis_status', 0)
+                ->get();
+            foreach ($pendingChangeRows as $chRow) {
+                $existingRemarks = trim((string) ($chRow->remarks ?? ''));
+                $suffix = ' [Cancelled – house returned by employee.]';
+                $newRemarks = $existingRemarks === '' ? $suffix : $existingRemarks . $suffix;
+                DB::table('estate_change_home_req_details')
+                    ->where('pk', $chRow->pk)
+                    ->update([
+                        'change_ap_dis_status' => 2,
+                        'remarks' => \Illuminate\Support\Str::limit($newRemarks, 500),
+                    ]);
+            }
+
             return redirect()->route('admin.estate.return-house')->with('success', 'House marked as returned successfully.');
         }
 
@@ -2866,6 +3023,12 @@ class EstateController extends Controller
                 ->with('error', 'Selected house not found. Please reselect the house and try again.');
         }
 
+        // Always persist the actual house number from master, not the submitted hidden field.
+        $resolvedHouseNo = trim((string) ($house->house_no ?? ''));
+        if ($resolvedHouseNo === '') {
+            $resolvedHouseNo = trim((string) ($validated['house_no'] ?? ''));
+        }
+
         // When allotting (not return-house): align with Define House - only Vacant and not already used
         if ($request->get('redirect_to') !== 'return-house') {
             $isSameAsExisting = $request->filled('id') && (int) (EstatePossessionOther::find($request->id)?->estate_house_master_pk ?? 0) === (int) $house->pk;
@@ -2911,7 +3074,7 @@ class EstateController extends Controller
             'allotment_date' => $validated['allotment_date'] ?? null,
             'meter_reading_oth' => $validated['meter_reading_oth'] ?? null,
             'meter_reading_oth1' => $validated['meter_reading_oth1'] ?? null,
-            'house_no' => $validated['house_no'] ?? ($house->house_no ?? null),
+            'house_no' => $resolvedHouseNo !== '' ? $resolvedHouseNo : null,
             'status' => 0,
             'create_date' => now(),
             'created_by' => Auth::id(),
@@ -2950,7 +3113,10 @@ class EstateController extends Controller
             }
             if (! $target) {
                 $target = EstatePossessionOther::where('estate_other_req_pk', $validated['estate_other_req_pk'])
-                    ->where('return_home_status', 0)
+                    ->where(function ($q) {
+                        $q->whereNull('return_home_status')
+                            ->orWhere('return_home_status', 0);
+                    })
                     ->orderByDesc('pk')
                     ->first();
             }
@@ -2987,7 +3153,7 @@ class EstateController extends Controller
                 $validated['possession_date_oth'] ?? null,
                 $validated['meter_reading_oth'] ?? null,
                 $validated['meter_reading_oth1'] ?? null,
-                $validated['house_no'] ?? ($house->house_no ?? null),
+                $resolvedHouseNo !== '' ? $resolvedHouseNo : null,
                 $house?->meter_one ?? null,
                 $house?->meter_two ?? null,
                 $house?->water_charge ?? null,
@@ -3005,7 +3171,7 @@ class EstateController extends Controller
                 $validated['possession_date_oth'] ?? null,
                 $validated['meter_reading_oth'] ?? null,
                 $validated['meter_reading_oth1'] ?? null,
-                $validated['house_no'] ?? ($house->house_no ?? null),
+                $resolvedHouseNo !== '' ? $resolvedHouseNo : null,
                 $house?->meter_one ?? null,
                 $house?->meter_two ?? null,
                 $house?->water_charge ?? null,
@@ -3943,7 +4109,6 @@ class EstateController extends Controller
             })
             ->where('h.estate_block_master_pk', $blockId)
             ->where('h.estate_unit_sub_type_master_pk', $unitSubTypeId)
-            ->where('h.used_home_status', 0)
             ->where('h.vacant_renovation_status', 1)
             ->where(function ($q) {
                 $q->whereNotNull('h.house_no')
@@ -4085,7 +4250,6 @@ class EstateController extends Controller
             })
             ->where('h.estate_block_master_pk', $blockId)
             ->where('h.estate_unit_sub_type_master_pk', $unitSubTypeId)
-            ->where('h.used_home_status', 0)
             ->where('h.vacant_renovation_status', 1)
             ->where(function ($q) {
                 $q->whereNotNull('h.house_no')
@@ -4197,13 +4361,9 @@ class EstateController extends Controller
             ->where('ehrd.hac_status', 1)
             // Latest possession record per request.
             ->whereRaw('epd.pk = (SELECT MAX(epd2.pk) FROM estate_possession_details epd2 WHERE epd2.estate_home_request_details = ehrd.pk)')
-            // "Allotted ho chuka hai" = allotment_date set
-            ->whereNotNull('epd.allotment_date')
-            // "Possession abhi tak nahi bana" = electric_meter_reading 0 ya NULL (pending).
-            ->where(function ($q) {
-                $q->whereNull('epd.electric_meter_reading')
-                  ->orWhere('epd.electric_meter_reading', 0);
-            })
+            // "Allotted ho chuka hai" = request status marked allotted
+            // (allotment_date/possession_date are filled later from Add Possession form)
+            ->where('ehrd.status', 1)
             ->select(
                 'ehrd.pk',
                 'ehrd.req_id',
@@ -4211,8 +4371,8 @@ class EstateController extends Controller
                 'ehrd.emp_designation',
                 'ehrd.employee_pk',
                 'ehrd.employee_id',
-                DB::raw('DATE(epd.allotment_date) as allotment_date'),
-                DB::raw('DATE(epd.possession_date) as possession_date'),
+                DB::raw("CASE WHEN epd.allotment_date <= '1900-01-01' THEN NULL ELSE DATE(epd.allotment_date) END as allotment_date"),
+                DB::raw("CASE WHEN epd.possession_date <= '1900-01-01' THEN NULL ELSE DATE(epd.possession_date) END as possession_date"),
                 'epd.electric_meter_reading',
                 'epd.estate_house_master_pk',
                 'ehm.estate_campus_master_pk',
@@ -4227,7 +4387,8 @@ class EstateController extends Controller
 
         // Self-service: non-estate/admin users should only see their own HAC-approved requester(s) in dropdown.
         $user = Auth::user();
-        if ($user && ! (hasRole('Estate') || hasRole('Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST'))) {
+        $isEstateAuthority = $user && (hasRole('Estate') || hasRole('Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST'));
+        if ($user && ! $isEstateAuthority) {
             $employeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null);
             if (!empty($employeeIds)) {
                 $baseRequestersQuery->where(function ($q) use ($employeeIds) {
@@ -4238,6 +4399,14 @@ class EstateController extends Controller
             } else {
                 // No mapped employee → keep query as-is so at least Estate/Admin can still use it if roles change.
             }
+        }
+
+        // Admin/Estate ke Add Possession form me sirf woh requester dikhne chahiye
+        // jinke liye abhi possession form complete nahi hua (possession_date = sentinel 1900-01-01).
+        // User ke end se agar possession ban chuka hai (possession_date set), to
+        // unka naam yahan nahi aana chahiye; admin unko listing se edit karega.
+        if ($isEstateAuthority) {
+            $baseRequestersQuery->where('epd.possession_date', '<=', '1900-01-01');
         }
 
         $requesters = $baseRequestersQuery->get();
@@ -4252,7 +4421,7 @@ class EstateController extends Controller
                 ->where('ehrd.pk', $preselectedRequester)
                 ->where('ehrd.hac_status', 1)
                 ->whereRaw('epd.pk = (SELECT MAX(epd2.pk) FROM estate_possession_details epd2 WHERE epd2.estate_home_request_details = ehrd.pk)')
-                ->whereNotNull('epd.allotment_date')
+                ->where('ehrd.status', 1)
                 ->select(
                     'ehrd.pk',
                     'ehrd.req_id',
@@ -4260,8 +4429,8 @@ class EstateController extends Controller
                     'ehrd.emp_designation',
                     'ehrd.employee_pk',
                     'ehrd.employee_id',
-                    DB::raw('DATE(epd.allotment_date) as allotment_date'),
-                    DB::raw('DATE(epd.possession_date) as possession_date'),
+                    DB::raw("CASE WHEN epd.allotment_date <= '1900-01-01' THEN NULL ELSE DATE(epd.allotment_date) END as allotment_date"),
+                    DB::raw("CASE WHEN epd.possession_date <= '1900-01-01' THEN NULL ELSE DATE(epd.possession_date) END as possession_date"),
                     'epd.electric_meter_reading',
                     'epd.estate_house_master_pk',
                     'ehm.estate_campus_master_pk',
@@ -4365,13 +4534,20 @@ class EstateController extends Controller
             'electric_meter_reading' => 'nullable',
         ], $messages, $attributes);
 
-        $validator->after(function ($v) use ($request) {
-            $primary = trim((string) ($request->input('electric_meter_reading_primary', '')));
-            $secondary = trim((string) ($request->input('electric_meter_reading_secondary', '')));
-            if ($secondary === '' && $primary === '') {
-                $v->errors()->add('electric_meter_reading_secondary', 'Electric Meter Reading is required (enter Primary or Secondary).');
-            }
-        });
+        // For Estate/Admin roles, electric meter reading (primary/secondary) is required.
+        // For normal users (self-service), meter reading is optional; admin will update later.
+        $user = Auth::user();
+        $isEstateAuthority = $user && (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST'));
+
+        if ($isEstateAuthority) {
+            $validator->after(function ($v) use ($request) {
+                $primary = trim((string) ($request->input('electric_meter_reading_primary', '')));
+                $secondary = trim((string) ($request->input('electric_meter_reading_secondary', '')));
+                if ($secondary === '' && $primary === '') {
+                    $v->errors()->add('electric_meter_reading_secondary', 'Electric Meter Reading is required (enter Primary or Secondary).');
+                }
+            });
+        }
 
         $validated = $validator->validate();
 
@@ -4396,6 +4572,29 @@ class EstateController extends Controller
                 ->back()
                 ->withInput()
                 ->with('error', 'Requester is not allotted yet. Please allot first from HAC Approved.');
+        }
+
+        // Date editability:
+        // UI keeps these readonly for non-authority users, but enforce server-side too.
+        $user = Auth::user();
+        $canEditDates = $user && (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'));
+        if (! $canEditDates) {
+            // When dates already exist on the latest possession record, keep them immutable.
+            // If they are empty (legacy/incomplete), fall back to validated input so flow doesn't break.
+            // BUT: pending allotment uses sentinel date 1900-01-01. Treat it as empty so user can fill real dates.
+            $pendingSentinel = '1900-01-01';
+            $existingAllotment = ! empty($existingPossession->allotment_date) ? (string) $existingPossession->allotment_date : '';
+            $existingPossessionDate = ! empty($existingPossession->possession_date) ? (string) $existingPossession->possession_date : '';
+
+            $isAllotmentPending = $existingAllotment !== '' && substr($existingAllotment, 0, 10) <= $pendingSentinel;
+            $isPossessionPending = $existingPossessionDate !== '' && substr($existingPossessionDate, 0, 10) <= $pendingSentinel;
+
+            if ($existingAllotment !== '' && ! $isAllotmentPending) {
+                $validated['allotment_date'] = $existingPossession->allotment_date;
+            }
+            if ($existingPossessionDate !== '' && ! $isPossessionPending) {
+                $validated['possession_date'] = $existingPossession->possession_date;
+            }
         }
 
         // Self-service users (non-estate/admin) should not modify an already *completed*
@@ -4764,14 +4963,18 @@ class EstateController extends Controller
         } else {
             $otherNameSelect = "COALESCE(NULLIF(TRIM(eor.emp_name), ''), NULLIF(TRIM(eor.request_no_oth), ''), CONCAT('Request #', eor.pk))";
 
-            // Other Employee: show ONLY those whose latest possession row is still active (return_home_status = 0),
+            // Other Employee: show ONLY those whose latest possession row is still active
+            // (legacy rows may keep return_home_status as NULL; treat that same as 0),
             // actually mapped to a house, AND that house is currently marked used (used_home_status = 1).
             // This keeps the dropdown perfectly aligned with the effective occupancy flag.
             $list = DB::table('estate_other_req as eor')
                 ->join('estate_possession_other as epo', 'epo.estate_other_req_pk', '=', 'eor.pk')
                 ->join('estate_house_master as ehm', 'epo.estate_house_master_pk', '=', 'ehm.pk')
                 ->whereNotNull('epo.estate_house_master_pk')
-                ->where('epo.return_home_status', 0)
+                ->where(function ($q) {
+                    $q->whereNull('epo.return_home_status')
+                        ->orWhere('epo.return_home_status', 0);
+                })
                 ->where('ehm.used_home_status', 1)
                 ->whereRaw("
                     epo.pk = (
@@ -4820,8 +5023,13 @@ class EstateController extends Controller
                         $join->on('ehm.estate_unit_master_pk', '=', 'eut.pk');
                     }
                 })
+                ->leftJoin('employee_master as em', 'ehrd.employee_pk', '=', 'em.pk')
+                ->leftJoin('department_master as dm', 'em.department_master_pk', '=', 'dm.pk')
                 ->where('ehrd.pk', $id)
-                ->where('epd.return_home_status', 0)
+                ->where(function ($q) {
+                    $q->whereNull('epd.return_home_status')
+                        ->orWhere('epd.return_home_status', 0);
+                })
                 ->whereNotNull('epd.estate_house_master_pk')
                 ->select(
                     'ec.pk as estate_campus_master_pk',
@@ -4836,7 +5044,7 @@ class EstateController extends Controller
                     'ehm.house_no',
                     'epd.allotment_date',
                     'epd.possession_date as possession_date_oth',
-                    'ehrd.remarks as section_display'
+                    DB::raw('COALESCE(NULLIF(TRIM(dm.department_name), ""), NULLIF(TRIM(ehrd.remarks), ""), "") as section_display')
                 )
                 ->orderByDesc('epd.pk');
             $row = $rowQ->first();
@@ -4862,7 +5070,10 @@ class EstateController extends Controller
             ->leftJoin('estate_unit_sub_type_master as eust', 'epo.estate_unit_sub_type_master_pk', '=', 'eust.pk')
             ->leftJoin('estate_house_master as ehm', 'epo.estate_house_master_pk', '=', 'ehm.pk')
             ->where('epo.estate_other_req_pk', $id)
-            ->where('epo.return_home_status', 0)
+            ->where(function ($q) {
+                $q->whereNull('epo.return_home_status')
+                    ->orWhere('epo.return_home_status', 0);
+            })
             ->whereNotNull('epo.estate_house_master_pk')
             ->orderBy('epo.pk', 'desc')
             ->select(

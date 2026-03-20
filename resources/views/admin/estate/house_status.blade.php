@@ -133,6 +133,27 @@ $(document).ready(function() {
     // Print: same pattern as other estate module DataTable print
     function buildPrintableTableHtml(tableElement) {
         var clone = tableElement.cloneNode(true);
+        clone.classList.remove('dataTable');
+        clone.removeAttribute('style');
+        clone.removeAttribute('width');
+
+        clone.querySelectorAll('colgroup').forEach(function(colgroup) {
+            colgroup.remove();
+        });
+
+        clone.querySelectorAll('[style]').forEach(function(el) {
+            el.removeAttribute('style');
+        });
+
+        clone.querySelectorAll('[width]').forEach(function(el) {
+            el.removeAttribute('width');
+        });
+
+        clone.querySelectorAll('th, td').forEach(function(cell) {
+            cell.style.whiteSpace = 'normal';
+            cell.style.wordBreak = 'break-word';
+        });
+
         return clone.outerHTML;
     }
 
@@ -147,14 +168,21 @@ $(document).ready(function() {
             '<!doctype html>' +
             '<html><head><title>House Status - Sargam</title>' +
             '<style>' +
-            'body{font-family:Arial,sans-serif;padding:16px;color:#111827;}' +
-            'h2{margin:0 0 12px 0;font-size:20px;}' +
-            'table{width:100%;border-collapse:collapse;font-size:12px;}' +
-            'th,td{border:1px solid #d1d5db;padding:8px;vertical-align:top;text-align:left;}' +
-            'th{background:#f3f4f6;font-weight:600;}' +
-            '</style></head><body>' +
+            '@page{size:A4 landscape;margin:10mm;}' +
+            'html,body{margin:0;padding:0;background:#fff;}' +
+            'body{font-family:Arial,sans-serif;color:#111827;}' +
+            '.print-wrap{padding:0;}' +
+            'h2{margin:0 0 10px 0;font-size:18px;text-align:center;}' +
+            'table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:10px;}' +
+            'th,td{border:1px solid #d1d5db;padding:4px 5px;vertical-align:top;text-align:left;white-space:normal;word-break:break-word;overflow-wrap:anywhere;line-height:1.25;}' +
+            'th{background:#f3f4f6;font-weight:700;}' +
+            'thead{display:table-header-group;}' +
+            'tr{page-break-inside:avoid;}' +
+            '@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}' +
+            '</style></head><body><div class="print-wrap">' +
             '<h2>House Status</h2>' +
             tableHtml +
+            '</div>' +
             '</body></html>'
         );
         win.document.close();

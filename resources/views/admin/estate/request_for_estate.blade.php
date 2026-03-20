@@ -24,6 +24,30 @@
             </div>
 
             <div id="request-for-estate-card-body">
+            @php
+                $showUserActionHelp = !(
+                    hasRole('Estate') ||
+                    hasRole('Admin') ||
+                    hasRole('Super Admin') ||
+                    hasRole('Training-Induction') ||
+                    hasRole('Training-MCTP') ||
+                    hasRole('IST')
+                );
+            @endphp
+
+            @if($showUserActionHelp)
+            <div class="alert alert-light border request-action-help shadow-sm mb-3" role="note">
+                <div class="fw-semibold text-dark mb-1">Action buttons</div>
+                <div class="small text-body-secondary d-flex flex-wrap gap-3">
+                    <span><i class="material-icons material-symbols-rounded align-middle text-primary">visibility</i> View request details</span>
+                    <span><i class="material-icons material-symbols-rounded align-middle text-success">add_home</i> Add possession</span>
+                    <span><i class="material-icons material-symbols-rounded align-middle text-success">check_circle</i> Possession already done</span>
+                    <span><i class="material-icons material-symbols-rounded align-middle text-warning">logout</i> Return house</span>
+                    <span><i class="material-icons material-symbols-rounded align-middle text-info">swap_horiz</i> Raise change request</span>
+                </div>
+            </div>
+            @endif
+
             <div class="row align-items-end mb-3">
                 <div class="col-12 col-md-4 col-lg-3">
                     <label for="estateStatusFilter" class="form-label fw-semibold small mb-1">Status</label>
@@ -31,7 +55,6 @@
                         <option value="">All</option>
                         <option value="0">Pending</option>
                         <option value="1">Allotted</option>
-                        <option value="2">Rejected</option>
                         <option value="3">Returned</option>
                     </select>
                 </div>
@@ -238,6 +261,14 @@
         font-size: 0.875rem;
         color: var(--bs-body-secondary);
     }
+    .request-action-help {
+        background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+        border-color: #d8e7ff !important;
+    }
+    .request-action-help .material-icons {
+        font-size: 1rem;
+        vertical-align: text-bottom;
+    }
     @media (max-width: 767.98px) {
         #requestForEstateTable_wrapper .col-md-6,
         #requestForEstateTable_wrapper .col-md-4,
@@ -247,6 +278,9 @@
 @endpush
 
 @push('scripts')
+    <script>
+        window.requestEstateSelfEmployeePk = @json($selfEmployeePk ?? null);
+    </script>
     {!! $dataTable->scripts() !!}
     <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
     <script>
@@ -365,7 +399,15 @@
             clearEmployeeDerivedFields();
             $('#addEditRequestEstateFormErrors').addClass('d-none').find('#addEditRequestEstateFormErrorsText').empty();
             $('#formAddEditRequestEstate').find('.field-error').empty().end().find('.is-invalid').removeClass('is-invalid');
-            loadRequestEstateEmployees();
+            var selfPk = (typeof window.requestEstateSelfEmployeePk !== 'undefined' && window.requestEstateSelfEmployeePk)
+                ? String(window.requestEstateSelfEmployeePk)
+                : null;
+            loadRequestEstateEmployees(null, selfPk, function() {
+                if (selfPk) {
+                    // Ensure change handler runs so derived fields (designation, pay scale, DOJ, eligibility type) are filled.
+                    $('#modal_employee_pk').trigger('change');
+                }
+            });
             $.get('{{ route("admin.estate.request-for-estate.next-req-id") }}', function(res) {
                 if (res.next_req_id) $('#modal_req_id').val(res.next_req_id);
                 if (addEditModal) addEditModal.show();

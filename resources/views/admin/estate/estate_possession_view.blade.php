@@ -87,7 +87,7 @@
                         <select class="form-select" id="estate_house_master_pk" name="estate_house_master_pk" required>
                             <!-- <option value="">---select---</option> -->
                         </select>
-                        <input type="hidden" id="house_no" name="house_no">
+                        <input type="hidden" id="house_no" name="house_no" value="{{ old('house_no', isset($record) ? $record->house_no : '') }}">
                         <div class="form-text">House No.</div>
                     </div>
                     <div class="col-12 col-md-6">

@@ -92,12 +92,28 @@ class EstateRequestForEstateDataTable extends DataTable
                 return '<span class="badge bg-' . $class . '">' . e($label) . '</span>';
             })
             ->editColumn('current_alot', fn($row) => $row->current_alot ?? '—')
+            ->editColumn('change_req_status', function ($row) {
+                $s = $row->change_req_status !== null && $row->change_req_status !== '' ? (int) $row->change_req_status : null;
+                if ($s === null) {
+                    return '—';
+                }
+                if ($s === 0) {
+                    return '<span class="badge bg-warning" title="Change request pending">Pending</span>';
+                }
+                if ($s === 1) {
+                    return '<span class="badge bg-success" title="Change request approved"><i class="material-icons material-symbols-rounded" style="font-size:1rem;vertical-align:middle">check_circle</i> Approved</span>';
+                }
+                if ($s === 2) {
+                    return '<span class="badge bg-danger" title="Change request disapproved"><i class="material-icons material-symbols-rounded" style="font-size:1rem;vertical-align:middle">cancel</i> Disapproved</span>';
+                }
+                return '—';
+            })
             ->editColumn('eligibility_type_pk', function ($row) {
                 $pk = (int) ($row->eligibility_type_pk ?? 0);
                 $map = [61 => 'I', 62 => 'II', 63 => 'III', 64 => 'IV', 65 => 'V', 66 => 'VI', 69 => 'IX', 70 => 'X', 71 => 'XI', 73 => 'XIII'];
                 return $map[$pk] ?? '—';
             })
-            ->addColumn('change', function ($row) {
+            ->addColumn('action', function ($row) {
                 $deleteUrl = route('admin.estate.request-for-estate.destroy', ['id' => $row->pk]);
                 $detailsUrl = route('admin.estate.request-details', ['id' => $row->pk]);
                 $reqDate = $row->req_date ? \Carbon\Carbon::parse($row->req_date)->format('Y-m-d') : '';
@@ -127,7 +143,10 @@ class EstateRequestForEstateDataTable extends DataTable
                 $dataAttrs = implode(' ', array_map(fn ($k, $v) => $k . '="' . $v . '"', array_keys($attrs), $attrs));
                 $currentAlot = trim((string) ($row->current_alot ?? ''));
                 $hasChangeStatus = (int) ($row->change_status ?? 0) === 1;
-                $canRaiseChangeRequest = (hasRole('Estate') || hasRole('Admin')) && $currentAlot !== '' && ! $hasChangeStatus;
+                $isEstateAuthority = hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST');
+
+                // Existing authority-only change request link (no change here).
+                $canRaiseChangeRequest = $isEstateAuthority && $currentAlot !== '' && ! $hasChangeStatus;
                 $raiseChangeUrl = $canRaiseChangeRequest
                     ? route('admin.estate.raise-change-request', ['id' => $row->pk])
                     : '';
@@ -143,14 +162,71 @@ class EstateRequestForEstateDataTable extends DataTable
 
                 $editLink = $isLocked ? '' : '<a href="javascript:void(0);" class="text-primary btn-edit-request-estate" title="Edit" ' . $dataAttrs . '><i class="material-icons material-symbols-rounded">edit</i></a>';
                 $deleteLink = $isLocked ? '' : '<a href="javascript:void(0);" class="text-primary btn-delete-request-estate" title="Delete" data-url="' . e($deleteUrl) . '"><i class="material-icons material-symbols-rounded">delete</i></a>';
+
+                // Common flags for possession / return / change actions
+                $addPossessionButton = '';
+                $returnHouseButton = '';
+                $selfChangeRequestButton = '';
+
+                // Add Possession button:
+                // - Only when HAC-approved
+                // - No pending change request
+                // - No active possession yet (user should not be able to create multiple possessions for same request)
+                // - Hidden for Admin / Super Admin / Estate roles as per requirement
+                //   (user/self-service flows remain unchanged).
+                // Returned requests never show Add button again.
+                $canAllot = (int) ($row->hac_status ?? 0) === 1
+                    && (int) ($row->change_status ?? 0) === 0
+                    && ! $hasActive
+                    && ! $isReturnedEffective;
+                $canShowPossessionButtonForRole = ! (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'));
+                if ($canAllot && $canShowPossessionButtonForRole) {
+                    // Always open generic Add Possession page; no preselected requester in URL.
+                    $url = route('admin.estate.possession-details.create');
+                    $addPossessionButton = '<a href="' . e($url) . '" class="text-success" title="Add Possession">
+                        <i class="material-icons material-symbols-rounded">add_home</i>
+                    </a>';
+                } elseif (! $isEstateAuthority && $hasActive && ! $hasReturned) {
+                    // For self-service users, show a non-clickable "Possession done" indicator once possession exists.
+                    $addPossessionButton = '<span class="text-success" title="Possession already created">
+                        <i class="material-icons material-symbols-rounded">check_circle</i>
+                    </span>';
+                }
+
+                // Self-service user options (Return House + Raise Change Request) after possession exists.
+                if (! $isEstateAuthority) {
+                    $hasActive = (int) ($row->has_active_possession ?? 0) === 1;
+                    $hasReturned = (int) ($row->has_any_returned ?? 0) === 1;
+
+                    // Return House: only when there is an active possession and not yet returned.
+                    if ($hasActive && ! $hasReturned) {
+                        // For user role, go directly to Return House page with request_id.
+                        $returnUrl = route('admin.estate.return-house', ['request_id' => $row->pk]);
+                        $returnHouseButton = '<a href="' . e($returnUrl) . '" class="text-warning" title="Return House">
+                            <i class="material-icons material-symbols-rounded">logout</i>
+                        </a>';
+                    }
+
+                    // User Raise Change Request: active possession, no existing change request.
+                    if ($hasActive && ! $hasChangeStatus) {
+                        $selfCrUrl = route('admin.estate.raise-change-request', ['id' => $row->pk]);
+                        $selfChangeRequestButton = '<a href="' . e($selfCrUrl) . '" class="text-info" title="Raise Change Request">
+                            <i class="material-icons material-symbols-rounded">swap_horiz</i>
+                        </a>';
+                    }
+                }
+
                 return '<div class="d-inline-flex align-items-center gap-1" role="group">
                     <a href="' . e($detailsUrl) . '" class="text-primary" title="Request &amp; Change Details"><i class="material-icons material-symbols-rounded">visibility</i></a>
                     ' . $raiseChangeLink . '
                     ' . $editLink . '
                     ' . $deleteLink . '
+                    ' . $addPossessionButton . '
+                    ' . $returnHouseButton . '
+                    ' . $selfChangeRequestButton . '
                 </div>';
             })
-            ->rawColumns(['status', 'change'])
+            ->rawColumns(['status', 'change_req_status', 'action'])
             ->filter(function ($query) {
                 $searchValue = trim((string) request()->input('search.value', ''));
                 if ($searchValue === '') {
@@ -158,39 +234,51 @@ class EstateRequestForEstateDataTable extends DataTable
                 }
                 $searchLike = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $searchValue) . '%';
                 $query->where(function ($q) use ($searchValue, $searchLike) {
-                    $q->where('estate_home_request_details.req_id', 'like', $searchLike)
-                        ->orWhere('estate_home_request_details.emp_name', 'like', $searchLike)
-                        ->orWhere('estate_home_request_details.employee_id', 'like', $searchLike)
-                        ->orWhere('estate_home_request_details.current_alot', 'like', $searchLike)
-                        ->orWhereRaw('CONCAT(TRIM(COALESCE(estate_home_request_details.emp_name,"")), " / ", TRIM(COALESCE(estate_home_request_details.employee_id,""))) LIKE ?', [$searchLike]);
-                    $statusMap = ['pending' => 0, 'allotted' => 1, 'rejected' => 2];
+                    $utf8Expr = static fn (string $column): string =>
+                        "CONVERT(COALESCE($column, '') USING utf8mb4) COLLATE utf8mb4_unicode_ci";
+
+                    $q->whereRaw($utf8Expr('estate_home_request_details.req_id') . ' LIKE ?', [$searchLike])
+                        ->orWhereRaw($utf8Expr('estate_home_request_details.emp_name') . ' LIKE ?', [$searchLike])
+                        ->orWhereRaw($utf8Expr('estate_home_request_details.employee_id') . ' LIKE ?', [$searchLike])
+                        ->orWhereRaw($utf8Expr('estate_home_request_details.current_alot') . ' LIKE ?', [$searchLike])
+                        ->orWhereRaw(
+                            'CONCAT(TRIM(' . $utf8Expr('estate_home_request_details.emp_name') . '), " / ", TRIM(' . $utf8Expr('estate_home_request_details.employee_id') . ')) LIKE ?',
+                            [$searchLike]
+                        );
+                    $statusMap = ['pending' => 0, 'allotted' => 1];
                     $searchLower = strtolower($searchValue);
                     if (isset($statusMap[$searchLower])) {
                         $q->orWhere('estate_home_request_details.status', $statusMap[$searchLower]);
-                    } elseif (is_numeric($searchValue) && in_array((int) $searchValue, [0, 1, 2], true)) {
+                    } elseif (is_numeric($searchValue) && in_array((int) $searchValue, [0, 1], true)) {
                         $q->orWhere('estate_home_request_details.status', (int) $searchValue);
                     }
                 });
-            }, true)
+            }, false)
             ->filterColumn('req_id', function ($query, $keyword) {
                 $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $keyword) . '%';
-                $query->where('estate_home_request_details.req_id', 'like', $like);
+                $query->whereRaw("CONVERT(COALESCE(estate_home_request_details.req_id, '') USING utf8mb4) COLLATE utf8mb4_unicode_ci LIKE ?", [$like]);
             })
             ->filterColumn('current_alot', function ($query, $keyword) {
                 $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $keyword) . '%';
-                $query->where('estate_home_request_details.current_alot', 'like', $like);
+                $query->whereRaw("CONVERT(COALESCE(estate_home_request_details.current_alot, '') USING utf8mb4) COLLATE utf8mb4_unicode_ci LIKE ?", [$like]);
             })
             ->filterColumn('name_id', function ($query, $keyword) {
                 $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $keyword) . '%';
                 $query->where(function ($q) use ($like) {
-                    $q->where('estate_home_request_details.emp_name', 'like', $like)
-                        ->orWhere('estate_home_request_details.employee_id', 'like', $like)
-                        ->orWhereRaw('CONCAT(TRIM(COALESCE(estate_home_request_details.emp_name,"")), " / ", TRIM(COALESCE(estate_home_request_details.employee_id,""))) LIKE ?', [$like]);
+                    $q->whereRaw("CONVERT(COALESCE(estate_home_request_details.emp_name, '') USING utf8mb4) COLLATE utf8mb4_unicode_ci LIKE ?", [$like])
+                        ->orWhereRaw("CONVERT(COALESCE(estate_home_request_details.employee_id, '') USING utf8mb4) COLLATE utf8mb4_unicode_ci LIKE ?", [$like])
+                        ->orWhereRaw(
+                            "CONCAT(TRIM(CONVERT(COALESCE(estate_home_request_details.emp_name, '') USING utf8mb4) COLLATE utf8mb4_unicode_ci), \" / \", TRIM(CONVERT(COALESCE(estate_home_request_details.employee_id, '') USING utf8mb4) COLLATE utf8mb4_unicode_ci)) LIKE ?",
+                            [$like]
+                        );
                 });
             })
-            ->orderColumn('pk', fn ($query, $order) => $query->orderBy('estate_home_request_details.pk', $order))
-            ->orderColumn('req_id', fn ($query, $order) => $query->orderBy('estate_home_request_details.req_id', $order))
-            ->orderColumn('req_date', fn ($query, $order) => $query->orderBy('estate_home_request_details.req_date', $order))
+            ->orderColumn('pk', fn ($query, $order) => $query->reorder()->orderBy('estate_home_request_details.pk', $order))
+            ->orderColumn('req_id', fn ($query, $order) => $query->reorder()->orderByRaw('LOWER(COALESCE(estate_home_request_details.req_id, "")) ' . $order))
+            ->orderColumn('req_date', fn ($query, $order) => $query->reorder()
+                ->orderBy('estate_home_request_details.req_date', $order)
+                ->orderBy('estate_home_request_details.pk', $order))
+            ->orderColumn('name_id', fn ($query, $order) => $query->reorder()->orderByRaw('LOWER(COALESCE(estate_home_request_details.emp_name, "")) ' . $order)->orderByRaw('LOWER(COALESCE(estate_home_request_details.employee_id, "")) ' . $order))
             ->setRowId('pk');
     }
 
@@ -214,12 +302,16 @@ class EstateRequestForEstateDataTable extends DataTable
                 'estate_home_request_details.eligibility_type_pk',
                 'estate_home_request_details.remarks',
                 'estate_home_request_details.change_status',
+                'estate_home_request_details.hac_status',
                 // Derived flags from estate_possession_details:
-                // has_active_possession: at least one possession row with house and not returned.
+                // has_active_possession: at least one *completed* possession row with house and not returned.
+                // Pending possessions (created at allotment time) use sentinel dates (1900-01-01) and should NOT
+                // be treated as "possession already created" for self-service users.
                 DB::raw("CASE WHEN EXISTS (
                     SELECT 1 FROM estate_possession_details epd
                     WHERE epd.estate_home_request_details = estate_home_request_details.pk
                       AND epd.estate_house_master_pk IS NOT NULL
+                      AND epd.possession_date > '1900-01-01'
                       AND (epd.return_home_status IS NULL OR epd.return_home_status = 0)
                 ) THEN 1 ELSE 0 END AS has_active_possession"),
                 // has_any_returned: at least one possession row with house and return_home_status = 1.
@@ -227,8 +319,11 @@ class EstateRequestForEstateDataTable extends DataTable
                     SELECT 1 FROM estate_possession_details epd2
                     WHERE epd2.estate_home_request_details = estate_home_request_details.pk
                       AND epd2.estate_house_master_pk IS NOT NULL
+                      AND epd2.possession_date > '1900-01-01'
                       AND epd2.return_home_status = 1
                 ) THEN 1 ELSE 0 END AS has_any_returned"),
+                // Latest change request status (0=Pending, 1=Approved, 2=Disapproved) for user visibility.
+                DB::raw("(SELECT ec.change_ap_dis_status FROM estate_change_home_req_details ec WHERE ec.estate_home_req_details_pk = estate_home_request_details.pk ORDER BY ec.pk DESC LIMIT 1) AS change_req_status"),
             ]);
 
         // Self-service: non-estate/admin/HAC-approval users should only see their own requests.
@@ -244,7 +339,10 @@ class EstateRequestForEstateDataTable extends DataTable
             }
         }
 
-        // Status filter: All (empty), Pending (0), Allotted (1), Rejected (2), Returned (3)
+        // Exclude rejected requests from listing (status = 2).
+        $query->where('estate_home_request_details.status', '!=', 2);
+
+        // Status filter: All (empty), Pending (0), Allotted (1), Returned (3)
         $statusFilter = request('status_filter');
         if ($statusFilter !== null && $statusFilter !== '') {
             $statusVal = (int) $statusFilter;
@@ -255,9 +353,6 @@ class EstateRequestForEstateDataTable extends DataTable
             } elseif ($statusVal === 1) {
                 // Allotted: there is an active possession for this request.
                 $query->havingRaw('has_active_possession = 1');
-            } elseif ($statusVal === 2) {
-                // Rejected: stored as status = 2 (historic semantics kept).
-                $query->where('estate_home_request_details.status', 2);
             } elseif ($statusVal === 3) {
                 // Returned: no active possession, but at least one returned possession row.
                 $query->havingRaw('has_any_returned = 1 AND has_active_possession = 0');
@@ -282,7 +377,8 @@ class EstateRequestForEstateDataTable extends DataTable
                 'searching' => true,
                 'lengthChange' => true,
                 'pageLength' => 10,
-                'order' => [[8, 'desc']],
+                // Default sort by Request Date (column index 2) descending.
+                'order' => [[2, 'desc']],
                 'lengthMenu' => [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
                 'language' => [
                     'search' => 'Search within table:',
@@ -298,7 +394,6 @@ class EstateRequestForEstateDataTable extends DataTable
                     ],
                 ],
                 'dom' => '<"row align-items-center mb-3"<"col-12 col-md-4"l><"col-12 col-md-8 request-for-estate-search-col"f>>rt<"row align-items-center mt-2"<"col-12 col-md-5"i><"col-12 col-md-7"p>>',
-                'columnDefs' => [['targets' => [8], 'visible' => false]],
             ]);
     }
 
@@ -308,13 +403,10 @@ class EstateRequestForEstateDataTable extends DataTable
             Column::computed('DT_RowIndex')->title('S.NO.')->addClass('text-center')->orderable(false)->searchable(false)->width('50px'),
             Column::make('req_id')->title('REQUEST ID')->orderable(true)->searchable(true),
             Column::make('req_date')->title('REQUEST DATE')->orderable(true)->searchable(false),
-            Column::computed('name_id')->title('NAME / ID')->orderable(false)->searchable(true),
-            Column::make('doj_academic')->title('DATE OF JOINING IN ACADEMY')->orderable(false)->searchable(false),
+            Column::computed('name_id')->title('NAME / ID')->orderable(true)->searchable(true),
             Column::make('status')->title('STATUS OF REQUEST')->orderable(false)->searchable(false),
-            Column::make('current_alot')->title('ALLOTED HOUSE')->orderable(false)->searchable(true),
-            Column::make('eligibility_type_pk')->title('ELIGIBILITY TYPE')->orderable(false)->searchable(false),
-            Column::make('pk')->title('')->orderable(true)->searchable(false)->exportable(false)->printable(false),
-            Column::computed('change')->title('CHANGE')->addClass('text-center')->orderable(false)->searchable(false)->width('100px'),
+            Column::make('change_req_status')->title('CHANGE REQ. STATUS')->orderable(false)->searchable(false)->addClass('text-center'),
+            Column::computed('action')->title('ACTION')->addClass('text-center')->orderable(false)->searchable(false)->width('100px'),
         ];
     }
 
