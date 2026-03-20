@@ -1,24 +1,9 @@
 @extends('admin.layouts.master')
 
-@section('content')
+@section('setup_content')
 
 <div class="container-fluid">
-
-    <!-- Page Header -->
-  <div class="row mb-3 align-items-center">
-    <div class="col-md-6">
-        <h4 class="mb-0">Pending Feedback – Students</h4>
-        <small class="text-muted">Total: {{ $pendingStudents->total() }} records</small>
-    </div>
-
-    <div class="col-md-6 text-end">
-        <a href="{{ route('admin.feedback.feedback_details') }}"
-           class="btn btn-outline-secondary">
-            <i class="fas fa-arrow-left"></i> Back
-        </a>
-    </div>
-</div>
-
+<x-breadcrum title="Pending Feedback – Students"></x-breadcrum>
 
     <!-- Course Filter + Export Buttons -->
     <div class="card mb-3">
@@ -58,16 +43,16 @@
         <div class="card-body" id="pendingStudentsData">
 
             <div class="table-responsive">
-                <table class="table table-bordered table-striped align-middle">
-                    <thead class="table">
+                <table class="table text-nowrap align-middle">
+                    <thead>
                         <tr>
-                            <th width="50">#</th>
+                            <th>#</th>
                             <th>OT / Participant</th>
                             <th>Email</th>
                             <th>Phone</th>
                             <th>OT Code</th>
-                            {{-- <th>Course</th>
-                            <th>Session</th> --}}
+                            <th>Course</th>
+                            <th>Session</th>
                         </tr>
                     </thead>
 
@@ -79,8 +64,8 @@
                                 <td>{{ $row->email }}</td>
                                 <td>{{ $row->contact_no }}</td>
                                 <td>{{ $row->generated_OT_code }}</td>
-                                {{-- <td>{{ $row->course_name }}</td>
-                                <td>{{ $row->subject_topic }}</td> --}}
+                                <td>{{ $row->course_name }}</td>
+                                <td>{{ $row->subject_topic }}</td>
                             </tr>
                         @empty
                             <tr>

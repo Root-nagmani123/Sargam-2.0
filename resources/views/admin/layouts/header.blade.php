@@ -130,7 +130,10 @@
                                     @elseif(hasRole('Internal Faculty') || hasRole('Guest Faculty') ||
                                     hasRole('Student-OT'))
                                     <span>Academics</span>
+                                    @else
+                                    <span>Setup</span>
                                     @endif
+
                                 </a>
                             </li>
                         </ul>

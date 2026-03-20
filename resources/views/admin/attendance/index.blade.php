@@ -2,6 +2,10 @@
 
 @section('title', 'Attendance')
 
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+@endpush
+
 @section('setup_content')
 <style>
 .form-label {
@@ -41,6 +45,126 @@ h4 {
 hr {
     border-top: 1px solid #dce1e7;
 }
+
+/* Choices + Bootstrap: form-select adds BS chevron; Choices adds its own — drop BS background only. */
+.attendance-choices-bootstrap .choices__inner.form-select {
+    background-color: var(--bs-body-bg);
+    border: var(--bs-border-width) solid var(--bs-border-color);
+    min-height: calc(1.5em + 0.75rem + var(--bs-border-width) * 2);
+    padding-top: 0.375rem;
+    padding-bottom: 0.375rem;
+    background-image: none !important;
+    padding-inline-end: 2.25rem;
+}
+
+.attendance-choices-bootstrap .choices.is-focused .choices__inner.form-select,
+.attendance-choices-bootstrap .choices.is-open .choices__inner.form-select {
+    border-color: var(--bs-focus-border-color);
+    outline: 0;
+    box-shadow: 0 0 0 0.25rem rgba(var(--bs-focus-ring-rgb), 0.25);
+}
+
+/* Panel border; scrolling is on the inner .choices__list (library default). */
+.attendance-choices-bootstrap .choices__list--dropdown.dropdown-menu,
+.attendance-choices-bootstrap .choices__list[aria-expanded].dropdown-menu {
+    border: var(--bs-border-width) solid var(--bs-border-color);
+}
+
+.attendance-choices-bootstrap .choices__list--dropdown.dropdown-menu .choices__list,
+.attendance-choices-bootstrap .choices__list[aria-expanded].dropdown-menu .choices__list {
+    max-height: 280px;
+}
+
+/* Smaller screens: hide closed-state caret; taller list + touch scroll + thin scrollbar (no arrow buttons). */
+@media (max-width: 767.98px) {
+
+    .attendance-choices-bootstrap .choices[data-type*="select-one"]::after,
+    .attendance-choices-bootstrap .choices[data-type*="select-one"]::before {
+        display: none !important;
+    }
+
+    .attendance-choices-bootstrap .choices__inner.form-select {
+        padding-inline-end: 0.75rem;
+    }
+
+    .attendance-choices-bootstrap .choices__list--dropdown.dropdown-menu .choices__list,
+    .attendance-choices-bootstrap .choices__list[aria-expanded].dropdown-menu .choices__list {
+        max-height: min(50vh, 20rem) !important;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-y: contain;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(33, 37, 41, 0.35) transparent;
+    }
+
+    .attendance-choices-bootstrap .choices__list--dropdown.dropdown-menu .choices__list::-webkit-scrollbar,
+    .attendance-choices-bootstrap .choices__list[aria-expanded].dropdown-menu .choices__list::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .attendance-choices-bootstrap .choices__list--dropdown.dropdown-menu .choices__list::-webkit-scrollbar-button,
+    .attendance-choices-bootstrap .choices__list[aria-expanded].dropdown-menu .choices__list::-webkit-scrollbar-button {
+        display: none;
+        height: 0;
+        width: 0;
+    }
+
+    .attendance-choices-bootstrap .choices__list--dropdown.dropdown-menu .choices__list::-webkit-scrollbar-thumb,
+    .attendance-choices-bootstrap .choices__list[aria-expanded].dropdown-menu .choices__list::-webkit-scrollbar-thumb {
+        background-color: rgba(33, 37, 41, 0.35);
+        border-radius: 999px;
+    }
+
+    /* Attendance DataTable: scroll vertically (and horizontally); avoid Responsive “+ / chevron” row controls. */
+
+    #attendanceTableDiv::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+
+    #attendanceTableDiv::-webkit-scrollbar-button {
+        display: none;
+        width: 0;
+        height: 0;
+    }
+
+    #attendanceTableDiv::-webkit-scrollbar-thumb {
+        background-color: rgba(33, 37, 41, 0.35);
+        border-radius: 999px;
+    }
+
+    #attendanceTableDiv thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background-color: var(--bs-body-bg);
+        box-shadow: inset 0 -1px 0 var(--bs-border-color);
+    }
+}
+
+/* Course column: short label, full name via native tooltip */
+#attendanceTable .attendance-course-cell {
+    cursor: help;
+    text-decoration: underline dotted;
+    text-underline-offset: 0.15em;
+}
+
+/* Custom tooltip (course full name) */
+#attendanceCustomTooltip {
+    position: fixed;
+    z-index: 9999;
+    display: none;
+    pointer-events: none;
+    max-width: 360px;
+    background: rgba(0, 0, 0, 0.88);
+    color: #fff;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 12.5px;
+    line-height: 1.25;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25);
+    word-break: break-word;
+    white-space: normal;
+}
 </style>
 
 
@@ -59,16 +183,23 @@ hr {
             <hr class="mt-3 mb-4">
 
             <!-- Filter Rows -->
-            <div class="row g-4">
+            <div class="row g-4 attendance-choices-bootstrap">
 
                 <!-- Course -->
                 <div class="col-md-3">
                     <label for="programme" class="form-label fw-semibold">Course Name</label>
-                    <select name="course_master_pk" id="programme" class="form-select shadow-sm select2" required>
+                    <select name="course_master_pk" id="programme" class="form-select shadow-sm js-attendance-choice" required>
                         <option value="">Select Course</option>
                         @foreach($courseMasters as $course)
-                        <option value="{{ $course['pk'] }}" {{ count($courseMasters) === 1 ? 'selected' : '' }}>
-                            {{ $course['course_name'] }}
+                        @php
+                            $courseFullName = trim((string) ($course['course_name'] ?? ''));
+                            $courseShortName = trim((string) ($course['couse_short_name'] ?? $course['course_short_name'] ?? ''));
+                            $courseLabel = $courseShortName !== '' ? $courseShortName : $courseFullName;
+                        @endphp
+                        <option value="{{ $course['pk'] }}"
+                            title="{{ $courseFullName !== '' ? $courseFullName : $courseLabel }}"
+                            {{ count($courseMasters) === 1 ? 'selected' : '' }}>
+                            {{ $courseLabel }}
                         </option>
                         @endforeach
 
@@ -117,7 +248,7 @@ hr {
                 <!-- Normal Session -->
                 <div class="col-md-3" id="normal_session_container" style="display:none;">
                     <label for="session" class="form-label fw-semibold">Normal Session</label>
-                    <select name="session" id="session" class="form-select shadow-sm select2">
+                    <select name="session" id="session" class="form-select shadow-sm js-attendance-choice">
                         <option value="">Select Session</option>
                         @foreach($sessions as $session)
                         <option value="{{ $session['pk'] }}">{{ $session['shift_name'] }}</option>
@@ -128,7 +259,7 @@ hr {
                 <!-- Manual Session -->
                 <div class="col-md-3" id="manual_session_container" style="display:none;">
                     <label for="manual_session" class="form-label fw-semibold">Manual Session</label>
-                    <select name="manual_session" id="manual_session" class="form-select shadow-sm select2">
+                    <select name="manual_session" id="manual_session" class="form-select shadow-sm js-attendance-choice">
                         <option value="">Select Session</option>
                         @foreach($maunalSessions as $maunalSession)
                         <option value="{{ $maunalSession['class_session'] }}">
@@ -151,17 +282,17 @@ hr {
             </div>
 
             <div id="attendanceTableCard">
-                <div class="table-responsive" id="attendanceTableDiv">
-                    <table id="attendanceTable" class="table text-nowrap">
+                <div id="attendanceTableDiv">
+                    <table id="attendanceTable" class="table w-100">
                         <thead>
                             <tr>
                                 <th class="col">#</th>
-                                <th class="col">Course Name</th>
+                                <th class="col">Topic</th>
                                 <th class="col">Date</th>
                                 <th class="col">Session</th>
                                 <th class="col">Venue</th>
                                 <th class="col">Group</th>
-                                <th class="col">Topic</th>
+                                <th class="col">Course Name</th>
                                 <th class="col">Faculty</th>
                                 <th class="col">Action</th>
                             </tr>
@@ -191,11 +322,60 @@ hr {
             </div>
         </div>
 
+            <div id="attendanceCustomTooltip" role="tooltip" aria-hidden="true"></div>
         @endsection
 
         @section('scripts')
+        <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
         <script>
         $(document).ready(function() {
+            if (typeof Choices !== 'undefined') {
+                var attendanceChoiceOpts = {
+                    searchEnabled: true,
+                    shouldSort: false,
+                    itemSelectText: '',
+                    allowHTML: false,
+                    classNames: {
+                        containerOuter: ['choices', 'w-100'],
+                        containerInner: ['choices__inner', 'form-select', 'shadow-sm'],
+                        input: ['choices__input', 'form-control', 'form-control-sm', 'border-0', 'shadow-none', 'my-1'],
+                        inputCloned: ['choices__input--cloned'],
+                        list: ['choices__list'],
+                        listItems: ['choices__list--multiple'],
+                        listSingle: ['choices__list--single'],
+                        listDropdown: ['choices__list--dropdown', 'dropdown-menu', 'mt-1', 'p-0', 'shadow-sm', 'w-100'],
+                        item: ['choices__item', 'dropdown-item', 'rounded-0'],
+                        itemSelectable: ['choices__item--selectable'],
+                        itemDisabled: ['choices__item--disabled', 'disabled'],
+                        itemChoice: ['choices__item--choice'],
+                        description: ['choices__description', 'small', 'text-muted'],
+                        placeholder: ['choices__placeholder', 'text-muted', 'opacity-75'],
+                        group: ['choices__group'],
+                        groupHeading: ['choices__heading', 'dropdown-header', 'text-uppercase', 'small'],
+                        button: ['choices__button'],
+                        activeState: ['is-active'],
+                        focusState: ['is-focused'],
+                        openState: ['is-open'],
+                        disabledState: ['is-disabled'],
+                        highlightedState: ['is-highlighted', 'active'],
+                        flippedState: ['is-flipped'],
+                        loadingState: ['is-loading'],
+                        invalidState: ['is-invalid'],
+                        notice: ['choices__notice', 'dropdown-item-text', 'text-muted', 'small', 'py-2'],
+                        addChoice: ['choices__item--selectable', 'add-choice'],
+                        noResults: ['has-no-results'],
+                        noChoices: ['has-no-choices'],
+                    }
+                };
+                document.querySelectorAll('.js-attendance-choice').forEach(function(el) {
+                    if (el.dataset.choicesInitialized === 'true') {
+                        return;
+                    }
+                    el._choicesInstance = new Choices(el, attendanceChoiceOpts);
+                    el.dataset.choicesInitialized = 'true';
+                });
+            }
+
             // Set today's date if not already set
             let today = new Date().toISOString().split('T')[0];
             if (!$('#from_date').val()) {
@@ -215,5 +395,68 @@ hr {
                 }, 100);
             }
         });
+        </script>
+
+        <script>
+        (function () {
+            const tooltip = document.getElementById('attendanceCustomTooltip');
+            if (!tooltip) return;
+
+            let rafId = null;
+            let visible = false;
+
+            function placeTooltip(x, y) {
+                const offset = 14;
+                let left = x + offset;
+                let top = y + offset;
+
+                tooltip.style.left = left + 'px';
+                tooltip.style.top = top + 'px';
+
+                const rect = tooltip.getBoundingClientRect();
+                if (rect.right > window.innerWidth - 8) {
+                    left = x - rect.width - offset;
+                    tooltip.style.left = left + 'px';
+                }
+                if (rect.bottom > window.innerHeight - 8) {
+                    top = y - rect.height - offset;
+                    tooltip.style.top = top + 'px';
+                }
+            }
+
+            $(document).on('mouseenter', '.attendance-course-cell', function (e) {
+                const content = this.getAttribute('data-tooltip');
+                if (!content) return;
+
+                tooltip.textContent = content;
+                tooltip.style.display = 'block';
+                tooltip.setAttribute('aria-hidden', 'false');
+                visible = true;
+                placeTooltip(e.clientX, e.clientY);
+            });
+
+            $(document).on('mousemove', '.attendance-course-cell', function (e) {
+                if (!visible) return;
+                if (rafId) return;
+
+                rafId = requestAnimationFrame(function () {
+                    rafId = null;
+                    placeTooltip(e.clientX, e.clientY);
+                });
+            });
+
+            $(document).on('mouseleave', '.attendance-course-cell', function () {
+                tooltip.style.display = 'none';
+                tooltip.setAttribute('aria-hidden', 'true');
+                visible = false;
+            });
+
+            $(window).on('scroll', function () {
+                if (!visible) return;
+                tooltip.style.display = 'none';
+                tooltip.setAttribute('aria-hidden', 'true');
+                visible = false;
+            });
+        })();
         </script>
         @endsection

@@ -77,7 +77,16 @@ class UserController extends Controller
 
       $emp_dob_data = EmployeeMaster::where('status', 1)->whereRaw("DATE_FORMAT(dob, '%m-%d') = DATE_FORMAT(CURDATE(), '%m-%d')")
         ->leftjoin('designation_master', 'employee_master.designation_master_pk', '=', 'designation_master.pk')
-        ->select('employee_master.first_name','employee_master.email','employee_master.mobile','employee_master.profile_picture', 'employee_master.last_name', 'designation_master.designation_name', 'employee_master.dob')
+        ->select(
+            'employee_master.first_name',
+            'employee_master.email',
+            'employee_master.mobile',
+            'employee_master.office_extension_no',
+            'employee_master.profile_picture',
+            'employee_master.last_name',
+            'designation_master.designation_name',
+            'employee_master.dob'
+        )
       ->get();
 
       $totalActiveCourses = CourseMaster::where('active_inactive', 1)->where('start_year', '<', now())->where('end_date', '>=', now())->count();
@@ -823,25 +832,37 @@ class UserController extends Controller
                 'email' => $request->email,
                 'password' => Hash::make($request->password),
             ]);
-            
-            if ($request->has('roles') && !empty($request->roles)) {
+
+            $roleIds = $request->input('roles', []);
+            if (empty($roleIds)) {
+                // Default RBAC role when no roles are selected.
+                $staffRole = UserRoleMaster::where('user_role_name', 'Staff')
+                    ->orWhere('user_role_display_name', 'Staff')
+                    ->first();
+                if ($staffRole) {
+                    $roleIds = [$staffRole->pk];
+                }
+            }
+
+            $assignedRoleNames = [];
+            if (!empty($roleIds)) {
                 // $user->assignRole($request->roles);
-                $assignedRoleNames = [];
-                foreach ($request->roles as $roleId) {
+                foreach ($roleIds as $roleId) {
                     EmployeeRoleMapping::create([
-                    'user_credentials_pk' => $user->id,
-                    'user_role_master_pk' => $roleId,
-                    'active_inactive' => 1,
-                    'created_date' => now(),
-                    'updated_date' => now(),
-                ]);
+                        'user_credentials_pk' => $user->id,
+                        'user_role_master_pk' => $roleId,
+                        'active_inactive' => 1,
+                        'created_date' => now(),
+                        'updated_date' => now(),
+                    ]);
+
                     // Get role name for notification
                     $role = UserRoleMaster::find($roleId);
                     if ($role) {
                         $assignedRoleNames[] = $role->user_role_display_name ?? $role->user_role_name;
                     }
                 }
-                
+
                 // Send notification to the user
                 if (!empty($assignedRoleNames) && $user->user_id) {
                     try {
@@ -927,8 +948,20 @@ class UserController extends Controller
 
             // Assign new roles
             $assignedRoleNames = [];
-            if (!empty($request->roles)) {
-                foreach ($request->roles as $roleId) {
+            $roleIds = $request->input('roles', []);
+
+            if (empty($roleIds)) {
+                // Default RBAC role when roles are submitted empty.
+                $staffRole = UserRoleMaster::where('user_role_name', 'Staff')
+                    ->orWhere('user_role_display_name', 'Staff')
+                    ->first();
+                if ($staffRole) {
+                    $roleIds = [$staffRole->pk];
+                }
+            }
+
+            if (!empty($roleIds)) {
+                foreach ($roleIds as $roleId) {
                     EmployeeRoleMapping::create([
                         'user_credentials_pk' => $user->id,
                         'user_role_master_pk' => $roleId,
@@ -1058,8 +1091,20 @@ public function assignRoleSave(Request $request)
 
         // Insert new roles
         $assignedRoleNames = [];
-        if (!empty($request->roles)) {
-            foreach ($request->roles as $roleId) {
+        $roleIds = $request->input('roles', []);
+
+        if (empty($roleIds)) {
+            // Default RBAC role when roles are submitted empty.
+            $staffRole = UserRoleMaster::where('user_role_name', 'Staff')
+                ->orWhere('user_role_display_name', 'Staff')
+                ->first();
+            if ($staffRole) {
+                $roleIds = [$staffRole->pk];
+            }
+        }
+
+        if (!empty($roleIds)) {
+            foreach ($roleIds as $roleId) {
                 \DB::table('employee_role_mapping')->insert([
                     'user_credentials_pk'  => $userId,
                     'user_role_master_pk'  => $roleId,

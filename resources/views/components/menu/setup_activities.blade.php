@@ -171,9 +171,16 @@
                                 <span class="hide-menu">Permissions</span>
                                 </a></li> --}}
                             </ul>
-                            <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('course-repository.index') }}">
-                                <span class="hide-menu">Course Repository</span>
+                            @if (hasRole('Admin') || hasRole('Super Admin'))
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link" href="{{ route('admin.setup.quick_links.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Quick Links Master</span>
+                                    </a>
+                                </li>
+                            @endif
+
+                            <li class="sidebar-item"><a class="sidebar-link" href="{{ route('course-repository.index') }}">
+                                    <span class="hide-menu">Course Repository</span>
                                 </a></li>
                             @endif
 

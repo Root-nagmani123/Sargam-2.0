@@ -894,6 +894,12 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                                                     {{ $employee->mobile }}
                                                 </span>
                                             @endif
+                                            @if(!empty($employee->office_extension_no))
+                                                <span class="text-truncate">
+                                                    <span class="material-icons material-symbols-rounded align-middle">local_phone</span>
+                                                    Ext {{ $employee->office_extension_no }}
+                                                </span>
+                                            @endif
                                         </div>
                                     </div>
                                 </div>
