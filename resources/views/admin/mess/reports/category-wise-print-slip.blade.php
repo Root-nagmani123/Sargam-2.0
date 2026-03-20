@@ -731,8 +731,77 @@ document.addEventListener('DOMContentLoaded', function() {
                             setBuyerChoices([], preservedBuyerName);
                         });
                 } else {
-                    // OT + "All" selected => load buyers across all OT vouchers (respects date filters)
-                    loadBuyersFromReportEndpoint('ot', preservedBuyerName);
+                    // OT + "All" selected:
+                    // 1) Prefer voucher-based buyer list (respects date filters).
+                    // 2) If empty, fallback to student list from ALL OT courses.
+                    const loadStudentsAllCourses = function() {
+                        // Fill buyer dropdown using student list from ALL OT courses.
+                        const coursePks = (otCourseOptions || []).map(function(o) { return o.value; }).filter(Boolean);
+                        if (!coursePks.length) {
+                            setBuyerChoices([], preservedBuyerName);
+                            return;
+                        }
+
+                        clientTypePkBuyer.innerHTML = '<option value="">Loading...</option>';
+
+                        Promise.all(coursePks.map(function(coursePk) {
+                            return fetch(studentsByCourseUrl + '/' + coursePk, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                                .then(function(r) { return r.json(); })
+                                .then(function(data) {
+                                    return (data.students || []).map(function(s) {
+                                        return { value: s.display_name || '', text: s.display_name || '—' };
+                                    }).filter(function(o) { return o.value; });
+                                })
+                                .catch(function() { return []; });
+                        }))
+                            .then(function(results) {
+                                let all = [];
+                                results.forEach(function(list) { all = all.concat(list || []); });
+
+                                // De-duplicate by student name
+                                const seen = new Set();
+                                const unique = [];
+                                all.forEach(function(o) {
+                                    const key = String(o.value || '').trim();
+                                    if (!key || seen.has(key)) return;
+                                    seen.add(key);
+                                    unique.push({ value: key, text: o.text || key });
+                                });
+
+                                unique.sort(function(a, b) {
+                                    return String(a.text || '').localeCompare(String(b.text || ''), undefined, { sensitivity: 'base' });
+                                });
+
+                                setBuyerChoices(unique, preservedBuyerName);
+                            })
+                            .catch(function() {
+                                setBuyerChoices([], preservedBuyerName);
+                            });
+                    };
+
+                    const qs = new URLSearchParams();
+                    qs.set('client_type_slug', 'ot');
+                    const fromEl = document.querySelector('input[name="from_date"]');
+                    const toEl = document.querySelector('input[name="to_date"]');
+                    if (fromEl && fromEl.value) qs.set('from_date', fromEl.value);
+                    if (toEl && toEl.value) qs.set('to_date', toEl.value);
+
+                    clientTypePkBuyer.innerHTML = '<option value="">Loading...</option>';
+                    fetch(buyersForReportUrl + '?' + qs.toString(), { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                        .then(function(r) { return r.json(); })
+                        .then(function(data) {
+                            const buyers = (data.buyers || []).map(function(name) { return String(name || '').trim(); })
+                                .filter(function(v) { return v; });
+                            if (buyers.length) {
+                                const list = buyers.map(function(b) { return { value: b, text: b }; });
+                                setBuyerChoices(list, preservedBuyerName);
+                                return;
+                            }
+                            loadStudentsAllCourses();
+                        })
+                        .catch(function() {
+                            loadStudentsAllCourses();
+                        });
                 }
             } else if (slug === 'course') {
                 // Course: load buyer names dynamically by selected course (no Apply Filters needed)

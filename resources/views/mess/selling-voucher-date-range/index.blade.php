@@ -481,19 +481,19 @@ document.addEventListener('DOMContentLoaded', function () {
                                     <select id="drFacultySelect" class="form-select " style="display:none;">
                                         <option value="">Select Faculty</option>
                                         @foreach($faculties ?? [] as $f)
-                                        <option value="{{ e($f->full_name) }}">{{ e($f->full_name) }}</option>
+                                        <option value="{{ e($f->full_name) }}">{{ e($f->full_name_with_code ?? $f->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="drAcademyStaffSelect" class="form-select " style="display:none;">
                                         <option value="">Select Academy Staff</option>
                                         @foreach($employees ?? [] as $e)
-                                        <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
+                                        <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="drMessStaffSelect" class="form-select " style="display:none;">
                                         <option value="">Select Mess Staff</option>
                                         @foreach($messStaff ?? [] as $e)
-                                        <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
+                                        <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="drOtStudentSelect" class="form-select " style="display:none;">
@@ -516,16 +516,8 @@ document.addEventListener('DOMContentLoaded', function () {
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label voucher-label">Remarks</label>
-                                    <input type="text" name="remarks" class="form-control " value="{{ old('remarks') }}" placeholder="Remarks (optional)">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label voucher-label">Reference Number</label>
-                                    <input type="text" name="reference_number" class="form-control " value="{{ old('reference_number') }}" placeholder="Reference number (optional)" maxlength="100">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label voucher-label">Order By</label>
-                                    <input type="text" name="order_by" class="form-control " value="{{ old('order_by') }}" placeholder="Order by (optional)" maxlength="100">
+                                    <label class="form-label voucher-label">Remarks / Reference Number / Order By</label>
+                                    <input type="text" name="remarks" class="form-control " value="{{ old('remarks') }}" placeholder="Remarks / Reference Number / Order By (optional)">
                                 </div>
                             </div>
                         </div>
@@ -576,7 +568,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                             </td>
                                             <td><input type="text" class="form-control  dr-left bg-light" readonly></td>
                                             <td><input type="date" name="items[0][issue_date]" class="form-control  dr-issue-date" value="{{ date('Y-m-d') }}"></td>
-                                            <td><input type="text" name="items[0][rate]" class="form-control  dr-rate" required></td>
+                                            <td><input type="number" name="items[0][rate]" class="form-control  dr-rate" step="0.01" min="0" required></td>
                                             <td><input type="text" class="form-control  dr-total bg-light" readonly></td>
                                             <td><button type="button" class="btn  btn-outline-danger dr-remove-row voucher-icon-btn" disabled title="Remove">×</button></td>
                                         </tr>
@@ -956,19 +948,19 @@ document.addEventListener('DOMContentLoaded', function () {
                                     <select id="editDrFacultySelect" class="form-select " style="display:none;">
                                         <option value="">Select Faculty</option>
                                         @foreach($faculties ?? [] as $f)
-                                        <option value="{{ e($f->full_name) }}">{{ e($f->full_name) }}</option>
+                                        <option value="{{ e($f->full_name) }}">{{ e($f->full_name_with_code ?? $f->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="editDrAcademyStaffSelect" class="form-select " style="display:none;">
                                         <option value="">Select Academy Staff</option>
                                         @foreach($employees ?? [] as $e)
-                                        <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
+                                        <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="editDrMessStaffSelect" class="form-select " style="display:none;">
                                         <option value="">Select Mess Staff</option>
                                         @foreach($messStaff ?? [] as $e)
-                                        <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
+                                        <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="editDrOtStudentSelect" class="form-select " style="display:none;">
@@ -991,16 +983,8 @@ document.addEventListener('DOMContentLoaded', function () {
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label voucher-label">Remarks</label>
-                                    <input type="text" name="remarks" class="form-control  edit-remarks" placeholder="Remarks (optional)">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label voucher-label">Reference Number</label>
-                                    <input type="text" name="reference_number" class="form-control  edit-reference-number" placeholder="Reference number (optional)" maxlength="100">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label voucher-label">Order By</label>
-                                    <input type="text" name="order_by" class="form-control  edit-order-by" placeholder="Order by (optional)" maxlength="100">
+                                    <label class="form-label voucher-label">Remarks / Reference Number / Order By</label>
+                                    <input type="text" name="remarks" class="form-control  edit-remarks" placeholder="Remarks / Reference Number / Order By (optional)">
                                 </div>
                             </div>
                         </div>
@@ -1714,7 +1698,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 '<td><input type="number" name="items[' + index + '][quantity]" class="form-control  dr-qty" step="0.01" required><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
                 '<td><input type="text" class="form-control  dr-left bg-light" readonly placeholder="0"></td>' +
                 '<td><input type="date" name="items[' + index + '][issue_date]" class="form-control  dr-issue-date" value="' + new Date().toISOString().slice(0, 10) + '"></td>' +
-                '<td><input type="number" name="items[' + index + '][rate]" class="form-control  dr-rate" required></td>' +
+                '<td><input type="number" name="items[' + index + '][rate]" class="form-control  dr-rate" step="0.01" min="0" required></td>' +
                 '<td><input type="text" class="form-control  dr-total bg-light" readonly></td>' +
                 '<td><button type="button" class="btn  btn-outline-danger dr-remove-row voucher-icon-btn" title="Remove">×</button></td>' +
                 '</tr>';
@@ -3098,7 +3082,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (editWrap2) editWrap2.style.display = '';
                     const isOt = slug === 'ot';
                     const isCourse = slug === 'course';
-                    const editClientSelect = document.getElementById('editDrClientNameSelect');
+                    let editClientSelect = document.getElementById('editDrClientNameSelect');
                     const editOtSelect = document.getElementById('editDrOtCourseSelect');
                     const editCourseSelect = document.getElementById('editDrCourseSelect');
                     const editCourseNameSelect = document.getElementById('editDrCourseNameSelect');

@@ -298,19 +298,19 @@ document.addEventListener('DOMContentLoaded', function () {
                                     <select id="modalFacultySelect" class="form-select" style="display:none;">
                                         <option value="">Select Faculty</option>
                                         @foreach($faculties ?? [] as $f)
-                                            <option value="{{ e($f->full_name) }}">{{ e($f->full_name) }}</option>
+                                            <option value="{{ e($f->full_name) }}">{{ e($f->full_name_with_code ?? $f->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="modalAcademyStaffSelect" class="form-select" style="display:none;">
                                         <option value="">Select Academy Staff</option>
                                         @foreach($employees ?? [] as $e)
-                                            <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
+                                            <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="modalMessStaffSelect" class="form-select" style="display:none;">
                                         <option value="">Select Mess Staff</option>
                                         @foreach($messStaff ?? [] as $e)
-                                            <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
+                                            <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="modalOtStudentSelect" class="form-select" style="display:none;">
@@ -337,16 +337,8 @@ document.addEventListener('DOMContentLoaded', function () {
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Remarks</label>
-                                    <input type="text" name="remarks" class="form-control" value="{{ old('remarks') }}" placeholder="Remarks (optional)">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Reference Number</label>
-                                    <input type="text" name="reference_number" class="form-control" value="{{ old('reference_number') }}" placeholder="Reference number (optional)" maxlength="100">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Order By</label>
-                                    <input type="text" name="order_by" class="form-control" value="{{ old('order_by') }}" placeholder="Order by (optional)" maxlength="100">
+                                    <label class="form-label">Remarks / Reference Number / Order By</label>
+                                    <input type="text" name="remarks" class="form-control" value="{{ old('remarks') }}" placeholder="Remarks / Reference Number / Order By (optional)">
                                 </div>
                             </div>
                         </div>
@@ -492,19 +484,19 @@ document.addEventListener('DOMContentLoaded', function () {
                                     <select id="editModalFacultySelect" class="form-select" style="display:none;">
                                         <option value="">Select Faculty</option>
                                         @foreach($faculties ?? [] as $f)
-                                            <option value="{{ e($f->full_name) }}">{{ e($f->full_name) }}</option>
+                                            <option value="{{ e($f->full_name) }}">{{ e($f->full_name_with_code ?? $f->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="editModalAcademyStaffSelect" class="form-select" style="display:none;">
                                         <option value="">Select Academy Staff</option>
                                         @foreach($employees ?? [] as $e)
-                                            <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
+                                            <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="editModalMessStaffSelect" class="form-select" style="display:none;">
                                         <option value="">Select Mess Staff</option>
                                         @foreach($messStaff ?? [] as $e)
-                                            <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
+                                            <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="editModalCourseNameSelect" class="form-select" style="display:none;">
@@ -528,16 +520,8 @@ document.addEventListener('DOMContentLoaded', function () {
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Remarks</label>
-                                    <input type="text" name="remarks" class="form-control edit-remarks" placeholder="Remarks (optional)">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Reference Number</label>
-                                    <input type="text" name="reference_number" class="form-control edit-reference-number" placeholder="Reference number (optional)" maxlength="100">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Order By</label>
-                                    <input type="text" name="order_by" class="form-control edit-order-by" placeholder="Order by (optional)" maxlength="100">
+                                    <label class="form-label">Remarks / Reference Number / Order By</label>
+                                    <input type="text" name="remarks" class="form-control edit-remarks" placeholder="Remarks / Reference Number / Order By (optional)">
                                 </div>
                             </div>
                         </div>

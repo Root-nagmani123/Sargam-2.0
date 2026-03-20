@@ -125,7 +125,7 @@
                                     data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-setup' ? 'true' : 'false' }}" aria-controls="setup-panel"
                                     id="setup-tab">
 
-                                    @if(hasRole('Admin') || hasRole('Training-Induction') ||  hasRole('Staff') || hasRole('IST'))
+                                    @if(hasRole('Admin')|| hasRole('Mess-Admin') || hasRole('Mess-Staff') || hasRole('Training-Induction') ||  hasRole('Staff') || hasRole('IST'))
                                     <span>Setup</span>
                                     @elseif(hasRole('Internal Faculty') || hasRole('Guest Faculty') ||
                                     hasRole('Student-OT'))
