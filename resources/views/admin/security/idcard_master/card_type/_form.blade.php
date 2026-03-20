@@ -4,6 +4,9 @@
 </div>
 <form id="cardTypeForm" method="POST" action="{{ isset($cardType) ? route('admin.security.idcard_card_type.update', encrypt($cardType->pk)) : route('admin.security.idcard_card_type.store') }}">
     @csrf
+    @php
+        $secNameMax = (int) ($secCardNameMaxLength ?? 11);
+    @endphp
     <div class="modal-body">
         <div class="mb-3">
             <label for="sec_card_name" class="form-label">Card Type Name <span class="text-danger">*</span></label>
@@ -12,9 +15,10 @@
                    id="sec_card_name"
                    class="form-control"
                    value="{{ old('sec_card_name', $cardType->sec_card_name ?? '') }}"
-                   placeholder="Enter card type name (e.g., LBSNAA, CPWD)"
-                   maxlength="255"
+                   placeholder="Enter card type name (e.g., LBSNAA)"
+                   maxlength="{{ $secNameMax }}"
                    required>
+            <div class="form-text">Maximum {{ $secNameMax }} characters (database limit).</div>
         </div>
     </div>
     <div class="modal-footer">

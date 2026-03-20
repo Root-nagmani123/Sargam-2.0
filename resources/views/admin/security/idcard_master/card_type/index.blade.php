@@ -19,6 +19,12 @@
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
             @endif
+            @if(session('error'))
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    {{ session('error') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            @endif
 
             <div class="table-responsive">
                 <table class="table mb-0">
@@ -60,13 +66,22 @@
                                         <a href="{{ route('admin.security.idcard_card_type.edit', encrypt($ct->pk)) }}" class="text-success openEditCardType" title="Edit">
                                             <i class="material-icons material-symbols-rounded" style="font-size:22px;">edit</i>
                                         </a>
-                                        <form action="{{ route('admin.security.idcard_card_type.delete', encrypt($ct->pk)) }}" method="POST" onsubmit="return confirm('Delete this Card Type?');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-link p-0 text-danger" title="Delete">
-                                                <i class="material-icons material-symbols-rounded" style="font-size:22px;">delete</i>
-                                            </button>
-                                        </form>
+                                        @php
+                                            $canDeleteCardType = ! $hasStatus || ! $isActive;
+                                        @endphp
+                                        @if($canDeleteCardType)
+                                            <form action="{{ route('admin.security.idcard_card_type.delete', encrypt($ct->pk)) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this Card Type?');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-link p-0 text-danger" title="Delete">
+                                                    <i class="material-icons material-symbols-rounded" style="font-size:22px;">delete</i>
+                                                </button>
+                                            </form>
+                                        @else
+                                            <span class="text-muted" style="cursor:not-allowed;" title="Set status to Inactive before delete">
+                                                <i class="material-icons material-symbols-rounded" style="font-size:22px;opacity:0.4;">delete</i>
+                                            </span>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>
@@ -96,6 +111,36 @@
 
 @push('scripts')
 <script>
+(function () {
+    // After status toggle (global custom.js → /admin/toggle-status), reload so delete icons match DB.
+    $(document).ajaxSuccess(function (event, xhr, settings) {
+        if (!window.location.pathname.includes('idcard-card-type')) {
+            return;
+        }
+        var type = (settings.type || '').toUpperCase();
+        if (type !== 'POST') {
+            return;
+        }
+        var url = String(settings.url || '');
+        var isCardTypeToggleUrl = url.indexOf('idcard-card-type') !== -1 && url.indexOf('toggle-status') !== -1;
+        if (!isCardTypeToggleUrl && url.indexOf('toggle-status') === -1 && url.indexOf('toggleStatus') === -1) {
+            return;
+        }
+        var isCardTypeTable = false;
+        var data = settings.data;
+        if (isCardTypeToggleUrl) {
+            isCardTypeTable = true;
+        } else if (typeof data === 'string') {
+            isCardTypeTable = data.indexOf('sec_id_cardno_master') !== -1;
+        } else if (data && typeof data === 'object' && !(data instanceof FormData)) {
+            isCardTypeTable = data.table === 'sec_id_cardno_master';
+        }
+        if (isCardTypeTable) {
+            window.location.reload();
+        }
+    });
+})();
+
 $(document).ready(function () {
     $('#openCreateCardType').on('click', function (e) {
         e.preventDefault();

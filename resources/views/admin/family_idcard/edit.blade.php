@@ -3,6 +3,20 @@
 @section('setup_content')
 <div class="container-fluid family-idcard-create-page">
     <x-breadcrum title="Edit Family ID Card Request"></x-breadcrum>
+    @php $canRemoveMembers = $can_remove_members ?? true; @endphp
+
+    @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+    @if(session('error'))
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            {{ session('error') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
 
     <form action="{{ route('admin.family_idcard.update', $request->id) }}" method="POST" enctype="multipart/form-data" class="needs-validation" id="familyIdcardForm" novalidate>
         @csrf
@@ -91,7 +105,8 @@
                 <!-- Family Members List (create-style: inline editable rows) -->
                 <div class="d-flex justify-content-between align-items-center mt-4 mb-3">
                     <h6 class="fw-semibold mb-0">Family Members List</h6>
-                    <button type="button" class="btn btn-primary btn-sm" id="addFamilyMemberBtn">
+                    <button type="button" class="btn btn-primary btn-sm" id="addFamilyMemberBtn"
+                        @if(!$canRemoveMembers) disabled title="Cannot add or remove members after the approval process has started"@endif>
                         <i class="material-icons material-symbols-rounded align-middle me-1" style="font-size:18px;">add</i>
                         Add Family Member
                     </button>
@@ -164,7 +179,9 @@
                                         </div>
                                     </td>
                                     <td class="align-middle text-center">
-                                        <button type="button" class="btn btn-outline-danger btn-sm remove-member-btn" data-row="{{ $idx }}" title="Remove row" aria-label="Remove row">
+                                        <button type="button" class="btn btn-outline-danger btn-sm remove-member-btn" data-row="{{ $idx }}"
+                                            @if(!$canRemoveMembers) disabled title="Cannot remove members after the approval process has started"@else title="Remove row" @endif
+                                            aria-label="Remove row">
                                             <i class="material-icons material-symbols-rounded" style="font-size:18px;">delete</i>
                                         </button>
                                     </td>
@@ -499,9 +516,11 @@
     });
     applyDateRestrictions();
 
-    addBtn.addEventListener('click', function() {
-        addRow();
-    });
+    if (addBtn && !addBtn.disabled) {
+        addBtn.addEventListener('click', function() {
+            addRow();
+        });
+    }
 })();
 </script>
 @endsection

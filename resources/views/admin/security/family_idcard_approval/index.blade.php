@@ -1,6 +1,14 @@
 @extends('admin.layouts.master')
 @section('title', 'Pending Family ID Card Approvals')
 @section('setup_content')
+@php
+    $familyApprovalReturn = in_array(request('return'), ['approval2', 'approval3'], true) ? request('return') : null;
+    $familyMembersQs = ['from' => 'family_approval'];
+    if ($familyApprovalReturn) {
+        $familyMembersQs['return'] = $familyApprovalReturn;
+    }
+    $familyMembersQueryString = '?' . http_build_query($familyMembersQs);
+@endphp
 <div class="container-fluid">
     <x-breadcrum title="Pending Family ID Card Approvals"></x-breadcrum>
     <div class="card" style="border-left:4px solid #004a93;">
@@ -26,6 +34,9 @@
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-body">
                     <form method="GET" action="{{ route('admin.security.family_idcard_approval.index') }}" class="row g-3 align-items-end">
+                        @if($familyApprovalReturn)
+                            <input type="hidden" name="return" value="{{ $familyApprovalReturn }}">
+                        @endif
                         <div class="col-md-4">
                             <label for="search" class="form-label">Search</label>
                             <input type="text" name="search" id="search" class="form-control"
@@ -47,7 +58,7 @@
                                 <i class="material-icons material-symbols-rounded" style="font-size:18px;">search</i>
                                 Search
                             </button>
-                            <a href="{{ route('admin.security.family_idcard_approval.index') }}" class="btn btn-outline-secondary">
+                            <a href="{{ route('admin.security.family_idcard_approval.index', array_filter(['return' => $familyApprovalReturn])) }}" class="btn btn-outline-secondary">
                                 <i class="material-icons material-symbols-rounded" style="font-size:18px;">restart_alt</i>
                             </a>
                         </div>
@@ -92,7 +103,7 @@
                                 <td>{{ $group->created_date ? \Carbon\Carbon::parse($group->created_date)->format('d-m-Y H:i') : '--' }}</td>
                                 <td>
                                     <div class="d-flex gap-2 flex-wrap">
-                                        <a href="{{ route('admin.family_idcard.members', $group->first_id) }}"
+                                        <a href="{{ route('admin.family_idcard.members', $group->first_id) }}{{ $familyMembersQueryString }}"
                                            class="btn  btn-outline-info bg-transparent border-0 text-primary p-0" title="View Members">
                                             <i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i>
                                         </a>

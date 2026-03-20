@@ -84,9 +84,13 @@ class EmployeeIDCardApprovalController extends Controller
                 default => 'Unknown',
             };
 
-            // If already approved at Level 1 (A1 exists) but master status still Pending,
-            // show as view-only in Approval-I list.
-            if ((int) ($dto->id_status ?? 0) === 1 && in_array(($r->emp_id_apply ?? ''), $contA1DoneArr, true)) {
+            // Section head (Approval I) for contractual regular: approve1() sets
+            // depart_approval_status = 2 and inserts security row with approval status 0 (not 1).
+            // So we must key "A1 done" off the main table, not approval.status = 1.
+            $sectionHeadDone = (int) ($r->depart_approval_status ?? 0) === 2;
+            $legacyA1InApprovalTable = in_array($r->emp_id_apply ?? null, $contA1DoneArr, false);
+
+            if ((int) ($dto->id_status ?? 0) === 1 && ($sectionHeadDone || $legacyA1InApprovalTable)) {
                 $dto->is_view_only = true;
             }
 
@@ -268,6 +272,7 @@ class EmployeeIDCardApprovalController extends Controller
 
         $permRows = $permQuery->limit($take)->get();
         $dupPermRows = $dupPermQuery->limit($take)->get();
+        $dupPermCardLabels = $this->mapDupPermIdCardTypeLabels($dupPermRows);
 
         // PERF: Avoid N+1 queries for permanent duplicate approvals by preloading flags in bulk.
         $dupPermIds = $dupPermRows->pluck('emp_id_apply')->filter()->unique()->values();
@@ -309,11 +314,12 @@ class EmployeeIDCardApprovalController extends Controller
         });
         // For duplicate permanent records (stdClass from DB query), create DTOs directly without mapper
         // and mark those which already have recommendation (recommend_status = 1) as view-only (pending final approval).
-        $dupPermDtos = $dupPermRows->map(function ($r) use ($dupPermRecommendedMap, $dupPermFinalMap) {
+        $dupPermDtos = $dupPermRows->map(function ($r) use ($dupPermRecommendedMap, $dupPermFinalMap, $dupPermCardLabels) {
             $fullName = trim(($r->first_name ?? '') . ' ' . ($r->last_name ?? ''));
             if ($fullName === '') {
                 $fullName = $r->employee_name ?? '--';
             }
+            $applyKey = (string) ($r->emp_id_apply ?? '');
             // Map base fields
             $dto = (object) [
                 'id' => $r->emp_id_apply,
@@ -322,7 +328,7 @@ class EmployeeIDCardApprovalController extends Controller
                 'designation' => $r->designation_name ?? null,
                 'father_name' => null,
                 'id_card_number' => $r->id_card_no,
-                'card_type' => $r->card_type ?? '--',
+                'card_type' => $dupPermCardLabels[$applyKey] ?? '--',
                 'date_of_birth' => $r->employee_dob,
                 'blood_group' => $r->blood_group,
                 'mobile_number' => $r->mobile_no,
@@ -434,6 +440,7 @@ class EmployeeIDCardApprovalController extends Controller
 
         $contRows = $contQuery->limit($take)->get();
         $dupContRows = $dupContQuery->limit($take)->get();
+        $dupContCardLabels = $this->mapDupOtherIdCardTypeLabels($dupContRows);
         $deptMap = DB::table('department_master')->pluck('department_name', 'pk')->toArray();
         
         $contDtos = $contRows->map(function ($r) use ($contHasA2) {
@@ -451,7 +458,7 @@ class EmployeeIDCardApprovalController extends Controller
         });
         // For duplicate contractual records (stdClass from DB query), create DTOs directly without mapper.
         // Mark recommended rows as view-only so no actions appear.
-        $dupContDtos = $dupContRows->map(function ($r) use ($deptMap, $dupContRecommended) {
+        $dupContDtos = $dupContRows->map(function ($r) use ($deptMap, $dupContRecommended, $dupContCardLabels) {
             $requestedSection = null;
             if (!empty($r->section) && isset($deptMap[$r->section])) {
                 $requestedSection = $deptMap[$r->section];
@@ -463,6 +470,7 @@ class EmployeeIDCardApprovalController extends Controller
                 3 => 'Rejected',
                 default => 'Unknown',
             };
+            $applyKey = (string) ($r->emp_id_apply ?? '');
             $dto = (object) [
                 // Use "c-<applyId>" as base id so view can build c-dup- prefix
                 'id' => 'c-' . $r->emp_id_apply,
@@ -471,7 +479,7 @@ class EmployeeIDCardApprovalController extends Controller
                 'designation' => $r->designation_name ?? '--',
                 'father_name' => null,
                 'id_card_number' => $r->id_card_no,
-                'card_type' => $r->card_type ?? '--',
+                'card_type' => $dupContCardLabels[$applyKey] ?? '--',
                 'date_of_birth' => $r->employee_dob,
                 'blood_group' => $r->blood_group,
                 'mobile_number' => $r->mobile_no,
@@ -596,8 +604,9 @@ class EmployeeIDCardApprovalController extends Controller
             'desig.designation_name',
             'dept.department_name',
         ])->get();
+        $dupPermCardLabels = $this->mapDupPermIdCardTypeLabels($dupPermRows);
 
-        $dupPermDtos = $dupPermRows->map(function ($r) {
+        $dupPermDtos = $dupPermRows->map(function ($r) use ($dupPermCardLabels) {
             $fullName = trim(($r->first_name ?? '') . ' ' . ($r->last_name ?? ''));
             if ($fullName === '') {
                 $fullName = $r->employee_name ?? '--';
@@ -608,6 +617,7 @@ class EmployeeIDCardApprovalController extends Controller
                 3 => 'Rejected',
                 default => 'Unknown',
             };
+            $applyKey = (string) ($r->emp_id_apply ?? '');
             return (object) [
                 // keep base id as emp_id_apply; _approval_table will add p-dup- prefix for duplicates
                 'id' => $r->emp_id_apply,
@@ -616,7 +626,7 @@ class EmployeeIDCardApprovalController extends Controller
                 'designation' => $r->designation_name ?? null,
                 'father_name' => null,
                 'id_card_number' => $r->id_card_no,
-                'card_type' => $r->card_type ?? '--',
+                'card_type' => $dupPermCardLabels[$applyKey] ?? '--',
                 'date_of_birth' => $r->employee_dob,
                 'blood_group' => $r->blood_group,
                 'mobile_number' => $r->mobile_no,
@@ -688,8 +698,9 @@ class EmployeeIDCardApprovalController extends Controller
             $dupContQuery->where('created_date', '<=', $dateToDt);
         }
         $dupContRows = $dupContQuery->orderByDesc('created_date')->get();
+        $dupContCardLabels = $this->mapDupOtherIdCardTypeLabels($dupContRows);
         $deptMap = DB::table('department_master')->pluck('department_name', 'pk')->toArray();
-        $dupContDtos = $dupContRows->map(function ($r) use ($deptMap) {
+        $dupContDtos = $dupContRows->map(function ($r) use ($deptMap, $dupContCardLabels) {
             $requestedSection = null;
             if (!empty($r->section) && isset($deptMap[$r->section])) {
                 $requestedSection = $deptMap[$r->section];
@@ -700,6 +711,7 @@ class EmployeeIDCardApprovalController extends Controller
                 3 => 'Rejected',
                 default => 'Unknown',
             };
+            $applyKey = (string) ($r->emp_id_apply ?? '');
             return (object) [
                 // base id is "c-<applyId>" so _approval_table can build "c-dup-<applyId>"
                 'id' => 'c-' . $r->emp_id_apply,
@@ -708,7 +720,7 @@ class EmployeeIDCardApprovalController extends Controller
                 'designation' => $r->designation_name ?? '--',
                 'father_name' => $r->father_name ?? null,
                 'id_card_number' => $r->id_card_no,
-                'card_type' => $r->card_type ?? '--',
+                'card_type' => $dupContCardLabels[$applyKey] ?? '--',
                 'date_of_birth' => $r->employee_dob,
                 'blood_group' => $r->blood_group,
                 'mobile_number' => $r->mobile_no,
@@ -963,9 +975,10 @@ class EmployeeIDCardApprovalController extends Controller
             $hasFinal = $approvals->where('status', 2)->isNotEmpty();
             $hasRej = $approvals->where('status', 3)->isNotEmpty();
             $hasPending = $approvals->where('status', 0)->isNotEmpty();
+            $sectionHeadDone = (int) ($row->depart_approval_status ?? 0) === 2;
 
             if ($stage === 1) {
-                $canApprove = !$hasA1 && !$hasRecommended && !$hasFinal && !$hasRej && (int) $row->id_status === 1;
+                $canApprove = ! $sectionHeadDone && ! $hasA1 && ! $hasRecommended && ! $hasFinal && ! $hasRej && (int) $row->id_status === 1;
             } elseif ($stage === 2) {
                 $canApprove = $hasPending && !$hasRecommended && !$hasFinal && !$hasRej && (int) $row->id_status === 1;
             } elseif ($stage === 3) {
@@ -1070,11 +1083,13 @@ class EmployeeIDCardApprovalController extends Controller
             }
             // Section head ke level par approval table me koi change nahi hona chahiye,
             // sirf departmental status/remarks/date update honge.
-            $hasA1 = DB::table('security_con_oth_id_apply_approval')
+            // Level-1 (section head) complete is stored on the main row; approval table gets status 0 for Security.
+            $sectionHeadDone = (int) ($row->depart_approval_status ?? 0) === 2;
+            $legacyA1 = DB::table('security_con_oth_id_apply_approval')
                 ->where('security_parm_id_apply_pk', $row->emp_id_apply)
                 ->where('status', 1)
                 ->exists();
-            if ($hasA1) {
+            if ($sectionHeadDone || $legacyA1) {
                 return redirect()->back()->with('error', 'This request has already been approved at Level 1.');
             }
             // Mark department approval as completed (Section Head)
@@ -1761,7 +1776,8 @@ class EmployeeIDCardApprovalController extends Controller
             // - Stage 2 updates that row to recommended (status=1, recommend_status=1) and creates a new pending row (status=0) for final.
             // So the correct "pending your action" check is presence of a status=0 row.
             $hasPending = $approvals->where('status', 0)->isNotEmpty();
-            if ($stage === 1 && ($hasA1 || $hasRej)) {
+            $sectionHeadDone = (int) ($row->depart_approval_status ?? 0) === 2;
+            if ($stage === 1 && ($sectionHeadDone || $hasA1 || $hasRej)) {
                 return redirect()->back()->with('error', 'This request is not pending your action.');
             }
             if ($stage === 2 && (!$hasPending || $hasRecommended || $hasFinal || $hasRej)) {
@@ -2182,6 +2198,136 @@ class EmployeeIDCardApprovalController extends Controller
             ->all();
 
         return $this->outputExport($data, 'Approval_II_' . now()->format('Y-m-d'), $format);
+    }
+
+    /**
+     * Resolve ID Type label (sec_id_cardno_master.sec_card_name) for permanent duplicate rows
+     * shown on Approval II / III lists. Uses dup.permanent_type when set, else parent SecurityParmIdApply.permanent_type.
+     *
+     * @param  \Illuminate\Support\Collection|array<int, object>  $dupPermRows
+     * @return array<string, string>  keyed by emp_id_apply
+     */
+    private function mapDupPermIdCardTypeLabels($dupPermRows): array
+    {
+        if ($dupPermRows->isEmpty()) {
+            return [];
+        }
+
+        $parentIds = $dupPermRows->pluck('parent_id')->filter()->unique()->values();
+        $permTypeByParent = [];
+        if ($parentIds->isNotEmpty()) {
+            $permTypeByParent = DB::table('security_parm_id_apply')
+                ->whereIn('emp_id_apply', $parentIds->all())
+                ->pluck('permanent_type', 'emp_id_apply')
+                ->all();
+        }
+
+        $masterPks = [];
+        foreach ($dupPermRows as $r) {
+            $pk = $r->permanent_type ?? null;
+            if (empty($pk) && ! empty($r->parent_id)) {
+                $pk = $permTypeByParent[$r->parent_id] ?? null;
+            }
+            if ($pk !== null && $pk !== '') {
+                $masterPks[] = (int) $pk;
+            }
+        }
+        $masterPks = array_values(array_unique(array_filter($masterPks)));
+        $namesByPk = $masterPks !== []
+            ? DB::table('sec_id_cardno_master')->whereIn('pk', $masterPks)->pluck('sec_card_name', 'pk')->all()
+            : [];
+
+        $labels = [];
+        foreach ($dupPermRows as $r) {
+            $applyKey = (string) ($r->emp_id_apply ?? '');
+            $pk = $r->permanent_type ?? null;
+            if (empty($pk) && ! empty($r->parent_id)) {
+                $pk = $permTypeByParent[$r->parent_id] ?? null;
+            }
+            $label = null;
+            if ($pk !== null && $pk !== '' && isset($namesByPk[(int) $pk])) {
+                $label = $namesByPk[(int) $pk];
+            }
+            if ($label === null && ! empty($r->card_type) && ! in_array((string) $r->card_type, ['Permanent', 'Contractual', 'Family'], true)) {
+                $label = (string) $r->card_type;
+            }
+            $labels[$applyKey] = $label ?: '--';
+        }
+
+        return $labels;
+    }
+
+    /**
+     * Resolve ID Type (card master name) for contractual duplicate rows on Approval II/III lists.
+     * Note: security_dup_other_id_apply.id_proof is document type (Aadhar/PAN…), not sec_id_cardno_master.pk.
+     * Prefer row.permanent_type when present; else resolve via latest matching security_con_oth_id_apply by id_card_no.
+     *
+     * @param  \Illuminate\Support\Collection|array<int, object>  $dupContRows
+     * @return array<string, string>  keyed by emp_id_apply
+     */
+    private function mapDupOtherIdCardTypeLabels($dupContRows): array
+    {
+        if ($dupContRows->isEmpty()) {
+            return [];
+        }
+
+        $cardNos = $dupContRows->pluck('id_card_no')
+            ->filter()
+            ->map(fn ($n) => trim((string) $n))
+            ->unique()
+            ->filter()
+            ->values();
+
+        $permTypeByCardNo = [];
+        if ($cardNos->isNotEmpty()) {
+            $candidates = DB::table('security_con_oth_id_apply')
+                ->whereIn('id_card_no', $cardNos->all())
+                ->orderByRaw('CASE WHEN id_status = 2 THEN 0 ELSE 1 END')
+                ->orderByDesc('created_date')
+                ->get(['id_card_no', 'permanent_type']);
+
+            foreach ($candidates as $c) {
+                $cn = trim((string) ($c->id_card_no ?? ''));
+                if ($cn === '' || isset($permTypeByCardNo[$cn])) {
+                    continue;
+                }
+                if (! empty($c->permanent_type)) {
+                    $permTypeByCardNo[$cn] = (int) $c->permanent_type;
+                }
+            }
+        }
+
+        $masterPkList = collect(array_values($permTypeByCardNo));
+        foreach ($dupContRows as $r) {
+            if (! empty($r->permanent_type)) {
+                $masterPkList->push((int) $r->permanent_type);
+            }
+        }
+        $masterPks = $masterPkList->filter(fn ($v) => (int) $v > 0)->unique()->values()->all();
+
+        $namesByPk = $masterPks !== []
+            ? DB::table('sec_id_cardno_master')->whereIn('pk', $masterPks)->pluck('sec_card_name', 'pk')->all()
+            : [];
+
+        $labels = [];
+        foreach ($dupContRows as $r) {
+            $applyKey = (string) ($r->emp_id_apply ?? '');
+            $label = null;
+            $typePk = ! empty($r->permanent_type) ? (int) $r->permanent_type : null;
+            if (! $typePk) {
+                $cn = trim((string) ($r->id_card_no ?? ''));
+                $typePk = ($cn !== '' && isset($permTypeByCardNo[$cn])) ? $permTypeByCardNo[$cn] : null;
+            }
+            if ($typePk && isset($namesByPk[$typePk])) {
+                $label = $namesByPk[$typePk];
+            }
+            if ($label === null && ! empty($r->card_type) && ! in_array((string) $r->card_type, ['Permanent', 'Contractual', 'Family'], true)) {
+                $label = (string) $r->card_type;
+            }
+            $labels[$applyKey] = $label ?: '--';
+        }
+
+        return $labels;
     }
 
     private function outputExport($data, $filename, $format)

@@ -19,6 +19,12 @@
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
             @endif
+            @if(session('error'))
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    {{ session('error') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            @endif
 
             <div class="table-responsive">
                 <table class="table mb-0">
@@ -60,23 +66,34 @@
                                     </div>
                                 </td>
                                 <td>
-                                    <div class="d-flex gap-2">
+                                    @php $subIsActive = (int) ($st->active_inactive ?? 1) === 1; @endphp
+                                    <div class="d-flex gap-2 align-items-center">
                                         <a href="{{ route('admin.security.idcard_sub_type.edit', encrypt($st->pk)) }}" class="text-success openEditSubType" title="Edit">
                                             <i class="material-icons material-symbols-rounded" style="font-size:22px;">edit</i>
                                         </a>
-                                        <form action="{{ route('admin.security.idcard_sub_type.delete', encrypt($st->pk)) }}" method="POST" onsubmit="return confirm('Delete this Sub Type mapping?');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-link p-0 text-danger" title="Delete">
+                                        @if($subIsActive)
+                                            <button type="button"
+                                                    class="btn btn-link p-0 text-secondary"
+                                                    disabled
+                                                    aria-disabled="true"
+                                                    title="Cannot delete while active. Set status to inactive first.">
                                                 <i class="material-icons material-symbols-rounded" style="font-size:22px;">delete</i>
                                             </button>
-                                        </form>
+                                        @else
+                                            <form action="{{ route('admin.security.idcard_sub_type.delete', encrypt($st->pk)) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this Sub Type mapping?');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-link p-0 text-danger" title="Delete">
+                                                    <i class="material-icons material-symbols-rounded" style="font-size:22px;">delete</i>
+                                                </button>
+                                            </form>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="text-center text-muted">No Sub Types found.</td>
+                                <td colspan="6" class="text-center text-muted">No Sub Types found.</td>
                             </tr>
                         @endforelse
                     </tbody>

@@ -10,6 +10,9 @@ use Illuminate\Validation\Rule;
 
 class CardTypeMasterController extends Controller
 {
+    /** Must match DB column `sec_id_cardno_master.sec_card_name` (e.g. varchar(11)). */
+    private const SEC_CARD_NAME_MAX_LENGTH = 11;
+
     public function index()
     {
         $query = DB::table('sec_id_cardno_master')->orderBy('sec_card_name');
@@ -25,7 +28,9 @@ class CardTypeMasterController extends Controller
     public function create(Request $request)
     {
         if ($request->ajax()) {
-            return view('admin.security.idcard_master.card_type._form');
+            return view('admin.security.idcard_master.card_type._form', [
+                'secCardNameMaxLength' => self::SEC_CARD_NAME_MAX_LENGTH,
+            ]);
         }
 
         return redirect()->route('admin.security.idcard_card_type.index');
@@ -37,7 +42,7 @@ class CardTypeMasterController extends Controller
             'sec_card_name' => [
                 'required',
                 'string',
-                'max:255',
+                'max:' . self::SEC_CARD_NAME_MAX_LENGTH,
                 Rule::unique('sec_id_cardno_master', 'sec_card_name'),
             ],
         ]);
@@ -81,7 +86,10 @@ class CardTypeMasterController extends Controller
         }
 
         if ($request->ajax()) {
-            return view('admin.security.idcard_master.card_type._form', compact('cardType'));
+            return view('admin.security.idcard_master.card_type._form', [
+                'cardType' => $cardType,
+                'secCardNameMaxLength' => self::SEC_CARD_NAME_MAX_LENGTH,
+            ]);
         }
 
         return redirect()->route('admin.security.idcard_card_type.index');
@@ -104,7 +112,7 @@ class CardTypeMasterController extends Controller
             'sec_card_name' => [
                 'required',
                 'string',
-                'max:255',
+                'max:' . self::SEC_CARD_NAME_MAX_LENGTH,
                 Rule::unique('sec_id_cardno_master', 'sec_card_name')->ignore($pk, 'pk'),
             ],
         ]);
@@ -170,6 +178,25 @@ class CardTypeMasterController extends Controller
             $pk = decrypt($id);
         } catch (\Exception $e) {
             abort(404);
+        }
+
+        $row = DB::table('sec_id_cardno_master')->where('pk', $pk)->first();
+        if (! $row) {
+            abort(404);
+        }
+
+        if (Schema::hasColumn('sec_id_cardno_master', 'active_inactive')) {
+            $isActive = (int) ($row->active_inactive ?? 1) === 1;
+            if ($isActive) {
+                $message = 'Active card types cannot be deleted. Set status to Inactive first.';
+                if ($request->ajax()) {
+                    return response()->json(['success' => false, 'message' => $message], 422);
+                }
+
+                return redirect()
+                    ->route('admin.security.idcard_card_type.index')
+                    ->with('error', $message);
+            }
         }
 
         DB::table('sec_id_cardno_master')->where('pk', $pk)->delete();
