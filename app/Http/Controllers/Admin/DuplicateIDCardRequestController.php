@@ -130,8 +130,27 @@ class DuplicateIDCardRequestController extends Controller
         $user = Auth::user();
         $employeePk = $user->user_id ?? $user->pk ?? null;
         $me = null;
+        $userDepartmentName = null;
+        $approvalAuthorityEmployees = collect();
+
         if ($employeePk) {
-            $me = EmployeeMaster::with(['designation', 'department'])->where('pk', $employeePk)->orWhere('pk_old', $employeePk)->first();
+            $me = EmployeeMaster::with(['designation', 'department'])
+                ->where('pk', $employeePk)
+                ->orWhere('pk_old', $employeePk)
+                ->first();
+
+            if ($me && $me->department_master_pk) {
+                $userDepartmentName = $me->department->department_name ?? null;
+
+                // Same department, Payroll = 0 (permanent) for Approval Authority dropdown
+                $approvalAuthorityEmployees = EmployeeMaster::with('designation')
+                    ->where('department_master_pk', $me->department_master_pk)
+                    ->when(\Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'payroll'), fn ($q) => $q->where('payroll', 0))
+                    ->when(\Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'status'), fn ($q) => $q->where('status', 1))
+                    ->orderBy('first_name')
+                    ->orderBy('last_name')
+                    ->get(['pk', 'first_name', 'last_name', 'designation_master_pk']);
+            }
         }
 
         $idProofOptions = [
@@ -142,7 +161,7 @@ class DuplicateIDCardRequestController extends Controller
         ];
 
         $data = [];
-        return view('admin.duplicate_idcard.create', compact('me', 'idProofOptions', 'data'));
+        return view('admin.duplicate_idcard.create', compact('me', 'idProofOptions', 'data', 'userDepartmentName', 'approvalAuthorityEmployees'));
     }
 
     /**
@@ -208,6 +227,57 @@ class DuplicateIDCardRequestController extends Controller
                     'blood_group' => $row->blood_group ?? '',
                     'mobile_number' => $row->mobile_no ?? '',
                     'father_name' => $emp->father_name ?? null,
+                    'card_valid_from' => $validFrom ? \Carbon\Carbon::parse($validFrom)->format('Y-m-d') : null,
+                    'card_valid_to' => $validTo ? \Carbon\Carbon::parse($validTo)->format('Y-m-d') : null,
+                ],
+            ]);
+        }
+
+        // Contractual ID Cards (security_con_oth_id_apply)
+        if ($type === 'Contractual') {
+            $row = DB::table('security_con_oth_id_apply')
+                ->where(function ($q) use ($cardNo) {
+                    $q->where('id_card_no', $cardNo)
+                        ->orWhereRaw('TRIM(COALESCE(id_card_no, "")) = ?', [$cardNo]);
+                })
+                ->orderByRaw('CASE WHEN id_status = 2 THEN 0 ELSE 1 END')
+                ->orderByDesc('created_date')
+                ->first();
+
+            if (! $row) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No contractual ID card found with this number.',
+                ], 404);
+            }
+
+            // Prefer main table validity; if missing, fall back to latest approved contractual duplicate
+            $validFrom = $row->card_valid_from ?? null;
+            $validTo = $row->card_valid_to ?? null;
+            if (! $validFrom || ! $validTo) {
+                $dup = DB::table('security_dup_other_id_apply')
+                    ->where('id_card_no', $cardNo)
+                    ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
+                    ->orderByDesc('card_valid_to')
+                    ->first(['card_valid_from', 'card_valid_to']);
+
+                if ($dup) {
+                    $validFrom = $validFrom ?: ($dup->card_valid_from ?? null);
+                    $validTo = $validTo ?: ($dup->card_valid_to ?? null);
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'employee_name' => trim($row->employee_name ?? ''),
+                    'designation' => trim($row->designation_name ?? ''),
+                    'date_of_birth' => ! empty($row->employee_dob)
+                        ? \Carbon\Carbon::parse($row->employee_dob)->format('Y-m-d')
+                        : null,
+                    'blood_group' => $row->blood_group ?? '',
+                    'mobile_number' => $row->mobile_no ?? '',
+                    'father_name' => $row->father_name ?? null,
                     'card_valid_from' => $validFrom ? \Carbon\Carbon::parse($validFrom)->format('Y-m-d') : null,
                     'card_valid_to' => $validTo ? \Carbon\Carbon::parse($validTo)->format('Y-m-d') : null,
                 ],
@@ -587,6 +657,12 @@ class DuplicateIDCardRequestController extends Controller
             'card_valid_to' => 'nullable|date|after_or_equal:card_valid_from',
         ];
 
+        // Contractual duplicate requires explicit Approval Authority (Section Head),
+        // same as contractual ID card request flow.
+        if ($request->get('id_card_type') === 'Contractual') {
+            $baseRules['approval_authority'] = 'required|integer|exists:employee_master,pk';
+        }
+
         // Conditional validation based on card_reason
         $cardReason = $request->get('card_reason');
         if ($cardReason === 'Damage Card') {
@@ -678,6 +754,15 @@ class DuplicateIDCardRequestController extends Controller
                         ->where('emp_id_apply', $applyId)
                         ->update(['employee_name' => $reasonDocData['new_name']]);
                 }
+                DB::table('security_dup_perm_id_apply_approval')->insert([
+                    'security_parm_id_apply_pk' => $applyId,
+                    'status' => 0,
+                    'approval_remarks' => null,
+                    'created_by' => $employeePk,
+                    'created_date' => $now,
+                    'modified_by' => $employeePk,
+                    'modified_date' => $now,
+                ]);
 
                 // Case 2 - Extension/Duplicate ID Card (Own Permanent): Only security_dup_perm_id_apply at request time.
                 // security_dup_perm_id_apply_approval rows are inserted when approvers approve.
@@ -698,8 +783,16 @@ class DuplicateIDCardRequestController extends Controller
 
                 $authEmp = EmployeeMaster::where('pk', $employeePk)->orWhere('pk_old', $employeePk)->first(['department_master_pk']);
                 $sectionPk = $authEmp->department_master_pk ?? null;
-                // Approval I shows requests where department_approval_emp_pk = current user; set to first approver so request appears in approval list
-                $firstApproverPk = $approvers->isNotEmpty() ? (int) $approvers->first() : null;
+
+                // Contractual duplicate: route to selected Section Head (approval_authority).
+                // Fallback to configured approver chain first element if not provided (should not happen due to validation).
+                $firstApproverPk = null;
+                if (($validated['id_card_type'] ?? null) === 'Contractual') {
+                    $firstApproverPk = !empty($validated['approval_authority']) ? (int) $validated['approval_authority'] : null;
+                }
+                if (!$firstApproverPk) {
+                    $firstApproverPk = $approvers->isNotEmpty() ? (int) $approvers->first() : null;
+                }
 
                 SecurityDupOtherIdApply::create([
                     'emp_id_apply' => $applyId,
@@ -720,6 +813,8 @@ class DuplicateIDCardRequestController extends Controller
                     'card_type' => $validated['id_card_type'],
                     'section' => $sectionPk,
                     'department_approval_emp_pk' => $firstApproverPk,
+                    'depart_approval_status' => 1,
+                    'depart_approval_date' => null,
                     'id_proof' => (int) $validated['id_proof'],
                     'aadhar_doc' => $aadharFile,
                     'service_ext' => $reasonDocData['service_ext'] ?? null,
@@ -797,7 +892,8 @@ class DuplicateIDCardRequestController extends Controller
         if ($source === 'perm') {
             $rej = SecurityDupPermIdApplyApproval::where('security_parm_id_apply_pk', $applyId)->where('status', 3)->latest('pk')->first();
             if ($rej) {
-                return 'Rejected';
+                $name = EmployeeMaster::where('pk', $rej->approval_emp_pk)->value(DB::raw("TRIM(CONCAT(IFNULL(first_name,''),' ',IFNULL(last_name,'')))"));
+                return $name ? ('Rejected By ' . $name) : 'Rejected';
             }
             $a2 = SecurityDupPermIdApplyApproval::where('security_parm_id_apply_pk', $applyId)->where('status', 2)->latest('pk')->first();
             if ($a2) {
@@ -809,7 +905,8 @@ class DuplicateIDCardRequestController extends Controller
 
         $rej = SecurityDupOtherIdApplyApproval::where('security_con_id_apply_pk', $applyId)->where('status', 3)->latest('pk')->first();
         if ($rej) {
-            return 'Rejected';
+            $name = EmployeeMaster::where('pk', $rej->approval_emp_pk)->value(DB::raw("TRIM(CONCAT(IFNULL(first_name,''),' ',IFNULL(last_name,'')))"));
+            return $name ? ('Rejected By ' . $name) : 'Rejected';
         }
         $a2 = SecurityDupOtherIdApplyApproval::where('security_con_id_apply_pk', $applyId)->where('status', 2)->latest('pk')->first();
         if ($a2) {

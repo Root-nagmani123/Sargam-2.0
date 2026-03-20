@@ -9,19 +9,13 @@
                 
                 <th>EMPLOYEE NAME</th>
                 <th>DESIGNATION</th>
-                <th>FATHER NAME</th>
                 <th>ID CARD NO</th>
                 <th>ID TYPE</th>
                 <th>REQUEST TYPE</th>
                 <th style="width:70px;" class="text-center">PHOTO</th>
-                <th>DATE OF BIRTH</th>
-                <th>BLOOD GROUP</th>
                 <th>CONTACT NO</th>
-                <th>VALID FROM</th>
-                <th>VALID TO</th>
-                <th>APPROVED/REJECT</th>
+                <th class="text-center">APPROVED/REJECT</th>
                 <th>REQUEST DATE</th>
-                <th>REQUESTED BY</th>
                 <th>REQUESTED SECTION</th>
             </tr>
         </thead>
@@ -32,43 +26,55 @@
                     
                     <td>{{ $req->name ?? '--' }}</td>
                     <td>{{ $req->designation ?? '--' }}</td>
-                    <td>{{ $req->father_name ?? '--' }}</td>
                     <td>{{ $req->id_card_number ?? '--' }}</td>
                     <td>{{ $req->card_type ?? '--' }}</td>
                     
-                    <td>
+                    <td class="text-center">
                         @if(isset($req->request_type) && $req->request_type === 'duplicate')
-                            <span class="badge bg-info">Duplicate</span>
+                            @php
+                                $empType = $req->employee_type ?? null;
+                                $empTypeShort = match ($empType) {
+                                    'Permanent Employee' => 'Permanent',
+                                    'Contractual Employee' => 'Contractual',
+                                    default => null,
+                                };
+                            @endphp
+                            @if($empTypeShort)
+                                <span class="badge bg-info">Duplicate ({{ $empTypeShort }})</span>
+                            @else
+                                <span class="badge bg-info">Duplicate</span>
+                            @endif
                         @else
-                            <span class="badge bg-secondary">Regular</span>
+                            <span class="badge bg-secondary">Fresh</span>
                         @endif
                     </td>
                     <td class="text-center">
                         @php
+                            // PERF: Avoid per-row storage existence checks (slow on Windows/network disks).
+                            // Use a deterministic URL and fall back to dummy image on load error.
                             $photoPath = null;
-                            $photoExists = false;
                             if ($req->photo) {
                                 $photoPath = str_starts_with($req->photo, 'idcard/')
                                     ? $req->photo
                                     : 'idcard/photos/' . $req->photo;
-                                $photoExists = \Storage::disk('public')->exists($photoPath);
                             }
+                            $photoUrl = $photoPath ? asset('storage/' . $photoPath) : asset('images/dummypic.jpeg');
+                            $dummyUrl = asset('images/dummypic.jpeg');
                         @endphp
-                        @if($photoExists)
-                            <a href="{{ asset('storage/' . $photoPath) }}" target="_blank" class="d-inline-block">
-                                <img src="{{ asset('storage/' . $photoPath) }}" alt="Photo" style="width:50px; height:50px; object-fit:cover; border-radius:4px; border:1px solid #dee2e6; cursor:pointer;" title="Click to view full photo">
+                        @if($photoPath)
+                            <a href="{{ $photoUrl }}" target="_blank" class="d-inline-block">
+                                <img src="{{ $photoUrl }}" alt="Photo"
+                                     onerror="this.onerror=null;this.src='{{ $dummyUrl }}';"
+                                     style="width:50px; height:50px; object-fit:cover; border-radius:4px; border:1px solid #dee2e6; cursor:pointer;"
+                                     title="Click to view full photo">
                             </a>
-                        @elseif($req->photo)
-                            <img src="{{ asset('images/dummypic.jpeg') }}" alt="No Photo" style="width:50px; height:50px; object-fit:cover; border-radius:4px; border:1px solid #dee2e6;" title="No file available in storage">
                         @else
-                            <img src="{{ asset('images/dummypic.jpeg') }}" alt="No Photo" style="width:50px; height:50px; object-fit:cover; border-radius:4px; border:1px solid #dee2e6;" title="No photo available">
+                            <img src="{{ $dummyUrl }}" alt="No Photo"
+                                 style="width:50px; height:50px; object-fit:cover; border-radius:4px; border:1px solid #dee2e6;"
+                                 title="No photo available">
                         @endif
                     </td>
-                    <td>{{ $req->date_of_birth ? (\Carbon\Carbon::parse($req->date_of_birth)->format('d-m-Y')) : '--' }}</td>
-                    <td>{{ $req->blood_group ?? '--' }}</td>
                     <td>{{ $req->mobile_number ?? $req->telephone_number ?? '--' }}</td>
-                    <td>{{ $req->id_card_valid_from ?? '--' }}</td>
-                    <td>{{ $req->id_card_valid_upto ?? '--' }}</td>
                     <td>
                         @php
                             // Determine the encryption key based on request type
@@ -85,27 +91,56 @@
                             $encryptedId = encrypt($encryptKey);
                         @endphp
 
-                        <div class="d-flex flex-column gap-1">
-                            <a href="{{ route('admin.security.employee_idcard_approval.show', $encryptedId) }}"
+                        <div class="d-flex flex-column gap-1 align-items-center">
+                            <a href="{{ route('admin.security.employee_idcard_approval.show', ['id' => $encryptedId, 'stage' => $approvalStage]) }}"
                                class="btn btn-link p-0 text-primary text-decoration-none"
                                title="View full request details">
                                 View Request
                             </a>
 
-                            @if(isset($req->is_view_only) && $req->is_view_only)
-                                {{-- Contractual requests at Approval 2 are view-only --}}
-                                <span class="badge bg-info align-self-start">View Only</span>
-                                <small class="text-muted">Approved at Level 1</small>
+                            @if(($req->status ?? 'Pending') !== 'Pending')
+                                {{-- Non-pending requests are always view-only --}}
+                                @php
+                                    $statusLabel = (string) ($req->status ?? '');
+                                    $statusBadgeClass = match ($statusLabel) {
+                                        'Approved' => 'bg-success',
+                                        'Rejected' => 'bg-danger',
+                                        default => 'bg-secondary',
+                                    };
+                                @endphp
+                                <span class="badge {{ $statusBadgeClass }}">{{ $statusLabel }}</span>
+                                <small class="text-muted">No further actions available</small>
+                            @elseif(isset($req->is_view_only) && $req->is_view_only)
+                                @if($approvalStage === 2 && in_array(($req->employee_type ?? ''), ['Permanent Employee', 'Contractual Employee']))
+                                    <span class="badge bg-warning">Pending from Final Approval</span>
+                                    <small class="text-muted">{{ $req->final_status_hint ?? 'Recommended at Level 2' }}</small>
+                                @else
+                                    {{-- View-only rows (e.g. other non-actionable rows) --}}
+                                    <span class="badge bg-info">View Only</span>
+                                    <small class="text-muted">Approved at Level 1</small>
+                                @endif
                             @else
-                                <div class="d-flex gap-1 flex-wrap">
-                                    <form action="{{ $approvalStage === 1 ? route('admin.security.employee_idcard_approval.approve1', $encryptedId) : route('admin.security.employee_idcard_approval.approve2', $encryptedId) }}" method="POST" class="d-inline">
+                                <div class="d-flex gap-1 flex-wrap justify-content-center align-items-center">
+                                    @php
+                                        $approveRoute = $approvalStage === 1
+                                            ? route('admin.security.employee_idcard_approval.approve1', $encryptedId)
+                                            : ($approvalStage === 2
+                                                ? route('admin.security.employee_idcard_approval.approve2', $encryptedId)
+                                                : route('admin.security.employee_idcard_approval.approve3', $encryptedId));
+                                        $rejectRoute = $approvalStage === 1
+                                            ? route('admin.security.employee_idcard_approval.reject1', $encryptedId)
+                                            : ($approvalStage === 2
+                                                ? route('admin.security.employee_idcard_approval.reject2', $encryptedId)
+                                                : route('admin.security.employee_idcard_approval.reject3', $encryptedId));
+                                    @endphp
+                                    <form action="{{ $approveRoute }}" method="POST" class="d-inline">
                                         @csrf
                                         <button type="submit" class="btn btn-link p-0 text-success text-decoration-none" title="Approve">Approve</button>
                                     </form>
                                     <span class="text-muted">|</span>
                                     <button type="button" class="btn btn-link p-0 text-danger text-decoration-none reject-btn" title="Reject"
                                         data-name="{{ $req->name }}"
-                                        data-url="{{ $approvalStage === 1 ? route('admin.security.employee_idcard_approval.reject1', $encryptedId) : route('admin.security.employee_idcard_approval.reject2', $encryptedId) }}">
+                                        data-url="{{ $rejectRoute }}">
                                         Reject
                                     </button>
                                 </div>
@@ -113,13 +148,12 @@
                         </div>
                     </td>
                     <td>{{ $req->created_at ? $req->created_at->format('d-m-Y') : '--' }}</td>
-                    <td>{{ $req->requested_by ?? '--' }}</td>
                     <td>{{ $req->requested_section ?? '--' }}</td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="19" class="text-center text-muted py-4">
-                        No pending requests for {{ $approvalStage === 1 ? 'Approval I' : 'Approval II' }}.
+                    <td colspan="11" class="text-center text-muted py-4">
+                        No requests found for {{ $approvalStage === 1 ? 'Approval I' : ($approvalStage === 2 ? 'Approval II' : 'Approval III') }}.
                     </td>
                 </tr>
             @endforelse

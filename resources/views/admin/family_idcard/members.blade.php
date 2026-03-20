@@ -14,10 +14,34 @@
         </div>
     @endif
 
+    @php
+        // Where approvers came from (query ?from=...) — avoid sending them to user "Request Family ID Card" by mistake.
+        $membersFrom = (string) request('from', '');
+        $membersBack = match ($membersFrom) {
+            'family_approval' => [
+                'url' => route('admin.security.family_idcard_approval.index', array_filter([
+                    'return' => in_array(request('return'), ['approval2', 'approval3'], true) ? request('return') : null,
+                ])),
+                'label' => 'Back to Family Approval List',
+            ],
+            'approval2' => [
+                'url' => route('admin.security.employee_idcard_approval.approval2'),
+                'label' => 'Back to Approval II',
+            ],
+            'approval3' => [
+                'url' => route('admin.security.employee_idcard_approval.approval3'),
+                'label' => 'Back to Approval III',
+            ],
+            default => [
+                'url' => route('admin.family_idcard.index'),
+                'label' => 'Back to Request List',
+            ],
+        };
+    @endphp
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
-        <a href="{{ route('admin.family_idcard.index') }}" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1">
+        <a href="{{ $membersBack['url'] }}" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1">
             <i class="material-icons material-symbols-rounded" style="font-size:20px;">arrow_back</i>
-            Back to Request List
+            {{ $membersBack['label'] }}
         </a>
     </div>
 

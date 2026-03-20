@@ -219,71 +219,69 @@
                 </div>
             @endif
 
-            <!-- Approval Details -->
-            @if($vehiclePass->approval)
-                <div class="row mb-3 mt-4">
-                    <div class="col-md-12">
-                        <h5 class="text-primary mb-3">
-                            <i class="material-icons material-symbols-rounded" style="font-size:20px;vertical-align:middle;">check_circle</i>
-                            Approval Details
-                        </h5>
-                    </div>
+            <!-- Approval History -->
+            <div class="row mb-3 mt-4">
+                <div class="col-md-12">
+                    <h5 class="text-primary mb-3">
+                        <i class="material-icons material-symbols-rounded" style="font-size:20px;vertical-align:middle;">history</i>
+                        Approval History
+                    </h5>
                 </div>
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Approval Status</label>
-                            <div class="form-control bg-light">
+            </div>
+            @php
+                $history = ($vehiclePass->approvals ?? collect())->sortBy('pk')->values();
+            @endphp
+            @if($history->isEmpty())
+                <div class="alert alert-light border">
+                    <span class="text-muted">No approval actions recorded yet.</span>
+                </div>
+            @else
+                <div class="table-responsive">
+                    <table class="table table-bordered align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:70px;" class="text-center">S.No.</th>
+                                <th style="width:140px;" class="text-center">Status</th>
+                                <th>Approved/Rejected By</th>
+                                <th style="width:180px;">Action Date</th>
+                                <th>Remarks</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($history as $i => $h)
                                 @php
-                                    $approvalStatusClass = '';
-                                    $approvalStatusText = '';
-                                    switch($vehiclePass->approval->status ?? 0) {
-                                        case 0:
-                                            $approvalStatusClass = 'warning';
-                                            $approvalStatusText = 'Pending';
-                                            break;
-                                        case 1:
-                                            $approvalStatusClass = 'info';
-                                            $approvalStatusText = 'Forwarded';
-                                            break;
-                                        case 2:
-                                            $approvalStatusClass = 'success';
-                                            $approvalStatusText = 'Approved';
-                                            break;
-                                        case 3:
-                                            $approvalStatusClass = 'danger';
-                                            $approvalStatusText = 'Rejected';
-                                            break;
-                                        default:
-                                            $approvalStatusClass = 'secondary';
-                                            $approvalStatusText = '--';
+                                    $statusText = $h->status_text ?? (method_exists($h, 'getStatusTextAttribute') ? $h->status_text : null);
+                                    $statusText = $statusText ?: match ((int) ($h->status ?? -1)) {
+                                        0 => 'Pending',
+                                        2 => 'Approved',
+                                        3 => 'Rejected',
+                                        default => 'Unknown',
+                                    };
+                                    $badge = match ($statusText) {
+                                        'Approved' => 'success',
+                                        'Rejected' => 'danger',
+                                        'Pending' => 'warning',
+                                        default => 'secondary',
+                                    };
+                                    $by = $h->approved_by_name ?? null;
+                                    if (!$by && isset($h->approvedBy) && $h->approvedBy) {
+                                        $by = $h->approvedBy->name ?? trim(($h->approvedBy->first_name ?? '') . ' ' . ($h->approvedBy->last_name ?? ''));
                                     }
+                                    $actionAt = $h->modified_date ?? $h->created_date ?? null;
                                 @endphp
-                                <span class="badge bg-{{ $approvalStatusClass }}">{{ $approvalStatusText }}</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Approval Date</label>
-                            <div class="form-control bg-light">
-                                {{ $vehiclePass->approval->modified_date ? $vehiclePass->approval->modified_date->format('d-M-Y H:i') : '--' }}
-                            </div>
-                        </div>
-                    </div>
+                                <tr>
+                                    <td class="text-center">{{ $i + 1 }}</td>
+                                    <td class="text-center">
+                                        <span class="badge bg-{{ $badge }}">{{ $statusText }}</span>
+                                    </td>
+                                    <td>{{ $by ?: '--' }}</td>
+                                    <td>{{ $actionAt ? \Carbon\Carbon::parse($actionAt)->format('d-M-Y H:i') : '--' }}</td>
+                                    <td>{{ $h->veh_approval_remarks ?? '--' }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
                 </div>
-                @if($vehiclePass->approval->veh_approval_remarks)
-                    <div class="row">
-                        <div class="col-md-12">
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">Remarks</label>
-                                <div class="form-control bg-light">
-                                    {{ $vehiclePass->approval->veh_approval_remarks }}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                @endif
             @endif
 
             <!-- Action Buttons -->
