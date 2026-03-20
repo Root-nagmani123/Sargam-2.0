@@ -3,7 +3,7 @@
     $activeNavTab = '#home';
     $path = request()->path();
     $routeName = request()->route()?->getName() ?? '';
-    if (request()->routeIs('admin.dashboard') || request()->routeIs('admin.dashboard.*') || request()->routeIs('calendar.index')) {
+    if (request()->routeIs('admin.dashboard') || request()->routeIs('admin.dashboard.*')) {
         $activeNavTab = '#home';
     } elseif (
         request()->routeIs('admin.employee_idcard.*') || request()->routeIs('admin.issue-management*') ||
@@ -23,6 +23,7 @@
         str_starts_with($path, 'stream') || str_starts_with($path, 'subject') || str_starts_with($path, 'Venue-Master') ||
         str_starts_with($path, 'batch') || str_starts_with($path, 'curriculum') || str_starts_with($path, 'mapping') ||
         str_starts_with($path, 'admin/master') || str_contains($path, 'breadcrumb-showcase') || str_starts_with($path, 'password') ||
+        request()->routeIs('calendar.index') || str_starts_with($path, 'calendar') ||
         str_starts_with($path, 'expertise') || str_starts_with($path, 'faculty_notice') || str_starts_with($path, 'faculty_mdo')
     ) {
         $activeNavTab = '#tab-setup';
@@ -1472,21 +1473,54 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Determine initial tab.
-    // If server says active tab is Home (dashboard, calendar, etc.),
-    // always force Home and ignore any previously saved tab.
-    const routeTab = window.SARGAM_ACTIVE_NAV_TAB || '#home';
-    let initial;
+    // Prefer tab inferred from current URL + sidebar links,
+    // then server route tab, then localStorage fallback.
+    function inferTabFromSidebarByUrl() {
+        const current = new URL(window.location.href);
+        const currentPath = current.pathname.replace(/\/+$/, '');
+        const currentQuery = current.search || '';
+        const sidebarPanes = [
+            { pane: '#sidebar-home', tab: '#home' },
+            { pane: '#sidebar-setup', tab: '#tab-setup' },
+            { pane: '#sidebar-communications', tab: '#tab-communications' },
+            { pane: '#sidebar-academics', tab: '#tab-academics' },
+            { pane: '#sidebar-purchase-order', tab: '#tab-material-management' }
+        ];
 
-    if (routeTab === '#home') {
-        // Coming from dashboard/home-like routes → always show Home tab.
-        initial = '#home';
-        localStorage.removeItem('activeMainTab');
-        console.log('Route is home/dashboard - forcing Home tab');
+        for (const item of sidebarPanes) {
+            const links = document.querySelectorAll(`${item.pane} .sidebar-link[href]`);
+            for (const link of links) {
+                if (!link.href) continue;
+                const target = new URL(link.href, window.location.origin);
+                const targetPath = target.pathname.replace(/\/+$/, '');
+                const targetQuery = target.search || '';
+                if (targetPath === currentPath && targetQuery === currentQuery) {
+                    return item.tab;
+                }
+            }
+        }
+        return null;
+    }
+
+    const routeTab = window.SARGAM_ACTIVE_NAV_TAB || '#home';
+    const savedTab = localStorage.getItem('activeMainTab');
+    const inferredTab = inferTabFromSidebarByUrl();
+    const hasRouteTab = !!document.querySelector(`[data-bs-toggle="tab"][href="${routeTab}"]`);
+    const hasSavedTab = !!document.querySelector(`[data-bs-toggle="tab"][href="${savedTab}"]`);
+    const hasInferredTab = !!document.querySelector(`[data-bs-toggle="tab"][href="${inferredTab}"]`);
+    let initial = '#home';
+
+    if (hasInferredTab) {
+        initial = inferredTab;
+        console.log('Initial tab from sidebar URL match:', initial);
+    } else if (hasRouteTab) {
+        initial = routeTab;
+        console.log('Initial tab from route:', initial);
+    } else if (hasSavedTab) {
+        initial = savedTab;
+        console.log('Initial tab from storage fallback:', initial);
     } else {
-        // For non-home routes, allow remembering last selected tab.
-        const savedTab = localStorage.getItem('activeMainTab');
-        initial = savedTab || routeTab || '#home';
-        console.log('Initial tab (non-home route):', initial);
+        console.log('Initial tab fallback to home');
     }
     
     showPane(initial);

@@ -50,7 +50,7 @@ function syncSidebarWithMainTabs() {
         '#tab-setup': '#sidebar-setup',
         '#tab-communications': '#sidebar-communications',
         '#tab-academics': '#sidebar-academics',
-        '#tab-purchase-order': '#sidebar-purchase-order'
+        '#tab-material-management': '#sidebar-purchase-order'
     };
     
     // Function to activate sidebar tab based on main tab
@@ -91,11 +91,8 @@ function syncSidebarWithMainTabs() {
         activateSidebarTab(targetTab);
     }
     
-    // Also check localStorage for persisted tab
-    const savedTab = localStorage.getItem('activeMainTab');
-    if (savedTab) {
-        activateSidebarTab(savedTab);
-    }
+    // Note: do not force from localStorage here.
+    // Route-aware tab selection is handled in header/sidebar-navigation-fixed.
 }
 
 // Save scroll position before unload
@@ -104,22 +101,7 @@ window.addEventListener('beforeunload', function() {
         localStorage.setItem('sidebar-scroll', sidebar.scrollTop);
     }
 });
-// Add on click
-document.querySelectorAll('.mini-nav-item').forEach(item => {
-    item.addEventListener('click', function() {
-        localStorage.setItem('active-mini-nav', this.id);
-    });
-});
-
-// On load
-document.addEventListener('DOMContentLoaded', () => {
-    const activeId = localStorage.getItem('active-mini-nav');
-    if (activeId) {
-        document.querySelectorAll('.mini-nav-item').forEach(item => item.classList.remove('selected'));
-        const activeEl = document.getElementById(activeId);
-        if (activeEl) activeEl.classList.add('selected');
-    }
-});
+// Mini-nav state is managed centrally by sidebar-navigation-fixed.js
 </script>
 
 
