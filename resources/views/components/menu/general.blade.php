@@ -67,7 +67,7 @@
                                     <!-- <li class="sidebar-item"><a class="sidebar-link" href="#">
                                             <span class="hide-menu small small-sm-normal text-nowrap">E-Learning</span>
                                         </a></li> -->
-                                    <li class="sidebar-item"><a class="sidebar-link" href=" https://idpbridge.myloft.xyz/simplesaml/module.php/core/loginuserpass?AuthState=_13df360546d97777e748e8ded7bf639c5c8c45d3d7%3Ahttps%3A%2F%2Fidpbridge.myloft.xyz%2Fsimplesaml%2Fmodule.php%2Fsaml%2Fidp%2FsingleSignOnService%3Fspentityid%3Dhttps%253A%252F%252Felibrarylbsnaa.myloft.xyz%26cookieTime%3D1688360911" target="_blank">
+                                    <li class="sidebar-item"><a class="sidebar-link" href="https://idpbridge.myloft.xyz/simplesaml/module.php/core/loginuserpass.php" target="_blank">
                                             <span class="hide-menu small small-sm-normal text-nowrap">Library</span>
                                         </a></li>
                                     <!-- <li class="sidebar-item"><a class="sidebar-link" href="#">

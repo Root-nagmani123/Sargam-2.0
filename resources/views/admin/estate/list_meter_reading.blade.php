@@ -103,7 +103,7 @@
                         <tr>
                             <th>S.NO.</th>
                             <th>NAME</th>
-                            <th>EMPLOYEE TYPE</th>
+                            <th>DESIGNATION</th>
                             <th>SECTION</th>
                             <th>UNIT TYPE</th>
                             <th>UNIT SUB TYPE</th>

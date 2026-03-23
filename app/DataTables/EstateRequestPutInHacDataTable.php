@@ -4,6 +4,7 @@ namespace App\DataTables;
 
 use App\Models\EstateHomeRequestDetails;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
+use Illuminate\Support\Facades\Auth;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Yajra\DataTables\Html\Column;
@@ -74,6 +75,14 @@ class EstateRequestPutInHacDataTable extends DataTable
 
     public function query(EstateHomeRequestDetails $model): QueryBuilder
     {
+        $canPutInHac = hasRole('HAC Person') || hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin');
+        // Self-service staff/training roles must not access HAC queues via this listing.
+        // Return an empty dataset when user is not authorized.
+        if (! Auth::check() || ! $canPutInHac) {
+            return $model->newQuery()
+                ->whereRaw('1 = 0');
+        }
+
         return $model->newQuery()
             ->select([
                 'estate_home_request_details.pk',
@@ -110,7 +119,7 @@ class EstateRequestPutInHacDataTable extends DataTable
                 'searching' => true,
                 'lengthChange' => true,
                 'pageLength' => 10,
-                'order' => [[1, 'desc']],
+                'order' => [[2, 'desc']],
                 'lengthMenu' => [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
                 'language' => [
                     'search' => 'Search within table:',
@@ -132,6 +141,7 @@ class EstateRequestPutInHacDataTable extends DataTable
     public function getColumns(): array
     {
         return [
+            Column::computed('put_in_hac')->title('Put in HAC')->addClass('text-center')->orderable(false)->searchable(false)->width('100px'),
             Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center')->orderable(false)->searchable(false)->width('50px'),
             Column::make('req_id')->title('Request ID')->orderable(true)->searchable(true),
             Column::make('req_date')->title('Request Date')->orderable(true)->searchable(false),
@@ -144,7 +154,6 @@ class EstateRequestPutInHacDataTable extends DataTable
             Column::make('doj_academic')->title('Date of Joining in Academy')->orderable(false)->searchable(false),
             Column::make('current_alot')->title('Current Allotment')->orderable(true)->searchable(true),
             Column::make('remarks')->title('Remarks')->orderable(false)->searchable(true),
-            Column::computed('put_in_hac')->title('Put in HAC')->addClass('text-center')->orderable(false)->searchable(false)->width('100px'),
         ];
     }
 
