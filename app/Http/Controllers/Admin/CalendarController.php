@@ -28,7 +28,7 @@ class CalendarController extends Controller
         $data_course_id = get_Role_by_course();
 
         $courseMaster = CourseMaster::where('course_master.active_inactive', 1)
-            ->where('end_date', '>', now());
+            ->whereDate('end_date', '>=', today());
 
         if (!empty($data_course_id)) {
             $courseMaster = $courseMaster->whereIn('course_master.pk', $data_course_id);
