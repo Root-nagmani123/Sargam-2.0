@@ -1321,7 +1321,7 @@
                         } else if (data.success) {
                             // Fallback: reload if no redirect URL
                             console.warn('[Notification][Step 5] success=true but redirect_url missing, triggering reload');
-                            location.reload();
+                            // location.reload(); //ye redirect ho rha h 
                         } else {
                             console.error('[Notification][Step 5] Failed to mark notification as read', data);
                         }
