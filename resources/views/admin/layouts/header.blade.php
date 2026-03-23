@@ -1330,7 +1330,7 @@
                         console.error('[Notification][Step X] Exception in markAsRead', error);
                         // Fallback to dashboard on error
                         console.warn('[Notification][Fallback] Redirecting to dashboard due to error');
-                        window.location.href = '{{ route("admin.dashboard") }}';
+                        // window.location.href = '{{ route("admin.dashboard") }}';
                     });
             }
 
