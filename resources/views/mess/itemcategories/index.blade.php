@@ -4,6 +4,8 @@
 @php
     $categoryTypes = \App\Models\Mess\ItemCategory::categoryTypes();
     $selectedCategoryType = $categoryTypeFilter ?? request('category_type', '');
+   $canDeleteItemCategory = hasRole('Admin') || hasRole('Mess-Admin');
+   // $canDeleteItemCategory = hasRole('Admin') || (hasRole('Mess-Admin') && auth()->check() && strcasecmp((string) auth()->user()->name, 'Rohit Aggarwal') === 0);
 @endphp
 <div class="container-fluid">
     <x-breadcrum title="Category Item Master"></x-breadcrum>
@@ -75,14 +77,16 @@
                                                 data-description="{{ e($itemcategory->description ?? '') }}"
                                                 data-status="{{ e($itemcategory->status ?? 'active') }}"
                                                 title="Edit"><i class="material-icons material-symbol-rounded">edit</i></button>
-                                        <form method="POST" action="{{ route('admin.mess.itemcategories.destroy', $itemcategory->id) }}" class="d-inline"
-                                              onsubmit="return confirm('Are you sure you want to delete this category item?');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="text-primary btn-delete-itemcategory bg-transparent border-0 p-0" title="Delete">
-                                                <i class="material-icons material-symbol-rounded">delete</i>
-                                            </button>
-                                        </form>
+                                        @if($canDeleteItemCategory)
+                                            <form method="POST" action="{{ route('admin.mess.itemcategories.destroy', $itemcategory->id) }}" class="d-inline"
+                                                  onsubmit="return confirm('Are you sure you want to delete this category item?');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="text-primary btn-delete-itemcategory bg-transparent border-0 p-0" title="Delete">
+                                                    <i class="material-icons material-symbol-rounded">delete</i>
+                                                </button>
+                                            </form>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>

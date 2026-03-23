@@ -31,40 +31,87 @@ class CategoryWisePrintSlipExport implements FromCollection, WithHeadings, WithS
     {
         $rows = [];
         $serialNo = 0;
-        foreach ($this->vouchers as $voucher) {
-            $requestNo = $voucher->request_no ?? ('SV-' . str_pad($voucher->id ?? $voucher->pk, 6, '0', STR_PAD_LEFT));
-            $issueDate = $voucher->issue_date ? (is_object($voucher->issue_date) ? $voucher->issue_date->format('d/m/Y') : $voucher->issue_date) : 'N/A';
-            $buyerName = $voucher->client_name ?? ($voucher->clientTypeCategory->client_name ?? 'N/A');
-            $clientType = $voucher->clientTypeCategory
-                ? ucfirst($voucher->clientTypeCategory->client_type ?? '')
-                : ucfirst($voucher->client_type_slug ?? 'N/A');
-            $remarks = $voucher->remarks ?? '';
+        $grandTotal = 0.0;
 
-            $items = $voucher->items ?? collect();
-            foreach ($items as $item) {
-                $serialNo++;
-                $itemName = $item->item_name ?? ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? 'N/A');
-                $issueQty = (float) ($item->quantity ?? 0);
-                $returnQty = (float) ($item->return_quantity ?? 0);
-                $netQty = max(0, $issueQty - $returnQty);
-                $rate = (float) ($item->rate ?? 0);
-                $amount = $netQty * $rate;
+        // Keep grouping aligned with the UI report sections.
+        $groupedVouchers = $this->vouchers->groupBy(function ($voucher) {
+            return ($voucher->client_type_pk ?? '') . '-' . ($voucher->client_type_slug ?? '');
+        });
 
-                $rows[] = [
-                    $serialNo,
-                    $buyerName,
-                    $remarks,
-                    $clientType,
-                    $requestNo,
-                    $issueDate,
-                    $itemName,
-                    number_format($netQty, 2),
-                    $item->unit ?? '—',
-                    number_format($rate, 2),
-                    number_format($amount, 2),
-                ];
+        foreach ($groupedVouchers as $sectionVouchers) {
+            $sectionTotal = 0.0;
+
+            foreach ($sectionVouchers as $voucher) {
+                $requestNo = $voucher->request_no ?? ('SV-' . str_pad($voucher->id ?? $voucher->pk, 6, '0', STR_PAD_LEFT));
+                $issueDate = $voucher->issue_date ? (is_object($voucher->issue_date) ? $voucher->issue_date->format('d/m/Y') : $voucher->issue_date) : 'N/A';
+                $buyerName = $voucher->client_name ?? ($voucher->clientTypeCategory->client_name ?? 'N/A');
+                $clientType = $voucher->clientTypeCategory
+                    ? ucfirst($voucher->clientTypeCategory->client_type ?? '')
+                    : ucfirst($voucher->client_type_slug ?? 'N/A');
+                $remarks = $voucher->remarks ?? '';
+
+                $items = $voucher->items ?? collect();
+                foreach ($items as $item) {
+                    $serialNo++;
+                    $itemName = $item->item_name ?? ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? 'N/A');
+                    $issueQty = (float) ($item->quantity ?? 0);
+                    $returnQty = (float) ($item->return_quantity ?? 0);
+                    $netQty = max(0, $issueQty - $returnQty);
+                    $rate = (float) ($item->rate ?? 0);
+                    $amount = $netQty * $rate;
+
+                    $sectionTotal += $amount;
+                    $grandTotal += $amount;
+
+                    $rows[] = [
+                        $serialNo,
+                        $buyerName,
+                        $remarks,
+                        $clientType,
+                        $requestNo,
+                        $issueDate,
+                        $itemName,
+                        number_format($netQty, 2),
+                        $item->unit ?? '—',
+                        number_format($rate, 2),
+                        number_format($amount, 2),
+                    ];
+                }
             }
+
+            // Section total row (mirrors TOTAL row shown in UI).
+            $rows[] = [
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                'TOTAL',
+                '',
+                '',
+                '',
+                number_format($sectionTotal, 2),
+            ];
         }
+
+        if ($grandTotal > 0) {
+            // Final report grand total row.
+            $rows[] = [
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                'GRAND TOTAL',
+                '',
+                '',
+                '',
+                number_format($grandTotal, 2),
+            ];
+        }
+
         return collect($rows);
     }
 
@@ -173,6 +220,19 @@ class CategoryWisePrintSlipExport implements FromCollection, WithHeadings, WithS
                         \PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::ORIENTATION_LANDSCAPE
                     )
                     ->setPrintArea("A1:K{$lastRow}");
+
+                // Emphasize section totals and grand total rows.
+                for ($row = 7; $row <= $lastRow; $row++) {
+                    $label = (string) $sheet->getCell("G{$row}")->getValue();
+                    if (in_array($label, ['TOTAL', 'GRAND TOTAL'], true)) {
+                        $sheet->getStyle("A{$row}:K{$row}")->getFont()->setBold(true);
+                        $sheet->getStyle("A{$row}:K{$row}")
+                            ->getFill()
+                            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                            ->getStartColor()
+                            ->setARGB('FFF3F4F6');
+                    }
+                }
             },
         ];
     }

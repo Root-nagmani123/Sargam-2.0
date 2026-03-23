@@ -1,6 +1,38 @@
 @extends('admin.layouts.master')
 @section('title', 'Family ID Card - Approval Review')
 @section('setup_content')
+@php
+    $familyApprovalReturn = in_array(request('return'), ['approval2', 'approval3'], true) ? request('return') : null;
+    $familyMembersQs = ['from' => 'family_approval'];
+    if ($familyApprovalReturn) {
+        $familyMembersQs['return'] = $familyApprovalReturn;
+    }
+    $familyMembersQueryString = '?' . http_build_query($familyMembersQs);
+    $familyIndexUrl = route('admin.security.family_idcard_approval.index', array_filter(['return' => $familyApprovalReturn]));
+
+    if ($familyApprovalReturn === 'approval3') {
+        $safeBackUrl = route('admin.security.employee_idcard_approval.approval3');
+        $safeBackLabel = 'Back to Approval III';
+    } elseif ($familyApprovalReturn === 'approval2') {
+        $safeBackUrl = route('admin.security.employee_idcard_approval.approval2');
+        $safeBackLabel = 'Back to Approval II';
+    } else {
+        $prev = url()->previous();
+        $safeBackUrl = $familyIndexUrl;
+        $safeBackLabel = 'Back to Approval List';
+        if (is_string($prev)) {
+            if (str_contains($prev, '/security/family-idcard-approval')) {
+                $safeBackUrl = $prev;
+            } elseif (str_contains($prev, '/security/employee-idcard-approval/approval2')) {
+                $safeBackUrl = route('admin.security.employee_idcard_approval.approval2');
+                $safeBackLabel = 'Back to Approval II';
+            } elseif (str_contains($prev, '/security/employee-idcard-approval/approval3')) {
+                $safeBackUrl = route('admin.security.employee_idcard_approval.approval3');
+                $safeBackLabel = 'Back to Approval III';
+            }
+        }
+    }
+@endphp
 <div class="container-fluid">
     <div class="card" style="border-left:4px solid #004a93;">
         <div class="card-header bg-white">
@@ -10,9 +42,9 @@
                     <small class="text-muted">Request ID: <code>{{ $application->fml_id_apply }}</code></small>
                 </div>
                 <div>
-                    <a href="{{ route('admin.security.family_idcard_approval.index') }}" class="btn btn-secondary">
+                    <a href="{{ $safeBackUrl }}" class="btn btn-secondary">
                         <i class="material-icons material-symbols-rounded" style="font-size:20px;vertical-align:middle;">arrow_back</i>
-                        Back to Pending
+                        {{ $safeBackLabel }}
                     </a>
                 </div>
             </div>
@@ -180,8 +212,8 @@
             @endif
 
             <div class="mt-4">
-                <a href="{{ route('admin.security.family_idcard_approval.index') }}" class="btn btn-secondary">Close</a>
-                <a href="{{ route('admin.family_idcard.members', $application->fml_id_apply) }}" class="btn btn-outline-primary">View All Members in Group</a>
+                <a href="{{ $familyIndexUrl }}" class="btn btn-secondary">Close</a>
+                <a href="{{ route('admin.family_idcard.members', $application->fml_id_apply) }}{{ $familyMembersQueryString }}" class="btn btn-outline-primary">View All Members in Group</a>
             </div>
         </div>
     </div>

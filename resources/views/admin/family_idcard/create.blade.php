@@ -26,7 +26,7 @@
                     <div class="form-check mb-0">
                         <input class="form-check-input" type="radio" name="employee_type" id="emp_type_govt" value="Permanent Employee"
                                {{ old('employee_type', 'Permanent Employee') == 'Permanent Employee' ? 'checked' : '' }} required>
-                        <label class="form-check-label" for="emp_type_govt">Government Employee</label>
+                        <label class="form-check-label" for="emp_type_govt">Permanent Employee</label>
                     </div>
                     <div class="form-check mb-0">
                         <input class="form-check-input" type="radio" name="employee_type" id="emp_type_cont" value="Contractual Employee"
@@ -54,26 +54,46 @@
                 <div class="row g-3 mb-4" data-employee-id-permanent="{{ e($defaultEmployeeIdPermanent ?? '') }}" data-employee-id-contractual="{{ e($defaultEmployeeIdContractual ?? '') }}" data-designation="{{ e($defaultDesignation ?? '') }}">
                     <div class="col-md-6">
                         <label for="employee_id" class="form-label">Employee ID <span class="text-danger">*</span></label>
-                        <input type="text" name="employee_id" id="employee_id" class="form-control" value="{{ $oldEmployeeId }}" placeholder="Enter your ID Card No." required>
+                        <input type="text"
+                               name="employee_id"
+                               id="employee_id"
+                               class="form-control {{ $isPermanent ? 'bg-light' : '' }}"
+                               value="{{ $oldEmployeeId }}"
+                               placeholder="Enter your ID Card No."
+                               required
+                               @if($isPermanent) readonly @endif>
                         @error('employee_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-md-6">
                         <label for="designation" class="form-label">Designation <span class="text-danger">*</span></label>
-                        <input type="text" name="designation" id="designation" class="form-control" value="{{ $oldDesignation }}" placeholder="Enter Designation." required>
+                        <input type="text"
+                               name="designation"
+                               id="designation"
+                               class="form-control {{ $isPermanent ? 'bg-light' : '' }}"
+                               value="{{ $oldDesignation }}"
+                               placeholder="Enter Designation."
+                               required
+                               @if($isPermanent) readonly @endif>
                         @error('designation')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-md-6">
                         <label for="card_type" class="form-label">Card Type <span class="text-danger">*</span></label>
                         <select name="card_type" id="card_type" class="form-select" required>
                             <option value="">Select The Card Type</option>
-                            <option value="Family" {{ $oldCardType == 'Family' ? 'selected' : '' }}>Family</option>
-                            <option value="Employee" {{ $oldCardType == 'Employee' ? 'selected' : '' }}>Employee</option>
-                        </select>
+                            <option value="Family" selected >Family</option>
+                              </select>
                         @error('card_type')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-md-6">
                         <label for="section" class="form-label">Section <span class="text-danger">*</span></label>
-                        <input type="text" name="section" id="section" class="form-control" value="{{ $oldSection }}" placeholder="Enter Section" required>
+                        <input type="text"
+                               name="section"
+                               id="section"
+                               class="form-control {{ $isPermanent ? 'bg-light' : '' }}"
+                               value="{{ $oldSection }}"
+                               placeholder="Enter Section"
+                               required
+                               @if($isPermanent) readonly @endif>
                         @error('section')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
                     <!-- Approval Authority: shown only when Contractual -->
@@ -344,19 +364,29 @@
         var wrap = document.getElementById('fmlApprovalAuthorityWrap');
         var sel = document.getElementById('approval_authority');
         if (!contRad || !wrap || !sel) return;
+        var empIdInp = document.getElementById('employee_id');
+        var desigInp = document.getElementById('designation');
+        var sectionInp = document.getElementById('section');
+
         if (contRad.checked) {
             wrap.style.display = 'block';
             sel.disabled = false;
             sel.required = true;
+            // Contractual: allow editing employee fields
+            if (empIdInp) { empIdInp.readOnly = false; empIdInp.classList.remove('bg-light'); }
+            if (desigInp) { desigInp.readOnly = false; desigInp.classList.remove('bg-light'); }
+            if (sectionInp) { sectionInp.readOnly = false; sectionInp.classList.remove('bg-light'); }
         } else {
             wrap.style.display = 'none';
             sel.disabled = true;
             sel.required = false;
             sel.value = '';
+            // Permanent: lock employee fields (non-editable)
+            if (empIdInp) { empIdInp.readOnly = true; empIdInp.classList.add('bg-light'); }
+            if (desigInp) { desigInp.readOnly = true; desigInp.classList.add('bg-light'); }
+            if (sectionInp) { sectionInp.readOnly = true; sectionInp.classList.add('bg-light'); }
         }
         var row = document.querySelector('.row.g-3.mb-4[data-employee-id-permanent]');
-        var empIdInp = document.getElementById('employee_id');
-        var desigInp = document.getElementById('designation');
         if (row && empIdInp && desigInp) {
             var idPerm = row.getAttribute('data-employee-id-permanent') || '';
             var idCont = row.getAttribute('data-employee-id-contractual') || '';
@@ -422,6 +452,9 @@
         var removePhotoBtn = row.querySelector('.member-photo-remove');
         var removeRowBtn = row.querySelector('.remove-member-btn');
         var nameInput = row.querySelector('.member-name');
+        var dobInput = row.querySelector('input[name^="members"][name$="[dob]"]');
+        var fromField = row.querySelector('.valid-from-field');
+        var toField = row.querySelector('input[name^="members"][name$="[valid_to]"]');
 
         // Real-time duplicate checking for member name
         if (nameInput) {
@@ -455,6 +488,94 @@
                 }
             });
         }
+
+        // Age validation: block members younger than 13 years
+        if (dobInput) {
+            dobInput.addEventListener('change', function() {
+                var val = this.value;
+                if (!val) return;
+                var dob = new Date(val);
+                if (isNaN(dob.getTime())) return;
+                var today = new Date();
+                var thirteenYearsAgo = new Date(today.getFullYear() - 13, today.getMonth(), today.getDate());
+
+                // If DOB is after (greater than) "13 years ago", member is younger than 13
+                if (dob > thirteenYearsAgo) {
+                    this.value = '';
+                    this.classList.add('is-invalid');
+                    var msg = 'Family members younger than 13 years do not require a separate ID card.';
+                    if (!this.nextElementSibling || !this.nextElementSibling.classList.contains('age-warning')) {
+                        var warning = document.createElement('div');
+                        warning.className = 'invalid-feedback d-block age-warning';
+                        warning.textContent = msg;
+                        this.parentNode.appendChild(warning);
+                    } else {
+                        this.nextElementSibling.textContent = msg;
+                    }
+                } else {
+                    this.classList.remove('is-invalid');
+                    var warning = this.parentNode.querySelector('.age-warning');
+                    if (warning) warning.remove();
+                }
+            });
+        }
+
+        // Valid From / Valid To validation (per row)
+        (function() {
+            var today = new Date().toISOString().split('T')[0];
+
+            if (fromField) {
+                // Ensure min is today
+                fromField.setAttribute('min', today);
+
+                // If there is already a value (old input), enforce min and sync Valid To
+                if (fromField.value && fromField.value < today) {
+                    fromField.value = today;
+                }
+
+                fromField.addEventListener('change', function() {
+                    var fromVal = this.value;
+                    if (fromVal && fromVal < today) {
+                        this.value = today;
+                        fromVal = today;
+                    }
+                    this.classList.remove('is-invalid');
+                    this.setCustomValidity('');
+
+                    if (toField) {
+                        // Update min for Valid To
+                        toField.setAttribute('min', fromVal || today);
+                        if (toField.value && toField.value < (fromVal || today)) {
+                            toField.value = '';
+                            toField.classList.add('is-invalid');
+                            toField.setCustomValidity('Valid To cannot be earlier than Valid From.');
+                        } else {
+                            toField.classList.remove('is-invalid');
+                            toField.setCustomValidity('');
+                        }
+                    }
+                });
+            }
+
+            if (toField) {
+                // Initial min when row is bound
+                var initialMin = fromField && fromField.value ? fromField.value : today;
+                toField.setAttribute('min', initialMin);
+
+                toField.addEventListener('change', function() {
+                    var toVal = this.value;
+                    var minVal = fromField && fromField.value ? fromField.value : today;
+                    if (toVal && toVal < minVal) {
+                        this.value = '';
+                        this.classList.add('is-invalid');
+                        this.setCustomValidity('Valid To cannot be earlier than Valid From.');
+                    } else {
+                        this.classList.remove('is-invalid');
+                        this.setCustomValidity('');
+                    }
+                });
+            }
+        })();
 
         if (photoCell) {
             photoCell.addEventListener('click', function(e) {
@@ -508,21 +629,63 @@
 
     addBtn.addEventListener('click', addRow);
 
-    // Apply date restrictions to Valid From fields
+    // Apply date restrictions to Valid From / Valid To fields
     function applyDateRestrictions() {
         var today = new Date().toISOString().split('T')[0];
-        var validFromFields = document.querySelectorAll('.valid-from-field');
-        validFromFields.forEach(function(field) {
-            field.setAttribute('min', today);
-            // Prevent user from clearing the value and selecting a past date
-            field.addEventListener('change', function() {
-                if (this.value && this.value < today) {
-                    this.value = today;
-                    this.classList.add('is-invalid');
-                } else {
+        var rows = tbody.querySelectorAll('.family-member-row');
+
+        rows.forEach(function(row) {
+            var fromField = row.querySelector('.valid-from-field');
+            var toField = row.querySelector('input[name^="members"][name$="[valid_to]"]');
+
+            if (fromField) {
+                fromField.setAttribute('min', today);
+                fromField.addEventListener('change', function() {
+                    var fromVal = this.value;
+                    if (fromVal && fromVal < today) {
+                        this.value = today;
+                        fromVal = today;
+                    }
                     this.classList.remove('is-invalid');
+                    this.setCustomValidity('');
+
+                    // When Valid From changes, enforce min on Valid To
+                    if (toField) {
+                        toField.setAttribute('min', fromVal || today);
+                        if (toField.value && toField.value < fromVal) {
+                            // Clear invalid Valid To immediately
+                            toField.value = '';
+                            toField.classList.add('is-invalid');
+                            toField.setCustomValidity('Valid To cannot be earlier than Valid From.');
+                        } else {
+                            toField.classList.remove('is-invalid');
+                            toField.setCustomValidity('');
+                        }
+                    }
+                });
+
+                // Ensure initial min for Valid To (in case Valid From already has a value from old input)
+                if (toField) {
+                    var initialFrom = fromField.value || today;
+                    toField.setAttribute('min', initialFrom);
                 }
-            });
+            }
+
+            if (toField) {
+                toField.addEventListener('change', function() {
+                    var toVal = this.value;
+                    var minVal = fromField && fromField.value ? fromField.value : today;
+                    if (toVal && toVal < minVal) {
+                        // Reset and mark invalid; user cannot keep a date earlier than Valid From
+                        this.value = '';
+                        this.classList.add('is-invalid');
+                        this.setCustomValidity('Valid To cannot be earlier than Valid From.');
+                    } else {
+                        this.classList.remove('is-invalid');
+                        this.setCustomValidity('');
+                    }
+                });
+            }
         });
     }
     
@@ -649,7 +812,7 @@
         }
     }
 
-    // Form submit: ensure at least one member and no duplicates
+    // Form submit: ensure at least one member, no duplicates, and no under-13 members
     document.getElementById('familyIdcardForm').addEventListener('submit', function(e) {
         var rows = tbody.querySelectorAll('.family-member-row');
         if (rows.length === 0) {
@@ -663,6 +826,31 @@
         if (duplicates.length > 0) {
             e.preventDefault();
             displayDuplicateError(duplicates);
+            return;
+        }
+
+        // Block members younger than 13 years (server also validates)
+        var underAge = false;
+        var today = new Date();
+        var thirteenYearsAgo = new Date(today.getFullYear() - 13, today.getMonth(), today.getDate());
+        var dobInputs = tbody.querySelectorAll('input[name^="members"][name$="[dob]"]');
+        dobInputs.forEach(function(input) {
+            if (!input.value) return;
+            var dob = new Date(input.value);
+            if (isNaN(dob.getTime())) return;
+            if (dob > thirteenYearsAgo) {
+                underAge = true;
+                input.classList.add('is-invalid');
+                if (!input.nextElementSibling || !input.nextElementSibling.classList.contains('age-warning')) {
+                    var warning = document.createElement('div');
+                    warning.className = 'invalid-feedback d-block age-warning';
+                    warning.textContent = 'Family members younger than 13 years do not require a separate ID card.';
+                    input.parentNode.appendChild(warning);
+                }
+            }
+        });
+        if (underAge) {
+            e.preventDefault();
             return;
         }
         

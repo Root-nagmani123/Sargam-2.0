@@ -1,6 +1,9 @@
 @extends('admin.layouts.master')
 @section('title', 'Selling Voucher')
 @section('setup_content')
+@php
+    $canDeleteSellingVoucher = hasRole('Admin') || hasRole('Mess-Admin');
+@endphp
 <div class="container-fluid py-3">
     <x-breadcrum title="Selling Voucher" />
 
@@ -131,11 +134,13 @@
                                         <div class="d-flex flex-wrap gap-2 align-items-center justify-content-center">
                                             <button type="button" class="btn btn-sm btn-info btn-view-sv" data-voucher-id="{{ $voucher->pk }}" title="View">View</button>
                                             <button type="button" class="btn btn-sm btn-warning btn-edit-sv" data-voucher-id="{{ $voucher->pk }}" title="{{ $voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED ? 'Edit is disabled for approved voucher' : 'Edit' }}" @if($voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED) disabled @endif>Edit</button>
-                                            <form action="{{ route('admin.mess.material-management.destroy', $voucher->pk) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this Selling Voucher?');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-danger" title="Delete" style="display: none;">Delete</button>
-                                            </form>
+                                            @if($canDeleteSellingVoucher)
+                                                <form action="{{ route('admin.mess.material-management.destroy', $voucher->pk) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this Selling Voucher?');">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-sm btn-danger" title="Delete">Delete</button>
+                                                </form>
+                                            @endif
                                         </div>
                                     </td>
                                 </tr>
@@ -161,11 +166,13 @@
                                         <div class="d-flex flex-wrap gap-2 align-items-center justify-content-center">
                                         <button type="button" class="btn btn-sm btn-info btn-view-sv" data-voucher-id="{{ $voucher->pk }}" title="View">View</button>
                                         <button type="button" class="btn btn-sm btn-warning btn-edit-sv" data-voucher-id="{{ $voucher->pk }}" title="{{ $voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED ? 'Edit is disabled for approved voucher' : 'Edit' }}" @if($voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED) disabled @endif>Edit</button>
-                                        <form action="{{ route('admin.mess.material-management.destroy', $voucher->pk) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this Selling Voucher?');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-danger" title="Delete" style="display: none;">Delete</button>
-                                        </form>
+                                        @if($canDeleteSellingVoucher)
+                                            <form action="{{ route('admin.mess.material-management.destroy', $voucher->pk) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this Selling Voucher?');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-danger" title="Delete">Delete</button>
+                                            </form>
+                                        @endif
                                         </div>
                                     </td>
                                 </tr>
@@ -298,19 +305,19 @@ document.addEventListener('DOMContentLoaded', function () {
                                     <select id="modalFacultySelect" class="form-select" style="display:none;">
                                         <option value="">Select Faculty</option>
                                         @foreach($faculties ?? [] as $f)
-                                            <option value="{{ e($f->full_name) }}">{{ e($f->full_name) }}</option>
+                                            <option value="{{ e($f->full_name) }}">{{ e($f->full_name_with_code ?? $f->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="modalAcademyStaffSelect" class="form-select" style="display:none;">
                                         <option value="">Select Academy Staff</option>
                                         @foreach($employees ?? [] as $e)
-                                            <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
+                                            <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="modalMessStaffSelect" class="form-select" style="display:none;">
                                         <option value="">Select Mess Staff</option>
                                         @foreach($messStaff ?? [] as $e)
-                                            <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
+                                            <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="modalOtStudentSelect" class="form-select" style="display:none;">
@@ -337,16 +344,8 @@ document.addEventListener('DOMContentLoaded', function () {
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Remarks</label>
-                                    <input type="text" name="remarks" class="form-control" value="{{ old('remarks') }}" placeholder="Remarks (optional)">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Reference Number</label>
-                                    <input type="text" name="reference_number" class="form-control" value="{{ old('reference_number') }}" placeholder="Reference number (optional)" maxlength="100">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Order By</label>
-                                    <input type="text" name="order_by" class="form-control" value="{{ old('order_by') }}" placeholder="Order by (optional)" maxlength="100">
+                                    <label class="form-label">Remarks / Reference Number / Order By</label>
+                                    <input type="text" name="remarks" class="form-control" value="{{ old('remarks') }}" placeholder="Remarks / Reference Number / Order By (optional)">
                                 </div>
                             </div>
                         </div>
@@ -492,19 +491,19 @@ document.addEventListener('DOMContentLoaded', function () {
                                     <select id="editModalFacultySelect" class="form-select" style="display:none;">
                                         <option value="">Select Faculty</option>
                                         @foreach($faculties ?? [] as $f)
-                                            <option value="{{ e($f->full_name) }}">{{ e($f->full_name) }}</option>
+                                            <option value="{{ e($f->full_name) }}">{{ e($f->full_name_with_code ?? $f->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="editModalAcademyStaffSelect" class="form-select" style="display:none;">
                                         <option value="">Select Academy Staff</option>
                                         @foreach($employees ?? [] as $e)
-                                            <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
+                                            <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="editModalMessStaffSelect" class="form-select" style="display:none;">
                                         <option value="">Select Mess Staff</option>
                                         @foreach($messStaff ?? [] as $e)
-                                            <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
+                                            <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="editModalCourseNameSelect" class="form-select" style="display:none;">
@@ -528,16 +527,8 @@ document.addEventListener('DOMContentLoaded', function () {
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Remarks</label>
-                                    <input type="text" name="remarks" class="form-control edit-remarks" placeholder="Remarks (optional)">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Reference Number</label>
-                                    <input type="text" name="reference_number" class="form-control edit-reference-number" placeholder="Reference number (optional)" maxlength="100">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Order By</label>
-                                    <input type="text" name="order_by" class="form-control edit-order-by" placeholder="Order by (optional)" maxlength="100">
+                                    <label class="form-label">Remarks / Reference Number / Order By</label>
+                                    <input type="text" name="remarks" class="form-control edit-remarks" placeholder="Remarks / Reference Number / Order By (optional)">
                                 </div>
                             </div>
                         </div>
@@ -1766,56 +1757,59 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    function appendModalItemRow() {
+        const tbody = document.getElementById('modalItemsBody');
+        if (!tbody) return;
+        tbody.insertAdjacentHTML('beforeend', getRowHtml(rowIndex));
+        rowIndex++;
+        updateRemoveButtons();
+
+        var newRow = tbody.querySelector('.sv-item-row:last-child');
+        var newSelect = newRow ? newRow.querySelector('.sv-item-select') : null;
+        if (newSelect && typeof TomSelect !== 'undefined') {
+            new TomSelect(newSelect, {
+                allowEmptyOption: true,
+                dropdownParent: 'body',
+                placeholder: 'Select Item',
+                maxOptions: null,
+                highlight: false,
+                controlInput: '<input>',
+                onInitialize: function () { this.activeOption = null; },
+                onDropdownOpen: function (dropdown) {
+                    var self = this;
+                    var input = this.control_input || (dropdown && dropdown.querySelector('input'));
+                    function clearInputAndCursor() {
+                        if (typeof self.setTextboxValue === 'function') self.setTextboxValue('');
+                        if (typeof self.onSearchChange === 'function') self.onSearchChange('');
+                        if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
+                        if (input) {
+                            input.value = '';
+                            input.focus();
+                            try { input.setSelectionRange(0, 0); } catch (e) {}
+                            input.scrollLeft = 0;
+                        }
+                    }
+                    clearInputAndCursor();
+                    setTimeout(clearInputAndCursor, 0);
+                    setTimeout(clearInputAndCursor, 50);
+                    setTimeout(clearInputAndCursor, 100);
+                    if (dropdown) setTimeout(function () {
+                        var opts = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"]');
+                        opts.forEach(function (opt) {
+                            opt.classList.remove('active');
+                            opt.classList.remove('selected');
+                            opt.setAttribute('aria-selected', 'false');
+                        });
+                    }, 0);
+                }
+            });
+        }
+    }
+
     const modalAddItemBtn = document.getElementById('modalAddItemRow');
     if (modalAddItemBtn) {
         modalAddItemBtn.addEventListener('click', function() {
-            const tbody = document.getElementById('modalItemsBody');
-            if (tbody) {
-                tbody.insertAdjacentHTML('beforeend', getRowHtml(rowIndex));
-                rowIndex++;
-                updateRemoveButtons();
-                var newRow = tbody.querySelector('.sv-item-row:last-child');
-                var newSelect = newRow ? newRow.querySelector('.sv-item-select') : null;
-                if (newSelect && typeof TomSelect !== 'undefined') {
-                    new TomSelect(newSelect, {
-                        allowEmptyOption: true,
-                        dropdownParent: 'body',
-                        placeholder: 'Select Item',
-                        maxOptions: null,
-                        highlight: false,
-                        controlInput: '<input>',
-                        onInitialize: function () { this.activeOption = null; },
-                        onDropdownOpen: function (dropdown) {
-                            var self = this;
-                            var input = this.control_input || (dropdown && dropdown.querySelector('input'));
-                            function clearInputAndCursor() {
-                                if (typeof self.setTextboxValue === 'function') self.setTextboxValue('');
-                                if (typeof self.onSearchChange === 'function') self.onSearchChange('');
-                                if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
-                                if (input) {
-                                    input.value = '';
-                                    input.focus();
-                                    try { input.setSelectionRange(0, 0); } catch (e) {}
-                                    input.scrollLeft = 0;
-                                }
-                            }
-                            clearInputAndCursor();
-                            setTimeout(clearInputAndCursor, 0);
-                            setTimeout(clearInputAndCursor, 50);
-                            setTimeout(clearInputAndCursor, 100);
-                            if (dropdown) setTimeout(function () {
-                                var opts = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"]');
-                                opts.forEach(function (opt) {
-                                    opt.classList.remove('active');
-                                    opt.classList.remove('selected');
-                                    opt.setAttribute('aria-selected', 'false');
-                                });
-                            }, 0);
-                        }
-                    });
-                }
-            }
-
+            appendModalItemRow();
         });
     }
 
@@ -1860,6 +1854,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     updateGrandTotal();
                     updateRemoveButtons();
                 }
+                return;
             }
         });
     }
@@ -1884,11 +1879,26 @@ document.addEventListener('DOMContentLoaded', function() {
     if (addSvModal && svItemsTable) {
         addSvModal.addEventListener('keydown', function(e) {
             if (e.key === 'Enter' && svItemsTable.contains(document.activeElement)) {
-                const addBtn = document.getElementById('modalAddItemRow');
-                if (addBtn) {
-                    e.preventDefault();
-                    addBtn.click();
+                const activeEl = document.activeElement;
+                const isRateField = activeEl && activeEl.classList && activeEl.classList.contains('sv-rate');
+
+                const activeRow = activeEl.closest('.sv-item-row');
+                const tbody = document.getElementById('modalItemsBody');
+                const lastRow = tbody ? tbody.querySelector('.sv-item-row:last-child') : null;
+
+                // Sirf last row ki Rate field par Enter => append
+                if (isRateField && activeRow && lastRow && activeRow === lastRow) {
+                    const addBtn = document.getElementById('modalAddItemRow');
+                    if (addBtn) {
+                        e.preventDefault();
+                        addBtn.click();
+                    }
+                    return;
                 }
+
+                // Baaki sab inputs par Enter => append/submit na ho
+                e.preventDefault();
+                if (activeEl.blur) activeEl.blur();
             }
         });
     }
@@ -2499,7 +2509,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 new TomSelect(select, {
                     allowEmptyOption: true,
-                    dropdownParent: '#editSellingVoucherModal .modal-body',
+                    dropdownParent: 'body',
                     placeholder: 'Select Item',
                     maxOptions: null,
                     highlight: false,
@@ -2560,7 +2570,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 new TomSelect(select, {
                     allowEmptyOption: true,
-                    dropdownParent: '#editSellingVoucherModal .modal-body',
+                    dropdownParent: 'body',
                     placeholder: 'Select Item',
                     maxOptions: null,
                     highlight: false,
@@ -2976,7 +2986,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     new TomSelect(newSelect, {
                         allowEmptyOption: true,
-                        dropdownParent: '#editSellingVoucherModal .modal-body',
+                        dropdownParent: 'body',
                         placeholder: 'Select Item',
                         maxOptions: null,
                         highlight: false,
@@ -3093,6 +3103,10 @@ document.addEventListener('DOMContentLoaded', function() {
             if (e.target.classList.contains('sv-avail') || e.target.classList.contains('sv-qty') || e.target.classList.contains('sv-rate')) {
                 const row = e.target.closest('.sv-item-row');
                 if (row) {
+                    if (e.target.classList.contains('sv-rate')) {
+                        const rateInp = row.querySelector('.sv-rate');
+                        if (rateInp) rateInp.dataset.manualRate = '1';
+                    }
                     refreshEditAllAvailable();
                     calcRow(row);
                     updateEditGrandTotal();
@@ -3111,6 +3125,35 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         });
+    }
+
+    // Edit modal: Enter sirf last-row Rate field par press hoga => new row append
+    const editFormEl = document.getElementById('editSellingVoucherForm');
+    if (editFormEl && editModalItemsBody) {
+        editFormEl.addEventListener('keydown', function(e) {
+            if (e.key !== 'Enter') return;
+            const activeEl = document.activeElement;
+            if (!activeEl) return;
+            if (!editModalItemsBody.contains(activeEl)) return;
+
+            const row = activeEl.closest('.sv-item-row');
+            if (!row) return;
+            const lastRow = editModalItemsBody.querySelector('.sv-item-row:last-child');
+            if (!lastRow) return;
+
+            const isRateField = activeEl.classList && activeEl.classList.contains('sv-rate');
+            if (isRateField && row === lastRow) {
+                const addBtn = document.getElementById('editModalAddItemRow');
+                if (addBtn) {
+                    e.preventDefault();
+                    addBtn.click();
+                }
+            } else {
+                // Other fields me Enter => append/submit na ho
+                e.preventDefault();
+                if (activeEl.blur) activeEl.blur();
+            }
+        }, true);
     }
 
     // Store selection change in EDIT modal

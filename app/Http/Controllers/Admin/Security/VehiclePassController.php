@@ -163,10 +163,12 @@ class VehiclePassController extends Controller
             'vehicle_type' => ['required', 'exists:sec_vehicle_type,pk'],
             'vehicle_no' => ['required', 'string', 'max:50', 'regex:/^[A-Za-z0-9\s\-]{3,20}$/'],
             'doc_upload' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048'],
-            'veh_card_valid_from' => ['required', 'date'],
+            'veh_card_valid_from' => ['required', 'date', 'after_or_equal:today'],
             'vech_card_valid_to' => ['required', 'date', 'after_or_equal:veh_card_valid_from'],
         ], [
             'vehicle_no.regex' => 'Vehicle number must be 3–20 characters (letters, numbers, spaces or hyphens only).',
+            'veh_card_valid_from.after_or_equal' => 'Start date cannot be in the past.',
+            'vech_card_valid_to.after_or_equal' => 'End date must be on or after start date.',
         ]);
 
         $user = Auth::user();
@@ -345,10 +347,12 @@ class VehiclePassController extends Controller
             'vehicle_type' => ['required', 'exists:sec_vehicle_type,pk'],
             'vehicle_no' => ['required', 'string', 'max:50', 'regex:/^[A-Za-z0-9\s\-]{3,20}$/'],
             'doc_upload' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048'],
-            'veh_card_valid_from' => ['required', 'date'],
+            'veh_card_valid_from' => ['required', 'date', 'after_or_equal:today'],
             'vech_card_valid_to' => ['required', 'date', 'after_or_equal:veh_card_valid_from'],
         ], [
             'vehicle_no.regex' => 'Vehicle number must be 3–20 characters (letters, numbers, spaces or hyphens only).',
+            'veh_card_valid_from.after_or_equal' => 'Valid From date cannot be in the past.',
+            'vech_card_valid_to.after_or_equal' => 'Valid To date must be on or after Valid From date.',
         ]);
 
         $user = Auth::user();

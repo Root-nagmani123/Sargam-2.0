@@ -125,7 +125,7 @@
                                     data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-setup' ? 'true' : 'false' }}" aria-controls="setup-panel"
                                     id="setup-tab">
 
-                                    @if(hasRole('Admin') || hasRole('Training-Induction') ||  hasRole('Staff') || hasRole('IST'))
+                                    @if(hasRole('Admin')|| hasRole('Mess-Admin') || hasRole('Mess-Staff') || hasRole('Training-Induction') ||  hasRole('Staff') || hasRole('IST'))
                                     <span>Setup</span>
                                     @elseif(hasRole('Internal Faculty') || hasRole('Guest Faculty') ||
                                     hasRole('Student-OT'))
@@ -1295,16 +1295,22 @@
             });
 
             // Notification functions
+            const notificationMarkReadUrlTemplate = '{{ route("admin.notifications.mark-read-redirect", ["id" => "__ID__"]) }}';
+            const notificationMarkAllReadUrl = '{{ route("admin.notifications.mark-all-read") }}';
             function markAsRead(notificationId) {
-                fetch('/admin/notifications/mark-read-redirect/' + notificationId, {
+                const endpoint = notificationMarkReadUrlTemplate.replace('__ID__', encodeURIComponent(notificationId));
+                fetch(endpoint, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
                             'X-CSRF-TOKEN': '{{ csrf_token() }}'
                         }
                     })
-                    .then(response => response.json())
-                    .then(data => {
+                    .then(response => response.json().then(data => ({ ok: response.ok, data })))
+                    .then(({ ok, data }) => {
+                        if (!ok) {
+                            throw new Error((data && data.error) ? data.error : 'Failed to mark notification as read');
+                        }
                         console.log('Controller Response:', data)
                         if (data.success && data.redirect_url) {
                             // Redirect to the appropriate module view
@@ -1335,7 +1341,7 @@
             });
 
             function markAllAsRead() {
-                fetch('/admin/notifications/mark-all-read', {
+                fetch(notificationMarkAllReadUrl, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',

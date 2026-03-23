@@ -11,6 +11,12 @@ class SecurityFamilyIdApplyApproval extends Model
 {
     protected $table = 'security_family_id_apply_approval';
 
+    protected $primaryKey = 'pk';
+
+    public $incrementing = false;
+
+    protected $keyType = 'int';
+
     public $timestamps = false;
 
     protected $fillable = [

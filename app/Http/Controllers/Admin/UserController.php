@@ -37,6 +37,13 @@ use App\Models\StudentMasterCourseMap;
 use App\Models\StudentMaster;
 use App\Models\CourseStudentAttendance;
 use App\Models\CourseGroupTimetableMapping;
+use App\Models\SecurityParmIdApply;
+use App\Models\SecurityDupPermIdApply;
+use App\Models\SecurityFamilyIdApply;
+use App\Models\SecurityFamilyIdApplyApproval;
+use App\Models\VehiclePassTWApply;
+use App\Models\VehiclePassFWApply;
+use App\Models\VehiclePassTWApplyApproval;
 use Carbon\Carbon;
 
 
@@ -202,6 +209,7 @@ class UserController extends Controller
              
              // Fetch today's timetable for the logged-in faculty
              $todayTimetable = $this->getTodayTimetableForFaculty($userId);
+        }
          }
 
         if ($request->boolean('calendar_only')) {
@@ -218,7 +226,430 @@ class UserController extends Controller
             ]);
         }
 
+        if ($request->boolean('calendar_only')) {
+            $calendarHtml = view('components.calendar', [
+                'year' => $year,
+                'month' => $month,
+                'selected' => now()->toDateString(),
+                'events' => $events,
+                'theme' => 'gov-red',
+            ])->render();
+
+            return response()->json([
+                'html' => $calendarHtml,
+            ]);
+        }
+
         return view('admin.dashboard', compact('year', 'month', 'events','emp_dob_data', 'totalActiveCourses', 'upcomingCourses', 'total_guest_faculty', 'total_internal_faculty', 'exemptionCount', 'MDO_count', 'todayTimetable', 'totalSessions', 'totalStudents', 'isCCorACC'));
+        $todayFamilyApprovals = $this->getTodayPendingFamilyApprovalsCount();
+        $todayVehicleApprovals = $this->getTodayPendingVehicleApprovalsCount();
+        $todayIdCardRequests = $this->getTodayPendingIdCardRequestsCount();
+        $todayPendingSplit = $this->getTodayPendingIdCardRequestsSplit();
+        $todayPendingPermanentIdCardRequests = (int) ($todayPendingSplit['perm'] ?? 0);
+        $todayPendingContractualIdCardRequests = (int) ($todayPendingSplit['cont'] ?? 0);
+        $todayApproval1SecurityRequests = $this->getTodayPendingSecurityApproval1Count();
+        $todayDuplicatePermIdCardRequests = $this->getTodayDuplicatePermanentIdCardRequestsCount();
+        $todayDuplicateContractualIdCardRequests = $this->getTodayDuplicateContractualIdCardRequestsCount();
+
+        return view('admin.dashboard', compact(
+            'year',
+            'month',
+            'events',
+            'emp_dob_data',
+            'totalActiveCourses',
+            'upcomingCourses',
+            'total_guest_faculty',
+            'total_internal_faculty',
+            'exemptionCount',
+            'MDO_count',
+            'todayTimetable',
+            'totalSessions',
+            'totalStudents',
+            'isCCorACC',
+            'todayFamilyApprovals',
+            'todayVehicleApprovals',
+            'todayIdCardRequests',
+            'todayPendingPermanentIdCardRequests',
+            'todayPendingContractualIdCardRequests',
+            'todayApproval1SecurityRequests',
+            'todayDuplicatePermIdCardRequests',
+            'todayDuplicateContractualIdCardRequests'
+        ));
+    }
+
+    /**
+     * Split "today pending employee id requests" into:
+     * - perm: pending Permanent ID cards
+     * - cont: pending Contractual ID cards
+     *
+     * Logic matches existing getTodayPendingIdCardRequestsCount(), but returns both parts separately.
+     */
+    private function getTodayPendingIdCardRequestsSplit(): array
+    {
+        $user = Auth::user();
+        if (! $user) {
+            return ['perm' => 0, 'cont' => 0];
+        }
+
+        if (! (hasRole('Security Card') || hasRole('Admin Security'))) {
+            return ['perm' => 0, 'cont' => 0];
+        }
+
+        $start = Carbon::today()->startOfDay()->toDateTimeString();
+        $end = Carbon::today()->endOfDay()->toDateTimeString();
+
+        $isApproval2 = hasRole('Security Card') && !hasRole('Admin Security');
+        $isApproval3 = hasRole('Admin Security') && !hasRole('Security Card');
+
+        // If user has both roles, fall back to Approval II "actionable" definition.
+        if (! $isApproval2 && ! $isApproval3) {
+            $isApproval2 = true;
+        }
+
+        if ($isApproval2) {
+            $permCount = (int) DB::table('security_parm_id_apply as spa')
+                ->whereBetween('spa.created_date', [$start, $end])
+                ->where('spa.id_status', SecurityParmIdApply::ID_STATUS_PENDING)
+                ->whereNotExists(function ($q) {
+                    $q->select(DB::raw(1))
+                        ->from('security_parm_id_apply_approval as a')
+                        ->whereColumn('a.security_parm_id_apply_pk', 'spa.emp_id_apply')
+                        ->where('a.status', 2);
+                })
+                ->count();
+
+            $contPendingIds = DB::table('security_con_oth_id_apply_approval')
+                ->where('status', 0)
+                ->pluck('security_parm_id_apply_pk');
+
+            $contCount = 0;
+            if ($contPendingIds->isNotEmpty()) {
+                $contCount = (int) DB::table('security_con_oth_id_apply as sco')
+                    ->whereBetween('sco.created_date', [$start, $end])
+                    ->where('sco.id_status', 1)
+                    ->where('sco.depart_approval_status', 2)
+                    ->whereIn('sco.emp_id_apply', $contPendingIds)
+                    ->count();
+            }
+
+            return ['perm' => $permCount, 'cont' => $contCount];
+        }
+
+        // Approval III final pending
+        $permFinalPending = (int) DB::table('security_parm_id_apply as spa')
+            ->whereBetween('spa.created_date', [$start, $end])
+            ->where('spa.id_status', SecurityParmIdApply::ID_STATUS_PENDING)
+            ->whereExists(function ($q) {
+                $q->select(DB::raw(1))
+                    ->from('security_parm_id_apply_approval as a')
+                    ->whereColumn('a.security_parm_id_apply_pk', 'spa.emp_id_apply')
+                    ->where('a.status', 2);
+            })
+            ->count();
+
+        $contRecommendedIds = DB::table('security_con_oth_id_apply_approval')
+            ->where('status', 1)
+            ->where('recommend_status', 1)
+            ->pluck('security_parm_id_apply_pk');
+        $contFinalDoneIds = DB::table('security_con_oth_id_apply_approval')
+            ->whereIn('status', [2, 3])
+            ->pluck('security_parm_id_apply_pk');
+
+        $contFinalPending = 0;
+        if ($contRecommendedIds->isNotEmpty()) {
+            $contQuery = DB::table('security_con_oth_id_apply as sco')
+                ->whereBetween('sco.created_date', [$start, $end])
+                ->where('sco.id_status', 1)
+                ->where('sco.depart_approval_status', 2)
+                ->whereIn('sco.emp_id_apply', $contRecommendedIds);
+
+            if ($contFinalDoneIds->isNotEmpty()) {
+                $contQuery->whereNotIn('sco.emp_id_apply', $contFinalDoneIds);
+            }
+
+            $contFinalPending = (int) $contQuery->count();
+        }
+
+        return ['perm' => $permFinalPending, 'cont' => $contFinalPending];
+    }
+
+    private function getTodayPendingFamilyApprovalsCount(): int
+    {
+        $user = Auth::user();
+        if (! $user) {
+            return 0;
+        }
+
+        $isLevel1 = hasRole('Security Card') && !hasRole('Admin Security');
+        $isLevel2 = hasRole('Admin Security') && !hasRole('Security Card');
+        if (! $isLevel1 && ! $isLevel2) {
+            return 0;
+        }
+
+        $rows = SecurityFamilyIdApply::with('approvals')
+            ->whereDate('created_date', Carbon::today())
+            ->get();
+
+        if ($rows->isEmpty()) {
+            return 0;
+        }
+
+        $groupKey = function ($r) {
+            $date = $r->created_date ? Carbon::parse($r->created_date)->format('Y-m-d H:i:s') : '';
+            return $r->emp_id_apply . '|' . ($r->created_by ?? '') . '|' . $date;
+        };
+
+        $groups = $rows->groupBy($groupKey);
+
+        $count = 0;
+        foreach ($groups as $rowsInGroup) {
+            $first = $rowsInGroup->sortBy('fml_id_apply')->first();
+            $statusInt = (int) ($first->id_status ?? 1);
+            $hasLevel1 = $first->approvals && $first->approvals->where('status', 1)->isNotEmpty();
+            $hasLevel2 = $first->approvals && $first->approvals->where('status', 2)->isNotEmpty();
+
+            $canApprove = false;
+            if ($statusInt === 1) {
+                if ($isLevel1 && ! $hasLevel1) {
+                    $canApprove = true;
+                } elseif ($isLevel2 && $hasLevel1 && ! $hasLevel2) {
+                    $canApprove = true;
+                }
+            }
+
+            if ($canApprove) {
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
+    private function getTodayPendingVehicleApprovalsCount(): int
+    {
+        $user = Auth::user();
+        if (! $user) {
+            return 0;
+        }
+
+        $isLevel1 = hasRole('Security Card') && !hasRole('Admin Security');
+        $isLevel2 = hasRole('Admin Security') && !hasRole('Security Card');
+        if (! $isLevel1 && ! $isLevel2) {
+            return 0;
+        }
+
+        $today = Carbon::today();
+
+        $twRows = VehiclePassTWApply::with('approvals')
+            ->whereDate('created_date', $today)
+            ->get();
+
+        $fwRows = VehiclePassFWApply::with('approvals')
+            ->whereDate('created_date', $today)
+            ->get();
+
+        $rows = $twRows->map(function ($r) {
+            $r->kind = 'tw';
+            return $r;
+        })->concat(
+            $fwRows->map(function ($r) {
+                $r->kind = 'fw';
+                return $r;
+            })
+        );
+
+        if ($rows->isEmpty()) {
+            return 0;
+        }
+
+        $count = 0;
+        foreach ($rows as $r) {
+            $statusInt = (int) ($r->vech_card_status ?? 1);
+            $approvals = $r->approvals ?? collect();
+            $hasLevel1 = $approvals->where(function ($a) {
+                return (int) ($a->veh_recommend_status ?? 0) === 1 || (int) ($a->status ?? 0) === 1;
+            })->isNotEmpty();
+            $hasLevel2 = $approvals->where(function ($a) {
+                return (int) ($a->status ?? 0) === 2;
+            })->isNotEmpty();
+
+            $canApprove = false;
+            if ($statusInt === 1) {
+                if ($isLevel1 && ! $hasLevel1) {
+                    $canApprove = true;
+                } elseif ($isLevel2 && $hasLevel1 && ! $hasLevel2) {
+                    $canApprove = true;
+                }
+            }
+
+            if ($canApprove) {
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
+    private function getTodayPendingIdCardRequestsCount(): int
+    {
+        $split = $this->getTodayPendingIdCardRequestsSplit();
+        return (int) ($split['perm'] ?? 0) + (int) ($split['cont'] ?? 0);
+    }
+
+    /**
+     * Today's pending Security Approval-I requests (contractual regular + duplicate)
+     * for the logged-in department approval authority.
+     */
+    private function getTodayPendingSecurityApproval1Count(): int
+    {
+        $user = Auth::user();
+        if (! $user) {
+            return 0;
+        }
+
+        $employeePk = $user->user_id ?? $user->pk ?? null;
+        if (! $employeePk) {
+            return 0;
+        }
+
+        $start = Carbon::today()->startOfDay()->toDateTimeString();
+        $end = Carbon::today()->endOfDay()->toDateTimeString();
+
+        // Contractual regular: pending at Approval-I for this authority
+        $contQuery = DB::table('security_con_oth_id_apply')
+            ->whereBetween('created_date', [$start, $end])
+            ->where('id_status', 1)
+            ->where('depart_approval_status', 1)
+            ->where('department_approval_emp_pk', $employeePk);
+
+        // Exclude those where Approval-I already done (status=1 in approval table)
+        $contA1Done = DB::table('security_con_oth_id_apply_approval')
+            ->where('status', 1)
+            ->pluck('security_parm_id_apply_pk');
+        if ($contA1Done->isNotEmpty()) {
+            $contQuery->whereNotIn('emp_id_apply', $contA1Done);
+        }
+
+        $contCount = (int) $contQuery->count();
+
+        // Contractual duplicate: pending at Approval-I for this authority
+        $dupA1Done = DB::table('security_dup_other_id_apply_approval')
+            ->where('status', 1)
+            ->pluck('security_con_id_apply_pk');
+
+        $dupQuery = DB::table('security_dup_other_id_apply')
+            ->whereBetween('created_date', [$start, $end])
+            ->where('id_status', 1)
+            ->where('card_type', 'Contractual')
+            ->where('depart_approval_status', 1)
+            ->where('department_approval_emp_pk', $employeePk);
+
+        if ($dupA1Done->isNotEmpty()) {
+            $dupQuery->whereNotIn('emp_id_apply', $dupA1Done);
+        }
+
+        $dupCount = (int) $dupQuery->count();
+
+        return $contCount + $dupCount;
+    }
+
+    private function getTodayDuplicatePermanentIdCardRequestsCount(): int
+    {
+        $user = Auth::user();
+        if (! $user) {
+            return 0;
+        }
+
+        if (! (hasRole('Security Card') || hasRole('Admin Security'))) {
+            return 0;
+        }
+
+        $start = Carbon::today()->startOfDay()->toDateTimeString();
+        $end = Carbon::today()->endOfDay()->toDateTimeString();
+        $isApproval2 = hasRole('Security Card') && !hasRole('Admin Security');
+        $isApproval3 = hasRole('Admin Security') && !hasRole('Security Card');
+
+        // Permanent Duplicate (security_dup_perm_id_apply)
+        $base = DB::table('security_dup_perm_id_apply as dup')
+            ->whereBetween('dup.created_date', [$start, $end])
+            ->where('dup.id_status', 1);
+
+        if ($isApproval2) {
+            // Actionable at Approval II = not yet recommended
+            $base->whereNotExists(function ($q) {
+                $q->select(DB::raw(1))
+                    ->from('security_dup_perm_id_apply_approval as a')
+                    ->whereColumn('a.security_parm_id_apply_pk', 'dup.emp_id_apply')
+                    ->where('a.status', 1)
+                    ->where('a.recommend_status', 1);
+            });
+        } elseif ($isApproval3) {
+            // Pending final at Approval III = recommended, not finally approved/rejected
+            $base->whereExists(function ($q) {
+                $q->select(DB::raw(1))
+                    ->from('security_dup_perm_id_apply_approval as a')
+                    ->whereColumn('a.security_parm_id_apply_pk', 'dup.emp_id_apply')
+                    ->where('a.status', 1)
+                    ->where('a.recommend_status', 1);
+            })->whereNotExists(function ($q) {
+                $q->select(DB::raw(1))
+                    ->from('security_dup_perm_id_apply_approval as a2')
+                    ->whereColumn('a2.security_parm_id_apply_pk', 'dup.emp_id_apply')
+                    ->whereIn('a2.status', [2, 3]);
+            });
+        }
+
+        return (int) $base->count();
+    }
+
+    private function getTodayDuplicateContractualIdCardRequestsCount(): int
+    {
+        $user = Auth::user();
+        if (! $user) {
+            return 0;
+        }
+
+        if (! (hasRole('Security Card') || hasRole('Admin Security'))) {
+            return 0;
+        }
+
+        $start = Carbon::today()->startOfDay()->toDateTimeString();
+        $end = Carbon::today()->endOfDay()->toDateTimeString();
+        $isApproval2 = hasRole('Security Card') && !hasRole('Admin Security');
+        $isApproval3 = hasRole('Admin Security') && !hasRole('Security Card');
+
+        // Contractual Duplicate (security_dup_other_id_apply with depart_approval_status = 2)
+        $base = DB::table('security_dup_other_id_apply as duo')
+            ->whereBetween('duo.created_date', [$start, $end])
+            ->where('duo.id_status', 1)
+            ->where('depart_approval_status', 2);
+
+        if ($isApproval2) {
+            // Actionable at Approval II = not yet recommended
+            $base->whereNotExists(function ($q) {
+                $q->select(DB::raw(1))
+                    ->from('security_dup_other_id_apply_approval as a')
+                    ->whereColumn('a.security_con_id_apply_pk', 'duo.emp_id_apply')
+                    ->where('a.status', 1)
+                    ->where('a.recommend_status', 1);
+            });
+        } elseif ($isApproval3) {
+            // Pending final at Approval III = recommended, not finally approved/rejected
+            $base->whereExists(function ($q) {
+                $q->select(DB::raw(1))
+                    ->from('security_dup_other_id_apply_approval as a')
+                    ->whereColumn('a.security_con_id_apply_pk', 'duo.emp_id_apply')
+                    ->where('a.status', 1)
+                    ->where('a.recommend_status', 1);
+            })->whereNotExists(function ($q) {
+                $q->select(DB::raw(1))
+                    ->from('security_dup_other_id_apply_approval as a2')
+                    ->whereColumn('a2.security_con_id_apply_pk', 'duo.emp_id_apply')
+                    ->whereIn('a2.status', [2, 3]);
+            });
+        }
+
+        return (int) $base->count();
     }
 
     /**
@@ -1050,10 +1481,22 @@ class UserController extends Controller
 public function toggleStatus(Request $request)
 {
     $idColumn = $request->id_column ?? 'pk'; 
+    $table = $request->table;
+    $column = $request->column;
+    $id = $request->id;
+    $status = $request->status;
+
     DB::table($request->table)
-        ->where($idColumn, $request->id)
-        ->update([$request->column => $request->status]);
-    return response()->json(['message' => 'Status updated successfully']);
+        ->where($idColumn, $id)
+        ->update([$column => $status]);
+
+    $newState = ((int) $status === 1) ? 'Active' : 'Inactive';
+    session()->flash('success', "Status updated to {$newState}.");
+
+    return response()->json([
+        'message' => "Status updated to {$newState}.",
+        'state' => $newState,
+    ]);
 }
 public function assignRole($id)
 {

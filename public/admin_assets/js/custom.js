@@ -174,6 +174,18 @@ $(document).on('change', '.status-toggle', function () {
     // SweetAlert confirmation text based on status
     let actionText = status === 1 ? 'activate' : 'deactivate';
 
+    // SweetAlert2 present nahi hai to fallback confirm() use kar do,
+    // taaki user ko confirmation message mil jaye.
+    if (typeof Swal === 'undefined' || typeof Swal.fire !== 'function') {
+        const ok = window.confirm(`Are you sure? You want to ${actionText} this item?`);
+        if (ok) {
+            updateStatus(table, column, id, id_column, status, $checkbox);
+        } else {
+            $checkbox.prop('checked', !status);
+        }
+        return;
+    }
+
     Swal.fire({
         title: 'Are you sure?',
         text: `Are you sure? You want to ${actionText} this item?`,
