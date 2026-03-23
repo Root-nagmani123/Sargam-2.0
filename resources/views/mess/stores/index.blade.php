@@ -3,6 +3,7 @@
 @section('setup_content')
 @php
     $storeTypes = \App\Models\Mess\Store::storeTypes();
+    $canDeleteStore = hasRole('Admin') || hasRole('Mess-Admin');
 @endphp
 <div class="container-fluid">
     <x-breadcrum title="Store Master"></x-breadcrum>
@@ -63,12 +64,14 @@
                                                 data-location="{{ e($store->location ?? '') }}"
                                                 data-status="{{ e($store->status ?? 'active') }}"
                                                 title="Edit"><i class="material-symbols-rounded">edit</i></button>
-                                        <form method="POST" action="{{ route('admin.mess.stores.destroy', $store->id) }}" class="d-inline"
-                                              onsubmit="return confirm('Are you sure you want to delete this store?');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-danger bg-transparent border-0 p-0 text-primary" title="Delete"><i class="material-symbols-rounded">delete</i></button>
-                                        </form>
+                                        @if($canDeleteStore)
+                                            <form method="POST" action="{{ route('admin.mess.stores.destroy', $store->id) }}" class="d-inline"
+                                                  onsubmit="return confirm('Are you sure you want to delete this store?');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-danger bg-transparent border-0 p-0 text-primary" title="Delete"><i class="material-symbols-rounded">delete</i></button>
+                                            </form>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>

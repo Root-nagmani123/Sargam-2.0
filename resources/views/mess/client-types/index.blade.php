@@ -3,6 +3,7 @@
 @section('setup_content')
 @php
     $clientTypeOptions = \App\Models\Mess\ClientType::clientTypes();
+    $canDeleteClientType = hasRole('Admin') || hasRole('Mess-Admin');
 @endphp
 <div class="container-fluid">
     <x-breadcrum title="Client Types Master"></x-breadcrum>
@@ -51,14 +52,16 @@
                                                 data-client-name="{{ e($clientType->client_name) }}"
                                                 data-status="{{ e($clientType->status ?? 'active') }}"
                                                 title="Edit"><i class="material-icons material-symbol-rounded">edit</i></button>
-                                        <form method="POST" action="{{ route('admin.mess.client-types.destroy', $clientType->id) }}" class="d-inline"
-                                              onsubmit="return confirm('Are you sure you want to delete this client type?');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="text-primary bg-transparent border-0 p-0" title="Delete">
-                                                <i class="material-icons material-symbol-rounded">delete</i>
-                                            </button>
-                                        </form>
+                                        @if($canDeleteClientType)
+                                            <form method="POST" action="{{ route('admin.mess.client-types.destroy', $clientType->id) }}" class="d-inline"
+                                                  onsubmit="return confirm('Are you sure you want to delete this client type?');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="text-primary bg-transparent border-0 p-0" title="Delete">
+                                                    <i class="material-icons material-symbol-rounded">delete</i>
+                                                </button>
+                                            </form>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>

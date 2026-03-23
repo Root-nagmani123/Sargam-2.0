@@ -8,7 +8,7 @@
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
                 <h4 class="mb-0">All Employee ID Card Requests</h4>
                 <div class="d-flex flex-wrap gap-2">
-                    <a href="{{ route('admin.security.employee_idcard_approval.approval1') }}" class="btn btn-outline-primary btn-sm">Approval I</a>
+                    {{-- <a href="{{ route('admin.security.employee_idcard_approval.approval1') }}" class="btn btn-outline-primary btn-sm">Approval I</a> --}}
                     <a href="{{ route('admin.security.employee_idcard_approval.approval2') }}" class="btn btn-outline-primary btn-sm">Approval II</a>
                     <a href="{{ route('admin.employee_idcard.index') }}" class="btn btn-secondary btn-sm">ID Card List</a>
                 </div>

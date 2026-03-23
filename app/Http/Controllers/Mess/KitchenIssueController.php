@@ -120,7 +120,13 @@ class KitchenIssueController extends Controller
         $faculties = FacultyMaster::whereNotNull('full_name')
             ->where('full_name', '!=', '')
             ->orderBy('full_name')
-            ->get(['pk', 'full_name', 'employee_master_pk']);
+            ->get(['pk', 'full_name', 'faculty_code', 'employee_master_pk'])
+            ->map(function ($f) {
+                $fullName = trim((string) ($f->full_name ?? ''));
+                $facultyCode = trim((string) ($f->faculty_code ?? ''));
+                $f->full_name_with_code = $facultyCode !== '' ? ($fullName . ' (' . $facultyCode . ')') : $fullName;
+                return $f;
+            });
 
         $facultyEmployeePks = $faculties
             ->pluck('employee_master_pk')
@@ -128,6 +134,17 @@ class KitchenIssueController extends Controller
             ->unique()
             ->values()
             ->all();
+
+        $departmentNamesByPk = DepartmentMaster::pluck('department_name', 'pk');
+
+        $buildEmployeeLabel = function ($fullName, $departmentPk) use ($departmentNamesByPk) {
+            $fullName = trim((string) $fullName);
+            if ($fullName === '') {
+                $fullName = '—';
+            }
+            $departmentName = trim((string) ($departmentNamesByPk[$departmentPk] ?? ''));
+            return $departmentName !== '' ? ($fullName . ' (' . $departmentName . ')') : $fullName;
+        };
 
         $employees = EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn($q) => $q->where('status', 1))
             ->when($officersMessDept, function ($q) use ($officersMessDept) {
@@ -140,10 +157,15 @@ class KitchenIssueController extends Controller
                 $q->whereNotIn('pk', $facultyEmployeePks);
             })
             ->orderBy('first_name')->orderBy('last_name')
-            ->get(['pk', 'first_name', 'middle_name', 'last_name'])
-            ->map(function ($e) {
+            ->get(['pk', 'first_name', 'middle_name', 'last_name', 'department_master_pk'])
+            ->map(function ($e) use ($buildEmployeeLabel) {
                 $fullName = trim(($e->first_name ?? '') . ' ' . ($e->middle_name ?? '') . ' ' . ($e->last_name ?? ''));
-                return (object) ['pk' => $e->pk, 'full_name' => $fullName ?: '—'];
+                $fullName = $fullName ?: '—';
+                return (object) [
+                    'pk' => $e->pk,
+                    'full_name' => $fullName,
+                    'full_name_with_department' => $buildEmployeeLabel($fullName, $e->department_master_pk ?? null),
+                ];
             })
             ->filter(fn($e) => $e->full_name !== '—')
             ->values();
@@ -151,10 +173,15 @@ class KitchenIssueController extends Controller
             ? EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn($q) => $q->where('status', 1))
                 ->where('department_master_pk', $officersMessDept->pk)
                 ->orderBy('first_name')->orderBy('last_name')
-                ->get(['pk', 'first_name', 'middle_name', 'last_name'])
-                ->map(function ($e) {
+                ->get(['pk', 'first_name', 'middle_name', 'last_name', 'department_master_pk'])
+                ->map(function ($e) use ($buildEmployeeLabel) {
                     $fullName = trim(($e->first_name ?? '') . ' ' . ($e->middle_name ?? '') . ' ' . ($e->last_name ?? ''));
-                    return (object) ['pk' => $e->pk, 'full_name' => $fullName ?: '—'];
+                    $fullName = $fullName ?: '—';
+                    return (object) [
+                        'pk' => $e->pk,
+                        'full_name' => $fullName,
+                        'full_name_with_department' => $buildEmployeeLabel($fullName, $e->department_master_pk ?? null),
+                    ];
                 })
                 ->filter(fn($e) => $e->full_name !== '—')
                 ->values()
@@ -274,13 +301,38 @@ class KitchenIssueController extends Controller
         $clientTypes = ClientType::clientTypes();
         $clientNamesByType = ClientType::active()->orderBy('client_type')->orderBy('client_name')->get()
             ->groupBy('client_type');
-        $faculties = FacultyMaster::whereNotNull('full_name')->where('full_name', '!=', '')->orderBy('full_name')->get(['pk', 'full_name']);
+        $faculties = FacultyMaster::whereNotNull('full_name')
+            ->where('full_name', '!=', '')
+            ->orderBy('full_name')
+            ->get(['pk', 'full_name', 'faculty_code'])
+            ->map(function ($f) {
+                $fullName = trim((string) ($f->full_name ?? ''));
+                $facultyCode = trim((string) ($f->faculty_code ?? ''));
+                $f->full_name_with_code = $facultyCode !== '' ? ($fullName . ' (' . $facultyCode . ')') : $fullName;
+                return $f;
+            });
+        $departmentNamesByPk = DepartmentMaster::pluck('department_name', 'pk');
+
+        $buildEmployeeLabel = function ($fullName, $departmentPk) use ($departmentNamesByPk) {
+            $fullName = trim((string) $fullName);
+            if ($fullName === '') {
+                $fullName = '—';
+            }
+            $departmentName = trim((string) ($departmentNamesByPk[$departmentPk] ?? ''));
+            return $departmentName !== '' ? ($fullName . ' (' . $departmentName . ')') : $fullName;
+        };
+
         $employees = EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn($q) => $q->where('status', 1))
             ->orderBy('first_name')->orderBy('last_name')
-            ->get(['pk', 'first_name', 'middle_name', 'last_name'])
-            ->map(function ($e) {
+            ->get(['pk', 'first_name', 'middle_name', 'last_name', 'department_master_pk'])
+            ->map(function ($e) use ($buildEmployeeLabel) {
                 $fullName = trim(($e->first_name ?? '') . ' ' . ($e->middle_name ?? '') . ' ' . ($e->last_name ?? ''));
-                return (object) ['pk' => $e->pk, 'full_name' => $fullName ?: '—'];
+                $fullName = $fullName ?: '—';
+                return (object) [
+                    'pk' => $e->pk,
+                    'full_name' => $fullName,
+                    'full_name_with_department' => $buildEmployeeLabel($fullName, $e->department_master_pk ?? null),
+                ];
             })
             ->filter(fn($e) => $e->full_name !== '—')
             ->values();
@@ -290,10 +342,15 @@ class KitchenIssueController extends Controller
             ? EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn($q) => $q->where('status', 1))
                 ->where('department_master_pk', $officersMessDept->pk)
                 ->orderBy('first_name')->orderBy('last_name')
-                ->get(['pk', 'first_name', 'middle_name', 'last_name'])
-                ->map(function ($e) {
+                ->get(['pk', 'first_name', 'middle_name', 'last_name', 'department_master_pk'])
+                ->map(function ($e) use ($buildEmployeeLabel) {
                     $fullName = trim(($e->first_name ?? '') . ' ' . ($e->middle_name ?? '') . ' ' . ($e->last_name ?? ''));
-                    return (object) ['pk' => $e->pk, 'full_name' => $fullName ?: '—'];
+                    $fullName = $fullName ?: '—';
+                    return (object) [
+                        'pk' => $e->pk,
+                        'full_name' => $fullName,
+                        'full_name_with_department' => $buildEmployeeLabel($fullName, $e->department_master_pk ?? null),
+                    ];
                 })
                 ->filter(fn($e) => $e->full_name !== '—')
                 ->values()

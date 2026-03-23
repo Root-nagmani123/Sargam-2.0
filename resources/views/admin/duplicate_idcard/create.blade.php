@@ -97,6 +97,31 @@
 
                     <div class="col-md-4"></div>
 
+                    {{-- Contractual-specific fields: Section & Approval Authority --}}
+                    <div class="col-md-4 contractual-only" style="display:none;">
+                        <label class="form-label">Section</label>
+                        <select name="section" id="section_contractual" class="form-select">
+                            <option value="">--Select--</option>
+                            @if(!empty($userDepartmentName))
+                                <option value="{{ $userDepartmentName }}" {{ old('section', $data['section'] ?? $userDepartmentName) == $userDepartmentName ? 'selected' : '' }}>{{ $userDepartmentName }}</option>
+                            @endif
+                        </select>
+                        @error('section')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="col-md-4 contractual-only" style="display:none;">
+                        <label class="form-label">Approval Authority <span class="text-danger">*</span></label>
+                        <select name="approval_authority" id="approval_authority_contractual" class="form-select">
+                            <option value="">--Select--</option>
+                            @foreach($approvalAuthorityEmployees ?? [] as $emp)
+                                @php $empName = trim(($emp->first_name ?? '') . ' ' . ($emp->last_name ?? '')); @endphp
+                                <option value="{{ $emp->pk }}" {{ old('approval_authority', $data['approval_authority'] ?? '') == $emp->pk ? 'selected' : '' }}>
+                                    {{ $empName }}{{ $emp->designation ? ' (' . $emp->designation->designation_name . ')' : '' }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('approval_authority')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                    </div>
+
                     <div class="col-md-6">
                         <label class="form-label">Employee Name <span class="text-danger">*</span></label>
                         <input type="text" name="employee_name" id="employee_name" class="form-control" value="{{ old('employee_name', $data['employee_name'] ?? ($me?->first_name ? trim(($me->first_name ?? '').' '.($me->last_name ?? '')) : '')) }}" {{ isset($edit_id) ? 'readonly' : 'required' }}>
@@ -344,6 +369,23 @@
         });
     }
 
+    function initContractualFieldsToggle() {
+        const typeSelect = document.getElementById('id_card_type');
+        const contractualFields = document.querySelectorAll('.contractual-only');
+        if (!typeSelect || contractualFields.length === 0) {
+            return;
+        }
+        function updateVisibility() {
+            const isContractual = typeSelect.value === 'Contractual';
+            contractualFields.forEach(function (el) {
+                el.style.display = isContractual ? '' : 'none';
+            });
+        }
+        typeSelect.addEventListener('change', updateVisibility);
+        // Initial state on page load
+        updateVisibility();
+    }
+
     function initCardReasonToggle() {
         console.log('🔧 initCardReasonToggle() called');
         
@@ -497,6 +539,7 @@
         console.log('📍 DOMContentLoaded fired');
         initCardReasonToggle();
         initDuplicatePrefetch();
+        initContractualFieldsToggle();
     });
     
     // Also try immediately in case DOM is already ready
@@ -504,9 +547,10 @@
     if (document.readyState === 'loading') {
         console.log('📍 Document still loading, waiting for DOMContentLoaded');
     } else {
-        console.log('📍 Document already loaded, calling initCardReasonToggle / initDuplicatePrefetch immediately');
+        console.log('📍 Document already loaded, calling initCardReasonToggle / initDuplicatePrefetch / initContractualFieldsToggle immediately');
         initCardReasonToggle();
         initDuplicatePrefetch();
+        initContractualFieldsToggle();
     }
     
     console.log('📝 Script initialization complete!');

@@ -55,15 +55,32 @@ class FamilyIDCardRequestController extends Controller
         }
         
         $all = $query->orderBy('created_date', 'desc')->get();
-        
+
+        // Any approval action (L1 recommend / final / reject) blocks user-side delete for that member id.
+        $fmlIdsAll = $all->pluck('fml_id_apply')->unique()->filter()->values();
+        $blockedDeleteByFml = [];
+        if ($fmlIdsAll->isNotEmpty()) {
+            $blockedDeleteByFml = array_flip(
+                DB::table('security_family_id_apply_approval')
+                    ->whereIn('security_fm_id_apply_pk', $fmlIdsAll->all())
+                    ->where(function ($q) {
+                        $q->whereIn('status', [1, 2, 3])
+                            ->orWhere('recommend_status', 1);
+                    })
+                    ->pluck('security_fm_id_apply_pk')
+                    ->unique()
+                    ->all()
+            );
+        }
+
         $groupKey = function ($r) {
             $date = $r->created_date ? Carbon::parse($r->created_date)->format('Y-m-d H:i:s') : '';
             return $r->emp_id_apply . '|' . ($r->created_by ?? '') . '|' . $date;
         };
-        
+
         $groups = $all->groupBy($groupKey);
-        
-        $groupList = $groups->map(function ($rows) {
+
+        $groupList = $groups->map(function ($rows) use ($blockedDeleteByFml) {
             $first = $rows->sortBy('fml_id_apply')->first();
             $empName = '--';
             $designation = '--';
@@ -84,7 +101,18 @@ class FamilyIDCardRequestController extends Controller
             if ($empName === '' || $empName === ' ') {
                 $empName = $first->emp_id_apply ?? '--';
             }
-            
+
+            $canDelete = true;
+            foreach ($rows as $r) {
+                if (isset($blockedDeleteByFml[$r->fml_id_apply])) {
+                    $canDelete = false;
+                    break;
+                }
+            }
+            if ((int) ($first->id_status ?? 1) === 2) {
+                $canDelete = false;
+            }
+
             return (object) [
                 'first_id' => $first->fml_id_apply,
                 'created_at' => $first->created_date,
@@ -95,6 +123,7 @@ class FamilyIDCardRequestController extends Controller
                 'member_count' => $rows->count(),
                 'card_type' => $first->card_type ?? 'Family',
                 'id_status' => (int) ($first->id_status ?? 1),
+                'can_delete' => $canDelete,
             ];
         })->values();
         
@@ -168,28 +197,32 @@ class FamilyIDCardRequestController extends Controller
                 ->where('pk', $authUserId)
                 ->orWhere('pk_old', $authUserId)
                 ->first();
-            if ($authEmp) {
-                $defaultApprovalAuthorityPk = $authEmp->pk;
-                $defaultDesignation = $authEmp->designation->designation_name ?? '';
-                if ($authEmp->department_master_pk) {
-                    $userDepartmentName = $authEmp->department->department_name ?? null;
-                    $approvalAuthorityEmployees = EmployeeMaster::with('designation')
-                        ->where('department_master_pk', $authEmp->department_master_pk)
-                        ->when(Schema::hasColumn('employee_master', 'payroll'), fn ($q) => $q->where('payroll', 0))
-                        ->when(Schema::hasColumn('employee_master', 'status'), fn ($q) => $q->where('status', 1))
-                        ->orderBy('first_name')
-                        ->orderBy('last_name')
-                        ->get(['pk', 'first_name', 'last_name', 'designation_master_pk']);
-                }
-                // Government (Permanent): approved ID from security_parm_id_apply
-                $parmRow = DB::table('security_parm_id_apply')
-                    ->where('employee_master_pk', $authEmp->pk)
-                    ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
-                    ->orderBy('created_date', 'desc')
-                    ->first(['id_card_no', 'emp_id_apply']);
-                if ($parmRow) {
-                    $defaultEmployeeIdPermanent = $parmRow->id_card_no ?? $parmRow->emp_id_apply ?? '';
-                }
+                if ($authEmp) {
+                    $defaultApprovalAuthorityPk = $authEmp->pk;
+                    $defaultDesignation = $authEmp->designation->designation_name ?? '';
+                    if ($authEmp->department_master_pk) {
+                        $userDepartmentName = $authEmp->department->department_name ?? null;
+                        $approvalAuthorityEmployees = EmployeeMaster::with('designation')
+                            ->where('department_master_pk', $authEmp->department_master_pk)
+                            ->when(Schema::hasColumn('employee_master', 'payroll'), fn ($q) => $q->where('payroll', 0))
+                            ->when(Schema::hasColumn('employee_master', 'status'), fn ($q) => $q->where('status', 1))
+                            ->orderBy('first_name')
+                            ->orderBy('last_name')
+                            ->get(['pk', 'first_name', 'last_name', 'designation_master_pk']);
+                    }
+
+                    // Permanent Employee: default to EmployeeMaster.emp_id (Employee ID)
+                    $defaultEmployeeIdPermanent = $authEmp->emp_id ?? '';
+
+                    // If an approved security_parm_id_apply exists with an ID card number, prefer that
+                    $parmRow = DB::table('security_parm_id_apply')
+                        ->where('employee_master_pk', $authEmp->pk)
+                        ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
+                        ->orderBy('created_date', 'desc')
+                        ->first(['id_card_no', 'emp_id_apply']);
+                    if ($parmRow && !empty($parmRow->id_card_no)) {
+                        $defaultEmployeeIdPermanent = $parmRow->id_card_no;
+                    }
                 // Contractual: approved ID from security_con_oth_id_apply (created_by = employee pk)
                 $conRow = DB::table('security_con_oth_id_apply')
                     ->where('created_by', $authEmp->pk)
@@ -240,6 +273,22 @@ class FamilyIDCardRequestController extends Controller
                 throw ValidationException::withMessages([
                     "members.{$index}.valid_to" => 'Valid To date must not be earlier than Valid From date.',
                 ]);
+            }
+
+            // Enforce minimum age: family member must be 13 years or older
+            $dob = $member['dob'] ?? null;
+            if (!empty($dob)) {
+                try {
+                    $birthDate = Carbon::parse($dob)->startOfDay();
+                    $thirteenYearsAgo = Carbon::now()->subYears(13)->startOfDay();
+                    if ($birthDate->greaterThan($thirteenYearsAgo)) {
+                        throw ValidationException::withMessages([
+                            "members.{$index}.dob" => 'Family members younger than 13 years do not require a separate ID card.',
+                        ]);
+                    }
+                } catch (\Exception $e) {
+                    // If DOB parsing fails, let default date validation handle it
+                }
             }
         }
 
@@ -400,6 +449,7 @@ class FamilyIDCardRequestController extends Controller
             'employeeType' => $employeeType,
             'approvalAuthorityEmployees' => $approvalAuthorityEmployees,
             'currentApprovalAuthorityPk' => $currentApprovalAuthorityPk,
+            'can_remove_members' => !$this->familyGroupHasApprovalProgress($row) && (int) $row->id_status !== 2,
         ]);
     }
 
@@ -556,6 +606,11 @@ class FamilyIDCardRequestController extends Controller
                 })
                 ->values();
 
+            if ($idsToDelete->count() > 0 && $this->familyGroupHasApprovalProgress($row)) {
+                return redirect()->route('admin.family_idcard.edit', $row->fml_id_apply)
+                    ->with('error', 'Members cannot be removed after the approval process has started.');
+            }
+
             if ($idsToDelete->count() > 0 && $existingRows->count() > $idsToDelete->count()) {
                 SecurityFamilyIdApply::whereIn('fml_id_apply', $idsToDelete)->delete();
             }
@@ -576,6 +631,25 @@ class FamilyIDCardRequestController extends Controller
         return SecurityFamilyIdApply::where('emp_id_apply', $mainRow->emp_id_apply)
             ->where('created_by', $mainRow->created_by)
             ->whereRaw("DATE_FORMAT(created_date, '%Y-%m-%d %H:%i:%s') = ?", [$createdDate]);
+    }
+
+    /**
+     * True if any member in the same request group has approval activity (recommend / final / reject).
+     */
+    private function familyGroupHasApprovalProgress(SecurityFamilyIdApply $row): bool
+    {
+        $fmlIds = $this->sameGroupQuery($row)->pluck('fml_id_apply');
+        if ($fmlIds->isEmpty()) {
+            return false;
+        }
+
+        return DB::table('security_family_id_apply_approval')
+            ->whereIn('security_fm_id_apply_pk', $fmlIds->all())
+            ->where(function ($q) {
+                $q->whereIn('status', [1, 2, 3])
+                    ->orWhere('recommend_status', 1);
+            })
+            ->exists();
     }
 
     /**
@@ -679,6 +753,10 @@ class FamilyIDCardRequestController extends Controller
             return redirect()->route('admin.family_idcard.edit', $id)
                 ->with('error', 'You cannot remove the main card. Edit the main details above instead.');
         }
+        if ($this->familyGroupHasApprovalProgress($mainRow)) {
+            return redirect()->route('admin.family_idcard.edit', $id)
+                ->with('error', 'Members cannot be removed after the approval process has started.');
+        }
         $memberRow = $this->sameGroupQuery($mainRow)->where('fml_id_apply', $memberId)->firstOrFail();
         $memberRow->delete();
         return redirect()->route('admin.family_idcard.edit', $id)
@@ -688,6 +766,17 @@ class FamilyIDCardRequestController extends Controller
     public function destroy($id)
     {
         $row = SecurityFamilyIdApply::where('fml_id_apply', $id)->firstOrFail();
+
+        if ((int) $row->id_status === 2) {
+            return redirect()->route('admin.family_idcard.index')
+                ->with('error', 'Approved requests cannot be deleted.');
+        }
+
+        if ($this->familyGroupHasApprovalProgress($row)) {
+            return redirect()->route('admin.family_idcard.index')
+                ->with('error', 'This request cannot be deleted because the approval process has already started.');
+        }
+
         $row->delete();
         return redirect()->route('admin.family_idcard.index')
             ->with('success', 'Family ID Card request archived successfully!');

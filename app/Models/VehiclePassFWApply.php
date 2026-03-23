@@ -62,6 +62,13 @@ class VehiclePassFWApply extends Model
         return $this->belongsTo(EmployeeMaster::class, 'veh_created_by', 'pk');
     }
 
+    public function approvals()
+    {
+        // Reuse vehicle_pass_tw_apply_approval table for both TW & FW,
+        // keying by vehicle_TW_pk = vehicle_fw_pk for four wheelers.
+        return $this->hasMany(VehiclePassTWApplyApproval::class, 'vehicle_TW_pk', 'vehicle_fw_pk');
+    }
+
     public function getStatusTextAttribute()
     {
         return match($this->vech_card_status) {

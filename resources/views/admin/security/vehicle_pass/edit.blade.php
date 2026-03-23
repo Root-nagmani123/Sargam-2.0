@@ -135,6 +135,7 @@
                             <input type="date" name="veh_card_valid_from" id="veh_card_valid_from" 
                                 class="form-control @error('veh_card_valid_from') is-invalid @enderror" 
                                 value="{{ old('veh_card_valid_from', $vehiclePass->veh_card_valid_from ? \Carbon\Carbon::parse($vehiclePass->veh_card_valid_from)->format('Y-m-d') : '') }}" 
+                                min="{{ now()->format('Y-m-d') }}"
                                 required>
                             @error('veh_card_valid_from')
                                 <div class="invalid-feedback">{{ $message }}</div>
@@ -150,6 +151,7 @@
                             <input type="date" name="vech_card_valid_to" id="vech_card_valid_to" 
                                 class="form-control @error('vech_card_valid_to') is-invalid @enderror" 
                                 value="{{ old('vech_card_valid_to', $vehiclePass->vech_card_valid_to ? \Carbon\Carbon::parse($vehiclePass->vech_card_valid_to)->format('Y-m-d') : '') }}" 
+                                min="{{ now()->format('Y-m-d') }}"
                                 required>
                             @error('vech_card_valid_to')
                                 <div class="invalid-feedback">{{ $message }}</div>
@@ -380,6 +382,40 @@ $(document).ready(function() {
             });
         }
     }
+
+    // Date guards: block past dates and keep valid_to >= valid_from
+    function getTodayYmdLocal() {
+        var now = new Date();
+        var tzOffsetMs = now.getTimezoneOffset() * 60000;
+        return new Date(now.getTime() - tzOffsetMs).toISOString().slice(0, 10);
+    }
+
+    function syncEditDateConstraints() {
+        var fromEl = document.getElementById('veh_card_valid_from');
+        var toEl = document.getElementById('vech_card_valid_to');
+        if (!fromEl || !toEl) return;
+        var todayYmd = getTodayYmdLocal();
+        fromEl.min = todayYmd;
+        // End date must be >= start date (and also not in past).
+        var minTo = todayYmd;
+        if (fromEl.value) {
+            minTo = (fromEl.value > todayYmd) ? fromEl.value : todayYmd;
+        }
+        toEl.min = minTo;
+
+        if (fromEl.value && fromEl.value < todayYmd) {
+            fromEl.value = '';
+        }
+        if (toEl.value && fromEl.value && toEl.value < fromEl.value) {
+            toEl.value = '';
+        } else if (toEl.value && toEl.value < toEl.min) {
+            toEl.value = '';
+        }
+    }
+
+    syncEditDateConstraints();
+    $('#veh_card_valid_from').on('change', syncEditDateConstraints);
+    $('#vech_card_valid_to').on('change', syncEditDateConstraints);
 
     // Validate valid_to date is after valid_from
     $('#vech_card_valid_to').on('change', function() {

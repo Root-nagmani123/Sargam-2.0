@@ -11,7 +11,7 @@
                         @if(isset($application->request_type) && $application->request_type === 'duplicate')
                             <span class="badge bg-warning ms-2">Duplicate Pass</span>
                         @else
-                            <span class="badge bg-info ms-2">Regular Pass</span>
+                            <span class="badge bg-info ms-2">Fresh Pass</span>
                         @endif
                     </h4>
                     <small class="text-muted">Request ID: <code>{{ $application->vehicle_req_id ?? $application->vehicle_tw_pk }}</code></small>
@@ -296,8 +296,11 @@
                                                 <span class="badge bg-{{ $recommendClass }}">{{ $recommendText }}</span>
                                             </td>
                                             <td>
-                                                @if($approval->approvedBy)
-                                                    {{ $approval->approvedBy->emp_name ?? 'N/A' }}
+                                                @php
+                                                    $approverName = $approval->approved_by_name ?? null;
+                                                @endphp
+                                                @if($approverName)
+                                                    {{ $approverName }}
                                                 @else
                                                     <span class="text-muted">--</span>
                                                 @endif
@@ -318,7 +321,7 @@
             @endif
 
             <!-- Approval Actions -->
-            @if($application->vech_card_status == 1)
+            @if($canApprove ?? false)
                 <div class="row mt-4">
                     <div class="col-md-12">
                         <h5 class="text-primary mb-3">
