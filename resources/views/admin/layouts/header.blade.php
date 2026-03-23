@@ -1295,7 +1295,9 @@
             const notificationMarkReadUrlTemplate = '{{ route("admin.notifications.mark-read-redirect", ["id" => "__ID__"]) }}';
             const notificationMarkAllReadUrl = '{{ route("admin.notifications.mark-all-read") }}';
             function markAsRead(notificationId) {
-                const endpoint = notificationMarkReadUrlTemplate.replace('__ID__', encodeURIComponent(notificationId));
+                console.log('[Notification][Step 1] markAsRead called', { notificationId, currentUrl: window.location.href });
+                const endpoint = '/admin/notifications/mark-read-redirect/' + notificationId;
+                console.log('[Notification][Step 2] Calling endpoint', { endpoint });
                 fetch(endpoint, {
                         method: 'POST',
                         headers: {
@@ -1303,26 +1305,34 @@
                             'X-CSRF-TOKEN': '{{ csrf_token() }}'
                         }
                     })
-                    .then(response => response.json().then(data => ({ ok: response.ok, data })))
-                    .then(({ ok, data }) => {
-                        if (!ok) {
-                            throw new Error((data && data.error) ? data.error : 'Failed to mark notification as read');
-                        }
-                        console.log('Controller Response:', data)
+                    .then(response => {
+                        console.log('[Notification][Step 3] HTTP response', {
+                            status: response.status,
+                            ok: response.ok,
+                            redirected: response.redirected,
+                            responseUrl: response.url
+                        });
+                        return response.json().then(data => ({ ok: response.ok, status: response.status, data }));
+                    })
+                    .then(({ ok, status, data }) => {
+                        console.log('[Notification][Step 4] Controller JSON payload', { ok, status, data });
                         if (data.success && data.redirect_url) {
                             // Redirect to the appropriate module view
+                            console.log('[Notification][Step 5] Redirecting to redirect_url', { redirectUrl: data.redirect_url });
                             window.location.href = data.redirect_url;
                         } else if (data.success) {
                             // Fallback: reload if no redirect URL
-                            location.reload();
+                            console.log('[Notification][Step 5] success=true but redirect_url missing, triggering reload');
+                            // location.reload(); //ye redirect ho rha h 
                         } else {
-                            console.error('Failed to mark notification as read');
+                            console.log('[Notification][Step 5] Failed to mark notification as read', data);
                         }
                     })
                     .catch(error => {
-                        console.error('Error:', error);
+                        console.log('[Notification][Step X] Exception in markAsRead', error);
                         // Fallback to dashboard on error
-                        window.location.href = '{{ route("admin.dashboard") }}';
+                        console.log('[Notification][Fallback] Redirecting to dashboard due to error');
+                        // window.location.href = '{{ route("admin.dashboard") }}';
                     });
             }
 
@@ -1334,11 +1344,17 @@
                 const id = target.getAttribute('data-notification-id');
                 if (!id) return;
 
+                console.log('[Notification][Step 0] Notification clicked', {
+                    id,
+                    elementClass: target.className
+                });
                 markAsRead(id);
             });
 
             function markAllAsRead() {
-                fetch(notificationMarkAllReadUrl, {
+                const markAllEndpoint = '/admin/notifications/mark-all-read';
+                console.log('[Notification][AllRead][Step 1] markAllAsRead called', { endpoint: markAllEndpoint });
+                fetch(markAllEndpoint, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -1347,11 +1363,13 @@
                     })
                     .then(response => response.json())
                     .then(data => {
+                        console.log('[Notification][AllRead][Step 2] Controller JSON payload', data);
                         if (data.success) {
+                            console.log('[Notification][AllRead][Step 3] Reloading page after success');
                             location.reload();
                         }
                     })
-                    .catch(error => console.error('Error:', error));
+                    .catch(error => console.error('[Notification][AllRead][Step X] Exception', error));
             }
             </script>
         </nav>

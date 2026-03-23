@@ -4,7 +4,7 @@
 @php
     $canDeleteSellingVoucherDateRange = hasRole('Admin') || hasRole('Mess-Admin');
 @endphp
-<div class="container-fluid">
+<div class="container-fluid py-2 py-lg-3">
     <x-breadcrum title="Selling Voucher with Date Range"></x-breadcrum>
 
 
@@ -19,7 +19,7 @@
     </div>  
     @endif
 
-    <div class="card mb-4 border-0 shadow-sm selling-voucher-filter">
+    <div class="card mb-4 border-0 shadow-sm rounded-4 selling-voucher-filter">
         <div class="card-body p-3 p-lg-4">
         <div class="d-flex justify-content-between align-items-start align-items-md-center mb-4 flex-wrap gap-3">
         <div>
@@ -75,7 +75,7 @@
         </div>
     </div>
 
-    <div class="card selling-voucher-card">
+    <div class="card border-0 shadow-sm rounded-4 selling-voucher-card">
         <div class="card-body">
             <div class="d-flex justify-content-end mb-2">
                 <div class="input-group input-group-sm selling-voucher-search-wrapper" style="max-width: 260px;">
@@ -89,7 +89,7 @@
                 </div>
             </div>
             <div class="table-responsive selling-voucher-table-wrap">
-                <table class="table align-middle mb-0 voucher-table w-100" id="sellingVoucherDateRangeTable">
+                <table class="table table-hover align-middle mb-0 voucher-table w-100" id="sellingVoucherDateRangeTable">
                     <thead>
                         <tr>
                             <th>S. No.</th>
@@ -133,7 +133,7 @@
                                 <span class="badge rounded-1 text-bg-info">Returned</span>
                                 @endif
                                 @if($loop->first)
-                                <button type="button" class="btn  btn-outline-secondary ms-1 btn-return-report d-inline-flex align-items-center gap-1" data-report-id="{{ $report->id }}" title="Return">
+                                <button type="button" class="btn btn-sm btn-outline-secondary ms-1 btn-return-report d-inline-flex align-items-center gap-1" data-report-id="{{ $report->id }}" title="Return">
                                     <i class="material-symbols-rounded" style="font-size: 1rem;">assignment_return</i>
                                     <span>Return</span>
                                 </button>
@@ -141,11 +141,11 @@
                             </td>
                             <td>
                                 @if($loop->first)
-                                <div class="d-inline-flex gap-1">
-                                    <button type="button" class="btn  btn-outline-primary btn-view-report voucher-icon-btn bg-transparent border-0 text-primary p-0" data-report-id="{{ $report->id }}" title="View">
+                                <div class="d-inline-flex align-items-center gap-1">
+                                    <button type="button" class="btn btn-sm btn-outline-primary btn-view-report voucher-icon-btn" data-report-id="{{ $report->id }}" title="View">
                                         <i class="material-symbols-rounded">visibility</i>
                                     </button>
-                                    <button type="button" class="btn  btn-outline-warning btn-edit-report voucher-icon-btn bg-transparent border-0 text-primary p-0" data-report-id="{{ $report->id }}" title="{{ $report->status == \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED ? 'Edit is disabled for approved voucher' : 'Edit' }}" @if($report->status == \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED) disabled @endif>
+                                    <button type="button" class="btn btn-sm btn-outline-warning btn-edit-report voucher-icon-btn" data-report-id="{{ $report->id }}" title="{{ $report->status == \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED ? 'Edit is disabled for approved voucher' : 'Edit' }}" @if($report->status == \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED) disabled @endif>
                                         <i class="material-symbols-rounded">edit</i>
                                     </button>
                                 </div>
@@ -153,7 +153,7 @@
                                     <form action="{{ route('admin.mess.selling-voucher-date-range.destroy', $report->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this report?');">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn  btn-danger" title="Delete"><i class="material-symbols-rounded">delete</i></button>
+                                        <button type="submit" class="btn btn-sm btn-outline-danger voucher-icon-btn" title="Delete"><i class="material-symbols-rounded">delete</i></button>
                                     </form>
                                 @endif
                                 @endif
@@ -177,21 +177,21 @@
                                 @else<span class="badge rounded-1 text-bg-secondary">Final</span>@endif
                             </td>
                             <td>
-                                <button type="button" class="btn  btn-outline-secondary btn-return-report d-inline-flex align-items-center gap-1" data-report-id="{{ $report->id }}" title="Return">
+                                <button type="button" class="btn btn-sm btn-outline-secondary btn-return-report d-inline-flex align-items-center gap-1" data-report-id="{{ $report->id }}" title="Return">
                                     <i class="material-symbols-rounded" style="font-size: 1rem;">assignment_return</i>
                                     <span>Return</span>
                                 </button>
                             </td>
                             <td>
-                                <div class="d-inline-flex gap-1">
-                                    <button type="button" class="btn  btn-outline-primary btn-view-report voucher-icon-btn" data-report-id="{{ $report->id }}" title="View"><i class="material-symbols-rounded">visibility</i></button>
-                                    <button type="button" class="btn  btn-outline-warning btn-edit-report voucher-icon-btn" data-report-id="{{ $report->id }}" title="{{ $report->status == \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED ? 'Edit is disabled for approved voucher' : 'Edit' }}" @if($report->status == \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED) disabled @endif><i class="material-symbols-rounded">edit</i></button>
+                                <div class="d-inline-flex align-items-center gap-1">
+                                    <button type="button" class="btn btn-sm btn-outline-primary btn-view-report voucher-icon-btn" data-report-id="{{ $report->id }}" title="View"><i class="material-symbols-rounded">visibility</i></button>
+                                    <button type="button" class="btn btn-sm btn-outline-warning btn-edit-report voucher-icon-btn" data-report-id="{{ $report->id }}" title="{{ $report->status == \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED ? 'Edit is disabled for approved voucher' : 'Edit' }}" @if($report->status == \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED) disabled @endif><i class="material-symbols-rounded">edit</i></button>
                                 </div>
                                 @if($canDeleteSellingVoucherDateRange)
                                     <form action="{{ route('admin.mess.selling-voucher-date-range.destroy', $report->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this report?');">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn  btn-outline-danger voucher-icon-btn text-primary bg-transparent border-0" title="Delete"><i class="material-symbols-rounded">delete</i></button>
+                                        <button type="submit" class="btn btn-sm btn-outline-danger voucher-icon-btn" title="Delete"><i class="material-symbols-rounded">delete</i></button>
                                     </form>
                                 @endif
                             </td>
@@ -251,11 +251,56 @@ document.addEventListener('DOMContentLoaded', function () {
 @endpush
 </div>
 
-{{-- Tom Select CSS --}}
-<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
-{{-- Tom Select JS --}}
-<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
-<style>.ts-dropdown { z-index: 2000; }</style>
+{{-- Choices.js CSS --}}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+{{-- Choices.js JS --}}
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+<style>
+    .ts-dropdown { z-index: 2000; }
+    .ts-wrapper.choices { margin-bottom: 0; }
+    .ts-wrapper.choices .choices__inner {
+        min-height: calc(1.5em + 0.75rem + 2px);
+        padding: 0.375rem 0.75rem;
+        border: 1px solid #ced4da;
+        border-radius: 0.375rem;
+        background-color: #fff;
+    }
+    .ts-wrapper.choices.is-open .choices__inner,
+    .ts-wrapper.choices.is-focused .choices__inner {
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+    .ts-wrapper.choices .choices__list--single { padding: 0; }
+    .ts-wrapper.choices[data-type*="select-one"] .choices__input {
+        display: block !important;
+        width: 100% !important;
+        min-width: 100% !important;
+    }
+    .ts-wrapper.choices .choices__list--dropdown .choices__input--cloned {
+        display: block !important;
+        position: relative !important;
+        opacity: 1 !important;
+        min-height: 34px;
+        width: 100% !important;
+    }
+    .voucher-icon-btn {
+        width: 2rem;
+        height: 2rem;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 0.5rem;
+    }
+    .voucher-section-card {
+        border: 1px solid var(--bs-border-color-translucent);
+        border-radius: 0.75rem;
+    }
+    .voucher-section-card .card-header {
+        background: var(--bs-tertiary-bg);
+        border-bottom: 1px solid var(--bs-border-color-translucent);
+    }
+</style>
 
 {{-- Add Report Modal --}}
 <style>
@@ -408,7 +453,7 @@ document.addEventListener('DOMContentLoaded', function () {
 </style>
 <div class="modal fade" id="addReportModal" tabindex="-1" aria-labelledby="addReportModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-xl-down modal-dialog-centered">
-        <div class="modal-content">
+        <div class="modal-content border-0 shadow">
             <form action="{{ route('admin.mess.selling-voucher-date-range.store') }}" method="POST" id="addReportForm" enctype="multipart/form-data">
                 @csrf
                 <div class="modal-header border-bottom">
@@ -428,7 +473,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     @endif
 
                     {{-- Voucher Details (exactly same as Add Selling Voucher) --}}
-                    <div class="card mb-4 voucher-section-card">
+                    <div class="card mb-4 voucher-section-card shadow-sm">
                         <div class="card-header py-3">
                             <h6 class="mb-0 fw-semibold text-primary">Voucher Details</h6>
                         </div>
@@ -533,14 +578,14 @@ document.addEventListener('DOMContentLoaded', function () {
                     <div class="card mb-4 voucher-section-card">
                         <div class="card-header d-flex justify-content-between align-items-center py-3">
                             <h6 class="mb-0 fw-semibold text-primary">Item Details</h6>
-                            <button type="button" class="btn  btn-outline-primary d-inline-flex align-items-center gap-1" id="addModalAddItemRow">
+                            <button type="button" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1" id="addModalAddItemRow">
                                 <i class="material-symbols-rounded" style="font-size: 1rem;">add</i>
                                 <span>Add Item</span>
                             </button>
                         </div>
                         <div class="card-body p-0">
                             <div class="table-responsive">
-                                <table class="table table-bordered table-sm align-middle mb-0" id="addReportItemsTable">
+                                <table class="table table-bordered table-sm table-hover align-middle mb-0" id="addReportItemsTable">
                                     <thead class="voucher-brand-head">
                                         <tr>
                                             <th style="min-width: 260px;">Item Name <span class="text-white">*</span></th>
@@ -574,7 +619,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                             <td><input type="date" name="items[0][issue_date]" class="form-control  dr-issue-date" value="{{ date('Y-m-d') }}"></td>
                                             <td><input type="number" name="items[0][rate]" class="form-control  dr-rate" step="0.01" min="0" required></td>
                                             <td><input type="text" class="form-control  dr-total bg-light" readonly></td>
-                                            <td><button type="button" class="btn  btn-outline-danger dr-remove-row voucher-icon-btn" disabled title="Remove">×</button></td>
+                                            <td><button type="button" class="btn btn-sm btn-outline-danger dr-remove-row voucher-icon-btn" disabled title="Remove">×</button></td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -717,7 +762,7 @@ document.addEventListener('DOMContentLoaded', function () {
 </style>
 <div class="modal fade" id="viewReportModal" tabindex="-1" aria-labelledby="viewReportModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-xl-down modal-dialog-centered">
-        <div class="modal-content">
+        <div class="modal-content border-0 shadow">
             <div class="modal-header border-bottom">
                 <h5 class="modal-title fw-semibold" id="viewReportModalLabel">View Selling Voucher with Date Range</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -896,7 +941,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 </div>
                 <div class="modal-body">
                     {{-- Voucher Details (exactly same as Edit Selling Voucher) --}}
-                    <div class="card mb-4 voucher-section-card">
+                    <div class="card mb-4 voucher-section-card shadow-sm">
                         <div class="card-header py-3">
                             <h6 class="mb-0 fw-semibold text-primary">Voucher Details</h6>
                         </div>
@@ -997,14 +1042,14 @@ document.addEventListener('DOMContentLoaded', function () {
                     <div class="card mb-4 voucher-section-card">
                         <div class="card-header d-flex justify-content-between align-items-center py-3">
                             <h6 class="mb-0 fw-semibold text-primary">Item Details</h6>
-                            <button type="button" class="btn  btn-outline-primary d-inline-flex align-items-center gap-1" id="editModalAddItemRow">
+                            <button type="button" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1" id="editModalAddItemRow">
                                 <i class="material-symbols-rounded" style="font-size: 1rem;">add</i>
                                 <span>Add Item</span>
                             </button>
                         </div>
                         <div class="card-body p-0">
                             <div class="table-responsive">
-                                <table class="table table-bordered table-sm align-middle mb-0">
+                                <table class="table table-bordered table-sm table-hover align-middle mb-0">
                                     <thead class="voucher-brand-head">
                                         <tr>
                                             <th style="min-width: 180px;">Item Name <span class="text-white">*</span></th>
@@ -1052,6 +1097,87 @@ document.addEventListener('DOMContentLoaded', function () {
         let currentStoreId = null;
         let editCurrentStoreId = null;
 
+        // Native Choices.js instance helper (keeps legacy alias for existing logic).
+        function createChoicesInstance(selectEl, settings) {
+            if (!selectEl || typeof window.Choices === 'undefined') return null;
+            if (selectEl.choicesInstance) return selectEl.choicesInstance;
+            settings = settings || {};
+
+            var choiceConfig = {
+                allowHTML: false,
+                itemSelectText: '',
+                shouldSort: false,
+                searchEnabled: true,
+                searchChoices: true,
+                searchFloor: 0,
+                searchResultLimit: typeof settings.maxOptions === 'number' ? settings.maxOptions : -1,
+                placeholder: true,
+                placeholderValue: settings.placeholder || (selectEl.getAttribute('placeholder') || ''),
+                searchPlaceholderValue: ''
+            };
+
+            var choices = new window.Choices(selectEl, choiceConfig);
+            var api = {
+                _choices: choices,
+                selectEl: selectEl,
+                settings: settings,
+                activeOption: null,
+                items: [],
+                wrapper: choices.containerOuter ? choices.containerOuter.element : null,
+                control_input: null,
+                getValue: function() { return this.selectEl ? (this.selectEl.value || '') : ''; },
+                setValue: function(v) {
+                    var value = (v === null || typeof v === 'undefined') ? '' : String(v);
+                    this._choices.removeActiveItems();
+                    if (value !== '') this._choices.setChoiceByValue(value);
+                    this.syncItems();
+                },
+                clear: function() {
+                    this._choices.removeActiveItems();
+                    this.syncItems();
+                },
+                addOption: function(opt) {
+                    if (!opt) return;
+                    var val = (opt.value === null || typeof opt.value === 'undefined') ? '' : String(opt.value);
+                    this._choices.setChoices([{ value: val, label: opt.text || val, selected: false, disabled: false }], 'value', 'label', false);
+                },
+                destroy: function() {
+                    if (this._choices) this._choices.destroy();
+                    if (this.selectEl) {
+                        this.selectEl.choicesInstance = null;
+                        this.selectEl.tomselect = null;
+                    }
+                },
+                setTextboxValue: function(v) {
+                    if (this.control_input) this.control_input.value = v || '';
+                },
+                onSearchChange: function() {},
+                refreshOptions: function() {},
+                syncItems: function() {
+                    var v = this.getValue();
+                    this.items = (v === '' || v === null || typeof v === 'undefined') ? [] : [String(v)];
+                }
+            };
+            api.control_input = api.wrapper ? api.wrapper.querySelector('input.choices__input--cloned') : null;
+            if (api.wrapper && api.wrapper.classList) api.wrapper.classList.add('ts-wrapper');
+            if (choices.dropdown && choices.dropdown.element && choices.dropdown.element.classList) {
+                choices.dropdown.element.classList.add('ts-dropdown');
+            }
+            api.syncItems();
+
+            selectEl.addEventListener('change', function() { api.syncItems(); });
+            selectEl.addEventListener('showDropdown', function() {
+                if (typeof settings.onDropdownOpen === 'function') {
+                    settings.onDropdownOpen.call(api, choices.dropdown ? choices.dropdown.element : null);
+                }
+            });
+            if (typeof settings.onInitialize === 'function') settings.onInitialize.call(api);
+
+            selectEl.choicesInstance = api;
+            selectEl.tomselect = api; // legacy alias until full cleanup
+            return api;
+        }
+
         var clientNameOptionsAdd = [];
         var clientNameOptionsEdit = [];
         document.addEventListener('DOMContentLoaded', function() {
@@ -1094,8 +1220,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 opt.setAttribute('data-client-name', ((o.clientName || '').toLowerCase().trim()));
                 selectEl.appendChild(opt);
             });
-            if (typeof TomSelect !== 'undefined') {
-                var inst = new TomSelect(selectEl, createBlankSearchConfig({
+            if (typeof Choices !== 'undefined') {
+                var inst = createChoicesInstance(selectEl, createBlankSearchConfig({
                     placeholder: 'Select Client Name',
                     clearOnOpen: true
                 }));
@@ -1117,8 +1243,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 opt.setAttribute('data-client-name', ((o.clientName || '').toLowerCase().trim()));
                 editSel.appendChild(opt);
             });
-            if (typeof TomSelect !== 'undefined') {
-                editModalTomSelectInstances.client = new TomSelect(editSel, createBlankSearchConfig({
+            if (typeof Choices !== 'undefined') {
+                editModalTomSelectInstances.client = createChoicesInstance(editSel, createBlankSearchConfig({
                     placeholder: 'Select Client Name',
                     clearOnOpen: true
                 }));
@@ -1188,11 +1314,18 @@ document.addEventListener('DOMContentLoaded', function () {
                 onDropdownOpen: function (dropdown) {
                     var self = this;
                     function clearInputAndCursor() {
-                        var input = self.control_input || (dropdown && dropdown.querySelector('input'));
+                        // Choices dropdown me visible cloned input ko priority do.
+                        var input = (dropdown && dropdown.querySelector('input.choices__input--cloned')) ||
+                                    (dropdown && dropdown.querySelector('input')) ||
+                                    self.control_input;
                         if (typeof self.setTextboxValue === 'function') self.setTextboxValue('');
                         if (typeof self.onSearchChange === 'function') self.onSearchChange('');
                         if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
                         if (input) {
+                            // Ensure search field is visible in all modal dropdown contexts (including Edit modal).
+                            input.style.display = 'block';
+                            input.style.visibility = 'visible';
+                            input.style.opacity = '1';
                             input.value = '';
                             input.focus();
                             try { input.setSelectionRange(0, 0); } catch (e) {}
@@ -1220,12 +1353,27 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             }, extra || {});
         }
+        function createItemSelectConfig() {
+            return createBlankSearchConfig({
+                placeholder: 'Select Item',
+                maxOptions: null,
+                clearOnOpen: false,
+                searchEnabled: true,
+                searchChoices: true,
+                searchFloor: 0
+            });
+        }
+        function ensureChoicesInitializedForItemSelect(selectEl) {
+            if (!selectEl || typeof Choices === 'undefined') return null;
+            if (selectEl.tomselect) return selectEl.tomselect;
+            return createChoicesInstance(selectEl, createItemSelectConfig());
+        }
 
         function initAddModalTomSelects() {
-            if (typeof TomSelect === 'undefined') return;
+            if (typeof Choices === 'undefined') return;
             var paymentSel = document.querySelector('#addReportModal select[name="payment_type"]');
             if (paymentSel && !paymentSel.tomselect) {
-                addModalTomSelectInstances.payment = new TomSelect(paymentSel, createBlankSearchConfig({
+                addModalTomSelectInstances.payment = createChoicesInstance(paymentSel, createBlankSearchConfig({
                     placeholder: 'Payment Type',
                     clearOnOpen: true
                 }));
@@ -1236,24 +1384,24 @@ document.addEventListener('DOMContentLoaded', function () {
             if (clientSel && slug !== 'ot' && slug !== 'course' && clientNameOptionsAdd.length) {
                 rebuildClientNameSelect(clientSel, clientNameOptionsAdd, slug);
             } else if (clientSel && !clientSel.tomselect) {
-                addModalTomSelectInstances.client = new TomSelect(clientSel, createBlankSearchConfig({
+                addModalTomSelectInstances.client = createChoicesInstance(clientSel, createBlankSearchConfig({
                     placeholder: 'Select Client Name',
                     clearOnOpen: true
                 }));
             }
             var storeSel = document.querySelector('#addReportModal select[name="inve_store_master_pk"]');
             if (storeSel && !storeSel.tomselect) {
-                addModalTomSelectInstances.store = new TomSelect(storeSel, createBlankSearchConfig({
+                addModalTomSelectInstances.store = createChoicesInstance(storeSel, createBlankSearchConfig({
                     placeholder: 'Select Store',
                     clearOnOpen: true
                 }));
             }
-            var nameSelectIds = ['drOtCourseSelect', 'drCourseSelect', 'drFacultySelect', 'drAcademyStaffSelect', 'drMessStaffSelect', 'drOtStudentSelect', 'drCourseNameSelect'];
+            var nameSelectIds = ['drOtCourseSelect', 'drCourseSelect', 'drFacultySelect', 'drAcademyStaffSeditelect', 'drMessStaffSelect', 'drOtStudentSelect', 'drCourseNameSelect'];
             nameSelectIds.forEach(function(id) {
                 var sel = document.getElementById(id);
                 if (!sel || sel.tomselect) return;
                 var ph = id.indexOf('Faculty') !== -1 ? 'Select Faculty' : id.indexOf('Academy') !== -1 ? 'Select Academy Staff' : id.indexOf('Mess') !== -1 ? 'Select Mess Staff' : id.indexOf('OtStudent') !== -1 ? 'Select Student' : 'Select Course';
-                new TomSelect(sel, createBlankSearchConfig({
+                createChoicesInstance(sel, createBlankSearchConfig({
                     placeholder: ph,
                     clearOnOpen: true
                 }));
@@ -1265,11 +1413,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (clientSel) setSelectVisible(clientSel, slug !== 'ot' && slug !== 'course');
             document.querySelectorAll('#addModalItemsBody .dr-item-select').forEach(function(select) {
                 if (select.tomselect) return;
-                new TomSelect(select, createBlankSearchConfig({
-                    placeholder: 'Select Item',
-                    maxOptions: null,
-                    clearOnOpen: true
-                }));
+                createChoicesInstance(select, createItemSelectConfig());
             });
             if (typeof updateDrNameField === 'function') updateDrNameField();
             var addChecked = document.querySelector('#addReportModal .dr-client-type-radio:checked');
@@ -1280,11 +1424,32 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (w2) w2.style.display = '';
             }
         }
+
+        // Defensive init: if an item select is clicked before Choices is attached,
+        // initialize immediately and open searchable dropdown.
+        document.addEventListener('mousedown', function(e) {
+            var selectEl = e.target && e.target.closest ? e.target.closest('#addModalItemsBody .dr-item-select, #editModalItemsBody .edit-dr-item-select') : null;
+            if (!selectEl || selectEl.tomselect || typeof Choices === 'undefined') return;
+
+            e.preventDefault();
+            var inst = ensureChoicesInitializedForItemSelect(selectEl);
+            setTimeout(function() {
+                if (inst && inst._choices && typeof inst._choices.showDropdown === 'function') {
+                    inst._choices.showDropdown();
+                }
+                var wrapper = inst && inst.wrapper ? inst.wrapper : null;
+                var input = wrapper ? wrapper.querySelector('.choices__list--dropdown .choices__input--cloned') : null;
+                if (input) {
+                    input.style.display = 'block';
+                    input.focus();
+                }
+            }, 0);
+        }, true);
         function initEditModalTomSelects() {
-            if (typeof TomSelect === 'undefined') return;
+            if (typeof Choices === 'undefined') return;
             var paymentSel = document.querySelector('#editReportModal select.edit-payment-type');
             if (paymentSel && !paymentSel.tomselect) {
-                editModalTomSelectInstances.payment = new TomSelect(paymentSel, createBlankSearchConfig({
+                editModalTomSelectInstances.payment = createChoicesInstance(paymentSel, createBlankSearchConfig({
                     placeholder: 'Payment Type',
                     clearOnOpen: true
                 }));
@@ -1301,14 +1466,14 @@ document.addEventListener('DOMContentLoaded', function () {
                     else clientSel.value = preservedPk;
                 }
             } else if (clientSel && !clientSel.tomselect) {
-                editModalTomSelectInstances.client = new TomSelect(clientSel, createBlankSearchConfig({
+                editModalTomSelectInstances.client = createChoicesInstance(clientSel, createBlankSearchConfig({
                     placeholder: 'Select Client Name',
                     clearOnOpen: true
                 }));
             }
             var storeSel = document.querySelector('#editReportModal select.edit-store-id');
             if (storeSel && !storeSel.tomselect) {
-                editModalTomSelectInstances.store = new TomSelect(storeSel, createBlankSearchConfig({
+                editModalTomSelectInstances.store = createChoicesInstance(storeSel, createBlankSearchConfig({
                     placeholder: 'Select Store',
                     clearOnOpen: true
                 }));
@@ -1328,18 +1493,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 var sel = document.getElementById(id);
                 if (!sel || sel.tomselect) return;
                 var ph = id.indexOf('Faculty') !== -1 ? 'Select Faculty' : id.indexOf('Academy') !== -1 ? 'Select Academy Staff' : id.indexOf('Mess') !== -1 ? 'Select Mess Staff' : 'Select Course';
-                new TomSelect(sel, createBlankSearchConfig({
+                createChoicesInstance(sel, createBlankSearchConfig({
                     placeholder: ph,
                     clearOnOpen: true
                 }));
             });
             document.querySelectorAll('#editModalItemsBody .edit-dr-item-select').forEach(function(select) {
                 if (select.tomselect) return;
-                new TomSelect(select, createBlankSearchConfig({
-                    placeholder: 'Select Item',
-                    maxOptions: null,
-                    clearOnOpen: true
-                }));
+                createChoicesInstance(select, createItemSelectConfig());
             });
             if (typeof updateEditDrNameField === 'function') updateEditDrNameField();
             var editChecked = document.querySelector('#editReportModal .edit-dr-client-type-radio:checked');
@@ -1396,13 +1557,13 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         document.addEventListener('DOMContentLoaded', function() {
-            if (typeof TomSelect === 'undefined') return;
+            if (typeof Choices === 'undefined') return;
             var filterStatus = document.querySelector('form[method="GET"] select[name="status"]');
             var filterStore = document.querySelector('form[method="GET"] select[name="store"]');
 
             if (filterStatus) {
                 if (filterStatus.tomselect) filterStatus.tomselect.destroy();
-                new TomSelect(filterStatus, {
+                createChoicesInstance(filterStatus, {
                     allowEmptyOption: true,
                     dropdownParent: 'body',
                     placeholder: 'All Status',
@@ -1457,7 +1618,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             if (filterStore) {
                 if (filterStore.tomselect) filterStore.tomselect.destroy();
-                new TomSelect(filterStore, {
+                createChoicesInstance(filterStore, {
                     allowEmptyOption: true,
                     dropdownParent: 'body',
                     placeholder: 'All Stores',
@@ -1640,7 +1801,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     select.appendChild(option);
                 });
 
-                if (typeof TomSelect !== 'undefined') new TomSelect(select, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Item', maxOptions: null });
+                if (typeof Choices !== 'undefined') createChoicesInstance(select, createItemSelectConfig());
                 updateAddRowUnit(row);
             });
         }
@@ -1672,7 +1833,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     select.appendChild(option);
                 });
 
-                if (typeof TomSelect !== 'undefined') new TomSelect(select, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Item', maxOptions: null });
+                if (typeof Choices !== 'undefined') createChoicesInstance(select, createItemSelectConfig());
                 const o = getSelectSelectedOption(select);
                 const unitInp = row.querySelector('.edit-dr-unit');
                 const rateInp = row.querySelector('.edit-dr-rate');
@@ -1704,7 +1865,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 '<td><input type="date" name="items[' + index + '][issue_date]" class="form-control  dr-issue-date" value="' + new Date().toISOString().slice(0, 10) + '"></td>' +
                 '<td><input type="number" name="items[' + index + '][rate]" class="form-control  dr-rate" step="0.01" min="0" required></td>' +
                 '<td><input type="text" class="form-control  dr-total bg-light" readonly></td>' +
-                '<td><button type="button" class="btn  btn-outline-danger dr-remove-row voucher-icon-btn" title="Remove">×</button></td>' +
+                '<td><button type="button" class="btn btn-sm btn-outline-danger dr-remove-row voucher-icon-btn" title="Remove">×</button></td>' +
                 '</tr>';
         }
 
@@ -1817,14 +1978,8 @@ document.addEventListener('DOMContentLoaded', function () {
             tbody.appendChild(newTr);
             addRowIndex++;
             var newItemSelect = newTr.querySelector('.dr-item-select');
-            if (newItemSelect && typeof TomSelect !== 'undefined') {
-                new TomSelect(newItemSelect, createBlankSearchConfig({
-                    allowEmptyOption: true,
-                    dropdownParent: 'body',
-                    placeholder: 'Select Item',
-                    maxOptions: null,
-                    clearOnOpen: true
-                }));
+            if (newItemSelect && typeof Choices !== 'undefined') {
+                createChoicesInstance(newItemSelect, createItemSelectConfig());
             }
             updateAddRowUnit(newTr);
             newTr.querySelector('.dr-avail').addEventListener('input', function() {
@@ -2098,7 +2253,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         if (otStudentSelect.tomselect) { try { otStudentSelect.tomselect.destroy(); } catch (e) {} }
                         otStudentSelect.innerHTML = '<option value="">Select course first</option>';
                         otStudentSelect.setAttribute('required', 'required');
-                        if (typeof TomSelect !== 'undefined') new TomSelect(otStudentSelect, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Student' });
+                        if (typeof Choices !== 'undefined') createChoicesInstance(otStudentSelect, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Student' });
                     }
                     if (drCourseSelect) {
                         setSelectVisible(drCourseSelect, false);
@@ -2134,7 +2289,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         otStudentSelect.removeAttribute('required');
                         if (otStudentSelect.tomselect) { try { otStudentSelect.tomselect.destroy(); } catch (e) {} }
                         otStudentSelect.innerHTML = '<option value="">Select Student</option>';
-                        if (typeof TomSelect !== 'undefined') new TomSelect(otStudentSelect, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Student' });
+                        if (typeof Choices !== 'undefined') createChoicesInstance(otStudentSelect, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Student' });
                     }
                     if (drCourseSelect) {
                         setSelectVisible(drCourseSelect, true);
@@ -2171,7 +2326,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         otStudentSelect.removeAttribute('required');
                         if (otStudentSelect.tomselect) { try { otStudentSelect.tomselect.destroy(); } catch (e) {} }
                         otStudentSelect.innerHTML = '<option value="">Select Student</option>';
-                        if (typeof TomSelect !== 'undefined') new TomSelect(otStudentSelect, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Student' });
+                        if (typeof Choices !== 'undefined') createChoicesInstance(otStudentSelect, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Student' });
                     }
                     if (drCourseSelect) {
                         setSelectVisible(drCourseSelect, false);
@@ -2253,7 +2408,7 @@ document.addEventListener('DOMContentLoaded', function () {
             nameInput.value = (selectedOpt && selectedOpt.dataset.courseName) ? selectedOpt.dataset.courseName : '';
             if (!coursePk) {
                 otStudentSelect.innerHTML = '<option value="">Select course first</option>';
-                if (typeof TomSelect !== 'undefined') new TomSelect(otStudentSelect, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Student' });
+                if (typeof Choices !== 'undefined') createChoicesInstance(otStudentSelect, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Student' });
                 return;
             }
             fetch(baseUrl + '/students-by-course/' + coursePk, {
@@ -2271,11 +2426,11 @@ document.addEventListener('DOMContentLoaded', function () {
                         opt.textContent = s.display_name || '—';
                         otStudentSelect.appendChild(opt);
                     });
-                    if (typeof TomSelect !== 'undefined') new TomSelect(otStudentSelect, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Student' });
+                    if (typeof Choices !== 'undefined') createChoicesInstance(otStudentSelect, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Student' });
                 })
                 .catch(function() {
                     otStudentSelect.innerHTML = '<option value="">Error loading students</option>';
-                    if (typeof TomSelect !== 'undefined') new TomSelect(otStudentSelect, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Student' });
+                    if (typeof Choices !== 'undefined') createChoicesInstance(otStudentSelect, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Student' });
                 });
         });
         document.getElementById('drOtStudentSelect').addEventListener('change', function() {
@@ -2483,7 +2638,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         if (otStudentSelect.tomselect) { try { otStudentSelect.tomselect.destroy(); } catch (e) {} }
                         otStudentSelect.innerHTML = '<option value="">Select course first</option>';
                         otStudentSelect.setAttribute('required', 'required');
-                        if (typeof TomSelect !== 'undefined') new TomSelect(otStudentSelect, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Student' });
+                        if (typeof Choices !== 'undefined') createChoicesInstance(otStudentSelect, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Student' });
                     }
                     if (editDrCourseSelect) {
                         setSelectVisible(editDrCourseSelect, false);
@@ -2519,7 +2674,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         otStudentSelect.removeAttribute('required');
                         if (otStudentSelect.tomselect) { try { otStudentSelect.tomselect.destroy(); } catch (e) {} }
                         otStudentSelect.innerHTML = '<option value="">Select Student</option>';
-                        if (typeof TomSelect !== 'undefined') new TomSelect(otStudentSelect, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Student' });
+                        if (typeof Choices !== 'undefined') createChoicesInstance(otStudentSelect, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Student' });
                     }
                     if (editDrCourseSelect) {
                         setSelectVisible(editDrCourseSelect, true);
@@ -2556,7 +2711,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         otStudentSelect.removeAttribute('required');
                         if (otStudentSelect.tomselect) { try { otStudentSelect.tomselect.destroy(); } catch (e) {} }
                         otStudentSelect.innerHTML = '<option value="">Select Student</option>';
-                        if (typeof TomSelect !== 'undefined') new TomSelect(otStudentSelect, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Student' });
+                        if (typeof Choices !== 'undefined') createChoicesInstance(otStudentSelect, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Student' });
                     }
                     if (editDrCourseSelect) {
                         setSelectVisible(editDrCourseSelect, false);
@@ -2590,7 +2745,7 @@ document.addEventListener('DOMContentLoaded', function () {
             nameInput.value = (selectedOpt && selectedOpt.dataset.courseName) ? selectedOpt.dataset.courseName : '';
             if (!coursePk) {
                 otStudentSelect.innerHTML = '<option value="">Select course first</option>';
-                if (typeof TomSelect !== 'undefined') new TomSelect(otStudentSelect, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Student' });
+                if (typeof Choices !== 'undefined') createChoicesInstance(otStudentSelect, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Student' });
                 return;
             }
             fetch(baseUrl + '/students-by-course/' + coursePk, {
@@ -2608,11 +2763,11 @@ document.addEventListener('DOMContentLoaded', function () {
                         opt.textContent = s.display_name || '—';
                         otStudentSelect.appendChild(opt);
                     });
-                    if (typeof TomSelect !== 'undefined') new TomSelect(otStudentSelect, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Student' });
+                    if (typeof Choices !== 'undefined') createChoicesInstance(otStudentSelect, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Student' });
                 })
                 .catch(function() {
                     otStudentSelect.innerHTML = '<option value="">Error loading students</option>';
-                    if (typeof TomSelect !== 'undefined') new TomSelect(otStudentSelect, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Student' });
+                    if (typeof Choices !== 'undefined') createChoicesInstance(otStudentSelect, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Student' });
                 });
         });
         document.getElementById('editDrOtStudentSelect').addEventListener('change', function() {
@@ -2668,7 +2823,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 '<td><input type="date" name="items[' + index + '][issue_date]" class="form-control  edit-dr-issue-date" value="' + issueDate + '"></td>' +
                 '<td><input type="text" name="items[' + index + '][rate]" class="form-control  edit-dr-rate" required value="' + rate + '"></td>' +
                 '<td><input type="text" class="form-control  edit-dr-total bg-light" readonly value="' + total + '"></td>' +
-                '<td><button type="button" class="btn  btn-outline-danger edit-dr-remove-row voucher-icon-btn" title="Remove">×</button></td>' +
+                '<td><button type="button" class="btn btn-sm btn-outline-danger edit-dr-remove-row voucher-icon-btn" title="Remove">×</button></td>' +
                 '</tr>';
         }
 
@@ -2751,7 +2906,7 @@ document.addEventListener('DOMContentLoaded', function () {
             tbody.appendChild(newTr);
             editRowIndex++;
             const sel = newTr.querySelector('.edit-dr-item-select');
-            if (sel && typeof TomSelect !== 'undefined') new TomSelect(sel, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Item', maxOptions: null });
+            if (sel && typeof Choices !== 'undefined') createChoicesInstance(sel, createItemSelectConfig());
             const opt = getSelectSelectedOption(sel);
             newTr.querySelector('.edit-dr-unit').value = (opt && opt.dataset.unit) ? opt.dataset.unit : '—';
             const initAvailInp = newTr.querySelector('.edit-dr-avail');
@@ -2802,32 +2957,65 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
 
-        // Edit modal: Sirf last row ki rate field par Enter se new row append
+        // Edit modal keyboard flow:
+        // - Dropdowns: Enter behaves like Tab (next focus)
+        // - Last row Rate: Enter appends a new row
+        // - Other fields: block Enter to avoid accidental submit
         const editReportFormKeydownEl = document.getElementById('editReportForm');
         const editModalItemsBodyEl = document.getElementById('editModalItemsBody');
         if (editReportFormKeydownEl && editModalItemsBodyEl) {
+            function getNextEditFocusable(currentEl) {
+                const modalEl = document.getElementById('editReportModal');
+                if (!modalEl) return null;
+                const focusable = Array.from(modalEl.querySelectorAll('input, select, textarea, button, [tabindex]')).filter(function(el) {
+                    if (el.disabled) return false;
+                    if (el.getAttribute('tabindex') === '-1') return false;
+                    if (el.type === 'hidden') return false;
+                    if (el.offsetParent === null) return false;
+                    return true;
+                });
+                const currentIndex = focusable.indexOf(currentEl);
+                return currentIndex >= 0 && currentIndex < focusable.length - 1 ? focusable[currentIndex + 1] : null;
+            }
+
+            function focusNextFromDropdown(activeEl) {
+                const wrapper = activeEl && activeEl.closest ? activeEl.closest('.ts-wrapper') : null;
+                if (wrapper) {
+                    const nextEl = getNextEditFocusable(wrapper);
+                    if (nextEl && typeof nextEl.focus === 'function') nextEl.focus();
+                    return true;
+                }
+                if (activeEl && activeEl.matches && activeEl.matches('select')) {
+                    const nextEl = getNextEditFocusable(activeEl);
+                    if (nextEl && typeof nextEl.focus === 'function') nextEl.focus();
+                    return true;
+                }
+                return false;
+            }
+
             editReportFormKeydownEl.addEventListener('keydown', function(e) {
                 if (e.key !== 'Enter') return;
                 const activeEl = document.activeElement;
-                if (!activeEl || !editModalItemsBodyEl.contains(activeEl)) return;
+                if (!activeEl || !editReportFormKeydownEl.contains(activeEl)) return;
 
                 const row = activeEl.closest('.edit-dr-item-row');
-                if (!row) return;
-                const lastRow = editModalItemsBodyEl.querySelector('.edit-dr-item-row:last-child');
-                if (!lastRow) return;
-
                 const isRateField = activeEl.classList && activeEl.classList.contains('edit-dr-rate');
-                if (isRateField && row === lastRow) {
+                const lastRow = editModalItemsBodyEl.querySelector('.edit-dr-item-row:last-child');
+                if (isRateField && row && lastRow && row === lastRow) {
                     const addBtn = document.getElementById('editModalAddItemRow');
                     if (addBtn) {
                         e.preventDefault();
                         addBtn.click();
                     }
-                } else {
-                    // Baaki fields par Enter => append/submit block
-                    e.preventDefault();
-                    if (activeEl.blur) activeEl.blur();
+                    return;
                 }
+
+                if (focusNextFromDropdown(activeEl)) {
+                    e.preventDefault();
+                    return;
+                }
+
+                e.preventDefault();
             }, true);
         }
 
