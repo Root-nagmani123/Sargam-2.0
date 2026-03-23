@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="admin-force-light">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    @include('admin.layouts.force_light_guard')
     <title>Form Display</title>
     <style>
         body {
@@ -150,7 +151,7 @@
     </style>
 </head>
 
-<body>
+<body class="admin-force-light">
     <div class="container">
         <div class="header">
             <div class="logo-container">

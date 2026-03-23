@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="en" style="height: 100%;">
+<html lang="en" class="admin-force-light" style="height: 100%;">
 
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    @include('admin.layouts.force_light_guard')
    <title>@yield('title') {{ env('APP_TITLE_SUFFIX') }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
     <link rel="stylesheet" href="https://bootstrapdemos.adminmart.com/matdash/dist/assets/css/styles.css">
@@ -21,7 +22,7 @@
     <!-- unified bootstrap include -->
     <!-- Icon library (Bootstrap Icons or Lucide) -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
-    <link href="{{ asset('admin_assets/css/accesibility-style_v1.css') }}" rel="stylesheet">
+    <link href="{{ asset('admin_assets/css/accesibility-style_v1.css') }}?v={{ @filemtime(public_path('admin_assets/css/accesibility-style_v1.css')) ?: time() }}" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
@@ -31,7 +32,7 @@
 </head>
 <x-session_message />
 
-<body style="min-height: 100vh; display: flex; flex-direction: column;background-color: #ffffff;">
+<body class="admin-force-light" style="min-height: 100vh; display: flex; flex-direction: column;background-color: #ffffff;">
     <!-- Top Blue Bar (Govt of India) -->
 <!-- Government Header Strips -->
 <div class="govt-header">
@@ -140,6 +141,38 @@
             </div>
         </div>
     </footer>
+
+    <style id="admin-timetable-light-last-resort">
+        html.admin-force-light,
+        body.admin-force-light,
+        html.admin-force-light .fc-event-card,
+        html.admin-force-light .list-event-card,
+        html.admin-force-light .timeline-event-card,
+        html.admin-force-light .card,
+        html.admin-force-light .dropdown-menu,
+        html.admin-force-light .modal-content,
+        html.admin-force-light .table,
+        html.admin-force-light .form-control,
+        html.admin-force-light .form-select {
+            color-scheme: only light !important;
+            background-color: #fff !important;
+            color: #212529 !important;
+            border-color: #dee2e6 !important;
+        }
+
+        html.admin-force-light .list-event-card .meta,
+        html.admin-force-light .fc-event-card .meta-item,
+        html.admin-force-light .timeline-event-card .meta {
+            color: #6c757d !important;
+        }
+    </style>
+    <script>
+        (function() {
+            if (typeof window.SargamStandaloneForceLight === 'function') {
+                window.SargamStandaloneForceLight();
+            }
+        })();
+    </script>
 
     <!-- Bootstrap JS (local) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>

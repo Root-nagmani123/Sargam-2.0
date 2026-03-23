@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="admin-force-light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    @include('admin.layouts.force_light_guard')
     <title>Faculty Profile - Chandrasekar S</title>
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -288,7 +289,7 @@
         }
     </style>
 </head>
-<body>
+<body class="admin-force-light">
     <div class="profile-container" role="main">
         <!-- Profile Header -->
         <div class="profile-header">

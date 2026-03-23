@@ -1,11 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="admin-force-light">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <meta name="Description" content="Enter your description here" />
+    @include('admin.layouts.force_light_guard')
     <link rel="stylesheet" href="https://unicons.iconscout.com/release/v2.1.9/css/unicons.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.5.0/css/bootstrap.min.css">
     <title>Registration</title>
@@ -336,7 +337,7 @@
     </style>
 </head>
 
-<body>
+<body class="admin-force-light">
 
     <a href="https://front.codes/" class="logo" target="_blank">
         <img src="https://assets.codepen.io/1462889/fcy.png" alt="">

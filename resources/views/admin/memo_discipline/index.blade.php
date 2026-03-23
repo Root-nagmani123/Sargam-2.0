@@ -1,4 +1,5 @@
 @extends('admin.layouts.master')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
 
 @section('title', 'Discipline Memo - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
@@ -334,6 +335,12 @@
 *:focus-visible {
     outline: 3px solid #004a93 !important;
     border-radius: 4px;
+}
+
+/* Choices.js + Bootstrap: avoid double dropdown arrow */
+.choices__inner.form-select {
+    background-image: none !important;
+    padding-right: 2.25rem !important;
 }
 </style>
 <div class="container-fluid">
@@ -900,10 +907,45 @@
 
 </div>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 
 @push('scripts')
 <script>
 $(document).ready(function() {
+    const disciplineChoicesIds = ['program_name', 'status'];
+
+    function initDisciplineChoices() {
+        if (typeof window.Choices === 'undefined') return;
+        disciplineChoicesIds.forEach(function(id) {
+            const el = document.getElementById(id);
+            if (!el || el.dataset.choicesInitialized === 'true') return;
+
+            new Choices(el, {
+                shouldSort: false,
+                searchEnabled: true,
+                searchResultLimit: 50,
+                itemSelectText: '',
+                allowHTML: false,
+                classNames: {
+                    containerInner: ['choices__inner', 'form-select', 'shadow-sm'],
+                    input: ['choices__input', 'form-control', 'form-control-sm', 'border-0', 'shadow-none', 'my-1'],
+                    inputCloned: ['choices__input--cloned'],
+                    listDropdown: ['choices__list--dropdown', 'dropdown-menu', 'mt-1', 'p-0', 'shadow-sm', 'w-100'],
+                    item: ['choices__item', 'dropdown-item', 'rounded-0'],
+                    itemSelectable: ['choices__item--selectable'],
+                    itemDisabled: ['choices__item--disabled', 'disabled'],
+                    itemChoice: ['choices__item--choice'],
+                    placeholder: ['choices__placeholder', 'text-muted', 'opacity-75'],
+                    highlightedState: ['is-highlighted', 'active'],
+                    notice: ['choices__notice', 'dropdown-item-text', 'text-muted', 'small', 'py-2']
+                }
+            });
+
+            el.dataset.choicesInitialized = 'true';
+        });
+    }
+
+    initDisciplineChoices();
 
     /* ===============================
        FILTER AUTO SUBMIT

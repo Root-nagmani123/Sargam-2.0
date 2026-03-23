@@ -1,5 +1,6 @@
 @extends('admin.layouts.master')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
 
 
 @section('title', 'Memo Management - Sargam | Lal Bahadur Shastri National Academy of Administration')
@@ -342,6 +343,12 @@
 *:focus-visible {
     outline: 3px solid #004a93 !important;
     border-radius: 4px;
+}
+
+/* Choices.js + Bootstrap: avoid double dropdown arrow */
+.choices__inner.form-select {
+    background-image: none !important;
+    padding-right: 2.25rem !important;
 }
 </style>
 <div class="container-fluid">
@@ -847,6 +854,7 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
     <!-- Memo generation end -->
 </div>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 <script>
 $(document).ready(function() {
     $('.view-conversation').on('click', function() {
@@ -882,6 +890,61 @@ $(document).ready(function() {
 @push('scripts')
 <script>
 $(document).ready(function() {
+    const memoChoicesIds = ['program_name', 'type', 'status', 'memo_type_master_pk', 'venue'];
+    const memoChoicesMap = new Map();
+
+    function createChoicesInstance(el) {
+        if (!el || typeof window.Choices === 'undefined') return;
+        if (memoChoicesMap.has(el.id)) return;
+
+        const instance = new Choices(el, {
+            shouldSort: false,
+            searchEnabled: true,
+            searchResultLimit: 50,
+            itemSelectText: '',
+            allowHTML: false,
+            classNames: {
+                containerInner: ['choices__inner', 'form-select', 'shadow-sm'],
+                input: ['choices__input', 'form-control', 'form-control-sm', 'border-0', 'shadow-none', 'my-1'],
+                inputCloned: ['choices__input--cloned'],
+                listDropdown: ['choices__list--dropdown', 'dropdown-menu', 'mt-1', 'p-0', 'shadow-sm', 'w-100'],
+                item: ['choices__item', 'dropdown-item', 'rounded-0'],
+                itemSelectable: ['choices__item--selectable'],
+                itemDisabled: ['choices__item--disabled', 'disabled'],
+                itemChoice: ['choices__item--choice'],
+                placeholder: ['choices__placeholder', 'text-muted', 'opacity-75'],
+                highlightedState: ['is-highlighted', 'active'],
+                notice: ['choices__notice', 'dropdown-item-text', 'text-muted', 'small', 'py-2']
+            }
+        });
+
+        memoChoicesMap.set(el.id, instance);
+    }
+
+    function initMemoChoices() {
+        memoChoicesIds.forEach(function(id) {
+            createChoicesInstance(document.getElementById(id));
+        });
+    }
+
+    function syncMemoChoicesById(id) {
+        const el = document.getElementById(id);
+        const instance = memoChoicesMap.get(id);
+        if (!el || !instance) return;
+        const values = Array.from(el.selectedOptions).map(option => option.value);
+        instance.removeActiveItems();
+        if (values.length) {
+            instance.setChoiceByValue(values);
+        }
+        if (el.disabled) {
+            instance.disable();
+        } else {
+            instance.enable();
+        }
+    }
+
+    initMemoChoices();
+
     // Filter form submission on change
     $('#program_name, #type, #status, #from_date, #to_date').on('change', function() {
         $('#filterForm').submit();
@@ -967,9 +1030,11 @@ $(document).ready(function() {
                 // Populate memo-specific fields
                 if (res.memo_type_master_pk) {
                     $('#memo_type_master_pk').val(res.memo_type_master_pk);
+                    syncMemoChoicesById('memo_type_master_pk');
                 }
                 if (res.venue_master_pk) {
                     $('#venue').val(res.venue_master_pk);
+                    syncMemoChoicesById('venue');
                 }
                 if (res.date) {
                     $('#memo_date').val(res.date);
@@ -1016,6 +1081,9 @@ $(document).ready(function() {
             saveButton.show();
             modalTitle.text('Generate Memo');
         }
+
+        syncMemoChoicesById('memo_type_master_pk');
+        syncMemoChoicesById('venue');
     }
 
     // Reset modal when closed

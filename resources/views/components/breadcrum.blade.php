@@ -378,52 +378,6 @@
         }
     }
     
-    /* Dark Mode Support */
-    @media (prefers-color-scheme: dark) {
-        .modern-breadcrumb-card {
-            background: #1a1d23;
-            box-shadow: 
-                0 2px 8px rgba(0, 0, 0, 0.2),
-                0 4px 16px rgba(0, 0, 0, 0.3),
-                0 0 0 1px rgba(255, 255, 255, 0.05);
-        }
-        
-        .modern-breadcrumb-card:hover {
-            box-shadow: 
-                0 4px 16px rgba(0, 0, 0, 0.3),
-                0 8px 24px rgba(0, 0, 0, 0.4),
-                0 0 0 1px rgba(13, 110, 253, 0.3);
-        }
-        
-        .modern-back-button {
-            background: linear-gradient(135deg, #2a2d35 0%, #23262d 100%);
-            border-color: #3a3d45;
-            color: #e9ecef;
-        }
-        
-        .modern-back-button:hover {
-            background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
-            border-color: #0d6efd;
-            color: #ffffff;
-        }
-        
-        .breadcrumb-title {
-            color: #f8f9fa;
-        }
-        
-        .breadcrumb-separator {
-            background: linear-gradient(180deg, transparent 0%, #3a3d45 50%, transparent 100%);
-        }
-        
-        .decoration-gradient {
-            background: radial-gradient(ellipse at top right, rgba(13, 110, 253, 0.1), transparent 70%);
-        }
-        
-        .decoration-pattern {
-            background-image: 
-                radial-gradient(circle at 20px 20px, rgba(13, 110, 253, 0.03) 1px, transparent 1px);
-        }
-    }
     
     /* Reduced Motion */
     @media (prefers-reduced-motion: reduce) {

@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="en" style="height: 100%;">
+<html lang="en" class="admin-force-light" style="height: 100%;">
 
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    @include('admin.layouts.force_light_guard')
     <title>Feedback Form - Sargam | Lal Bahadur Shastri National Academy of Administration</title>
     <link rel="stylesheet" href="https://bootstrapdemos.adminmart.com/matdash/dist/assets/css/styles.css">
     <!-- Favicon icon-->
@@ -22,7 +23,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
     <!-- Icon library (Bootstrap Icons or Lucide) -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
-    <link href="{{ asset('admin_assets/css/accesibility-style_v1.css') }}" rel="stylesheet">
+    <link href="{{ asset('admin_assets/css/accesibility-style_v1.css') }}?v={{ @filemtime(public_path('admin_assets/css/accesibility-style_v1.css')) ?: time() }}" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -235,7 +236,7 @@
 </head>
 <x-session_message />
 
-<body style="min-height: 100vh; display: flex; flex-direction: column;">
+<body class="admin-force-light" style="min-height: 100vh; display: flex; flex-direction: column;">
     <!-- Top Blue Bar (Govt of India) -->
     <div class="top-header d-flex justify-content-between align-items-center d-none d-md-block py-2"
         style="background-color: #004a93;">

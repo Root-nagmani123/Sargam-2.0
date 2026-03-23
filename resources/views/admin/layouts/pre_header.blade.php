@@ -51,17 +51,6 @@ html {
   --bs-border-color-translucent: rgba(0, 0, 0, 0.175) !important;
 }
 
-/* Override any dark mode media queries - force light mode */
-@media (prefers-color-scheme: dark) {
-  html,
-  html[data-bs-theme="light"],
-  html[data-bs-theme="dark"] {
-    color-scheme: light !important;
-    --bs-body-bg: #fff !important;
-    --bs-body-color: #212529 !important;
-  }
-}
-
 /* Prevent Bootstrap dark mode CSS variables from being applied */
 [data-bs-theme="dark"] {
   color-scheme: light !important;
@@ -98,49 +87,6 @@ body[data-bs-theme="dark"] {
   --bs-heading-color: inherit !important;
   background-color: #fff !important;
   color: #212529 !important;
-}
-
-/* CRITICAL: Override Bootstrap's dark mode media query completely */
-@media (prefers-color-scheme: dark) {
-  *,
-  :root,
-  html,
-  html[data-bs-theme],
-  html[data-bs-theme="light"],
-  html[data-bs-theme="dark"],
-  body,
-  body[data-bs-theme],
-  body[data-bs-theme="light"],
-  body[data-bs-theme="dark"],
-  .card,
-  .modal,
-  .dropdown-menu,
-  .popover,
-  .tooltip,
-  .offcanvas,
-  .navbar,
-  .nav,
-  .btn,
-  .form-control,
-  .form-select,
-  .table,
-  .alert,
-  .badge,
-  .list-group,
-  .pagination {
-    color-scheme: light !important;
-    --bs-body-bg: #fff !important;
-    --bs-body-color: #212529 !important;
-    --bs-emphasis-color: #000 !important;
-    --bs-secondary-color: rgba(33, 37, 41, 0.75) !important;
-    --bs-secondary-bg: #e9ecef !important;
-    --bs-tertiary-color: rgba(33, 37, 41, 0.5) !important;
-    --bs-tertiary-bg: #f8f9fa !important;
-    --bs-border-color: #dee2e6 !important;
-    --bs-border-color-translucent: rgba(0, 0, 0, 0.175) !important;
-    background-color: #fff !important;
-    color: #212529 !important;
-  }
 }
 </style>
 

@@ -164,80 +164,66 @@
     </div>
     @endif
 
-    <div class="row g-4">
-        {{-- Social Groups Distribution --}}
-        <div class="col-lg-4">
-            <div class="card border-0 shadow-sm rounded-3 h-100 overflow-hidden">
-                <div class="card-header bg-transparent border-0 py-2">
-                    <h6 class="mb-0 fw-bold">Social Groups Distribution</h6>
+    <div class="row g-3">
+        <div class="col-12 col-xl-6">
+            <div class="card border-0 shadow-sm rounded-3 h-100">
+                <div class="card-header bg-transparent border-0 pb-0">
+                    <h6 class="mb-0 fw-bold">Total Age Distribution</h6>
                 </div>
-                <div class="card-body">
-                    <div id="chart-social-groups" style="min-height: 280px;"></div>
-                </div>
-            </div>
-        </div>
-        {{-- Gender Distribution (Donut) --}}
-        <div class="col-lg-4">
-            <div class="card border-0 shadow-sm rounded-3 h-100 overflow-hidden">
-                <div class="card-header bg-transparent border-0 py-2">
-                    <h6 class="mb-0 fw-bold">Gender Distribution</h6>
-                </div>
-                <div class="card-body">
-                    <div id="chart-gender" style="min-height: 280px;"></div>
+                <div class="card-body pt-2">
+                    <div id="chart-age-donut" style="min-height: 220px;"></div>
                 </div>
             </div>
         </div>
-        {{-- Age Distribution --}}
-        <div class="col-lg-4">
-            <div class="card border-0 shadow-sm rounded-3 h-100 overflow-hidden">
-                <div class="card-header bg-transparent border-0 py-2">
-                    <h6 class="mb-0 fw-bold">Age Distribution</h6>
+        <div class="col-12 col-xl-6">
+            <div class="card border-0 shadow-sm rounded-3 h-100">
+                <div class="card-header bg-transparent border-0 pb-0">
+                    <h6 class="mb-0 fw-bold">Social Groups by Age</h6>
                 </div>
-                <div class="card-body">
-                    <div id="chart-age" style="min-height: 280px;"></div>
+                <div class="card-body pt-2">
+                    <div id="chart-social-by-age" style="min-height: 220px;"></div>
                 </div>
             </div>
         </div>
 
-        {{-- Highest Stream Wise --}}
-        <div class="col-12">
-            <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
-                <div class="card-header bg-transparent border-0 py-2">
-                    <h6 class="mb-0 fw-bold">Highest Stream Wise Distribution</h6>
-                    <small class="text-muted">Educational background of participants</small>
+        <div class="col-12 col-xl-6">
+            <div class="card border-0 shadow-sm rounded-3 h-100">
+                <div class="card-header bg-transparent border-0 pb-0">
+                    <h6 class="mb-0 fw-bold">Highest Stream by Age</h6>
                 </div>
-                <div class="card-body">
-                    <div id="chart-stream" style="min-height: 320px;"></div>
+                <div class="card-body pt-2">
+                    <div id="chart-stream-radar" style="min-height: 220px;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-xl-6">
+            <div class="card border-0 shadow-sm rounded-3 h-100">
+                <div class="card-header bg-transparent border-0 pb-0">
+                    <h6 class="mb-0 fw-bold">Age Shift Across Selected Courses</h6>
+                </div>
+                <div class="card-body pt-2">
+                    <div id="chart-age-shift" style="min-height: 220px;"></div>
                 </div>
             </div>
         </div>
 
-        {{-- Cadre Wise --}}
-        <div class="col-12">
-            <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
-                <div class="card-header bg-transparent border-0 py-2">
-                    <h6 class="mb-0 fw-bold">Cadre Wise Distribution</h6>
-                    <small class="text-muted">Service category breakdown by gender</small>
+        <div class="col-12 col-xl-6">
+            <div class="card border-0 shadow-sm rounded-3 h-100">
+                <div class="card-header bg-transparent border-0 pb-0">
+                    <h6 class="mb-0 fw-bold">Cadre by Age Group</h6>
                 </div>
-                <div class="card-body">
-                    <div id="chart-cadre" style="min-height: 320px;"></div>
+                <div class="card-body pt-2">
+                    <div id="chart-cadre-age" style="min-height: 220px;"></div>
                 </div>
             </div>
         </div>
-
-        {{-- Domicile State --}}
-        <div class="col-12">
-            <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
-                <div class="card-header bg-transparent border-0 py-2">
-                    <h6 class="mb-0 fw-bold">Domicile State Distribution</h6>
-                    <small class="text-muted">Geographic distribution across states and UTs</small>
+        <div class="col-12 col-xl-6">
+            <div class="card border-0 shadow-sm rounded-3 h-100">
+                <div class="card-header bg-transparent border-0 pb-0">
+                    <h6 class="mb-0 fw-bold">Domicile State by Age Group</h6>
                 </div>
-                <div class="card-body">
-                    <div id="chart-domicile" style="min-height: 360px;"></div>
-                    @if(!empty($chartData['domicile']['categories']))
-                    <p class="text-muted small mt-2 mb-0">Covering {{ count($chartData['domicile']['categories']) }}
-                        States and Union Territories</p>
-                    @endif
+                <div class="card-body pt-2">
+                    <div id="chart-domicile-age" style="min-height: 220px;"></div>
                 </div>
             </div>
         </div>
@@ -252,6 +238,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     var chartData = @json($chartData ?? []);
     var chartInstances = [];
+    var agePalette = ["#8ec5ff", "#4f91ff", "#245ecf", "#193f9f", "#102a70", "#7a8ba8"];
 
     console.log('Chart Data:', chartData);
 
@@ -260,229 +247,266 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
 
-    // Social Groups - stacked bar
-    if (chartData.social_groups && chartData.social_groups.categories && chartData.social_groups.categories
-        .length) {
-        var socialChart = new ApexCharts(document.querySelector("#chart-social-groups"), {
-            series: [{
-                    name: "Female",
-                    data: chartData.social_groups.female || []
-                },
-                {
-                    name: "Male",
-                    data: chartData.social_groups.male || []
-                }
-            ],
-            chart: {
-                type: "bar",
-                height: 280,
-                stacked: true,
-                toolbar: {
-                    show: false
-                }
-            },
-            plotOptions: {
-                bar: {
-                    horizontal: false,
-                    columnWidth: "60%"
-                }
-            },
-            colors: ["#dc3545", "#0d6efd"],
-            xaxis: {
-                categories: chartData.social_groups.categories
-            },
-            legend: {
-                position: "bottom"
-            },
-            dataLabels: {
-                enabled: false
-            }
-        });
-        socialChart.render();
-        chartInstances.push(socialChart);
+    function toNumberArray(arr) {
+        return Array.isArray(arr) ? arr.map(function(v) {
+            var n = Number(v);
+            return Number.isFinite(n) ? n : 0;
+        }) : [];
     }
 
-    // Gender - donut
-    if (chartData.gender && chartData.gender.labels && chartData.gender.labels.length) {
-        var genderChart = new ApexCharts(document.querySelector("#chart-gender"), {
-            series: chartData.gender.values || [],
-            chart: {
-                type: "donut",
-                height: 280
-            },
-            labels: chartData.gender.labels || [],
-            colors: ["#dc3545", "#0d6efd"],
-            legend: {
-                position: "bottom"
-            },
-            plotOptions: {
-                pie: {
-                    donut: {
-                        size: "65%"
-                    }
-                }
-            }
-        });
-        genderChart.render();
-        chartInstances.push(genderChart);
+    function sumArrays(a, b) {
+        var len = Math.max(a.length, b.length);
+        var out = [];
+        for (var i = 0; i < len; i++) {
+            out.push((a[i] || 0) + (b[i] || 0));
+        }
+        return out;
     }
 
-    // Age - stacked bar
-    if (chartData.age && chartData.age.categories && chartData.age.categories.length) {
-        var ageChart = new ApexCharts(document.querySelector("#chart-age"), {
-            series: [{
-                    name: "Female",
-                    data: chartData.age.female || []
-                },
-                {
-                    name: "Male",
-                    data: chartData.age.male || []
-                }
-            ],
-            chart: {
-                type: "bar",
-                height: 280,
-                stacked: true,
-                toolbar: {
-                    show: false
-                }
-            },
-            plotOptions: {
-                bar: {
-                    horizontal: false,
-                    columnWidth: "60%"
-                }
-            },
-            colors: ["#dc3545", "#0d6efd"],
-            xaxis: {
-                categories: chartData.age.categories
-            },
-            legend: {
-                position: "bottom"
-            },
-            dataLabels: {
-                enabled: false
-            }
+    function limitTop(labels, values, maxItems) {
+        var pairs = labels.map(function(label, idx) {
+            return {
+                label: label,
+                value: values[idx] || 0
+            };
         });
-        ageChart.render();
-        chartInstances.push(ageChart);
+        pairs.sort(function(a, b) {
+            return b.value - a.value;
+        });
+        pairs = pairs.slice(0, maxItems);
+        return {
+            labels: pairs.map(function(p) {
+                return p.label;
+            }),
+            values: pairs.map(function(p) {
+                return p.value;
+            })
+        };
     }
 
-    // Stream - bar
-    if (chartData.stream && chartData.stream.categories && chartData.stream.categories.length) {
-        var streamChart = new ApexCharts(document.querySelector("#chart-stream"), {
-            series: [{
-                name: "Count",
-                data: chartData.stream.values || []
-            }],
-            chart: {
-                type: "bar",
-                height: 320,
-                toolbar: {
-                    show: false
-                }
-            },
-            plotOptions: {
-                bar: {
-                    horizontal: false,
-                    columnWidth: "55%",
-                    borderRadius: 4
-                }
-            },
-            colors: ["#004a93"],
-            xaxis: {
-                categories: chartData.stream.categories
-            },
-            dataLabels: {
-                enabled: false
-            }
-        });
-        streamChart.render();
-        chartInstances.push(streamChart);
+    function safeRender(selector, options, label) {
+        var node = document.querySelector(selector);
+        if (!node) return;
+        try {
+            var chart = new ApexCharts(node, options);
+            chart.render();
+            chartInstances.push(chart);
+        } catch (e) {
+            console.error(label + ' render failed:', e);
+        }
     }
 
-    // Cadre - stacked bar
-    if (chartData.cadre && chartData.cadre.categories && chartData.cadre.categories.length) {
-        var cadreChart = new ApexCharts(document.querySelector("#chart-cadre"), {
-            series: [{
-                    name: "Female",
-                    data: chartData.cadre.female || []
-                },
-                {
-                    name: "Male",
-                    data: chartData.cadre.male || []
-                }
-            ],
-            chart: {
-                type: "bar",
-                height: 320,
-                stacked: true,
-                toolbar: {
-                    show: false
-                }
-            },
-            plotOptions: {
-                bar: {
-                    horizontal: false,
-                    columnWidth: "60%"
-                }
-            },
-            colors: ["#dc3545", "#0d6efd"],
-            xaxis: {
-                categories: chartData.cadre.categories,
-                labels: {
-                    rotate: -45
-                }
-            },
-            legend: {
-                position: "bottom"
-            },
-            dataLabels: {
-                enabled: false
-            }
-        });
-        cadreChart.render();
-        chartInstances.push(cadreChart);
-    }
+    var ageCategories = (chartData.age && chartData.age.categories) ? chartData.age.categories : [];
+    var ageFemale = toNumberArray(chartData.age && chartData.age.female ? chartData.age.female : []);
+    var ageMale = toNumberArray(chartData.age && chartData.age.male ? chartData.age.male : []);
+    var ageTotals = sumArrays(ageFemale, ageMale);
+    var hasAgeData = ageTotals.some(function(v) {
+        return v > 0;
+    });
 
-    // Domicile - bar
-    if (chartData.domicile && chartData.domicile.categories && chartData.domicile.categories.length) {
-        var domicileChart = new ApexCharts(document.querySelector("#chart-domicile"), {
-            series: [{
-                name: "Count",
-                data: chartData.domicile.values || []
-            }],
-            chart: {
-                type: "bar",
-                height: 360,
-                toolbar: {
-                    show: false
-                }
-            },
-            plotOptions: {
-                bar: {
-                    horizontal: false,
-                    columnWidth: "70%",
-                    borderRadius: 4
-                }
-            },
-            colors: ["#0dcaf0"],
-            xaxis: {
-                categories: chartData.domicile.categories,
-                labels: {
-                    rotate: -45
-                }
-            },
-            dataLabels: {
-                enabled: false
+    safeRender("#chart-age-donut", {
+        series: hasAgeData ? ageTotals : [1],
+        chart: {
+            type: "donut",
+            height: 220,
+            toolbar: {
+                show: false
             }
-        });
-        domicileChart.render();
-        chartInstances.push(domicileChart);
-    }
+        },
+        labels: hasAgeData ? ageCategories : ['No data'],
+        colors: agePalette.slice(0, hasAgeData ? ageTotals.length : 1),
+        plotOptions: {
+            pie: {
+                donut: {
+                    size: "65%"
+                }
+            }
+        },
+        dataLabels: {
+            enabled: false
+        },
+        legend: {
+            position: "bottom",
+            fontSize: "11px"
+        }
+    }, "Total Age Distribution");
+
+    var socialLabels = (chartData.social_groups && chartData.social_groups.categories) ? chartData.social_groups.categories : [];
+    var socialFemale = toNumberArray(chartData.social_groups && chartData.social_groups.female ? chartData.social_groups.female : []);
+    var socialMale = toNumberArray(chartData.social_groups && chartData.social_groups.male ? chartData.social_groups.male : []);
+    var socialTop = limitTop(socialLabels, sumArrays(socialFemale, socialMale), 8);
+    safeRender("#chart-social-by-age", {
+        series: [{
+            name: "Count",
+            data: socialTop.values.length ? socialTop.values : [0]
+        }],
+        chart: {
+            type: "bar",
+            height: 220,
+            toolbar: {
+                show: false
+            }
+        },
+        colors: ["#245ecf"],
+        plotOptions: {
+            bar: {
+                horizontal: false,
+                columnWidth: "40%",
+                borderRadius: 3
+            }
+        },
+        xaxis: {
+            categories: socialTop.labels.length ? socialTop.labels : ['No data'],
+            labels: {
+                style: {
+                    fontSize: '11px'
+                }
+            }
+        },
+        dataLabels: {
+            enabled: false
+        },
+        grid: {
+            borderColor: "#eef1f5"
+        }
+    }, "Social Groups by Age");
+
+    var streamLabels = (chartData.stream && chartData.stream.categories) ? chartData.stream.categories : [];
+    var streamValues = toNumberArray(chartData.stream && chartData.stream.values ? chartData.stream.values : []);
+    var streamTop = limitTop(streamLabels, streamValues, 6);
+    safeRender("#chart-stream-radar", {
+        series: [{
+            name: "Count",
+            data: streamTop.values.length ? streamTop.values : [0]
+        }],
+        chart: {
+            type: "radar",
+            height: 220,
+            toolbar: {
+                show: false
+            }
+        },
+        labels: streamTop.labels.length ? streamTop.labels : ['No data'],
+        colors: ["#245ecf"],
+        stroke: {
+            width: 2
+        },
+        fill: {
+            opacity: 0.25
+        },
+        markers: {
+            size: 3
+        }
+    }, "Highest Stream by Age");
+
+    safeRender("#chart-age-shift", {
+        series: [{
+            name: "Participants",
+            data: hasAgeData ? ageTotals : [0]
+        }],
+        chart: {
+            type: "line",
+            height: 220,
+            toolbar: {
+                show: false
+            }
+        },
+        stroke: {
+            curve: "smooth",
+            width: 2
+        },
+        colors: ["#245ecf"],
+        markers: {
+            size: 3
+        },
+        xaxis: {
+            categories: hasAgeData ? ageCategories : ['No data']
+        },
+        dataLabels: {
+            enabled: false
+        },
+        grid: {
+            borderColor: "#eef1f5"
+        }
+    }, "Age Shift Across Selected Courses");
+
+    var cadreLabels = (chartData.cadre && chartData.cadre.categories) ? chartData.cadre.categories : [];
+    var cadreFemale = toNumberArray(chartData.cadre && chartData.cadre.female ? chartData.cadre.female : []);
+    var cadreMale = toNumberArray(chartData.cadre && chartData.cadre.male ? chartData.cadre.male : []);
+    var cadreTop = limitTop(cadreLabels, sumArrays(cadreFemale, cadreMale), 8);
+    safeRender("#chart-cadre-age", {
+        series: [{
+            name: "Count",
+            data: cadreTop.values.length ? cadreTop.values : [0]
+        }],
+        chart: {
+            type: "bar",
+            height: 220,
+            toolbar: {
+                show: false
+            }
+        },
+        colors: ["#245ecf"],
+        plotOptions: {
+            bar: {
+                horizontal: false,
+                columnWidth: "45%",
+                borderRadius: 3
+            }
+        },
+        xaxis: {
+            categories: cadreTop.labels.length ? cadreTop.labels : ['No data'],
+            labels: {
+                rotate: -25,
+                style: {
+                    fontSize: '11px'
+                }
+            }
+        },
+        dataLabels: {
+            enabled: false
+        },
+        grid: {
+            borderColor: "#eef1f5"
+        }
+    }, "Cadre by Age Group");
+
+    var domicileLabels = (chartData.domicile && chartData.domicile.categories) ? chartData.domicile.categories : [];
+    var domicileValues = toNumberArray(chartData.domicile && chartData.domicile.values ? chartData.domicile.values : []);
+    var domicileTop = limitTop(domicileLabels, domicileValues, 8);
+    safeRender("#chart-domicile-age", {
+        series: [{
+            name: "Count",
+            data: domicileTop.values.length ? domicileTop.values : [0]
+        }],
+        chart: {
+            type: "bar",
+            height: 220,
+            toolbar: {
+                show: false
+            }
+        },
+        plotOptions: {
+            bar: {
+                horizontal: true,
+                barHeight: "45%",
+                borderRadius: 2
+            }
+        },
+        colors: ["#245ecf"],
+        xaxis: {
+            categories: domicileTop.labels.length ? domicileTop.labels : ['No data']
+        },
+        dataLabels: {
+            enabled: false
+        },
+        grid: {
+            borderColor: "#eef1f5"
+        }
+    }, "Domicile State by Age Group");
 
     // Handle Bootstrap tab shown event - resize charts when tab becomes visible
-    document.addEventListener('shown.bs.tab', function(e) {
+    document.addEventListener('shown.bs.tab', function() {
         console.log('Tab switched, resizing charts');
         setTimeout(function() {
             chartInstances.forEach(function(chart) {

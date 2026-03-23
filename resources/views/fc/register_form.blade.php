@@ -1240,47 +1240,6 @@
                         </button>
                     </div>
 
-                    <div class="uwaw-features__item reset-feature" id="featureItem-ht-dark">
-                        <button id="dark-btn" class="uwaw-features__item__i"
-                            data-uw-reader-content="Enable the UserWay screen reader"
-                            aria-label="Enable the UserWay screen reader" aria-pressed="false">
-                            <span class="uwaw-features__item__name">
-                                <span class="light_dark_icon">
-                                    <input type="checkbox" class="light_mode uwaw-featugres__item__i" id="checkbox" />
-                                    <label for="checkbox" class="checkbox-label">
-                                        <!-- <i class="fas fa-moon-stars"></i> -->
-                                        <i class="fas fa-moon-stars">
-                                            <span class="icon icon-moon"></span>
-                                        </i>
-                                        <i class="fas fa-sun">
-                                            <span class="icon icon-sun"></span>
-                                        </i>
-                                        <span class="ball"></span>
-                                    </label>
-                                </span>
-                                <span class="uwaw-features__item__name">Light-Dark</span>
-                            </span>
-                            <span class="tick-active uwaw-features__item__enabled reset-tick" id="tickIcon-ht-dark"
-                                style="display: none; pointer-events: none">
-                            </span>
-                        </button>
-                    </div>
-
-                    <!-- Invert Colors Widget -->
-
-                    <div class="uwaw-features__item reset-feature" id="featureItem-ic">
-                        <button id="btn-invert" class="uwaw-features__item__i"
-                            data-uw-reader-content="Enable the UserWay screen reader"
-                            aria-label="Enable the UserWay screen reader" aria-pressed="false">
-                            <span class="uwaw-features__item__icon">
-                                <span class="icon icon-invert"> </span>
-                            </span>
-                            <span class="uwaw-features__item__name">Invert Colors</span>
-                            <span class="tick-active uwaw-features__item__enabled reset-tick" id="tickIcon-ic"
-                                style="display: none">
-                            </span>
-                        </button>
-                    </div>
                 </div>
             </div>
             <!-- Reset Button -->
