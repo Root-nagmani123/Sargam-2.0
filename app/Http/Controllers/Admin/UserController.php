@@ -210,7 +210,6 @@ class UserController extends Controller
              // Fetch today's timetable for the logged-in faculty
              $todayTimetable = $this->getTodayTimetableForFaculty($userId);
         }
-         }
 
         if ($request->boolean('calendar_only')) {
             $calendarHtml = view('components.calendar', [
