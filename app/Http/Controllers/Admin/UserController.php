@@ -47,10 +47,10 @@ class UserController extends Controller
      *
      * @return \Illuminate\View\View
      */
-    public function dashboard()
+    public function dashboard(Request $request)
     {
-         $year = request('year', now()->year);
-        $month = request('month', now()->month);
+         $year = $request->input('year', now()->year);
+        $month = $request->input('month', now()->month);
         
         // Fetch holidays for the selected month/year
         $startDate = \Carbon\Carbon::create($year, $month, 1)->startOfMonth();
@@ -203,6 +203,20 @@ class UserController extends Controller
              // Fetch today's timetable for the logged-in faculty
              $todayTimetable = $this->getTodayTimetableForFaculty($userId);
          }
+
+        if ($request->boolean('calendar_only')) {
+            $calendarHtml = view('components.calendar', [
+                'year' => $year,
+                'month' => $month,
+                'selected' => now()->toDateString(),
+                'events' => $events,
+                'theme' => 'gov-red',
+            ])->render();
+
+            return response()->json([
+                'html' => $calendarHtml,
+            ]);
+        }
 
         return view('admin.dashboard', compact('year', 'month', 'events','emp_dob_data', 'totalActiveCourses', 'upcomingCourses', 'total_guest_faculty', 'total_internal_faculty', 'exemptionCount', 'MDO_count', 'todayTimetable', 'totalSessions', 'totalStudents', 'isCCorACC'));
     }

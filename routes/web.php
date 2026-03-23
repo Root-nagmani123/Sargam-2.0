@@ -35,6 +35,7 @@ use App\Http\Controllers\Admin\{
     NotificationController,
     MemoDisciplineController,
     DashboardController,
+    DirectoryController,
     CourseRepositoryController,
     WhosWhoController,
     EstateController,
@@ -108,6 +109,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard/students', [UserController::class, 'studentList'])->name('admin.dashboard.students');
     Route::get('/dashboard/my-counselee', [UserController::class, 'myCounselee'])->name('admin.dashboard.my-counselee');
     Route::get('/dashboard/students/{id}/detail', [UserController::class, 'studentDetail'])->name('admin.dashboard.students.detail');
+    Route::get('/directory/lbsnaa', [DirectoryController::class, 'lbsnaa'])->name('admin.directory.lbsnaa');
+    Route::get('/directory/ot', [DirectoryController::class, 'ot'])->name('admin.directory.ot');
 
     // Dashboard Statistics (Batch Profile)
     // NOTE: Currently served by a Blade view; replace with controller when business logic is ready.
@@ -816,6 +819,7 @@ use App\Http\Controllers\Admin\Setup\DepartmentMasterSetupController;
 use App\Http\Controllers\Admin\Setup\DesignationMasterSetupController;
 use App\Http\Controllers\Admin\Setup\CasteCategoryController;
 use App\Http\Controllers\Admin\Setup\QuickLinksSetupController;
+use App\Http\Controllers\Admin\Setup\UsefulLinksSetupController;
 
 // Setup -> Employee Type (moved to controller with modal CRUD)
 Route::middleware(['auth'])->group(function () {
@@ -885,6 +889,17 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/update/{id}', 'update')->name('update');
         Route::delete('/delete/{id}', 'delete')->name('delete');
         Route::post('/reorder/{id}', 'reorder')->name('reorder');
+        Route::post('/bulk-reorder', 'bulkReorder')->name('bulk-reorder');
+    });
+
+    // Useful Links master
+    Route::prefix('admin/setup/useful-links')->name('admin.setup.useful_links.')->controller(UsefulLinksSetupController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::post('/update/{id}', 'update')->name('update');
+        Route::delete('/delete/{id}', 'delete')->name('delete');
         Route::post('/bulk-reorder', 'bulkReorder')->name('bulk-reorder');
     });
 

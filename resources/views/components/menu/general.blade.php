@@ -83,42 +83,47 @@
                                                 target="{{ $link->target_blank ? '_blank' : '_self' }}">
                                                 <span class="hide-menu small small-sm-normal text-nowrap">{{ $link->label }}</span>
                                             </a>
-
-                                            @if (($link->id ?? null) && (hasRole('Admin') || hasRole('Super Admin')))
-                                                <form method="POST"
-                                                    action="{{ route('admin.quick-links.destroy', $link->id) }}"
-                                                    onsubmit="return confirm('Delete this quick link?');">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit"
-                                                        class="btn btn-sm btn-link text-danger p-0 ms-2"
-                                                        title="Delete quick link"
-                                                        aria-label="Delete quick link">
-                                                        <i class="material-icons" style="font-size: 18px;">delete</i>
-                                                    </button>
-                                                </form>
-                                            @endif
                                         </li>
                                     @endforeach
+                                </ul>
 
-                                    @if (hasRole('Admin') || hasRole('Super Admin'))
-                                        <li class="sidebar-item mt-2">
-                                            <form method="POST" action="{{ route('admin.quick-links.store') }}">
-                                                @csrf
-                                                <input type="text" name="label" class="form-control form-control-sm mb-1"
-                                                    placeholder="Label" required maxlength="255">
-                                                <input type="url" name="url" class="form-control form-control-sm mb-1"
-                                                    placeholder="URL (include https://)" required maxlength="2048">
-                                                <select name="target_blank" class="form-select form-select-sm mb-1" required>
-                                                    <option value="1" selected>Open in New Tab</option>
-                                                    <option value="0">Open in Same Tab</option>
-                                                </select>
-                                                <button type="submit" class="btn btn-primary btn-sm w-100">
-                                                    Add Quick Link
-                                                </button>
-                                            </form>
-                                        </li>
-                                    @endif
+                                <li class="sidebar-item mt-2" style="background: #4077ad;
+                                border-radius: 30px 0px 0px 30px;
+                                width: 100%;
+                                box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+                                min-width: 250px;">
+                                    <a class="sidebar-link d-flex justify-content-between align-items-center"
+                                        data-bs-toggle="collapse" href="#usefulLinksCollapse" role="button"
+                                        aria-expanded="false" aria-controls="usefulLinksCollapse">
+                                        <span class="hide-menu fw-bold small small-sm-normal text-nowrap">Useful Links</span>
+                                        <i class="material-icons menu-icon material-symbols-rounded"
+                                            style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
+                                    </a>
+                                </li>
+                                <ul class="collapse list-unstyled ps-3" id="usefulLinksCollapse">
+                                    @php
+                                        $usefulLinks = \App\Models\UsefulLink::query()
+                                            ->active()
+                                            ->orderBy('position')
+                                            ->get(['id', 'label', 'url', 'file_path', 'target_blank']);
+                                    @endphp
+
+                                    @foreach ($usefulLinks as $link)
+                                        @php
+                                            $url = $link->url ? trim($link->url) : null;
+                                            if (!$url && !empty($link->file_path)) {
+                                                $url = asset('storage/' . $link->file_path);
+                                            }
+                                        @endphp
+                                        @if ($url)
+                                            <li class="sidebar-item d-flex justify-content-between align-items-center">
+                                                <a class="sidebar-link" href="{{ $url }}"
+                                                    target="{{ $link->target_blank ? '_blank' : '_self' }}">
+                                                    <span class="hide-menu small small-sm-normal text-nowrap">{{ $link->label }}</span>
+                                                </a>
+                                            </li>
+                                        @endif
+                                    @endforeach
                                 </ul>
                     </div>
                 </div>

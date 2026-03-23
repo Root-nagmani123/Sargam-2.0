@@ -177,6 +177,11 @@
                                         <span class="hide-menu small small-sm-normal text-nowrap">Quick Links Master</span>
                                     </a>
                                 </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link" href="{{ route('admin.setup.useful_links.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Useful Links Master</span>
+                                    </a>
+                                </li>
                             @endif
 
                             <li class="sidebar-item"><a class="sidebar-link" href="{{ route('course-repository.index') }}">
