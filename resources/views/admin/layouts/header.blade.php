@@ -1292,6 +1292,8 @@
             });
 
             // Notification functions
+            const notificationMarkReadUrlTemplate = '{{ route("admin.notifications.mark-read-redirect", ["id" => "__ID__"]) }}';
+            const notificationMarkAllReadUrl = '{{ route("admin.notifications.mark-all-read") }}';
             function markAsRead(notificationId) {
                 console.log('[Notification][Step 1] markAsRead called', { notificationId, currentUrl: window.location.href });
                 const endpoint = '/admin/notifications/mark-read-redirect/' + notificationId;
