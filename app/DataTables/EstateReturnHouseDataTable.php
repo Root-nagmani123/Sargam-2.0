@@ -63,7 +63,7 @@ class EstateReturnHouseDataTable extends DataTable
         }
 
         $user = \Illuminate\Support\Facades\Auth::user();
-        $isPrivileged = hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST');
+        $isPrivileged = hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin');
         $employeeIds = [];
         if (! $isPrivileged && $user) {
             $employeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null) ?: [];

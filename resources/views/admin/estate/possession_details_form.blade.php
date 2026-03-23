@@ -8,6 +8,11 @@
     <x-estate-workflow-stepper current="possession-details" />
     <x-session_message />
 
+    @php
+        // Only these roles should be able to manually edit allotment/possession dates.
+        $canEditDates = hasRole('Admin') || hasRole('Super Admin') || hasRole('Estate');
+    @endphp
+
     <div class="card border-0 shadow-sm rounded-3 border-start border-4 border-primary">
         <div class="card-body p-4 p-lg-5">
             <h2 class="h5 fw-semibold mb-1">{{ ($isEdit ?? false) ? 'Edit Possession Details' : 'Add Possession Details' }}</h2>
@@ -117,63 +122,65 @@
                         <input type="date" class="form-control" id="possession_date" name="possession_date" value="{{ old('possession_date') }}" required>
                         <div class="text-danger small field-error" data-field="possession_date" role="alert">@error('possession_date'){{ $message }}@enderror</div>
                     </div>
-                    <div class="col-12 col-md-6">
-                        <div class="row g-3 align-items-end">
-                            <div class="col-12 col-md-6">
-                                <label for="meter_one_display" class="form-label">Electric Meter No. (I)</label>
-                                <input
-                                    type="text"
-                                    class="form-control bg-body-secondary"
-                                    id="meter_one_display"
-                                    readonly
-                                >
+                    @if(hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'))
+                        <div class="col-12 col-md-6">
+                            <div class="row g-3 align-items-end">
+                                <div class="col-12 col-md-6">
+                                    <label for="meter_one_display" class="form-label">Electric Meter No. (I)</label>
+                                    <input
+                                        type="text"
+                                        class="form-control bg-body-secondary"
+                                        id="meter_one_display"
+                                        readonly
+                                    >
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label for="electric_meter_reading_primary" class="form-label">Electric Meter Reading (I) <span class="text-danger">*</span></label>
+                                    <input
+                                        type="number"
+                                        class="form-control"
+                                        id="electric_meter_reading_primary"
+                                        name="electric_meter_reading_primary"
+                                        inputmode="numeric"
+                                        min="0"
+                                        step="1"
+                                        maxlength="10"
+                                        value="{{ old('electric_meter_reading_primary', old('electric_meter_reading', '')) }}"
+                                        oninput="this.value=this.value.replace(/\\D/g,'').slice(0,10);"
+                                    >
+                                    <div class="text-danger small field-error" data-field="electric_meter_reading_primary" role="alert">@error('electric_meter_reading_primary'){{ $message }}@enderror</div>
+                                </div>
                             </div>
-                            <div class="col-12 col-md-6">
-                                <label for="electric_meter_reading_primary" class="form-label">Electric Meter Reading (I) <span class="text-danger">*</span></label>
-                                <input
-                                    type="number"
-                                    class="form-control"
-                                    id="electric_meter_reading_primary"
-                                    name="electric_meter_reading_primary"
-                                    inputmode="numeric"
-                                    min="0"
-                                    step="1"
-                                    maxlength="10"
-                                    value="{{ old('electric_meter_reading_primary', old('electric_meter_reading', '')) }}"
-                                    oninput="this.value=this.value.replace(/\\D/g,'').slice(0,10);"
-                                >
-                                <div class="text-danger small field-error" data-field="electric_meter_reading_primary" role="alert">@error('electric_meter_reading_primary'){{ $message }}@enderror</div>
+                            <div class="row g-3 align-items-end mt-1" id="secondary-meter-wrapper">
+                                <div class="col-12 col-md-6">
+                                    <label for="meter_two_display" class="form-label">Electric Meter No. (II)</label>
+                                    <input
+                                        type="text"
+                                        class="form-control bg-body-secondary"
+                                        id="meter_two_display"
+                                        readonly
+                                    >
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label for="electric_meter_reading_secondary" class="form-label">Electric Meter Reading (II)</label>
+                                    <input
+                                        type="number"
+                                        class="form-control"
+                                        id="electric_meter_reading_secondary"
+                                        name="electric_meter_reading_secondary"
+                                        inputmode="numeric"
+                                        min="0"
+                                        step="1"
+                                        maxlength="10"
+                                        value="{{ old('electric_meter_reading_secondary') }}"
+                                        oninput="this.value=this.value.replace(/\\D/g,'').slice(0,10);"
+                                    >
+                                    <div class="text-danger small field-error" data-field="electric_meter_reading_secondary" role="alert">@error('electric_meter_reading_secondary'){{ $message }}@enderror</div>
+                                </div>
                             </div>
+                            <input type="hidden" id="electric_meter_reading" name="electric_meter_reading" value="{{ old('electric_meter_reading', '') }}">
                         </div>
-                        <div class="row g-3 align-items-end mt-1" id="secondary-meter-wrapper">
-                            <div class="col-12 col-md-6">
-                                <label for="meter_two_display" class="form-label">Electric Meter No. (II)</label>
-                                <input
-                                    type="text"
-                                    class="form-control bg-body-secondary"
-                                    id="meter_two_display"
-                                    readonly
-                                >
-                            </div>
-                            <div class="col-12 col-md-6">
-                                <label for="electric_meter_reading_secondary" class="form-label">Electric Meter Reading (II)</label>
-                                <input
-                                    type="number"
-                                    class="form-control"
-                                    id="electric_meter_reading_secondary"
-                                    name="electric_meter_reading_secondary"
-                                    inputmode="numeric"
-                                    min="0"
-                                    step="1"
-                                    maxlength="10"
-                                    value="{{ old('electric_meter_reading_secondary') }}"
-                                    oninput="this.value=this.value.replace(/\\D/g,'').slice(0,10);"
-                                >
-                                <div class="text-danger small field-error" data-field="electric_meter_reading_secondary" role="alert">@error('electric_meter_reading_secondary'){{ $message }}@enderror</div>
-                            </div>
-                        </div>
-                        <input type="hidden" id="electric_meter_reading" name="electric_meter_reading" value="{{ old('electric_meter_reading', '') }}">
-                    </div>
+                    @endif
                 </div>
 
                 <div class="alert alert-warning py-2 mb-4" role="alert">
@@ -203,6 +210,7 @@
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 <script>
 $(document).ready(function() {
+    const canEditDates = @json($canEditDates);
     const blocksUrl = "{{ route('admin.estate.possession.blocks') }}";
     const unitSubTypesUrl = "{{ route('admin.estate.possession.unit-sub-types') }}";
     const housesUrl = "{{ route('admin.estate.change-request.vacant-houses') }}";
@@ -323,9 +331,18 @@ $(document).ready(function() {
             .prop('disabled', locked)
             .toggleClass('bg-body-secondary', locked);
 
+        // Dates:
+        // - For Admin/Super Admin/Estate: always editable.
+        // - For self-service users: editable ONLY when dates are not yet filled (pending).
+        //   Once dates exist, keep them readonly.
+        const allotVal = String($('#allotment_date').val() || '').trim();
+        const possVal = String($('#possession_date').val() || '').trim();
+        const hasExistingDates = allotVal !== '' || possVal !== '';
+        const shouldReadonlyDates = locked && !canEditDates && hasExistingDates;
+
         $('#allotment_date, #possession_date')
-            .prop('readonly', locked)
-            .toggleClass('bg-body-secondary', locked);
+            .prop('readonly', shouldReadonlyDates)
+            .toggleClass('bg-body-secondary', shouldReadonlyDates);
 
         setLockedFieldNames(locked);
         syncLockedHiddenSelects();

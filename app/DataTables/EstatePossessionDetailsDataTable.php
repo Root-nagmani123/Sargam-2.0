@@ -31,13 +31,25 @@ class EstatePossessionDetailsDataTable extends DataTable
             })
             ->editColumn('possession_date', function ($row) {
                 $d = $row->possession_date ?? null;
-                return $d ? \Carbon\Carbon::parse($d)->format('d-m-Y') : '—';
+                if (! $d) return '—';
+                try {
+                    $dt = \Carbon\Carbon::parse($d);
+                    if ($dt->format('Y-m-d') <= '1900-01-01') return '—';
+                    return $dt->format('d-m-Y');
+                } catch (\Throwable $e) {
+                    return '—';
+                }
             })
             ->editColumn('electric_meter_reading', function ($row) {
                 $v = $row->electric_meter_reading;
                 return ($v !== null && $v !== '') ? e((string) $v) : '—';
             })
             ->addColumn('actions', function ($row) {
+                // Only Estate/Admin/Super Admin/Training/IST can edit possession details.
+                if (! (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'))) {
+                    return '';
+                }
+
                 $editUrl = route('admin.estate.possession-details.create', [
                     'requester_id' => $row->estate_home_request_details_pk,
                 ]);
@@ -103,15 +115,17 @@ class EstatePossessionDetailsDataTable extends DataTable
                 'epd.allotment_date',
                 'epd.possession_date',
                 'epd.electric_meter_reading',
-            ])
-            // Only records where possession is complete (Electric Meter Reading I entered).
-            ->whereNotNull('epd.electric_meter_reading')
-            ->where('epd.electric_meter_reading', '>', 0);
+            ]);
+
+        // Show only *completed* possessions in listing.
+        // Pending possessions (created at allotment time) store a sentinel date: 1900-01-01.
+        $query->where('epd.possession_date', '>', '1900-01-01');
 
         // RBAC: Only Admin / Estate / Super Admin / Training-* / IST can see full list.
         // All other roles (including Staff / HAC Person etc.) should only see their own possessions.
-        if (! (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST'))) {
-            $user = \Illuminate\Support\Facades\Auth::user();
+        $user = \Illuminate\Support\Facades\Auth::user();
+        $isEstateAuthority = $user && (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'));
+        if (! $isEstateAuthority) {
             if ($user) {
                 $employeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null);
                 if (!empty($employeeIds)) {
@@ -163,7 +177,9 @@ class EstatePossessionDetailsDataTable extends DataTable
 
     public function getColumns(): array
     {
-        return [
+        $isEstateAuthority = hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin');
+
+        $columns = [
             Column::computed('DT_RowIndex')->title('S.NO.')->addClass('text-center')->orderable(false)->searchable(false)->width('50px'),
             // Hidden column for default sort: newest possession (highest pk) first
             Column::make('pk')->name('epd.pk')->title('ID')->orderable(true)->searchable(false)->addClass('d-none')->visible(false),
@@ -181,8 +197,13 @@ class EstatePossessionDetailsDataTable extends DataTable
             Column::make('allotment_date')->name('epd.allotment_date')->title('ALLOTMENT DATE')->orderable(true)->searchable(false),
             Column::make('possession_date')->name('epd.possession_date')->title('POSSESSION DATE')->orderable(true)->searchable(false),
             Column::make('electric_meter_reading')->name('epd.electric_meter_reading')->title('Electric Meter Reading (I)')->orderable(false)->searchable(false)->addClass('text-end')->width('140px'),
-            Column::computed('actions')->title('Actions')->addClass('text-center')->orderable(false)->searchable(false)->width('120px'),
         ];
+
+        if ($isEstateAuthority) {
+            $columns[] = Column::computed('actions')->title('Actions')->addClass('text-center')->orderable(false)->searchable(false)->width('120px');
+        }
+
+        return $columns;
     }
 
     protected function filename(): string

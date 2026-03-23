@@ -15,14 +15,14 @@
                     <div class="input-group">
                         <input type="month" class="form-control" id="bill_month" name="bill_month" value="{{ date('Y-m') }}" max="{{ date('Y-m') }}" required>
                     </div>
-                    <small class="text-muted">
-                        <i class="bi bi-info-circle"></i> Select Bill Month and click Show to load data.
-                    </small>
                 </div>
                 <div class="col-md-2 mt-3 mt-md-0">
                     <button type="button" id="showPendingBtn" class="btn btn-primary rounded-1 px-3 w-100">Show</button>
                 </div>
             </div>
+            <small class="text-muted d-block mt-2">
+                <i class="bi bi-info-circle"></i> Select Bill Month and click Show to load data.
+            </small>
         </div>
     </div>
 
@@ -33,7 +33,7 @@
                     <thead>
                         <tr>
                             <th>S.No.</th>
-                            <th>Employee Type</th>
+                            <th>Designation</th>
                             <th>Name</th>
                             <th>House No.</th>
                             <th>Meter Reading Date</th>
@@ -129,7 +129,7 @@ $(document).ready(function() {
                     var $filter = $wrapper.find('.dataTables_filter');
                     $filter.addClass('d-flex align-items-center justify-content-end flex-wrap gap-2');
 
-                    var colLabels = ['S.No.', 'Employee Type', 'Name', 'House No.', 'Meter Reading Date', 'Last Meter Reading'];
+                    var colLabels = ['S.No.', 'Designation', 'Name', 'House No.', 'Meter Reading Date', 'Last Meter Reading'];
                     var $colDropdown = $('<div class="dropdown d-inline-block" data-bs-auto-close="outside">' +
                         '<button class="btn btn-outline-secondary btn-sm rounded-1 dropdown-toggle" type="button" id="pendingMeterColDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Show/Hide columns"><i class="material-icons material-symbols-rounded" style="font-size:18px;vertical-align:middle">view_column</i> Columns</button>' +
                         '<ul class="dropdown-menu dropdown-menu-end py-2" aria-labelledby="pendingMeterColDropdown" id="pendingMeterColMenu"></ul></div>');

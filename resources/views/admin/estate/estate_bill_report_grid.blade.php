@@ -18,7 +18,6 @@
                     <div class="input-group">
                         <input type="month" class="form-control" id="bill_month" name="bill_month" value="{{ request('bill_month', date('Y-m')) }}" max="{{ date('Y-m') }}" required>
                     </div>
-                    <small class="text-muted d-block">Select Bill Month (current month or earlier)</small>
                 </div>
                 <div class="col-12 col-md-2">
                     <button type="submit" class="btn btn-primary rounded-1 px-3 w-100" id="btnShow">
@@ -26,6 +25,7 @@
                     </button>
                 </div>
             </form>
+            <small class="text-muted d-block mt-2">Select Bill Month (current month or earlier)</small>
             <div class="d-none" id="billReportToolbarPlaceholder">
                 <div class="dropdown d-inline-block ms-2" data-bs-auto-close="outside">
                     <button type="button" class="btn btn-outline-secondary btn-sm rounded-1 dropdown-toggle d-inline-flex align-items-center" data-bs-toggle="dropdown" aria-expanded="false" id="btnBillReportColumns" title="Show / hide columns" disabled>

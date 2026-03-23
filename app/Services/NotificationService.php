@@ -317,6 +317,119 @@ class NotificationService
         $type = strtolower($notification->type ?? '');
         $moduleName = $notification->module_name ?? '';
 
+        // Estate: when estate bill is ready, redirect to Generate Estate Bill
+        // page for the bill's month and auto-open the specific bill print.
+        if ($type === 'estate' && strtolower($moduleName) === 'estatebill') {
+            $readingPk = (int) ($notification->reference_pk ?? 0);
+
+            if ($readingPk > 0) {
+                $row = DB::table('estate_month_reading_details as emrd')
+                    ->leftJoin('estate_possession_details as epd', 'emrd.estate_possession_details_pk', '=', 'epd.pk')
+                    ->leftJoin('estate_house_master as ehm', 'epd.estate_house_master_pk', '=', 'ehm.pk')
+                    ->where('emrd.pk', $readingPk)
+                    ->select([
+                        'emrd.bill_no',
+                        'emrd.bill_month',
+                        'emrd.bill_year',
+                        'ehm.estate_unit_sub_type_master_pk as unit_sub_type_pk',
+                    ])
+                    ->first();
+
+                if ($row) {
+                    $billNo = trim((string) ($row->bill_no ?? ''));
+                    $billMonthName = trim((string) ($row->bill_month ?? ''));
+                    $billYearRaw = trim((string) ($row->bill_year ?? ''));
+                    $billYear = $billYearRaw !== '' ? (int) $billYearRaw : 0;
+
+                    $resolveMonthNumber = function (?string $rawMonth) : ?int {
+                        $rawMonth = trim((string) ($rawMonth ?? ''));
+                        if ($rawMonth === '') return null;
+
+                        $rawMonthLower = strtolower($rawMonth);
+                        $monthMap = [
+                            'january' => 1, 'jan' => 1,
+                            'february' => 2, 'feb' => 2,
+                            'march' => 3, 'mar' => 3,
+                            'april' => 4, 'apr' => 4,
+                            'may' => 5,
+                            'june' => 6, 'jun' => 6,
+                            'july' => 7, 'jul' => 7,
+                            'august' => 8, 'aug' => 8,
+                            'september' => 9, 'sep' => 9, 'sept' => 9,
+                            'october' => 10, 'oct' => 10,
+                            'november' => 11, 'nov' => 11,
+                            'december' => 12, 'dec' => 12,
+                        ];
+                        if (isset($monthMap[$rawMonthLower])) {
+                            return $monthMap[$rawMonthLower];
+                        }
+
+                        // Numeric month (e.g., 9 or 09)
+                        if (preg_match('/^\d{1,2}$/', $rawMonth)) {
+                            $n = (int) $rawMonth;
+                            return ($n >= 1 && $n <= 12) ? $n : null;
+                        }
+
+                        // YYYY-mm passed as bill_month (rare, but handle)
+                        if (preg_match('/^\d{4}-\d{1,2}$/', $rawMonth)) {
+                            $parts = explode('-', $rawMonth);
+                            $n = (int) ($parts[1] ?? 0);
+                            return ($n >= 1 && $n <= 12) ? $n : null;
+                        }
+
+                        $rawMonthCap = ucfirst($rawMonthLower);
+                        try {
+                            return \Carbon\Carbon::createFromFormat('F', $rawMonthCap)->month;
+                        } catch (\Throwable $e) {}
+
+                        try {
+                            return \Carbon\Carbon::createFromFormat('M', $rawMonthCap)->month;
+                        } catch (\Throwable $e) {}
+
+                        try {
+                            return \Carbon\Carbon::parse('1 ' . $rawMonthCap . ' 2000')->month;
+                        } catch (\Throwable $e) {}
+
+                        return null;
+                    };
+
+                    $monthNum = $resolveMonthNumber($billMonthName);
+                    $billNoInt = (int) $billNo;
+
+                    // If we can build month filter for the Generate Estate Bill page, redirect there.
+                    // Even if bill_no is 0/empty, we still redirect to the month page and let the page highlight (if possible).
+                    if ($billMonthName !== '' && $billYear > 0 && $monthNum !== null) {
+                        $billMonthYm = sprintf('%04d-%02d', $billYear, $monthNum); // matches <input type="month">
+
+                        $query = [
+                            'bill_month' => $billMonthYm,
+                        ];
+
+                        $unitSubTypePk = (int) ($row->unit_sub_type_pk ?? 0);
+                        if ($unitSubTypePk > 0) {
+                            $query['unit_sub_type_pk'] = $unitSubTypePk;
+                        }
+
+                        // Only auto-open print when bill_no is a valid non-zero integer.
+                        if ($billNoInt > 0) {
+                            $query['open_estate_bill'] = 1;
+                        } else {
+                            $query['open_estate_bill'] = 0;
+                        }
+
+                        // Provide identifiers so the page can locate/highlight the correct card.
+                        // (Even bill_no=0 might still exist as a card identifier.)
+                        $query['bill_no'] = (string) $billNoInt;
+                        $query['bill_print_month'] = $billMonthName;
+                        $query['bill_print_year'] = $billYear;
+
+                        $base = route('admin.estate.generate-estate-bill');
+                        return $base . '?' . http_build_query($query);
+                    }
+                }
+            }
+        }
+
        
         // Try to find route mapping by type and module
         if (isset($config[$type]) && is_array($config[$type])) {

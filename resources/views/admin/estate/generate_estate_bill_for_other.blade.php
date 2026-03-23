@@ -29,22 +29,25 @@
                 </div>
             </div>
 
-            <form id="billForOtherFilterForm" class="row g-3 align-items-end">
+            <form id="billForOtherFilterForm" class="row g-3 align-items-start">
                 <div class="col-12 col-md-4">
                     <label for="bill_month" class="form-label">Bill Month <span class="text-danger">*</span></label>
                     <input type="month" class="form-control" id="bill_month" name="bill_month" value="{{ date('Y-m') }}" max="{{ date('Y-m') }}" required>
                     <small class="text-muted d-block">Select Bill Month</small>
                 </div>
-                <div class="col-12 col-md-2 d-flex align-items-center">
-                    <div class="form-check">
+                <div class="col-12 col-md-4">
+                    <label class="form-label d-none d-md-block mb-2">&nbsp;</label>
+                    <div class="d-flex flex-wrap align-items-center gap-3">
+                    <div class="form-check mb-0">
                         <input class="form-check-input" type="checkbox" id="check_all_bills" name="check_all">
                         <label class="form-check-label" for="check_all_bills">Check All</label>
                     </div>
-                </div>
-                <div class="col-12 col-md-4 d-flex flex-wrap gap-2 align-items-center">
                     <button type="submit" class="btn btn-primary" id="btnShow">
                         <i class="bi bi-search me-1"></i> Show
                     </button>
+                    </div>
+                </div>
+                <div class="col-12 col-md-4 d-flex flex-wrap gap-2 align-items-center justify-content-md-end">
                     <!-- <button type="button" class="btn btn-outline-success btn-sm" id="btnVerifySelected" title="Mark selected bills as verified (notify employee)">
                         <i class="bi bi-check2-circle me-1"></i> Verify Selected Bills
                     </button> -->
@@ -218,7 +221,7 @@ $(document).ready(function() {
                         var pk = row.pk != null ? row.pk : '';
                         tbody.append(
                             '<tr>' +
-                            '<td class="text-center"><input type="checkbox" class="form-check-input bill-row-check" value="' + escapeHtml(pk) + '" data-pk="' + escapeHtml(pk) + '"></td>' +
+                            '<td class="text-center"><input type="checkbox" class="form-check-input bill-row-check" value="' + escapeHtml(pk) + '" data-pk="' + escapeHtml(pk) + '" data-bill-no="' + escapeHtml(row.bill_no || '') + '" data-bill-month="' + escapeHtml(row.bill_month || '') + '" data-bill-year="' + escapeHtml(row.bill_year || '') + '"></td>' +
                             '<td>' + escapeHtml(row.sno || '') + '</td>' +
                             '<td>' + escapeHtml(row.name || '—') + '</td>' +
                             '<td>' + escapeHtml(row.section || '—') + '</td>' +
@@ -398,37 +401,31 @@ $(document).ready(function() {
     });
 
     $('#btnPrint').on('click', function() {
-        if (!dataTableInstance) {
-            window.print();
+        var printAllUrl = "{{ route('admin.estate.reports.bill-report-print-all') }}";
+        var selectedRows = $('#billForOtherTable .bill-row-check:checked');
+        var selectedMonthValue = ($('#bill_month').val() || '').toString().trim();
+
+        if (!selectedRows.length) {
+            alert('Please select at least one bill to print.');
             return;
         }
 
-        var table = dataTableInstance;
-        var originalLen = table.page.len();
-        var originalPage = table.page();
-
-        var restore = function() {
-            table.page.len(originalLen);
-            table.page(originalPage);
-            table.draw(false);
-        };
-
-        var restored = false;
-        var safeRestore = function() {
-            if (restored) return;
-            restored = true;
-            restore();
-        };
-
-        table.one('draw', function() {
-            setTimeout(function() {
-                var tableHtml = buildPrintableTableHtml();
-                openPrintWindow(tableHtml);
-                setTimeout(safeRestore, 800);
-            }, 250);
+        var selectedPks = [];
+        selectedRows.each(function() {
+            var pk = ($(this).data('pk') || '').toString().trim();
+            if (pk) selectedPks.push(pk);
         });
 
-        table.page.len(-1).draw();
+        if (!selectedPks.length) {
+            alert('No printable bill found for selected row(s).');
+            return;
+        }
+
+        var combinedUrl = printAllUrl +
+            '?bill_month=' + encodeURIComponent(selectedMonthValue) +
+            '&selected_pks=' + encodeURIComponent(selectedPks.join(',')) +
+            '&is_other=1';
+        window.open(combinedUrl, '_blank', 'noopener');
     });
 
     $('#btnVerifySelected').on('click', function() {
