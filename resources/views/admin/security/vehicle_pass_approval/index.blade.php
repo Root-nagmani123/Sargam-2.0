@@ -23,6 +23,49 @@
                 </div>
             @endif
 
+            <!-- Filters -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <form method="GET" action="{{ route('admin.security.vehicle_pass_approval.index') }}" class="row g-3 align-items-end">
+                       <div class="col-md-2">
+                            <label for="wheeler" class="form-label">Vehicle Type</label>
+                            <select name="wheeler" id="wheeler" class="form-select">
+                                @php $wh = $wheeler ?? request('wheeler', 'tw'); @endphp
+                                <option value="tw" {{ $wh === 'tw' ? 'selected' : '' }}>Two Wheeler</option>
+                                <option value="fw" {{ $wh === 'fw' ? 'selected' : '' }}>Four Wheeler</option>
+                                <option value="all" {{ $wh === 'all' ? 'selected' : '' }}>Both</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="search" class="form-label">Search</label>
+                            <input type="text" name="search" id="search" class="form-control"
+                                   placeholder="Search by Employee / Vehicle"
+                                   value="{{ $search ?? request('search', '') }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="date_from" class="form-label">Applied From</label>
+                            <input type="date" name="date_from" id="date_from" class="form-control"
+                                   value="{{ $dateFrom ?? request('date_from') }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="date_to" class="form-label">Applied To</label>
+                            <input type="date" name="date_to" id="date_to" class="form-control"
+                                   value="{{ $dateTo ?? request('date_to') }}">
+                        </div>
+                        
+                        <div class="col-md-12 d-flex justify-content-end gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="material-icons material-symbols-rounded" style="font-size:18px;">search</i>
+                                Search
+                            </button>
+                            <a href="{{ route('admin.security.vehicle_pass_approval.index') }}" class="btn btn-outline-secondary">
+                                <i class="material-icons material-symbols-rounded" style="font-size:18px;">restart_alt</i>
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
             <div class="datatables">
                 <div class="table-responsive">
                     <table id="vehicle-pass-approval-table" class="table text-nowrap align-middle mb-0">
@@ -31,7 +74,7 @@
                                 <th scope="col">Employee Name</th>
                                 <th scope="col">Vehicle Number</th>
                                 <th scope="col">Vehicle Type</th>
-                                <th scope="col">Request Type</th>
+                                <th scope="col">Status</th>
                                 <th scope="col">Vehicle Pass No</th>
                                 <th scope="col">Employee ID</th>
                                 <th scope="col">Applied On</th>
@@ -43,37 +86,34 @@
                             <tr>
                              <td>{{ $app->employee_name ?? '--' }}</td>
                                 <td><strong>{{ $app->vehicle_number ?? '--' }}</strong></td>
-                                 <td>{{ $app->vehicle_type ?? '--' }}</td>
+                                <td>{{ $app->vehicle_type ?? '--' }}</td>
                                 <td>
-                                    @if(isset($app->request_type) && $app->request_type === 'duplicate')
-                                        <span class="badge bg-warning">Duplicate</span>
-                                    @else
-                                        <span class="badge bg-info">Regular</span>
-                                    @endif
+                                    <span class="badge bg-{{ $app->status_class ?? 'secondary' }}">
+                                        {{ $app->status ?? '--' }}
+                                    </span>
                                 </td>
                                 <td>{{ $app->vehicle_pass_no ?? '--' }}</td>
                                 <td>{{ $app->employee_id ?? '--' }}</td>
-                               
                                 <td>{{ $app->created_date ? \Carbon\Carbon::parse($app->created_date)->format('d-m-Y H:i') : '--' }}</td>
                                 <td>
                                     <div class="d-flex gap-2 flex-wrap">
                                         @php
-                                            $encryptId = isset($app->request_type) && $app->request_type === 'duplicate' 
-                                                ? encrypt('dup-' . $app->id) 
-                                                : encrypt($app->id);
+                                            $encryptId = encrypt($app->id);
                                         @endphp
                                         <a href="{{ route('admin.security.vehicle_pass_approval.show', $encryptId) }}" 
                                            class="btn  btn-info bg-transparent border-0 text-primary p-0" title="View Details">
                                             <i class="material-icons material-symbols-rounded">visibility</i>
                                         </a>
-                                        <button type="button" class="btn  btn-success btn-veh-approve bg-transparent border-0 text-primary p-0" 
-                                                data-encrypted-id="{{ $encryptId }}" title="Approve">
-                                            <i class="material-icons material-symbols-rounded">check_circle</i>
-                                        </button>
-                                        <button type="button" class="btn  btn-danger btn-veh-reject bg-transparent border-0 text-primary p-0" 
-                                            data-encrypted-id="{{ $encryptId }}" title="Reject">
-                                        <i class="material-icons material-symbols-rounded">cancel</i>
-                                    </button>
+                                        @if($app->can_approve ?? false)
+                                            <button type="button" class="btn  btn-success btn-veh-approve bg-transparent border-0 text-primary p-0" 
+                                                    data-encrypted-id="{{ $encryptId }}" title="Approve">
+                                                <i class="material-icons material-symbols-rounded">check_circle</i>
+                                            </button>
+                                            <button type="button" class="btn  btn-danger btn-veh-reject bg-transparent border-0 text-primary p-0" 
+                                                data-encrypted-id="{{ $encryptId }}" title="Reject">
+                                            <i class="material-icons material-symbols-rounded">cancel</i>
+                                            </button>
+                                        @endif
                                 </td>
                             </tr>
                         @empty
@@ -84,6 +124,9 @@
                     </tbody>
                     </table>
                 </div>
+            </div>
+            <div class="mt-3">
+                {{ $pendingApplications->links() }}
             </div>
         </div>
     </div>
@@ -108,9 +151,8 @@
                         <label for="forward_status" class="form-label">Status</label>
                         <select class="form-select" id="forward_status" name="forward_status">
                             <option value="">Select Status (Optional)</option>
-                            <option value="1">Forward for Card Printing</option>
-                            <option value="2">Card Ready</option>
-                        </select>
+                            <option value="1">Forwarded</option>
+                            </select>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -170,44 +212,6 @@
         var url = rejectUrlTemplate.replace('__ID__', safeId);
         $('#rejectForm').attr('action', url);
         $('#rejectModal').modal('show');
-    });
-
-    // DataTables: sorting, search, pagination (page length 10)
-    $(document).ready(function () {
-        var $table = $('#vehicle-pass-approval-table');
-        if ($table.length && typeof $.fn.DataTable !== 'undefined' && !$.fn.DataTable.isDataTable($table)) {
-            $table.DataTable({
-                pageLength: 10,
-                lengthMenu: [[10, 25, 50], [10, 25, 50]],
-                order: [[0, 'asc']],
-                ordering: true,
-                searching: true,
-                dom: '<"row align-items-center mb-2"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row align-items-center mt-2"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
-                language: {
-                    search: '',
-                    searchPlaceholder: 'Search applications...',
-                    lengthMenu: 'Show _MENU_ entries',
-                    info: 'Showing _START_ to _END_ of _TOTAL_ entries',
-                    infoEmpty: 'No entries',
-                    infoFiltered: '(filtered from _MAX_ total)',
-                    paginate: { first: 'First', last: 'Last', next: 'Next', previous: 'Previous' },
-                    zeroRecords: 'No matching applications found'
-                },
-                columnDefs: [{ orderable: false, targets: 7 }],
-                drawCallback: function () {
-                    if (typeof window.adjustAllDataTables === 'function') {
-                        try { window.adjustAllDataTables(); } catch (e) {}
-                    }
-                }
-            });
-            var wrapper = $table.closest('.datatables');
-            if (wrapper.length) {
-                wrapper.find('.dataTables_length select').addClass('form-select form-select-sm');
-                wrapper.find('.dataTables_filter input').addClass('form-control').attr('placeholder', 'Search applications...');
-                wrapper.find('.dataTables_info').addClass('small text-muted');
-                wrapper.find('.dataTables_paginate').addClass('small');
-            }
-        }
     });
 })();
 </script>

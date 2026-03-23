@@ -1,13 +1,17 @@
 @extends('admin.layouts.master')
 @section('title', 'All Family ID Card Applications')
 @section('setup_content')
+@php
+    $familyApprovalReturn = in_array(request('return'), ['approval2', 'approval3'], true) ? request('return') : null;
+    $familyShowReturnQs = $familyApprovalReturn ? ('?return=' . $familyApprovalReturn) : '';
+@endphp
 <div class="container-fluid">
     <x-breadcrum title="All Family ID Card Applications"></x-breadcrum>
     <div class="card" style="border-left:4px solid #004a93;">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h4 class="mb-0">All Family ID Card Applications</h4>
-                <a href="{{ route('admin.security.family_idcard_approval.index') }}" class="btn btn-primary">
+                <a href="{{ route('admin.security.family_idcard_approval.index', array_filter(['return' => $familyApprovalReturn])) }}" class="btn btn-primary">
                     Pending Approvals
                 </a>
             </div>
@@ -50,7 +54,7 @@
                                 </td>
                                 <td>{{ $app->created_date ? $app->created_date->format('d-m-Y H:i') : '--' }}</td>
                                 <td>
-                                    <a href="{{ route('admin.security.family_idcard_approval.show', encrypt($app->fml_id_apply)) }}"
+                                    <a href="{{ route('admin.security.family_idcard_approval.show', encrypt($app->fml_id_apply)) }}{{ $familyShowReturnQs }}"
                                        class="btn btn-sm btn-info" title="View">
                                         <i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i>
                                     </a>

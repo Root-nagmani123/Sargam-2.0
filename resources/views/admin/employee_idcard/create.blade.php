@@ -84,10 +84,10 @@
                             <label for="request_for_perm" class="form-label">Request For <span class="text-danger">*</span></label>
                             <select name="request_for" id="request_for_perm" class="form-select idcard-perm-field idcard-step-field" data-field="request_for" required>
                                 <option value="">Select Request</option>
-                                <option value="Own ID Card" {{ $oldRequestFor == 'Own ID Card' ? 'selected' : '' }}>Own ID Card</option>
-                                <option value="Replacement" {{ $oldRequestFor == 'Replacement' ? 'selected' : '' }}>Replacement</option>
+                                <option value="Own ID Card" >Own ID Card</option>
+                                {{--<option value="Replacement" {{ $oldRequestFor == 'Replacement' ? 'selected' : '' }}>Replacement</option>
                                 <option value="Duplication" {{ $oldRequestFor == 'Duplication' ? 'selected' : '' }}>Duplication</option>
-                                <option value="Extension" {{ $oldRequestFor == 'Extension' ? 'selected' : '' }}>Extension</option>
+                                <option value="Extension" {{ $oldRequestFor == 'Extension' ? 'selected' : '' }}>Extension</option> --}}
                             </select>
                             @error('request_for')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>

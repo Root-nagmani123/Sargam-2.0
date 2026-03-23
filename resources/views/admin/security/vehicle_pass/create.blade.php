@@ -14,8 +14,9 @@
             $oldDesignation = old('designation', '');
             $oldDepartment = old('department', '');
             $oldVehicleNo = old('vehicle_no', '');
-            $oldValidFrom = old('veh_card_valid_from', '2026-01-01');
-            $oldValidTo = old('vech_card_valid_to', '2027-01-01');
+            $todayYmd = now()->format('Y-m-d');
+            $oldValidFrom = old('veh_card_valid_from', $todayYmd);
+            $oldValidTo = old('vech_card_valid_to', now()->addYear()->format('Y-m-d'));
             if (in_array($oldApplicantType, ['employee', 'government_vehicle']) && isset($currentUserEmployee) && $currentUserEmployee) {
                 if ($oldIdCard === '') $oldIdCard = $currentUserEmployee->emp_id ?? '';
                 if ($oldName === '') $oldName = $currentUserEmployee->name ?? '';
@@ -122,12 +123,12 @@
                     </div>
                     <div class="col-md-6">
                         <label for="veh_card_valid_from" class="form-label">Start Date <span class="text-danger">*</span></label>
-                        <input type="date" name="veh_card_valid_from" id="veh_card_valid_from" class="form-control" value="{{ $oldValidFrom }}" required>
+                        <input type="date" name="veh_card_valid_from" id="veh_card_valid_from" class="form-control" value="{{ $oldValidFrom }}" min="{{ $todayYmd }}" required>
                         @error('veh_card_valid_from')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-md-6">
                         <label for="vech_card_valid_to" class="form-label">End Date <span class="text-danger">*</span></label>
-                        <input type="date" name="vech_card_valid_to" id="vech_card_valid_to" class="form-control" value="{{ $oldValidTo }}" required>
+                        <input type="date" name="vech_card_valid_to" id="vech_card_valid_to" class="form-control" value="{{ $oldValidTo }}" min="{{ $todayYmd }}" required>
                         @error('vech_card_valid_to')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-12">
@@ -480,6 +481,44 @@
                 if (deptEl && !deptEl.value) deptEl.value = match.department || '';
             }
         });
+    }
+
+    // Date guards: block past dates and keep "Valid To" >= "Valid From"
+    var fromDateInput = document.getElementById('veh_card_valid_from');
+    var toDateInput = document.getElementById('vech_card_valid_to');
+    var today = new Date();
+    var tzOffsetMs = today.getTimezoneOffset() * 60000;
+    var todayYmd = new Date(today.getTime() - tzOffsetMs).toISOString().slice(0, 10);
+
+    function syncVehicleDateConstraints() {
+        if (!fromDateInput || !toDateInput) return;
+        fromDateInput.min = todayYmd;
+        // End date must be >= start date (and also not in past).
+        var minTo = todayYmd;
+        if (fromDateInput.value) {
+            minTo = fromDateInput.value > todayYmd ? fromDateInput.value : todayYmd;
+        }
+        toDateInput.min = minTo;
+
+        // If user somehow has an older date in field, clear it.
+        if (fromDateInput.value && fromDateInput.value < todayYmd) {
+            fromDateInput.value = '';
+        }
+        if (toDateInput.value && fromDateInput.value && toDateInput.value < fromDateInput.value) {
+            toDateInput.value = '';
+        } else if (toDateInput.value && toDateInput.value < toDateInput.min) {
+            toDateInput.value = '';
+        }
+    }
+
+    if (fromDateInput && toDateInput) {
+        syncVehicleDateConstraints();
+        fromDateInput.addEventListener('change', function() {
+            syncVehicleDateConstraints();
+            // If end date is empty, keep UX flexible (user may choose later),
+            // but never allow selecting before start date.
+        });
+        toDateInput.addEventListener('change', syncVehicleDateConstraints);
     }
 
     // Add new vehicle type (modal + AJAX)

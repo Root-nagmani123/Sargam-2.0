@@ -216,6 +216,8 @@ class IdCardSecurityMapper
             3 => 'Rejected',
             default => 'Unknown',
         };
+        // For contractual requests, resolve approval history from security_con_oth_id_apply_approval
+        $applyId = $row->emp_id_apply ?? null;
         $dto->approved_by_a1 = null;
         $dto->approved_by_a2 = null;
         $dto->rejected_by = null;
@@ -226,6 +228,51 @@ class IdCardSecurityMapper
         $dto->approver1 = null;
         $dto->approver2 = null;
         $dto->rejectedByUser = null;
+
+        if ($applyId) {
+            $approvals = DB::table('security_con_oth_id_apply_approval')
+                ->where('security_parm_id_apply_pk', $applyId)
+                ->orderBy('pk')
+                ->get();
+
+            $a1 = $approvals->firstWhere('status', 1);
+            $a2 = $approvals->firstWhere('status', 2);
+            $rej = $approvals->where('status', 3)->last();
+
+            $dto->approved_by_a1 = $a1 ? $a1->modified_by : null;
+            $dto->approved_by_a2 = $a2 ? $a2->modified_by : null;
+            $dto->rejected_by = $rej ? $rej->modified_by : null;
+            $dto->approved_by_a1_at = $a1 ? $a1->created_date : null;
+            $dto->approved_by_a2_at = $a2 ? $a2->created_date : null;
+            $dto->rejected_at = $rej ? $rej->created_date : null;
+            $dto->rejection_reason = $rej ? $rej->approval_remarks : null;
+
+            // Resolve approver names from employee_master for display in "All Requests" table
+            if ($dto->approved_by_a1) {
+                $emp1 = DB::table('employee_master')->where('pk', $dto->approved_by_a1)->first();
+                if ($emp1) {
+                    $dto->approver1 = (object)[
+                        'name' => trim(($emp1->first_name ?? '') . ' ' . ($emp1->last_name ?? '')),
+                    ];
+                }
+            }
+            if ($dto->approved_by_a2) {
+                $emp2 = DB::table('employee_master')->where('pk', $dto->approved_by_a2)->first();
+                if ($emp2) {
+                    $dto->approver2 = (object)[
+                        'name' => trim(($emp2->first_name ?? '') . ' ' . ($emp2->last_name ?? '')),
+                    ];
+                }
+            }
+            if ($dto->rejected_by) {
+                $empR = DB::table('employee_master')->where('pk', $dto->rejected_by)->first();
+                if ($empR) {
+                    $dto->rejectedByUser = (object)[
+                        'name' => trim(($empR->first_name ?? '') . ' ' . ($empR->last_name ?? '')),
+                    ];
+                }
+            }
+        }
         $dto->employee_master_pk = null;
         $dto->card_valid_from = isset($row->card_valid_from) ? \Carbon\Carbon::parse($row->card_valid_from) : null;
         $dto->card_valid_to = isset($row->card_valid_to) ? \Carbon\Carbon::parse($row->card_valid_to) : null;
