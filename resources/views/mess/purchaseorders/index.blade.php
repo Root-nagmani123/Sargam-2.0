@@ -984,25 +984,6 @@
                         this.refreshOptions(false);
                     }
 
-                    // TomSelect apni taraf se selected/active class dobara lagata hai,
-                    // isliye thoda delay dekar unhe hata rahe hain
-                    setTimeout(() => {
-                        this.activeOption = null;
-                        if (typeof this.setActiveOption === 'function') {
-                            this.setActiveOption(null);
-                        }
-                        if (typeof this.clearActiveItems === 'function') {
-                            this.clearActiveItems();
-                        }
-
-                        const options = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"]');
-                        options.forEach(opt => {
-                            opt.classList.remove('active');
-                            opt.classList.remove('selected');
-                            opt.setAttribute('aria-selected', 'false');
-                        });
-                    }, 0);
-
                     // Cursor ko hamesha input ke starting me le jao
                     if (searchInput) {
                         setTimeout(() => {
@@ -1025,10 +1006,8 @@
                     }
                 },
                 onType: function(str) {
-                    // Clear active option when user starts typing
-                    if (str.length === 0) {
-                        this.setActiveOption(null);
-                    }
+                    // Keep default keyboard highlight behavior for arrow navigation
+                    void str;
                 },
                 ...options
             };
@@ -1702,17 +1681,96 @@
         }
     });
 
-    // Enter key inside Item Details table triggers Add Item (and prevents form submit)
+    // In create modal, treat Enter like Tab; on Rate Enter append a new item row
     const createPOModal = document.getElementById('createPurchaseOrderModal');
     const poItemsTable = document.getElementById('poItemsTable');
-    if (createPOModal && poItemsTable) {
+    if (createPOModal) {
         createPOModal.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' && poItemsTable.contains(document.activeElement)) {
+            if (e.key !== 'Enter') return;
+            if (e.target && e.target.tagName === 'TEXTAREA') return;
+
+            const activeEl = document.activeElement;
+            if (!activeEl || !createPOModal.contains(activeEl)) return;
+            if (activeEl.matches('button, [type="submit"], [type="button"]')) return;
+
+            const isDropdownInteraction =
+                activeEl.matches('select') ||
+                !!activeEl.closest('.ts-wrapper') ||
+                !!activeEl.closest('.ts-dropdown');
+            if (isDropdownInteraction) return;
+
+            e.preventDefault();
+
+            if (poItemsTable && poItemsTable.contains(activeEl) && activeEl.classList.contains('po-unit-price')) {
                 const addBtn = document.getElementById('addPoItemRow');
                 if (addBtn) {
-                    e.preventDefault();
                     addBtn.click();
+                    const tbody = document.getElementById('poItemsBody');
+                    const newRow = tbody ? tbody.lastElementChild : null;
+                    const firstInput = newRow ? newRow.querySelector('.po-item-select, .po-qty, .po-unit-price, input, select') : null;
+                    if (firstInput) firstInput.focus();
                 }
+                return;
+            }
+
+            const focusable = Array.from(
+                createPOModal.querySelectorAll(
+                    'input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+                )
+            ).filter(function(el) {
+                return el.offsetParent !== null;
+            });
+
+            const currentIndex = focusable.indexOf(activeEl);
+            if (currentIndex !== -1 && currentIndex < focusable.length - 1) {
+                focusable[currentIndex + 1].focus();
+            }
+        });
+    }
+
+    // In edit modal, treat Enter like Tab; on Rate Enter append a new item row
+    const editPOModal = document.getElementById('editPurchaseOrderModal');
+    const editPoItemsTable = document.getElementById('editPoItemsTable');
+    if (editPOModal) {
+        editPOModal.addEventListener('keydown', function(e) {
+            if (e.key !== 'Enter') return;
+            if (e.target && e.target.tagName === 'TEXTAREA') return;
+
+            const activeEl = document.activeElement;
+            if (!activeEl || !editPOModal.contains(activeEl)) return;
+            if (activeEl.matches('button, [type="submit"], [type="button"]')) return;
+
+            const isDropdownInteraction =
+                activeEl.matches('select') ||
+                !!activeEl.closest('.ts-wrapper') ||
+                !!activeEl.closest('.ts-dropdown');
+            if (isDropdownInteraction) return;
+
+            e.preventDefault();
+
+            if (editPoItemsTable && editPoItemsTable.contains(activeEl) && activeEl.classList.contains('po-unit-price')) {
+                const addBtn = document.getElementById('addEditPoItemRow');
+                if (addBtn) {
+                    addBtn.click();
+                    const tbody = document.getElementById('editPoItemsBody');
+                    const newRow = tbody ? tbody.lastElementChild : null;
+                    const firstInput = newRow ? newRow.querySelector('.po-item-select, .po-qty, .po-unit-price, input, select') : null;
+                    if (firstInput) firstInput.focus();
+                }
+                return;
+            }
+
+            const focusable = Array.from(
+                editPOModal.querySelectorAll(
+                    'input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+                )
+            ).filter(function(el) {
+                return el.offsetParent !== null;
+            });
+
+            const currentIndex = focusable.indexOf(activeEl);
+            if (currentIndex !== -1 && currentIndex < focusable.length - 1) {
+                focusable[currentIndex + 1].focus();
             }
         });
     }

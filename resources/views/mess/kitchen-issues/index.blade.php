@@ -2509,7 +2509,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 new TomSelect(select, {
                     allowEmptyOption: true,
-                    dropdownParent: '#editSellingVoucherModal .modal-body',
+                    dropdownParent: 'body',
                     placeholder: 'Select Item',
                     maxOptions: null,
                     highlight: false,
@@ -2570,7 +2570,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 new TomSelect(select, {
                     allowEmptyOption: true,
-                    dropdownParent: '#editSellingVoucherModal .modal-body',
+                    dropdownParent: 'body',
                     placeholder: 'Select Item',
                     maxOptions: null,
                     highlight: false,
@@ -2986,7 +2986,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     new TomSelect(newSelect, {
                         allowEmptyOption: true,
-                        dropdownParent: '#editSellingVoucherModal .modal-body',
+                        dropdownParent: 'body',
                         placeholder: 'Select Item',
                         maxOptions: null,
                         highlight: false,
@@ -3103,6 +3103,10 @@ document.addEventListener('DOMContentLoaded', function() {
             if (e.target.classList.contains('sv-avail') || e.target.classList.contains('sv-qty') || e.target.classList.contains('sv-rate')) {
                 const row = e.target.closest('.sv-item-row');
                 if (row) {
+                    if (e.target.classList.contains('sv-rate')) {
+                        const rateInp = row.querySelector('.sv-rate');
+                        if (rateInp) rateInp.dataset.manualRate = '1';
+                    }
                     refreshEditAllAvailable();
                     calcRow(row);
                     updateEditGrandTotal();
