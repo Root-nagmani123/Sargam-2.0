@@ -5,6 +5,7 @@ namespace App\DataTables;
 use App\Models\EstateHacApprovedRow;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Yajra\DataTables\Html\Column;
@@ -134,6 +135,8 @@ class EstateHacApprovedDataTable extends DataTable
 
     public function query(EstateHacApprovedRow $model): EloquentBuilder
     {
+        $canSeeHacApproved = hasRole('HAC Person') || hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin');
+
         $part1 = DB::table('estate_change_home_req_details as ec')
             ->join('estate_home_request_details as eh', 'ec.estate_home_req_details_pk', '=', 'eh.pk')
             ->where('ec.estate_change_hac_status', 1)
@@ -192,10 +195,17 @@ class EstateHacApprovedDataTable extends DataTable
 
         $unionQuery = $part1->unionAll($part2);
 
-        return $model->newQuery()
+        $q = $model->newQuery()
             ->fromSub($unionQuery, 'hac_approved')
             ->orderByDesc('request_date')
             ->orderByDesc('pk');
+
+        // Self-service staff/training roles must not access HAC approved queues.
+        if (! Auth::check() || ! $canSeeHacApproved) {
+            $q->whereRaw('1 = 0');
+        }
+
+        return $q;
     }
 
     public function html(): HtmlBuilder

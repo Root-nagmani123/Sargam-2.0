@@ -149,7 +149,6 @@
             @php
                 $hasCurrentAlot = trim((string) ($requestForHouse->current_alot ?? '')) !== '' && (string) ($requestForHouse->current_alot ?? '') !== '—';
                 $hasAnyChangeRequest = ! $changeRequestDetails->isEmpty();
-                $canEditChangeRequest = hasRole('Admin') || hasRole('Estate') || hasRole('Super Admin');
             @endphp
             @if($hasCurrentAlot && ! $hasAnyChangeRequest && (hasRole('Estate') || hasRole('Admin')))
                 <a href="{{ route('admin.estate.raise-change-request', ['id' => $requestForHouse->pk]) }}" class="btn btn-info btn-sm">
@@ -159,7 +158,7 @@
         </div>
         <div class="card-body p-4">
             @if($changeRequestDetails->isEmpty())
-                <p class="text-body-secondary mb-0">No change request has been raised for this house request. Change request is applicable only when the employee already has a house allotted (<code>current_alot</code> is set). Use <strong>Raise Change Request</strong> above when the employee has a current allotment. <strong>If you have already returned the house</strong>, you cannot raise a change request for this request.</p>
+                <p class="text-body-secondary mb-0">No change request has been raised for this house request. Change request is applicable only when the employee already has a house allotted (<code>current alot</code> is set). Use <strong>Raise Change Request</strong> above when the employee has a current allotment. <strong>If you have already returned the house</strong>, you cannot raise a change request for this request.</p>
             @else
                 <p class="text-body-secondary small mb-4">Change request(s) linked to this house request from.</p>
                 <div class="table-responsive">
@@ -175,9 +174,6 @@
                                 <th class="fw-semibold small text-uppercase">Unit Sub Type</th>
                                 <th class="fw-semibold small text-uppercase">Status</th>
                                 <th class="fw-semibold small text-uppercase">Remarks</th>
-                                @if($canEditChangeRequest)
-                                <th class="fw-semibold small text-uppercase text-center">Action</th>
-                                @endif
                             </tr>
                         </thead>
                         <tbody>
@@ -201,13 +197,6 @@
                                         <span class="badge bg-{{ $statusClass }}">{{ $chg->change_ap_dis_status_label }}</span>
                                     </td>
                                     <td class="small">{{ \Illuminate\Support\Str::limit($chg->remarks, 40) }}</td>
-                                    @if($canEditChangeRequest)
-                                    <td class="text-center">
-                                        <a href="{{ $chg->edit_url }}" class="btn btn-sm btn-outline-primary" title="Edit change request details">
-                                            <i class="material-icons">edit</i>
-                                        </a>
-                                    </td>
-                                    @endif
                                 </tr>
                             @endforeach
                         </tbody>

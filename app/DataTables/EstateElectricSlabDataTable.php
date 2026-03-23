@@ -88,7 +88,7 @@ class EstateElectricSlabDataTable extends DataTable
                         'previous' => 'Previous',
                     ],
                 ],
-                'dom' => '<"row flex-wrap align-items-center gap-2"<"col-12 col-md-6"l><"col-12 col-md-6"f>>rt<"row align-items-center mt-2"<"col-12 col-md-5"i><"col-12 col-md-7"p>>',
+                'dom' => '<"row align-items-center g-2"<"col-12 col-md-6"l><"col-12 col-md-6 text-md-end"f>>rt<"row align-items-center mt-2 g-2"<"col-12 col-md-5"i><"col-12 col-md-7"p>>',
             ]);
     }
 

@@ -70,7 +70,7 @@ class EstateController extends Controller
      */
     private function ensureChangeRequestOwnership(int $changeRequestPk): void
     {
-        if (hasRole('Estate') || hasRole('Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST')) {
+        if (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin')) {
             return;
         }
         $user = Auth::user();
@@ -113,9 +113,9 @@ class EstateController extends Controller
             ->orderBy('ust.unit_sub_type')
             ->pluck('ust.unit_sub_type', 'ust.pk');
 
-        // For self-service users (non-estate/admin/IST/HAC-person), resolve their own employee_master.pk
+        // For self-service users (non-estate/admin/super-admin/HAC-person), resolve their own employee_master.pk
         // so the Request For Estate form can be prefilled with their details.
-        if ($user && ! (hasRole('Estate') || hasRole('Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST') || hasRole('HAC Person'))) {
+        if ($user && ! (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin') || hasRole('HAC Person'))) {
             $employeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null);
             if (!empty($employeeIds)) {
                 $selfEmployeePk = DB::table('employee_master')
@@ -151,6 +151,10 @@ class EstateController extends Controller
      */
     public function putInHacAction(Request $request)
     {
+        if (! (hasRole('HAC Person') || hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'))) {
+            abort(403, 'You do not have permission to put requests in HAC.');
+        }
+
         $request->validate([
             'ids' => 'required|array',
             'ids.*' => 'integer|exists:estate_home_request_details,pk',
@@ -342,7 +346,8 @@ class EstateController extends Controller
         }
 
         $user = Auth::user();
-        $isEstateAuthority = $user && (hasRole('Estate') || hasRole('Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST'));
+        // Training roles should behave like normal staff in estate request flow.
+        $isEstateAuthority = $user && (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'));
         $selfEmployeeIds = [];
         if ($user && ! $isEstateAuthority) {
             $selfEmployeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null);
@@ -889,9 +894,9 @@ class EstateController extends Controller
                 : "COALESCE(NULLIF(TRIM(e.emp_id), ''), '')")
             : ($hasEmployeeId ? "COALESCE(NULLIF(TRIM(e.employee_id), ''), '')" : "''");
 
-        // Self-service: non-estate/admin users must not fetch details for other employees
+        // Self-service: non-estate/admin/super-admin users must not fetch details for other employees
         $user = Auth::user();
-        if ($user && ! (hasRole('Estate') || hasRole('Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST'))) {
+        if ($user && ! (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'))) {
             $employeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null);
             // Normalize possible pk_old values to canonical employee_master.pk for correct comparison
             if (!empty($employeeIds)) {
@@ -1098,7 +1103,7 @@ class EstateController extends Controller
         }
 
         $user = Auth::user();
-        $isEstateAuthority = $user && (hasRole('Estate') || hasRole('Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST'));
+        $isEstateAuthority = $user && (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'));
         if ($user && ! $isEstateAuthority) {
             $selfEmployeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null);
             if (! in_array((string) $record->employee_pk, array_map('strval', $selfEmployeeIds), true)) {
@@ -1215,8 +1220,8 @@ class EstateController extends Controller
                     'eut.unit_type as unit_type_name',
                     'eust.unit_sub_type',
                     'ehm.house_no',
-                    'epd.allotment_date',
-                    'epd.possession_date'
+                    DB::raw("CASE WHEN epd.allotment_date <= '1900-01-01' THEN NULL ELSE DATE(epd.allotment_date) END as allotment_date"),
+                    DB::raw("CASE WHEN epd.possession_date <= '1900-01-01' THEN NULL ELSE DATE(epd.possession_date) END as possession_date")
                 );
 
             $row = $rowQ->first();
@@ -1467,7 +1472,7 @@ class EstateController extends Controller
             ->select('ec.pk', 'ec.estate_change_req_ID');
 
         $user = Auth::user();
-        if ($user && ! (hasRole('Estate') || hasRole('Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST'))) {
+        if ($user && ! (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'))) {
             $employeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null);
             if (! empty($employeeIds)) {
                 $optionsQuery->whereIn('eh.employee_pk', $employeeIds);
@@ -1492,7 +1497,7 @@ class EstateController extends Controller
             ->select('eh.pk', 'eh.req_id', 'eh.emp_name', 'eh.employee_id', 'eh.current_alot')
             ->orderByDesc('eh.pk')
             ->limit(200);
-        if ($user && ! (hasRole('Estate') || hasRole('Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST'))) {
+        if ($user && ! (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'))) {
             $employeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null);
             if (! empty($employeeIds)) {
                 $homeRequestsQuery->whereIn('eh.employee_pk', $employeeIds);
@@ -1782,7 +1787,7 @@ class EstateController extends Controller
             ->orderByDesc('ec.pk');
 
         $user = Auth::user();
-        if ($user && ! (hasRole('Estate') || hasRole('Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST'))) {
+        if ($user && ! (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'))) {
             $employeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null);
             if (!empty($employeeIds)) {
                 $query->whereIn('eh.employee_pk', $employeeIds);
@@ -1829,6 +1834,8 @@ class EstateController extends Controller
                     'pk' => $row->pk,
                     'request_id' => $row->estate_change_req_ID ?: ('Chg-Req-' . $row->pk),
                     'request_date' => $row->change_req_date ? \Carbon\Carbon::parse($row->change_req_date)->format('d-m-Y') : '—',
+                    'request_date_sort' => $row->change_req_date ? \Carbon\Carbon::parse($row->change_req_date)->format('Y-m-d') : '',
+                    'change_status' => $status,
                     'name' => $row->emp_name ?: '—',
                     'emp_id' => $row->employee_id ?: '—',
                     'doj_academy' => $row->doj_academic ? \Carbon\Carbon::parse($row->doj_academic)->format('d-m-Y') : '—',
@@ -2307,6 +2314,10 @@ class EstateController extends Controller
      */
     public function allotNewRequest(Request $request, $id)
     {
+        if (! (hasRole('HAC Person') || hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'))) {
+            abort(403, 'You do not have permission to allot estate houses.');
+        }
+
         $homeReq = EstateHomeRequestDetails::where('hac_status', 1)
             ->where('change_status', 0)
             ->findOrFail($id);
@@ -2473,6 +2484,10 @@ class EstateController extends Controller
      */
     public function approveChangeRequest(Request $request, $id)
     {
+        if (! (hasRole('HAC Person') || hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'))) {
+            abort(403, 'You do not have permission to approve estate change requests.');
+        }
+
         $record = EstateChangeHomeReqDetails::with('estateHomeRequestDetails')
             ->where('estate_change_hac_status', 1)
             ->findOrFail($id);
@@ -2623,6 +2638,10 @@ class EstateController extends Controller
      */
     public function disapproveChangeRequest(Request $request, $id)
     {
+        if (! (hasRole('HAC Person') || hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'))) {
+            abort(403, 'You do not have permission to disapprove estate change requests.');
+        }
+
         $request->validate([
             'disapprove_reason' => 'required|string|max:500',
         ]);
@@ -4387,7 +4406,7 @@ class EstateController extends Controller
 
         // Self-service: non-estate/admin users should only see their own HAC-approved requester(s) in dropdown.
         $user = Auth::user();
-        $isEstateAuthority = $user && (hasRole('Estate') || hasRole('Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST'));
+        $isEstateAuthority = $user && (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'));
         if ($user && ! $isEstateAuthority) {
             $employeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null);
             if (!empty($employeeIds)) {
@@ -4441,7 +4460,7 @@ class EstateController extends Controller
             if (\Illuminate\Support\Facades\Schema::hasColumn('estate_possession_details', 'electric_meter_reading_2')) {
                 $editRequesterQuery->addSelect('epd.electric_meter_reading_2');
             }
-            if ($user && ! (hasRole('Estate') || hasRole('Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST'))) {
+            if ($user && ! (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'))) {
                 $employeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null);
                 if (! empty($employeeIds)) {
                     $editRequesterQuery->where(function ($q) use ($employeeIds) {
@@ -4537,7 +4556,7 @@ class EstateController extends Controller
         // For Estate/Admin roles, electric meter reading (primary/secondary) is required.
         // For normal users (self-service), meter reading is optional; admin will update later.
         $user = Auth::user();
-        $isEstateAuthority = $user && (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST'));
+        $isEstateAuthority = $user && (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'));
 
         if ($isEstateAuthority) {
             $validator->after(function ($v) use ($request) {
@@ -4602,7 +4621,7 @@ class EstateController extends Controller
         // Lekin pehli baar possession details fill karne ke liye (electric_meter_reading 0/NULL)
         // unko allow karna hai – warna staff apna first possession complete hi nahi kar paayega.
         $user = Auth::user();
-        $isEstateAuthority = $user && (hasRole('Estate') || hasRole('Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST'));
+        $isEstateAuthority = $user && (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'));
         $hasFinalReading = $existingPossession && (int) ($existingPossession->electric_meter_reading ?? 0) > 0;
         if (! $isEstateAuthority && $hasFinalReading) {
             return redirect()
@@ -4944,9 +4963,9 @@ class EstateController extends Controller
                 });
 
             // LBSNAA: non-admin (permanent employee) sees only their own name;
-            // Estate/Admin/Training/IST see full list (same as Request For Estate behavior).
+            // Estate/Admin/Super Admin see full list (same as Request For Estate behavior).
             $user = Auth::user();
-            if ($user && ! (hasRole('Estate') || hasRole('Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST'))) {
+            if ($user && ! (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'))) {
                 $employeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null);
                 if (!empty($employeeIds)) {
                     $query->whereIn('ehrd.employee_pk', $employeeIds);
@@ -5884,6 +5903,7 @@ class EstateController extends Controller
 
         $hasUnitTypeOnSubType = \Illuminate\Support\Facades\Schema::hasColumn('estate_unit_sub_type_master', 'estate_unit_type_master_pk');
         $hasEpdReading2 = \Illuminate\Support\Facades\Schema::hasColumn('estate_possession_details', 'electric_meter_reading_2');
+        $hasEpdReading1 = \Illuminate\Support\Facades\Schema::hasColumn('estate_possession_details', 'electric_meter_reading');
 
         // Avoid correlated subqueries per row for "previous meter" values.
         // MySQL 8 supports window functions; LAG gives previous row within possession, ordered by (to_date, pk).
@@ -6013,6 +6033,9 @@ class EstateController extends Controller
                 'emrd.prev_meter_one',
                 'emrd.prev_meter_two',
             ];
+            if ($hasEpdReading1) {
+                $selectCols[] = 'epd.electric_meter_reading as epd_electric_meter_reading';
+            }
             if ($hasEpdReading2) {
                 $selectCols[] = 'epd.electric_meter_reading_2 as epd_electric_meter_reading_2';
             }
@@ -6040,6 +6063,17 @@ class EstateController extends Controller
                 $oldR2Source = $r->last_month_elec_red2;
                 $hasSecondaryMeter = ($r->emrd_meter_two !== null && (int) $r->emrd_meter_two > 0)
                     || ($r->prev_meter_two !== null && (int) $r->prev_meter_two > 0);
+
+                // Old Meter1 Reading:
+                // Prefer last_month_elec_red (previous snapshot). If it is missing/0, fall back to
+                // possession's electric_meter_reading (this happens during some change-request flows).
+                $oldM1Reading = '—';
+                $oldM1ReadingVal = $oldR1Source;
+                if ($oldM1ReadingVal !== null && $oldM1ReadingVal !== '' && (int) $oldM1ReadingVal > 0) {
+                    $oldM1Reading = (string) $oldM1ReadingVal;
+                } elseif ($hasEpdReading1 && isset($r->epd_electric_meter_reading) && (int) $r->epd_electric_meter_reading > 0) {
+                    $oldM1Reading = (string) $r->epd_electric_meter_reading;
+                }
                 // Old Meter2 Reading: use last_month_elec_red2; if null/0 and secondary meter exists, fallback to possession's electric_meter_reading_2 (same as Update Meter Reading "Electric Meter Reading")
                 $oldM2Reading = '—';
                 if ($hasSecondaryMeter) {
@@ -6062,7 +6096,7 @@ class EstateController extends Controller
                     'new_meter1_no' => $newM1,
                     'old_meter2_no' => $oldM2,
                     'new_meter2_no' => $newM2,
-                    'old_meter1_reading' => $oldR1Source !== null && $oldR1Source !== '' ? (string) $oldR1Source : '—',
+                    'old_meter1_reading' => $oldM1Reading,
                     'new_meter1_reading' => $r->curr_month_elec_red !== null && $r->curr_month_elec_red !== '' ? (string) $r->curr_month_elec_red : '—',
                     'old_meter2_reading' => $oldM2Reading,
                     'new_meter2_reading' => $hasSecondaryMeter
@@ -6105,6 +6139,9 @@ class EstateController extends Controller
             'emrd.prev_meter_one',
             'emrd.prev_meter_two',
         ];
+            if ($hasEpdReading1) {
+                $legacySelectCols[] = 'epd.electric_meter_reading as epd_electric_meter_reading';
+            }
         if ($hasEpdReading2) {
             $legacySelectCols[] = 'epd.electric_meter_reading_2 as epd_electric_meter_reading_2';
         }
@@ -6131,6 +6168,15 @@ class EstateController extends Controller
             $oldR2Source = $r->last_month_elec_red2;
             $hasSecondaryMeter = ($r->emrd_meter_two !== null && (int) $r->emrd_meter_two > 0)
                 || ($r->prev_meter_two !== null && (int) $r->prev_meter_two > 0);
+
+            // Old Meter1 Reading (legacy response):
+            $oldM1Reading = '—';
+            $oldM1ReadingVal = $oldR1Source;
+            if ($oldM1ReadingVal !== null && $oldM1ReadingVal !== '' && (int) $oldM1ReadingVal > 0) {
+                $oldM1Reading = (string) $oldM1ReadingVal;
+            } elseif ($hasEpdReading1 && isset($r->epd_electric_meter_reading) && (int) $r->epd_electric_meter_reading > 0) {
+                $oldM1Reading = (string) $r->epd_electric_meter_reading;
+            }
             $oldM2Reading = '—';
             if ($hasSecondaryMeter) {
                 if ($oldR2Source !== null && $oldR2Source !== '' && (int) $oldR2Source > 0) {
@@ -6152,7 +6198,7 @@ class EstateController extends Controller
                 'new_meter1_no' => $newM1,
                 'old_meter2_no' => $oldM2,
                 'new_meter2_no' => $newM2,
-                'old_meter1_reading' => $oldR1Source !== null && $oldR1Source !== '' ? (string) $oldR1Source : '—',
+                'old_meter1_reading' => $oldM1Reading,
                 'new_meter1_reading' => $r->curr_month_elec_red !== null && $r->curr_month_elec_red !== '' ? (string) $r->curr_month_elec_red : '—',
                 'old_meter2_reading' => $oldM2Reading,
                 'new_meter2_reading' => $hasSecondaryMeter
@@ -7085,7 +7131,7 @@ class EstateController extends Controller
                     DB::raw('NULL as ehm_licence_fee'),
                     'eor.emp_name',
                     DB::raw('NULL as employee_id'),
-                    'eor.designation as emp_designation',
+                    DB::raw("COALESCE(NULLIF(TRIM(eor.designation), ''), NULLIF(TRIM(eor.section), ''), '—') as emp_designation"),
                     'eust.unit_sub_type'
                 );
         };
@@ -7292,8 +7338,116 @@ class EstateController extends Controller
         $billMonth = $request->get('bill_month');
         $unitSubTypePk = $request->get('unit_sub_type_pk');
         $bills = collect();
+        $isSelectedPrint = false;
+        $isOtherSelected = false;
+        $backUrl = route('admin.estate.generate-estate-bill');
 
-        if ($billMonth) {
+        $selectedPksRaw = $request->get('selected_pks');
+        $selectedPks = collect(is_array($selectedPksRaw) ? $selectedPksRaw : explode(',', (string) $selectedPksRaw))
+            ->map(function ($v) {
+                return (int) trim((string) $v);
+            })
+            ->filter(function ($v) {
+                return $v > 0;
+            })
+            ->unique()
+            ->values()
+            ->all();
+
+        if (!empty($selectedPks) && $request->boolean('is_other')) {
+            $isSelectedPrint = true;
+            $isOtherSelected = true;
+            $backUrl = route('admin.estate.generate-estate-bill-for-other', ['bill_month' => $billMonth]);
+
+            $hasUnitTypeOnSubType = \Illuminate\Support\Facades\Schema::hasColumn('estate_unit_sub_type_master', 'estate_unit_type_master_pk');
+            $rows = DB::table('estate_month_reading_details_other as emro')
+                ->join('estate_possession_other as epo', 'emro.estate_possession_other_pk', '=', 'epo.pk')
+                ->join('estate_other_req as eor', 'epo.estate_other_req_pk', '=', 'eor.pk')
+                ->leftJoin('estate_unit_sub_type_master as eust', 'epo.estate_unit_sub_type_master_pk', '=', 'eust.pk')
+                ->leftJoin('estate_house_master as ehm', 'epo.estate_house_master_pk', '=', 'ehm.pk')
+                ->whereIn('emro.pk', $selectedPks)
+                ->select(
+                    'emro.pk',
+                    'emro.bill_no',
+                    'emro.bill_month',
+                    'emro.bill_year',
+                    'emro.from_date',
+                    'emro.to_date',
+                    'emro.last_month_elec_red',
+                    'emro.curr_month_elec_red',
+                    'emro.last_month_elec_red2',
+                    'emro.curr_month_elec_red2',
+                    'emro.electricty_charges',
+                    'emro.water_charges',
+                    'emro.licence_fees',
+                    'emro.house_no',
+                    'emro.meter_one',
+                    DB::raw('NULL as meter_one_elec_charge'),
+                    DB::raw('NULL as meter_one_consume_unit'),
+                    'emro.meter_two',
+                    DB::raw('NULL as meter_two_elec_charge'),
+                    DB::raw('NULL as meter_two_consume_unit'),
+                    ($hasUnitTypeOnSubType ? 'eust.estate_unit_type_master_pk as unit_type_pk' : 'epo.estate_unit_type_master_pk as unit_type_pk'),
+                    'epo.estate_unit_sub_type_master_pk as unit_sub_type_pk',
+                    'ehm.water_charge as ehm_water_charge',
+                    'ehm.licence_fee as ehm_licence_fee',
+                    'eor.emp_name',
+                    DB::raw("COALESCE(NULLIF(TRIM(eor.designation), ''), NULLIF(TRIM(eor.section), ''), '—') as emp_designation"),
+                    'eust.unit_sub_type'
+                )
+                ->orderBy('emro.bill_year', 'desc')
+                ->orderBy('emro.bill_month')
+                ->orderBy('emro.bill_no')
+                ->get();
+
+            foreach ($rows as $b) {
+                $b->bill_no = $this->resolveBillNumber($b->bill_no ?? null, $b->pk ?? null);
+                $b->from_date_formatted = $b->from_date ? \Carbon\Carbon::parse($b->from_date)->format('d.m.Y') : '—';
+                $b->to_date_formatted = $b->to_date ? \Carbon\Carbon::parse($b->to_date)->format('d.m.Y') : '—';
+                $b->house_display = $b->unit_sub_type && $b->house_no ? $b->unit_sub_type . '-(' . $b->house_no . ')' : ($b->house_no ?? '—');
+
+                $unitTypePk = isset($b->unit_type_pk) ? (int) $b->unit_type_pk : null;
+                if (! $unitTypePk && isset($b->unit_sub_type_pk) && $b->unit_sub_type_pk) {
+                    $derived = DB::table('estate_eligibility_mapping')
+                        ->where('estate_unit_sub_type_master_pk', (int) $b->unit_sub_type_pk)
+                        ->whereNotNull('estate_unit_type_master_pk')
+                        ->orderBy('estate_unit_type_master_pk')
+                        ->value('estate_unit_type_master_pk');
+                    if ($derived) {
+                        $unitTypePk = (int) $derived;
+                    }
+                }
+
+                $prev1 = (int) ($b->last_month_elec_red ?? 0);
+                $curr1 = (int) ($b->curr_month_elec_red ?? 0);
+                $prev2 = (int) ($b->last_month_elec_red2 ?? 0);
+                $curr2 = (int) ($b->curr_month_elec_red2 ?? 0);
+                $u1 = ($curr1 >= $prev1) ? $curr1 - $prev1 : 0;
+                $u2 = ($curr2 >= $prev2) ? $curr2 - $prev2 : 0;
+
+                $m1 = $u1 > 0 ? $this->calculateElectricChargeForUnits($unitTypePk, $u1) : 0.0;
+                $m2 = $u2 > 0 ? $this->calculateElectricChargeForUnits($unitTypePk, $u2) : 0.0;
+                $b->meter_one_consume_unit = ($u1 > 0 || $curr1 > 0 || $prev1 > 0) ? $u1 : null;
+                $b->meter_two_consume_unit = ($u2 > 0 || $curr2 > 0 || $prev2 > 0) ? $u2 : null;
+                $b->meter_one_elec_charge = $m1;
+                $b->meter_two_elec_charge = $m2;
+                $b->electricty_charges = $m1 + $m2;
+
+                $billWater = (float) ($b->water_charges ?? 0);
+                $billLicence = (float) ($b->licence_fees ?? 0);
+                if ($billWater <= 0 && isset($b->ehm_water_charge) && $b->ehm_water_charge !== null && $b->ehm_water_charge !== '') {
+                    $b->water_charges = (float) $b->ehm_water_charge;
+                }
+                if ($billLicence <= 0 && isset($b->ehm_licence_fee) && $b->ehm_licence_fee !== null && $b->ehm_licence_fee !== '') {
+                    $b->licence_fees = (float) $b->ehm_licence_fee;
+                }
+                $b->grand_total = (float) ($b->electricty_charges ?? 0) + (float) ($b->water_charges ?? 0) + (float) ($b->licence_fees ?? 0);
+            }
+
+            $bills = $rows;
+        }
+
+        if (!$isOtherSelected && $billMonth) {
             [$year, $month] = explode('-', $billMonth);
             $monthName = date('F', mktime(0, 0, 0, (int) $month, 1));
 
@@ -7347,6 +7501,15 @@ class EstateController extends Controller
 
             if (!empty($unitSubTypePk)) {
                 $query->where('ehm.estate_unit_sub_type_master_pk', $unitSubTypePk);
+            }
+
+            if (!empty($selectedPks)) {
+                $isSelectedPrint = true;
+                $query->whereIn('emrd.pk', $selectedPks);
+                $backUrl = route('admin.estate.generate-estate-bill', [
+                    'bill_month' => $billMonth,
+                    'unit_sub_type_pk' => $unitSubTypePk,
+                ]);
             }
 
             $bills = $query->orderBy('emrd.bill_no')->get();
@@ -7416,7 +7579,7 @@ class EstateController extends Controller
             }
         }
 
-        return view('admin.estate.estate_bill_report_print_all', compact('bills', 'billMonth', 'unitSubTypePk'));
+        return view('admin.estate.estate_bill_report_print_all', compact('bills', 'billMonth', 'unitSubTypePk', 'isSelectedPrint', 'isOtherSelected', 'backUrl'));
     }
 
     /**
@@ -8352,6 +8515,9 @@ class EstateController extends Controller
             ->whereNotNull('epo.estate_house_master_pk')
             ->select([
                 'emro.pk',
+                'emro.bill_no',
+                'emro.bill_month',
+                'emro.bill_year',
                 'emro.from_date',
                 'emro.to_date',
                 'emro.house_no',
@@ -8396,6 +8562,9 @@ class EstateController extends Controller
             $grandTotal = $totalCharge + $licence + $water;
             $rows[] = [
                 'pk' => $r->pk,
+                'bill_no' => $this->resolveBillNumber($r->bill_no ?? null, $r->pk ?? null),
+                'bill_month' => $r->bill_month ?? $billMonthStr,
+                'bill_year' => $r->bill_year ?? $billYearStr,
                 'name' => $r->emp_name ?? 'N/A',
                 'section' => $r->section ?? '—',
                 'house_no' => $r->house_no ?? '—',
@@ -8639,6 +8808,32 @@ class EstateController extends Controller
             ->orderBy('type_of_building')
             ->pluck('type_of_building');
 
+        $houseNos = EstateMigrationReport::select('house_no')
+            ->whereNotNull('house_no')
+            ->where('house_no', '!=', '')
+            ->distinct()
+            ->orderBy('house_no')
+            ->pluck('house_no');
+
+        $employeeNames = EstateMigrationReport::select('employee_name')
+            ->whereNotNull('employee_name')
+            ->where('employee_name', '!=', '')
+            ->distinct()
+            ->orderBy('employee_name')
+            ->pluck('employee_name')
+            ->merge(
+                EmployeeMaster::query()
+                    ->select(DB::raw("TRIM(CONCAT(COALESCE(first_name,''), ' ', COALESCE(last_name,''))) as employee_name"))
+                    ->whereRaw("TRIM(CONCAT(COALESCE(first_name,''), ' ', COALESCE(last_name,''))) != ''")
+                    ->distinct()
+                    ->orderBy('employee_name')
+                    ->pluck('employee_name')
+            )
+            ->filter(fn ($name) => !empty($name))
+            ->unique()
+            ->sort()
+            ->values();
+
         $departments = EstateMigrationReport::select('department_name')
             ->whereNotNull('department_name')
             ->where('department_name', '!=', '')
@@ -8654,7 +8849,7 @@ class EstateController extends Controller
             ->pluck('employee_type');
 
         return $dataTable->render('admin.estate.estate_migration_report', compact(
-            'years', 'campuses', 'buildings', 'buildingTypes', 'departments', 'employeeTypes'
+            'years', 'campuses', 'buildings', 'buildingTypes', 'houseNos', 'employeeNames', 'departments', 'employeeTypes'
         ));
     }
 
@@ -8669,7 +8864,10 @@ class EstateController extends Controller
         $campus = $request->query('campus');
         $building = $request->query('building');
         $type = $request->query('type');
+        $houseNo = $request->query('house_no');
+        $employeeName = $request->query('employee_name');
         $department = $request->query('department');
+        $employeeType = $request->query('employee_type');
 
         $response = [];
 
@@ -8726,7 +8924,64 @@ class EstateController extends Controller
             ->orderBy('type_of_building')
             ->pluck('type_of_building');
 
-        // Departments: filtered by year, campus, building, type
+        // House numbers: filtered by year, campus, building, type
+        $houseQuery = EstateMigrationReport::query();
+        if ($year !== null && $year !== '') {
+            $houseQuery->where('allotment_year', (int) $year);
+        }
+        if ($campus !== null && $campus !== '') {
+            $houseQuery->where('campus_name', $campus);
+        }
+        if ($building !== null && $building !== '') {
+            $houseQuery->where('building_name', $building);
+        }
+        if ($type !== null && $type !== '') {
+            $houseQuery->where('type_of_building', $type);
+        }
+        $response['houseNos'] = $houseQuery->select('house_no')
+            ->whereNotNull('house_no')
+            ->where('house_no', '!=', '')
+            ->distinct()
+            ->orderBy('house_no')
+            ->pluck('house_no');
+
+        // Employee names: filtered by year, campus, building, type, house no
+        $empNameQuery = EstateMigrationReport::query();
+        if ($year !== null && $year !== '') {
+            $empNameQuery->where('allotment_year', (int) $year);
+        }
+        if ($campus !== null && $campus !== '') {
+            $empNameQuery->where('campus_name', $campus);
+        }
+        if ($building !== null && $building !== '') {
+            $empNameQuery->where('building_name', $building);
+        }
+        if ($type !== null && $type !== '') {
+            $empNameQuery->where('type_of_building', $type);
+        }
+        if ($houseNo !== null && $houseNo !== '') {
+            $empNameQuery->where('house_no', $houseNo);
+        }
+        $response['employeeNames'] = $empNameQuery->select('employee_name')
+            ->whereNotNull('employee_name')
+            ->where('employee_name', '!=', '')
+            ->distinct()
+            ->orderBy('employee_name')
+            ->pluck('employee_name')
+            ->merge(
+                EmployeeMaster::query()
+                    ->select(DB::raw("TRIM(CONCAT(COALESCE(first_name,''), ' ', COALESCE(last_name,''))) as employee_name"))
+                    ->whereRaw("TRIM(CONCAT(COALESCE(first_name,''), ' ', COALESCE(last_name,''))) != ''")
+                    ->distinct()
+                    ->orderBy('employee_name')
+                    ->pluck('employee_name')
+            )
+            ->filter(fn ($name) => !empty($name))
+            ->unique()
+            ->sort()
+            ->values();
+
+        // Departments: filtered by year, campus, building, type, house no, employee name
         $deptQuery = EstateMigrationReport::query();
         if ($year !== null && $year !== '') {
             $deptQuery->where('allotment_year', (int) $year);
@@ -8740,6 +8995,12 @@ class EstateController extends Controller
         if ($type !== null && $type !== '') {
             $deptQuery->where('type_of_building', $type);
         }
+        if ($houseNo !== null && $houseNo !== '') {
+            $deptQuery->where('house_no', $houseNo);
+        }
+        if ($employeeName !== null && $employeeName !== '') {
+            $deptQuery->where('employee_name', $employeeName);
+        }
         $response['departments'] = $deptQuery->select('department_name')
             ->whereNotNull('department_name')
             ->where('department_name', '!=', '')
@@ -8747,7 +9008,7 @@ class EstateController extends Controller
             ->orderBy('department_name')
             ->pluck('department_name');
 
-        // Employee types: filtered by year, campus, building, type, department
+        // Employee types: filtered by year, campus, building, type, house no, employee name, department
         $empTypeQuery = EstateMigrationReport::query();
         if ($year !== null && $year !== '') {
             $empTypeQuery->where('allotment_year', (int) $year);
@@ -8761,6 +9022,12 @@ class EstateController extends Controller
         if ($type !== null && $type !== '') {
             $empTypeQuery->where('type_of_building', $type);
         }
+        if ($houseNo !== null && $houseNo !== '') {
+            $empTypeQuery->where('house_no', $houseNo);
+        }
+        if ($employeeName !== null && $employeeName !== '') {
+            $empTypeQuery->where('employee_name', $employeeName);
+        }
         if ($department !== null && $department !== '') {
             $empTypeQuery->where('department_name', $department);
         }
@@ -8770,6 +9037,13 @@ class EstateController extends Controller
             ->distinct()
             ->orderBy('employee_type')
             ->pluck('employee_type');
+
+        // Keep selected employee type in chain if present (supports narrow employee name list while preserving current selection behavior).
+        if ($employeeType !== null && $employeeType !== '') {
+            $response['employeeTypes'] = collect($response['employeeTypes'])->contains($employeeType)
+                ? $response['employeeTypes']
+                : collect($response['employeeTypes'])->push($employeeType)->sort()->values();
+        }
 
         return response()->json($response);
     }
