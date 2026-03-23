@@ -1121,19 +1121,27 @@ class ProcessMessBillsEmployeeController extends Controller
             $first = $bills[0];
             $referencePk = (int) ($first->id ?? $first->pk ?? 0);
             $receiverUserId = $this->getReceiverUserIdForBill($first, !($first instanceof SellingVoucherDateRangeReport));
-            if ($receiverUserId !== null && $receiverUserId > 0) {
-                try {
-                    app(NotificationService::class)->create(
-                        $receiverUserId,
-                        'mess',
-                        'MessInvoice',
-                        $referencePk,
-                        'Mess Payment Pending',
-                        'Your combined mess bill is pending. Please review and pay via Process Mess Bills.'
-                    );
-                } catch (\Throwable $e) {
-                    report($e);
-                }
+            if ($receiverUserId === null || $receiverUserId <= 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invoice generated, but notification could not be sent because user mapping was not found.',
+                ], 422);
+            }
+            try {
+                app(NotificationService::class)->create(
+                    $receiverUserId,
+                    'mess',
+                    'MessInvoice',
+                    $referencePk,
+                    'Mess Payment Pending',
+                    'Your combined mess bill is pending. Please review and pay via Process Mess Bills.'
+                );
+            } catch (\Throwable $e) {
+                report($e);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invoice generated, but notification could not be saved.',
+                ], 500);
             }
             $clientName = trim((string) ($first->client_name ?? ($first->clientTypeCategory->client_name ?? '—')));
             return response()->json([
@@ -1148,19 +1156,27 @@ class ProcessMessBillsEmployeeController extends Controller
         $isKitchenIssue = !$isDateRange;
         $billId = $bill->id ?? $bill->pk;
         $receiverUserId = $this->getReceiverUserIdForBill($bill, $isKitchenIssue);
-        if ($receiverUserId !== null && $receiverUserId > 0) {
-            try {
-                app(NotificationService::class)->create(
-                    $receiverUserId,
-                    'mess',
-                    'MessInvoice',
-                    (int) $billId,
-                    'Mess Payment Pending',
-                    'Your mess payment is pending. Please review your invoice.'
-                );
-            } catch (\Throwable $e) {
-                report($e);
-            }
+        if ($receiverUserId === null || $receiverUserId <= 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invoice generated, but notification could not be sent because user mapping was not found.',
+            ], 422);
+        }
+        try {
+            app(NotificationService::class)->create(
+                $receiverUserId,
+                'mess',
+                'MessInvoice',
+                (int) $billId,
+                'Mess Payment Pending',
+                'Your mess payment is pending. Please review your invoice.'
+            );
+        } catch (\Throwable $e) {
+            report($e);
+            return response()->json([
+                'success' => false,
+                'message' => 'Invoice generated, but notification could not be saved.',
+            ], 500);
         }
 
         return response()->json([
@@ -1257,31 +1273,55 @@ class ProcessMessBillsEmployeeController extends Controller
      */
     private function resolveReceiverUserIdByClientName(string $clientName): ?int
     {
-        $escaped = str_replace(['%', '_', '\\'], ['\\%', '\\_', '\\\\'], $clientName);
-        $row = DB::table('user_credentials as uc')
-            ->join('employee_master as e', 'uc.user_id', '=', 'e.pk')
-            ->whereRaw('TRIM(CONCAT(COALESCE(e.first_name, \'\'), \' \', COALESCE(e.middle_name, \'\'), \' \', COALESCE(e.last_name, \'\'))) = ?', [$clientName])
-            ->where('uc.user_category', '!=', 'S')
-            ->value('uc.user_id');
-        if ($row !== null) {
-            return (int) $row;
+        $candidates = [
+            trim($clientName),
+            $this->sanitizeBuyerNameForUserLookup($clientName),
+        ];
+        $candidates = array_values(array_unique(array_filter($candidates, fn ($name) => $name !== '')));
+
+        foreach ($candidates as $candidateName) {
+            $escaped = str_replace(['%', '_', '\\'], ['\\%', '\\_', '\\\\'], $candidateName);
+
+            $row = DB::table('user_credentials as uc')
+                ->join('employee_master as e', 'uc.user_id', '=', 'e.pk')
+                ->whereRaw('TRIM(CONCAT(COALESCE(e.first_name, \'\'), \' \', COALESCE(e.middle_name, \'\'), \' \', COALESCE(e.last_name, \'\'))) = ?', [$candidateName])
+                ->where('uc.user_category', '!=', 'S')
+                ->value('uc.user_id');
+            if ($row !== null) {
+                return (int) $row;
+            }
+
+            $row = DB::table('user_credentials as uc')
+                ->join('employee_master as e', 'uc.user_id', '=', 'e.pk')
+                ->whereRaw('TRIM(CONCAT(COALESCE(e.first_name, \'\'), \' \', COALESCE(e.middle_name, \'\'), \' \', COALESCE(e.last_name, \'\'))) LIKE ?', [$escaped . '%'])
+                ->where('uc.user_category', '!=', 'S')
+                ->value('uc.user_id');
+            if ($row !== null) {
+                return (int) $row;
+            }
+
+            if (Schema::hasColumn('user_credentials', 'name')) {
+                $row = DB::table('user_credentials')
+                    ->where('name', $candidateName)
+                    ->where('user_category', '!=', 'S')
+                    ->value('user_id');
+                if ($row !== null) {
+                    return (int) $row;
+                }
+            }
         }
-        $row = DB::table('user_credentials as uc')
-            ->join('employee_master as e', 'uc.user_id', '=', 'e.pk')
-            ->whereRaw('TRIM(CONCAT(COALESCE(e.first_name, \'\'), \' \', COALESCE(e.middle_name, \'\'), \' \', COALESCE(e.last_name, \'\'))) LIKE ?', [$escaped . '%'])
-            ->where('uc.user_category', '!=', 'S')
-            ->value('uc.user_id');
-        if ($row !== null) {
-            return (int) $row;
-        }
-        if (Schema::hasColumn('user_credentials', 'name')) {
-            $row = DB::table('user_credentials')
-                ->where('name', $clientName)
-                ->where('user_category', '!=', 'S')
-                ->value('user_id');
-            return $row !== null ? (int) $row : null;
-        }
+
         return null;
+    }
+
+    /**
+     * Normalize buyer display name to improve employee mapping from user_credentials.
+     */
+    private function sanitizeBuyerNameForUserLookup(string $name): string
+    {
+        $normalized = preg_replace('/\([^)]*\)/', '', $name) ?? $name;
+        $normalized = preg_replace('/\s+/', ' ', $normalized) ?? $normalized;
+        return trim((string) $normalized);
     }
 
     /**

@@ -1,6 +1,9 @@
 @extends('admin.layouts.master')
 @section('title', 'Mess Vendors')
 @section('setup_content')
+@php
+    $canDeleteVendor = hasRole('Admin') || hasRole('Mess-Admin');
+@endphp
 <div class="container-fluid">
     <x-breadcrum title="Mess Stores"></x-breadcrum>
     <div class="datatables">
@@ -69,16 +72,18 @@
                                             data-ifsc-code="{{ e($vendor->ifsc_code ?? '') }}"
                                             data-account-number="{{ e($vendor->account_number ?? '') }}" title="Edit"><i
                                                 class="material-icons material-symbol-rounded">edit</i></button>
-                                        <form method="POST"
-                                            action="{{ route('admin.mess.vendors.destroy', $vendor->id) }}"
-                                            class="d-inline"
-                                            onsubmit="return confirm('Are you sure you want to delete this vendor?');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="text-primary bg-transparent border-0 p-0" title="Delete">
-                                                <i class="material-icons material-symbol-rounded">delete</i>
-                                            </button>
-                                        </form>
+                                        @if($canDeleteVendor)
+                                            <form method="POST"
+                                                action="{{ route('admin.mess.vendors.destroy', $vendor->id) }}"
+                                                class="d-inline"
+                                                onsubmit="return confirm('Are you sure you want to delete this vendor?');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="text-primary bg-transparent border-0 p-0" title="Delete">
+                                                    <i class="material-icons material-symbol-rounded">delete</i>
+                                                </button>
+                                            </form>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>

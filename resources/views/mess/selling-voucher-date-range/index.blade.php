@@ -1,6 +1,9 @@
 @extends('admin.layouts.master')
 @section('title', 'Selling Voucher with Date Range')
 @section('setup_content')
+@php
+    $canDeleteSellingVoucherDateRange = hasRole('Admin') || hasRole('Mess-Admin');
+@endphp
 <div class="container-fluid">
     <x-breadcrum title="Selling Voucher with Date Range"></x-breadcrum>
 
@@ -13,7 +16,7 @@
     @if(session('error'))
     <div class="alert alert-danger alert-dismissible fade show">{{ session('error') }}
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
+    </div>  
     @endif
 
     <div class="card mb-4 border-0 shadow-sm selling-voucher-filter">
@@ -85,7 +88,7 @@
                            placeholder="Search selling vouchers...">
                 </div>
             </div>
-            <div class="table-responsive d-inline-block" style="max-width: 100%;">
+            <div class="table-responsive selling-voucher-table-wrap">
                 <table class="table align-middle mb-0 voucher-table w-100" id="sellingVoucherDateRangeTable">
                     <thead>
                         <tr>
@@ -146,11 +149,13 @@
                                         <i class="material-symbols-rounded">edit</i>
                                     </button>
                                 </div>
-                                <form action="{{ route('admin.mess.selling-voucher-date-range.destroy', $report->id) }}" method="POST" class="d-inline d-none" onsubmit="return confirm('Are you sure you want to delete this report?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn  btn-danger d-none" title="Delete"><i class="material-symbols-rounded">delete</i></button>
-                                </form>
+                                @if($canDeleteSellingVoucherDateRange)
+                                    <form action="{{ route('admin.mess.selling-voucher-date-range.destroy', $report->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this report?');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn  btn-danger" title="Delete"><i class="material-symbols-rounded">delete</i></button>
+                                    </form>
+                                @endif
                                 @endif
                             </td>
                         </tr>
@@ -182,11 +187,13 @@
                                     <button type="button" class="btn  btn-outline-primary btn-view-report voucher-icon-btn" data-report-id="{{ $report->id }}" title="View"><i class="material-symbols-rounded">visibility</i></button>
                                     <button type="button" class="btn  btn-outline-warning btn-edit-report voucher-icon-btn" data-report-id="{{ $report->id }}" title="{{ $report->status == \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED ? 'Edit is disabled for approved voucher' : 'Edit' }}" @if($report->status == \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED) disabled @endif><i class="material-symbols-rounded">edit</i></button>
                                 </div>
-                                <form action="{{ route('admin.mess.selling-voucher-date-range.destroy', $report->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this report?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn  btn-outline-danger voucher-icon-btn" title="Delete"><i class="material-symbols-rounded">delete</i></button>
-                                </form>
+                                @if($canDeleteSellingVoucherDateRange)
+                                    <form action="{{ route('admin.mess.selling-voucher-date-range.destroy', $report->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this report?');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn  btn-outline-danger voucher-icon-btn text-primary bg-transparent border-0" title="Delete"><i class="material-symbols-rounded">delete</i></button>
+                                    </form>
+                                @endif
                             </td>
                         </tr>
                         @endforelse
@@ -210,7 +217,8 @@
 'ordering' => false,
 'actionColumnIndex' => 12,
 'infoLabel' => 'selling vouchers',
-'searchDelay' => 0
+'searchDelay' => 0,
+'scrollX' => true
 ])
 
 @push('scripts')
@@ -363,20 +371,18 @@ document.addEventListener('DOMContentLoaded', function () {
         box-shadow: var(--bs-box-shadow-sm);
     }
 
-    /* Mobile: enable horizontal scroll for wide table (only table scrolls, controls stay fixed) */
-    @media (max-width: 991.98px) {
-        .selling-voucher-card .card-body {
-            overflow-x: visible;
-        }
+    .selling-voucher-card .selling-voucher-table-wrap {
+        width: 100%;
+        max-width: 100%;
+        overflow: visible;
+    }
 
-        .selling-voucher-card .table-responsive {
-            width: 100%;
-            overflow-x: auto;
-        }
+    #sellingVoucherDateRangeTable {
+        min-width: 1200px;
+    }
 
-        #sellingVoucherDateRangeTable {
-            min-width: 1200px;
-        }
+    .selling-voucher-card #sellingVoucherDateRangeTable_wrapper .dataTables_scrollBody {
+        overflow-x: auto !important;
     }
 
     /* Keep DataTable search box pinned and not floating while scrolling */
@@ -392,14 +398,12 @@ document.addEventListener('DOMContentLoaded', function () {
         max-width: 260px;
     }
 
-    /* Keep length dropdown, info text and pagination pinned on horizontal scroll */
+    /* Keep DataTables controls in normal flow (no floating) */
     .selling-voucher-card .dataTables_wrapper .dataTables_length,
     .selling-voucher-card .dataTables_wrapper .dataTables_info,
     .selling-voucher-card .dataTables_wrapper .dataTables_paginate {
-        position: sticky;
-        left: 0;
-        z-index: 5;
-        background-color: #fff;
+        position: static;
+        background-color: transparent;
     }
 </style>
 <div class="modal fade" id="addReportModal" tabindex="-1" aria-labelledby="addReportModalLabel" aria-hidden="true">
@@ -1933,11 +1937,25 @@ document.addEventListener('DOMContentLoaded', function () {
         if (addReportModalEl && addReportItemsTable) {
             addReportModalEl.addEventListener('keydown', function(e) {
                 if (e.key === 'Enter' && addReportItemsTable.contains(document.activeElement)) {
-                    const addBtn = document.getElementById('addModalAddItemRow');
-                    if (addBtn) {
-                        e.preventDefault();
-                        addBtn.click();
+                    const activeEl = document.activeElement;
+                    const isRateField = activeEl && activeEl.classList && activeEl.classList.contains('dr-rate');
+                    const activeRow = activeEl ? activeEl.closest('.dr-item-row') : null;
+                    const tbody = document.getElementById('addModalItemsBody');
+                    const lastRow = tbody ? tbody.querySelector('.dr-item-row:last-child') : null;
+
+                    // Sirf last row ki rate field par Enter => append new row
+                    if (isRateField && activeRow && lastRow && activeRow === lastRow) {
+                        const addBtn = document.getElementById('addModalAddItemRow');
+                        if (addBtn) {
+                            e.preventDefault();
+                            addBtn.click();
+                        }
+                        return;
                     }
+
+                    // Baaki fields par Enter => append/submit block
+                    e.preventDefault();
+                    if (activeEl && activeEl.blur) activeEl.blur();
                 }
             });
         }
@@ -2783,6 +2801,35 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             }
         });
+
+        // Edit modal: Sirf last row ki rate field par Enter se new row append
+        const editReportFormKeydownEl = document.getElementById('editReportForm');
+        const editModalItemsBodyEl = document.getElementById('editModalItemsBody');
+        if (editReportFormKeydownEl && editModalItemsBodyEl) {
+            editReportFormKeydownEl.addEventListener('keydown', function(e) {
+                if (e.key !== 'Enter') return;
+                const activeEl = document.activeElement;
+                if (!activeEl || !editModalItemsBodyEl.contains(activeEl)) return;
+
+                const row = activeEl.closest('.edit-dr-item-row');
+                if (!row) return;
+                const lastRow = editModalItemsBodyEl.querySelector('.edit-dr-item-row:last-child');
+                if (!lastRow) return;
+
+                const isRateField = activeEl.classList && activeEl.classList.contains('edit-dr-rate');
+                if (isRateField && row === lastRow) {
+                    const addBtn = document.getElementById('editModalAddItemRow');
+                    if (addBtn) {
+                        e.preventDefault();
+                        addBtn.click();
+                    }
+                } else {
+                    // Baaki fields par Enter => append/submit block
+                    e.preventDefault();
+                    if (activeEl.blur) activeEl.blur();
+                }
+            }, true);
+        }
 
         // View report (mousedown ensures single-tap works with DataTables)
         document.addEventListener('mousedown', function(e) {
