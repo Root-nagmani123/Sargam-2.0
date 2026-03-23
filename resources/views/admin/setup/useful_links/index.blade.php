@@ -19,7 +19,7 @@
                 </div>
 
                 <div class="table-responsive">
-                    <table class="table mb-0" id="usefulLinksTable">
+                    <table class="table datatable" id="usefulLinksTable" data-export="false">
                         <thead>
                             <tr>
                                 <th style="width:70px;">S.No.</th>
@@ -86,10 +86,6 @@
                             @endforelse
                         </tbody>
                     </table>
-                </div>
-
-                <div class="small text-muted mt-3">
-                    Tip: Drag the handle in the "Order" column, then click `Save Order`.
                 </div>
             </div>
         </div>

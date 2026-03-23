@@ -1,5 +1,5 @@
 @extends('admin.layouts.master')
-@section('title', 'Quick Links - Sargam | Lal Bahadur Shastri')
+@section('title', 'Quick Links')
 @section('setup_content')
     <div class="container-fluid">
         <x-breadcrum title="Quick Links" />
@@ -19,7 +19,7 @@
                 </div>
 
                 <div class="table-responsive">
-                    <table class="table mb-0" id="quickLinksTable">
+                    <table class="table datatable" id="quickLinksTable" data-export="false">
                         <thead>
                             <tr>
                                 <th style="width:70px;">S.No.</th>
@@ -76,10 +76,6 @@
                             @endforelse
                         </tbody>
                     </table>
-                </div>
-
-                <div class="small text-muted mt-3">
-                    Tip: Drag the handle in the "Order" column, then click `Save Order`.
                 </div>
             </div>
         </div>
