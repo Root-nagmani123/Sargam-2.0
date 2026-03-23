@@ -402,7 +402,7 @@ class NotificationService
         $marked = $this->markAsRead($notificationPk, $userId);
         // print_r($marked);die;
         $redirectUrl = $this->getRedirectUrl($notificationPk);
-        print_r($redirectUrl);die;
+        // print_r($redirectUrl);die;
 
         return [
             'success' => $marked,
