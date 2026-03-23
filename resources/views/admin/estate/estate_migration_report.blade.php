@@ -55,11 +55,21 @@
                 </div>
                 <div class="col-12 col-sm-6 col-md-4 col-lg-2">
                     <label for="filter_house_no" class="form-label fw-medium">House No.</label>
-                    <input type="text" class="form-control" id="filter_house_no" placeholder="House No.">
+                    <select class="form-select" id="filter_house_no">
+                        <option value="">— All Houses —</option>
+                        @foreach($houseNos ?? [] as $houseNo)
+                            <option value="{{ $houseNo }}">{{ $houseNo }}</option>
+                        @endforeach
+                    </select>
                 </div>
                 <div class="col-12 col-sm-6 col-md-4 col-lg-2">
                     <label for="filter_employee_name" class="form-label fw-medium">Employee Name</label>
-                    <input type="text" class="form-control" id="filter_employee_name" placeholder="Employee">
+                    <select class="form-select" id="filter_employee_name">
+                        <option value="">— All Employees —</option>
+                        @foreach($employeeNames ?? [] as $employeeName)
+                            <option value="{{ $employeeName }}">{{ $employeeName }}</option>
+                        @endforeach
+                    </select>
                 </div>
                 <div class="col-12 col-sm-6 col-md-4 col-lg-2">
                     <label for="filter_department_name" class="form-label fw-medium">Department</label>
@@ -123,7 +133,7 @@
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 <script>
 $(document).ready(function() {
-    var filterSelectIds = ['filter_allotment_year', 'filter_campus_name', 'filter_building_name', 'filter_type_of_building', 'filter_department_name', 'filter_employee_type'];
+    var filterSelectIds = ['filter_allotment_year', 'filter_campus_name', 'filter_building_name', 'filter_type_of_building', 'filter_house_no', 'filter_employee_name', 'filter_department_name', 'filter_employee_type'];
 
     function initTomSelects() {
         if (typeof TomSelect !== 'undefined') {
@@ -226,7 +236,10 @@ $(document).ready(function() {
             campus: $('#filter_campus_name').val(),
             building: $('#filter_building_name').val(),
             type: $('#filter_type_of_building').val(),
-            department: $('#filter_department_name').val()
+            house_no: $('#filter_house_no').val(),
+            employee_name: $('#filter_employee_name').val(),
+            department: $('#filter_department_name').val(),
+            employee_type: $('#filter_employee_type').val()
         };
     }
 
@@ -244,10 +257,18 @@ $(document).ready(function() {
             fillSelect($('#filter_type_of_building'), opts.buildingTypes || [], '— All Types —');
         }
         if (resetFrom <= 4) {
+            $('#filter_house_no').val('');
+            fillSelect($('#filter_house_no'), opts.houseNos || [], '— All Houses —');
+        }
+        if (resetFrom <= 5) {
+            $('#filter_employee_name').val('');
+            fillSelect($('#filter_employee_name'), opts.employeeNames || [], '— All Employees —');
+        }
+        if (resetFrom <= 6) {
             $('#filter_department_name').val('');
             fillSelect($('#filter_department_name'), opts.departments || [], '— All Departments —');
         }
-        if (resetFrom <= 5) {
+        if (resetFrom <= 7) {
             $('#filter_employee_type').val('');
             fillSelect($('#filter_employee_type'), opts.employeeTypes || [], '— All Types —');
         }
@@ -274,8 +295,14 @@ $(document).ready(function() {
     $('#filter_type_of_building').on('change', function() {
         fetchAndUpdateFilters(4, true);
     });
-    $('#filter_department_name').on('change', function() {
+    $('#filter_house_no').on('change', function() {
         fetchAndUpdateFilters(5, true);
+    });
+    $('#filter_employee_name').on('change', function() {
+        fetchAndUpdateFilters(6, true);
+    });
+    $('#filter_department_name').on('change', function() {
+        fetchAndUpdateFilters(7, true);
     });
     $('#filter_employee_type').on('change', function() {
         table.ajax.reload(null, false);
@@ -287,28 +314,19 @@ $(document).ready(function() {
 
     $('#btnResetFilters').on('click', function() {
         destroyTomSelects();
-        $('#filter_allotment_year, #filter_campus_name, #filter_building_name, #filter_type_of_building, #filter_department_name, #filter_employee_type').val('');
-        $('#filter_house_no, #filter_employee_name').val('');
+        $('#filter_allotment_year, #filter_campus_name, #filter_building_name, #filter_type_of_building, #filter_house_no, #filter_employee_name, #filter_department_name, #filter_employee_type').val('');
         $.get(filterOptionsUrl, {}, function(opts) {
             fillSelect($('#filter_allotment_year'), opts.years || [], '— All Years —');
             fillSelect($('#filter_campus_name'), opts.campuses || [], '— All Campuses —');
             fillSelect($('#filter_building_name'), opts.buildings || [], '— All Buildings —');
             fillSelect($('#filter_type_of_building'), opts.buildingTypes || [], '— All Types —');
+            fillSelect($('#filter_house_no'), opts.houseNos || [], '— All Houses —');
+            fillSelect($('#filter_employee_name'), opts.employeeNames || [], '— All Employees —');
             fillSelect($('#filter_department_name'), opts.departments || [], '— All Departments —');
             fillSelect($('#filter_employee_type'), opts.employeeTypes || [], '— All Types —');
             initTomSelects();
             table.ajax.reload(null, false);
         });
-    });
-
-    $('#filter_house_no, #filter_employee_name').on('keydown', function(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            table.ajax.reload(null, false);
-        }
-    });
-    $('#filter_house_no, #filter_employee_name').on('blur', function() {
-        table.ajax.reload(null, false);
     });
 });
 </script>

@@ -12,7 +12,16 @@
                             {{-- ESTATE MANAGEMENT (same visibility rules as main Setup menu) --}}
                             @php
                                 $showUserManagement = hasRole('Admin') || hasRole('Super Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST');
-                                $estateSelfServiceRoles = hasRole('Staff') || hasRole('Student-OT') || hasRole('Doctor') || hasRole('Guest Faculty') || hasRole('Internal Faculty');
+                                // Staff/self-service: Request For Estate + My Estate Bill.
+                                // Training roles should behave like normal staff (self-service), not like estate authorities.
+                                $estateSelfServiceRoles = hasRole('Staff')
+                                    || hasRole('Student-OT')
+                                    || hasRole('Doctor')
+                                    || hasRole('Guest Faculty')
+                                    || hasRole('Internal Faculty')
+                                    || hasRole('Training-Induction')
+                                    || hasRole('Training-MCTP')
+                                    || hasRole('IST');
                                 // Check permanent LBSNAA employee (payroll = 0)
                                 $isPermanentEstateEmployee = false;
                                 $user = Auth::user();
@@ -41,7 +50,9 @@
                                 $showEstateSection = $showUserManagement || hasRole('Estate') || hasRole('Super Admin') || hasRole('HAC Person') || $estateSelfServiceRoles;
                                 $isEstateAdmin = hasRole('Estate') || hasRole('Super Admin');
                                 $isHACPerson = hasRole('HAC Person');
-                                $canSeeAllEstate = $isEstateAdmin || $showUserManagement;
+                                // Estate authority menus (Put In HAC, Possession Details, etc.) should be visible only to Estate/Admin/Super Admin.
+                                // Training roles must NOT get "all estate" access.
+                                $canSeeAllEstate = $isEstateAdmin || hasRole('Admin');
                                 $estateManagementOpen = request()->routeIs('admin.estate.*');
                                 // HAC menus (Put In HAC / HAC Approved) visible ONLY to HAC Person + Estate/Admin.
                                 $canSeeHAC = $isHACPerson || $canSeeAllEstate;
@@ -191,15 +202,15 @@
                                     <li class="sidebar-item">
                                         <a class="sidebar-link {{ request()->routeIs('admin.estate.request-for-house') ? 'active' : '' }}"
                                             href="{{ route('admin.estate.request-for-house') }}">
-                                            <span class="hide-menu small small-sm-normal text-nowrap">Return house of request</span>
+                                            <span class="hide-menu small small-sm-normal text-nowrap">Change House R                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                equest</span>
                                         </a>
                                     </li>
-                                    <li class="sidebar-item">
+                                    <!-- <li class="sidebar-item">
                                         <a class="sidebar-link {{ request()->routeIs('admin.estate.change-request-details') ? 'active' : '' }}"
                                             href="{{ route('admin.estate.change-request-details') }}">
                                             <span class="hide-menu small small-sm-normal text-nowrap">Change Request Details</span>
                                         </a>
-                                    </li>
+                                    </li> -->
                                     @endif
                                 </ul>
                             @endif

@@ -22,11 +22,9 @@
                     </a>
                     <button type="button" class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-2" id="btnElectricSlabPrint" title="Print">
                         <i class="material-icons material-symbols-rounded">print</i>
-                        <span>Print</span>
                     </button>
                     <button type="button" class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-2" id="btnElectricSlabExport" title="Export to Excel">
                         <i class="material-icons material-symbols-rounded">file_download</i>
-                        <span>Export</span>
                     </button>
                 </div>
             </div>
@@ -89,6 +87,43 @@
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
 }
+
+#electricSlabTable_wrapper .row:first-child {
+    justify-content: space-between;
+    align-items: center;
+}
+
+#electricSlabTable_wrapper .row .dataTables_filter,
+#electricSlabTable_wrapper .row .dt-search {
+    float: right !important;
+    text-align: right !important;
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+}
+
+#electricSlabTable_wrapper .row .dataTables_filter label,
+#electricSlabTable_wrapper .row .dt-search label {
+    margin-bottom: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
+@media (max-width: 767.98px) {
+    #electricSlabTable_wrapper .row .dataTables_filter,
+    #electricSlabTable_wrapper .row .dt-search {
+        float: none !important;
+        text-align: left !important;
+        justify-content: flex-start;
+    }
+
+    #electricSlabTable_wrapper .row .dataTables_filter label,
+    #electricSlabTable_wrapper .row .dt-search label {
+        justify-content: flex-start;
+    }
+}
 </style>
 @endpush
 
@@ -98,9 +133,45 @@
     (function() {
         var slabTableApi = null;
 
+        function enforceFilterAlignment() {
+            var $wrapper = $('#electricSlabTable_wrapper');
+            if (!$wrapper.length) return;
+
+            var $topRow = $wrapper.find('.row').first();
+            var $filter = $wrapper.find('.dataTables_filter, .dt-search');
+            var $filterCol = $filter.closest('div[class*="col-"], div');
+
+            $topRow.css({
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+            });
+
+            $filterCol.css({
+                display: 'flex',
+                justifyContent: 'flex-end'
+            });
+
+            $filter.css({
+                float: 'right',
+                textAlign: 'right',
+                marginLeft: 'auto'
+            });
+
+            $filter.find('label').css({
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                gap: '0.5rem',
+                marginBottom: 0
+            });
+        }
+
         $(document).on('init.dt', function(e, settings) {
             if (settings.nTable && settings.nTable.id === 'electricSlabTable') {
                 slabTableApi = new $.fn.dataTable.Api(settings);
+                enforceFilterAlignment();
+                slabTableApi.on('draw', enforceFilterAlignment);
             }
         });
 

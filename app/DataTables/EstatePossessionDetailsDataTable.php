@@ -46,7 +46,7 @@ class EstatePossessionDetailsDataTable extends DataTable
             })
             ->addColumn('actions', function ($row) {
                 // Only Estate/Admin/Super Admin/Training/IST can edit possession details.
-                if (! (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST'))) {
+                if (! (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'))) {
                     return '';
                 }
 
@@ -124,7 +124,7 @@ class EstatePossessionDetailsDataTable extends DataTable
         // RBAC: Only Admin / Estate / Super Admin / Training-* / IST can see full list.
         // All other roles (including Staff / HAC Person etc.) should only see their own possessions.
         $user = \Illuminate\Support\Facades\Auth::user();
-        $isEstateAuthority = $user && (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST'));
+        $isEstateAuthority = $user && (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'));
         if (! $isEstateAuthority) {
             if ($user) {
                 $employeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null);
@@ -177,7 +177,7 @@ class EstatePossessionDetailsDataTable extends DataTable
 
     public function getColumns(): array
     {
-        $isEstateAuthority = hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST');
+        $isEstateAuthority = hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin');
 
         $columns = [
             Column::computed('DT_RowIndex')->title('S.NO.')->addClass('text-center')->orderable(false)->searchable(false)->width('50px'),

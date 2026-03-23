@@ -143,7 +143,9 @@ class EstateRequestForEstateDataTable extends DataTable
                 $dataAttrs = implode(' ', array_map(fn ($k, $v) => $k . '="' . $v . '"', array_keys($attrs), $attrs));
                 $currentAlot = trim((string) ($row->current_alot ?? ''));
                 $hasChangeStatus = (int) ($row->change_status ?? 0) === 1;
-                $isEstateAuthority = hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST');
+                // Estate/Admin/Super Admin authority can manage others (no self-service Return House / Raise Change Request buttons).
+                // Training roles should behave like normal staff (self-service), so they are NOT treated as authority here.
+                $isEstateAuthority = hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin');
 
                 // Existing authority-only change request link (no change here).
                 $canRaiseChangeRequest = $isEstateAuthority && $currentAlot !== '' && ! $hasChangeStatus;
@@ -154,11 +156,15 @@ class EstateRequestForEstateDataTable extends DataTable
                     ? '<a href="' . e($raiseChangeUrl) . '" class="text-info" title="Raise Change Request"><i class="material-icons material-symbols-rounded">swap_horiz</i></a>'
                     : '';
                 // Lock row (no Edit/Delete) when request is effectively Allotted or Returned.
+                // Some legacy/self-service records may remain status=0 even after allotment,
+                // so also lock when there is active possession OR current allotment is present.
                 $statusInt = (int) ($row->status ?? 0);
                 $hasActive = (int) ($row->has_active_possession ?? 0) === 1;
                 $hasReturned = (int) ($row->has_any_returned ?? 0) === 1;
                 $isReturnedEffective = (! $hasActive && $hasReturned) || $statusInt === 3;
-                $isLocked = $statusInt === 1 || $isReturnedEffective;
+                $hasCurrentAllotment = trim((string) ($row->current_alot ?? '')) !== '';
+                $isAllottedEffective = $statusInt === 1 || $hasActive || $hasCurrentAllotment;
+                $isLocked = $isAllottedEffective || $isReturnedEffective;
 
                 $editLink = $isLocked ? '' : '<a href="javascript:void(0);" class="text-primary btn-edit-request-estate" title="Edit" ' . $dataAttrs . '><i class="material-icons material-symbols-rounded">edit</i></a>';
                 $deleteLink = $isLocked ? '' : '<a href="javascript:void(0);" class="text-primary btn-delete-request-estate" title="Delete" data-url="' . e($deleteUrl) . '"><i class="material-icons material-symbols-rounded">delete</i></a>';
@@ -207,8 +213,11 @@ class EstateRequestForEstateDataTable extends DataTable
                         </a>';
                     }
 
-                    // User Raise Change Request: active possession, no existing change request.
-                    if ($hasActive && ! $hasChangeStatus) {
+                    // User Raise Change Request:
+                    // show when request is effectively allotted (active possession OR current allotment),
+                    // no existing change request, and request is not already returned.
+                    $canSelfRaiseChangeRequest = ($hasActive || $hasCurrentAllotment) && ! $hasChangeStatus && ! $isReturnedEffective;
+                    if ($canSelfRaiseChangeRequest) {
                         $selfCrUrl = route('admin.estate.raise-change-request', ['id' => $row->pk]);
                         $selfChangeRequestButton = '<a href="' . e($selfCrUrl) . '" class="text-info" title="Raise Change Request">
                             <i class="material-icons material-symbols-rounded">swap_horiz</i>
@@ -326,10 +335,10 @@ class EstateRequestForEstateDataTable extends DataTable
                 DB::raw("(SELECT ec.change_ap_dis_status FROM estate_change_home_req_details ec WHERE ec.estate_home_req_details_pk = estate_home_request_details.pk ORDER BY ec.pk DESC LIMIT 1) AS change_req_status"),
             ]);
 
-        // Self-service: non-estate/admin/HAC-approval users should only see their own requests.
-        // Estate / Admin / Training-* / IST / HAC Person see full list (they work on others' requests).
+        // Self-service: non-estate/admin/super-admin/HAC-approval users should only see their own requests.
+        // Estate/Admin/Super Admin/HAC Person see full list (they work on others' requests).
         $user = Auth::user();
-        if ($user && ! (hasRole('Estate') || hasRole('Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST') || hasRole('HAC Person'))) {
+        if ($user && ! (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin') || hasRole('HAC Person'))) {
             $employeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null);
             if (!empty($employeeIds)) {
                 $query->whereIn('estate_home_request_details.employee_pk', $employeeIds);

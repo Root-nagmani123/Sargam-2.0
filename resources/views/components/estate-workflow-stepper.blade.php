@@ -6,8 +6,17 @@
 @props(['current' => 'request-for-estate'])
 @php
     $isHacPersonOnly = hasRole('HAC Person') && !hasRole('Estate') && !hasRole('Admin') && !hasRole('Training-Induction') && !hasRole('Training-MCTP') && !hasRole('IST') && !hasRole('Staff') && !hasRole('Student-OT') && !hasRole('Doctor') && !hasRole('Guest Faculty') && !hasRole('Internal Faculty');
-    $isPrivilegedEstate = hasRole('Estate') || hasRole('Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST');
-    $estateSelfServiceRoles = hasRole('Staff') || hasRole('Student-OT') || hasRole('Doctor') || hasRole('Guest Faculty') || hasRole('Internal Faculty');
+    // Authority users: Estate/Admin/Super Admin OR HAC Person.
+    // Training roles must behave like normal staff (self-service), so they are NOT treated as privileged here.
+    $isPrivilegedEstate = hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin');
+    $estateSelfServiceRoles = hasRole('Staff')
+        || hasRole('Student-OT')
+        || hasRole('Doctor')
+        || hasRole('Guest Faculty')
+        || hasRole('Internal Faculty')
+        || hasRole('Training-Induction')
+        || hasRole('Training-MCTP')
+        || hasRole('IST');
     $hasHacPersonRole = hasRole('HAC Person');
 
     $stages = [
@@ -17,7 +26,7 @@
         'possession-details'=> ['label' => 'Possession Details', 'route' => 'admin.estate.possession-details'],
     ];
 
-    // Full workflow (all 4 buttons) for: Estate/Admin/Training/IST OR HAC Person (with or without Staff).
+    // Full workflow (all 4 buttons) for: Estate/Admin/Super Admin OR HAC Person (with or without Staff).
     if ($isPrivilegedEstate || $hasHacPersonRole) {
         // Keep all $stages – show Request For Estate, Put In HAC, HAC Approved, Possession Details.
     } elseif ($estateSelfServiceRoles) {

@@ -4,6 +4,7 @@ namespace App\DataTables;
 
 use App\Models\EstateHomeRequestDetails;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
+use Illuminate\Support\Facades\Auth;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Yajra\DataTables\Html\Column;
@@ -74,6 +75,14 @@ class EstateRequestPutInHacDataTable extends DataTable
 
     public function query(EstateHomeRequestDetails $model): QueryBuilder
     {
+        $canPutInHac = hasRole('HAC Person') || hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin');
+        // Self-service staff/training roles must not access HAC queues via this listing.
+        // Return an empty dataset when user is not authorized.
+        if (! Auth::check() || ! $canPutInHac) {
+            return $model->newQuery()
+                ->whereRaw('1 = 0');
+        }
+
         return $model->newQuery()
             ->select([
                 'estate_home_request_details.pk',

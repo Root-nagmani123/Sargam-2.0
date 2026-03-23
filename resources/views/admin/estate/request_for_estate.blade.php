@@ -28,10 +28,7 @@
                 $showUserActionHelp = !(
                     hasRole('Estate') ||
                     hasRole('Admin') ||
-                    hasRole('Super Admin') ||
-                    hasRole('Training-Induction') ||
-                    hasRole('Training-MCTP') ||
-                    hasRole('IST')
+                    hasRole('Super Admin')
                 );
             @endphp
 
