@@ -1,16 +1,28 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Generate Estate Bill - Sargam')
+@php
+    $estateBillPageLabel = (hasRole('Admin') || hasRole('Super Admin') || hasRole('Estate'))
+        ? 'Generate Estate Bill'
+        : 'My Estate Bill';
+@endphp
+
+@section('title', $estateBillPageLabel . ' - Sargam')
 
 @section('setup_content')
 <div class="container-fluid py-4">
-    <x-breadcrum title="Generate Estate Bill"></x-breadcrum>
+    <x-breadcrum title="{{ $estateBillPageLabel }}"></x-breadcrum>
     <x-session_message />
 
     <div class="d-flex flex-column flex-md-row flex-wrap align-items-start align-items-md-center justify-content-between gap-3 mb-4">
         <div>
-            <h1 class="h4 fw-semibold mb-1">Generate Estate Bill</h1>
-            <p class="text-muted small mb-0">View and generate estate bill summary. Select bill month and unit sub type, then use actions to notify or save as draft.</p>
+            <h1 class="h4 fw-semibold mb-1">{{ $estateBillPageLabel }}</h1>
+            <p class="text-muted small mb-0">
+                @if($estateBillPageLabel === 'Generate Estate Bill')
+                    View and generate estate bill summary. Select bill month and unit sub type, then use actions to notify or save as draft.
+                @else
+                    View your estate bill summary. Select bill month and (where available) unit sub type to review bills.
+                @endif
+            </p>
         </div>
     </div>
 
@@ -23,12 +35,13 @@
             </h2>
         </div>
         <div class="card-body p-4">
-            <form method="get" action="{{ route('admin.estate.generate-estate-bill') }}" class="row g-3 g-md-4 align-items-end">
+            <form method="get" action="{{ route('admin.estate.generate-estate-bill') }}" class="row g-3 g-md-4 align-items-center">
                 <div class="col-12 col-sm-6 col-md-4 col-lg-3">
                     <label for="bill_month" class="form-label fw-medium">Bill Month <span class="text-danger">*</span></label>
                     <input type="month" class="form-control" id="bill_month" name="bill_month" value="{{ old('bill_month', $billMonth) }}" max="{{ date('Y-m') }}" required aria-describedby="bill_month_help">
                     <div id="bill_month_help" class="form-text small">Select the month for billing</div>
                 </div>
+                @if(hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'))
                 <div class="col-12 col-sm-6 col-md-4 col-lg-3">
                     <label for="unit_sub_type_pk" class="form-label fw-medium">Unit Sub Type </label>
                     <select class="form-select" id="unit_sub_type_pk" name="unit_sub_type_pk" aria-label="Select Unit Sub Type" aria-describedby="unit_sub_type_help">
@@ -39,21 +52,20 @@
                     </select>
                     <div id="unit_sub_type_help" class="form-text small">Filter by unit category</div>
                 </div>
-                <div class="col-12 col-sm-6 col-md-4 col-lg-2 d-flex align-items-center pb-1">
-                    <div class="form-check form-check-inline">
+                @endif
+                <div class="col-12 col-sm-6 col-md-4 col-lg-4 d-flex align-items-center gap-3">
+                    <div class="form-check form-check-inline mb-0 mt-2">
                         <input class="form-check-input" type="checkbox" id="check_all" name="check_all" aria-describedby="check_all_help">
                         <label class="form-check-label" for="check_all">Check All</label>
                     </div>
                     <span id="check_all_help" class="visually-hidden">Select or clear all bill checkboxes</span>
-                </div>
-                <div class="col-12 col-sm-6 col-md-4 col-lg-2">
                     <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-2">
                         <i class="material-symbols-rounded" style="font-size: 1.1rem;">visibility</i>
                         Show
                     </button>
                 </div>
                 <div class="col-12 col-md-auto ms-md-auto d-flex gap-2 flex-wrap justify-content-sm-start">
-                    <button type="button" id="btn_print_selected" class="btn btn-outline-success btn-sm d-inline-flex align-items-center gap-1" title="Print selected bills (each in a new tab)">
+                    <button type="button" id="btn_print_selected" class="btn btn-outline-success btn-sm d-inline-flex align-items-center gap-1" title="Print selected bills in a single tab">
                         <i class="material-symbols-rounded" style="font-size: 1rem;">print</i>
                         Print Selected
                     </button>
@@ -211,6 +223,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     var basePrintUrl = '{{ route("admin.estate.reports.bill-report-print") }}';
+    var printAllUrl = '{{ route("admin.estate.reports.bill-report-print-all") }}';
     function buildPrintUrl(billNo, month, year) {
         return basePrintUrl + '?bill_no=' + encodeURIComponent(billNo) + '&month=' + encodeURIComponent(month) + '&year=' + encodeURIComponent(year);
     }
@@ -225,26 +238,39 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         return Array.prototype.slice.call(cards);
     }
-    function openPrintTabs(cards) {
+    function openSelectedPrintInSingleTab(cards) {
         if (!cards.length) {
             alert('Please select at least one bill to print.');
             return;
         }
-        cards.forEach(function (card, i) {
-            var billNo = card.getAttribute('data-bill-no') || '';
-            var month = card.getAttribute('data-bill-month') || '';
-            var year = card.getAttribute('data-bill-year') || '';
-            if (billNo || month || year) {
-                setTimeout(function () {
-                    window.open(buildPrintUrl(billNo, month, year), '_blank', 'noopener');
-                }, i * 300);
-            }
+        var selectedPks = [];
+        cards.forEach(function (card) {
+            var cb = card.querySelector('.bill-checkbox');
+            var v = cb ? parseInt(cb.value, 10) : 0;
+            if (v > 0) selectedPks.push(v);
         });
+        if (!selectedPks.length) {
+            alert('Please select at least one bill to print.');
+            return;
+        }
+
+        var form = document.querySelector('form[action*="generate-estate-bill"]');
+        var billMonthEl = form ? form.querySelector('#bill_month') : null;
+        var unitSubTypeEl = form ? form.querySelector('#unit_sub_type_pk') : null;
+        var billMonth = billMonthEl ? (billMonthEl.value || '').trim() : '';
+        var unitSubTypePk = unitSubTypeEl ? (unitSubTypeEl.value || '').trim() : '';
+
+        var params = new URLSearchParams();
+        if (billMonth) params.set('bill_month', billMonth);
+        if (unitSubTypePk) params.set('unit_sub_type_pk', unitSubTypePk);
+        params.set('selected_pks', selectedPks.join(','));
+
+        window.open(printAllUrl + '?' + params.toString(), '_blank', 'noopener');
     }
     var btnPrintSelected = document.getElementById('btn_print_selected');
     if (btnPrintSelected) {
         btnPrintSelected.addEventListener('click', function () {
-            openPrintTabs(getBillCardsToPrint(true));
+            openSelectedPrintInSingleTab(getBillCardsToPrint(true));
         });
     }
     // Print All: opens the print-all page (all bills in one view with option to print or download PDF)
@@ -337,6 +363,54 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         });
     }
+
+    // If opened from notification, jump to the specific bill.
+    // Expected query params:
+    // - bill_no, bill_print_month, bill_print_year (used to locate the bill card)
+    // - open_estate_bill=1 (optional: also auto-open print in new tab)
+    (function () {
+        var params = new URLSearchParams(window.location.search);
+        var shouldOpen = params.get('open_estate_bill');
+
+        var billNo = (params.get('bill_no') || '').trim();
+        var billPrintMonth = (params.get('bill_print_month') || params.get('month') || '').trim();
+        var billPrintYear = (params.get('bill_print_year') || params.get('year') || '').trim();
+
+        var hasBillInfo = !!(billNo && billPrintMonth && billPrintYear);
+        if (!hasBillInfo) return;
+
+        // Best-effort scroll to the matching bill card (if present on the page).
+        try {
+            var cards = document.querySelectorAll('.bill-card');
+            var target = null;
+            cards.forEach(function (card) {
+                if (target) return;
+                var cNo = (card.getAttribute('data-bill-no') || '').trim();
+                var cMonth = (card.getAttribute('data-bill-month') || '').trim();
+                var cYear = (card.getAttribute('data-bill-year') || '').trim();
+                if (cNo === billNo && cMonth === billPrintMonth && cYear === billPrintYear) {
+                    target = card;
+                }
+            });
+
+            if (target && target.scrollIntoView) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                target.classList.add('border', 'border-primary');
+            }
+        } catch (e) {}
+
+        // Optional: also auto-open the specific print page.
+        if (!shouldOpen || shouldOpen === '0' || shouldOpen === 'false') return;
+
+        var printUrl = buildPrintUrl(billNo, billPrintMonth, billPrintYear);
+        // Try open in a new tab; fallback to same-tab redirect when blocked.
+        setTimeout(function () {
+            var w = window.open(printUrl, '_blank', 'noopener');
+            if (!w) {
+                window.location.href = printUrl;
+            }
+        }, 400);
+    })();
 });
 </script>
 @endpush

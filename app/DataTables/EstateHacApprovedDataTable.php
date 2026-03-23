@@ -5,6 +5,7 @@ namespace App\DataTables;
 use App\Models\EstateHacApprovedRow;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Yajra\DataTables\Html\Column;
@@ -57,28 +58,57 @@ class EstateHacApprovedDataTable extends DataTable
             ->addColumn('action', function ($row) {
                 $detailsPk = (int) ($row->estate_home_request_details_pk ?? $row->source_pk ?? 0);
                 $detailsUrl = $detailsPk ? route('admin.estate.request-details', ['id' => $detailsPk]) : '#';
-                $detailsLink = $detailsPk ? '<a href="' . e($detailsUrl) . '" class="btn btn-primary btn-sm me-1" title="Request &amp; Change Details"><i class="material-icons">visibility</i></a>' : '';
+                $detailsLink = $detailsPk
+                    ? '<a href="' . e($detailsUrl) . '" class="text-primary" title="View request &amp; change details">
+                           <i class="material-icons material-symbols-rounded">visibility</i>
+                       </a>'
+                    : '';
                 if ($row->request_type === 'change') {
                     $status = (int) ($row->change_ap_dis_status ?? 0);
                     if ($status === 1) {
-                        return $detailsLink . '<span class="badge bg-success">Approved</span>';
+                        return '<div class="d-inline-flex align-items-center gap-1 justify-content-center">'
+                            . $detailsLink
+                            . '<span class="text-success" title="Approved">
+                                   <i class="material-icons material-symbols-rounded">check_circle</i>
+                               </span>'
+                            . '</div>';
                     }
                     if ($status === 2) {
-                        return $detailsLink . '<span class="badge bg-danger">Disapproved</span>';
+                        return '<div class="d-inline-flex align-items-center gap-1 justify-content-center">'
+                            . $detailsLink
+                            . '<span class="text-danger" title="Disapproved">
+                                   <i class="material-icons material-symbols-rounded">cancel</i>
+                               </span>'
+                            . '</div>';
                     }
                     $reqId = e($row->request_id ?? 'N/A');
-                    return $detailsLink . '<div class="d-inline-flex flex-wrap gap-1 justify-content-center">
-                        <button type="button" class="btn btn-sm btn-success btn-approve-change-request" data-id="' . (int) $row->source_pk . '" data-request-id="' . $reqId . '">Approve</button>
-                        <button type="button" class="btn btn-sm btn-outline-danger btn-disapprove-change-request" data-id="' . (int) $row->source_pk . '" data-request-id="' . $reqId . '">Disapprove</button>
-                    </div>';
+                    return '<div class="d-inline-flex align-items-center gap-1 justify-content-center">'
+                        . $detailsLink
+                        . '<a href="javascript:void(0);" class="text-success btn-approve-change-request" data-id="' . (int) $row->source_pk . '" data-request-id="' . $reqId . '" title="Approve change request">
+                               <i class="material-icons material-symbols-rounded">check_circle</i>
+                           </a>'
+                        . '<a href="javascript:void(0);" class="text-danger btn-disapprove-change-request" data-id="' . (int) $row->source_pk . '" data-request-id="' . $reqId . '" title="Disapprove change request">
+                               <i class="material-icons material-symbols-rounded">cancel</i>
+                           </a>'
+                        . '</div>';
                 }
                 $url = route('admin.estate.new-request.allot-details', ['id' => $row->source_pk]);
-                return $detailsLink . '<button type="button" class="btn btn-success btn-allot-new-request" data-id="' . (int) $row->source_pk . '" data-req-id="' . e($row->request_id ?? '') . '" data-details-url="' . e($url) . '" title="Allot house (add to Possession Details)"> Allot
-                </button>';
+                return '<div class="d-inline-flex align-items-center gap-1 justify-content-center">'
+                    . $detailsLink
+                    . '<a href="javascript:void(0);" class="text-success btn-allot-new-request" data-id="' . (int) $row->source_pk . '" data-req-id="' . e($row->request_id ?? '') . '" data-details-url="' . e($url) . '" title="Allot house (add to Possession Details)">
+                           <i class="material-icons material-symbols-rounded">add_home</i>
+                       </a>'
+                    . '</div>';
             })
             ->rawColumns(['request_type', 'action'])
             ->filter(function ($query) {
                 $searchValue = trim((string) request()->input('search.value', ''));
+                $typeFilter = trim((string) request()->input('type_filter', ''));
+
+                if (in_array($typeFilter, ['change', 'new'], true)) {
+                    $query->where('request_type', $typeFilter);
+                }
+
                 if ($searchValue !== '') {
                     $searchLike = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $searchValue) . '%';
                     $query->where(function ($q) use ($searchLike) {
@@ -92,11 +122,21 @@ class EstateHacApprovedDataTable extends DataTable
                     });
                 }
             }, true)
+            ->orderColumn('request_date', fn ($query, $order) => $query->reorder()
+                ->orderBy('request_date', $order)
+                ->orderBy('pk', $order))
+            ->orderColumn('request_type', fn ($query, $order) => $query->reorder()->orderByRaw('LOWER(COALESCE(request_type, "")) ' . $order))
+            ->orderColumn('request_id', fn ($query, $order) => $query->reorder()->orderByRaw('LOWER(COALESCE(request_id, "")) ' . $order))
+            ->orderColumn('emp_name', fn ($query, $order) => $query->reorder()->orderByRaw('LOWER(COALESCE(emp_name, "")) ' . $order))
+            ->orderColumn('emp_designation', fn ($query, $order) => $query->reorder()->orderByRaw('LOWER(COALESCE(emp_designation, "")) ' . $order))
+            ->orderColumn('pay_scale', fn ($query, $order) => $query->reorder()->orderByRaw('LOWER(COALESCE(pay_scale, "")) ' . $order))
             ->setRowId('pk');
     }
 
     public function query(EstateHacApprovedRow $model): EloquentBuilder
     {
+        $canSeeHacApproved = hasRole('HAC Person') || hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin');
+
         $part1 = DB::table('estate_change_home_req_details as ec')
             ->join('estate_home_request_details as eh', 'ec.estate_home_req_details_pk', '=', 'eh.pk')
             ->where('ec.estate_change_hac_status', 1)
@@ -155,9 +195,17 @@ class EstateHacApprovedDataTable extends DataTable
 
         $unionQuery = $part1->unionAll($part2);
 
-        return $model->newQuery()
+        $q = $model->newQuery()
             ->fromSub($unionQuery, 'hac_approved')
-            ->orderBy('request_date', 'desc');
+            ->orderByDesc('request_date')
+            ->orderByDesc('pk');
+
+        // Self-service staff/training roles must not access HAC approved queues.
+        if (! Auth::check() || ! $canSeeHacApproved) {
+            $q->whereRaw('1 = 0');
+        }
+
+        return $q;
     }
 
     public function html(): HtmlBuilder
@@ -166,7 +214,9 @@ class EstateHacApprovedDataTable extends DataTable
             ->setTableId('estateHacApprovedTable')
             ->addTableClass('table table-bordered table-striped table-hover text-nowrap align-middle mb-0')
             ->columns($this->getColumns())
-            ->minifiedAjax()
+            ->minifiedAjax('', null, [
+                'type_filter' => '$("#hacApprovedTypeFilter").val()',
+            ])
             ->parameters([
                 'responsive' => false,
                 'autoWidth' => false,
@@ -174,7 +224,7 @@ class EstateHacApprovedDataTable extends DataTable
                 'searching' => true,
                 'lengthChange' => true,
                 'pageLength' => 10,
-                'order' => [[2, 'desc']],
+                'order' => [[1, 'desc']],
                 'lengthMenu' => [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
                 'language' => [
                     'search' => 'Search within table:',
@@ -192,19 +242,12 @@ class EstateHacApprovedDataTable extends DataTable
     {
         return [
             Column::computed('DT_RowIndex')->title('S.NO.')->addClass('text-center')->orderable(false)->searchable(false)->width('50px'),
+            Column::make('request_date')->title('REQUEST DATE')->orderable(true)->searchable(false)->visible(false),
             Column::make('request_type')->title('TYPE')->orderable(true)->searchable(false)->width('120px'),
             Column::make('request_id')->title('REQUEST ID')->orderable(true)->searchable(true),
-            Column::make('request_date')->title('REQUEST DATE')->orderable(true)->searchable(false),
             Column::make('emp_name')->title('NAME')->orderable(true)->searchable(true),
-            Column::make('employee_id')->title('EMP.ID')->orderable(true)->searchable(true),
             Column::make('emp_designation')->title('DESIGNATION')->orderable(true)->searchable(true),
             Column::make('pay_scale')->title('PAY SCALE')->orderable(true)->searchable(true),
-            Column::make('doj_pay_scale')->title('DOJ PAY SCALE')->orderable(false)->searchable(false),
-            Column::make('doj_service')->title('DOJ SERVICE')->orderable(false)->searchable(false),
-            Column::make('doj_academic')->title('DOJ ACADEMY')->orderable(false)->searchable(false),
-            Column::make('eligibility_label')->title('ELIGIBILITY')->orderable(false)->searchable(false),
-            Column::make('current_or_availability')->title('CURRENT ALLOTMENT / AVAILABILITY')->orderable(true)->searchable(true),
-            Column::make('remarks')->title('REMARKS')->orderable(false)->searchable(true),
             Column::computed('action')->title('ACTION')->addClass('text-center')->orderable(false)->searchable(false)->width('180px'),
         ];
     }

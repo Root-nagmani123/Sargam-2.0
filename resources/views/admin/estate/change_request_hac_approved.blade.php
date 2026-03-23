@@ -262,26 +262,78 @@
         border: 1px solid var(--bs-border-color, #dee2e6);
     }
     #estateHacApprovedTable_wrapper .dataTables_filter {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        flex-wrap: nowrap;
         text-align: right;
+    }
+    #estateHacApprovedTable_wrapper .dataTables_filter .hac-approved-filter-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        flex-wrap: nowrap;
+        width: 100%;
     }
     #estateHacApprovedTable_wrapper .dataTables_filter label {
         display: flex;
         align-items: center;
         gap: 0.5rem;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         justify-content: flex-end;
+        margin-bottom: 0;
+        white-space: nowrap;
     }
+    #estateHacApprovedTable_wrapper .dataTables_filter .form-select,
     #estateHacApprovedTable_wrapper .dataTables_filter input {
+        height: 38px;
         padding: 0.375rem 0.75rem;
         font-size: 0.875rem;
         border: 1px solid var(--bs-border-color);
         border-radius: var(--bs-border-radius);
+        line-height: 1.5;
+        box-sizing: border-box;
+        background-color: var(--bs-body-bg);
+    }
+    #estateHacApprovedTable_wrapper .dataTables_filter input {
         margin-left: 0.25rem;
+        min-width: 180px;
     }
     #estateHacApprovedTable_wrapper .dataTables_filter input:focus {
         border-color: var(--bs-primary);
         outline: 0;
         box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
+    }
+    #estateHacApprovedTable_wrapper .hac-approved-type-filter {
+        margin-bottom: 0;
+        flex: 0 0 auto;
+    }
+    #estateHacApprovedTable_wrapper #hacApprovedTypeFilter {
+        min-width: 180px;
+    }
+    @media (max-width: 767.98px) {
+        #estateHacApprovedTable_wrapper .dataTables_filter {
+            justify-content: stretch;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        #estateHacApprovedTable_wrapper .dataTables_filter .hac-approved-filter-toolbar {
+            width: 100%;
+            flex-wrap: wrap;
+            justify-content: stretch;
+        }
+        #estateHacApprovedTable_wrapper .dataTables_filter label,
+        #estateHacApprovedTable_wrapper .hac-approved-type-filter {
+            width: 100%;
+            justify-content: flex-start;
+        }
+        #estateHacApprovedTable_wrapper .dataTables_filter input,
+        #estateHacApprovedTable_wrapper #hacApprovedTypeFilter {
+            width: 100%;
+            min-width: 0;
+        }
     }
     /* Table: primary header, striped rows, hover */
     #estateHacApprovedTable_wrapper thead th {
@@ -345,6 +397,55 @@
     {!! $dataTable->scripts() !!}
     <script>
     document.addEventListener('DOMContentLoaded', function() {
+        function getHacApprovedTable() {
+            return $.fn.dataTable.isDataTable('#estateHacApprovedTable')
+                ? $('#estateHacApprovedTable').DataTable()
+                : null;
+        }
+
+        function injectTypeFilter() {
+            var hacApprovedTable = getHacApprovedTable();
+            if (!hacApprovedTable || document.getElementById('hacApprovedTypeFilter')) {
+                return;
+            }
+
+            var $filterContainer = $('#estateHacApprovedTable_wrapper .dataTables_filter');
+            var $searchLabel = $filterContainer.find('label').first();
+            if (!$searchLabel.length) {
+                return;
+            }
+
+            if (!$filterContainer.find('.hac-approved-filter-toolbar').length) {
+                $filterContainer.contents().wrapAll('<div class="hac-approved-filter-toolbar"></div>');
+            }
+
+            var typeFilterHtml = `
+                <label class="hac-approved-type-filter">
+                    <select id="hacApprovedTypeFilter" class="form-select form-select-sm">
+                        <option value="">All Types</option>
+                        <option value="change">Change Request</option>
+                        <option value="new">New Request</option>
+                    </select>
+                </label>
+            `;
+
+            $filterContainer.find('.hac-approved-filter-toolbar').prepend(typeFilterHtml);
+        }
+
+        injectTypeFilter();
+        $(document).on('init.dt', function(e, settings) {
+            if (settings && settings.nTable && settings.nTable.id === 'estateHacApprovedTable') {
+                injectTypeFilter();
+            }
+        });
+
+        $(document).on('change', '#hacApprovedTypeFilter', function() {
+            var hacApprovedTable = getHacApprovedTable();
+            if (hacApprovedTable) {
+                hacApprovedTable.ajax.reload();
+            }
+        });
+
         var approveModalEl = document.getElementById('approveChangeRequestModal');
         var approveModal = approveModalEl ? new bootstrap.Modal(approveModalEl) : null;
         var approveForm = document.getElementById('formApproveChangeRequest');

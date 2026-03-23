@@ -30,25 +30,25 @@ class EstateMigrationReportDataTable extends DataTable
                     $query->where('allotment_year', (int) $req->filter_allotment_year);
                 }
                 if ($req->filled('filter_campus_name')) {
-                    $query->where('campus_name', 'like', '%' . $req->filter_campus_name . '%');
+                    $query->where('campus_name', $req->filter_campus_name);
                 }
                 if ($req->filled('filter_building_name')) {
-                    $query->where('building_name', 'like', '%' . $req->filter_building_name . '%');
+                    $query->where('building_name', $req->filter_building_name);
                 }
                 if ($req->filled('filter_type_of_building')) {
-                    $query->where('type_of_building', 'like', '%' . $req->filter_type_of_building . '%');
+                    $query->where('type_of_building', $req->filter_type_of_building);
                 }
                 if ($req->filled('filter_house_no')) {
-                    $query->where('house_no', 'like', '%' . $req->filter_house_no . '%');
+                    $query->where('house_no', $req->filter_house_no);
                 }
                 if ($req->filled('filter_employee_name')) {
-                    $query->where('employee_name', 'like', '%' . $req->filter_employee_name . '%');
+                    $query->where('employee_name', $req->filter_employee_name);
                 }
                 if ($req->filled('filter_department_name')) {
-                    $query->where('department_name', 'like', '%' . $req->filter_department_name . '%');
+                    $query->where('department_name', $req->filter_department_name);
                 }
                 if ($req->filled('filter_employee_type')) {
-                    $query->where('employee_type', 'like', '%' . $req->filter_employee_type . '%');
+                    $query->where('employee_type', $req->filter_employee_type);
                 }
                 $searchValue = $req->input('search.value');
                 if (! empty($searchValue)) {

@@ -13,13 +13,97 @@
     .estate-bill-print.bill-pages, .estate-bill-print.bill-pages * { visibility: visible; }
     .estate-bill-print.bill-pages { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; background: #fff; }
     .no-print { display: none !important; }
-    .bill-doc { break-inside: avoid; page-break-inside: avoid; page-break-after: always; }
-    .bill-doc:last-child { page-break-after: auto; }
-    @page { size: A4; margin: 12mm; }
+    .bill-doc { break-inside: auto; page-break-inside: auto; page-break-after: auto; }
+    @page { size: A4 portrait; margin: 2mm; }
     body { background: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .bill-doc { box-shadow: none !important; }
+    .bill-pages.compact-print {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 4mm;
+        max-width: none;
+    }
+    .bill-pages.compact-print .bill-doc {
+        margin: 0;
+        break-inside: avoid;
+        page-break-inside: avoid;
+        page-break-after: always;
+        width: 100%;
+        max-width: 206mm;
+        border-width: 1.5px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    .bill-pages.compact-print .bill-doc:last-child { page-break-after: auto; }
+    .bill-pages.compact-print .bill-header { padding: 7px 10px 8px; }
+    .bill-pages.compact-print .bill-header::after { margin-top: 4px; height: 1px; }
+    .bill-pages.compact-print .bill-header .org-name { font-size: 9.1pt; margin-bottom: 1px; }
+    .bill-pages.compact-print .bill-header .org-sub { font-size: 7pt; }
+    .bill-pages.compact-print .bill-header .bill-title { font-size: 8.3pt; margin-top: 5px; letter-spacing: 0.06em; }
+    .bill-pages.compact-print .bill-emblem { width: 24px; height: 24px; margin-bottom: 4px; font-size: 6.5pt; border-width: 1px; }
+    .bill-pages.compact-print .bill-badge { top: 5px; right: 7px; font-size: 6.2pt; padding: 2px 6px; }
+    .bill-pages.compact-print .bill-meta-bar { padding: 5px 10px; gap: 4px; font-size: 7.1pt; border-bottom-width: 1px; }
+    .bill-pages.compact-print .bill-meta-bar .bill-no { font-size: 7.8pt; padding: 1px 6px; border-width: 1px; }
+    .bill-pages.compact-print .bill-consumer { padding: 5px 10px; border-left-width: 2px; }
+    .bill-pages.compact-print .bill-consumer-title { margin-bottom: 3px; padding-bottom: 2px; font-size: 7.1pt; border-bottom-width: 1px; }
+    .bill-pages.compact-print .bill-consumer-table td { padding: 2px 6px 2px 0; font-size: 7pt; }
+    .bill-pages.compact-print .bill-section-title { margin: 6px 10px 3px; padding: 2px 0 2px 5px; font-size: 7.1pt; border-left-width: 2px; }
+    .bill-pages.compact-print .bill-table-wrap { padding: 0 10px 2px; }
+    .bill-pages.compact-print .bill-table { margin-bottom: 4px; font-size: 6.9pt; }
+    .bill-pages.compact-print .bill-table th,
+    .bill-pages.compact-print .bill-table td { padding: 2px 4px; }
+    .bill-pages.compact-print .bill-total-wrap { padding: 0 10px 5px; }
+    .bill-pages.compact-print .bill-total-box { margin-top: 1px; padding: 5px 7px; border-width: 1.5px; }
+    .bill-pages.compact-print .bill-total-box::before { height: 1px; }
+    .bill-pages.compact-print .bill-total-label { font-size: 6.8pt; margin-bottom: 2px; }
+    .bill-pages.compact-print .bill-total-box .grand-total { font-size: 10pt; }
+    .bill-pages.compact-print .bill-amount-words,
+    .bill-pages.compact-print .bill-pay-by { margin-top: 2px; font-size: 6.3pt; line-height: 1.15; padding-top: 0; }
+    .bill-pages.compact-print .bill-footer { padding: 5px 10px 6px; font-size: 6.2pt; border-top-width: 1px; }
+    .bill-pages.compact-print .bill-footer .footer-note { margin-bottom: 2px; line-height: 1.15; }
+    .bill-pages.compact-print .bill-footer p { margin-bottom: 2px; }
+    .bill-pages.compact-print .bill-footer .sign-block { margin-top: 6px; gap: 10px; display: flex; }
+    .bill-pages.compact-print .bill-footer .sign-line { width: 95px; padding-top: 2px; font-size: 6.2pt; border-top-width: 1px; }
+    .bill-pages.compact-print .bill-footer .sign-sub { font-size: 5.8pt; margin-top: 1px; }
 }
 .bill-pages { font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; font-size: 11pt; color: #1a202c; line-height: 1.45; }
+.bill-pages.compact-print {
+    max-width: 210mm;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+}
+.bill-pages.compact-print .bill-doc { margin: 0; }
+.bill-pages.compact-print .bill-header { padding: 14px 16px 15px; }
+.bill-pages.compact-print .bill-header::after { margin-top: 4px; height: 1px; }
+.bill-pages.compact-print .bill-header .org-name { font-size: 12.5pt; margin-bottom: 1px; }
+.bill-pages.compact-print .bill-header .org-sub { font-size: 9.6pt; }
+.bill-pages.compact-print .bill-header .bill-title { font-size: 11.2pt; margin-top: 7px; letter-spacing: 0.06em; }
+.bill-pages.compact-print .bill-emblem { width: 37px; height: 37px; font-size: 9.8pt; margin-bottom: 6px; border-width: 1px; }
+.bill-pages.compact-print .bill-badge { top: 7px; right: 9px; font-size: 8.2pt; padding: 3px 9px; }
+.bill-pages.compact-print .bill-meta-bar { padding: 10px 15px; font-size: 9.4pt; gap: 5px; border-bottom-width: 1px; }
+.bill-pages.compact-print .bill-meta-bar .bill-no { font-size: 10.4pt; padding: 2px 9px; border-width: 1px; }
+.bill-pages.compact-print .bill-consumer { padding: 11px 15px; border-left-width: 2px; }
+.bill-pages.compact-print .bill-consumer-title { font-size: 9.6pt; margin-bottom: 4px; padding-bottom: 2px; border-bottom-width: 1px; }
+.bill-pages.compact-print .bill-consumer-table td { font-size: 9.3pt; padding: 4px 8px 4px 0; }
+.bill-pages.compact-print .bill-section-title { margin: 12px 15px 6px; font-size: 9.6pt; padding: 3px 0 3px 6px; border-left-width: 2px; }
+.bill-pages.compact-print .bill-table-wrap { padding: 0 15px 5px; }
+.bill-pages.compact-print .bill-table { margin-bottom: 9px; font-size: 9.2pt; }
+.bill-pages.compact-print .bill-table th,
+.bill-pages.compact-print .bill-table td { padding: 6px 9px; }
+.bill-pages.compact-print .bill-total-wrap { padding: 0 15px 11px; }
+.bill-pages.compact-print .bill-total-box { margin-top: 2px; padding: 11px 13px; border-width: 1.5px; }
+.bill-pages.compact-print .bill-total-box::before { height: 1px; }
+.bill-pages.compact-print .bill-total-label { font-size: 9.1pt; margin-bottom: 3px; }
+.bill-pages.compact-print .bill-total-box .grand-total { font-size: 14.1pt; }
+.bill-pages.compact-print .bill-amount-words { font-size: 8.2pt; margin-top: 3px; padding-top: 3px; line-height: 1.2; }
+.bill-pages.compact-print .bill-pay-by { font-size: 8.1pt; margin-top: 2px; line-height: 1.2; }
+.bill-pages.compact-print .bill-footer { padding: 10px 15px 11px; font-size: 8pt; border-top-width: 1px; }
+.bill-pages.compact-print .bill-footer .footer-note { margin-bottom: 3px; line-height: 1.2; }
+.bill-pages.compact-print .bill-footer p { margin-bottom: 2px; }
+.bill-pages.compact-print .bill-footer .sign-block { margin-top: 8px; gap: 12px; }
+.bill-pages.compact-print .bill-footer .sign-line { width: 124px; font-size: 7.9pt; padding-top: 2px; border-top-width: 1px; }
+.bill-pages.compact-print .bill-footer .sign-sub { font-size: 7.2pt; margin-top: 1px; }
 .bill-doc {
     position: relative;
     border: 2px solid #1e3a5f;
@@ -133,17 +217,25 @@
     @if($bills->isNotEmpty())
     <div class="no-print card shadow-sm border-0 rounded-3 mb-4">
         <div class="card-body p-4">
-            <p class="text-muted mb-3">All {{ $bills->count() }} bill(s) for the selected month and unit type are shown below. You can print them all at once or download as a single PDF.</p>
+            <p class="text-muted mb-3">
+                @if(!empty($isSelectedPrint))
+                    Selected {{ $bills->count() }} bill(s) are shown below. You can print all selected bills at once.
+                @else
+                    All {{ $bills->count() }} bill(s) for the selected month and unit type are shown below. You can print them all at once or download as a single PDF.
+                @endif
+            </p>
             <div class="d-flex flex-wrap gap-2 align-items-center">
+                @if(empty($isSelectedPrint))
                 <a href="{{ route('admin.estate.reports.bill-report-print-all-pdf', ['bill_month' => $billMonth, 'unit_sub_type_pk' => $unitSubTypePk]) }}" class="btn btn-danger d-inline-flex align-items-center gap-2" target="_blank" rel="noopener">
                     <i class="material-symbols-rounded" style="font-size: 1.2rem;">picture_as_pdf</i>
                     Download PDF
                 </a>
+                @endif
                 <button type="button" class="btn btn-success d-inline-flex align-items-center gap-2" onclick="window.print();" title="Print all bills at once">
                     <i class="material-symbols-rounded" style="font-size: 1.2rem;">print</i>
                     Print All at Once
                 </button>
-                <a href="{{ route('admin.estate.generate-estate-bill', ['bill_month' => $billMonth, 'unit_sub_type_pk' => $unitSubTypePk]) }}" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2">
+                <a href="{{ $backUrl ?? route('admin.estate.generate-estate-bill', ['bill_month' => $billMonth, 'unit_sub_type_pk' => $unitSubTypePk]) }}" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2">
                     <i class="material-symbols-rounded" style="font-size: 1rem;">arrow_back</i>
                     Back to Generate Bill
                 </a>
@@ -151,7 +243,7 @@
         </div>
     </div>
 
-    <div class="estate-bill-print bill-pages" id="all-bills-content">
+    <div class="estate-bill-print bill-pages {{ (!empty($isSelectedPrint) || !empty($isOtherSelected)) ? 'compact-print' : '' }}" id="all-bills-content">
         @foreach($bills as $bill)
             @include('admin.estate.partials._bill_doc', ['bill' => $bill])
         @endforeach

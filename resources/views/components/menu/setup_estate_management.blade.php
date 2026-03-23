@@ -12,7 +12,16 @@
                             {{-- ESTATE MANAGEMENT (same visibility rules as main Setup menu) --}}
                             @php
                                 $showUserManagement = hasRole('Admin') || hasRole('Super Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST');
-                                $estateSelfServiceRoles = hasRole('Staff') || hasRole('Student-OT') || hasRole('Doctor') || hasRole('Guest Faculty') || hasRole('Internal Faculty');
+                                // Staff/self-service: Request For Estate + My Estate Bill.
+                                // Training roles should behave like normal staff (self-service), not like estate authorities.
+                                $estateSelfServiceRoles = hasRole('Staff')
+                                    || hasRole('Student-OT')
+                                    || hasRole('Doctor')
+                                    || hasRole('Guest Faculty')
+                                    || hasRole('Internal Faculty')
+                                    || hasRole('Training-Induction')
+                                    || hasRole('Training-MCTP')
+                                    || hasRole('IST');
                                 // Check permanent LBSNAA employee (payroll = 0)
                                 $isPermanentEstateEmployee = false;
                                 $user = Auth::user();
@@ -41,15 +50,24 @@
                                 $showEstateSection = $showUserManagement || hasRole('Estate') || hasRole('Super Admin') || hasRole('HAC Person') || $estateSelfServiceRoles;
                                 $isEstateAdmin = hasRole('Estate') || hasRole('Super Admin');
                                 $isHACPerson = hasRole('HAC Person');
-                                $canSeeAllEstate = $isEstateAdmin || $showUserManagement;
+                                // Estate authority menus (Put In HAC, Possession Details, etc.) should be visible only to Estate/Admin/Super Admin.
+                                // Training roles must NOT get "all estate" access.
+                                $canSeeAllEstate = $isEstateAdmin || hasRole('Admin');
                                 $estateManagementOpen = request()->routeIs('admin.estate.*');
-                                // HAC menus (Put In HAC / HAC Approved) visible to HAC Person + Estate/Admin (same as main sidebar).
+                                // HAC menus (Put In HAC / HAC Approved) visible ONLY to HAC Person + Estate/Admin.
                                 $canSeeHAC = $isHACPerson || $canSeeAllEstate;
+                                // Staff/self-service: Request For Estate + Generate Estate Bill only. HAC Person (without Staff) sees only Put In HAC + HAC Approved.
+                                $canSeeRequestAndBill = $canSeeAllEstate || $estateSelfServiceRoles;
                                 $canSeeSelfOnly = $canSeeAllEstate || $isHACPerson || $estateSelfServiceRoles;
+                                // Restricted menus: visible ONLY to Admin/Estate/Super Admin.
+                                $canSeeUpdateMeterNo = hasRole('Admin') || hasRole('Estate') || hasRole('Super Admin');
+                                $canSeeListMeterReading = hasRole('Admin') || hasRole('Estate') || hasRole('Super Admin');
                                 // "Other" estate operations (for other employees, Return House, Define House, etc.) are restricted strictly to Admin / Estate / Super Admin.
                                 $canManageOthersEstate = $isEstateAdmin || hasRole('Admin') || hasRole('Super Admin');
-                                // But Return House list should also be visible to permanent estate self-service employees (same as main sidebar).
-                                $canSeeReturnHouse = $canManageOthersEstate || $isPermanentEstateEmployee;
+                                // For client requirement: Return House menu should NOT appear for self-service users.
+                                $canSeeReturnHouse = $canManageOthersEstate;
+                                // Admin/Super Admin/Estate see "Generate Estate Bill"; everyone else sees "My Estate Bill".
+                                $estateBillMenuLabel = (hasRole('Admin') || hasRole('Super Admin') || hasRole('Estate')) ? 'Generate Estate Bill' : 'My Estate Bill';
                             @endphp
 
                             @if($showEstateSection)
@@ -68,8 +86,8 @@
                                     </a>
                                 </li>
                                 <ul class="collapse list-unstyled ps-3 {{ $estateManagementOpen ? 'show' : '' }}" id="estateManagementMiniCollapse">
-                                    {{-- User: own data | HAC Person: HAC items | Estate / Admin: all --}}
-                                    @if($canSeeSelfOnly)
+                                    {{-- Staff/self-service: Request For Estate + Generate Estate Bill. HAC Person: only Put In HAC + HAC Approved. --}}
+                                    @if($canSeeRequestAndBill)
                                     <li class="sidebar-item">
                                         <a class="sidebar-link {{ request()->routeIs('admin.estate.request-for-estate') ? 'active' : '' }}"
                                             href="{{ route('admin.estate.request-for-estate') }}">
@@ -102,7 +120,7 @@
                                     </li>
                                     @endif
 
-                                    @if($canSeeSelfOnly)
+                                    @if($canSeeUpdateMeterNo)
                                     <li class="sidebar-item">
                                         <a class="sidebar-link {{ request()->routeIs('admin.estate.update-meter-no') ? 'active' : '' }}"
                                             href="{{ route('admin.estate.update-meter-no') }}">
@@ -132,17 +150,20 @@
                                     </li>
                                     @endif
 
-                                    @if($canSeeSelfOnly)
+                                    @if($canSeeListMeterReading)
                                     <li class="sidebar-item">
                                         <a class="sidebar-link {{ request()->routeIs('admin.estate.list-meter-reading*') ? 'active' : '' }}"
                                             href="{{ route('admin.estate.list-meter-reading') }}">
                                             <span class="hide-menu small small-sm-normal text-nowrap">List Meter Reading</span>
                                         </a>
                                     </li>
+                                    @endif
+
+                                    @if($canSeeRequestAndBill)
                                     <li class="sidebar-item">
                                         <a class="sidebar-link {{ request()->routeIs('admin.estate.generate-estate-bill') ? 'active' : '' }}"
                                             href="{{ route('admin.estate.generate-estate-bill') }}">
-                                            <span class="hide-menu small small-sm-normal text-nowrap">Generate Estate Bill</span>
+                                            <span class="hide-menu small small-sm-normal text-nowrap">{{ $estateBillMenuLabel }}</span>
                                         </a>
                                     </li>
                                     @endif
@@ -177,19 +198,19 @@
                                     </li>
                                     @endif
 
-                                    @if($canSeeSelfOnly)
+                                    @if($canSeeAllEstate)
                                     <li class="sidebar-item">
                                         <a class="sidebar-link {{ request()->routeIs('admin.estate.request-for-house') ? 'active' : '' }}"
                                             href="{{ route('admin.estate.request-for-house') }}">
-                                            <span class="hide-menu small small-sm-normal text-nowrap">Return house of request</span>
+                                            <span class="hide-menu small small-sm-normal text-nowrap">Change House R                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                equest</span>
                                         </a>
                                     </li>
-                                    <li class="sidebar-item">
+                                    <!-- <li class="sidebar-item">
                                         <a class="sidebar-link {{ request()->routeIs('admin.estate.change-request-details') ? 'active' : '' }}"
                                             href="{{ route('admin.estate.change-request-details') }}">
                                             <span class="hide-menu small small-sm-normal text-nowrap">Change Request Details</span>
                                         </a>
-                                    </li>
+                                    </li> -->
                                     @endif
                                 </ul>
                             @endif
@@ -301,12 +322,12 @@
                                         <span class="hide-menu small small-sm-normal text-nowrap">Estate Bill Report - Grid View</span>
                                     </a>
                                 </li>
-                                <li class="sidebar-item">
+                                <!-- <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.reports.bill-report-print') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.reports.bill-report-print') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Estate Bill Report for Print</span>
                                     </a>
-                                </li>
+                                </li> -->
                                 <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.reports.migration-report') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.reports.migration-report') }}">
