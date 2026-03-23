@@ -1,9 +1,9 @@
 @extends('admin.layouts.master')
-@section('title', 'Employee ID Card Request - Sargam | Lal Bahadur Shastri')
+@section('title', 'Employee ID Card List')
 @section('setup_content')
 <div class="container-fluid idcard-index-page">
     <!-- Breadcrumb + Search (reference: Setup > User Management, search icon right) -->
-    <x-breadcrum title="Request Employee ID Card"></x-breadcrum>
+    <x-breadcrum title="Employee ID Card List"></x-breadcrum>
     <x-session_message />
 
     <div class="card border border-body-secondary rounded-4 shadow-sm idcard-index-card overflow-hidden">

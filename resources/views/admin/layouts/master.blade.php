@@ -548,39 +548,22 @@
 
                     <!-- Setup Tab -->
                     <div class="tab-pane fade {{ ($activeNavTab ?? '#home') === '#tab-setup' ? 'show active' : '' }}" id="tab-setup" role="tabpanel">
-                        @hasSection('setup_content')
-                            @yield('setup_content')
-                        @else
-                            {{-- Fallback to main content so tab is not blank on pages that don't define setup_content --}}
-                            @yield('content')
-                        @endif
+                        @yield('setup_content')
                     </div>
 
                     <!-- Communications Tab -->
                     <div class="tab-pane fade {{ ($activeNavTab ?? '#home') === '#tab-communications' ? 'show active' : '' }}" id="tab-communications" role="tabpanel">
-                        @hasSection('communications_content')
-                            @yield('communications_content')
-                        @else
-                            @yield('content')
-                        @endif
+                        @yield('communications_content')
                     </div>
 
                     <!-- Academics Tab -->
                     <div class="tab-pane fade {{ ($activeNavTab ?? '#home') === '#tab-academics' ? 'show active' : '' }}" id="tab-academics" role="tabpanel">
-                        @hasSection('academics_content')
-                            @yield('academics_content')
-                        @else
-                            @yield('content')
-                        @endif
+                        @yield('academics_content')
                     </div>
 
                     <!-- Material Management Tab -->
                     <div class="tab-pane fade {{ ($activeNavTab ?? '#home') === '#tab-material-management' ? 'show active' : '' }}" id="tab-material-management" role="tabpanel">
-                        @hasSection('material_management_content')
-                            @yield('material_management_content')
-                        @else
-                            @yield('content')
-                        @endif
+                        @yield('material_management_content')
                     </div>
                 </div>
                 </main>
