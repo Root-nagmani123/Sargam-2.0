@@ -120,6 +120,7 @@ class EstatePossessionDetailsDataTable extends DataTable
         // Show only *completed* possessions in listing.
         // Pending possessions (created at allotment time) store a sentinel date: 1900-01-01.
         $query->where('epd.possession_date', '>', '1900-01-01');
+        $query->where('epd.return_home_status', 0);
 
         // RBAC: Only Admin / Estate / Super Admin / Training-* / IST can see full list.
         // All other roles (including Staff / HAC Person etc.) should only see their own possessions.

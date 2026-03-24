@@ -111,6 +111,7 @@ class EstatePossessionOtherDataTable extends DataTable
             ->leftJoinSub($latestOtherReadings, 'emro_latest', function ($join) {
                 $join->on('emro_latest.estate_possession_other_pk', '=', 'estate_possession_other.pk');
             })
+            ->where('estate_possession_other.return_home_status', 0)
             ->orderByDesc('estate_possession_other.pk');
     }
 

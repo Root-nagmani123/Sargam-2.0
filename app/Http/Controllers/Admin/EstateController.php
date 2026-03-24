@@ -4438,9 +4438,7 @@ class EstateController extends Controller
                 ->leftJoin('estate_house_master as ehm', 'epd.estate_house_master_pk', '=', 'ehm.pk')
                 ->leftJoin('estate_unit_sub_type_master as eust', 'ehm.estate_unit_sub_type_master_pk', '=', 'eust.pk')
                 ->where('ehrd.pk', $preselectedRequester)
-                ->where('ehrd.hac_status', 1)
                 ->whereRaw('epd.pk = (SELECT MAX(epd2.pk) FROM estate_possession_details epd2 WHERE epd2.estate_home_request_details = ehrd.pk)')
-                ->where('ehrd.status', 1)
                 ->select(
                     'ehrd.pk',
                     'ehrd.req_id',
@@ -4517,6 +4515,7 @@ class EstateController extends Controller
             'isEdit'
         ));
     }
+
 
     /**
      * Possession Details (LBSNAA) - Store form into estate_possession_details.
