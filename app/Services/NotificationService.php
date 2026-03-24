@@ -317,9 +317,11 @@ class NotificationService
 
         $config = config('notifications', []);
         //print_r($config);
-        $type = strtolower($notification->type ?? '');
+        $type = strtolower(trim($notification->type ?? ''));
+        $moduleName = strtolower(trim($notification->module_name ?? ''));
         log::info($type);
-        $moduleName = $notification->module_name ?? '';
+        log::info($moduleName);
+        
 
         // Estate: when estate bill is ready, redirect to Generate Estate Bill
         // page for the bill's month and auto-open the specific bill print.
@@ -446,7 +448,7 @@ class NotificationService
 
             // Try case-insensitive module name match
             foreach ($config[$type] as $configModuleName => $routeConfig) {
-                if (strtolower($configModuleName) === strtolower($moduleName)) {
+                if (strtolower(trim($configModuleName)) === strtolower(trim($moduleName))) {
                     log::info($routeConfig);
                     return $this->buildRouteUrl($routeConfig, $notification);
                 }
@@ -480,7 +482,14 @@ class NotificationService
         $routeParams = [];
         foreach ($params as $paramName => $sourceField) {
             if ($sourceField === 'reference_pk') {
-                $routeParams[$paramName] = $notification->reference_pk;
+                if (!empty($notification->reference_pk)) {
+                    $routeParams[$paramName] = $notification->reference_pk;
+                } else {
+                    \Log::error('reference_pk missing in notification', [
+                        'notification_id' => $notification->id ?? null,
+                        'notification' => $notification
+                    ]);
+                }
             } elseif (isset($notification->$sourceField)) {
                 $routeParams[$paramName] = $notification->$sourceField;
             } elseif (is_string($sourceField) && !empty($sourceField)) {
@@ -490,13 +499,24 @@ class NotificationService
         }
 
         // Check if route exists
-        try {
-            if (Route::has($routeName)) {
-                return route($routeName, $routeParams);
-            }
-        } catch (\Exception $e) {
-            // Route doesn't exist or has invalid parameters, fallback to dashboard
-        }
+// Debug log (IMPORTANT)
+\Log::info('Building route URL', [
+    'route' => $routeName,
+    'params' => $routeParams,
+    'notification_id' => $notification->id ?? null
+]);
+
+try {
+    return route($routeName, $routeParams);
+} catch (\Exception $e) {
+    \Log::error('Route generation failed', [
+        'route' => $routeName,
+        'params' => $routeParams,
+        'error' => $e->getMessage(),
+        'notification_id' => $notification->id ?? null
+    ]);
+}
+
 
         // Fallback to dashboard if route doesn't exist
         return route('admin.dashboard');
