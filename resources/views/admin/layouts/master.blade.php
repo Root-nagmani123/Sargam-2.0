@@ -1,5 +1,10 @@
 <!DOCTYPE html>
 <html lang="en" data-bs-theme="light">
+@php
+    $activeCategoryId = request()->get('category') ?? ($sidebarMenus->first()->id ?? null);
+    $activeCategory = $sidebarMenus->find($activeCategoryId);
+    $groups = $activeCategory ? $activeCategory->groups : collect([]);
+@endphp
 
 <head>
     <!-- Set initial theme from localStorage before paint (avoids flash) -->
@@ -14,6 +19,7 @@
             } catch (e) {}
         })();
     </script>
+
     @include('admin.layouts.pre_header')
     <title>@yield('title') {{ env('APP_TITLE_SUFFIX') }} - Sargam 2.0 | Lal Bahadur Shastri National Academy of Administration</title>
     @section('css')
@@ -535,10 +541,9 @@
     </div>
 
     <div id="main-wrapper">
-        @include('admin.layouts.header')
+        @include('admin.layouts.header_new')
         <div class="page-wrapper">
-
-            @include('admin.layouts.sidebar')
+            @include('admin.layouts.sidebar_new')
             <div class="body-wrapper">
                 <main id="main-content" tabindex="-1" role="main">
                 <!-- Tab Content Container -->
@@ -574,7 +579,7 @@
     </div>
 
     @include('admin.layouts.footer')
-     <script src="{{ asset('js/forms.js') }}"></script>
+    <script src="{{ asset('js/forms.js') }}"></script>
     <script src="{{ asset('admin_assets/js/sidebar-navigation-fixed.js') }}"></script>
     <script src="{{ asset('admin_assets/js/tab-persistence.js') }}"></script>
     <!-- SweetAlert2 -->
@@ -747,6 +752,63 @@ document.addEventListener("DOMContentLoaded", function () {
       document.documentElement.offsetHeight;
     });
   </script>
+
+
+    <!-- @sidebar  scripts -->
+    <script>
+
+        // @getSidebarGroups()
+        $(document).on('click', '.sidebar-category-link', function(e){
+            e.preventDefault();
+            var categoryId = $(this).data('id');
+            $('.sidebar-category-link').removeClass('active').attr('aria-selected','false');
+            $(this).addClass('active').attr('aria-selected','true');
+            $.ajax({
+                url: '{{ route("sidebar.groups") }}',
+                type: 'GET',
+                data: { category_id: categoryId },
+                success: function(response){ 
+                    $('#sidebar-groups').html(response);
+                },
+                error: function(xhr){
+                    console.error(xhr.responseText);
+                    alert('Failed to load groups!');
+                }
+            });
+        });
+
+        // @getSidebarMenu()
+        $(document).on('click', '.sidebar-group-link', function(e){
+            e.preventDefault();
+            var groupId = $(this).data('id');
+            var groupName = $(this).data('name');
+            $('#sidebar-title').text(groupName).addClass('border-bottom');
+            $('.sidebar-group-link').removeClass('selected').attr('aria-selected','false');
+            $('.sidebar-group-link').removeClass('mx-2 py-1 bg-primary');
+            $('.sidebar-google-icon-wrap').removeClass('text-light');
+            $('.sidebar-google-label').removeClass('text-light');
+            $(this).addClass('selected').attr('aria-selected','true');
+            $(this).addClass('mx-2 py-1 bg-primary');
+            $(this).find('.sidebar-google-icon-wrap').addClass('text-light');
+            $(this).find('.sidebar-google-label').addClass('text-light');
+            $.ajax({
+                url: '{{ route("sidebar.menu") }}',
+                type: 'GET',
+                data: { group_id: groupId },
+                success: function(response){ 
+                    $('#sidebarnav').html(response);
+                },
+                error: function(xhr){
+                    console.error(xhr.responseText);
+                    alert('Failed to load menu!');
+                }
+            });
+        });
+
+
+    </script>
+
+  @yield('script')
 </body>
 
 </html>

@@ -1,163 +1,163 @@
-var at = document.documentElement.getAttribute("data-layout");
-if ((at = "vertical")) {
-  // ==============================================================
-  // Auto select left navbar
-  // ==============================================================
+// var at = document.documentElement.getAttribute("data-layout");
+// if ((at = "vertical")) {
+//   // ==============================================================
+//   // Auto select left navbar
+//   // ==============================================================
 
-  document.addEventListener("DOMContentLoaded", function () {
-    "use strict";
-    var isSidebar = document.getElementsByClassName("side-mini-panel");
-    if (isSidebar.length > 0) {
-      var url = window.location + "";
-      var path = url.replace(
-        window.location.protocol + "//" + window.location.host + "/",
-        ""
-      );
+//   document.addEventListener("DOMContentLoaded", function () {
+//     "use strict";
+//     var isSidebar = document.getElementsByClassName("side-mini-panel");
+//     if (isSidebar.length > 0) {
+//       var url = window.location + "";
+//       var path = url.replace(
+//         window.location.protocol + "//" + window.location.host + "/",
+//         ""
+//       );
 
-      //****************************
-      // This is for
-      //****************************
+//       //****************************
+//       // This is for
+//       //****************************
 
-      function findMatchingElement() {
-        var currentUrl = window.location.href;
-        var anchors = document.querySelectorAll("#sidebarnav a");
+//       function findMatchingElement() {
+//         var currentUrl = window.location.href;
+//         var anchors = document.querySelectorAll("#sidebarnav a");
 
-        for (var i = 0; i < anchors.length; i++) {
-          if (anchors[i].href === currentUrl) {
-            return anchors[i];
-          }
-        }
+//         for (var i = 0; i < anchors.length; i++) {
+//           if (anchors[i].href === currentUrl) {
+//             return anchors[i];
+//           }
+//         }
 
-        return null; // Return null if no matching element is found
-      }
+//         return null; // Return null if no matching element is found
+//       }
 
-      var elements = findMatchingElement();
+//       var elements = findMatchingElement();
 
-      if (elements) {
-        // Do something with the matching element
-        elements.classList.add("active");
-      }
+//       if (elements) {
+//         // Do something with the matching element
+//         elements.classList.add("active");
+//       }
 
-      //****************************
-      // This is for the multilevel menu
-      //****************************
-      document.querySelectorAll("#sidebarnav a").forEach(function (link) {
-        link.addEventListener("click", function (e) {
-          const isActive = this.classList.contains("active");
-          const parentUl = this.closest("ul");
+//       //****************************
+//       // This is for the multilevel menu
+//       //****************************
+//       document.querySelectorAll("#sidebarnav a").forEach(function (link) {
+//         link.addEventListener("click", function (e) {
+//           const isActive = this.classList.contains("active");
+//           const parentUl = this.closest("ul");
 
-          if (!isActive) {
-            // hide any open menus and remove all other classes
-            parentUl.querySelectorAll("ul").forEach(function (submenu) {
-              submenu.classList.remove("in");
-            });
-            parentUl.querySelectorAll("a").forEach(function (navLink) {
-              navLink.classList.remove("active");
-            });
+//           if (!isActive) {
+//             // hide any open menus and remove all other classes
+//             parentUl.querySelectorAll("ul").forEach(function (submenu) {
+//               submenu.classList.remove("in");
+//             });
+//             parentUl.querySelectorAll("a").forEach(function (navLink) {
+//               navLink.classList.remove("active");
+//             });
 
-            // open our new menu and add the open class
-            const submenu = this.nextElementSibling;
-            if (submenu) {
-              submenu.classList.add("in");
-            }
+//             // open our new menu and add the open class
+//             const submenu = this.nextElementSibling;
+//             if (submenu) {
+//               submenu.classList.add("in");
+//             }
 
-            this.classList.add("active");
-          } else {
-            this.classList.remove("active");
-            parentUl.classList.remove("active");
-            const submenu = this.nextElementSibling;
-            if (submenu) {
-              submenu.classList.remove("in");
-            }
-          }
-        });
-      });
+//             this.classList.add("active");
+//           } else {
+//             this.classList.remove("active");
+//             parentUl.classList.remove("active");
+//             const submenu = this.nextElementSibling;
+//             if (submenu) {
+//               submenu.classList.remove("in");
+//             }
+//           }
+//         });
+//       });
 
-      document
-        .querySelectorAll("#sidebarnav > li > a.has-arrow")
-        .forEach(function (link) {
-          link.addEventListener("click", function (e) {
-            e.preventDefault();
-          });
-        });
+//       document
+//         .querySelectorAll("#sidebarnav > li > a.has-arrow")
+//         .forEach(function (link) {
+//           link.addEventListener("click", function (e) {
+//             e.preventDefault();
+//           });
+//         });
 
-      //****************************
-      // This is for show menu
-      //****************************
+//       //****************************
+//       // This is for show menu
+//       //****************************
 
-      if (elements) {
-        var closestNav = elements.closest("nav[class^=sidebar-nav]");
-        var menuid = (closestNav && closestNav.id) || "menu-right-mini-1";
-        var menu = menuid[menuid.length - 1];
+//       if (elements) {
+//         var closestNav = elements.closest("nav[class^=sidebar-nav]");
+//         var menuid = (closestNav && closestNav.id) || "menu-right-mini-1";
+//         var menu = menuid[menuid.length - 1];
 
-        var menuElement = document.getElementById("menu-right-mini-" + menu);
-        var miniElement = document.getElementById("mini-" + menu);
+//         var menuElement = document.getElementById("menu-right-mini-" + menu);
+//         var miniElement = document.getElementById("mini-" + menu);
         
-        if (menuElement) {
-          menuElement.classList.add("d-block");
-        }
-        if (miniElement) {
-          miniElement.classList.add("selected");
-        }
-      }
+//         if (menuElement) {
+//           menuElement.classList.add("d-block");
+//         }
+//         if (miniElement) {
+//           miniElement.classList.add("selected");
+//         }
+//       }
 
-      //****************************
-      // This is for mini sidebar
-      //****************************
-      document
-        .querySelectorAll("ul#sidebarnav ul li a.active")
-        .forEach(function (link) {
-          link.closest("ul").classList.add("in");
-          link.closest("ul").parentElement.classList.add("selected");
-        });
-      // Mini-nav click handling is now done globally by sidebar-navigation-fixed.js
-      // to prevent duplicate event listeners that cause multi-click issues
-    }
-  });
-}
+//       //****************************
+//       // This is for mini sidebar
+//       //****************************
+//       document
+//         .querySelectorAll("ul#sidebarnav ul li a.active")
+//         .forEach(function (link) {
+//           link.closest("ul").classList.add("in");
+//           link.closest("ul").parentElement.classList.add("selected");
+//         });
+//       // Mini-nav click handling is now done globally by sidebar-navigation-fixed.js
+//       // to prevent duplicate event listeners that cause multi-click issues
+//     }
+//   });
+// }
 
-if ((at = "horizontal")) {
-  function findMatchingElement() {
-    var currentUrl = window.location.href;
-    var anchors = document.querySelectorAll("#sidebarnavh ul#sidebarnav a");
-    for (var i = 0; i < anchors.length; i++) {
-      if (anchors[i].href === currentUrl) {
-        return anchors[i];
-      }
-    }
+// if ((at = "horizontal")) {
+//   function findMatchingElement() {
+//     var currentUrl = window.location.href;
+//     var anchors = document.querySelectorAll("#sidebarnavh ul#sidebarnav a");
+//     for (var i = 0; i < anchors.length; i++) {
+//       if (anchors[i].href === currentUrl) {
+//         return anchors[i];
+//       }
+//     }
 
-    return null; // Return null if no matching element is found
-  }
-  var elements = findMatchingElement();
+//     return null; // Return null if no matching element is found
+//   }
+//   var elements = findMatchingElement();
 
-  if (elements) {
-    elements.classList.add("active");
-  }
-  document
-    .querySelectorAll("#sidebarnavh ul#sidebarnav a.active")
-    .forEach(function (link) {
-      link.closest("a").parentElement.classList.add("selected");
-      link.closest("ul").parentElement.classList.add("selected");
-    });
-}
+//   if (elements) {
+//     elements.classList.add("active");
+//   }
+//   document
+//     .querySelectorAll("#sidebarnavh ul#sidebarnav a.active")
+//     .forEach(function (link) {
+//       link.closest("a").parentElement.classList.add("selected");
+//       link.closest("ul").parentElement.classList.add("selected");
+//     });
+// }
 
-// ----------------------------------------
-// Active 2 file at same time 
-// ----------------------------------------
+// // ----------------------------------------
+// // Active 2 file at same time 
+// // ----------------------------------------
 
-var currentURL =
-  window.location != window.parent.location
-    ? document.referrer
-    : document.location.href;
+// var currentURL =
+//   window.location != window.parent.location
+//     ? document.referrer
+//     : document.location.href;
 
-var link = document.getElementById("get-url");
+// var link = document.getElementById("get-url");
 
-if (link) {
-  if (currentURL.includes("/main/index.html")) {
-    link.setAttribute("href", "../main/index.html");
-  } else if (currentURL.includes("/index.html")) {
-    link.setAttribute("href", "./index.html");
-  } else {
-    link.setAttribute("href", "./");
-  }
-}
+// if (link) {
+//   if (currentURL.includes("/main/index.html")) {
+//     link.setAttribute("href", "../main/index.html");
+//   } else if (currentURL.includes("/index.html")) {
+//     link.setAttribute("href", "./index.html");
+//   } else {
+//     link.setAttribute("href", "./");
+//   }
+// }

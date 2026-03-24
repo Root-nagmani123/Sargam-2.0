@@ -19,12 +19,7 @@
             @include('admin.layouts.sidebar.material')
         </div>
     </div>
-
-
     <!-- //faculty & OTs tabs -->
-
-
-
 <script>
 const sidebar = document.querySelector('.sidebarmenu .simplebar-content-wrapper');
 
@@ -121,7 +116,4 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 </script>
-
-
-
 <!--  Sidebar End -->

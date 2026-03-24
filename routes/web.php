@@ -5,8 +5,10 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\{RoleController,SidebarController};
+use App\Models\User;
+use Spatie\Permission\Models\Role;
 use App\Http\Controllers\Admin\{
-    RoleController,
     PermissionController,
     UserController,
     MemberController,
@@ -64,6 +66,23 @@ use App\Http\Controllers\Admin\IssueManagement\{
 };
 use App\Http\Controllers\Admin\DuplicateIDCardRequestController;
 
+use App\Http\Controllers\SidebarMenu\{
+    SidebarCategoryController,MenuGroupController,MenuController
+};
+
+Route::get('assign-role', function () {
+    $user = User::find(2);
+    $permissions = $user->getAllPermissions();
+    foreach ($permissions as $permission) {
+        echo $permission->name . "<br>";
+    }
+})->name('admin.assign-role');
+
+Route::get('test-menus', function () {
+    
+    $menus = app()->make(\App\Services\SidebarMenu\MenuService::class)->getMenus();
+    dd($menus);
+});
 
 Route::get('clear-cache', function () {
     Artisan::call('cache:clear');
@@ -124,6 +143,11 @@ Auth::routes(['verify' => true, 'register' => false]);
 Route::get('/', [LoginController::class, 'showLoginForm'])->name('home');
 // Route::get('/', [LoginController::class, 'showLoginForm'])->name('home');
 Route::post('/login', [LoginController::class, 'authenticate'])->name('post_login');
+
+
+
+Route::post('roles/permissions/{id}', [RoleController::class, 'assignPermission'])->name('assign.roles.permissions');
+Route::resource('roles', RoleController::class);
 
 // Protected Routes
 Route::middleware(['auth'])->group(function () {
@@ -979,7 +1003,7 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
 
     Route::get('/student-faculty-feedback', [CalendarController::class, 'studentFacultyFeedback'])->name('feedback.get.studentFacultyFeedback');
     Route::get('/admin/feedback/pending-students', [FeedbackController::class, 'pendingStudents'])->name('admin.feedback.pending.students');
-// Change export routes to POST
+    // Change export routes to POST
     Route::post('/admin/feedback/pending-students/export/pdf', [FeedbackController::class, 'exportPendingStudentsPDF'])
     ->name('admin.feedback.export.pdf');
 
@@ -1015,7 +1039,7 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
         Route::post('add-other-estate-request', [EstateController::class, 'storeOtherEstateRequest'])->name('add-other-estate-request.store');
         Route::delete('other-estate-request/{id}', [EstateController::class, 'destroyOtherEstateRequest'])->name('other-estate-request.destroy');
 
-        // Change Requests (HAC Approved) + New requests
+        
         // Change Requests (HAC Approved) + New requests
         Route::get('change-request-hac-approved', [EstateController::class, 'changeRequestHacApproved'])->name('change-request-hac-approved');
         Route::get('change-request/approve-details/{id}', [EstateController::class, 'getChangeRequestApproveDetails'])->name('change-request.approve-details');
@@ -1384,3 +1408,20 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
 
 Route::get('/view-logs', [App\Http\Controllers\LogController::class, 'index'])
     ->middleware('auth');
+
+    
+######### Manjeet Chand ###############
+# @Sidbar Menu Route 
+
+Route::prefix('sidebar')->name('sidebar.')->group(function () {
+    Route::get('categories/status/{id}', [SidebarCategoryController::class, 'status'])->name('categories.status');
+    Route::resource('categories', SidebarCategoryController::class);
+    Route::get('menu-groups/status/{id}', [MenuGroupController::class, 'status'])->name('menu-groups.status');
+    Route::resource('menu-groups', MenuGroupController::class);
+    Route::get('menus/status/{id}', [MenuController::class, 'status'])->name('menus.status');
+    Route::resource('menus', MenuController::class);
+    Route::get('groups', [SidebarController::class, 'getGroups'])->name('groups');
+    Route::get('menu', [SidebarController::class, 'sidebarMenus'])->name('menu');
+    Route::get('getGroups/{category_id}', [SidebarController::class, 'getCategoryGroups'])->name('getGroups');
+    Route::get('getMenus/{group_id}', [SidebarController::class, 'getGroupMenus'])->name('getMenus');
+});

@@ -87,15 +87,15 @@ class User extends Authenticatable
         return $this->hasMany(ActionLog::class, 'action_by');
     }
 
-  public function roles()
-{
-    return $this->belongsToMany(
-        UserRoleMaster::class,
-        'employee_role_mapping',          // pivot table
-        'user_credentials_pk',            // foreign key of user
-        'user_role_master_pk'             // foreign key of role
-    );
-}
+//   public function roles()
+// {
+//     return $this->belongsToMany(
+//         UserRoleMaster::class,
+//         'employee_role_mapping',          // pivot table
+//         'user_credentials_pk',            // foreign key of user
+//         'user_role_master_pk'             // foreign key of role
+//     );
+// }
 
 /**
      * Employees and faculty for complaint section (complainant / assignment dropdowns).

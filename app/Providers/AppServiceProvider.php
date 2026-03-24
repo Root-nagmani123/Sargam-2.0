@@ -5,6 +5,7 @@ namespace App\Providers;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Pagination\Paginator;
 use App\Services\NotificationService;
+use App\Services\SidebarMenu\MenuService;
 
 
 class AppServiceProvider extends ServiceProvider
@@ -26,10 +27,15 @@ class AppServiceProvider extends ServiceProvider
      *
      * @return void
      */
-    public function boot()
+    public function boot(MenuService $menuService)
     {
         Paginator::useBootstrap();
 
+        view()->composer('*', function ($view) use ($menuService) {
+            if (auth()->check()) {
+                $view->with('sidebarMenus', $menuService->getMenus());
+            }
+        });
 
     }
 }
