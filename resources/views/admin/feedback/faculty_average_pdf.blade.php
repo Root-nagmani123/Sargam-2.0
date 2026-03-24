@@ -264,7 +264,7 @@
         </table>
 
         <!-- Summary Statistics -->
-        <div class="summary-section">
+        {{-- <div class="summary-section">
             <h4>📈 Summary Statistics</h4>
             <div class="summary-grid">
                 <div class="summary-item">
@@ -311,7 +311,7 @@
                     <div class="summary-label">Needs Improvement (&lt;70%)</div>
                 </div>
             </div>
-        </div>
+        </div> --}}
     @endif
 
     <div class="footer">
