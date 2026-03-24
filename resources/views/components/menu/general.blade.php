@@ -18,6 +18,15 @@
                                     <span class="hide-menu small small-sm-normal text-nowrap">Dashboard</span>
                                 </a>
                             </li>
+
+                            <!-- Profile Management Link -->
+                            <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('member.profile.edit') ? 'active' : '' }}"
+                                    href="{{ route('member.profile.edit', Auth::user()->user_id) }}">
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Edit Profile</span>
+                                </a>
+                            </li>
+
                             @if(hasRole('Admin') || hasRole('Training-Induction'))
                             <!-- Participant / Dashboard Statistics -->
                             <li class="sidebar-item">

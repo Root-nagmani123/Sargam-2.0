@@ -4,7 +4,6 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    @include('admin.layouts.force_light_guard')
     <title>Feedback Form - Sargam | Lal Bahadur Shastri National Academy of Administration</title>
     <link rel="stylesheet" href="https://bootstrapdemos.adminmart.com/matdash/dist/assets/css/styles.css">
     <!-- Favicon icon-->

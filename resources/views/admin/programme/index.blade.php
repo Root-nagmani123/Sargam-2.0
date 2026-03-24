@@ -112,7 +112,7 @@
                 class="btn btn-primary d-inline-flex align-items-center gap-2 px-4"
                 aria-label="Add a new course"
             >
-                <iconify-icon icon="ep:circle-plus-filled" aria-hidden="true"></iconify-icon>
+                <i class="bi bi-plus-circle-fill" aria-hidden="true"></i>
                 <span class="fw-semibold">Add Course</span>
             </a>
 

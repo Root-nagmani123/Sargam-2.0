@@ -1,6 +1,37 @@
 {{-- Modern & Elegant Breadcrumb Component --}}
-@props(['title' => 'Page', 'variant' => 'glass'])
-@php $variant = $variant ?? 'glass'; @endphp
+@props(['title' => 'Page', 'variant' => 'glass', 'items' => null])
+@php
+    $variant = $variant ?? 'glass';
+    $homeUrl = url('/');
+    $generalUrl = url()->previous();
+
+    // Backward-compatible fallback for old usages: Home -> General -> {title}
+    $breadcrumbItems = collect(
+        is_array($items) && count($items)
+            ? array_values(array_filter($items, fn ($item) => filled($item)))
+            : [
+                ['label' => 'Home', 'url' => $homeUrl],
+                ['label' => 'General', 'url' => $generalUrl],
+                ['label' => $title, 'url' => null],
+            ]
+    )
+        ->map(function ($item) {
+            if (is_array($item)) {
+                return [
+                    'label' => $item['label'] ?? $item['title'] ?? null,
+                    'url' => $item['url'] ?? $item['href'] ?? null,
+                ];
+            }
+
+            return [
+                'label' => $item,
+                'url' => null,
+            ];
+        })
+        ->filter(fn ($item) => filled($item['label']))
+        ->values()
+        ->all();
+@endphp
 
 <div class="modern-breadcrumb-wrapper mb-4" data-variant="{{ $variant }}">
     
@@ -43,7 +74,20 @@
                     <div class="breadcrumb-title-wrapper">
                         <div class="title-indicator"></div>
                         <div class="title-content">
-                            <h1 class="breadcrumb-title">{{ $title }}</h1>
+                            <nav aria-label="breadcrumb" class="breadcrumb-nav">
+                                <ol class="breadcrumb-trail">
+                                    @foreach ($breadcrumbItems as $index => $item)
+                                        @php $isLast = $index === count($breadcrumbItems) - 1; @endphp
+                                        <li class="trail-item {{ $isLast ? 'active' : '' }}" @if ($isLast) aria-current="page" @endif>
+                                            @if (!$isLast && filled($item['url']))
+                                                <a href="{{ $item['url'] }}" class="trail-link">{{ $item['label'] }}</a>
+                                            @else
+                                                <span class="{{ $isLast ? 'trail-current' : 'trail-label' }}">{{ $item['label'] }}</span>
+                                            @endif
+                                        </li>
+                                    @endforeach
+                                </ol>
+                            </nav>
                             <div class="title-underline"></div>
                         </div>
                     </div>
@@ -284,6 +328,58 @@
         flex-grow: 1;
         min-width: 0;
     }
+
+    .breadcrumb-nav {
+        margin-bottom: 0.25rem;
+    }
+
+    .breadcrumb-trail {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: #6c757d;
+    }
+
+    .trail-item {
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .trail-link,
+    .trail-label,
+    .trail-current {
+        color: inherit;
+        text-decoration: none;
+    }
+
+    .trail-link {
+        transition: color 0.2s ease;
+    }
+
+    .trail-link:hover,
+    .trail-link:focus-visible {
+        color: #0d6efd;
+        text-decoration: underline;
+        text-underline-offset: 0.15em;
+    }
+
+    .trail-item + .trail-item::before {
+        content: ">";
+        margin-right: 0.35rem;
+        color: #9aa3ad;
+        font-weight: 600;
+    }
+
+    .trail-item.active {
+        color: #0d6efd;
+        font-weight: 600;
+    }
     
     .breadcrumb-title {
         margin: 0;
@@ -424,6 +520,10 @@
         
         .breadcrumb-title {
             font-size: 1.125rem;
+        }
+
+        .breadcrumb-trail {
+            font-size: 0.75rem;
         }
         
         .title-underline {

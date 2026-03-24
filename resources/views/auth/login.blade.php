@@ -943,12 +943,12 @@
                     <div class="header-left">
                         <div class="header-govt">
                             <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Flag_of_India.svg/800px-Flag_of_India.svg.png"
-                                alt="National Flag of India" loading="eager">
+                                alt="National Flag of India" loading="eager" onerror="this.style.display='none'">
                             <span>भारत सरकार | Government of India</span>
                         </div>
                         <a href="{{ url('/') }}" class="header-lbsnaa d-none d-lg-block" aria-label="LBSNAA Home">
-                            <img src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png"
-                                alt="LBSNAA - Lal Bahadur Shastri National Academy of Administration" loading="eager">
+                            <img src="{{ asset('admin_assets/images/logos/white-logo.svg') }}"
+                                alt="LBSNAA - Lal Bahadur Shastri National Academy of Administration" loading="eager" onerror="this.style.display='none'" style="min-width: 300px; height: auto;">
                         </a>
                     </div>
                     <div class="header-right d-none d-lg-block">
@@ -1086,7 +1086,7 @@
             <div class="footer-negd">
                 <div class="container">
                     <a href="https://negd.gov.in/" target="_blank" rel="noopener noreferrer" aria-label="Powered by National e-Governance Division">
-                        <img src="{{ asset('images/negd.png') }}" alt="NeGD Logo" loading="lazy" onerror="this.style.display='none'">
+                        <img src="{{ asset('admin_assets/images/logos/logo-icon.svg') }}" alt="NeGD Logo" loading="lazy" onerror="this.style.display='none'">
                         <span>Powered by <strong>National e-Governance Division</strong>, MeitY</span>
                     </a>
                 </div>

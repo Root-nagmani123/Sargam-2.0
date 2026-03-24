@@ -24,8 +24,7 @@
 
                                 <a href="{{ route('group.mapping.create') }}"
                                     class="btn btn-primary px-3 d-flex align-items-center shadow-sm">
-                                    <iconify-icon icon="ep:circle-plus-filled" width="1.2em" height="1.2em"
-                                        class="me-2"></iconify-icon>
+                                    <i class="bi bi-plus-circle-fill me-2" aria-hidden="true"></i>
                                     Add Group Mapping
                                 </a>
 
