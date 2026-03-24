@@ -433,128 +433,53 @@
 </style>
 
 <script>
-// Keep a lightweight navigation history so "Back" goes to last click reliably.
-(function initBreadcrumbBackStack() {
-    const NAV_STACK_KEY = 'sargam_breadcrumb_back_stack_v1';
-    const currentUrl = window.location.href;
+(function () {
+    var homeUrl = @json(url('/'));
+    var laravelPrevious = @json(url()->previous());
 
-    function isSameOrigin(url) {
-        try {
-            return new URL(url).origin === window.location.origin;
-        } catch (e) {
-            return false;
-        }
-    }
+    window.handleBackNavigation = function handleBackNavigation() {
+        var currentUrl = window.location.href;
 
-    function safeParse(json, fallback) {
-        try {
-            const val = JSON.parse(json);
-            return val ?? fallback;
-        } catch (e) {
-            return fallback;
-        }
-    }
-
-    function getStack() {
-        const raw = sessionStorage.getItem(NAV_STACK_KEY);
-        return safeParse(raw, []);
-    }
-
-    function setStack(stack) {
-        // Limit size to avoid unbounded growth.
-        const trimmed = Array.isArray(stack) ? stack.slice(-20) : [];
-        sessionStorage.setItem(NAV_STACK_KEY, JSON.stringify(trimmed));
-    }
-
-    try {
-        if (!isSameOrigin(currentUrl)) return;
-        const stack = getStack();
-        const last = stack[stack.length - 1];
-        if (last !== currentUrl) {
-            // Avoid duplicates while preserving order.
-            const deduped = stack.filter((u) => u !== currentUrl);
-            deduped.push(currentUrl);
-            setStack(deduped);
-        }
-    } catch (e) {
-        // If storage is blocked, fall back to referrer/history logic.
-    }
-})();
-
-function handleBackNavigation() {
-    const NAV_STACK_KEY = 'sargam_breadcrumb_back_stack_v1';
-    const currentUrl = window.location.href;
-
-    function isSameOrigin(url) {
-        try {
-            return new URL(url).origin === window.location.origin;
-        } catch (e) {
-            return false;
-        }
-    }
-
-    function safeParse(json, fallback) {
-        try {
-            const val = JSON.parse(json);
-            return val ?? fallback;
-        } catch (e) {
-            return fallback;
-        }
-    }
-
-    function getStack() {
-        const raw = sessionStorage.getItem(NAV_STACK_KEY);
-        return safeParse(raw, []);
-    }
-
-    function setStack(stack) {
-        const trimmed = Array.isArray(stack) ? stack.slice(-20) : [];
-        sessionStorage.setItem(NAV_STACK_KEY, JSON.stringify(trimmed));
-    }
-
-    // Priority 0: Use our localStorage stack (best for "last click" behavior).
-    try {
-        if (isSameOrigin(currentUrl)) {
-            const stack = getStack();
-            if (Array.isArray(stack) && stack.length) {
-                if (stack[stack.length - 1] === currentUrl) {
-                    stack.pop();
-                }
-                const target = stack.length ? stack[stack.length - 1] : null;
-                if (target && target !== currentUrl) {
-                    setStack(stack);
-                    window.location.href = target;
-                    return;
-                }
+        function sameOrigin(u) {
+            try {
+                return new URL(u).origin === window.location.origin;
+            } catch (e) {
+                return false;
             }
         }
-    } catch (e) {
-        // Ignore and continue with fallbacks.
-    }
 
-    // Priority 1: Use document.referrer (most reliable for actual last click)
-    const referrer = document.referrer;
-    
-    // Check if referrer exists and is not the current page
-    if (referrer && referrer !== currentUrl && referrer.includes(window.location.hostname)) {
-        window.location.href = referrer;
-        return;
-    }
-    
-    // Priority 2: Use Laravel's previous URL
-    const previousUrl = "{{ url()->previous() }}";
-    if (previousUrl && previousUrl !== currentUrl) {
-        window.location.href = previousUrl;
-        return;
-    }
-    
-    // Priority 3: Fallback to browser history
-    if (window.history.length > 1) {
-        window.history.back();
-        return;
-    }
-    
-    // Priority 4: Default fallback - go to home/dashboard
-    window.location.href = "{{ url('/') }}";
-}
+        function stripHash(u) {
+            try {
+                var parsed = new URL(u);
+                parsed.hash = '';
+                return parsed.href;
+            } catch (e) {
+                return u;
+            }
+        }
+
+        var currentNoHash = stripHash(currentUrl);
+
+        // 1) Browser history — matches real "back" (fixes broken sessionStorage stack after browser Back/forward)
+        if (window.history.length > 1) {
+            window.history.back();
+            return;
+        }
+
+        // 2) Same-origin referrer (e.g. opened in new tab from this site)
+        var referrer = document.referrer;
+        if (referrer && stripHash(referrer) !== currentNoHash && sameOrigin(referrer)) {
+            window.location.href = referrer;
+            return;
+        }
+
+        // 3) Laravel session previous URL
+        if (laravelPrevious && stripHash(laravelPrevious) !== currentNoHash) {
+            window.location.href = laravelPrevious;
+            return;
+        }
+
+        window.location.href = homeUrl;
+    };
+})();
 </script>
