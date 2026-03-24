@@ -88,6 +88,7 @@
                                     @endforeach
                                 </ol>
                             </nav>
+                            <h1 class="breadcrumb-title">{{ $title }}</h1>
                             <div class="title-underline"></div>
                         </div>
                     </div>
