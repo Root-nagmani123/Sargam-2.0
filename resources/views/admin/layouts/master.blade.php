@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" dir="ltr" data-bs-theme="light" data-color-theme="Blue_Theme" data-layout="vertical">
+<html lang="en" data-bs-theme="light">
 
 <head>
     <!-- Set initial theme from localStorage before paint (avoids flash) -->
@@ -14,6 +14,7 @@
             } catch (e) {}
         })();
     </script>
+
     @include('admin.layouts.pre_header')
     <title>@yield('title') {{ env('APP_TITLE_SUFFIX') }} - Sargam 2.0 | Lal Bahadur Shastri National Academy of Administration</title>
     @section('css')
@@ -533,49 +534,9 @@
     </div>
 
     <div id="main-wrapper">
-        @php
-            // Must run in this view (not in header include) so tab panes below see $activeNavTab.
-            $activeNavTab = '#home';
-            $path = request()->path();
-            if (request()->routeIs('admin.dashboard') || request()->routeIs('admin.dashboard.*')) {
-                $activeNavTab = '#home';
-            } elseif (request()->routeIs('admin.estate.*')) {
-                $activeNavTab = '#tab-setup';
-            } elseif (
-                request()->routeIs('admin.employee_idcard.*') || request()->routeIs('admin.issue-management*') ||
-                request()->routeIs('admin.mess.*') ||
-                request()->routeIs('member.*') || request()->routeIs('faculty.*') || request()->routeIs('programme.*') ||
-                request()->routeIs('admin.roles.*') || request()->routeIs('admin.users.*') ||
-                str_starts_with($path, 'setup/') || str_starts_with($path, 'admin/setup') ||
-                str_starts_with($path, 'admin/employee-idcard') || str_starts_with($path, 'admin/issue-management') ||
-                str_starts_with($path, 'courseAttendanceNoticeMap') || str_starts_with($path, 'course_memo') ||
-                str_starts_with($path, 'building_floor') || str_starts_with($path, 'group_mapping') ||
-                str_starts_with($path, 'course-repository') || str_starts_with($path, 'feedback') || str_starts_with($path, 'admin/feedback') ||
-                str_starts_with($path, 'admin/notice') || str_starts_with($path, 'attendance') ||
-                str_starts_with($path, 'security') || str_starts_with($path, 'ot_notice') ||
-                str_starts_with($path, 'forms') || str_starts_with($path, 'registration') ||
-                str_starts_with($path, 'mdo_escrot') || str_starts_with($path, 'student_medical') ||
-                str_starts_with($path, 'medical_exception') || str_starts_with($path, 'memo_discipline') ||
-                str_starts_with($path, 'country') || str_starts_with($path, 'state') || str_starts_with($path, 'city') ||
-                str_starts_with($path, 'stream') || str_starts_with($path, 'subject') || str_starts_with($path, 'Venue-Master') ||
-                str_starts_with($path, 'batch') || str_starts_with($path, 'curriculum') || str_starts_with($path, 'mapping') ||
-                str_starts_with($path, 'admin/master') || str_contains($path, 'breadcrumb-showcase') || str_starts_with($path, 'password') ||
-                request()->routeIs('calendar.index') || request()->routeIs('feedback.*') || str_starts_with($path, 'calendar') ||
-                str_starts_with($path, 'expertise') || str_starts_with($path, 'faculty_notice') || str_starts_with($path, 'faculty_mdo')
-            ) {
-                $activeNavTab = '#tab-setup';
-            } elseif (str_starts_with($path, 'communications') || request()->routeIs('*communications*')) {
-                $activeNavTab = '#tab-communications';
-            } elseif (str_starts_with($path, 'academics') || request()->routeIs('*academics*')) {
-                $activeNavTab = '#tab-academics';
-            } elseif (str_starts_with($path, 'material') || request()->routeIs('*material*')) {
-                $activeNavTab = '#tab-material-management';
-            }
-        @endphp
         @include('admin.layouts.header')
         <div class="page-wrapper">
-
-            @include('admin.layouts.sidebar')
+            @include('admin.layouts.sidebar_new')
             <div class="body-wrapper">
                 <main id="main-content" tabindex="-1" role="main">
                 <!-- Tab Content Container -->
@@ -611,7 +572,7 @@
     </div>
 
     @include('admin.layouts.footer')
-     <script src="{{ asset('js/forms.js') }}"></script>
+    <script src="{{ asset('js/forms.js') }}"></script>
     <script src="{{ asset('admin_assets/js/sidebar-navigation-fixed.js') }}"></script>
     <script src="{{ asset('admin_assets/js/tab-persistence.js') }}"></script>
     <!-- SweetAlert2 -->
@@ -789,83 +750,6 @@ document.addEventListener("DOMContentLoaded", function () {
       // Force reflow to apply styles
       document.documentElement.offsetHeight;
     });
-  </script>
-
-  <script>
-    // Admin Mess: Tab on dropdown should act like Enter (Select2-friendly)
-    (function () {
-      function isAdminMessPage() {
-        try {
-          const p = (window.location && window.location.pathname || '').toLowerCase();
-          return p.includes('/admin/mess') || (p.includes('/mess') && !p.includes('/message'));
-        } catch (e) {
-          return false;
-        }
-      }
-
-      function shouldConvertTabToEnter(e) {
-        if (!e || e.defaultPrevented) return false;
-        if (e.key !== 'Tab' || e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) return false;
-
-        const active = document.activeElement;
-
-        // Select2: when dropdown is open, focus is in .select2-search__field
-        const isSelect2Search = !!(active && active.classList && active.classList.contains('select2-search__field'));
-        const isSelect2Open = !!document.querySelector('.select2-container--open');
-
-        if (isSelect2Search && isSelect2Open) return true;
-
-        // Fallback: if focus is within a select2 container and it's open
-        if (isSelect2Open && active && active.closest && active.closest('.select2-container')) return true;
-
-        // Choices.js: open dropdown has `.choices.is-open`; focus is usually in `.choices__input`
-        const choicesRoot = active && active.closest ? active.closest('.choices') : null;
-        if (choicesRoot && choicesRoot.classList && choicesRoot.classList.contains('is-open')) return true;
-        if (document.querySelector('.choices.is-open') && active && active.classList && active.classList.contains('choices__input')) return true;
-
-        // Tom Select: open dropdown typically sets `.ts-wrapper.dropdown-active`
-        const tomRoot = active && active.closest ? active.closest('.ts-wrapper') : null;
-        if (tomRoot && tomRoot.classList && tomRoot.classList.contains('dropdown-active')) return true;
-        if (document.querySelector('.ts-wrapper.dropdown-active') && active && active.closest && active.closest('.ts-control')) return true;
-
-        return false;
-      }
-
-      function dispatchEnterOnActiveElement() {
-        const el = document.activeElement;
-        if (!el) return;
-
-        // Prefer keyboard event for Select2; it listens on keydown in the search field
-        try {
-          const evt = new KeyboardEvent('keydown', {
-            key: 'Enter',
-            code: 'Enter',
-            keyCode: 13,
-            which: 13,
-            bubbles: true,
-            cancelable: true
-          });
-          el.dispatchEvent(evt);
-        } catch (e) {
-          // Very old browsers fallback
-          if (typeof el.dispatchEvent === 'function') {
-            const legacy = document.createEvent('Event');
-            legacy.initEvent('keydown', true, true);
-            legacy.keyCode = 13;
-            legacy.which = 13;
-            el.dispatchEvent(legacy);
-          }
-        }
-      }
-
-      document.addEventListener('keydown', function (e) {
-        if (!isAdminMessPage()) return;
-        if (!shouldConvertTabToEnter(e)) return;
-
-        e.preventDefault();
-        dispatchEnterOnActiveElement();
-      }, true);
-    })();
   </script>
 </body>
 

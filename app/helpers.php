@@ -112,25 +112,34 @@ function safeDecrypt($value, $default = null)
         return $default;
     }
 }
+// function hasRole($role)
+// {
+//     $user = Auth::user();
+//     if (!$user) return false;
+
+//     // Step 1: Check session roles first (Student static role bhi yahi me milega)
+//     $sessionRoles = Session::get('user_roles', []);
+//     if (in_array($role, $sessionRoles)) {
+//         return true;
+//     }
+
+//     // Step 2: Check database roles + cache
+//     $roles = Cache::remember('user_roles_' . $user->pk, 10, function () use ($user) {
+//         return $user->roles()->pluck('user_role_name')->toArray();
+//     });
+
+//     return in_array($role, $roles);
+// }
+
+
 function hasRole($role)
 {
     $user = Auth::user();
     if (!$user) return false;
 
-    // Step 1: Check session roles first (Student static role bhi yahi me milega)
-    $sessionRoles = Session::get('user_roles', []);
-    if (in_array($role, $sessionRoles)) {
-        return true;
-    }
-
-    // Step 2: Check database roles + cache
-    $roles = Cache::remember('user_roles_' . $user->pk, 10, function () use ($user) {
-        return $user->roles()->pluck('user_role_name')->toArray();
-    });
-
-    return in_array($role, $roles);
+    // Spatie already has hasRole() method
+    return $user->hasRole($role);
 }
-
 /**
  * Whether the current user can see the low stock alert (Admin, Mess Staff role, or employee in Officers Mess department).
  */

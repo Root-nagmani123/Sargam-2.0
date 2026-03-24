@@ -904,7 +904,7 @@ class EstateController extends Controller
                 ->map(fn ($v) => (int) $v)
                 ->all();
         }
-
+           
         // Blocked set (raw ids from existing data) = active possession wale + pending request wale.
         // These values may be mixed (employee_master.pk OR employee_master.pk_old) depending on legacy/migration.
         $blockedEmployeePksRaw = array_values(array_unique(array_merge($activeEmployeePks, $pendingRequestEmployeePks)));
