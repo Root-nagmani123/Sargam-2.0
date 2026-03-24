@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Log;
 
+
 class NotificationService
 {
     /**
@@ -515,6 +516,7 @@ class NotificationService
         $marked = $this->markAsRead($notificationPk, $userId);
         // print_r($marked);die;
         $redirectUrl = $this->getRedirectUrl($notificationPk);
+        print_r($redirectUrl);die;
         // print_r($redirectUrl);die;
 
         return [
