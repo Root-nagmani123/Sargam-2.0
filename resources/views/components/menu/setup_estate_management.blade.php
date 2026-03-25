@@ -106,7 +106,7 @@
                                     <li class="sidebar-item">
                                         <a class="sidebar-link {{ request()->routeIs('admin.estate.change-request-hac-approved') ? 'active' : '' }}"
                                             href="{{ route('admin.estate.change-request-hac-approved') }}">
-                                            <span class="hide-menu small small-sm-normal text-nowrap">HAC Approved</span>
+                                            <span class="hide-menu small small-sm-normal text-nowrap">HAC Approval</span>
                                         </a>
                                     </li>
                                     @endif

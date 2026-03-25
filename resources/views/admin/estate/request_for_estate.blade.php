@@ -145,13 +145,13 @@
                         </div>
                         <div class="col-md-4">
                             <label for="modal_eligibility_type_pk" class="form-label">Eligibility Type <span class="text-danger">*</span></label>
-                            <select class="form-select" id="modal_eligibility_type_pk" disabled>
+                            <select class="form-select" id="modal_eligibility_type_pk" name="eligibility_type_pk" required>
                                 <option value="">— Select eligibility type —</option>
                                 @foreach($eligibilityTypes ?? [] as $pk => $name)
                                     <option value="{{ (string) $pk }}">{{ $name }}</option>
                                 @endforeach
                             </select>
-                            <input type="hidden" id="modal_eligibility_type_pk_hidden" name="eligibility_type_pk" value="">
+                            <input type="hidden" id="modal_eligibility_type_pk_hidden" value="">
                             <div class="text-danger small field-error" data-field="eligibility_type_pk" role="alert"></div>
                         </div>
                         <div class="col-md-12">
@@ -349,7 +349,22 @@
             });
         }
 
-        function ensureEligibilityOptionAndSetVal(pk, label) {
+        var eligibilityLocked = false;
+        function setEligibilityLock(locked) {
+            eligibilityLocked = !!locked;
+            var $sel = $('#modal_eligibility_type_pk');
+            var $hidden = $('#modal_eligibility_type_pk_hidden');
+            if (eligibilityLocked) {
+                $sel.prop('disabled', true).removeAttr('name');
+                $hidden.attr('name', 'eligibility_type_pk');
+            } else {
+                $sel.prop('disabled', false).attr('name', 'eligibility_type_pk');
+                $hidden.removeAttr('name');
+            }
+        }
+
+        function ensureEligibilityOptionAndSetVal(pk, label, force) {
+            if (eligibilityLocked && !force) return;
             var selEl = document.getElementById('modal_eligibility_type_pk');
             var $sel = $('#modal_eligibility_type_pk');
             var $hidden = $('#modal_eligibility_type_pk_hidden');
@@ -375,7 +390,7 @@
             $('#modal_doj_pay_scale').val(data.doj_pay_scale || '');
             $('#modal_doj_academic').val(data.doj_academic || '');
             $('#modal_doj_service').val(data.doj_service || '');
-            ensureEligibilityOptionAndSetVal(data.eligibility_type_pk, data.eligibility_type_name);
+            ensureEligibilityOptionAndSetVal(data.eligibility_type_pk, data.eligibility_type_name, false);
         }
 
         function clearEmployeeDerivedFields() {
@@ -393,6 +408,7 @@
             $('#modal_req_date').val(new Date().toISOString().slice(0, 10));
             $('#modal_status_wrap').addClass('d-none');
             $('#modal_status').removeAttr('required');
+            setEligibilityLock(false);
             clearEmployeeDerivedFields();
             $('#addEditRequestEstateFormErrors').addClass('d-none').find('#addEditRequestEstateFormErrorsText').empty();
             $('#formAddEditRequestEstate').find('.field-error').empty().end().find('.is-invalid').removeClass('is-invalid');
@@ -430,7 +446,8 @@
             $('#modal_doj_service').val($btn.data('doj_service') || '');
             var eligPk = $btn.data('eligibility_type_pk');
             var eligLabel = $btn.data('eligibility_type_label');
-            ensureEligibilityOptionAndSetVal(eligPk, eligLabel);
+            setEligibilityLock(true);
+            ensureEligibilityOptionAndSetVal(eligPk, eligLabel, true);
             var statusVal = $btn.data('status') !== undefined ? String($btn.data('status')) : '0';
             $('#modal_status').val(statusVal);
             if (document.getElementById('modal_status').tomselect) document.getElementById('modal_status').tomselect.setValue(statusVal, true);
