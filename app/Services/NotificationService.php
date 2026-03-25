@@ -6,7 +6,6 @@ use App\Models\Notification;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Log;
 
 
 class NotificationService
@@ -309,8 +308,7 @@ class NotificationService
     public function getRedirectUrl(int $notificationPk): ?string
     {
         $notification = Notification::find($notificationPk);
-        log::info($notification);
-        
+
         if (!$notification) {
             return null;
         }
@@ -319,9 +317,6 @@ class NotificationService
         //print_r($config);
         $type = strtolower(trim($notification->type ?? ''));
         $moduleName = strtolower(trim($notification->module_name ?? ''));
-        log::info($type);
-        log::info($moduleName);
-        
 
         // Estate: when estate bill is ready, redirect to Generate Estate Bill
         // page for the bill's month and auto-open the specific bill print.
@@ -442,14 +437,12 @@ class NotificationService
             // Check for exact module name match
             if (isset($config[$type][$moduleName])) {
                 $routeConfig = $config[$type][$moduleName];
-                log::info($routeConfig);
                 return $this->buildRouteUrl($routeConfig, $notification);
             }
 
             // Try case-insensitive module name match
             foreach ($config[$type] as $configModuleName => $routeConfig) {
                 if (strtolower(trim($configModuleName)) === strtolower(trim($moduleName))) {
-                    log::info($routeConfig);
                     return $this->buildRouteUrl($routeConfig, $notification);
                 }
             }
@@ -457,12 +450,10 @@ class NotificationService
 
         // Fallback to default route
         if (isset($config['default'])) {
-            log::info($config['default']);
             return $this->buildRouteUrl($config['default'], $notification);
         }
 
         // Ultimate fallback to dashboard
-        log::info(route('admin.dashboard'));
         return route('admin.dashboard');
     }
 
@@ -498,14 +489,6 @@ class NotificationService
             }
         }
 
-        // Check if route exists
-// Debug log (IMPORTANT)
-\Log::info('Building route URL', [
-    'route' => $routeName,
-    'params' => $routeParams,
-    'notification_id' => $notification->id ?? null
-]);
-
 try {
     return route($routeName, $routeParams);
 } catch (\Exception $e) {
@@ -534,9 +517,7 @@ try {
        
         //echo $notificationPk;
         $marked = $this->markAsRead($notificationPk, $userId);
-        // print_r($marked);die;
         $redirectUrl = $this->getRedirectUrl($notificationPk);
-        // print_r($redirectUrl);die;
 
         return [
             'success' => $marked,
