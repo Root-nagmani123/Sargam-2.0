@@ -1370,6 +1370,49 @@ document.addEventListener('DOMContentLoaded', function() {
         if (grandTotalEl) grandTotalEl.textContent = '₹0.00';
     }
 
+    // After AJAX save (add/edit), refresh the listing DataTable so new rows show immediately.
+    // This fetches the current page HTML and swaps DataTable rows (preserves search/paging).
+    var isRefreshingSellingVouchersTable = false;
+    function refreshSellingVouchersTable() {
+        if (isRefreshingSellingVouchersTable) return;
+        if (typeof window.jQuery === 'undefined' || !window.jQuery.fn.DataTable) return;
+
+        var $ = window.jQuery;
+        var $table = $('#sellingVouchersTable');
+        if (!$table.length || !$.fn.DataTable.isDataTable($table)) return;
+
+        var dt = $table.DataTable();
+        var expectedCols = $table.find('thead tr:first th').length;
+        var url = window.location.pathname + window.location.search;
+
+        isRefreshingSellingVouchersTable = true;
+
+        fetch(url, { headers: { 'Accept': 'text/html' } })
+            .then(function(r) { return r.text(); })
+            .then(function(html) {
+                var doc = new DOMParser().parseFromString(html, 'text/html');
+                var newTbody = doc.querySelector('#sellingVouchersTable tbody');
+                if (!newTbody) return;
+
+                var newRowData = [];
+                newTbody.querySelectorAll('tr').forEach(function(tr) {
+                    var cells = Array.from(tr.querySelectorAll('td,th'));
+                    if (expectedCols && cells.length !== expectedCols) return; // skip colspan/empty rows
+                    newRowData.push(cells.map(function(td) { return td.innerHTML; }));
+                });
+
+                dt.clear();
+                if (newRowData.length) dt.rows.add(newRowData);
+                dt.draw(false);
+            })
+            .catch(function(err) {
+                console.error('Failed to refresh selling vouchers table', err);
+            })
+            .finally(function() {
+                isRefreshingSellingVouchersTable = false;
+            });
+    }
+
     // Prevent double submit on Add Selling Voucher form (stops double entry) + AJAX submit
     var sellingVoucherModalForm = document.getElementById('sellingVoucherModalForm');
     if (sellingVoucherModalForm) {
@@ -1415,6 +1458,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     var data = res.payload;
                     if (res.ok && data && data.success) {
                         resetSellingVoucherModalForm();
+                        refreshSellingVouchersTable();
                         if (window.toastr && data.message) {
                             toastr.success(data.message);
                         } else if (data.message) {
