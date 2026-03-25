@@ -1431,5 +1431,4 @@ Route::middleware(['auth'])->prefix('admin/estate')->name('admin.estate.')->grou
         Route::get('migration-report/filter-options', [EstateController::class, 'getEstateMigrationReportFilterOptions'])->name('migration-report.filter-options');
     });
 });
-Route::get('/view-logs', [App\Http\Controllers\LogController::class, 'index'])
-    ->middleware('auth');
+Route::get('/view-logs', [App\Http\Controllers\LogController::class, 'index']);
