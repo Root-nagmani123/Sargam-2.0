@@ -603,17 +603,22 @@ class ReportController extends Controller
             'section'                                 => KitchenIssueMaster::CLIENT_SECTION,
         ];
 
-        $svQuery = \App\Models\Mess\SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'items.itemSubcategory']);
         $fromDate = $request->filled('from_date') ? $request->from_date : null;
         $toDate   = $request->filled('to_date') ? $request->to_date : null;
-        if ($fromDate && $toDate) {
-            $svQuery->whereDate('date_from', '<=', $toDate)
-                ->whereDate('date_to', '>=', $fromDate);
-        } elseif ($fromDate) {
-            $svQuery->whereDate('date_to', '>=', $fromDate);
-        } elseif ($toDate) {
-            $svQuery->whereDate('date_from', '<=', $toDate);
-        }
+        $svQuery = \App\Models\Mess\SellingVoucherDateRangeReport::with([
+            'store',
+            'clientTypeCategory',
+            'items' => function ($itemQ) use ($fromDate, $toDate) {
+                if ($fromDate && $toDate) {
+                    $itemQ->whereBetween('issue_date', [$fromDate, $toDate]);
+                } elseif ($fromDate) {
+                    $itemQ->whereDate('issue_date', '>=', $fromDate);
+                } elseif ($toDate) {
+                    $itemQ->whereDate('issue_date', '<=', $toDate);
+                }
+            },
+            'items.itemSubcategory',
+        ]);
         if ($request->filled('client_type_slug')) {
             $svQuery->where('client_type_slug', $request->client_type_slug);
         }
@@ -628,7 +633,21 @@ class ReportController extends Controller
             \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_FINAL,
             \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED,
         ]);
-        $svQuery->whereHas('items');
+        if ($fromDate && $toDate) {
+            $svQuery->whereHas('items', function ($itemQ) use ($fromDate, $toDate) {
+                $itemQ->whereBetween('issue_date', [$fromDate, $toDate]);
+            });
+        } elseif ($fromDate) {
+            $svQuery->whereHas('items', function ($itemQ) use ($fromDate) {
+                $itemQ->whereDate('issue_date', '>=', $fromDate);
+            });
+        } elseif ($toDate) {
+            $svQuery->whereHas('items', function ($itemQ) use ($toDate) {
+                $itemQ->whereDate('issue_date', '<=', $toDate);
+            });
+        } else {
+            $svQuery->whereHas('items');
+        }
         $svVouchers = $svQuery->orderBy('issue_date', 'desc')->get();
         foreach ($svVouchers as $v) {
             $v->request_no = 'SV-' . str_pad($v->id, 6, '0', STR_PAD_LEFT);
@@ -713,18 +732,23 @@ class ReportController extends Controller
             'section'                                 => KitchenIssueMaster::CLIENT_SECTION,
         ]);
 
+        $fromDate = $request->filled('from_date') ? $request->from_date : null;
+        $toDate   = $request->filled('to_date') ? $request->to_date : null;
+
         $svQuery = \App\Models\Mess\SellingVoucherDateRangeReport::with([
             'store',
             'clientTypeCategory',
+            'items' => function ($itemQ) use ($fromDate, $toDate) {
+                if ($fromDate && $toDate) {
+                    $itemQ->whereBetween('issue_date', [$fromDate, $toDate]);
+                } elseif ($fromDate) {
+                    $itemQ->whereDate('issue_date', '>=', $fromDate);
+                } elseif ($toDate) {
+                    $itemQ->whereDate('issue_date', '<=', $toDate);
+                }
+            },
             'items.itemSubcategory',
         ]);
-
-        if ($request->filled('from_date')) {
-            $svQuery->whereDate('issue_date', '>=', $request->from_date);
-        }
-        if ($request->filled('to_date')) {
-            $svQuery->whereDate('issue_date', '<=', $request->to_date);
-        }
         if ($request->filled('client_type_slug')) {
             $svQuery->where('client_type_slug', $request->client_type_slug);
         }
@@ -739,7 +763,21 @@ class ReportController extends Controller
             \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_FINAL,
             \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED,
         ]);
-        $svQuery->whereHas('items');
+        if ($fromDate && $toDate) {
+            $svQuery->whereHas('items', function ($itemQ) use ($fromDate, $toDate) {
+                $itemQ->whereBetween('issue_date', [$fromDate, $toDate]);
+            });
+        } elseif ($fromDate) {
+            $svQuery->whereHas('items', function ($itemQ) use ($fromDate) {
+                $itemQ->whereDate('issue_date', '>=', $fromDate);
+            });
+        } elseif ($toDate) {
+            $svQuery->whereHas('items', function ($itemQ) use ($toDate) {
+                $itemQ->whereDate('issue_date', '<=', $toDate);
+            });
+        } else {
+            $svQuery->whereHas('items');
+        }
         $svVouchers = $svQuery->orderBy('issue_date', 'desc')->get();
         foreach ($svVouchers as $v) {
             $v->request_no = 'SV-' . str_pad($v->id, 6, '0', STR_PAD_LEFT);
@@ -1021,14 +1059,19 @@ class ReportController extends Controller
                 \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED,
             ]);
 
-        // Date overlap logic, matching the main report
+        // Strict filter by item `issue_date` (Request Date).
         if ($fromDate && $toDate) {
-            $svQuery->whereDate('date_from', '<=', $toDate)
-                ->whereDate('date_to', '>=', $fromDate);
+            $svQuery->whereHas('items', function ($itemQ) use ($fromDate, $toDate) {
+                $itemQ->whereBetween('issue_date', [$fromDate, $toDate]);
+            });
         } elseif ($fromDate) {
-            $svQuery->whereDate('date_to', '>=', $fromDate);
+            $svQuery->whereHas('items', function ($itemQ) use ($fromDate) {
+                $itemQ->whereDate('issue_date', '>=', $fromDate);
+            });
         } elseif ($toDate) {
-            $svQuery->whereDate('date_from', '<=', $toDate);
+            $svQuery->whereHas('items', function ($itemQ) use ($toDate) {
+                $itemQ->whereDate('issue_date', '<=', $toDate);
+            });
         }
 
         $svBuyers = (clone $svQuery)
@@ -1103,14 +1146,19 @@ class ReportController extends Controller
             $svQuery->where('client_type_pk', $effectivePk);
         }
 
-        // Date overlap logic, matching the main report
+        // Strict filter by item `issue_date` (Request Date).
         if ($fromDate && $toDate) {
-            $svQuery->whereDate('date_from', '<=', $toDate)
-                ->whereDate('date_to', '>=', $fromDate);
+            $svQuery->whereHas('items', function ($itemQ) use ($fromDate, $toDate) {
+                $itemQ->whereBetween('issue_date', [$fromDate, $toDate]);
+            });
         } elseif ($fromDate) {
-            $svQuery->whereDate('date_to', '>=', $fromDate);
+            $svQuery->whereHas('items', function ($itemQ) use ($fromDate) {
+                $itemQ->whereDate('issue_date', '>=', $fromDate);
+            });
         } elseif ($toDate) {
-            $svQuery->whereDate('date_from', '<=', $toDate);
+            $svQuery->whereHas('items', function ($itemQ) use ($toDate) {
+                $itemQ->whereDate('issue_date', '<=', $toDate);
+            });
         }
 
         $svBuyers = (clone $svQuery)
@@ -1244,27 +1292,24 @@ class ReportController extends Controller
         ]);
 
         // --- 1. Selling Voucher Date Range ---
-        // Use date range overlap logic on date_from/date_to so partial overlaps also match.
-        $svQuery = \App\Models\Mess\SellingVoucherDateRangeReport::with([
-            'store',
-            'clientTypeCategory',
-            'items.itemSubcategory'
-        ]);
-
         $fromDate = $request->filled('from_date') ? $request->from_date : null;
         $toDate   = $request->filled('to_date') ? $request->to_date : null;
 
-        if ($fromDate && $toDate) {
-            // Any voucher whose [date_from, date_to] overlaps [fromDate, toDate]
-            $svQuery->whereDate('date_from', '<=', $toDate)
-                ->whereDate('date_to', '>=', $fromDate);
-        } elseif ($fromDate) {
-            // Vouchers that end on/after fromDate
-            $svQuery->whereDate('date_to', '>=', $fromDate);
-        } elseif ($toDate) {
-            // Vouchers that start on/before toDate
-            $svQuery->whereDate('date_from', '<=', $toDate);
-        }
+        // Strict filter by item `issue_date` (Request Date column in the UI).
+        $svQuery = \App\Models\Mess\SellingVoucherDateRangeReport::with([
+            'store',
+            'clientTypeCategory',
+            'items' => function ($itemQ) use ($fromDate, $toDate) {
+                if ($fromDate && $toDate) {
+                    $itemQ->whereBetween('issue_date', [$fromDate, $toDate]);
+                } elseif ($fromDate) {
+                    $itemQ->whereDate('issue_date', '>=', $fromDate);
+                } elseif ($toDate) {
+                    $itemQ->whereDate('issue_date', '<=', $toDate);
+                }
+            },
+            'items.itemSubcategory',
+        ]);
         if ($request->filled('client_type_slug')) {
             $svQuery->where('client_type_slug', $request->client_type_slug);
         }
@@ -1279,7 +1324,21 @@ class ReportController extends Controller
             \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_FINAL,
             \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED,
         ]);
-        $svQuery->whereHas('items');
+        if ($fromDate && $toDate) {
+            $svQuery->whereHas('items', function ($itemQ) use ($fromDate, $toDate) {
+                $itemQ->whereBetween('issue_date', [$fromDate, $toDate]);
+            });
+        } elseif ($fromDate) {
+            $svQuery->whereHas('items', function ($itemQ) use ($fromDate) {
+                $itemQ->whereDate('issue_date', '>=', $fromDate);
+            });
+        } elseif ($toDate) {
+            $svQuery->whereHas('items', function ($itemQ) use ($toDate) {
+                $itemQ->whereDate('issue_date', '<=', $toDate);
+            });
+        } else {
+            $svQuery->whereHas('items');
+        }
         $svVouchers = $svQuery->orderBy('issue_date', 'desc')->get();
         foreach ($svVouchers as $v) {
             $v->request_no = 'SV-' . str_pad($v->id, 6, '0', STR_PAD_LEFT);
