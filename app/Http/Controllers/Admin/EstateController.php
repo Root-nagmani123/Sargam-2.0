@@ -3784,14 +3784,28 @@ class EstateController extends Controller
         $total = $query->count();
 
         if ($request->filled('search.value')) {
-            $term = $request->get('search')['value'];
-            $query->where(function ($q) use ($term) {
-                $q->where('c.campus_name', 'like', "%{$term}%")
-                    ->orWhere('b.block_name', 'like', "%{$term}%")
-                    ->orWhere('ut.unit_type', 'like', "%{$term}%")
-                    ->orWhere('ust.unit_sub_type', 'like', "%{$term}%")
-                    ->orWhere('h.house_no', 'like', "%{$term}%");
-            });
+            // DataTables search: make it robust for multi-word terms and odd spacing
+            // (e.g. double spaces / non-breaking spaces in DB or user input).
+            $rawTerm = (string) data_get($request->get('search'), 'value', '');
+            $rawTerm = str_replace("\xC2\xA0", ' ', $rawTerm); // NBSP -> normal space
+            $rawTerm = trim(preg_replace('/\s+/u', ' ', $rawTerm));
+
+            if ($rawTerm !== '') {
+                $tokens = preg_split('/\s+/u', $rawTerm, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+                // AND across tokens; OR across searchable columns.
+                foreach ($tokens as $token) {
+                    $query->where(function ($q) use ($token) {
+                        $like = '%' . $token . '%';
+                        $q->where('c.campus_name', 'like', $like)
+                            ->orWhere('b.block_name', 'like', $like)
+                            ->orWhere('ut.unit_type', 'like', $like)
+                            ->orWhere('ust.unit_sub_type', 'like', $like)
+                            ->orWhere('h.house_no', 'like', $like)
+                            ->orWhere('h.meter_one', 'like', $like);
+                    });
+                }
+            }
         }
 
         $filtered = $query->count();
@@ -4800,6 +4814,14 @@ class EstateController extends Controller
      */
     public function destroyPossessionDetails(Request $request, $id)
     {
+        if (! (hasRole('Admin') || hasRole('Estate') || hasRole('Super Admin'))) {
+            $message = 'You are not authorized to delete this possession.';
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $message], 403);
+            }
+            return redirect()->route('admin.estate.possession-details')->with('error', $message);
+        }
+
         $record = DB::table('estate_possession_details')
             ->where('pk', (int) $id)
             ->first();
@@ -4833,10 +4855,78 @@ class EstateController extends Controller
     }
 
     /**
+     * Bulk delete LBSNAA Possession Details records.
+     * Skips records which already have meter readings.
+     */
+    public function destroyPossessionDetailsBulk(Request $request)
+    {
+        if (! (hasRole('Admin') || hasRole('Estate') || hasRole('Super Admin'))) {
+            $message = 'You are not authorized to delete possessions.';
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $message], 403);
+            }
+            return redirect()->route('admin.estate.possession-details')->with('error', $message);
+        }
+
+        $ids = $request->input('ids', []);
+        if (! is_array($ids)) {
+            $ids = [];
+        }
+        $ids = array_values(array_unique(array_filter(array_map(static fn ($v) => (int) $v, $ids), static fn ($v) => $v > 0)));
+
+        if (empty($ids)) {
+            $message = 'Please select at least one record to delete.';
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $message], 422);
+            }
+            return redirect()->route('admin.estate.possession-details')->with('error', $message);
+        }
+
+        $idsWithReadings = DB::table('estate_month_reading_details')
+            ->whereIn('estate_possession_details_pk', $ids)
+            ->distinct()
+            ->pluck('estate_possession_details_pk')
+            ->map(fn ($v) => (int) $v)
+            ->toArray();
+
+        $blocked = array_values(array_unique(array_filter(array_map('intval', $idsWithReadings))));
+        $deletable = array_values(array_diff($ids, $blocked));
+
+        $deleted = 0;
+        if (! empty($deletable)) {
+            $deleted = (int) DB::table('estate_possession_details')->whereIn('pk', $deletable)->delete();
+        }
+
+        $message = "Deleted {$deleted} record(s).";
+        if (! empty($blocked)) {
+            $message .= ' Skipped ' . count($blocked) . ' record(s) because meter readings already exist.';
+        }
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'deleted' => $deleted,
+                'skipped' => count($blocked),
+                'skipped_ids' => $blocked,
+            ]);
+        }
+        return redirect()->route('admin.estate.possession-details')->with('success', $message);
+    }
+
+    /**
      * Delete Estate Possession.
      */
     public function destroyPossession(Request $request, $id)
     {
+        if (! (hasRole('Admin') || hasRole('Estate') || hasRole('Super Admin'))) {
+            $message = 'You are not authorized to delete this possession.';
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $message], 403);
+            }
+            return redirect()->route('admin.estate.possession-for-others')->with('error', $message);
+        }
+
         $record = EstatePossessionOther::find($id);
         if (!$record) {
             if ($request->ajax() || $request->wantsJson()) {
@@ -4851,6 +4941,45 @@ class EstateController extends Controller
             return response()->json(['success' => true, 'message' => 'Possession deleted successfully.']);
         }
         return redirect()->route('admin.estate.possession-for-others')->with('success', 'Possession deleted successfully.');
+    }
+
+    /**
+     * Bulk delete Estate Possession (Others).
+     */
+    public function destroyPossessionBulk(Request $request)
+    {
+        if (! (hasRole('Admin') || hasRole('Estate') || hasRole('Super Admin'))) {
+            $message = 'You are not authorized to delete possessions.';
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $message], 403);
+            }
+            return redirect()->route('admin.estate.possession-for-others')->with('error', $message);
+        }
+
+        $ids = $request->input('ids', []);
+        if (! is_array($ids)) {
+            $ids = [];
+        }
+        $ids = array_values(array_unique(array_filter(array_map(static fn ($v) => (int) $v, $ids), static fn ($v) => $v > 0)));
+
+        if (empty($ids)) {
+            $message = 'Please select at least one record to delete.';
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $message], 422);
+            }
+            return redirect()->route('admin.estate.possession-for-others')->with('error', $message);
+        }
+
+        $deleted = EstatePossessionOther::whereIn('pk', $ids)->delete();
+
+        $message = $deleted
+            ? ($deleted . ' possession(s) deleted successfully.')
+            : 'No records were deleted.';
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => $message, 'deleted' => (int) $deleted]);
+        }
+        return redirect()->route('admin.estate.possession-for-others')->with('success', $message);
     }
 
     /**
@@ -5593,12 +5722,24 @@ class EstateController extends Controller
         if (!$campusId) {
             return response()->json(['status' => true, 'data' => []]);
         }
-        $blocks = DB::table('estate_month_reading_details as emrd')
-            ->join('estate_possession_details as epd', 'emrd.estate_possession_details_pk', '=', 'epd.pk')
+        // NOTE: Do not depend on estate_month_reading_details here.
+        // The "Update Meter Reading" screen should list buildings based on current house/possession mapping,
+        // even if month reading rows don't exist yet (otherwise some buildings disappear from dropdown).
+        $q = DB::table('estate_possession_details as epd')
             ->join('estate_house_master as h', 'epd.estate_house_master_pk', '=', 'h.pk')
             ->join('estate_block_master as b', 'h.estate_block_master_pk', '=', 'b.pk')
-            ->where('h.estate_campus_master_pk', $campusId)
-            ->select('b.pk', 'b.block_name')
+            ->whereNotNull('epd.estate_house_master_pk')
+            ->where('h.estate_campus_master_pk', $campusId);
+
+        // Prefer showing only active possessions (if column exists).
+        if (\Illuminate\Support\Facades\Schema::hasColumn('estate_possession_details', 'return_home_status')) {
+            $q->where(function ($inner) {
+                $inner->whereNull('epd.return_home_status')
+                    ->orWhere('epd.return_home_status', 0);
+            });
+        }
+
+        $blocks = $q->select('b.pk', 'b.block_name')
             ->distinct()
             ->orderBy('b.block_name')
             ->get();
@@ -5637,13 +5778,22 @@ class EstateController extends Controller
         if (!$campusId || !$blockId) {
             return response()->json(['status' => true, 'data' => []]);
         }
-        $items = DB::table('estate_month_reading_details as emrd')
-            ->join('estate_possession_details as epd', 'emrd.estate_possession_details_pk', '=', 'epd.pk')
+        // Keep consistent with getMeterReadingBlocks(): depend on possession/house mapping, not month reading rows.
+        $q = DB::table('estate_possession_details as epd')
             ->join('estate_house_master as h', 'epd.estate_house_master_pk', '=', 'h.pk')
             ->join('estate_unit_sub_type_master as u', 'h.estate_unit_sub_type_master_pk', '=', 'u.pk')
+            ->whereNotNull('epd.estate_house_master_pk')
             ->where('h.estate_campus_master_pk', $campusId)
-            ->where('h.estate_block_master_pk', $blockId)
-            ->select('u.pk', 'u.unit_sub_type')
+            ->where('h.estate_block_master_pk', $blockId);
+
+        if (\Illuminate\Support\Facades\Schema::hasColumn('estate_possession_details', 'return_home_status')) {
+            $q->where(function ($inner) {
+                $inner->whereNull('epd.return_home_status')
+                    ->orWhere('epd.return_home_status', 0);
+            });
+        }
+
+        $items = $q->select('u.pk', 'u.unit_sub_type')
             ->distinct()
             ->orderBy('u.unit_sub_type')
             ->get();

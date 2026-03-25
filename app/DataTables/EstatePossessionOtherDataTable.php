@@ -85,11 +85,26 @@ class EstatePossessionOtherDataTable extends DataTable
             ->orderColumn('possession_date_oth', fn ($query, $order) => $query->orderBy('estate_possession_other.possession_date_oth', $order))
             ->addColumn('actions', function ($row) {
                 $editUrl = route('admin.estate.possession-view', ['id' => $row->pk]);
-                return '<div class="d-inline-flex align-items-center gap-1" role="group">
-                    <a href="' . $editUrl . '" class="text-primary" title="Edit">
-                        <i class="material-symbols-rounded">edit</i>
-                    </a>
-                </div>';
+                $canDelete = hasRole('Admin') || hasRole('Estate') || hasRole('Super Admin');
+                $deleteUrl = route('admin.estate.possession-delete', ['id' => $row->pk]);
+
+                $html = '<div class="d-inline-flex align-items-center gap-2" role="group">';
+                $html .= '<a href="' . $editUrl . '" class="text-primary" title="Edit">
+                    <i class="material-symbols-rounded">edit</i>
+                </a>';
+
+                if ($canDelete) {
+                    $html .= '<form method="POST" action="' . $deleteUrl . '" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this possession?\')">
+                        <input type="hidden" name="_token" value="' . csrf_token() . '">
+                        <input type="hidden" name="_method" value="DELETE">
+                        <button type="submit" class="btn btn-link p-0 text-danger" title="Delete" aria-label="Delete">
+                            <i class="material-symbols-rounded">delete</i>
+                        </button>
+                    </form>';
+                }
+
+                $html .= '</div>';
+                return $html;
             })
             ->rawColumns(['checkbox', 'actions'])
             ->setRowId('pk');
@@ -169,7 +184,12 @@ class EstatePossessionOtherDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::computed('checkbox')->title('')->addClass('text-center')->orderable(false)->searchable(false)->width('40px'),
+            Column::computed('checkbox')
+                ->title('<input type="checkbox" class="form-check-input" id="selectAllPossessionOthers" aria-label="Select all">')
+                ->addClass('text-center')
+                ->orderable(false)
+                ->searchable(false)
+                ->width('40px'),
             Column::computed('DT_RowIndex')->title('S.NO.')->addClass('text-center')->orderable(true)->searchable(false)->width('50px'),
             Column::make('request_id')->title('REQUEST ID')->orderable(true)->searchable(true),
             Column::make('name')->title('NAME')->orderable(true)->searchable(true),

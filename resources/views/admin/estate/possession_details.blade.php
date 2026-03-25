@@ -16,6 +16,12 @@
                 </div>
                 <div class="d-flex flex-wrap gap-2 flex-shrink-0">
                     @if(hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'))
+                        <button type="button" class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-2" id="btnBulkDeletePossessionDetails" title="Delete selected">
+                            <i class="material-symbols-rounded">delete</i>
+                            <span class="d-none d-md-inline">Delete Selected</span>
+                        </button>
+                    @endif
+                    @if(hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'))
                     <a href="{{ route('admin.estate.possession-details.create') }}" class="btn btn-success btn-sm d-inline-flex align-items-center gap-2" title="Add possession details">
                         <i class="bi bi-plus-lg"></i>
                         <span>Add Possession</span>
@@ -192,6 +198,31 @@
     $(document).ready(function() {
         var table = $('#estatePossessionDetailsTable').DataTable();
 
+        function syncSelectAllState() {
+            var $rows = $('#estatePossessionDetailsTable').find('input.row-select-possession-details:checkbox');
+            var $checked = $rows.filter(':checked');
+            var all = $rows.length > 0 && $checked.length === $rows.length;
+            var some = $checked.length > 0 && $checked.length < $rows.length;
+            var el = document.getElementById('selectAllPossessionDetails');
+            if (!el) return;
+            el.checked = all;
+            el.indeterminate = some;
+        }
+
+        $(document).on('change', '#selectAllPossessionDetails', function() {
+            var checked = $(this).prop('checked');
+            $('#estatePossessionDetailsTable').find('input.row-select-possession-details:checkbox').prop('checked', checked);
+            syncSelectAllState();
+        });
+
+        $(document).on('change', 'input.row-select-possession-details', function() {
+            syncSelectAllState();
+        });
+
+        table.on('draw', function() {
+            syncSelectAllState();
+        });
+
         function buildColumnToggle() {
             var menu = $('#columnToggleMenu');
             menu.empty();
@@ -316,6 +347,44 @@
             });
 
             table.page.len(-1).draw();
+        });
+
+        $('#btnBulkDeletePossessionDetails').on('click', function() {
+            var ids = [];
+            $('#estatePossessionDetailsTable').find('input.row-select-possession-details:checkbox:checked').each(function() {
+                var id = parseInt($(this).data('id'), 10);
+                if (!isNaN(id) && id > 0) ids.push(id);
+            });
+
+            if (ids.length === 0) {
+                alert('Please select at least one record.');
+                return;
+            }
+
+            if (!confirm('Delete ' + ids.length + ' selected possession detail record(s)?')) {
+                return;
+            }
+
+            $.ajax({
+                url: "{{ route('admin.estate.possession-details.bulk-delete') }}",
+                method: 'POST',
+                data: {
+                    _token: "{{ csrf_token() }}",
+                    ids: ids
+                },
+                success: function(resp) {
+                    if (resp && resp.message) {
+                        alert(resp.message);
+                    } else {
+                        alert('Deleted successfully.');
+                    }
+                    table.ajax.reload(null, false);
+                },
+                error: function(xhr) {
+                    var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Delete failed.';
+                    alert(msg);
+                }
+            });
         });
     });
     </script>

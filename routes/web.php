@@ -1260,12 +1260,15 @@ Route::middleware(['auth'])->prefix('admin/estate')->name('admin.estate.')->grou
     Route::delete('possession-details/{id}', [EstateController::class, 'destroyPossessionDetails'])->name('possession-details.delete');
     Route::get('possession-for-others', [EstateController::class, 'possessionForOthers'])->name('possession-for-others');
     Route::delete('possession/{id}', [EstateController::class, 'destroyPossession'])->name('possession-delete');
+    Route::post('possession/bulk-delete', [EstateController::class, 'destroyPossessionBulk'])->name('possession-bulk-delete');
 
     Route::get('possession-view', [EstateController::class, 'possessionView'])->name('possession-view');
     Route::post('possession-view/store', [EstateController::class, 'storePossession'])->name('possession-view.store');
     Route::get('possession/blocks', [EstateController::class, 'getPossessionBlocks'])->name('possession.blocks');
     Route::get('possession/unit-sub-types', [EstateController::class, 'getPossessionUnitSubTypes'])->name('possession.unit-sub-types');
     Route::get('possession/houses', [EstateController::class, 'getPossessionHouses'])->name('possession.houses');
+
+    Route::post('possession-details/bulk-delete', [EstateController::class, 'destroyPossessionDetailsBulk'])->name('possession-details.bulk-delete');
 
     // Update Meter
     Route::get('update-meter-reading', [EstateController::class, 'updateMeterReading'])->name('update-meter-reading');

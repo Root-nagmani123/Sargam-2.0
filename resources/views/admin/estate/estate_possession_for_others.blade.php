@@ -16,6 +16,12 @@
                     <p class="text-muted small mb-0">This page displays all Possession added in the system, and provides options to manage records such as add, edit, delete, excel upload, excel download, print etc.</p>
                 </div>
                 <div class="d-flex flex-wrap gap-2 flex-shrink-0">
+                    @if(hasRole('Admin') || hasRole('Estate') || hasRole('Super Admin'))
+                        <button type="button" class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-2" id="btnBulkDeletePossessionOthers" title="Delete selected">
+                            <i class="material-symbols-rounded">delete</i>
+                            <span class="d-none d-md-inline">Delete Selected</span>
+                        </button>
+                    @endif
                     <a href="{{ route('admin.estate.update-meter-reading-of-other') }}" id="btnUpdateReading" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-2 text-decoration-none">
                         <i class="bi bi-speedometer2"></i>
                         <span>Update Reading</span>
@@ -176,6 +182,33 @@
     $(document).ready(function() {
         var table = $('#estatePossessionTable').DataTable();
 
+        function syncSelectAllState() {
+            var $rows = $('#estatePossessionTable').find('input.row-select-possession:checkbox');
+            var $checked = $rows.filter(':checked');
+            var all = $rows.length > 0 && $checked.length === $rows.length;
+            var some = $checked.length > 0 && $checked.length < $rows.length;
+            var el = document.getElementById('selectAllPossessionOthers');
+            if (!el) return;
+            el.checked = all;
+            el.indeterminate = some;
+        }
+
+        // Header select-all checkbox (works across redraws)
+        $(document).on('change', '#selectAllPossessionOthers', function() {
+            var checked = $(this).prop('checked');
+            $('#estatePossessionTable').find('input.row-select-possession:checkbox').prop('checked', checked);
+            syncSelectAllState();
+        });
+
+        // Row checkbox updates header state
+        $(document).on('change', 'input.row-select-possession', function() {
+            syncSelectAllState();
+        });
+
+        table.on('draw', function() {
+            syncSelectAllState();
+        });
+
         // Column visibility toggle (build menu from table columns, skip checkbox and actions)
         function buildColumnToggle() {
             var menu = $('#columnToggleMenu');
@@ -312,6 +345,46 @@
         $('#btnUpdateReading').on('click', function(e) {
             var baseUrl = "{{ route('admin.estate.update-meter-reading-of-other') }}";
             window.location = baseUrl;
+        });
+
+        // Bulk delete selected possessions (Others)
+        $('#btnBulkDeletePossessionOthers').on('click', function() {
+            var ids = [];
+            $('#estatePossessionTable').find('input.row-select-possession:checkbox:checked').each(function() {
+                var id = parseInt($(this).data('id'), 10);
+                if (!isNaN(id) && id > 0) ids.push(id);
+            });
+
+            if (ids.length === 0) {
+                alert('Please select at least one record.');
+                return;
+            }
+
+            if (!confirm('Delete ' + ids.length + ' selected possession(s)?')) {
+                return;
+            }
+
+            $.ajax({
+                url: "{{ route('admin.estate.possession-bulk-delete') }}",
+                method: 'POST',
+                data: {
+                    _token: "{{ csrf_token() }}",
+                    ids: ids
+                },
+                success: function(resp) {
+                    if (resp && resp.message) {
+                        alert(resp.message);
+                    } else {
+                        alert('Deleted successfully.');
+                    }
+                    // Refresh datatable
+                    table.ajax.reload(null, false);
+                },
+                error: function(xhr) {
+                    var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Delete failed.';
+                    alert(msg);
+                }
+            });
         });
 
     });

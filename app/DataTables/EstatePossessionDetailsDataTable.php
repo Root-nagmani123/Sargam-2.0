@@ -19,6 +19,12 @@ class EstatePossessionDetailsDataTable extends DataTable
 
         return (new EloquentDataTable($query))
             ->addIndexColumn()
+            ->addColumn('checkbox', function ($row) {
+                if (! (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'))) {
+                    return '';
+                }
+                return '<input type="checkbox" class="form-check-input row-select-possession-details" data-id="' . (int) $row->pk . '" aria-label="Select row">';
+            })
             ->editColumn('request_id', fn ($row) => e($row->request_id ?? '—'))
             ->editColumn('emp_name', fn ($row) => e($row->emp_name ?? '—'))
             ->editColumn('employee_id', fn ($row) => e($row->employee_id ?? '—'))
@@ -71,11 +77,19 @@ class EstatePossessionDetailsDataTable extends DataTable
                 $editUrl = route('admin.estate.possession-details.create', [
                     'requester_id' => $row->estate_home_request_details_pk,
                 ]);
+                $deleteUrl = route('admin.estate.possession-details.delete', ['id' => $row->pk]);
 
-                return '<div class="d-inline-flex align-items-center gap-1" role="group">
+                return '<div class="d-inline-flex align-items-center gap-2" role="group">
                     <a href="' . e($editUrl) . '" class="text-primary" title="Edit">
                         <i class="material-symbols-rounded">edit</i>
                     </a>
+                    <form method="POST" action="' . e($deleteUrl) . '" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this possession details record?\')">
+                        <input type="hidden" name="_token" value="' . csrf_token() . '">
+                        <input type="hidden" name="_method" value="DELETE">
+                        <button type="submit" class="btn btn-link p-0 text-danger" title="Delete" aria-label="Delete">
+                            <i class="material-symbols-rounded">delete</i>
+                        </button>
+                    </form>
                 </div>';
             })
             ->filter(function ($query) {
@@ -96,7 +110,7 @@ class EstatePossessionDetailsDataTable extends DataTable
                         ->orWhere('ehm.house_no', 'like', $searchLike);
                 });
             }, true)
-            ->rawColumns(['actions'])
+            ->rawColumns(['checkbox', 'actions'])
             ->setRowId('pk');
     }
 
@@ -200,6 +214,12 @@ class EstatePossessionDetailsDataTable extends DataTable
         $isEstateAuthority = hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin');
 
         $columns = [
+            Column::computed('checkbox')
+                ->title('<input type="checkbox" class="form-check-input" id="selectAllPossessionDetails" aria-label="Select all">')
+                ->addClass('text-center')
+                ->orderable(false)
+                ->searchable(false)
+                ->width('40px'),
             Column::computed('DT_RowIndex')->title('S.NO.')->addClass('text-center')->orderable(false)->searchable(false)->width('50px'),
             // Hidden column for default sort: newest possession (highest pk) first
             Column::make('pk')->name('epd.pk')->title('ID')->orderable(true)->searchable(false)->addClass('d-none')->visible(false),

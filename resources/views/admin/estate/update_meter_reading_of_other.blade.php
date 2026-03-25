@@ -66,12 +66,7 @@
                     </div>
                     <div class="col-12 col-md-6 col-lg-4">
                         <label for="meter_reading_date" class="form-label">Meter Reading Date <span class="text-danger">*</span></label>
-                        <div class="input-group">
-                            <select class="form-select" id="meter_reading_date" name="meter_reading_date">
-                                <option value="">---Select---</option>
-                            </select>
-                            <span class="input-group-text"><i class="bi bi-calendar3"></i></span>
-                        </div>
+                        <input type="date" class="form-control" id="meter_reading_date" name="meter_reading_date" placeholder="Select date" required>
                         <div class="form-text">Meter Reading Date</div>
                     </div>
                     <div class="col-12">
@@ -133,7 +128,6 @@ $(document).ready(function() {
     const listUrl = "{{ route('admin.estate.update-meter-reading-of-other.list') }}";
     const blocksUrl = "{{ route('admin.estate.update-meter-reading-of-other.blocks') }}";
     const unitSubTypesUrl = "{{ route('admin.estate.update-meter-reading-of-other.unit-sub-types') }}";
-    const meterReadingDatesUrl = "{{ route('admin.estate.update-meter-reading-of-other.meter-reading-dates') }}";
     const unitTypesByCampus = @json($unitTypesByCampus ?? []);
     const allUnitTypes = @json($unitTypes ?? []);
     const possessionPks = @json($possessionPks ?? '');
@@ -150,12 +144,11 @@ $(document).ready(function() {
     }
     function getSelVal(el) { return (el && el.tomselect) ? el.tomselect.getValue() : $(el).val(); }
 
-    var tsEstate = null, tsUnitName = null, tsBuilding = null, tsUnitSub = null, tsMeterDate = null;
+    var tsEstate = null, tsUnitName = null, tsBuilding = null, tsUnitSub = null;
     if (document.getElementById('estate_name')) tsEstate = initTs(document.getElementById('estate_name'), '---Select---');
     if (document.getElementById('unit_name')) tsUnitName = initTs(document.getElementById('unit_name'), '---Select---');
     if (document.getElementById('building')) tsBuilding = initTs(document.getElementById('building'), '---Select---');
     if (document.getElementById('unit_sub_type')) tsUnitSub = initTs(document.getElementById('unit_sub_type'), '---Select---');
-    if (document.getElementById('meter_reading_date')) tsMeterDate = initTs(document.getElementById('meter_reading_date'), 'Select');
 
     function parseBillMonthInput(val) {
         if (!val || val.length < 7) return { bill_month: null, bill_year: null };
@@ -164,30 +157,6 @@ $(document).ready(function() {
         const month = parts[1] ? parseInt(parts[1], 10) : null;
         return { bill_month: (month >= 1 && month <= 12) ? month : null, bill_year: year };
     }
-
-    $('#bill_month').on('change', function() {
-        const val = $(this).val();
-        const { bill_month, bill_year } = parseBillMonthInput(val);
-        var el = document.getElementById('meter_reading_date');
-        if (tsMeterDate) { try { tsMeterDate.destroy(); } catch (e) {} tsMeterDate = null; }
-        $('#meter_reading_date').html('<option value="">Select</option>');
-        if (!bill_month || !bill_year) {
-            if (el) tsMeterDate = initTs(el, 'Select');
-            return;
-        }
-        $.get(meterReadingDatesUrl, { bill_month: bill_month, bill_year: bill_year }, function(res) {
-            if (res.status && res.data && res.data.length) {
-                res.data.forEach(function(d) {
-                    $('#meter_reading_date').append('<option value="'+d.value+'">'+d.label+'</option>');
-                });
-            }
-            if (el) tsMeterDate = initTs(el, 'Select');
-            if (res.status && res.data && res.data.length === 1) {
-                if (tsMeterDate) tsMeterDate.setValue(res.data[0].value, true);
-                else $('#meter_reading_date').val(res.data[0].value);
-            }
-        });
-    });
 
     $(document).on('change', '#estate_name', function() {
         const campusId = getSelVal(this);
@@ -377,7 +346,7 @@ $(document).ready(function() {
     // Prefill form when coming from Estate Possession for Other with possession_pks
     if (prefill) {
         if (prefill.bill_month) {
-            $('#bill_month').val(prefill.bill_month).trigger('change');
+            $('#bill_month').val(prefill.bill_month);
         }
         if (tsEstate) tsEstate.setValue(String(prefill.estate_campus_master_pk || ''), true);
         else $('#estate_name').val(prefill.estate_campus_master_pk || '');
