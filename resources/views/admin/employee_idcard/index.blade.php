@@ -9,32 +9,7 @@
     <div class="card border border-body-secondary rounded-4 shadow-sm idcard-index-card overflow-hidden">
         <div class="card-body">
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4 p-3 p-md-4 border border-body-secondary rounded-4 bg-body shadow-sm">
-        <ul class="nav nav-pills gap-1 idcard-index-tabs bg-body-tertiary p-1 rounded-3 shadow-sm" role="tablist">
-            <li class="nav-item" role="presentation">
-                <button class="nav-link active rounded-3 px-3 py-2 fw-semibold d-inline-flex align-items-center transition-opacity" id="active-tab" data-bs-toggle="tab" data-bs-target="#active-panel" type="button" role="tab" aria-controls="active-panel" aria-selected="true">
-                    Active
-                    @if($activeRequests->total() > 0)
-                        <span class="badge rounded-pill bg-primary-subtle text-primary-emphasis ms-2">{{ $activeRequests->total() }}</span>
-                    @endif
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link rounded-3 px-3 py-2 fw-semibold d-inline-flex align-items-center" id="duplication-tab" data-bs-toggle="tab" data-bs-target="#duplication-panel" type="button" role="tab" aria-controls="duplication-panel" aria-selected="false">
-                    Duplication
-                    @if($duplicationRequests->total() > 0)
-                        <span class="badge rounded-pill text-bg-warning ms-2">{{ $duplicationRequests->total() }}</span>
-                    @endif
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link rounded-3 px-3 py-2 fw-semibold d-inline-flex align-items-center" id="archive-tab" data-bs-toggle="tab" data-bs-target="#archive-panel" type="button" role="tab" aria-controls="archive-panel" aria-selected="false">
-                    Archive
-                    @if($archivedRequests->total() > 0)
-                        <span class="badge rounded-pill text-bg-secondary ms-2">{{ $archivedRequests->total() }}</span>
-                    @endif
-                </button>
-            </li>
-        </ul>
+        
         <div class="d-flex align-items-center gap-2 flex-wrap">
             @php
                 $exportParams = array_filter([
@@ -111,8 +86,8 @@
 
     <div class="card border border-body-secondary rounded-4 shadow-sm idcard-index-card overflow-hidden">
         <div class="card-body p-0">
-            <div class="tab-content">
-                <div class="tab-pane fade show active" id="active-panel" role="tabpanel" aria-labelledby="active-tab">
+            <div>
+                <div id="active-panel">
                     <div class="table-responsive">
                         <table class="table text-nowrap align-middle idcard-index-table" id="activeIdcardTable">
                             <thead>
@@ -132,9 +107,9 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @forelse($activeRequests as $index => $request)
+                                @forelse($allRequests as $index => $request)
                                     <tr data-request-id="{{ $request->id }}" class="align-middle">
-                                        <td class="fw-medium ps-4">{{ ($activeRequests->currentPage() - 1) * $activeRequests->perPage() + $loop->iteration }}</td>
+                                        <td class="fw-medium ps-4">{{ ($allRequests->currentPage() - 1) * $allRequests->perPage() + $loop->iteration }}</td>
                                         <td>
                                             @php
                                                 $photoExists = $request->photo && \Storage::disk('public')->exists($request->photo);
@@ -163,8 +138,14 @@
                                                     'Issued' => 'primary',
                                                     default => 'secondary'
                                                 };
+                                                $statusTooltip = (($request->status ?? '') === 'Pending')
+                                                    ? ($request->pending_status_tooltip ?? 'Pending')
+                                                    : null;
                                             @endphp
-                                            <span class="badge rounded-pill bg-{{ $statusClass }}">{{ $request->status ?? '--' }}</span>
+                                            <span class="badge rounded-pill bg-{{ $statusClass }}"
+                                                  @if($statusTooltip) data-bs-toggle="tooltip" data-bs-placement="top" title="{{ $statusTooltip }}" @endif>
+                                                {{ $request->status ?? '--' }}
+                                            </span>
                                         </td>
                                         <td class="text-end pe-4">
                                             <div class="btn-group btn-group-sm" role="group">
@@ -193,7 +174,7 @@
                                         <td colspan="12" class="text-center py-5 table-empty-state">
                                             <div class="d-inline-flex flex-column align-items-center p-5 bg-body-tertiary rounded-4 border border-body-secondary">
                                                 <i class="material-icons material-symbols-rounded mb-3 text-body-tertiary" style="font-size:56px;">inbox</i>
-                                                <p class="mb-1 fw-semibold text-body-emphasis">No active ID card requests found.</p>
+                                                <p class="mb-1 fw-semibold text-body-emphasis">No ID card requests found.</p>
                                                 <small class="text-body-secondary mb-4">Click "Generate New ID Card" to create one.</small>
                                                 <a href="{{ route('admin.employee_idcard.create') }}" class="btn btn-primary rounded-3 px-4 py-2">
                                                     <i class="material-icons material-symbols-rounded align-middle me-1" style="font-size:16px;">add</i>
@@ -206,10 +187,10 @@
                             </tbody>
                         </table>
                     </div>
-                    @if($activeRequests->hasPages())
+                    @if($allRequests->hasPages())
                         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 px-3 py-2 border-top bg-body-tertiary">
-                            <small class="text-body-secondary">Showing {{ $activeRequests->firstItem() ?? 0 }} to {{ $activeRequests->lastItem() ?? 0 }} of {{ $activeRequests->total() }} entries</small>
-                            {{ $activeRequests->links() }}
+                            <small class="text-body-secondary">Showing {{ $allRequests->firstItem() ?? 0 }} to {{ $allRequests->lastItem() ?? 0 }} of {{ $allRequests->total() }} entries</small>
+                            {{ $allRequests->links() }}
                         </div>
                     @endif
                 </div>
@@ -264,8 +245,14 @@
                                                     'Issued' => 'primary',
                                                     default => 'secondary'
                                                 };
+                                                $statusTooltip = (($request->status ?? '') === 'Pending')
+                                                    ? ($request->pending_status_tooltip ?? 'Pending')
+                                                    : null;
                                             @endphp
-                                            <span class="badge rounded-pill bg-{{ $statusClass }}">{{ $request->status ?? '--' }}</span>
+                                            <span class="badge rounded-pill bg-{{ $statusClass }}"
+                                                  @if($statusTooltip) data-bs-toggle="tooltip" data-bs-placement="top" title="{{ $statusTooltip }}" @endif>
+                                                {{ $request->status ?? '--' }}
+                                            </span>
                                         </td>
                                         <td class="text-end pe-4">
                                             <div class="btn-group btn-group-sm" role="group">
@@ -412,8 +399,12 @@
                                                     'Issued' => 'card_giftcard',
                                                     default => 'help'
                                                 };
+                                                $statusTooltip = (($request->status ?? '') === 'Pending')
+                                                    ? ($request->pending_status_tooltip ?? 'Pending')
+                                                    : null;
                                             @endphp
-                                            <span class="badge rounded-pill bg-{{ $statusClass }}">
+                                            <span class="badge rounded-pill bg-{{ $statusClass }}"
+                                                  @if($statusTooltip) data-bs-toggle="tooltip" data-bs-placement="top" title="{{ $statusTooltip }}" @endif>
                                                 <i class="material-icons material-symbols-rounded" style="font-size:12px;">{{ $statusIcon }}</i>
                                                 {{ $request->status }}
                                             </span>
@@ -679,11 +670,22 @@ document.addEventListener('DOMContentLoaded', function() {
         labelEl.textContent = title + ' (with current filter)';
     }
 
+    function initStatusTooltips() {
+        if (typeof bootstrap === 'undefined' || !bootstrap.Tooltip) return;
+        document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
+            try {
+                bootstrap.Tooltip.getOrCreateInstance(el);
+            } catch (e) {}
+        });
+    }
+
     // Update label on page load and whenever tab is changed
     updateExportHeaderLabel();
+    initStatusTooltips();
     document.querySelectorAll('.idcard-index-tabs .nav-link').forEach(function (btn) {
         btn.addEventListener('shown.bs.tab', function () {
             updateExportHeaderLabel();
+            initStatusTooltips();
         });
     });
 

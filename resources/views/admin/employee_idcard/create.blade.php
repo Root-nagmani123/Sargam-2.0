@@ -25,18 +25,29 @@
             <!-- Employee Type Selection Card - Bootstrap 5.3 -->
         <div class="card idcard-create-type-card mb-4 border-0 shadow-sm overflow-hidden">
             <div class="card-body py-4 px-4">
+                @php
+                    $lockedType = $lockedEmployeeType ?? null;
+                    $selectedType = old('employee_type', $lockedType ?: 'Permanent Employee');
+                @endphp
                 <div class="d-flex flex-wrap gap-4 align-items-center">
                     <div class="form-check idcard-radio-option mb-0">
                         <input class="form-check-input" type="radio" name="employee_type" id="permanent" value="Permanent Employee"
-                               {{ old('employee_type', 'Permanent Employee') == 'Permanent Employee' ? 'checked' : '' }} required>
+                               {{ $selectedType == 'Permanent Employee' ? 'checked' : '' }}
+                               @if($lockedType === 'Contractual Employee') disabled @endif required>
                         <label class="form-check-label" for="permanent">Permanent Employee</label>
                     </div>
                     <div class="form-check idcard-radio-option mb-0">
                         <input class="form-check-input" type="radio" name="employee_type" id="contractual" value="Contractual Employee"
-                               {{ old('employee_type') == 'Contractual Employee' ? 'checked' : '' }} required>
+                               {{ $selectedType == 'Contractual Employee' ? 'checked' : '' }}
+                               @if($lockedType === 'Permanent Employee') disabled @endif required>
                         <label class="form-check-label" for="contractual">Contractual Employee</label>
                     </div>
                 </div>
+                @if($lockedType)
+                    <small class="text-muted d-block mt-2">
+                        Your profile type is <strong>{{ $lockedType }}</strong>. Only this type is allowed.
+                    </small>
+                @endif
             </div>
         </div>
 
@@ -504,6 +515,7 @@
     var contractualView = document.getElementById('contractual-view');
     var permRad = document.getElementById('permanent');
     var contRad = document.getElementById('contractual');
+    var lockedEmployeeType = @json($lockedEmployeeType ?? null);
     if (!form || !permanentView || !contractualView || !permRad || !contRad) return;
 
     function showPermanent() {
@@ -532,8 +544,31 @@
         if (photoCont) photoCont.required = true;
     }
 
-    permRad.addEventListener('change', function() { showPermanent(); idcardResetFlow(); });
-    contRad.addEventListener('change', function() { showContractual(); idcardResetFlow(); });
+    permRad.addEventListener('change', function() {
+        if (lockedEmployeeType === 'Contractual Employee') {
+            contRad.checked = true;
+            showContractual();
+            return;
+        }
+        showPermanent();
+        idcardResetFlow();
+    });
+    contRad.addEventListener('change', function() {
+        if (lockedEmployeeType === 'Permanent Employee') {
+            permRad.checked = true;
+            showPermanent();
+            return;
+        }
+        showContractual();
+        idcardResetFlow();
+    });
+    if (lockedEmployeeType === 'Permanent Employee') {
+        permRad.checked = true;
+        contRad.checked = false;
+    } else if (lockedEmployeeType === 'Contractual Employee') {
+        contRad.checked = true;
+        permRad.checked = false;
+    }
     if (contRad.checked) showContractual();
     else showPermanent();
 

@@ -471,6 +471,100 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
         </div>
     </div>
 
+@if(hasRole('Security Card') || hasRole('Admin Security'))
+            <div class="row g-3 mb-3">
+                <div class="col-xl-3 col-md-6">
+                    @php
+                        $idCardApprovalRoute = hasRole('Admin Security')
+                            ? route('admin.security.employee_idcard_approval.approval3')
+                            : route('admin.security.employee_idcard_approval.approval2');
+                    @endphp
+                    <a href="{{ $idCardApprovalRoute }}" class="text-decoration-none">
+                        <div class="card dashboard-stat-card shadow-sm rounded-4 card-blue">
+                            <div class="card-body d-flex align-items-center justify-content-between gap-2">
+                                <div>
+                                    <p class="small text-dark mb-1">Today's Pending Permanent ID Requests</p>
+                                    <div class="dashboard-stat-value fw-semibold text-primary">{{ $todayPendingPermanentIdCardRequests ?? 0 }}</div>
+                                    <span class="stat-link-hint text-primary">Go to approvals <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
+                                </div>
+                                <span class="stat-icon"><span class="material-icons material-symbols-rounded">badge</span></span>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-xl-3 col-md-6">
+                    <a href="{{ $idCardApprovalRoute }}" class="text-decoration-none">
+                        <div class="card dashboard-stat-card shadow-sm rounded-4 card-blue">
+                            <div class="card-body d-flex align-items-center justify-content-between gap-2">
+                                <div>
+                                    <p class="small text-dark mb-1">Today's Pending Contractual ID Requests</p>
+                                    <div class="dashboard-stat-value fw-semibold text-primary">{{ $todayPendingContractualIdCardRequests ?? 0 }}</div>
+                                    <span class="stat-link-hint text-primary">Go to approvals <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
+                                </div>
+                                <span class="stat-icon"><span class="material-icons material-symbols-rounded">badge</span></span>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-xl-3 col-md-6">
+                    <a href="{{ $idCardApprovalRoute }}" class="text-decoration-none">
+                        <div class="card dashboard-stat-card shadow-sm rounded-4 card-amber">
+                            <div class="card-body d-flex align-items-center justify-content-between gap-2">
+                                <div>
+                                    <p class="small text-dark mb-1">Today's Duplicate Permanent ID Requests</p>
+                                    <div class="dashboard-stat-value fw-semibold text-warning-emphasis">{{ $todayDuplicatePermIdCardRequests ?? 0 }}</div>
+                                    <span class="stat-link-hint text-warning">Go to approvals <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
+                                </div>
+                                <span class="stat-icon"><span class="material-icons material-symbols-rounded">copy_all</span></span>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-xl-3 col-md-6">
+                    <a href="{{ $idCardApprovalRoute }}" class="text-decoration-none">
+                        <div class="card dashboard-stat-card shadow-sm rounded-4 card-amber">
+                            <div class="card-body d-flex align-items-center justify-content-between gap-2">
+                                <div>
+                                    <p class="small text-dark mb-1">Today's Duplicate Contractual ID Requests</p>
+                                    <div class="dashboard-stat-value fw-semibold text-warning-emphasis">{{ $todayDuplicateContractualIdCardRequests ?? 0 }}</div>
+                                    <span class="stat-link-hint text-warning">Go to approvals <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
+                                </div>
+                                <span class="stat-icon"><span class="material-icons material-symbols-rounded">content_copy</span></span>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-xl-4 col-md-6">
+                    <a href="{{ route('admin.security.family_idcard_approval.index') }}" class="text-decoration-none">
+                        <div class="card dashboard-stat-card shadow-sm rounded-4 card-blue">
+                            <div class="card-body d-flex align-items-center justify-content-between gap-2">
+                                <div>
+                                    <p class="small text-dark mb-1">Today's Pending Family ID Requests</p>
+                                    <div class="dashboard-stat-value fw-semibold text-primary">{{ $todayFamilyApprovals ?? 0 }}</div>
+                                    <span class="stat-link-hint text-primary">Go to approvals <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
+                                </div>
+                                <span class="stat-icon"><span class="material-icons material-symbols-rounded">diversity_3</span></span>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-xl-4 col-md-6">
+                    <a href="{{ route('admin.security.vehicle_pass_approval.index') }}" class="text-decoration-none">
+                        <div class="card dashboard-stat-card shadow-sm rounded-4 card-green">
+                            <div class="card-body d-flex align-items-center justify-content-between gap-2">
+                                <div>
+                                    <p class="small text-dark mb-1">Today's Pending Vehicle Pass Requests</p>
+                                    <div class="dashboard-stat-value fw-semibold text-success">{{ $todayVehicleApprovals ?? 0 }}</div>
+                                    <span class="stat-link-hint text-success">Go to approvals <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
+                                </div>
+                                <span class="stat-icon"><span class="material-icons material-symbols-rounded">directions_car</span></span>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            </div>
+            @endif
+    @if(!hasRole('Security Card') && !hasRole('Admin Security'))
     <div class="row g-2 g-md-3 mb-4 row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 row-cols-xxl-5">
         <div class="col">
             <a href="{{ route('admin.dashboard.active_course') }}" class="text-decoration-none d-block h-100">
@@ -630,6 +724,7 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
         </div>
         @endif
     </div>
+    @endif
 
     <div class="row g-3 g-lg-4">
         <div class="col-lg-7">
@@ -774,99 +869,7 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                 </div>
             </div>
 
-            @if(hasRole('Security Card') || hasRole('Admin Security'))
-            <div class="row g-3 mb-3">
-                <div class="col-xl-3 col-md-6">
-                    @php
-                        $idCardApprovalRoute = hasRole('Admin Security')
-                            ? route('admin.security.employee_idcard_approval.approval3')
-                            : route('admin.security.employee_idcard_approval.approval2');
-                    @endphp
-                    <a href="{{ $idCardApprovalRoute }}" class="text-decoration-none">
-                        <div class="card dashboard-stat-card shadow-sm rounded-4 card-blue">
-                            <div class="card-body d-flex align-items-center justify-content-between gap-2">
-                                <div>
-                                    <p class="small text-dark mb-1">Today's Pending Permanent ID Requests</p>
-                                    <div class="dashboard-stat-value fw-semibold text-primary">{{ $todayPendingPermanentIdCardRequests ?? 0 }}</div>
-                                    <span class="stat-link-hint text-primary">Go to approvals <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
-                                </div>
-                                <span class="stat-icon"><span class="material-icons material-symbols-rounded">badge</span></span>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-xl-3 col-md-6">
-                    <a href="{{ $idCardApprovalRoute }}" class="text-decoration-none">
-                        <div class="card dashboard-stat-card shadow-sm rounded-4 card-blue">
-                            <div class="card-body d-flex align-items-center justify-content-between gap-2">
-                                <div>
-                                    <p class="small text-dark mb-1">Today's Pending Contractual ID Requests</p>
-                                    <div class="dashboard-stat-value fw-semibold text-primary">{{ $todayPendingContractualIdCardRequests ?? 0 }}</div>
-                                    <span class="stat-link-hint text-primary">Go to approvals <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
-                                </div>
-                                <span class="stat-icon"><span class="material-icons material-symbols-rounded">badge</span></span>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-xl-3 col-md-6">
-                    <a href="{{ $idCardApprovalRoute }}" class="text-decoration-none">
-                        <div class="card dashboard-stat-card shadow-sm rounded-4 card-amber">
-                            <div class="card-body d-flex align-items-center justify-content-between gap-2">
-                                <div>
-                                    <p class="small text-dark mb-1">Today's Duplicate Permanent ID Requests</p>
-                                    <div class="dashboard-stat-value fw-semibold text-warning-emphasis">{{ $todayDuplicatePermIdCardRequests ?? 0 }}</div>
-                                    <span class="stat-link-hint text-warning">Go to approvals <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
-                                </div>
-                                <span class="stat-icon"><span class="material-icons material-symbols-rounded">copy_all</span></span>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-xl-3 col-md-6">
-                    <a href="{{ $idCardApprovalRoute }}" class="text-decoration-none">
-                        <div class="card dashboard-stat-card shadow-sm rounded-4 card-amber">
-                            <div class="card-body d-flex align-items-center justify-content-between gap-2">
-                                <div>
-                                    <p class="small text-dark mb-1">Today's Duplicate Contractual ID Requests</p>
-                                    <div class="dashboard-stat-value fw-semibold text-warning-emphasis">{{ $todayDuplicateContractualIdCardRequests ?? 0 }}</div>
-                                    <span class="stat-link-hint text-warning">Go to approvals <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
-                                </div>
-                                <span class="stat-icon"><span class="material-icons material-symbols-rounded">content_copy</span></span>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-xl-4 col-md-6">
-                    <a href="{{ route('admin.security.family_idcard_approval.index') }}" class="text-decoration-none">
-                        <div class="card dashboard-stat-card shadow-sm rounded-4 card-blue">
-                            <div class="card-body d-flex align-items-center justify-content-between gap-2">
-                                <div>
-                                    <p class="small text-dark mb-1">Today's Pending Family ID Requests</p>
-                                    <div class="dashboard-stat-value fw-semibold text-primary">{{ $todayFamilyApprovals ?? 0 }}</div>
-                                    <span class="stat-link-hint text-primary">Go to approvals <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
-                                </div>
-                                <span class="stat-icon"><span class="material-icons material-symbols-rounded">diversity_3</span></span>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-xl-4 col-md-6">
-                    <a href="{{ route('admin.security.vehicle_pass_approval.index') }}" class="text-decoration-none">
-                        <div class="card dashboard-stat-card shadow-sm rounded-4 card-green">
-                            <div class="card-body d-flex align-items-center justify-content-between gap-2">
-                                <div>
-                                    <p class="small text-dark mb-1">Today's Pending Vehicle Pass Requests</p>
-                                    <div class="dashboard-stat-value fw-semibold text-success">{{ $todayVehicleApprovals ?? 0 }}</div>
-                                    <span class="stat-link-hint text-success">Go to approvals <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
-                                </div>
-                                <span class="stat-icon"><span class="material-icons material-symbols-rounded">directions_car</span></span>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-            </div>
-            @endif
+            
         </div>
 
         <div class="col-lg-5">

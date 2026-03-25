@@ -116,7 +116,7 @@
     <div class="card border-0 shadow-sm">
         <div class="card-body p-0">
             <div class="tab-content">
-                <div class="tab-pane fade show active" id="active-panel" role="tabpanel" aria-labelledby="active-tab">
+                <div class="tab-pane show active" id="active-panel" role="tabpanel" aria-labelledby="active-tab">
                     <div class="table-responsive">
                         <table class="table table-hover mb-0 align-middle vehicle-pass-table">
                             <thead>
@@ -345,10 +345,22 @@ document.addEventListener('DOMContentLoaded', function() {
         archiveTab.classList.remove('active');
         archiveTab.setAttribute('aria-selected', 'false');
         activePanel.classList.add('show', 'active');
+        activePanel.style.display = 'block';
         archivePanel.classList.remove('show', 'active');
+        archivePanel.style.display = 'none';
         if (window.location.hash === '#archive-panel') {
             history.replaceState(null, null, window.location.pathname + window.location.search);
         }
+
+        // Keep only one list visible when switching tabs.
+        activeTab.addEventListener('shown.bs.tab', function () {
+            activePanel.style.display = 'block';
+            archivePanel.style.display = 'none';
+        });
+        archiveTab.addEventListener('shown.bs.tab', function () {
+            activePanel.style.display = 'none';
+            archivePanel.style.display = 'block';
+        });
     }
     if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
         [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]')).forEach(function(el) {

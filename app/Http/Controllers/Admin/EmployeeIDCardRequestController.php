@@ -29,7 +29,7 @@ class EmployeeIDCardRequestController extends Controller
         $with = [
             'employee:pk,first_name,last_name,designation_master_pk',
             'employee.designation:pk,designation_name',
-            'approvals:pk,security_parm_id_apply_pk,status,approval_emp_pk,created_date,approval_remarks',
+            'approvals:pk,security_parm_id_apply_pk,status,recommend_status,approval_emp_pk,created_date,approval_remarks',
             'approvals.approver:pk,first_name,last_name',
         ];
         $columns = ['pk', 'emp_id_apply', 'employee_master_pk', 'id_status', 'created_date', 'card_valid_from', 'card_valid_to', 'id_card_no', 'id_photo_path', 'joining_letter_path', 'mobile_no', 'telephone_no', 'blood_group', 'card_type', 'permanent_type', 'perm_sub_type', 'remarks', 'created_by', 'employee_dob'];
@@ -63,7 +63,7 @@ class EmployeeIDCardRequestController extends Controller
         $permRows = $permQuery->get();
 
         // Contractual
-        $contCols = ['pk', 'emp_id_apply', 'employee_name', 'designation_name', 'id_status', 'created_date', 'card_valid_from', 'card_valid_to', 'id_card_no', 'id_photo_path', 'mobile_no', 'telephone_no', 'blood_group', 'permanent_type', 'perm_sub_type', 'remarks', 'created_by', 'employee_dob', 'vender_name', 'father_name', 'doc_path'];
+        $contCols = ['pk', 'emp_id_apply', 'employee_name', 'designation_name', 'id_status', 'depart_approval_status', 'created_date', 'card_valid_from', 'card_valid_to', 'id_card_no', 'id_photo_path', 'mobile_no', 'telephone_no', 'blood_group', 'permanent_type', 'perm_sub_type', 'remarks', 'created_by', 'employee_dob', 'vender_name', 'father_name', 'doc_path'];
         $contQuery = DB::table('security_con_oth_id_apply')->select($contCols)->orderBy('created_date', 'desc');
         if (!hasRole('Admin') && !hasRole('SuperAdmin')) {
             $currentUserId = Auth::user()->user_id ?? Auth::id();
@@ -87,6 +87,56 @@ class EmployeeIDCardRequestController extends Controller
         $permDto = $permRows->map(fn ($r) => IdCardSecurityMapper::toEmployeeRequestDto($r));
         $contDto = $contRows->map(fn ($r) => IdCardSecurityMapper::toContractualRequestDto($r));
         $merged = $permDto->concat($contDto)->sortByDesc('created_at')->values();
+
+        // Build pending-stage tooltip text for status hover in list view.
+        $approvalAuthorityIds = $merged->pluck('approval_authority')
+            ->filter(fn ($v) => !empty($v))
+            ->map(fn ($v) => (int) $v)
+            ->unique()
+            ->values();
+        $approvalAuthorityNames = [];
+        if ($approvalAuthorityIds->isNotEmpty()) {
+            $rows = DB::table('employee_master')
+                ->whereIn('pk', $approvalAuthorityIds->all())
+                ->get(['pk', 'first_name', 'last_name']);
+            foreach ($rows as $row) {
+                $approvalAuthorityNames[(int) $row->pk] = trim(($row->first_name ?? '') . ' ' . ($row->last_name ?? ''));
+            }
+        }
+
+        $merged = $merged->map(function ($row) use ($approvalAuthorityNames) {
+            $status = (string) ($row->status ?? '');
+            $row->pending_status_tooltip = null;
+            if ($status !== 'Pending') {
+                return $row;
+            }
+
+            if (!empty($row->approved_by_a2)) {
+                $row->pending_status_tooltip = 'Pending with Security Head';
+                return $row;
+            }
+
+            $sectionApproved = !empty($row->approved_by_a1)
+                || ((int) ($row->depart_approval_status ?? 0) === 2);
+
+            if ($sectionApproved) {
+                $row->pending_status_tooltip = 'Pending with Security Section';
+                return $row;
+            }
+
+            $sectionEmployeeName = null;
+            if (!empty($row->approval_authority)) {
+                $sectionEmployeeName = $approvalAuthorityNames[(int) $row->approval_authority] ?? null;
+            }
+            if (empty($sectionEmployeeName) && !empty($row->requested_by)) {
+                $sectionEmployeeName = (string) $row->requested_by;
+            }
+
+            $row->pending_status_tooltip = 'Pending with Section Employee'
+                . ($sectionEmployeeName ? (' (' . $sectionEmployeeName . ')') : '');
+
+            return $row;
+        })->values();
 
         // Date range filter (created_date)
         $dateFrom = $request->get('date_from');
@@ -135,6 +185,9 @@ class EmployeeIDCardRequestController extends Controller
 
         $activeRequests = static::paginateCollection($activeCollection, (int) $request->get('active_page', 1) ?: 1, $perPage, $request->url(), 'active_page');
         $activeRequests->withQueryString();
+        // Combined list (all statuses in one list)
+        $allRequestsPaged = static::paginateCollection($allRequests, (int) $request->get('page', 1) ?: 1, $perPage, $request->url(), 'page');
+        $allRequestsPaged->withQueryString();
         $archivedRequests = static::paginateCollection($archivedCollection, (int) $request->get('archive_page', 1) ?: 1, $perPage, $request->url(), 'archive_page');
         $archivedRequests->withQueryString();
         $duplicationRequests = static::paginateCollection($duplicationCollection, (int) $request->get('duplication_page', 1) ?: 1, $perPage, $request->url(), 'duplication_page');
@@ -143,6 +196,7 @@ class EmployeeIDCardRequestController extends Controller
         $extensionRequests->withQueryString();
 
         return view('admin.employee_idcard.index', [
+            'allRequests' => $allRequestsPaged,
             'activeRequests' => $activeRequests,
             'archivedRequests' => $archivedRequests,
             'duplicationRequests' => $duplicationRequests,
@@ -193,11 +247,16 @@ class EmployeeIDCardRequestController extends Controller
         $userDepartmentPk = null;
         $userDepartmentName = null;
         $approvalAuthorityEmployees = collect();
+        $lockedEmployeeType = null;
         if ($authUserId) {
             $authEmp = EmployeeMaster::with('department')
                 ->where('pk', $authUserId)
                 ->orWhere('pk_old', $authUserId)
                 ->first();
+            if ($authEmp && Schema::hasColumn('employee_master', 'payroll')) {
+                $payroll = (int) ($authEmp->payroll ?? 0);
+                $lockedEmployeeType = $payroll === 0 ? 'Permanent Employee' : 'Contractual Employee';
+            }
             if ($authEmp && $authEmp->department_master_pk) {
                 $userDepartmentPk = $authEmp->department_master_pk;
                 $userDepartmentName = $authEmp->department->department_name ?? null;
@@ -217,6 +276,7 @@ class EmployeeIDCardRequestController extends Controller
             'userDepartmentPk' => $userDepartmentPk,
             'userDepartmentName' => $userDepartmentName,
             'approvalAuthorityEmployees' => $approvalAuthorityEmployees,
+            'lockedEmployeeType' => $lockedEmployeeType,
         ]);
     }
 
@@ -343,6 +403,39 @@ class EmployeeIDCardRequestController extends Controller
         ]);
 
         $authEmpPk = Auth::user()->user_id ?? Auth::id();
+        $authEmpRow = null;
+        if ($authEmpPk) {
+            $authEmpRow = EmployeeMaster::where('pk', $authEmpPk)->orWhere('pk_old', $authEmpPk)->first();
+        }
+        if ($authEmpRow && Schema::hasColumn('employee_master', 'payroll')) {
+            $expectedType = ((int) ($authEmpRow->payroll ?? 0) === 0) ? 'Permanent Employee' : 'Contractual Employee';
+            if (($validated['employee_type'] ?? null) !== $expectedType) {
+                throw ValidationException::withMessages([
+                    'employee_type' => "You can apply only as {$expectedType}.",
+                ]);
+            }
+        }
+
+        // Contractual request: Approval Authority must be a permanent employee from same section.
+        if (($validated['employee_type'] ?? null) === 'Contractual Employee') {
+            $approvalAuthorityPk = (int) ($validated['approval_authority'] ?? 0);
+            $authDeptPk = (int) ($authEmpRow->department_master_pk ?? 0);
+            $isValidApprovalAuthority = false;
+            if ($approvalAuthorityPk > 0 && $authDeptPk > 0) {
+                $approverQuery = EmployeeMaster::query()
+                    ->where('pk', $approvalAuthorityPk)
+                    ->where('department_master_pk', $authDeptPk)
+                    ->when(Schema::hasColumn('employee_master', 'payroll'), fn ($q) => $q->where('payroll', 0))
+                    ->when(Schema::hasColumn('employee_master', 'status'), fn ($q) => $q->where('status', 1));
+                $isValidApprovalAuthority = $approverQuery->exists();
+            }
+            if (!$isValidApprovalAuthority) {
+                throw ValidationException::withMessages([
+                    'approval_authority' => 'Approval Authority must be a permanent employee from your section only.',
+                ]);
+            }
+        }
+
         $employeePk = $validated['employee_master_pk'] ?? $authEmpPk;
         // Resolve to actual employee_master.pk (user_id may be pk or pk_old)
         if ($employeePk) {

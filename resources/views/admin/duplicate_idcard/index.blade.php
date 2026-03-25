@@ -42,8 +42,8 @@
                         <button class="btn btn-sm btn-primary">Search</button>
                     </form>
                     <a href="{{ route('admin.duplicate_idcard.create') }}" class="btn btn-sm btn-success">
-                        <i class="material-icons material-symbols-rounded" style="font-size:18px;vertical-align:middle;">add</i>
-                        Add
+                        <i class="material-icons material-symbols-rounded" style="font-size:18px;vertical-align:middle;"></i>
+                        Add Duplicate ID Card
                     </a>
                 </div>
             </div>

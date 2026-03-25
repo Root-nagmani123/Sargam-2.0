@@ -124,7 +124,7 @@
                 </ul>
             </div>
             <a href="{{ route('admin.family_idcard.create') }}" class="btn btn-success  d-flex align-items-center gap-1" title="Add">
-                <i class="material-icons material-symbols-rounded" style="font-size:20px;">add</i>
+                <i class="material-icons material-symbols-rounded" style="font-size:20px;">New Family ID Card</i>
             </a>
             <button type="button" class="btn btn-primary family-idcard-print-btn d-flex align-items-center gap-2 px-3" title="Print" onclick="window.print();" aria-label="Print list">
                 <i class="material-icons material-symbols-rounded" style="font-size:20px;">print</i>

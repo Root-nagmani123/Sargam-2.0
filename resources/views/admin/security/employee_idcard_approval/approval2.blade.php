@@ -33,7 +33,8 @@
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">Request Date From</label>
-                                <input type="date" name="date_from" class="form-control" value="{{ request('date_from') }}">
+                                <input type="date" name="date_from" class="form-control" value="{{ request('date_from', '2026-03-01') }}">
+                                <small class="text-muted">Default: 01-03-2026 (you can select older date).</small>
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">Request Date To</label>
@@ -88,11 +89,38 @@
                 </div>
             @endif
 
-            @include('admin.security.employee_idcard_approval._approval_table', ['requests' => $requests, 'approvalStage' => 2])
+            <input type="hidden" id="activeTabInput" name="tab" value="{{ $activeTab ?? 'new' }}" form="filterForm">
 
-            <div class="mt-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <small class="text-muted">Showing {{ $requests->firstItem() ?? 0 }} to {{ $requests->lastItem() ?? 0 }} of {{ $requests->total() }} entries</small>
-                {{ $requests->withQueryString()->links() }}
+            <ul class="nav nav-pills mb-3 approval2-tabs" id="approval2Tabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link {{ ($activeTab ?? 'new') === 'new' ? 'active' : '' }}" id="new-request-tab" data-bs-toggle="tab" data-bs-target="#new-request-panel" type="button" role="tab" aria-controls="new-request-panel" aria-selected="{{ ($activeTab ?? 'new') === 'new' ? 'true' : 'false' }}" data-tab-key="new">
+                        New Request
+                        <span class="badge bg-white text-primary ms-1">{{ $newRequests->total() }}</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link {{ ($activeTab ?? 'new') === 'for_approval' ? 'active' : '' }}" id="for-approval-tab" data-bs-toggle="tab" data-bs-target="#for-approval-panel" type="button" role="tab" aria-controls="for-approval-panel" aria-selected="{{ ($activeTab ?? 'new') === 'for_approval' ? 'true' : 'false' }}" data-tab-key="for_approval">
+                        For Approval
+                        <span class="badge bg-secondary ms-1">{{ $forApprovalRequests->total() }}</span>
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content">
+                <div class="tab-pane {{ ($activeTab ?? 'new') === 'new' ? 'show active' : '' }}" id="new-request-panel" role="tabpanel" aria-labelledby="new-request-tab" style="{{ ($activeTab ?? 'new') === 'new' ? 'display:block;' : 'display:none;' }}">
+                    @include('admin.security.employee_idcard_approval._approval_table', ['requests' => $newRequests, 'approvalStage' => 2])
+                    <div class="mt-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <small class="text-muted">Showing {{ $newRequests->firstItem() ?? 0 }} to {{ $newRequests->lastItem() ?? 0 }} of {{ $newRequests->total() }} entries</small>
+                        {{ $newRequests->appends(array_merge(request()->query(), ['tab' => 'new']))->links() }}
+                    </div>
+                </div>
+                <div class="tab-pane {{ ($activeTab ?? 'new') === 'for_approval' ? 'show active' : '' }}" id="for-approval-panel" role="tabpanel" aria-labelledby="for-approval-tab" style="{{ ($activeTab ?? 'new') === 'for_approval' ? 'display:block;' : 'display:none;' }}">
+                    @include('admin.security.employee_idcard_approval._approval_table', ['requests' => $forApprovalRequests, 'approvalStage' => 2])
+                    <div class="mt-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <small class="text-muted">Showing {{ $forApprovalRequests->firstItem() ?? 0 }} to {{ $forApprovalRequests->lastItem() ?? 0 }} of {{ $forApprovalRequests->total() }} entries</small>
+                        {{ $forApprovalRequests->appends(array_merge(request()->query(), ['tab' => 'for_approval']))->links() }}
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -125,8 +153,68 @@
 </div>
 @endsection
 
+@push('styles')
+<style>
+.approval2-tabs .nav-link {
+    color: #495057;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    padding: 0.45rem 0.9rem;
+    font-weight: 500;
+}
+.approval2-tabs .nav-link:hover {
+    color: #004a93;
+    background-color: #f1f5f9;
+}
+.approval2-tabs .nav-link.active {
+    background-color: #004a93;
+    color: #fff;
+    border-color: #004a93;
+}
+.approval2-tabs .nav-link.active .badge {
+    background-color: #fff !important;
+    color: #004a93 !important;
+}
+</style>
+@endpush
+
 @push('scripts')
 <script>
+// Default tab behavior: if no `tab` query is provided, always open "New Request".
+document.addEventListener('DOMContentLoaded', function () {
+    try {
+        var url = new URL(window.location.href);
+        var tab = url.searchParams.get('tab');
+        var tabKey = (tab === 'for_approval') ? 'for_approval' : 'new';
+        var tabInput = document.getElementById('activeTabInput');
+        if (tabInput) tabInput.value = tabKey;
+
+        var newTabBtn = document.getElementById('new-request-tab');
+        var forTabBtn = document.getElementById('for-approval-tab');
+        var newPanel = document.getElementById('new-request-panel');
+        var forPanel = document.getElementById('for-approval-panel');
+
+        if (newTabBtn && forTabBtn && newPanel && forPanel) {
+            var isNew = tabKey === 'new';
+
+            newTabBtn.classList.toggle('active', isNew);
+            newTabBtn.setAttribute('aria-selected', isNew ? 'true' : 'false');
+            forTabBtn.classList.toggle('active', !isNew);
+            forTabBtn.setAttribute('aria-selected', !isNew ? 'true' : 'false');
+
+            newPanel.classList.toggle('show', isNew);
+            newPanel.classList.toggle('active', isNew);
+            newPanel.style.display = isNew ? 'block' : 'none';
+
+            forPanel.classList.toggle('show', !isNew);
+            forPanel.classList.toggle('active', !isNew);
+            forPanel.style.display = !isNew ? 'block' : 'none';
+
+            // No bootstrap.Tab.show() call here; we manage pane visibility explicitly.
+        }
+    } catch (e) {}
+});
+
 document.querySelectorAll('.reject-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
         document.getElementById('rejectModalEmployeeName').textContent = 'Rejecting: ' + (this.dataset.name || '');
@@ -139,6 +227,33 @@ document.querySelectorAll('.reject-btn').forEach(function(btn) {
 // Auto-submit when per_page changes
 document.getElementById('per_page').addEventListener('change', function() {
     document.getElementById('filterForm').submit();
+});
+
+// Keep selected tab in query so pagination and filters stay consistent.
+document.querySelectorAll('#approval2Tabs .nav-link').forEach(function(btn) {
+    btn.addEventListener('shown.bs.tab', function() {
+        var tabKey = this.dataset.tabKey || 'new';
+        var tabInput = document.getElementById('activeTabInput');
+        if (tabInput) {
+            tabInput.value = tabKey;
+        }
+        var newPanel = document.getElementById('new-request-panel');
+        var forPanel = document.getElementById('for-approval-panel');
+        if (newPanel && forPanel) {
+            if (tabKey === 'for_approval') {
+                newPanel.style.display = 'none';
+                forPanel.style.display = 'block';
+            } else {
+                newPanel.style.display = 'block';
+                forPanel.style.display = 'none';
+            }
+        }
+        try {
+            var url = new URL(window.location.href);
+            url.searchParams.set('tab', tabKey);
+            window.history.replaceState({}, '', url.toString());
+        } catch (e) {}
+    });
 });
 </script>
 @endpush

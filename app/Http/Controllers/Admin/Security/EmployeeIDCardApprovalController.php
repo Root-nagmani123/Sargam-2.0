@@ -13,6 +13,7 @@ use App\Support\IdCardSecurityMapper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 /**
@@ -193,6 +194,11 @@ class EmployeeIDCardApprovalController extends Controller
 
     public function approval2(Request $request)
     {
+        // Default filter: show records from 01-03-2026 onward unless user selects another date.
+        if (!$request->filled('date_from')) {
+            $request->merge(['date_from' => '2026-03-01']);
+        }
+
         $user = Auth::user();
         $currentEmployeePk = $user->user_id ?? $user->pk ?? null;
 
@@ -205,6 +211,9 @@ class EmployeeIDCardApprovalController extends Controller
         // Show ALL permanent requests (Pending / Approved / Rejected) with clear status.
         $permQuery = SecurityParmIdApply::with(['employee.designation', 'employee.department', 'creator.department', 'approvals.approver'])
             ->orderBy('created_date', 'desc');
+        if (Schema::hasColumn('security_parm_id_apply', 'id_card_generate_date')) {
+            $permQuery->whereNull('id_card_generate_date');
+        }
 
         // Permanent Duplicate: show both pending and already finally approved records at Approval II.
         // Non-pending rows will be view-only in the table.
@@ -215,6 +224,9 @@ class EmployeeIDCardApprovalController extends Controller
                     ->orOn('emp.designation_master_pk', '=', 'desig.pk');
             })
             ->leftJoin('department_master as dept', 'emp.department_master_pk', '=', 'dept.pk');
+        if (Schema::hasColumn('security_dup_perm_id_apply', 'id_card_generate_date')) {
+            $dupPermQuery->whereNull('dup.id_card_generate_date');
+        }
         $dupPermQuery->orderByDesc('dup.created_date')
             ->select([
                 'dup.*',
@@ -259,19 +271,15 @@ class EmployeeIDCardApprovalController extends Controller
             $permQuery->where('permanent_type', $request->card_type);
         }
 
-        // Pagination parameters (used to limit DB fetches)
+        // Pagination parameters
         $perPage = (int) $request->get('per_page', 10);
         $perPage = in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 10;
-        $page = max(1, (int) $request->get('page', 1));
-        // Fetch enough rows to correctly build the merged page slice after sorting
-        $take = $perPage * $page;
+        $newPage = max(1, (int) $request->get('new_page', 1));
+        $forApprovalPage = max(1, (int) $request->get('for_page', 1));
 
-        // Totals for correct paginator counts (avoid loading full result sets)
-        $permTotal = (clone $permQuery)->count();
-        $dupPermTotal = (clone $dupPermQuery)->count();
-
-        $permRows = $permQuery->limit($take)->get();
-        $dupPermRows = $dupPermQuery->limit($take)->get();
+        // For tab-wise split + independent pagination we need complete filtered sets.
+        $permRows = $permQuery->get();
+        $dupPermRows = $dupPermQuery->get();
         $dupPermCardLabels = $this->mapDupPermIdCardTypeLabels($dupPermRows);
 
         // PERF: Avoid N+1 queries for permanent duplicate approvals by preloading flags in bulk.
@@ -372,6 +380,9 @@ class EmployeeIDCardApprovalController extends Controller
         // Criteria: contractual requests with overall status pending and department approval done.
         $contQuery = DB::table('security_con_oth_id_apply')
             ->where('depart_approval_status', 2);
+        if (Schema::hasColumn('security_con_oth_id_apply', 'id_card_generate_date')) {
+            $contQuery->whereNull('id_card_generate_date');
+        }
         if ($request->filled('search')) {
             $search = $request->search;
             $contQuery->where(function ($q) use ($search) {
@@ -417,6 +428,9 @@ class EmployeeIDCardApprovalController extends Controller
         $dupContQuery = DB::table('security_dup_other_id_apply')
             ->whereIn('id_status', [1, 2, 3])
             ->where('depart_approval_status', 2);
+        if (Schema::hasColumn('security_dup_other_id_apply', 'id_card_generate_date')) {
+            $dupContQuery->whereNull('id_card_generate_date');
+        }
         // Approval II list is for Security level; do not filter by department_approval_emp_pk (Section Head).
         if ($request->filled('search')) {
             $search = $request->search;
@@ -435,11 +449,8 @@ class EmployeeIDCardApprovalController extends Controller
         }
         $dupContQuery->orderByDesc('created_date');
 
-        $contTotal = (clone $contQuery)->count();
-        $dupContTotal = (clone $dupContQuery)->count();
-
-        $contRows = $contQuery->limit($take)->get();
-        $dupContRows = $dupContQuery->limit($take)->get();
+        $contRows = $contQuery->get();
+        $dupContRows = $dupContQuery->get();
         $dupContCardLabels = $this->mapDupOtherIdCardTypeLabels($dupContRows);
         $deptMap = DB::table('department_master')->pluck('department_name', 'pk')->toArray();
         
@@ -507,18 +518,97 @@ class EmployeeIDCardApprovalController extends Controller
             return $d->created_at ? (\Carbon\Carbon::parse($d->created_at)->timestamp ?? 0) : 0;
         })->values();
 
-        $total = $permTotal + $dupPermTotal + $contTotal + $dupContTotal;
-        $requests = new LengthAwarePaginator(
-            $merged->forPage($page, $perPage),
-            $total,
+        // New Request: actionable pending rows (not view-only)
+        $newRows = $merged->filter(function ($r) {
+            return (string) ($r->status ?? 'Pending') === 'Pending'
+                && !((bool) ($r->is_view_only ?? false));
+        })->values();
+
+        // For Approval: view-only rows and non-pending rows except rejected.
+        // Generated rows are already excluded by query-level whereNull(id_card_generate_date).
+        $forApprovalRows = $merged->filter(function ($r) {
+            $status = (string) ($r->status ?? 'Pending');
+            if ($status === 'Rejected') {
+                return false;
+            }
+            return ((bool) ($r->is_view_only ?? false))
+                || $status !== 'Pending';
+        })->values();
+
+        $newRequests = new LengthAwarePaginator(
+            $newRows->forPage($newPage, $perPage)->values(),
+            $newRows->count(),
             $perPage,
-            $page,
-            ['path' => $request->url(), 'query' => $request->query()]
+            $newPage,
+            ['path' => $request->url(), 'pageName' => 'new_page', 'query' => $request->query()]
         );
+        $forApprovalRequests = new LengthAwarePaginator(
+            $forApprovalRows->forPage($forApprovalPage, $perPage)->values(),
+            $forApprovalRows->count(),
+            $perPage,
+            $forApprovalPage,
+            ['path' => $request->url(), 'pageName' => 'for_page', 'query' => $request->query()]
+        );
+
+        $activeTab = $request->get('tab', 'new');
+        if (!in_array($activeTab, ['new', 'for_approval'], true)) {
+            $activeTab = 'new';
+        }
 
         $cardTypes = DB::table('sec_id_cardno_master')->orderBy('sec_card_name')->pluck('sec_card_name', 'pk')->toArray();
 
-        return view('admin.security.employee_idcard_approval.approval2', compact('requests', 'cardTypes'));
+        return view('admin.security.employee_idcard_approval.approval2', compact(
+            'newRequests',
+            'forApprovalRequests',
+            'activeTab',
+            'cardTypes'
+        ));
+    }
+
+    /**
+     * Mark a final-approved request as generated/archived from Approval II list.
+     * Sets id_card_generate_date = now() on the underlying table row.
+     */
+    public function markGenerated(Request $request, $id)
+    {
+        try {
+            $decoded = decrypt($id);
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Invalid request id.');
+        }
+
+        $now = now()->format('Y-m-d H:i:s');
+
+        if (is_string($decoded) && str_starts_with($decoded, 'c-dup-')) {
+            $applyId = substr($decoded, 6);
+            DB::table('security_dup_other_id_apply')
+                ->where('emp_id_apply', $applyId)
+                ->update(['id_card_generate_date' => $now]);
+            return redirect()->back()->with('success', 'Record moved to archive successfully.');
+        }
+
+        if (is_string($decoded) && str_starts_with($decoded, 'p-dup-')) {
+            $applyId = substr($decoded, 6);
+            DB::table('security_dup_perm_id_apply')
+                ->where('emp_id_apply', $applyId)
+                ->update(['id_card_generate_date' => $now]);
+            return redirect()->back()->with('success', 'Record moved to archive successfully.');
+        }
+
+        if (is_string($decoded) && str_starts_with($decoded, 'c-')) {
+            $pk = (int) substr($decoded, 2);
+            DB::table('security_con_oth_id_apply')
+                ->where('pk', $pk)
+                ->update(['id_card_generate_date' => $now]);
+            return redirect()->back()->with('success', 'Record moved to archive successfully.');
+        }
+
+        // Permanent regular (emp_id_apply)
+        DB::table('security_parm_id_apply')
+            ->where('emp_id_apply', $decoded)
+            ->update(['id_card_generate_date' => $now]);
+
+        return redirect()->back()->with('success', 'Record moved to archive successfully.');
     }
 
     /**
