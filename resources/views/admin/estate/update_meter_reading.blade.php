@@ -24,7 +24,7 @@
                         </small>
                     </div>
                     <div class="col-md-4">
-                        <label for="estate_name" class="form-label">Estate Name</label>
+                        <label for="estate_name" class="form-label">Estate Name <span class="text-danger">*</span></label>
                         <select class="form-select" id="estate_name" name="estate_name">
                             <option value="">Select</option>
                             @foreach($campuses ?? [] as $c)
@@ -33,15 +33,6 @@
                         </select>
                         <small class="text-muted">
                             <i class="bi bi-info-circle"></i> Select Estate Name
-                        </small>
-                    </div>
-                    <div class="col-md-4">
-                        <label for="building" class="form-label">Building</label>
-                        <select class="form-select" id="building" name="building">
-                            <option value="">Select</option>
-                        </select>
-                        <small class="text-muted">
-                            <i class="bi bi-info-circle"></i> Select Building
                         </small>
                     </div>
                     <div class="col-md-4">
@@ -57,6 +48,15 @@
                         </small>
                     </div>
                     <div class="col-md-4">
+                        <label for="building" class="form-label">Building</label>
+                        <select class="form-select" id="building" name="building">
+                            <option value="">Select</option>
+                        </select>
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i> Select Building
+                        </small>
+                    </div>
+                    <div class="col-md-4">
                         <label for="unit_sub_type" class="form-label">Unit Sub Type</label>
                         <select class="form-select" id="unit_sub_type" name="unit_sub_type">
                             <option value="">Select</option>
@@ -69,7 +69,7 @@
                         </small>
                     </div>
                     <div class="col-md-4">
-                        <label for="meter_reading_date" class="form-label">Meter Update Date</label>
+                        <label for="meter_reading_date" class="form-label">Meter Reading Date</label>
                         <input type="date" class="form-control" id="meter_reading_date" name="meter_reading_date" placeholder="Select date" value="{{ isset($prefill['meter_reading_date']) ? $prefill['meter_reading_date'] : '' }}">
                         <small class="text-muted">
                             <i class="bi bi-info-circle"></i> Select date
@@ -111,6 +111,7 @@
                                 <th><input type="checkbox" class="form-check-input" id="select_all"></th>
                                 <th>House No.</th>
                                 <th>Name</th>
+                                <th>Last Month Electric Reading Date</th>
                                 <th>Old Meter No.</th>
                                 <th>Electric Meter Reading</th>
                                 <th>New Meter No.</th>
@@ -286,6 +287,7 @@ $(document).ready(function() {
                     '<td><input type="checkbox" class="form-check-input row-check" name="readings['+idx+'][selected]" value="1"></td>' +
                     '<td>'+ (row.house_no || 'N/A') +'</td>' +
                     '<td>'+ (row.name || 'N/A') +'</td>' +
+                    '<td>'+ (row.last_reading_date || 'N/A') +'</td>' +
                     '<td>'+ (row.old_meter_no || 'N/A') +'</td>' +
                     '<td>'+ (row.electric_meter_reading ?? 'N/A') +'</td>' +
                     '<td><input type="text" class="form-control form-control-sm new-meter-no" name="readings['+idx+'][new_meter_no]" value="'+ newMeterNo.replace(/"/g, '&quot;') +'" placeholder="Enter new meter no." inputmode="numeric" maxlength="50"></td>' +

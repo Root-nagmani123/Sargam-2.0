@@ -5081,12 +5081,33 @@ class EstateController extends Controller
         if (!$req) {
             return response()->json(['status' => false, 'data' => null]);
         }
-        $pos = DB::table('estate_possession_other as epo')
-            ->leftJoin('estate_campus_master as ec', 'epo.estate_campus_master_pk', '=', 'ec.pk')
-            ->leftJoin('estate_block_master as eb', 'epo.estate_block_master_pk', '=', 'eb.pk')
-            ->leftJoin('estate_unit_type_master as eut', 'epo.estate_unit_type_master_pk', '=', 'eut.pk')
-            ->leftJoin('estate_unit_sub_type_master as eust', 'epo.estate_unit_sub_type_master_pk', '=', 'eust.pk')
+        // Possession rows often store only estate_house_master_pk on live/legacy data; campus/block/unit
+        // then come from estate_house_master. Joining only epo.*_pk leaves campus null and the Return House
+        // UI clears the house. COALESCE(epo, ehm) matches the LBSNAA path and fixes prefill.
+        $hasUnitTypeOnSubTypeOther = Schema::hasColumn('estate_unit_sub_type_master', 'estate_unit_type_master_pk');
+        $posQuery = DB::table('estate_possession_other as epo')
             ->leftJoin('estate_house_master as ehm', 'epo.estate_house_master_pk', '=', 'ehm.pk')
+            ->leftJoin('estate_campus_master as ec_epo', 'epo.estate_campus_master_pk', '=', 'ec_epo.pk')
+            ->leftJoin('estate_campus_master as ec_hm', 'ehm.estate_campus_master_pk', '=', 'ec_hm.pk')
+            ->leftJoin('estate_block_master as eb_epo', 'epo.estate_block_master_pk', '=', 'eb_epo.pk')
+            ->leftJoin('estate_block_master as eb_hm', 'ehm.estate_block_master_pk', '=', 'eb_hm.pk')
+            ->leftJoin('estate_unit_sub_type_master as eust_epo', 'epo.estate_unit_sub_type_master_pk', '=', 'eust_epo.pk')
+            ->leftJoin('estate_unit_sub_type_master as eust_hm', 'ehm.estate_unit_sub_type_master_pk', '=', 'eust_hm.pk')
+            ->leftJoin('estate_unit_type_master as eut_fb', function ($join) {
+                $join->whereRaw('eut_fb.pk = COALESCE(epo.estate_unit_type_master_pk, ehm.estate_unit_master_pk)');
+            });
+        if ($hasUnitTypeOnSubTypeOther) {
+            $posQuery
+                ->leftJoin('estate_unit_type_master as eut_st_epo', 'eust_epo.estate_unit_type_master_pk', '=', 'eut_st_epo.pk')
+                ->leftJoin('estate_unit_type_master as eut_st_hm', 'eust_hm.estate_unit_type_master_pk', '=', 'eut_st_hm.pk');
+        }
+        $unitTypePkExpr = $hasUnitTypeOnSubTypeOther
+            ? 'COALESCE(eut_st_epo.pk, eut_st_hm.pk, eut_fb.pk)'
+            : 'eut_fb.pk';
+        $unitTypeNameExpr = $hasUnitTypeOnSubTypeOther
+            ? 'COALESCE(eut_st_epo.unit_type, eut_st_hm.unit_type, eut_fb.unit_type)'
+            : 'eut_fb.unit_type';
+        $pos = $posQuery
             ->where('epo.estate_other_req_pk', $id)
             ->where(function ($q) {
                 $q->whereNull('epo.return_home_status')
@@ -5095,14 +5116,14 @@ class EstateController extends Controller
             ->whereNotNull('epo.estate_house_master_pk')
             ->orderBy('epo.pk', 'desc')
             ->select(
-                'ec.pk as estate_campus_master_pk',
-                'ec.campus_name',
-                'eb.pk as estate_block_master_pk',
-                'eb.block_name',
-                'eut.pk as estate_unit_type_master_pk',
-                'eut.unit_type as unit_type_name',
-                'eust.pk as estate_unit_sub_type_master_pk',
-                'eust.unit_sub_type',
+                DB::raw('COALESCE(ec_epo.pk, ec_hm.pk) as estate_campus_master_pk'),
+                DB::raw('COALESCE(ec_epo.campus_name, ec_hm.campus_name) as campus_name'),
+                DB::raw('COALESCE(eb_epo.pk, eb_hm.pk) as estate_block_master_pk'),
+                DB::raw('COALESCE(eb_epo.block_name, eb_hm.block_name) as block_name'),
+                DB::raw($unitTypePkExpr.' as estate_unit_type_master_pk'),
+                DB::raw($unitTypeNameExpr.' as unit_type_name'),
+                DB::raw('COALESCE(eust_epo.pk, eust_hm.pk) as estate_unit_sub_type_master_pk'),
+                DB::raw('COALESCE(eust_epo.unit_sub_type, eust_hm.unit_sub_type) as unit_sub_type'),
                 'ehm.pk as estate_house_master_pk',
                 'ehm.house_no',
                 'epo.allotment_date',
@@ -5214,10 +5235,16 @@ class EstateController extends Controller
                 $possessionPks = implode(',', $ids);
                 $first = $possessions->first();
                 if ($first) {
-                    $possessionDate = $first->allotment_date ?? $first->possession_date_oth;
-                    $billMonthYm = $possessionDate
-                        ? \Carbon\Carbon::parse($possessionDate)->format('Y-m')
-                        : now()->format('Y-m');
+                    // Bill Month on the form is the month *after* the stored reading period (see meterReadingUiToDataPeriod).
+                    $billMonthYm = now()->format('Y-m');
+                    $billMonthQuery = request('bill_month');
+                    if (is_string($billMonthQuery) && preg_match('/^(\d{4})-(\d{2})$/', trim($billMonthQuery), $mm)) {
+                        $dataY = (int) $mm[1];
+                        $dataM = (int) $mm[2];
+                        if ($dataM >= 1 && $dataM <= 12) {
+                            $billMonthYm = \Carbon\Carbon::createFromDate($dataY, $dataM, 1)->addMonth()->format('Y-m');
+                        }
+                    }
 
                     $unitTypePk = $first->estate_unit_type_master_pk;
                     $unitTypeName = null;
@@ -5285,6 +5312,11 @@ class EstateController extends Controller
             $billYear = count($parts) >= 1 ? (string) ((int) $parts[0]) : null;
             $monthNum = count($parts) >= 2 ? (int) $parts[1] : null;
             $billMonthName = $monthNum ? date('F', mktime(0, 0, 0, $monthNum, 1)) : null;
+            // List/edit links pass data month (Y-m); month input shows the following calendar month (UI rule).
+            $uiBillMonthYm = $billMonthInput;
+            if ($monthNum >= 1 && $monthNum <= 12 && $billYear) {
+                $uiBillMonthYm = \Carbon\Carbon::createFromDate((int) $billYear, $monthNum, 1)->addMonth()->format('Y-m');
+            }
 
             $hasUnitTypeOnSubType = \Illuminate\Support\Facades\Schema::hasColumn('estate_unit_sub_type_master', 'estate_unit_type_master_pk');
             $possessionQ = DB::table('estate_possession_details as epd')
@@ -5316,7 +5348,7 @@ class EstateController extends Controller
 
             if ($possession) {
                 $prefill = [
-                    'bill_month' => $billMonthInput,
+                    'bill_month' => $uiBillMonthYm,
                     'bill_year' => $billYear,
                     'bill_month_name' => $billMonthName,
                     'campus_id' => (int) $possession->campus_id,
@@ -5335,6 +5367,7 @@ class EstateController extends Controller
 
     /**
      * API: Get meter reading list for "Update Meter Reading" (filtered).
+     * bill_month (English name from JS) + bill_year are the UI month; rows match the previous calendar month.
      */
     public function getMeterReadingList(Request $request)
     {
@@ -5366,6 +5399,7 @@ class EstateController extends Controller
             ->select([
                 'emrd.pk',
                 'emrd.from_date',
+                'emrd.to_date',
                 'emrd.last_month_elec_red',
                 'emrd.curr_month_elec_red',
                 'emrd.last_month_elec_red2',
@@ -5404,11 +5438,14 @@ class EstateController extends Controller
             }
         }
 
-        if ($billMonth) {
-            $query->where('emrd.bill_month', $billMonth);
+        [$dataMonth, $dataYear] = $this->meterReadingUiToDataPeriod($billMonth, $billYear);
+        $dataBillMonthName = $dataMonth ? date('F', mktime(0, 0, 0, $dataMonth, 1)) : null;
+        $dataBillYearStr = $dataYear ? (string) $dataYear : null;
+        if ($dataBillMonthName) {
+            $query->where('emrd.bill_month', $dataBillMonthName);
         }
-        if ($billYear) {
-            $query->where('emrd.bill_year', $billYear);
+        if ($dataBillYearStr) {
+            $query->where('emrd.bill_year', $dataBillYearStr);
         }
         if ($meterReadingDate) {
             $query->whereDate('emrd.to_date', $meterReadingDate);
@@ -5442,11 +5479,18 @@ class EstateController extends Controller
                 : null;
             $newMeterReadingFromPossession = $epdSecondaryReading !== null ? (string) $epdSecondaryReading : '';
 
+            $lastReadingDate = 'N/A';
+            if (! empty($row->to_date)) {
+                $lastReadingDate = \Carbon\Carbon::parse($row->to_date)->format('d/m/Y');
+            } elseif (! empty($row->from_date)) {
+                $lastReadingDate = \Carbon\Carbon::parse($row->from_date)->format('d/m/Y');
+            }
+
             $base = [
                 'pk' => $row->pk,
                 'house_no' => $row->house_no ?? 'N/A',
                 'name' => $row->emp_name ?? 'N/A',
-                'last_reading_date' => $row->from_date ? \Carbon\Carbon::parse($row->from_date)->format('d/m/Y') : 'N/A',
+                'last_reading_date' => $lastReadingDate,
             ];
             $pushed = false;
             // Meter 1 - prefill new_meter_no / new_meter_reading from saved reading when present, else from possession
@@ -5568,11 +5612,13 @@ class EstateController extends Controller
     {
         $billMonth = $request->get('bill_month');
         $billYear = $request->get('bill_year');
-        if (!$billMonth || !$billYear) {
+        [$dataMonth, $dataYear] = $this->meterReadingUiToDataPeriod($billMonth, $billYear);
+        if (!$dataMonth || !$dataYear) {
             return response()->json(['status' => true, 'data' => []]);
         }
-        $dates = EstateMonthReadingDetails::where('bill_month', $billMonth)
-            ->where('bill_year', $billYear)
+        $billMonthName = date('F', mktime(0, 0, 0, $dataMonth, 1));
+        $dates = EstateMonthReadingDetails::where('bill_month', $billMonthName)
+            ->where('bill_year', (string) $dataYear)
             ->select('to_date')
             ->distinct()
             ->orderBy('to_date')
@@ -5708,9 +5754,10 @@ class EstateController extends Controller
         $currentMeterReadingDate = null;
         if (!empty($readingBillMonth)) {
             try {
-                $selectedMonth = \Carbon\Carbon::createFromFormat('Y-m', (string) $readingBillMonth)->startOfMonth();
-                // Keep last meter reading date within selected Meter Change Month (month-end).
-                $lastMeterReadingDate = $selectedMonth->copy()->endOfMonth()->toDateString();
+                $uiMonthStart = \Carbon\Carbon::createFromFormat('Y-m', (string) $readingBillMonth)->startOfMonth();
+                // Form month is UI month; last meter reading date aligns with data (bill) month end (previous month).
+                $dataMonthStart = $uiMonthStart->copy()->subMonth();
+                $lastMeterReadingDate = $dataMonthStart->copy()->endOfMonth()->toDateString();
             } catch (\Throwable $e) {
                 $lastMeterReadingDate = null;
             }
@@ -6211,7 +6258,8 @@ class EstateController extends Controller
 
     /**
      * API: Get meter reading list for "Update Meter Reading of Other" (filtered).
-     * Accepts bill_month as numeric (1-12) from input type="month" and converts to month name for DB query.
+     * bill_month / bill_year from the form are the *UI* month (input type="month"); rows are loaded for the
+     * previous calendar month (e.g. March 2026 selected → February 2026 bill rows).
      */
     public function getMeterReadingListOther(Request $request)
     {
@@ -6223,8 +6271,9 @@ class EstateController extends Controller
         $unitTypeId = $request->get('unit_type_id');
         $unitSubTypeId = $request->get('unit_sub_type_id');
 
-        $billMonthStr = $billMonth ? $this->normalizeBillMonthForOther($billMonth) : null;
-        $billYearStr = $billYear ? (string) $billYear : null;
+        [$dataMonth, $dataYear] = $this->meterReadingUiToDataPeriod($billMonth, $billYear);
+        $billMonthStr = $dataMonth ? $this->normalizeBillMonthForOther($dataMonth) : null;
+        $billYearStr = $dataYear ? (string) $dataYear : null;
 
         $query = EstateMonthReadingDetailsOther::query()
             ->select([
@@ -6285,7 +6334,8 @@ class EstateController extends Controller
             $poss = $row->estatePossessionOther;
             $req = $poss ? $poss->estateOtherRequest : null;
             $name = $req ? ($req->emp_name ?? 'N/A') : 'N/A';
-            $lastDate = $row->from_date ? $row->from_date->format('d/m/Y') : 'N/A';
+            // Show period end date as "Last Month Electric Reading Date" (e.g. 28/02/2026 for February row).
+            $lastReadingDate = $row->to_date ? $row->to_date->format('d/m/Y') : ($row->from_date ? $row->from_date->format('d/m/Y') : 'N/A');
 
             $meterOne = $row->meter_one;
             $meterTwo = $row->meter_two;
@@ -6305,7 +6355,7 @@ class EstateController extends Controller
                     'meter_slot' => 1,
                     'house_no' => $row->house_no ?? 'N/A',
                     'name' => $name,
-                    'last_reading_date' => $lastDate,
+                    'last_reading_date' => $lastReadingDate,
                     'meter_no' => (string) $meterOne,
                     'last_month_reading' => $last1 !== null ? $last1 : 'N/A',
                     'curr_month_reading' => $curr1,
@@ -6326,7 +6376,7 @@ class EstateController extends Controller
                     'meter_slot' => 2,
                     'house_no' => $row->house_no ?? 'N/A',
                     'name' => $name,
-                    'last_reading_date' => $lastDate,
+                    'last_reading_date' => $lastReadingDate,
                     'meter_no' => (string) $meterTwo,
                     'last_month_reading' => $last2 !== null ? $last2 : 'N/A',
                     'curr_month_reading' => $curr2,
@@ -6347,7 +6397,7 @@ class EstateController extends Controller
                     'meter_slot' => 1,
                     'house_no' => $row->house_no ?? 'N/A',
                     'name' => $name,
-                    'last_reading_date' => $lastDate,
+                    'last_reading_date' => $lastReadingDate,
                     'meter_no' => $row->meter_one ?? $row->meter_two ?? 'N/A',
                     'last_month_reading' => $last !== null ? $last : 'N/A',
                     'curr_month_reading' => $curr,
@@ -6379,18 +6429,18 @@ class EstateController extends Controller
     }
 
     /**
-     * API: Get meter reading dates for selected bill month.
-     * Accepts bill_month as numeric (1-12) from input type="month" and converts to month name for DB query.
+     * API: Get meter reading dates for selected bill month (UI month → previous month data period).
      */
     public function getMeterReadingDatesOther(Request $request)
     {
         $billMonth = $request->get('bill_month');
         $billYear = $request->get('bill_year');
-        if (!$billMonth || !$billYear) {
+        [$dataMonth, $dataYear] = $this->meterReadingUiToDataPeriod($billMonth, $billYear);
+        if (!$dataMonth || !$dataYear) {
             return response()->json(['status' => true, 'data' => []]);
         }
-        $billMonthStr = $this->normalizeBillMonthForOther($billMonth);
-        $billYearStr = (string) $billYear;
+        $billMonthStr = $this->normalizeBillMonthForOther($dataMonth);
+        $billYearStr = (string) $dataYear;
         $dates = EstateMonthReadingDetailsOther::where('bill_month', $billMonthStr)
             ->where('bill_year', $billYearStr)
             ->select('to_date')
@@ -6399,6 +6449,47 @@ class EstateController extends Controller
             ->get()
             ->map(fn($r) => ['value' => $r->to_date->format('Y-m-d'), 'label' => $r->to_date->format('d/m/Y')]);
         return response()->json(['status' => true, 'data' => $dates]);
+    }
+
+    /**
+     * UI Bill Month (form) maps to the previous calendar month in estate_month_reading_details_other
+     * (e.g. March 2026 → February 2026).
+     *
+     * @return array{0: ?int, 1: ?int} [month 1-12, year] or [null, null]
+     */
+    /**
+     * "Bill month" / Meter Change Month on the form: user selects e.g. March 2026 → rows are for February 2026.
+     * $billMonth may be 1–12 (Other screen) or English month name (regular screen JS).
+     *
+     * @return array{0: ?int, 1: ?int} [1–12 month, year] for estate_month_reading_details / _other bill period
+     */
+    private function meterReadingUiToDataPeriod($billMonth, $billYear): array
+    {
+        $y = is_numeric($billYear) ? (int) $billYear : null;
+        if ($y === null || $y < 1) {
+            return [null, null];
+        }
+        $m = null;
+        if (is_numeric($billMonth)) {
+            $mn = (int) $billMonth;
+            $m = ($mn >= 1 && $mn <= 12) ? $mn : null;
+        } else {
+            $s = trim((string) $billMonth);
+            if ($s === '') {
+                return [null, null];
+            }
+            try {
+                $m = (int) \Carbon\Carbon::parse('15 ' . $s . ' ' . $y)->month;
+            } catch (\Throwable $e) {
+                $m = null;
+            }
+        }
+        if ($m === null || $m < 1 || $m > 12) {
+            return [null, null];
+        }
+        $d = \Carbon\Carbon::createFromDate($y, $m, 1)->subMonth();
+
+        return [(int) $d->month, (int) $d->year];
     }
 
     /**

@@ -19,7 +19,7 @@
                     <div class="col-12 col-md-6 col-lg-4">
                         <label for="bill_month" class="form-label">Bill Month <span class="text-danger">*</span></label>
                         <input type="month" class="form-control" id="bill_month" name="bill_month" placeholder="Select Bill Month" max="{{ date('Y-m') }}" required>
-                        <div class="form-text">Select Bill Month</div>
+                        <div class="form-text">Select the billing month</div>
                     </div>
                     <div class="col-12 col-md-6 col-lg-4">
                         <label for="estate_name" class="form-label">Estate Name <span class="text-danger">*</span></label>
@@ -264,9 +264,7 @@ $(document).ready(function() {
             unit_type_id: getSelVal(document.getElementById('unit_name')) || '',
             unit_sub_type_id: getSelVal(document.getElementById('unit_sub_type')) || ''
         };
-        if (possessionPks) {
-            params.possession_pks = typeof possessionPks === 'string' ? possessionPks : (Array.isArray(possessionPks) ? possessionPks.join(',') : '');
-        }
+        // Load grid data by selected filters only (estate/unit/building/sub-type/date/month).
         $.get(listUrl, params, function(res) {
             if (!res.status || !res.data || res.data.length === 0) {
                 $('#meterReadingSaveForm').hide();

@@ -308,19 +308,10 @@
             table.page.len(-1).draw();
         });
 
+        // Directly open Update Meter Reading page (no member selection required).
         $('#btnUpdateReading').on('click', function(e) {
-            e.preventDefault();
-            var ids = [];
-            $('#estatePossessionTable .row-select-possession:checked').each(function() {
-                var id = $(this).data('id');
-                if (id) ids.push(id);
-            });
-            if (ids.length !== 1) {
-                alert('Please select exactly one member to update reading.');
-                return;
-            }
             var baseUrl = "{{ route('admin.estate.update-meter-reading-of-other') }}";
-            window.location = baseUrl + '?possession_pks=' + ids[0];
+            window.location = baseUrl;
         });
 
     });

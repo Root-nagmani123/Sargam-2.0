@@ -34,9 +34,25 @@ class EstatePossessionOtherDataTable extends DataTable
             ->editColumn('house_no', fn($row) => $row->house_no ?? $row->house_no_display ?? 'N/A')
             ->editColumn('allotment_date', fn($row) => $row->allotment_date ? $row->allotment_date->format('d-m-Y') : '—')
             ->editColumn('possession_date_oth', fn($row) => $row->possession_date_oth ? $row->possession_date_oth->format('d-m-Y') : '—')
-            // Always show the possession record's stored last month reading,
-            // which we keep in sync whenever meter readings are updated.
-            ->editColumn('meter_reading_oth', fn($row) => $row->meter_reading_oth ?? '---')
+            // Show "primary/secondary" only after secondary reading is actually saved (not empty / not 0).
+            ->editColumn('meter_reading_oth', function ($row) {
+                $primary = $row->meter_reading_oth;
+                $secondary = $row->meter_reading_oth1;
+
+                $seg = static function ($v) {
+                    return ($v !== null && trim((string) $v) !== '') ? (string) $v : '—';
+                };
+
+                $secStr = $secondary !== null ? trim((string) $secondary) : '';
+                $hasSecondaryEntered = $secStr !== ''
+                    && ! (is_numeric($secStr) && (int) $secStr === 0);
+
+                if ($hasSecondaryEntered) {
+                    return $seg($primary) . '/' . $seg($secondary);
+                }
+
+                return ($primary !== null && $primary !== '') ? (string) $primary : '---';
+            })
             ->filter(function ($query) {
                 $searchValue = request()->input('search.value');
                 if (empty($searchValue)) {

@@ -5,6 +5,7 @@ namespace App\DataTables;
 use App\Models\EstateHomeRequestDetails;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Yajra\DataTables\Html\Column;
@@ -14,6 +15,8 @@ class EstatePossessionDetailsDataTable extends DataTable
 {
     public function dataTable(QueryBuilder $query): EloquentDataTable
     {
+        $hasReading2Col = Schema::hasColumn('estate_possession_details', 'electric_meter_reading_2');
+
         return (new EloquentDataTable($query))
             ->addIndexColumn()
             ->editColumn('request_id', fn ($row) => e($row->request_id ?? '—'))
@@ -40,9 +43,24 @@ class EstatePossessionDetailsDataTable extends DataTable
                     return '—';
                 }
             })
-            ->editColumn('electric_meter_reading', function ($row) {
-                $v = $row->electric_meter_reading;
-                return ($v !== null && $v !== '') ? e((string) $v) : '—';
+            ->editColumn('electric_meter_reading', function ($row) use ($hasReading2Col) {
+                $primary = $row->electric_meter_reading;
+                $secondary = $hasReading2Col ? ($row->electric_meter_reading_2 ?? null) : null;
+
+                $seg = static function ($v) {
+                    return ($v !== null && trim((string) $v) !== '') ? (string) $v : '—';
+                };
+
+                $secStr = $secondary !== null ? trim((string) $secondary) : '';
+                $hasSecondaryEntered = $hasReading2Col
+                    && $secStr !== ''
+                    && ! (is_numeric($secStr) && (int) $secStr === 0);
+
+                if ($hasSecondaryEntered) {
+                    return $seg($primary) . '/' . $seg($secondary);
+                }
+
+                return ($primary !== null && $primary !== '') ? (string) $primary : '---';
             })
             ->addColumn('actions', function ($row) {
                 // Only Estate/Admin/Super Admin/Training/IST can edit possession details.
@@ -84,10 +102,9 @@ class EstatePossessionDetailsDataTable extends DataTable
 
     public function query(EstateHomeRequestDetails $model): QueryBuilder
     {
-        // Listing column "Electric Meter Reading (I)" = exactly epd.electric_meter_reading
-        // (value from Possession Details form). Do NOT use estate_month_reading_details
-        // (curr_month_elec_red) here — that shows "latest updated" reading and was causing
-        // wrong/old value to appear (bug raised multiple times).
+        // Last month readings = epd.electric_meter_reading (I) and optional epd.electric_meter_reading_2 (II).
+        // Do NOT use estate_month_reading_details (curr_month_elec_red) here — that shows "latest updated"
+        // reading and was causing wrong/old value to appear (bug raised multiple times).
         $query = $model->newQuery()
             ->from('estate_home_request_details as ehrd')
             ->join('estate_possession_details as epd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
@@ -100,7 +117,7 @@ class EstatePossessionDetailsDataTable extends DataTable
             }, function ($q) {
                 $q->leftJoin('estate_unit_type_master as eut', 'ehm.estate_unit_master_pk', '=', 'eut.pk');
             })
-            ->select([
+            ->select(array_merge([
                 'epd.pk as pk',
                 'ehrd.pk as estate_home_request_details_pk',
                 'ehrd.req_id as request_id',
@@ -115,7 +132,9 @@ class EstatePossessionDetailsDataTable extends DataTable
                 'epd.allotment_date',
                 'epd.possession_date',
                 'epd.electric_meter_reading',
-            ]);
+            ], Schema::hasColumn('estate_possession_details', 'electric_meter_reading_2')
+                ? ['epd.electric_meter_reading_2']
+                : []));
 
         // Show only *completed* possessions in listing.
         // Pending possessions (created at allotment time) store a sentinel date: 1900-01-01.
@@ -197,7 +216,7 @@ class EstatePossessionDetailsDataTable extends DataTable
             Column::make('house_no')->name('ehm.house_no')->title('HOUSE NO.')->orderable(true)->searchable(false),
             Column::make('allotment_date')->name('epd.allotment_date')->title('ALLOTMENT DATE')->orderable(true)->searchable(false),
             Column::make('possession_date')->name('epd.possession_date')->title('POSSESSION DATE')->orderable(true)->searchable(false),
-            Column::make('electric_meter_reading')->name('epd.electric_meter_reading')->title('Electric Meter Reading (I)')->orderable(false)->searchable(false)->addClass('text-end')->width('140px'),
+            Column::make('electric_meter_reading')->name('epd.electric_meter_reading')->title('LAST MONTH ELECTRIC METER READING')->orderable(false)->searchable(false)->addClass('text-end')->width('140px'),
         ];
 
         if ($isEstateAuthority) {
