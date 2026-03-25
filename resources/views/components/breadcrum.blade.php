@@ -1,19 +1,146 @@
 {{-- Modern & Elegant Breadcrumb Component --}}
-@props(['title' => 'Page', 'variant' => 'glass', 'items' => null])
+@props(['title' => 'Page', 'variant' => 'glass', 'items' => null, 'section' => null])
 @php
     $variant = $variant ?? 'glass';
-    $homeUrl = url('/');
-    $generalUrl = url()->previous();
+    $routeName = request()->route()?->getName();
+    $requestPath = request()->path();
 
-    // Backward-compatible fallback for old usages: Home -> General -> {title}
+    $matchesSection = function (array $routePatterns = [], array $pathPatterns = []) use ($routeName, $requestPath) {
+        return (!empty($routePatterns) && \Illuminate\Support\Str::is($routePatterns, $routeName ?? ''))
+            || (!empty($pathPatterns) && \Illuminate\Support\Str::is($pathPatterns, $requestPath));
+    };
+
+    $resolvedSection = $section ?? (function () use ($matchesSection) {
+        if ($matchesSection(['admin.mess.*'], ['admin/mess*'])) {
+            return 'Mess Management';
+        }
+
+        if ($matchesSection(
+            ['admin.security.*', 'admin.employee_idcard.*', 'admin.duplicate_idcard.*', 'admin.family_idcard.*'],
+            ['security*', 'admin/employee-idcard*', 'admin/duplicate-idcard*', 'admin/family-idcard*']
+        )) {
+            return 'Security';
+        }
+
+        if ($matchesSection(
+            [
+                'admin.issue-management.*',
+                'admin.issue-categories.*',
+                'admin.issue-sub-categories.*',
+                'admin.issue-priorities.*',
+                'admin.issue-escalation-matrix.*',
+                'issue-management.*',
+                'issue-categories.*',
+                'issue-sub-categories.*',
+                'issue-priorities.*',
+                'issue-escalation-matrix.*',
+            ],
+            ['issue-management*', 'issue-categories*', 'issue-sub-categories*', 'issue-priorities*', 'issue-escalation-matrix*']
+        )) {
+            return 'Centcom';
+        }
+
+        if ($matchesSection(['admin.estate.*'], ['admin/estate*'])) {
+            return 'Estate Management';
+        }
+
+        if ($matchesSection(['forms.*'], ['forms*'])) {
+            return 'FC Forms';
+        }
+
+        if ($matchesSection(
+            [
+                'calendar.*',
+                'attendance.*',
+                'send.notice.management.*',
+                'memo.notice.management.*',
+                'memo.discipline.*',
+                'admin.memo-notice.*',
+                'feedback.get.*',
+                'subject.*',
+                'subject-module.*',
+            ],
+            ['calendar*', 'attendance*', 'memo/discipline*']
+        )) {
+            return 'Time Table';
+        }
+
+        if ($matchesSection(
+            [
+                'programme.*',
+                'group.mapping.*',
+                'master.course.group.type.*',
+                'student.medical.exemption.*',
+                'mdo-escrot-exemption.*',
+                'master.exemption.*',
+                'master.mdo_duty_type.*',
+                'master.memo.type.master.*',
+                'master.memo.conclusion.master.*',
+                'course.memo.decision.*',
+                'admin.feedback.*',
+                'feedback.average*',
+                'medical.exception.*',
+                'ot.*',
+                'faculty.mdo.*',
+                'faculty.notice.*',
+                'peer.*',
+                'admin.course-repository.user.*',
+            ]
+        )) {
+            return 'Academic';
+        }
+
+        if ($matchesSection(
+            ['member.profile.edit', 'admin.dashboard*', 'admin.notice.*'],
+            ['dashboard*', 'member/profile/edit*']
+        )) {
+            return 'General';
+        }
+
+        if ($matchesSection(
+            [
+                'member.*',
+                'faculty.*',
+                'master.employee.*',
+                'master.department.*',
+                'master.designation.*',
+                'master.caste.category.*',
+                'master.faculty.*',
+                'admin.faculty.whos-who',
+                'admin.roles.*',
+                'admin.users.*',
+                'admin.setup.quick_links.*',
+                'admin.setup.useful_links.*',
+                'course-repository.*',
+            ],
+            ['member*', 'faculty*', 'users*']
+        )) {
+            return 'Users';
+        }
+
+        if ($matchesSection(
+            [
+                'Venue-Master.*',
+                'master.class.session.*',
+                'stream.*',
+                'master.country.*',
+                'master.state.*',
+                'master.district.*',
+                'master.city.*',
+                'master.hostel.*',
+                'hostel.*',
+            ]
+        )) {
+            return 'Master';
+        }
+
+        return 'General';
+    })();
+
     $breadcrumbItems = collect(
         is_array($items) && count($items)
             ? array_values(array_filter($items, fn ($item) => filled($item)))
-            : [
-                ['label' => 'Home', 'url' => $homeUrl],
-                ['label' => 'General', 'url' => $generalUrl],
-                ['label' => $title, 'url' => null],
-            ]
+            : ['Home', $resolvedSection, $title]
     )
         ->map(function ($item) {
             if (is_array($item)) {
@@ -78,7 +205,7 @@
                                 <ol class="breadcrumb-trail">
                                     @foreach ($breadcrumbItems as $index => $item)
                                         @php $isLast = $index === count($breadcrumbItems) - 1; @endphp
-                                        <li class="trail-item {{ $isLast ? 'active' : '' }}" @if ($isLast) aria-current="page" @endif>
+                                        <li style="font-size: 16px;" class="trail-item {{ $isLast ? 'active' : '' }}" @if ($isLast) aria-current="page" @endif>
                                             @if (!$isLast && filled($item['url']))
                                                 <a href="{{ $item['url'] }}" class="trail-link">{{ $item['label'] }}</a>
                                             @else
@@ -88,7 +215,6 @@
                                     @endforeach
                                 </ol>
                             </nav>
-                            <h1 class="breadcrumb-title">{{ $title }}</h1>
                             <div class="title-underline"></div>
                         </div>
                     </div>
@@ -339,7 +465,7 @@
         align-items: center;
         flex-wrap: wrap;
         gap: 0.35rem;
-        margin: 0;
+        margin: 0 0 0.35rem;
         padding: 0;
         list-style: none;
         font-size: 0.8rem;
@@ -350,6 +476,13 @@
     .trail-item {
         display: inline-flex;
         align-items: center;
+    }
+
+    .trail-item + .trail-item::before {
+        content: ">";
+        margin-right: 0.35rem;
+        color: #9aa3ad;
+        font-weight: 600;
     }
 
     .trail-link,
@@ -368,13 +501,6 @@
         color: #0d6efd;
         text-decoration: underline;
         text-underline-offset: 0.15em;
-    }
-
-    .trail-item + .trail-item::before {
-        content: ">";
-        margin-right: 0.35rem;
-        color: #9aa3ad;
-        font-weight: 600;
     }
 
     .trail-item.active {
@@ -475,7 +601,6 @@
         }
     }
     
-    
     /* Reduced Motion */
     @media (prefers-reduced-motion: reduce) {
         .modern-breadcrumb-wrapper,
@@ -534,53 +659,128 @@
 </style>
 
 <script>
-(function () {
-    var homeUrl = @json(url('/'));
-    var laravelPrevious = @json(url()->previous());
+// Keep a lightweight navigation history so "Back" goes to last click reliably.
+(function initBreadcrumbBackStack() {
+    const NAV_STACK_KEY = 'sargam_breadcrumb_back_stack_v1';
+    const currentUrl = window.location.href;
 
-    window.handleBackNavigation = function handleBackNavigation() {
-        var currentUrl = window.location.href;
-
-        function sameOrigin(u) {
-            try {
-                return new URL(u).origin === window.location.origin;
-            } catch (e) {
-                return false;
-            }
+    function isSameOrigin(url) {
+        try {
+            return new URL(url).origin === window.location.origin;
+        } catch (e) {
+            return false;
         }
+    }
 
-        function stripHash(u) {
-            try {
-                var parsed = new URL(u);
-                parsed.hash = '';
-                return parsed.href;
-            } catch (e) {
-                return u;
-            }
+    function safeParse(json, fallback) {
+        try {
+            const val = JSON.parse(json);
+            return val ?? fallback;
+        } catch (e) {
+            return fallback;
         }
+    }
 
-        var currentNoHash = stripHash(currentUrl);
+    function getStack() {
+        const raw = sessionStorage.getItem(NAV_STACK_KEY);
+        return safeParse(raw, []);
+    }
 
-        // 1) Browser history — matches real "back" (fixes broken sessionStorage stack after browser Back/forward)
-        if (window.history.length > 1) {
-            window.history.back();
-            return;
+    function setStack(stack) {
+        // Limit size to avoid unbounded growth.
+        const trimmed = Array.isArray(stack) ? stack.slice(-20) : [];
+        sessionStorage.setItem(NAV_STACK_KEY, JSON.stringify(trimmed));
+    }
+
+    try {
+        if (!isSameOrigin(currentUrl)) return;
+        const stack = getStack();
+        const last = stack[stack.length - 1];
+        if (last !== currentUrl) {
+            // Avoid duplicates while preserving order.
+            const deduped = stack.filter((u) => u !== currentUrl);
+            deduped.push(currentUrl);
+            setStack(deduped);
         }
-
-        // 2) Same-origin referrer (e.g. opened in new tab from this site)
-        var referrer = document.referrer;
-        if (referrer && stripHash(referrer) !== currentNoHash && sameOrigin(referrer)) {
-            window.location.href = referrer;
-            return;
-        }
-
-        // 3) Laravel session previous URL
-        if (laravelPrevious && stripHash(laravelPrevious) !== currentNoHash) {
-            window.location.href = laravelPrevious;
-            return;
-        }
-
-        window.location.href = homeUrl;
-    };
+    } catch (e) {
+        // If storage is blocked, fall back to referrer/history logic.
+    }
 })();
+
+function handleBackNavigation() {
+    const NAV_STACK_KEY = 'sargam_breadcrumb_back_stack_v1';
+    const currentUrl = window.location.href;
+
+    function isSameOrigin(url) {
+        try {
+            return new URL(url).origin === window.location.origin;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function safeParse(json, fallback) {
+        try {
+            const val = JSON.parse(json);
+            return val ?? fallback;
+        } catch (e) {
+            return fallback;
+        }
+    }
+
+    function getStack() {
+        const raw = sessionStorage.getItem(NAV_STACK_KEY);
+        return safeParse(raw, []);
+    }
+
+    function setStack(stack) {
+        const trimmed = Array.isArray(stack) ? stack.slice(-20) : [];
+        sessionStorage.setItem(NAV_STACK_KEY, JSON.stringify(trimmed));
+    }
+
+    // Priority 0: Use our localStorage stack (best for "last click" behavior).
+    try {
+        if (isSameOrigin(currentUrl)) {
+            const stack = getStack();
+            if (Array.isArray(stack) && stack.length) {
+                if (stack[stack.length - 1] === currentUrl) {
+                    stack.pop();
+                }
+                const target = stack.length ? stack[stack.length - 1] : null;
+                if (target && target !== currentUrl) {
+                    setStack(stack);
+                    window.location.href = target;
+                    return;
+                }
+            }
+        }
+    } catch (e) {
+        // Ignore and continue with fallbacks.
+    }
+
+    // Priority 1: Use document.referrer (most reliable for actual last click)
+    const referrer = document.referrer;
+    
+    // Check if referrer exists and is not the current page
+    if (referrer && referrer !== currentUrl && referrer.includes(window.location.hostname)) {
+        window.location.href = referrer;
+        return;
+    }
+    
+    // Priority 2: Use Laravel's previous URL
+    const previousUrl = "{{ url()->previous() }}";
+    if (previousUrl && previousUrl !== currentUrl) {
+        window.location.href = previousUrl;
+        return;
+    }
+    
+    // Priority 3: Fallback to browser history
+    if (window.history.length > 1) {
+        window.history.back();
+        return;
+    }
+    
+    // Priority 4: Default fallback - go to home/dashboard
+    window.location.href = "{{ url('/') }}";
+}
 </script>

@@ -947,7 +947,7 @@
                             <span>भारत सरकार | Government of India</span>
                         </div>
                         <a href="{{ url('/') }}" class="header-lbsnaa d-none d-lg-block" aria-label="LBSNAA Home">
-                            <img src="{{ asset('admin_assets/images/logos/white-logo.svg') }}"
+                            <img src="{{ asset('admin_assets/images/logos/logo.png') }}"
                                 alt="LBSNAA - Lal Bahadur Shastri National Academy of Administration" loading="eager" onerror="this.style.display='none'" style="min-width: 300px; height: auto;">
                         </a>
                     </div>
@@ -1086,7 +1086,7 @@
             <div class="footer-negd">
                 <div class="container">
                     <a href="https://negd.gov.in/" target="_blank" rel="noopener noreferrer" aria-label="Powered by National e-Governance Division">
-                        <img src="{{ asset('admin_assets/images/logos/logo-icon.svg') }}" alt="NeGD Logo" loading="lazy" onerror="this.style.display='none'">
+                        <img src="https://cdn.digitalindiacorporation.in/wp-content/themes/di-child/assets/images/dilogonew.svg.gzip" alt="NeGD Logo" loading="lazy" onerror="this.style.display='none'">
                         <span>Powered by <strong>National e-Governance Division</strong>, MeitY</span>
                     </a>
                 </div>
