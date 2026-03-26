@@ -14,40 +14,42 @@
             overflow: hidden;
         }
         .bill-header {
-            background: #1e3a5f;
-            color: #fff;
+            background: #fff;
+            color: #1e3a5f;
             text-align: center;
-            padding: 11px 15px 12px;
+            padding: 10px 15px 11px;
+            position: relative;
         }
+        .bill-header-main { margin: 0; padding: 0 86px 0 6px; }
         .bill-header .org-name { font-size: 10.8pt; font-weight: 700; margin: 0 0 2px 0; }
         .bill-header .org-sub { font-size: 8.2pt; margin: 0; }
         .bill-header .bill-title { font-size: 9.8pt; font-weight: 700; margin: 7px 0 0 0; }
         .bill-badge {
-            float: right;
+            position: absolute;
+            right: 15px;
+            top: 10px;
             font-size: 7pt; font-weight: 700;
             background: #c9a227; color: #1a1a1a; padding: 3px 8px;
+            z-index: 2;
         }
-        .bill-emblem {
-            width: 30px;
+        .bill-logo {
+            width: 112px;
             height: 30px;
-            line-height: 30px;
-            margin: 0 auto 6px;
-            border: 1px solid rgba(255,255,255,0.6);
-            border-radius: 50%;
-            font-size: 7pt;
-            font-weight: 700;
-            text-align: center;
+            display: block;
+            margin: 0 auto 5px;
+            object-fit: contain;
         }
         .bill-meta-bar {
             display: table; width: 100%;
-            padding: 8px 15px; background: #edf2f7;
-            border-bottom: 1px solid #cbd5e0;
+            padding: 8px 15px; background: #f7efd9;
+            border-bottom: 1px solid #dbc489;
             font-size: 8.2pt;
         }
         .bill-meta-bar .bill-no { font-weight: 700; color: #1e3a5f; }
-        .bill-consumer { margin: 0; padding: 10px 15px; border-bottom: 1px solid #e2e8f0; background: #fafbfc; }
+        .bill-consumer { margin: 0; padding: 10px 15px; border-bottom: 1px solid #e4dbbf; background: #fffef8; }
         .bill-consumer-title { font-size: 8pt; font-weight: 700; text-transform: uppercase; color: #2c5282; margin: 0 0 5px 0; }
         .bill-consumer-table { width: 100%; border-collapse: collapse; font-size: 8.2pt; }
+        .bill-consumer-table { table-layout: fixed; }
         .bill-consumer-table td { padding: 3px 8px 3px 0; }
         .bill-consumer-table .label { color: #4a5568; font-weight: 600; width: 28%; }
         .bill-section-title {
@@ -57,13 +59,13 @@
         .bill-table-wrap { padding: 0 15px 6px; }
         .bill-table { width: 100%; border-collapse: collapse; margin-bottom: 9px; font-size: 8pt; }
         .bill-table th, .bill-table td { border: 1px solid #a0aec0; padding: 5px 7px; text-align: left; }
-        .bill-table th { background: #2c5282; color: #fff; font-weight: 600; }
+        .bill-table th { background: #1e3a5f; color: #fff; font-weight: 600; }
         .bill-table .text-right { text-align: right; }
         .bill-table .amount { text-align: right; font-weight: 600; }
         .bill-total-wrap { padding: 0 15px 11px; }
         .bill-total-box {
             border: 1.5px solid #1e3a5f; margin-top: 4px; padding: 10px 11px;
-            background: #ebf8ff;
+            background: #f7efd9;
         }
         .bill-total-label { font-size: 7.8pt; font-weight: 700; color: #4a5568; margin-bottom: 4px; }
         .bill-total-box .grand-total { font-size: 11.6pt; font-weight: 700; text-align: right; color: #1e3a5f; }
@@ -71,7 +73,7 @@
         .bill-pay-by { font-size: 7pt; color: #718096; margin-top: 4px; text-align: right; }
         .bill-footer {
             margin: 0; padding: 10px 15px 11px;
-            border-top: 1px solid #e2e8f0; background: #f7fafc;
+            border-top: 1px solid #dccb96; background: #fffef8;
             font-size: 7.1pt; color: #4a5568;
         }
         .bill-footer p { margin: 0 0 4px; }

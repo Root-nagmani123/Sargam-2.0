@@ -33,12 +33,13 @@
         width: 100%;
     }
     .bill-header { padding: 7px 10px 8px; }
+    .bill-header-main { max-width: calc(100% - 95px); }
     .bill-header::after { margin-top: 4px; height: 1px; }
     .bill-header .org-name { font-size: 9.1pt; margin-bottom: 1px; }
     .bill-header .org-sub { font-size: 7pt; }
     .bill-header .bill-title { font-size: 8.3pt; margin-top: 5px; letter-spacing: 0.06em; }
     .bill-badge { top: 5px; right: 7px; font-size: 6.2pt; padding: 2px 6px; }
-    .bill-emblem { width: 24px; height: 24px; margin-bottom: 4px; font-size: 6.5pt; border-width: 1px; }
+    .bill-logo { width: 90px; height: 24px; margin-bottom: 3px; object-fit: contain; }
     .bill-meta-bar { padding: 5px 10px; gap: 4px; font-size: 7.1pt; border-bottom-width: 1px; }
     .bill-meta-bar .bill-no { font-size: 7.8pt; padding: 1px 6px; border-width: 1px; }
     .bill-consumer { padding: 5px 10px; border-left-width: 2px; }
@@ -78,11 +79,18 @@
 }
 /* --- Header --- */
 .bill-header {
-    background: linear-gradient(135deg, #1e3a5f 0%, #2c5282 50%, #1a365d 100%);
-    color: #fff;
+    background: #ffffff;
+    color: #af2910;
     text-align: center;
-    padding: 20px 24px 22px;
+    padding: 18px 24px 20px;
     position: relative;
+}
+.bill-header-main {
+    max-width: calc(100% - 150px);
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 .bill-header::after {
     content: ''; display: block; height: 4px;
@@ -100,7 +108,6 @@
 .bill-header .bill-title {
     font-size: 13pt; font-weight: 700; margin: 14px 0 0 0;
     letter-spacing: 0.12em; text-transform: uppercase;
-    color: #f6e05e;
 }
 .bill-badge {
     position: absolute; top: 14px; right: 20px;
@@ -108,17 +115,17 @@
     background: #c9a227; color: #1a1a1a; padding: 6px 14px;
     border-radius: 0; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
-.bill-emblem {
-    width: 48px; height: 48px; border: 2px solid rgba(255,255,255,0.6);
-    border-radius: 50%; display: flex; align-items: center; justify-content: center;
-    margin: 0 auto 10px; font-size: 11pt; font-weight: 800; color: #f6e05e;
-    background: rgba(255,255,255,0.08); letter-spacing: 0.02em;
+.bill-logo {
+    width: 158px; height: 48px;
+    display: block;
+    margin: 0 auto 8px;
+    object-fit: contain;
 }
 /* --- Bill meta bar --- */
 .bill-meta-bar {
     display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
-    padding: 14px 24px; background: linear-gradient(to bottom, #edf2f7 0%, #e2e8f0 100%);
-    border-bottom: 2px solid #cbd5e0;
+    padding: 14px 24px; background: linear-gradient(to bottom, #f8f4e6 0%, #efe6c8 100%);
+    border-bottom: 2px solid #dbc489;
     font-size: 11pt;
 }
 .bill-meta-bar .bill-no {
@@ -130,9 +137,9 @@
 /* --- Consumer details --- */
 .bill-consumer {
     margin: 0; padding: 18px 24px;
-    border-bottom: 1px solid #e2e8f0;
-    background: linear-gradient(to bottom, #fafbfc 0%, #f7fafc 100%);
-    border-left: 4px solid #2c5282;
+    border-bottom: 1px solid #e4dbbf;
+    background: linear-gradient(to bottom, #fffef8 0%, #fbf7ea 100%);
+    border-left: 4px solid #c9a227;
 }
 .bill-consumer-title {
     font-size: 10pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
@@ -140,6 +147,7 @@
     border-bottom: 2px solid #cbd5e0;
 }
 .bill-consumer-table { width: 100%; border-collapse: collapse; }
+.bill-consumer-table { table-layout: fixed; }
 .bill-consumer-table td { padding: 6px 14px 6px 0; vertical-align: middle; font-size: 10.5pt; }
 .bill-consumer-table .label { width: 26%; color: #4a5568; font-weight: 600; }
 .bill-consumer-table .value { font-weight: 500; color: #1a202c; }
@@ -147,14 +155,14 @@
 .bill-section-title {
     font-size: 10.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
     color: #1e3a5f; margin: 20px 24px 10px; padding: 8px 0 8px 12px;
-    border-left: 4px solid #c9a227; background: #f8fafc;
+    border-left: 4px solid #c9a227; background: #fffaf0;
 }
 /* --- Tables --- */
 .bill-table-wrap { padding: 0 24px 8px; }
 .bill-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 10.5pt; }
 .bill-table th, .bill-table td { border: 1px solid #a0aec0; padding: 10px 12px; text-align: left; }
 .bill-table th {
-    background: linear-gradient(to bottom, #2c5282 0%, #2b6cb0 100%);
+    background: linear-gradient(to bottom, #1e3a5f 0%, #254d7a 100%);
     color: #fff; font-weight: 600; font-size: 10pt; letter-spacing: 0.02em;
 }
 .bill-table tbody tr:nth-child(even) { background: #f7fafc; }
@@ -166,7 +174,7 @@
 .bill-total-wrap { padding: 0 24px 24px; }
 .bill-total-box {
     border: 3px solid #1e3a5f; margin-top: 8px; padding: 20px 20px;
-    background: linear-gradient(135deg, #ebf8ff 0%, #e2e8f0 100%);
+    background: linear-gradient(135deg, #fffdf6 0%, #f7efd9 100%);
     position: relative;
 }
 .bill-total-box::before {
@@ -186,7 +194,7 @@
 /* --- Footer --- */
 .bill-footer {
     margin: 0; padding: 20px 24px 24px;
-    border-top: 2px solid #e2e8f0; background: linear-gradient(to bottom, #f7fafc 0%, #edf2f7 100%);
+    border-top: 2px solid #dccb96; background: linear-gradient(to bottom, #fffef8 0%, #f6f0de 100%);
     font-size: 9pt; color: #4a5568;
 }
 .bill-footer .footer-note { margin-bottom: 10px; line-height: 1.5; }
@@ -320,10 +328,12 @@
             <!-- Header -->
             <div class="bill-header">
                 <span class="bill-badge">Consumer Copy</span>
-                <div class="bill-emblem">LBS</div>
-                <p class="org-name">Lal Bahadur Shastri National Academy of Administration</p>
-                <p class="org-sub">Mussoorie · Estate Section</p>
-                <h1 class="bill-title">Estate Bill — Electricity, Water &amp; Licence</h1>
+                <div class="bill-header-main">
+                    <img src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png" alt="LBSNAA Official Logo" class="bill-logo">
+                    <p class="org-name">Lal Bahadur Shastri National Academy of Administration</p>
+                    <p class="org-sub">Mussoorie · Estate Section</p>
+                    <h1 class="bill-title">Estate Bill — Electricity, Water &amp; Licence</h1>
+                </div>
             </div>
 
             <!-- Bill No & Period -->
@@ -336,10 +346,16 @@
             <div class="bill-consumer">
                 <p class="bill-consumer-title">Consumer / Employee Details</p>
                 <table class="bill-consumer-table">
+                    <colgroup>
+                        <col style="width: 24%;">
+                        <col style="width: 26%;">
+                        <col style="width: 24%;">
+                        <col style="width: 26%;">
+                    </colgroup>
                     <tr>
                         <td class="label">Name of Employee</td>
-                        <td class="value" style="width: 24%;"><strong>{{ $bill->emp_name ?? '—' }}</strong></td>
-                        <td class="label" style="width: 26%;">Designation</td>
+                        <td class="value"><strong>{{ $bill->emp_name ?? '—' }}</strong></td>
+                        <td class="label">Designation</td>
                         <td class="value">{{ $bill->emp_designation ?? '—' }}</td>
                     </tr>
                     <tr>
@@ -458,8 +474,8 @@
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    var form = document.querySelector('form[action="{{ route('admin.estate.reports.bill-report-print') }}"]');
-    var urlEmployees = '{{ route('admin.estate.reports.bill-report-print.employees') }}';
+    var form = document.querySelector("form[action=\"{{ route('admin.estate.reports.bill-report-print') }}\"]");
+    var urlEmployees = "{{ route('admin.estate.reports.bill-report-print.employees') }}";
     var commonCfg = {
         allowEmptyOption: true,
         create: false,
@@ -512,7 +528,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (form) {
         form.addEventListener('submit', function (e) {
             e.preventDefault();
-            var base = '{{ route('admin.estate.reports.bill-report-print') }}';
+            var base = "{{ route('admin.estate.reports.bill-report-print') }}";
             var names = ['employee_category', 'month', 'year', 'employee_type_pk', 'employee_pk'];
             var params = [];
             names.forEach(function (name) {
