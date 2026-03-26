@@ -36,8 +36,8 @@
                         <input type="date" name="to_date" class="form-control" value="{{ request('to_date') }}">
                     </div>
                     <div class="col-12 col-md-3 col-lg-2">
-                        <label class="form-label fw-semibold small text-uppercase text-muted mb-1">Employee / OT / Course</label>
-                        <select name="client_type_slug" id="clientTypeSlug" class="form-select">
+                        <label for="clientTypeSlug" class="form-label fw-semibold small text-uppercase text-muted mb-1">Employee / OT / Course</label>
+                        <select name="client_type_slug" id="clientTypeSlug" class="form-select w-100">
                             <option value="">All Client Types</option>
                             @foreach($clientTypes as $key => $label)
                                 <option value="{{ $key }}" {{ request('client_type_slug') == $key ? 'selected' : '' }}>
@@ -47,8 +47,8 @@
                         </select>
                     </div>
                     <div class="col-12 col-md-3 col-lg-3">
-                        <label class="form-label fw-semibold small text-uppercase text-muted mb-1">Client Type</label>
-                        <select id="clientTypePk" class="form-select" name="{{ in_array(request('client_type_slug'), ['ot', 'course']) ? 'course_master_pk' : 'client_type_pk' }}">
+                        <label for="clientTypePk" class="form-label fw-semibold small text-uppercase text-muted mb-1">Client Type</label>
+                        <select id="clientTypePk" class="form-select w-100" name="{{ in_array(request('client_type_slug'), ['ot', 'course']) ? 'course_master_pk' : 'client_type_pk' }}">
                             <option value="">All</option>
                             @if(request('client_type_slug') === 'employee' && isset($clientTypeCategories['employee']))
                                 @foreach($clientTypeCategories['employee'] as $category)
@@ -70,8 +70,8 @@
                         </select>
                     </div>
                     <div class="col-12 col-md-3 col-lg-3">
-                        <label class="form-label fw-semibold small text-uppercase text-muted mb-1">Buyer Name (Selling Voucher)</label>
-                        <select name="buyer_name" id="clientTypePkBuyer" class="form-select">
+                        <label for="clientTypePkBuyer" class="form-label fw-semibold small text-uppercase text-muted mb-1">Buyer Name (Selling Voucher)</label>
+                        <select name="buyer_name" id="clientTypePkBuyer" class="form-select w-100">
                             <option value="">All Buyers</option>
                             @if(request('client_type_slug') === 'employee' && request('client_type_pk'))
                                 @php
