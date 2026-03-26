@@ -558,7 +558,7 @@
                     @csrf
                     <div class="row g-3 mb-3">
                         <div class="col-md-3">
-                            <label class="form-label small fw-semibold text-dark mb-2\"><i class=\"material-symbols-rounded align-middle me-1\" style=\"font-size: 1rem;\">event</i>Date From <span class="text-danger">*</span></label>
+                            <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1rem;">event</i>Date From <span class="text-danger">*</span></label>
                             <input type="text" name="modal_date_from" id="modal_date_from" class="form-control "
                                    value="{{ now()->startOfMonth()->format('d-m-Y') }}" placeholder="dd-mm-yyyy" autocomplete="off" required>
                         </div>
@@ -686,8 +686,15 @@
                     </table>
                 </div>
 
-                <div class="d-flex flex-wrap justify-content-between align-items-center mt-3 pt-3 border-top">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3 pt-3 border-top">
                     <div class="small text-muted fw-semibold" id="modalPaginationInfo">Showing 0 to 0 of 0 entries</div>
+                    <nav id="modalPaginationNav" class="d-none" aria-label="Bills list pages">
+                        <ul class="pagination pagination-sm mb-0">
+                            <li class="page-item" id="modalPaginationPrevLi"><button type="button" class="page-link py-1 px-2" id="modalPaginationPrev">Previous</button></li>
+                            <li class="page-item disabled" id="modalPaginationPageLi"><span class="page-link py-1 px-2" id="modalPaginationPageLabel">Page 1 of 1</span></li>
+                            <li class="page-item" id="modalPaginationNextLi"><button type="button" class="page-link py-1 px-2" id="modalPaginationNext">Next</button></li>
+                        </ul>
+                    </nav>
                 </div>
             </div>
             <div class="modal-footer bg-light border-0 rounded-bottom-3 py-3">
@@ -806,6 +813,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     var modalBillsData = [];
+    var modalBillsCurrentPage = 1;
     var paymentDetailsBillId = null;
     var paymentDetailsDateFrom = null;
     var paymentDetailsDateTo = null;
@@ -834,6 +842,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function loadModalBills() {
+        modalBillsCurrentPage = 1;
         var df = document.getElementById('modal_date_from');
         var dt = document.getElementById('modal_date_to');
         var ct = document.getElementById('modal_client_type');
@@ -909,14 +918,39 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    function updateModalPaginationNav(totalPages, filteredLength) {
+        var nav = document.getElementById('modalPaginationNav');
+        var prevBtn = document.getElementById('modalPaginationPrev');
+        var nextBtn = document.getElementById('modalPaginationNext');
+        var prevLi = document.getElementById('modalPaginationPrevLi');
+        var nextLi = document.getElementById('modalPaginationNextLi');
+        var pageLi = document.getElementById('modalPaginationPageLi');
+        var label = document.getElementById('modalPaginationPageLabel');
+        if (!nav || !prevBtn || !nextBtn || !label) return;
+        if (totalPages <= 1 || !filteredLength) {
+            nav.classList.add('d-none');
+            return;
+        }
+        nav.classList.remove('d-none');
+        label.textContent = 'Page ' + modalBillsCurrentPage + ' of ' + totalPages;
+        var onFirst = modalBillsCurrentPage <= 1;
+        var onLast = modalBillsCurrentPage >= totalPages;
+        prevBtn.disabled = onFirst;
+        nextBtn.disabled = onLast;
+        if (prevLi) prevLi.classList.toggle('disabled', onFirst);
+        if (nextLi) nextLi.classList.toggle('disabled', onLast);
+        if (pageLi) pageLi.classList.add('disabled');
+    }
+
     function renderModalTable() {
         var tbody = document.getElementById('modalBillsTableBody');
         var modalSelectAllEl = document.getElementById('modalSelectAll');
         if (modalSelectAllEl) modalSelectAllEl.checked = false;
         var filtered = getFilteredModalBills();
         var perPage = parseInt((document.getElementById('modalPerPage') || {}).value || 10, 10);
-        var page = 1;
-        var start = (page - 1) * perPage;
+        var totalPages = filtered.length ? Math.ceil(filtered.length / perPage) : 0;
+        modalBillsCurrentPage = Math.max(1, Math.min(modalBillsCurrentPage, totalPages || 1));
+        var start = (modalBillsCurrentPage - 1) * perPage;
         var pageData = filtered.slice(start, start + perPage);
 
         if (pageData.length === 0) {
@@ -942,6 +976,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         document.getElementById('modalPaginationInfo').textContent = 'Showing ' + (filtered.length ? start + 1 : 0) + ' to ' + Math.min(start + perPage, filtered.length) + ' of ' + filtered.length + ' entries';
+        updateModalPaginationNav(totalPages, filtered.length);
         updateBulkActionsBar();
     }
 
@@ -1013,8 +1048,29 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('addProcessMessBillsModal').addEventListener('show.bs.modal', function() { loadModalBills(); });
     document.getElementById('modalLoadBillsBtn').addEventListener('click', loadModalBills);
     document.getElementById('modalClearFiltersBtn').addEventListener('click', clearModalFilters);
-    document.getElementById('modalSearch').addEventListener('input', renderModalTable);
-    document.getElementById('modalPerPage').addEventListener('change', renderModalTable);
+    document.getElementById('modalSearch').addEventListener('input', function() {
+        modalBillsCurrentPage = 1;
+        renderModalTable();
+    });
+    document.getElementById('modalPerPage').addEventListener('change', function() {
+        modalBillsCurrentPage = 1;
+        renderModalTable();
+    });
+    document.getElementById('modalPaginationPrev').addEventListener('click', function() {
+        if (modalBillsCurrentPage > 1) {
+            modalBillsCurrentPage--;
+            renderModalTable();
+        }
+    });
+    document.getElementById('modalPaginationNext').addEventListener('click', function() {
+        var filtered = getFilteredModalBills();
+        var perPage = parseInt((document.getElementById('modalPerPage') || {}).value || 10, 10);
+        var totalPages = filtered.length ? Math.ceil(filtered.length / perPage) : 0;
+        if (modalBillsCurrentPage < totalPages) {
+            modalBillsCurrentPage++;
+            renderModalTable();
+        }
+    });
 
     // --- Client Type / Buyer dependent dropdowns in modal (similar to Sale Voucher Report) ---
     (function initModalClientTypeFilters() {
@@ -1023,6 +1079,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var modalBuyerName = document.getElementById('modal_buyer_name');
         var studentsByCourseUrl = "{{ url('/admin/mess/selling-voucher-date-range/students-by-course') }}";
         var buyersForReportUrl = "{{ route('admin.mess.reports.category-wise-print-slip.buyers') }}";
+        var courseBuyersByCourseUrl = "{{ url('/admin/mess/reports/category-wise-print-slip/course-buyers') }}";
 
         if (!modalClientType || !modalClientTypePk || !modalBuyerName) {
             return;
@@ -1130,6 +1187,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 choicesBuyer.setChoices([{ value: '', label: 'All Buyers', selected: true }], 'value', 'label', true);
             }
 
+            function syncChoicesBuyer() {
+                if (!choicesBuyer) return;
+                var newChoices = Array.from(modalBuyerName.options).map(function (o) {
+                    return { value: o.value, label: o.text, selected: o.selected };
+                });
+                choicesBuyer.clearStore();
+                choicesBuyer.setChoices(newChoices, 'value', 'label', true);
+            }
+
             function addBuyerOptions(list) {
                 (list || []).forEach(function (o) {
                     var opt = document.createElement('option');
@@ -1137,6 +1203,46 @@ document.addEventListener('DOMContentLoaded', function() {
                     opt.textContent = o.text;
                     modalBuyerName.appendChild(opt);
                 });
+            }
+
+            function getModalDateRangeYmd() {
+                var df = document.getElementById('modal_date_from');
+                var dt = document.getElementById('modal_date_to');
+                return {
+                    from: (df && df.value) ? toYmd(df.value) : '',
+                    to: (dt && dt.value) ? toYmd(dt.value) : ''
+                };
+            }
+
+            function loadBuyersFromReportEndpoint(slugToLoad) {
+                var range = getModalDateRangeYmd();
+                var qs = new URLSearchParams();
+                qs.set('client_type_slug', slugToLoad);
+                if (range.from) qs.set('from_date', range.from);
+                if (range.to) qs.set('to_date', range.to);
+
+                // Add PK if selected (course/ot => course_master_pk, others => client_type_pk)
+                if (selectedPk) {
+                    if (slugToLoad === 'course' || slugToLoad === 'ot') {
+                        qs.set('course_master_pk', selectedPk);
+                    } else {
+                        qs.set('client_type_pk', selectedPk);
+                    }
+                }
+
+                fetch(buyersForReportUrl + '?' + qs.toString(), { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        var buyers = (data.buyers || []).map(function (name) {
+                            var v = String(name || '').trim();
+                            return v ? { value: v, text: v } : null;
+                        }).filter(Boolean);
+                        addBuyerOptions(buyers);
+                        syncChoicesBuyer();
+                    })
+                    .catch(function () {
+                        syncChoicesBuyer();
+                    });
             }
 
             if (slug === 'employee') {
@@ -1156,6 +1262,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         addBuyerOptions(employeeNames[key] || []);
                     });
                 }
+                syncChoicesBuyer();
             } else if (slug === 'ot' && selectedPk) {
                 // OT + specific course: students by course
                 fetch(studentsByCourseUrl + '/' + selectedPk, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
@@ -1165,64 +1272,122 @@ document.addEventListener('DOMContentLoaded', function() {
                             return { value: s.display_name || '', text: s.display_name || '—' };
                         });
                         addBuyerOptions(students);
+                        syncChoicesBuyer();
                     })
                     .catch(function () {
                         // ignore error; All Buyers hi rahe
+                        syncChoicesBuyer();
                     });
             } else if (slug === 'ot' && !selectedPk) {
-                // Sirf OT select hai – OT ke liye jo buyer names controllers se aaye hain unko dikhao
-                var listOt = (courseBuyerNames || []).map(function (name) {
-                    return { value: name, text: name };
-                });
-                addBuyerOptions(listOt);
-            } else if (slug === 'course') {
-                var listCourse = (courseBuyerNames || []).map(function (name) {
-                    return { value: name, text: name };
-                });
-                addBuyerOptions(listOt);
-            } else if (slug === 'course') {
-                // Requirement (modal):
-                // - Course selected + Client Type = All => Buyer Name = ALL course names
-                // - Course selected + specific Client Type PK => Buyer Name = that course name only
-                var courses = (otCourseOptions || []);
-                if (!selectedPk) {
-                    var listCourseAll = courses.map(function (o) {
-                        return { value: o.text, text: o.text };
-                    });
-                    addBuyerOptions(listCourseAll);
-                } else {
-                    var matchCourse = courses.find(function (o) {
-                        return String(o.value) === String(selectedPk);
-                    });
-                    if (matchCourse) {
-                        addBuyerOptions([{ value: matchCourse.text, text: matchCourse.text }]);
+                // OT + All:
+                // 1) Prefer voucher-based buyer list (respects modal date range)
+                // 2) If empty, fallback to students from ALL OT courses
+                var range2 = getModalDateRangeYmd();
+                var qsOt = new URLSearchParams();
+                qsOt.set('client_type_slug', 'ot');
+                if (range2.from) qsOt.set('from_date', range2.from);
+                if (range2.to) qsOt.set('to_date', range2.to);
+
+                function loadStudentsAllOtCourses() {
+                    var coursePks = (otCourseOptions || []).map(function (o) { return o.value; }).filter(Boolean);
+                    if (!coursePks.length) {
+                        syncChoicesBuyer();
+                        return;
                     }
+
+                    Promise.all(coursePks.map(function (coursePk) {
+                        return fetch(studentsByCourseUrl + '/' + coursePk, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                            .then(function (r) { return r.json(); })
+                            .then(function (data) {
+                                return (data.students || []).map(function (s) {
+                                    return String(s.display_name || '').trim();
+                                }).filter(function (n) { return !!n; });
+                            })
+                            .catch(function () { return []; });
+                    }))
+                        .then(function (results) {
+                            var seen = new Set();
+                            var all = [];
+                            (results || []).forEach(function (names) {
+                                (names || []).forEach(function (n) {
+                                    var key = String(n || '').trim();
+                                    if (!key || seen.has(key)) return;
+                                    seen.add(key);
+                                    all.push({ value: key, text: key });
+                                });
+                            });
+                            all.sort(function (a, b) {
+                                return String(a.text || '').localeCompare(String(b.text || ''), undefined, { sensitivity: 'base' });
+                            });
+                            addBuyerOptions(all);
+                            syncChoicesBuyer();
+                        })
+                        .catch(function () {
+                            syncChoicesBuyer();
+                        });
                 }
+
+                fetch(buyersForReportUrl + '?' + qsOt.toString(), { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        var buyers = (data.buyers || []).map(function (name) { return String(name || '').trim(); })
+                            .filter(function (v) { return !!v; })
+                            .map(function (v) { return { value: v, text: v }; });
+                        if (buyers.length) {
+                            addBuyerOptions(buyers);
+                            syncChoicesBuyer();
+                            return;
+                        }
+                        loadStudentsAllOtCourses();
+                    })
+                    .catch(function () {
+                        loadStudentsAllOtCourses();
+                    });
+                return; // async
+            } else if (slug === 'course') {
+                // Course: same as Sale Voucher logic
+                // - Specific course => buyer names for that course (date filtered)
+                // - All => buyer names across course vouchers (date filtered)
+                if (selectedPk) {
+                    var range3 = getModalDateRangeYmd();
+                    var qsC = new URLSearchParams();
+                    if (range3.from) qsC.set('from_date', range3.from);
+                    if (range3.to) qsC.set('to_date', range3.to);
+                    var url = courseBuyersByCourseUrl + '/' + selectedPk + (qsC.toString() ? ('?' + qsC.toString()) : '');
+                    fetch(url, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                        .then(function (r) { return r.json(); })
+                        .then(function (data) {
+                            var buyers = (data.buyers || []).map(function (name) {
+                                var v = String(name || '').trim();
+                                return v ? { value: v, text: v } : null;
+                            }).filter(Boolean);
+                            addBuyerOptions(buyers);
+                            syncChoicesBuyer();
+                        })
+                        .catch(function () {
+                            // fallback: buyers endpoint still respects course_master_pk
+                            loadBuyersFromReportEndpoint('course');
+                        });
+                    return; // async
+                }
+
+                loadBuyersFromReportEndpoint('course');
+                return; // async
             } else if (slug === 'other') {
-                // Other: use distinct buyer names list
-                var listOther = (otherBuyerNames || []).map(function (name) {
-                    return { value: name, text: name };
-                });
-                addBuyerOptions(listOther);
+                loadBuyersFromReportEndpoint('other');
+                return; // async
             } else if (slug === 'section') {
-                var listSection = (sectionBuyerNames || []).map(function (name) {
-                    return { value: name, text: name };
-                });
-                addBuyerOptions(listSection);
+                loadBuyersFromReportEndpoint('section');
+                return; // async
             } else if (!slug && (allBuyerNames || []).length) {
                 // koi client type select nahi – saare distinct buyer names (course/other/section etc.) dikhado
                 var listAll = (allBuyerNames || []).map(function (name) {
                     return { value: name, text: name };
                 });
                 addBuyerOptions(listAll);
-            }
-
-            if (choicesBuyer) {
-                var newChoices = Array.from(modalBuyerName.options).map(function (o) {
-                    return { value: o.value, label: o.text, selected: o.selected };
-                });
-                choicesBuyer.clearStore();
-                choicesBuyer.setChoices(newChoices, 'value', 'label', true);
+                syncChoicesBuyer();
+            } else {
+                syncChoicesBuyer();
             }
         }
 
@@ -1240,6 +1405,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var buyerSelect = document.getElementById('filterBuyerName');
         var studentsByCourseUrl = "{{ url('/admin/mess/selling-voucher-date-range/students-by-course') }}";
         var buyersForReportUrl = "{{ route('admin.mess.reports.category-wise-print-slip.buyers') }}";
+        var courseBuyersByCourseUrl = "{{ url('/admin/mess/reports/category-wise-print-slip/course-buyers') }}";
         var preservedClientTypePk = {!! json_encode($clientTypePk ?? request('client_type_pk', '')) !!};
         var preservedBuyerName = {!! json_encode($buyerName ?? request('buyer_name', '')) !!};
 
@@ -1284,6 +1450,7 @@ document.addEventListener('DOMContentLoaded', function() {
 @endforeach
             ]
         };
+        var otBuyerNames = {!! json_encode(($otBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
         var courseBuyerNames = {!! json_encode(($courseBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
         var otherBuyerNames = {!! json_encode(($otherBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
         var sectionBuyerNames = {!! json_encode(($sectionBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
@@ -1522,28 +1689,132 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
                 return; // Exit early for async case
             } else if (slug === 'ot' && !selectedPk) {
-                // OT selected but Course = All => show all OT buyers from precomputed list
-                var listOt = (otBuyerNames || []).map(function (name) {
-                    return { value: name, text: name };
-                });
-                addOptions(listOt);
-            } else if (slug === 'course') {
-                // Requirement:
-                // - If Course selected AND Client Type = All => Buyer Name should list ALL course names
-                // - If specific course selected => Buyer Name should be that course name
-                if (!selectedPk) {
-                    var listCourseAll = (otCourseOptions || []).map(function (o) {
-                        return { value: o.text, text: o.text };
-                    });
-                    addOptions(listCourseAll);
-                } else {
-                    var matchCourse = (otCourseOptions || []).find(function (o) {
-                        return String(o.value) === String(selectedPk);
-                    });
-                    if (matchCourse) {
-                        addOptions([{ value: matchCourse.text, text: matchCourse.text }]);
+                // OT selected but Course = All
+                // Same behavior as Sale Voucher Report:
+                // 1) Prefer buyer list from report endpoint (respects date filters)
+                // 2) If empty, fallback to loading students from ALL OT courses
+
+                var df2 = document.getElementById('date_from');
+                var dt2 = document.getElementById('date_to');
+                var dateFromYmd2 = (df2 && df2.value) ? toYmd(df2.value) : '';
+                var dateToYmd2 = (dt2 && dt2.value) ? toYmd(dt2.value) : '';
+
+                function initBuyerChoicesAfterAsync() {
+                    if (typeof window.Choices !== 'undefined') {
+                        initChoicesElement(buyerSelect);
+                        if (currentBuyer && buyerSelect.choicesInstance) {
+                            try { buyerSelect.choicesInstance.setChoiceByValue(currentBuyer); } catch (e) {}
+                        }
                     }
                 }
+
+                function loadStudentsAllOtCourses() {
+                    var coursePks = (otCourseOptions || []).map(function (o) { return o.value; }).filter(Boolean);
+                    if (!coursePks.length) {
+                        initBuyerChoicesAfterAsync();
+                        return;
+                    }
+
+                    Promise.all(coursePks.map(function (coursePk) {
+                        return fetch(studentsByCourseUrl + '/' + coursePk, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                            .then(function (r) { return r.json(); })
+                            .then(function (data) {
+                                return (data.students || []).map(function (s) {
+                                    return String(s.display_name || '').trim();
+                                }).filter(function (n) { return !!n; });
+                            })
+                            .catch(function () { return []; });
+                    }))
+                        .then(function (results) {
+                            var seen = new Set();
+                            var all = [];
+                            (results || []).forEach(function (names) {
+                                (names || []).forEach(function (n) {
+                                    var key = String(n || '').trim();
+                                    if (!key || seen.has(key)) return;
+                                    seen.add(key);
+                                    all.push({ value: key, text: key });
+                                });
+                            });
+                            all.sort(function (a, b) {
+                                return String(a.text || '').localeCompare(String(b.text || ''), undefined, { sensitivity: 'base' });
+                            });
+                            addOptions(all);
+                            initBuyerChoicesAfterAsync();
+                        })
+                        .catch(function () {
+                            initBuyerChoicesAfterAsync();
+                        });
+                }
+
+                // Try report endpoint first
+                var qsOt = new URLSearchParams();
+                qsOt.set('client_type_slug', 'ot');
+                if (dateFromYmd2) qsOt.set('from_date', dateFromYmd2);
+                if (dateToYmd2) qsOt.set('to_date', dateToYmd2);
+
+                fetch(buyersForReportUrl + '?' + qsOt.toString(), { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        var buyers = (data.buyers || []).map(function (name) { return String(name || '').trim(); })
+                            .filter(function (v) { return !!v; })
+                            .map(function (v) { return { value: v, text: v }; });
+
+                        if (buyers.length) {
+                            addOptions(buyers);
+                            initBuyerChoicesAfterAsync();
+                            return;
+                        }
+
+                        loadStudentsAllOtCourses();
+                    })
+                    .catch(function () {
+                        loadStudentsAllOtCourses();
+                    });
+
+                return; // async branch
+            } else if (slug === 'course') {
+                // Same behavior as Sale Voucher filter:
+                // - If a specific course is selected => show buyer names for that course
+                // - If course = All => show buyer names across all course vouchers (respecting date filters)
+                if (selectedPk) {
+                    var df = document.getElementById('date_from');
+                    var dt = document.getElementById('date_to');
+                    var dateFromYmd = (df && df.value) ? toYmd(df.value) : '';
+                    var dateToYmd = (dt && dt.value) ? toYmd(dt.value) : '';
+
+                    var qs = new URLSearchParams();
+                    if (dateFromYmd) qs.set('from_date', dateFromYmd);
+                    if (dateToYmd) qs.set('to_date', dateToYmd);
+
+                    var url = courseBuyersByCourseUrl + '/' + selectedPk + (qs.toString() ? ('?' + qs.toString()) : '');
+                    fetch(url, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                        .then(function (r) { return r.json(); })
+                        .then(function (data) {
+                            var buyers = (data.buyers || []).map(function (name) {
+                                return { value: name || '', text: name || '—' };
+                            }).filter(function (o) { return !!o.value; });
+
+                            addOptions(buyers);
+
+                            if (typeof window.Choices !== 'undefined') {
+                                initChoicesElement(buyerSelect);
+                                if (currentBuyer && buyerSelect.choicesInstance) {
+                                    buyerSelect.choicesInstance.setChoiceByValue(currentBuyer);
+                                }
+                            }
+                        })
+                        .catch(function () {
+                            // Fallback to the report-based endpoint (still respects selected course + dates)
+                            loadBuyersFromReportEndpoint('course');
+                        });
+
+                    return; // async branch
+                }
+
+                // Course + "All"
+                loadBuyersFromReportEndpoint('course');
+                return; // async branch
             } else if (slug === 'section') {
                 // Requirement:
                 // - If Section selected AND Client Type = All => Buyer Name should list ALL section names
