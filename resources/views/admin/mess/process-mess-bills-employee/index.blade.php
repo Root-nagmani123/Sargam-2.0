@@ -558,7 +558,7 @@
                     @csrf
                     <div class="row g-3 mb-3">
                         <div class="col-md-3">
-                            <label class="form-label small fw-semibold text-dark mb-2\"><i class=\"material-symbols-rounded align-middle me-1\" style=\"font-size: 1rem;\">event</i>Date From <span class="text-danger">*</span></label>
+                            <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1rem;">event</i>Date From <span class="text-danger">*</span></label>
                             <input type="text" name="modal_date_from" id="modal_date_from" class="form-control "
                                    value="{{ now()->startOfMonth()->format('d-m-Y') }}" placeholder="dd-mm-yyyy" autocomplete="off" required>
                         </div>
@@ -686,8 +686,15 @@
                     </table>
                 </div>
 
-                <div class="d-flex flex-wrap justify-content-between align-items-center mt-3 pt-3 border-top">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3 pt-3 border-top">
                     <div class="small text-muted fw-semibold" id="modalPaginationInfo">Showing 0 to 0 of 0 entries</div>
+                    <nav id="modalPaginationNav" class="d-none" aria-label="Bills list pages">
+                        <ul class="pagination pagination-sm mb-0">
+                            <li class="page-item" id="modalPaginationPrevLi"><button type="button" class="page-link py-1 px-2" id="modalPaginationPrev">Previous</button></li>
+                            <li class="page-item disabled" id="modalPaginationPageLi"><span class="page-link py-1 px-2" id="modalPaginationPageLabel">Page 1 of 1</span></li>
+                            <li class="page-item" id="modalPaginationNextLi"><button type="button" class="page-link py-1 px-2" id="modalPaginationNext">Next</button></li>
+                        </ul>
+                    </nav>
                 </div>
             </div>
             <div class="modal-footer bg-light border-0 rounded-bottom-3 py-3">
@@ -806,6 +813,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     var modalBillsData = [];
+    var modalBillsCurrentPage = 1;
     var paymentDetailsBillId = null;
     var paymentDetailsDateFrom = null;
     var paymentDetailsDateTo = null;
@@ -834,6 +842,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function loadModalBills() {
+        modalBillsCurrentPage = 1;
         var df = document.getElementById('modal_date_from');
         var dt = document.getElementById('modal_date_to');
         var ct = document.getElementById('modal_client_type');
@@ -909,14 +918,39 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    function updateModalPaginationNav(totalPages, filteredLength) {
+        var nav = document.getElementById('modalPaginationNav');
+        var prevBtn = document.getElementById('modalPaginationPrev');
+        var nextBtn = document.getElementById('modalPaginationNext');
+        var prevLi = document.getElementById('modalPaginationPrevLi');
+        var nextLi = document.getElementById('modalPaginationNextLi');
+        var pageLi = document.getElementById('modalPaginationPageLi');
+        var label = document.getElementById('modalPaginationPageLabel');
+        if (!nav || !prevBtn || !nextBtn || !label) return;
+        if (totalPages <= 1 || !filteredLength) {
+            nav.classList.add('d-none');
+            return;
+        }
+        nav.classList.remove('d-none');
+        label.textContent = 'Page ' + modalBillsCurrentPage + ' of ' + totalPages;
+        var onFirst = modalBillsCurrentPage <= 1;
+        var onLast = modalBillsCurrentPage >= totalPages;
+        prevBtn.disabled = onFirst;
+        nextBtn.disabled = onLast;
+        if (prevLi) prevLi.classList.toggle('disabled', onFirst);
+        if (nextLi) nextLi.classList.toggle('disabled', onLast);
+        if (pageLi) pageLi.classList.add('disabled');
+    }
+
     function renderModalTable() {
         var tbody = document.getElementById('modalBillsTableBody');
         var modalSelectAllEl = document.getElementById('modalSelectAll');
         if (modalSelectAllEl) modalSelectAllEl.checked = false;
         var filtered = getFilteredModalBills();
         var perPage = parseInt((document.getElementById('modalPerPage') || {}).value || 10, 10);
-        var page = 1;
-        var start = (page - 1) * perPage;
+        var totalPages = filtered.length ? Math.ceil(filtered.length / perPage) : 0;
+        modalBillsCurrentPage = Math.max(1, Math.min(modalBillsCurrentPage, totalPages || 1));
+        var start = (modalBillsCurrentPage - 1) * perPage;
         var pageData = filtered.slice(start, start + perPage);
 
         if (pageData.length === 0) {
@@ -942,6 +976,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         document.getElementById('modalPaginationInfo').textContent = 'Showing ' + (filtered.length ? start + 1 : 0) + ' to ' + Math.min(start + perPage, filtered.length) + ' of ' + filtered.length + ' entries';
+        updateModalPaginationNav(totalPages, filtered.length);
         updateBulkActionsBar();
     }
 
@@ -1013,8 +1048,29 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('addProcessMessBillsModal').addEventListener('show.bs.modal', function() { loadModalBills(); });
     document.getElementById('modalLoadBillsBtn').addEventListener('click', loadModalBills);
     document.getElementById('modalClearFiltersBtn').addEventListener('click', clearModalFilters);
-    document.getElementById('modalSearch').addEventListener('input', renderModalTable);
-    document.getElementById('modalPerPage').addEventListener('change', renderModalTable);
+    document.getElementById('modalSearch').addEventListener('input', function() {
+        modalBillsCurrentPage = 1;
+        renderModalTable();
+    });
+    document.getElementById('modalPerPage').addEventListener('change', function() {
+        modalBillsCurrentPage = 1;
+        renderModalTable();
+    });
+    document.getElementById('modalPaginationPrev').addEventListener('click', function() {
+        if (modalBillsCurrentPage > 1) {
+            modalBillsCurrentPage--;
+            renderModalTable();
+        }
+    });
+    document.getElementById('modalPaginationNext').addEventListener('click', function() {
+        var filtered = getFilteredModalBills();
+        var perPage = parseInt((document.getElementById('modalPerPage') || {}).value || 10, 10);
+        var totalPages = filtered.length ? Math.ceil(filtered.length / perPage) : 0;
+        if (modalBillsCurrentPage < totalPages) {
+            modalBillsCurrentPage++;
+            renderModalTable();
+        }
+    });
 
     // --- Client Type / Buyer dependent dropdowns in modal (similar to Sale Voucher Report) ---
     (function initModalClientTypeFilters() {
