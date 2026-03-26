@@ -6,7 +6,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>Category Wise Sale Voucher Report</title>
+    <title>Sale Voucher Report</title>
     <style>
         body {
             font-family: DejaVu Sans, Arial, sans-serif;
@@ -122,7 +122,7 @@
                    
                     <div class="page-header-col page-header-title">
                         <h1>OFFICER'S MESS LBSNAA MUSSOORIE</h1>
-                        <h2>Category-wise Sale Voucher Report</h2>
+                        <h2>Sale Voucher Report</h2>
                         <div class="page-header-sub">Lal Bahadur Shastri National Academy of Administration</div>
                     </div>
                 </div>
@@ -152,11 +152,18 @@
                     $slug = $first->client_type_slug ?? '';
                     $typeSuffix = ($slug === 'employee') ? 'Employee' : (($slug === 'ot') ? 'OT' : ucfirst($slug));
                     if (!$typeSuffix) $typeSuffix = 'N/A';
+                    $courseDisplay = null;
+                    if ($slug === 'course' && !empty($courseMasterPk) && isset($otCourses) && $otCourses->isNotEmpty()) {
+                        $selectedCourse = $otCourses->firstWhere('pk', $courseMasterPk);
+                        if ($selectedCourse) {
+                            $courseDisplay = $selectedCourse->course_name;
+                        }
+                    }
                 @endphp
 
                 <div class="buyer-header">
-                    <span><strong>Buyer:</strong> {{ $buyerName }} - {{ $typeSuffix }}</span>
-                    <span><strong>Client Type:</strong> {{ $clientTypeLabel }}</span>
+                    <span><strong>Buyer Name :</strong> {{ $buyerName }}- {{ $typeSuffix }}</span>
+                    <span><strong>Client Type :</strong> {{ $clientTypeLabel }}@if($courseDisplay) <strong>[{{ $courseDisplay }}]</strong>@endif</span>
                 </div>
 
                 <table>
@@ -189,6 +196,12 @@
                                 $itemAmount = $netQty * $rate;
                                 $sectionTotal += $itemAmount;
                                 $itemName = $item->item_name ?? ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? 'N/A');
+                                $itemIssueDate = $item->issue_date ?? null;
+                                $itemIssueDateFormatted = $itemIssueDate
+                                    ? ($itemIssueDate instanceof \Carbon\Carbon
+                                        ? $itemIssueDate->format('d-m-Y')
+                                        : \Carbon\Carbon::parse($itemIssueDate)->format('d-m-Y'))
+                                    : $requestDate;
                             @endphp
                             <tr>
                                 @if($itemIndex === 0)
@@ -197,7 +210,7 @@
                                     <td rowspan="{{ $rowCount }}">{{ $voucher->remarks ?? '—' }}</td>
                                 @endif
                                 <td>{{ $itemName }}</td>
-                                <td class="text-center">{{ $requestDate }}</td>
+                                <td class="text-center">{{ $itemIssueDateFormatted }}</td>
                                 <td class="text-end">{{ number_format($netQty, 2) }}</td>
                                 <td class="text-end">{{ number_format($rate, 2) }}</td>
                                 <td class="text-end">{{ number_format($itemAmount, 2) }}</td>
@@ -216,7 +229,7 @@
             @endforelse
 
             <div class="footer">
-                <small>Officer's Mess LBSNAA Mussoorie &mdash; Category-wise Sale Voucher Report</small>
+                <small>Officer's Mess LBSNAA Mussoorie &mdash; Sale Voucher Report</small>
             </div>
         </div>
     @endforeach

@@ -617,13 +617,19 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 <script>
-    window.addEventListener('load', function () {
-        const loader = document.getElementById('sargamLoader');
-        if (loader) {
+    (function () {
+        function hideSargamLoader() {
+            var loader = document.getElementById('sargamLoader');
+            if (!loader || loader.classList.contains('hidden')) return;
             loader.classList.add('hidden');
             setTimeout(function () { loader.style.display = 'none'; }, 500);
         }
-    });
+        window.addEventListener('load', hideSargamLoader);
+        document.addEventListener('DOMContentLoaded', function () {
+            setTimeout(hideSargamLoader, 300);
+        });
+        setTimeout(hideSargamLoader, 12000);
+    })();
 </script>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
