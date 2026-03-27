@@ -81,7 +81,7 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 8px;
+            font-size: 16px;
             margin-bottom: 8px;
         }
         th, td {
@@ -166,17 +166,17 @@
                     <span><strong>Client Type :</strong> {{ $clientTypeLabel }}@if($courseDisplay) <strong>[{{ $courseDisplay }}]</strong>@endif</span>
                 </div>
 
-                <table>
+                <table style="font-size: 14px;">
                     <thead>
                     <tr>
-                        <th class="text-center">Slip No.</th>
-                        <th>Buyer Name</th>
+                        <th>Slip No.</th>
+                        <th style="width: 150px;">Buyer Name</th>
                         <th>Remark</th>
                         <th>Item Name</th>
-                        <th class="text-center">Request Date</th>
-                        <th class="text-end">Quantity</th>
-                        <th class="text-end">Price</th>
-                        <th class="text-end">Amount</th>
+                        <th>Request Date</th>
+                        <th style="text-align: right;">Quantity</th>
+                        <th style="text-align: right;">Price</th>
+                        <th style="text-align: right;">Amount</th>
                     </tr>
                     </thead>
                     <tbody>
