@@ -1031,23 +1031,6 @@ Route::get('/student-faculty-feedback', [CalendarController::class, 'studentFacu
 // Route::post('/admin/feedback/pending-students/export/excel', [FeedbackController::class, 'exportPendingStudentsExcel'])
 //     ->name('admin.feedback.export.excel');
 
-// routes/web.php
-Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
-    // Pending Feedback Routes
-    Route::get('/feedback/pending-students', [FeedbackController::class, 'pendingStudents'])
-        ->name('feedback.pending.students');
-
-    // Sessions by course (AJAX)
-    Route::get('/get-sessions-by-course', [FeedbackController::class, 'getSessionsByCourse'])
-        ->name('get.sessions.by.course');
-
-    // Export Routes
-    Route::post('/feedback/pending-students/export/pdf', [FeedbackController::class, 'exportPendingStudentsPDF'])
-        ->name('feedback.export.pdf');
-
-    Route::post('/feedback/pending-students/export/excel', [FeedbackController::class, 'exportPendingStudentsExcel'])
-        ->name('feedback.export.excel');
-});
 
 Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
     // Pending Feedback Routes
