@@ -5,7 +5,9 @@
     $canDeletePurchaseOrder = hasRole('Admin') || hasRole('Mess-Admin');
 @endphp
 <div class="container-fluid py-3 py-md-4">
-    <x-breadcrum title="Purchase Orders"></x-breadcrum>
+    <div class="no-print">
+        <x-breadcrum title="Purchase Orders"></x-breadcrum>
+    </div>
     <div class="datatables">
         <div class="card shadow-sm border-0 rounded-4">
             <div class="card-header bg-white border-0 pb-0">
@@ -14,7 +16,7 @@
                         <h4 class="mb-1 fw-semibold">Purchase Orders</h4>
                         <p class="mb-0 text-muted small">View, filter and manage mess purchase orders.</p>
                     </div>
-                    <button type="button" class="btn btn-primary btn-sm px-3 d-inline-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#createPurchaseOrderModal">
+                    <button type="button" class="btn btn-primary px-3 d-inline-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#createPurchaseOrderModal">
                         <i class="material-icons material-symbol-rounded" style="font-size: 1.1rem;">add</i>
                         <span class="d-none d-sm-inline">Create Purchase Order</span>
                         <span class="d-inline d-sm-none">New</span>
@@ -59,14 +61,14 @@
                             </select>
                         </div>
                         <div class="col-12 d-flex flex-wrap gap-2 mt-3">
-                            <button type="submit" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1">
+                            <button type="submit" class="btn btn-primary  d-inline-flex align-items-center gap-1">
                                 <i class="material-symbols-rounded" style="font-size: 1rem;">filter_list</i>
                                 <span>Apply</span>
                             </button>
-                            <a href="{{ route('admin.mess.purchaseorders.index') }}" class="btn btn-outline-secondary btn-sm">
+                            <a href="{{ route('admin.mess.purchaseorders.index') }}" class="btn btn-outline-secondary ">
                                 Clear
                             </a>
-                            <button type="button" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1" onclick="window.print()" title="Print list or Save as PDF">
+                            <button type="button" class="btn btn-outline-primary  d-inline-flex align-items-center gap-1" onclick="window.print()" title="Print list or Save as PDF">
                                 <i class="material-icons material-symbol-rounded" style="font-size: 1rem;">print</i>
                                 <span>Print</span>
                             </button>
@@ -74,12 +76,16 @@
                     </div>
                 </form>
 
-                {{-- Print header: standard format (shown only when printing) --}}
+                {{-- Printable area: isolation in @media print shows only header + table (LBSNAA branding + list) --}}
+                <div class="po-print-area">
+                {{-- Print header: LBSNAA / Sargam branding (shown only when printing) --}}
                 <div class="print-only report-header text-center mb-3" style="display: none;">
-                    <div class="logo-container mb-2" style="display: flex; justify-content: center; align-items: center; gap: 15px;">
-                        <img src="{{ asset('images/lbsnaa_logo.jpg') }}" alt="LBSNAA Logo" style="height: 60px; width: auto;">
+                    <div class="logo-container mb-2 d-flex justify-content-center align-items-center gap-3 flex-wrap">
+                        <img src="{{ asset('images/ashoka.webp') }}" alt="" class="po-print-emblem" width="52" height="52" style="height: 52px; width: auto; object-fit: contain;">
+                        <img src="{{ asset('admin_assets/images/logos/logo.svg') }}" alt="Lal Bahadur Shastri National Academy of Administration" class="po-print-wordmark" style="height: 44px; width: auto;">
                     </div>
                     <h3 class="report-mess-title mb-1">OFFICER'S MESS LBSNAA MUSSOORIE</h3>
+                    <p class="small text-muted mb-2 mb-md-3">Sargam 2.0</p>
                     <div class="report-title-bar">Purchase Orders</div>
                     <div class="report-print-date small text-muted mt-1">Printed on {{ now()->format('d-m-Y, h:i A') }}</div>
                 </div>
@@ -93,7 +99,7 @@
                                 <th>Vendor Name</th>
                                 <th>Store Name</th>
                                 <th>Status</th>
-                                <th>Action</th>
+                                <th class="d-print-none">Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -108,7 +114,7 @@
                                         {{ ucfirst($po->status) }}
                                     </span>
                                 </td>
-                                <td>
+                                <td class="d-print-none">
                                     <div class="d-inline-flex align-items-center gap-2">
                                     <button type="button" class="btn  btn-outline-primary btn-view-po bg-transparent border-0 p-0" data-po-id="{{ $po->id }}" title="View">
                                         <i class="material-icons material-symbol-rounded">visibility</i>
@@ -120,7 +126,7 @@
                                         <form action="{{ route('admin.mess.purchaseorders.destroy', $po->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this purchase order?');">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="btn  btn-outline-danger" title="Delete">
+                                            <button type="submit" class="btn  btn-outline-danger bg-transparent border-0 p-0 text-primary" title="Delete">
                                                 <i class="material-icons material-symbol-rounded">delete</i>
                                             </button>
                                         </form>
@@ -132,6 +138,7 @@
                         </tbody>
                     </table>
                 </div>
+                </div>{{-- /.po-print-area --}}
             </div>
         </div>
     </div>
@@ -155,16 +162,66 @@
     .report-print-date { color: #6c757d; }
 
     @media print {
+        html, body {
+            background: #fff !important;
+            height: auto !important;
+        }
+        body { margin: 0 !important; padding: 0 !important; position: relative !important; }
+
+        /* Remove app chrome from layout flow (visibility:hidden still reserves space) */
+        .sargam-loader,
+        #sargamLoader,
+        .topbar,
+        header.topbar,
+        .left-sidebar,
+        .side-mini-panel,
+        aside.side-mini-panel,
+        #sidebarTabContent,
+        .navbar,
+        #mainNavbarContent > .tab-pane:not(.show.active) {
+            display: none !important;
+        }
+
+        .page-wrapper,
+        .body-wrapper,
+        #main-content,
+        .tab-content {
+            margin: 0 !important;
+            padding: 0 !important;
+            border: none !important;
+            box-shadow: none !important;
+        }
+
         .no-print { display: none !important; }
+
+        /* Only show the purchase-order list region; hide everything else */
+        body * {
+            visibility: hidden;
+        }
+        .po-print-area,
+        .po-print-area * {
+            visibility: visible !important;
+        }
+        .po-print-area {
+            position: absolute;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100%;
+            max-width: 100%;
+            padding: 0 12px;
+            box-sizing: border-box;
+        }
+
         .print-only { display: block !important; }
-        .dataTables_length, .dataTables_filter, .dataTables_info, .dataTables_paginate { display: none !important; }
-        /* Hide layout header and sidebar so only report content prints */
-        .topbar, header.topbar, .left-sidebar, .side-mini-panel, #sidebarTabContent, .navbar { display: none !important; }
-        body { margin: 0; padding: 15px; }
-        body * { visibility: visible; }
+        .dataTables_length,
+        .dataTables_filter,
+        .dataTables_info,
+        .dataTables_paginate { display: none !important; }
+
         .report-header { margin-top: 0; border-bottom: 2px solid #004a93; padding-bottom: 12px; margin-bottom: 20px; }
         .logo-container { margin-bottom: 12px; }
-        .logo-container img { height: 60px !important; width: auto !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .logo-container .po-print-emblem { height: 52px !important; width: auto !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .logo-container .po-print-wordmark { height: 44px !important; width: auto !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         .report-mess-title { font-size: 18px; font-weight: 700; color: #1a1a1a; margin-bottom: 8px; }
         .report-title-bar { font-size: 14px; -webkit-print-color-adjust: exact; print-color-adjust: exact; display: inline-block; background-color: #004a93 !important; }
         .report-print-date { font-size: 11px; color: #6c757d; margin-top: 8px; }
@@ -228,6 +285,38 @@
     'actionColumnIndex' => 5,
     'infoLabel' => 'purchase orders'
 ])
+
+@push('scripts')
+<script>
+(function() {
+    var poListPrintRestore = null;
+    window.addEventListener('beforeprint', function() {
+        if (typeof window.jQuery === 'undefined' || !window.jQuery.fn.DataTable) return;
+        var $t = window.jQuery('#purchaseOrdersTable');
+        if (!$t.length || !window.jQuery.fn.DataTable.isDataTable($t)) return;
+        var dt = $t.DataTable();
+        var info = dt.page.info();
+        poListPrintRestore = { length: info.length, page: info.page };
+        dt.page.len(-1).draw(false);
+    });
+    window.addEventListener('afterprint', function() {
+        if (!poListPrintRestore) return;
+        if (typeof window.jQuery === 'undefined' || !window.jQuery.fn.DataTable) {
+            poListPrintRestore = null;
+            return;
+        }
+        var $t = window.jQuery('#purchaseOrdersTable');
+        if (!$t.length || !window.jQuery.fn.DataTable.isDataTable($t)) {
+            poListPrintRestore = null;
+            return;
+        }
+        var dt = $t.DataTable();
+        dt.page.len(poListPrintRestore.length).page(poListPrintRestore.page).draw(false);
+        poListPrintRestore = null;
+    });
+})();
+</script>
+@endpush
 
 {{-- Tom Select CSS --}}
 <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
