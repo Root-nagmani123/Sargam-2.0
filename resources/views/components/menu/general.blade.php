@@ -110,6 +110,16 @@
                                     </a>
                                 </li>
                                 <ul class="collapse list-unstyled ps-3" id="usefulLinksCollapse">
+                                    <li class="sidebar-item d-flex justify-content-between align-items-center">
+                                        <a class="sidebar-link" href="{{ route('admin.directory.ot') }}">
+                                            <span class="hide-menu small small-sm-normal text-nowrap">OT Directory</span>
+                                        </a>
+                                    </li>
+                                    <li class="sidebar-item d-flex justify-content-between align-items-center">
+                                        <a class="sidebar-link" href="{{ route('admin.directory.lbsnaa') }}">
+                                            <span class="hide-menu small small-sm-normal text-nowrap">LBSNAA Directory</span>
+                                        </a>
+                                    </li>
                                     @php
                                         $usefulLinks = \App\Models\UsefulLink::query()
                                             ->active()

@@ -52,7 +52,7 @@ class UsefulLinksSetupController extends Controller
 
         if (!$storeUrl && !$request->hasFile('file')) {
             return back()
-                ->withErrors(['url' => 'Please provide either URL or file.'])
+                ->withErrors(['url_or_file' => 'Please provide either URL or file.'])
                 ->withInput();
         }
 
@@ -140,7 +140,7 @@ class UsefulLinksSetupController extends Controller
         }
         if (!$finalUrl && !$newFilePath) {
             return back()
-                ->withErrors(['url' => 'Please provide either URL or file.'])
+                ->withErrors(['url_or_file' => 'Please provide either URL or file.'])
                 ->withInput();
         }
 

@@ -269,6 +269,89 @@ document.addEventListener('DOMContentLoaded', () => {
             loadForm(e.currentTarget.getAttribute('href'), 'Edit Useful Link');
         });
     });
+
+    document.addEventListener('submit', async (e) => {
+        const form = e.target.closest('#usefulLinkForm');
+        if (!form) return;
+
+        e.preventDefault();
+
+        const urlInput = form.querySelector('#usefulLinkUrl');
+        const fileInput = form.querySelector('#usefulLinkFile');
+        const errorEl = form.querySelector('#urlFileValidationError');
+        const removeFileCheckbox = form.querySelector('#removeFile');
+        const hasExistingFile = form.dataset.hasExistingFile === '1';
+
+        const clearValidationError = () => {
+            if (urlInput) urlInput.classList.remove('is-invalid');
+            if (fileInput) fileInput.classList.remove('is-invalid');
+            if (errorEl) errorEl.textContent = '';
+        };
+
+        const hasUrl = !!(urlInput && urlInput.value.trim() !== '');
+        const hasNewFile = !!(fileInput && fileInput.files && fileInput.files.length > 0);
+        const keepsExistingFile = hasExistingFile && (!removeFileCheckbox || !removeFileCheckbox.checked);
+
+        clearValidationError();
+        if (!hasUrl && !hasNewFile && !keepsExistingFile) {
+            if (urlInput) urlInput.classList.add('is-invalid');
+            if (fileInput) fileInput.classList.add('is-invalid');
+            if (errorEl) errorEl.textContent = 'Please provide either URL or file.';
+            return;
+        }
+
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalSubmitText = submitBtn ? submitBtn.textContent : '';
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Saving...';
+        }
+
+        try {
+            const res = await fetch(form.getAttribute('action'), {
+                method: 'POST',
+                body: new FormData(form),
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': csrfToken
+                }
+            });
+
+            if (res.ok) {
+                const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                if (modalInstance) modalInstance.hide();
+                location.reload();
+                return;
+            }
+
+            if (res.status === 422) {
+                const data = await res.json();
+                const errors = data?.errors || {};
+                const urlOrFileError = errors.url_or_file?.[0] || errors.url?.[0] || errors.file?.[0];
+
+                if (urlOrFileError) {
+                    if (urlInput) urlInput.classList.add('is-invalid');
+                    if (fileInput) fileInput.classList.add('is-invalid');
+                    if (errorEl) errorEl.textContent = urlOrFileError;
+                }
+                return;
+            }
+
+            throw new Error('Save failed. Please try again.');
+        } catch (err) {
+            if (errorEl) {
+                errorEl.textContent = err.message || 'Save failed. Please try again.';
+            } else {
+                alert(err.message || 'Save failed. Please try again.');
+            }
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalSubmitText;
+            }
+        }
+    });
 });
 </script>
 @endpush

@@ -20,6 +20,39 @@
     border-radius: 6px;
 }
 
+.attendance-page .card {
+    border: 0;
+    border-radius: 0.9rem;
+}
+
+.attendance-page .attendance-main-card {
+    box-shadow: 0 0.4rem 1.4rem rgba(15, 23, 42, 0.08);
+    overflow: hidden;
+}
+
+.attendance-page .attendance-topbar {
+    background: linear-gradient(135deg, #f8fbff 0%, #f1f7ff 100%);
+    border-bottom: 1px solid var(--bs-border-color);
+}
+
+.attendance-page .attendance-topbar .page-title {
+    color: #003366;
+    letter-spacing: 0.2px;
+}
+
+.attendance-page .attendance-filter-shell {
+    border: 1px solid var(--bs-border-color);
+    background-color: var(--bs-light);
+}
+
+.attendance-page .table-attendance thead th {
+    text-transform: uppercase;
+    font-size: 0.74rem;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    color: var(--bs-secondary-color);
+}
+
 .form-control:focus,
 .form-select:focus {
     outline: 3px solid #0059b3 !important;
@@ -168,22 +201,19 @@ hr {
 </style>
 
 
-<div class="container-fluid">
+<div class="container-fluid attendance-page py-3">
     <x-breadcrum title="Attendance" />
-    <div class="card" style="border-left: 4px solid #004a93;">
-        <div class="card-body py-4">
+    <div class="card attendance-main-card border-start border-4 border-primary">
+        <div class="attendance-topbar px-4 py-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <h4 class="fw-bold page-title mb-0">Attendance</h4>
+            <span class="badge rounded-pill text-bg-primary-subtle text-primary-emphasis px-3 py-2 fw-semibold">Filter and manage records</span>
+        </div>
+        <div class="card-body p-4">
 
             <!-- Title -->
-            <div class="row align-items-center mb-2">
-                <div class="col-12">
-                    <h4 class="fw-bold text-primary mb-0">Attendance</h4>
-                </div>
-            </div>
-
-            <hr class="mt-3 mb-4">
-
             <!-- Filter Rows -->
-            <div class="row g-4 attendance-choices-bootstrap">
+            <div class="attendance-filter-shell rounded-4 p-3 p-lg-4 mb-4">
+                <div class="row g-3 attendance-choices-bootstrap">
 
                 <!-- Course -->
                 <div class="col-md-3">
@@ -268,13 +298,12 @@ hr {
                         @endforeach
                     </select>
                 </div>
+                </div>
             </div>
 
-            <hr class="mt-4">
-
             <!-- Reset Button -->
-            <div class="text-end mb-4">
-                <button class="btn btn-secondary px-4 py-2 shadow-sm d-inline-flex align-items-center"
+            <div class="text-end mb-3 mb-lg-4">
+                <button class="btn btn-outline-secondary px-4 py-2 shadow-sm d-inline-flex align-items-center rounded-pill"
                     id="resetAttendance" type="button">
                     <span class="material-symbols-rounded me-2 fs-6">refresh</span>
                     Reset
@@ -282,9 +311,9 @@ hr {
             </div>
 
             <div id="attendanceTableCard">
-                <div id="attendanceTableDiv">
-                    <table id="attendanceTable" class="table w-100">
-                        <thead>
+                <div id="attendanceTableDiv" class="table-responsive">
+                    <table id="attendanceTable" class="table align-middle table-attendance w-100 mb-0">
+                        <thead class="table-light">
                             <tr>
                                 <th class="col">#</th>
                                 <th class="col">Topic</th>
@@ -301,8 +330,9 @@ hr {
                             @if(hasRole('Admin') || hasRole('Training-Induction'))
                             <tr id="defaultMessageRow">
                                 <td colspan="9" class="text-center py-5">
-                                    <div class="text-muted">
-                                        <p class="mb-2" style="font-size: 1rem;">Apply filter to mark attendance.</p>
+                                    <div class="text-muted small">
+                                        <p class="mb-1 fs-6 fw-semibold text-secondary">Apply filters to mark attendance.</p>
+                                        <p class="mb-0">Choose course, dates, and attendance type to load sessions.</p>
                                     </div>
                                 </td>
                             </tr>
@@ -310,8 +340,9 @@ hr {
                             @if(hasRole('Internal Faculty'))
                             <tr id="defaultMessageRow">
                                 <td colspan="9" class="text-center py-5">
-                                    <div class="text-muted">
-                                        <p class="mb-2" style="font-size: 1rem;">Apply filter to see attendance.</p>
+                                    <div class="text-muted small">
+                                        <p class="mb-1 fs-6 fw-semibold text-secondary">Apply filters to view attendance.</p>
+                                        <p class="mb-0">Select the required details to display attendance records.</p>
                                     </div>
                                 </td>
                             </tr>

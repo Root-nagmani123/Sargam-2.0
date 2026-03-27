@@ -351,30 +351,30 @@
     padding-right: 2.25rem !important;
 }
 </style>
-<div class="container-fluid">
+<div class="container-fluid py-2 py-md-3">
        <x-breadcrum title="Notice /Memo Management" />
             <x-session_message />
 
     <!-- start Zero Configuration -->
-    <div class="card" style="border-left:4px solid #004a93;">
-        <div class="card-body">
-            <div class="row">
-                <div class="col-6">
-                    <h4 class="card-title">Notice /Memo Management</h4>
+    <div class="card shadow-sm border-0 overflow-hidden">
+        <div class="card-body p-3 p-md-4">
+            <div class="row g-2 align-items-center">
+                <div class="col-12 col-lg-6">
+                    <h4 class="card-title mb-0 fw-semibold">Notice /Memo Management</h4>
                 </div>
-                <div class="col-6">
-                    <div class="d-flex justify-content-end align-items-center gap-2">
+                <div class="col-12 col-lg-6">
+                    <div class="d-flex justify-content-lg-end align-items-center gap-2 flex-wrap">
 
                         <!-- Export PDF Button -->
                         <a href="{{ route('memo.notice.management.export_pdf', request()->query()) }}"
-                            class="btn btn-danger d-flex align-items-center" target="_blank">
+                            class="btn btn-outline-danger d-inline-flex align-items-center px-3" target="_blank">
                             <i class="bi bi-file-earmark-pdf me-1" style="font-size: 18px;"></i>
                             Export PDF
                         </a>
 
                         <!-- Add Group Mapping -->
                         <a href="{{ route('memo.notice.management.create') }}"
-                            class="btn btn-primary d-flex align-items-center">
+                            class="btn btn-primary d-inline-flex align-items-center px-3 shadow-sm">
                             <i class="material-icons menu-icon material-symbols-rounded"
                                 style="font-size: 24px;">add</i>
                             Add Notice
@@ -384,9 +384,9 @@
                     </div>
                 </div>
             </div>
-            <form method="GET" action="{{ route('memo.notice.management.index') }}" id="filterForm">
-            <div class="row">
-                <div class="col-3">
+            <form method="GET" action="{{ route('memo.notice.management.index') }}" id="filterForm" class="bg-light border rounded-3 p-3 mt-3">
+            <div class="row g-3">
+                <div class="col-12 col-md-6 col-xl-3">
                     <div class="mb-3">
                         <label for="program_name" class="form-label">Program Name</label>
                         <select class="form-select" id="program_name" name="program_name">
@@ -397,7 +397,7 @@
                         </select>
                     </div>
                 </div>
-                <div class="col-3">
+                <div class="col-12 col-md-6 col-xl-3">
                     <div class="mb-3">
                         <label for="type" class="form-label">Type (Notice / Memo)</label>
                         <select class="form-select" id="type" name="type">
@@ -407,7 +407,7 @@
                         </select>
                     </div>
                 </div>
-                <div class="col-3">
+                <div class="col-12 col-md-6 col-xl-3">
                     <div class="mb-3">
                         <label for="status" class="form-label">Status</label>
                         <select class="form-select" id="status" name="status">
@@ -417,41 +417,41 @@
                         </select>
                     </div>
                 </div>
-                <div class="col-3">
+                <div class="col-12 col-md-6 col-xl-3">
                     <div class="mb-3">
                         <label for="search" class="form-label">Search</label>
                        <input type="text" class="form-control" id="search" name="search" placeholder="Search..." value="{{ $searchFilter }}">
                     </div>
                 </div>
             </div>
-            <div class="row">
-                <div class="col-3">
+            <div class="row g-3 align-items-end">
+                <div class="col-12 col-md-6 col-xl-3">
                     <div class="mb-3">
                         <label for="from_date" class="form-label">From Date</label>
                         <input type="date" class="form-control" id="from_date" name="from_date" value="{{ $fromDateFilter ?: \Carbon\Carbon::today()->toDateString() }}">
                     </div>
                 </div>
-                <div class="col-3">
+                <div class="col-12 col-md-6 col-xl-3">
                     <div class="mb-3">
                         <label for="to_date" class="form-label">To Date</label>
                         <input type="date" class="form-control" id="to_date" name="to_date" value="{{ $toDateFilter ?: \Carbon\Carbon::today()->toDateString() }}">
                     </div>
                 </div>
-                <div class="col-6">
-                    <div class="mb-3 d-flex align-items-center gap-2">
-                        <a href="{{ route('memo.notice.management.index') }}" class="btn btn-secondary">
+                <div class="col-12 col-xl-6">
+                    <div class="mb-3 d-flex align-items-center gap-2 flex-wrap justify-content-xl-end">
+                        <a href="{{ route('memo.notice.management.index') }}" class="btn btn-outline-secondary">
                             <i class="bi bi-x-circle me-1"></i> Clear Filters
                         </a>
                     </div>
                 </div>
             </div>
             </form>
-            <hr>
+            <hr class="my-4">
             <div class="table-responsive">
-                <table class="table text-nowrap">
+                <table class="table align-middle mb-0 {{ $memos->isNotEmpty() ? 'datatable' : '' }}">
                     <thead>
                         <!-- start row -->
-                        <tr>
+                        <tr class="align-middle">
                             <th class="col">S.No.</th>
                             <th class="col">Program Name</th>
                             <th class="col">Participant Name</th>
@@ -468,8 +468,8 @@
                     </thead>
                     <tbody>
                         @if ($memos->isEmpty())
-                        <tr>
-                            <td colspan="12" class="text-center text-muted py-4">
+                        <tr class="align-middle">
+                            <td colspan="12" class="text-center text-muted py-5">
                                 <i class="bi bi-inbox fs-3 d-block mb-2"></i>
                                 No records found
                             </td>
@@ -519,7 +519,7 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
 @endphp
                             <!-- Conversations -->
                             <td class="conversation">
-                                <div class="d-flex align-items-center gap-2 flex-nowrap">
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
                                     @if($memo->type_notice_memo == 'Notice' || $memo->type_notice_memo == 'Memo')
                                     @if($memo->notice_id)
                                     <a href="{{ route('memo.notice.management.conversation', ['id' => $memo->notice_id, 'type' => 'notice']) }}"
@@ -552,14 +552,14 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
                                     <!-- Admin Offcanvas -->
                                      @if($memo->type_notice_memo == 'Notice')
                                     <a
-                                        class="text-primary d-flex align-items-center view-conversation"
+                                        class="text-primary d-inline-flex align-items-center gap-1 text-decoration-none view-conversation"
                                         data-bs-toggle="offcanvas" data-bs-target="#chatOffcanvas" data-type="notice" 
                                         data-id="{{ $memo->notice_id }}" data-topic="{{ $memo->topic_name }}">
                                         <i class="material-icons material-symbols-rounded">chat</i> {{ $role }}
                                     </a>
                                     @elseif($memo->type_notice_memo == 'Memo')
                                     <a
-                                        class="text-primary d-flex align-items-center view-conversation"
+                                        class="text-primary d-inline-flex align-items-center gap-1 text-decoration-none view-conversation"
                                         data-bs-toggle="offcanvas" data-bs-target="#chatOffcanvas" data-type="memo"
                                         data-id="{{ $memo->memo_id }}" data-topic="{{ $memo->topic_name }}">
                                         <i class="material-icons material-symbols-rounded">chat</i> {{ $role }}
@@ -649,15 +649,15 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
                 </table>
 
                 <!-- Pagination -->
-                <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap">
+                <div class="d-flex justify-content-between align-items-center mt-3 gap-2 flex-wrap">
 
-                    <div class="text-muted small mb-2">
+                    <div class="text-muted small mb-0">
                         Showing {{ $memos->firstItem() ?? 0 }}
                         to {{ $memos->lastItem() }}
                         of {{ $memos->total() }} items
                     </div>
 
-                    <div>
+                    <div class="ms-auto">
                         {{ $memos->links('vendor.pagination.custom') }}
                     </div>
 
@@ -669,7 +669,7 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
     <!-- end Zero Configuration -->
    
     <!-- Enhanced Offcanvas with GIGW Guidelines -->
-    <div class="offcanvas offcanvas-end" tabindex="-1" id="chatOffcanvas" aria-labelledby="conversationTopic" role="dialog">
+    <div class="offcanvas offcanvas-end shadow-lg" tabindex="-1" id="chatOffcanvas" aria-labelledby="conversationTopic" role="dialog">
         <div class="offcanvas-header">
             <div class="d-flex flex-column w-100">
                 <h4 class="offcanvas-title mb-2" id="conversationTopic">
@@ -704,16 +704,16 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
      <!-- memo generation modal -->
     <div class="modal fade" id="memo_generate" tabindex="-1" aria-labelledby="memo_generateLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="memo_generateLabel">Generate Memo</h5>
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title fw-semibold" id="memo_generateLabel">Generate Memo</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <form action="{{ route('memo.notice.management.store_memo_status') }}" method="POST">
                         @csrf
-                        <div class="row">
-                            <div class="col-6 mb-3">
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6 mb-3">
                                 <label for="course_master_name" class="form-label">Course</label>
 
                                 <input type="text" id="course_master_name" class="form-control"
@@ -727,7 +727,7 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
                                 @enderror
                             </div>
 
-                            <div class="col-6 mb-3">
+                            <div class="col-12 col-md-6 mb-3">
                                 <label for="date_memo_notice" class="form-label">Date</label>
                                 <input type="date" class="form-control" id="date_memo_notice" name="date_memo_notice"
                                     required readonly>
@@ -736,7 +736,7 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
                                 @enderror
                             </div>
 
-                            <div class="col-6 mb-3">
+                            <div class="col-12 col-md-6 mb-3">
                                 <label for="subject_master_id" class="form-label">Subject <span
                                         class="text-danger">*</span></label>
 
@@ -748,7 +748,7 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
                                 @enderror
                             </div>
 
-                            <div class="col-6 mb-3">
+                            <div class="col-12 col-md-6 mb-3">
                                 <label for="topic_id" class="form-label">Topic</label>
 
                                 <input type="text" id="topic_id" class="form-control" name="topic_id" readonly>
@@ -760,7 +760,7 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
 
 
 
-                            <div class="col-6 mb-3">
+                            <div class="col-12 col-md-6 mb-3">
                                 <label for="session_name" class="form-label">Session</label>
                                 <input type="text" id="class_session_master_pk" class="form-control" readonly>
                                 @error('session_name')
@@ -768,25 +768,25 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
                                 @enderror
                             </div>
 
-                            <div class="col-6 mb-3">
+                            <div class="col-12 col-md-6 mb-3">
                                 <label for="faculty_name" class="form-label">Faculty Name</label>
                                 <input type="text" id="faculty_name" class="form-control" readonly>
                                 @error('faculty_name')
                                 <span class="text-danger">{{ $message }}</span>
                                 @enderror
                             </div>
-                            <div class="col-6 mb-3">
+                            <div class="col-12 col-md-6 mb-3">
                                 <label for="student_name" class="form-label">Student Name</label>
                                 <input type="text" id="student_name" class="form-control" readonly>
                                 @error('student_name')
                                 <span class="text-danger">{{ $message }}</span>
                                 @enderror
                             </div>
-                            <div class="col-6 mb-3">
+                            <div class="col-12 col-md-6 mb-3">
                             </div>
-                            <div class="col-6 mb-3">
+                            <div class="col-12 col-md-6 mb-3">
                                 <label for="memo_type" class="form-label">Memo Type</label>
-                                <select name="memo_type_master_pk" id="memo_type_master_pk" class="form-control">
+                                <select name="memo_type_master_pk" id="memo_type_master_pk" class="form-select">
                                     <option value="">Select Memo Type</option>
                                     @foreach ($memo_master as $master)
                                     <option value="{{ $master->pk }}">{{ $master->memo_type_name }}</option>
@@ -796,7 +796,7 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
                                 <span class="text-danger">{{ $message }}</span>
                                 @enderror
                             </div>
-                            <div class="col-6 mb-3">
+                            <div class="col-12 col-md-6 mb-3">
                                 <label for="memo_number" class="form-label">Memo Number</label>
                                 <input type="text" id="memo_number" name="memo_number" class="form-control" readonly>
                                 @error('memo_number')
@@ -805,9 +805,9 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
                             </div>
 
 
-                            <div class="col-6 mb-3">
+                            <div class="col-12 col-md-6 mb-3">
                                 <label for="venue" class="form-label">Venue</label>
-                                <select name="venue" id="venue" class="form-control">
+                                <select name="venue" id="venue" class="form-select">
                                     <option value="">Select Venue</option>
                                     @foreach ($venue as $v)
                                     <option value="{{ $v->venue_id }}">{{ $v->venue_name }}</option>
@@ -817,14 +817,14 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
                                 <span class="text-danger">{{ $message }}</span>
                                 @enderror
                             </div>
-                            <div class="col-3 mb-3">
+                            <div class="col-12 col-md-3 mb-3">
                                 <label for="memo_date" class="form-label">Date</label>
                                 <input type="date" id="memo_date" class="form-control">
                                 @error('memo_date')
                                 <span class="text-danger">{{ $message }}</span>
                                 @enderror
                             </div>
-                            <div class="col-3 mb-3">
+                            <div class="col-12 col-md-3 mb-3">
                                 <label for="meeting_time" class="form-label">Meeting Time</label>
                                 <input type="time" id="meeting_time" name="meeting_time" class="form-control">
                                 @error('meeting_time')
@@ -842,9 +842,9 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
                         </div>
 
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="submit" class="btn btn-primary">Save</button>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary px-4">Save</button>
                 </div>
                 </form>
             </div>

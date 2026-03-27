@@ -13,7 +13,7 @@
         str_starts_with($path, 'admin/employee-idcard') || str_starts_with($path, 'admin/issue-management') ||
         str_starts_with($path, 'courseAttendanceNoticeMap') || str_starts_with($path, 'course_memo') ||
         str_starts_with($path, 'building_floor') || str_starts_with($path, 'group_mapping') ||
-        str_starts_with($path, 'course-repository') || str_starts_with($path, 'feedback') ||
+        str_starts_with($path, 'course-repository') || str_starts_with($path, 'feedback') || str_starts_with($path, 'admin/feedback') ||
         str_starts_with($path, 'admin/notice') || str_starts_with($path, 'attendance') ||
         str_starts_with($path, 'security') || str_starts_with($path, 'ot_notice') ||
         str_starts_with($path, 'forms') || str_starts_with($path, 'registration') ||
@@ -23,7 +23,7 @@
         str_starts_with($path, 'stream') || str_starts_with($path, 'subject') || str_starts_with($path, 'Venue-Master') ||
         str_starts_with($path, 'batch') || str_starts_with($path, 'curriculum') || str_starts_with($path, 'mapping') ||
         str_starts_with($path, 'admin/master') || str_contains($path, 'breadcrumb-showcase') || str_starts_with($path, 'password') ||
-        request()->routeIs('calendar.index') || str_starts_with($path, 'calendar') ||
+        request()->routeIs('calendar.index') || request()->routeIs('feedback.*') || str_starts_with($path, 'calendar') ||
         str_starts_with($path, 'expertise') || str_starts_with($path, 'faculty_notice') || str_starts_with($path, 'faculty_mdo')
     ) {
         $activeNavTab = '#tab-setup';
