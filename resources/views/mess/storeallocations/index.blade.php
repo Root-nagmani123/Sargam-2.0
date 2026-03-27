@@ -28,25 +28,9 @@
     <hr class="my-2">
 
     {{-- DataTables-style top: length (left) + search (right) --}}
-    <div class="row align-items-center mb-3 g-2">
-        <div class="col-auto">
-            <label class="col-form-label col-form-label-sm text-muted me-2">Show</label>
-            <select class="form-select form-select-sm d-inline-block w-auto" id="storeAllocationPerPage">
-                <option value="10">10</option>
-                <option value="25">25</option>
-                <option value="50">50</option>
-                <option value="100">100</option>
-            </select>
-            <span class="text-muted ms-1">entries</span>
-        </div>
-        <div class="col d-flex justify-content-end">
-            <label class="col-form-label col-form-label-sm text-muted me-2">Search:</label>
-            <input type="search" class="form-control  d-inline-block" id="storeAllocationSearch" placeholder="" style="max-width: 260px;">
-        </div>
-    </div>
 
     <div class="table-responsive">
-        <table class="table text-nowrap align-middle mb-0" id="storeAllocationTable">
+        <table class="table datatable" data-export="false" id="storeAllocationTable">
             <thead>
                 <tr>
                     <th style="width: 60px;">S.No</th>
@@ -70,14 +54,14 @@
                     <td class="text-end">{{ $item->quantity }}</td>
                     <td>{{ $allocation->allocation_date ? $allocation->allocation_date->format('d-m-Y') : '—' }}</td>
                     <td class="text-center">
-                        <button type="button" class="btn btn-sm btn-info btn-edit-allocation text-primary bg-transparent border-0" data-allocation-id="{{ $allocation->id }}" title="Edit allocation">
+                        <button type="button" class="btn btn-sm btn-info btn-edit-allocation text-primary bg-transparent border-0 p-0" data-allocation-id="{{ $allocation->id }}" title="Edit allocation">
                             <span class="material-symbols-rounded" style="font-size: 1.1rem;">edit</span>
                         </button>
                         @if($canDeleteStoreAllocation)
                             <form action="{{ route('admin.mess.storeallocations.destroy', $allocation->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this store allocation?');">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" class="btn btn-sm btn-outline-danger bg-transparent border-0" title="Delete allocation">
+                                <button type="submit" class="btn btn-sm btn-outline-danger bg-transparent border-0 p-0 text-primary" title="Delete allocation">
                                     <span class="material-symbols-rounded" style="font-size: 1.1rem;">delete</span>
                                 </button>
                             </form>
@@ -96,14 +80,6 @@
             </tr>
             </tbody>
         </table>
-    </div>
-
-    {{-- DataTables-style bottom: info (left) + pagination (right) --}}
-    <div class="row align-items-center mt-2 flex-nowrap">
-        <div class="col text-muted small" id="storeAllocationCount">Showing 0 to 0 of 0 entries</div>
-        <div class="col-auto" id="storeAllocationPaginationNav">
-            <ul class="pagination pagination-sm mb-0" id="storeAllocationPagination"></ul>
-        </div>
     </div>
     </div>
    </div>

@@ -25,14 +25,14 @@
                                value="{{ $toDate }}" required>
                     </div>
                     <div class="col-md-3">
-                        <label class="form-label small fw-semibold text-uppercase mb-1 text-muted">Store Type</label>
+                        <label class="form-label fw-semibold text-uppercase mb-1 text-muted">Store Type</label>
                         <select name="store_type" id="store_type" class="form-select" data-placeholder="Select Store Type">
                             <option value="main" {{ $storeType == 'main' ? 'selected' : '' }}>Main Store</option>
                             <option value="sub" {{ $storeType == 'sub' ? 'selected' : '' }}>Sub Store</option>
                         </select>
                     </div>
                     <div class="col-md-3" id="main_store_div" style="display: {{ $storeType == 'main' ? 'block' : 'none' }};">
-                        <label class="form-label small fw-semibold text-uppercase mb-1 text-muted">Main Store</label>
+                        <label class="form-label fw-semibold text-uppercase mb-1 text-muted">Main Store</label>
                         <select name="main_store_id" class="form-select form-select-sm" data-placeholder="All Main Stores">
                             <option value="">All Main Stores</option>
                             @foreach($stores as $store)
