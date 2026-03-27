@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\DataTables\FC\PendingFeedbackDataTable;
+use App\DataTables\FC\PendingFeedbackSummaryDataTable;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -22,6 +24,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str; // Add this import
 use App\Exports\PendingFeedbackExport;
 use App\Exports\FacultyFeedback_AvgExport;
+use App\Exports\PendingFeedbackSummaryExport;
 
 
 
@@ -938,7 +941,7 @@ class FeedbackController extends Controller
         return $pdf->download($filename);
     }
 
-   
+
 
     public function facultyView(Request $request)
     {
@@ -1405,7 +1408,7 @@ class FeedbackController extends Controller
                 'tf.faculty_pk',
                 'tt.START_DATE',
                 'tt.END_DATE',
-                'tt.class_session', 
+                'tt.class_session',
                 'tf.timetable_pk',
                 DB::raw('SUM(CASE WHEN tf.content = "5" THEN 1 ELSE 0 END) as content_5'),
                 DB::raw('SUM(CASE WHEN tf.content = "4" THEN 1 ELSE 0 END) as content_4'),
@@ -1542,7 +1545,7 @@ class FeedbackController extends Controller
                         $remark !== '...' &&
                         $remark !== '-' &&
                         $remark !== '--' &&
-                        strlen($remark) > 1; 
+                        strlen($remark) > 1;
                 });
                 $remarks = array_unique($remarks);
 
@@ -2717,101 +2720,258 @@ class FeedbackController extends Controller
     }
 
 
-
-
-
-    /**
-     * Show pending feedback students for admin
-     */
-    public function pendingStudents(Request $request)
+    public function pendingStudents(PendingFeedbackDataTable $dataTable)
     {
-        $courses = Cache::remember('active_courses', 3600, function () {
-            return DB::table('course_master')
-                ->where('active_inactive', 1)
-                ->orderBy('course_name')
-                ->get();
-        });
+        try {
+            // Get filter options from cache
+            $courses = Cache::remember('pending_feedback_courses', 3600, function () {
+                return DB::table('course_master')
+                    ->where('active_inactive', 1)
+                    ->orderBy('course_name')
+                    ->pluck('course_name', 'pk');
+            });
 
-        $query = $this->buildPendingQuery();
+            $sessions = Cache::remember('pending_feedback_sessions', 3600, function () {
+                return DB::table('timetable')
+                    ->select('pk', 'subject_topic', 'START_DATE')
+                    ->where('active_inactive', 1)
+                    ->where('feedback_checkbox', 1)
+                    ->orderBy('START_DATE', 'desc')
+                    ->get()
+                    ->mapWithKeys(function ($item) {
+                        $label = $item->subject_topic;
+                        if ($item->START_DATE) {
+                            $label .= ' (' . date('d-m-Y', strtotime($item->START_DATE)) . ')';
+                        }
+                        return [$item->pk => $label];
+                    });
+            });
 
-        if ($request->filled('course_pk')) {
-            $query->where('t.course_master_pk', $request->course_pk);
+            return $dataTable->render('admin.feedback.pending_students', compact('courses', 'sessions'));
+        } catch (\Exception $e) {
+            \Log::error('Pending Students View Error: ' . $e->getMessage());
+            return back()->with('error', 'Error loading page: ' . $e->getMessage());
         }
-
-        $pendingStudents = $query
-            ->orderBy('from_date', 'asc')
-            ->orderBy('session_end_time', 'asc')
-            ->paginate(20)
-            ->appends($request->query());
-
-        return view('admin.feedback.pending_students', compact('pendingStudents', 'courses'));
     }
 
 
-    /**
-     * Export pending feedback as PDF
-     */
+
+    public function getSessionsByCourse(Request $request)
+    {
+        try {
+            $courseId = $request->course_pk;
+
+            if (!$courseId) {
+                return response()->json([]);
+            }
+
+            $sessions = DB::table('timetable')
+                ->select('pk', 'subject_topic', 'START_DATE')
+                ->where('course_master_pk', $courseId)
+                ->where('active_inactive', 1)
+                ->where('feedback_checkbox', 1)
+                ->orderBy('START_DATE', 'desc')
+                ->get()
+                ->map(function ($item) {
+                    $item->label = $item->subject_topic;
+                    if ($item->START_DATE) {
+                        $item->label .= ' (' . date('d-m-Y', strtotime($item->START_DATE)) . ')';
+                    }
+                    return $item;
+                });
+
+            return response()->json($sessions);
+        } catch (\Exception $e) {
+            \Log::error('Get Sessions Error: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to load sessions'], 500);
+        }
+    }
+
+
+
+
     public function exportPendingStudentsPDF(Request $request)
     {
-        set_time_limit(300);
-        ini_set('memory_limit', '1024M');
+        try {
+            // Increase limits for large exports
+            set_time_limit(600); // 10 minutes for large datasets
+            ini_set('memory_limit', '2048M');
 
-        $query = $this->buildPendingQuery();
+            // Build the query
+            $query = $this->buildExportQuery();
+            $this->applyExportFilters($query, $request);
 
-        if ($request->filled('course_pk')) {
-            $query->where('t.course_master_pk', $request->course_pk);
+            // Get total count efficiently
+            $totalCount = $query->count();
+
+            if ($totalCount == 0) {
+                return back()->with('error', 'No pending feedback records found.');
+            }
+
+            // For very large datasets, show warning and suggest filtering
+            if ($totalCount > 10000) {
+                return back()->with(
+                    'warning',
+                    "Large dataset ({$totalCount} records). PDF generation may take several minutes. " .
+                        "Consider applying more filters to reduce records. Continue anyway?"
+                )->with('force_export', true);
+            }
+
+            // Optimize chunk size based on total records
+            $chunkSize = $totalCount > 5000 ? 1000 : ($totalCount > 2000 ? 500 : 200);
+
+            // Use lazy loading for better memory efficiency
+            $students = collect();
+            $processedCount = 0;
+            $lastLogTime = now();
+
+            // Process in chunks with progress tracking
+            $query->orderBy('t.START_DATE', 'desc')
+                ->chunk($chunkSize, function ($chunk) use (&$students, &$processedCount, $totalCount, $lastLogTime) {
+                    foreach ($chunk as $item) {
+                        // Only keep essential fields to reduce memory
+                        $students->push((object)[
+                            'student_name' => $item->student_name,
+                            'course_name' => $item->course_name,
+                            'subject_topic' => $item->subject_topic,
+                            'email' => $item->email,
+                            'contact_no' => $item->contact_no,
+                            'generated_OT_code' => $item->generated_OT_code,
+                            'faculty_name' => $item->faculty_name ?? 'N/A',
+                            'venue_name' => $item->venue_name ?? 'N/A',
+                            'from_date' => $item->from_date,
+                            'to_date' => $item->to_date,
+                            'class_session' => $item->class_session,
+                        ]);
+                    }
+
+                    $processedCount += $chunk->count();
+
+                    // Log progress every 5 seconds for large exports
+                    if (now()->diffInSeconds($lastLogTime) >= 5) {
+                        $percentage = round(($processedCount / $totalCount) * 100, 1);
+                        \Log::info("PDF Export Progress: {$processedCount}/{$totalCount} ({$percentage}%)");
+                        $lastLogTime = now();
+                    }
+
+                    // Force garbage collection after each chunk
+                    unset($chunk);
+                    if (function_exists('gc_collect_cycles')) {
+                        gc_collect_cycles();
+                    }
+                });
+
+            \Log::info('PDF Export Completed: ' . $students->count() . ' records processed');
+
+            // Prepare optimized data for PDF
+            $data = [
+                'students' => $students,
+                'course_name' => $this->getCourseName($request->course_pk),
+                'export_date' => now()->format('d-m-Y H:i:s'),
+                'total_count' => $students->count(),
+                'page_size' => $students->count() > 2000 ? 'A3' : 'A4', // Use larger paper for big datasets
+                'filters' => [
+                    'course' => $this->getCourseName($request->course_pk),
+                    'session' => $request->session_id ? $this->getSessionName($request->session_id) : 'All Sessions',
+                    'from_date' => $request->from_date ? date('d-m-Y', strtotime($request->from_date)) : 'All',
+                    'to_date' => $request->to_date ? date('d-m-Y', strtotime($request->to_date)) : 'All',
+                    'search' => $request->ot_name ?: 'None'
+                ]
+            ];
+
+            // Generate PDF with memory-efficient settings
+            $pdf = Pdf::loadView('admin.feedback.pending_students_pdf', $data)
+                ->setPaper($data['page_size'], 'landscape')
+                ->setOptions([
+                    'defaultFont' => 'sans-serif',
+                    'isHtml5ParserEnabled' => true,
+                    'isRemoteEnabled' => false,
+                    'dpi' => 72, // Reduced DPI for smaller file size
+                    'margin_top' => 8,
+                    'margin_right' => 8,
+                    'margin_bottom' => 8,
+                    'margin_left' => 8,
+                    'enable_php' => false,
+                    'enable_javascript' => false,
+                    'enable_css_float' => true,
+                ]);
+
+            // Generate filename with timestamp
+            $filename = 'pending_feedback_' . date('Y-m-d_His') . '.pdf';
+
+            // Stream download (more memory efficient than direct download)
+            return $pdf->download($filename);
+        } catch (\Exception $e) {
+            \Log::error('PDF Export Error: ' . $e->getMessage());
+            \Log::error('Stack trace: ' . $e->getTraceAsString());
+
+            // Provide helpful error message
+            $errorMessage = 'Failed to export PDF: ' . $e->getMessage();
+            if (str_contains($e->getMessage(), 'memory')) {
+                $errorMessage = 'Memory limit exceeded. Please apply more filters to reduce the dataset size.';
+            } elseif (str_contains($e->getMessage(), 'timeout')) {
+                $errorMessage = 'Export timeout. Please try with fewer records or apply more filters.';
+            }
+
+            return back()->with('error', $errorMessage);
         }
-
-        $students = collect();
-
-        // 🔁 Chunking prevents memory crash
-        $query->orderBy('t.START_DATE')->chunk(200, function ($rows) use (&$students) {
-            $students = $students->merge($rows);
-        });
-
-        if ($students->isEmpty()) {
-            return back()->with('error', 'No pending feedback records found.');
-        }
-
-        $pdf = PDF::loadView('admin.feedback.pending_students_pdf', [
-            'students' => $students,
-            'course_name' => $this->getCourseName($request->course_pk),
-            'export_date' => now()->format('d-m-Y H:i:s'),
-        ])
-            ->setPaper('A4', 'landscape');
-
-        return $pdf->download('pending_feedback_' . now()->format('Ymd_His') . '.pdf');
     }
 
+    /**
+     * Helper method to get session name
+     */
+    private function getSessionName($sessionId)
+    {
+        if (!$sessionId) return 'All Sessions';
 
+        static $sessionCache = [];
 
+        if (!isset($sessionCache[$sessionId])) {
+            $sessionCache[$sessionId] = DB::table('timetable')
+                ->where('pk', $sessionId)
+                ->value('subject_topic');
+        }
+
+        return $sessionCache[$sessionId] ?? 'Unknown Session';
+    }
 
     /**
-     * Export pending feedback as Excel
+     * Export to Excel
      */
     public function exportPendingStudentsExcel(Request $request)
     {
-        $request->validate([
-            'course_pk' => 'nullable|integer|exists:course_master,pk'
-        ]);
+        try {
+            // Build the query
+            $query = $this->buildExportQuery();
 
-        $query = $this->buildPendingQuery();
+            // Apply filters
+            $this->applyExportFilters($query, $request);
 
-        if ($request->filled('course_pk')) {
-            $query->where('t.course_master_pk', $request->course_pk);
+            // Order the query
+            $query->orderBy('t.START_DATE', 'desc');
+
+            // Check if data exists (optional - you can let the export handle empty data)
+            $count = (clone $query)->count();
+            if ($count == 0) {
+                return back()->with('error', 'No pending feedback records found.');
+            }
+
+            // Download Excel with Query Builder
+            return Excel::download(
+                new PendingFeedbackExport($query),
+                'pending_feedback_' . now()->format('Y-m-d_H-i') . '.xlsx'
+            );
+        } catch (\Exception $e) {
+            \Log::error('Excel Export Error: ' . $e->getMessage());
+            return back()->with('error', 'Failed to export Excel: ' . $e->getMessage());
         }
-
-        return Excel::download(
-            new PendingFeedbackExport(clone $query),
-            'pending_feedback_' . now()->format('Y-m-d_H-i') . '.xlsx'
-        );
     }
 
 
     /**
      * Build optimized pending feedback query
      */
-    private function buildPendingQuery()
+    private function buildExportQuery()
     {
         return DB::table('timetable as t')
             ->select([
@@ -2821,35 +2981,31 @@ class FeedbackController extends Controller
                 'v.venue_name',
                 'f.full_name as faculty_name',
                 DB::raw("TRIM(CONCAT(
-                sm.first_name,' ',
-                IFNULL(sm.middle_name,''),' ',
-                IFNULL(sm.last_name,'')
-            )) as student_name"),
+                    COALESCE(sm.first_name, ''),
+                    ' ',
+                    COALESCE(sm.middle_name, ''),
+                    ' ',
+                    COALESCE(sm.last_name, '')
+                )) as student_name"),
                 'sm.email',
                 'sm.contact_no',
                 'sm.generated_OT_code',
                 't.START_DATE as from_date',
-                DB::raw("DATE_FORMAT(t.START_DATE, '%d-%m-%Y') as formatted_date"),
-                't.class_session',
-                DB::raw("
-                STR_TO_DATE(
-                    TRIM(SUBSTRING_INDEX(t.class_session, '-', -1)),
-                    '%h:%i %p'
-                ) as session_end_time
-            ")
+                't.END_DATE as to_date',
+                't.class_session'
             ])
             ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
             ->join('venue_master as v', 't.venue_id', '=', 'v.venue_id')
             ->leftJoin('faculty_master as f', function ($join) {
-                $join->whereRaw("
-                f.pk = (
-                    CASE 
-                        WHEN JSON_VALID(t.faculty_master) 
-                        THEN CAST(JSON_UNQUOTE(JSON_EXTRACT(t.faculty_master, '$[0]')) AS UNSIGNED)
-                        ELSE CAST(t.faculty_master AS UNSIGNED)
-                    END
-                )
-            ");
+                $join->on('f.pk', '=', DB::raw("
+                    CAST(
+                        CASE 
+                            WHEN JSON_VALID(t.faculty_master) 
+                            THEN JSON_UNQUOTE(JSON_EXTRACT(t.faculty_master, '$[0]'))
+                            ELSE t.faculty_master
+                        END AS UNSIGNED
+                    )
+                "));
             })
             ->join('student_master_course__map as smcm', function ($join) {
                 $join->on('smcm.course_master_pk', '=', 't.course_master_pk')
@@ -2868,16 +3024,390 @@ class FeedbackController extends Controller
             })
             ->where('t.feedback_checkbox', 1)
             ->whereNull('tf.pk')
+            ->where('t.START_DATE', '<=', now())
             ->whereRaw("
-            TIMESTAMP(
-                t.END_DATE,
+                ADDTIME(t.END_DATE, 
+                    STR_TO_DATE(
+                        TRIM(SUBSTRING_INDEX(t.class_session, '-', -1)),
+                        '%h:%i %p'
+                    )
+                ) <= NOW()
+            ")
+            ->distinct();
+    }
+
+    /**
+     * Apply filters to export query
+     */
+    private function applyExportFilters($query, Request $request)
+    {
+        // Log incoming filters for debugging
+        \Log::info('Export Filters Applied:', $request->all());
+
+        // Course filter
+        if ($request->filled('course_pk')) {
+            $query->where('t.course_master_pk', $request->course_pk);
+        }
+
+        // Session filter (timetable pk)
+        if ($request->filled('session_id')) {
+            $query->where('t.pk', $request->session_id);
+        }
+
+        // Date filters
+        if ($request->filled('from_date')) {
+            $query->whereDate('t.START_DATE', '>=', $request->from_date);
+        }
+
+        if ($request->filled('to_date')) {
+            $query->whereDate('t.START_DATE', '<=', $request->to_date);
+        }
+
+        // Global search term (from DataTables search box)
+        if ($request->filled('ot_name') && !empty($request->ot_name)) {
+            $searchTerm = $request->ot_name;
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where(DB::raw("TRIM(CONCAT(
+                COALESCE(sm.first_name, ''),
+                ' ',
+                COALESCE(sm.middle_name, ''),
+                ' ',
+                COALESCE(sm.last_name, '')
+            ))"), 'LIKE', '%' . $searchTerm . '%')
+                    ->orWhere('sm.email', 'LIKE', '%' . $searchTerm . '%')
+                    ->orWhere('sm.contact_no', 'LIKE', '%' . $searchTerm . '%')
+                    ->orWhere('sm.generated_OT_code', 'LIKE', '%' . $searchTerm . '%')
+                    ->orWhere('t.subject_topic', 'LIKE', '%' . $searchTerm . '%')
+                    ->orWhere('c.course_name', 'LIKE', '%' . $searchTerm . '%');
+            });
+        }
+    }
+
+    /**
+     * Get course name helper
+     */
+    private function getCourseName($coursePk)
+    {
+        if (!$coursePk) {
+            return 'All Courses';
+        }
+
+        $course = DB::table('course_master')
+            ->where('pk', $coursePk)
+            ->first();
+
+        return $course ? $course->course_name : 'Unknown Course';
+    }
+
+    /**
+     * DataTable AJAX endpoint
+     */
+    public function pendingStudentsDataTable(PendingFeedbackDataTable $dataTable)
+    {
+        try {
+            return $dataTable->ajax();
+        } catch (\Exception $e) {
+            \Log::error('DataTable Error: ' . $e->getMessage());
+            return response()->json([
+                'error' => true,
+                'message' => 'Error loading data: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+
+
+    /**
+     * Display pending feedback summary by user
+     */
+    /**
+     * Pending Feedback Summary View
+     */
+    public function pendingFeedbackSummary(PendingFeedbackSummaryDataTable $dataTable)
+    {
+        try {
+            // Get filter options from cache (same as pending students)
+            $courses = Cache::remember('pending_feedback_courses', 3600, function () {
+                return DB::table('course_master')
+                    ->where('active_inactive', 1)
+                    ->orderBy('course_name')
+                    ->pluck('course_name', 'pk');
+            });
+
+            $sessions = Cache::remember('pending_feedback_sessions', 3600, function () {
+                return DB::table('timetable')
+                    ->select('pk', 'subject_topic', 'START_DATE')
+                    ->where('active_inactive', 1)
+                    ->where('feedback_checkbox', 1)
+                    ->orderBy('START_DATE', 'desc')
+                    ->get()
+                    ->mapWithKeys(function ($item) {
+                        $label = $item->subject_topic;
+                        if ($item->START_DATE) {
+                            $label .= ' (' . date('d-m-Y', strtotime($item->START_DATE)) . ')';
+                        }
+                        return [$item->pk => $label];
+                    });
+            });
+
+            return $dataTable->render('admin.feedback.pending_feedback_summary', compact('courses', 'sessions'));
+        } catch (\Exception $e) {
+            \Log::error('Pending Feedback Summary View Error: ' . $e->getMessage());
+            return back()->with('error', 'Error loading page: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Get sessions by course for summary (AJAX)
+     */
+    public function getSessionsByCourseForSummary(Request $request)
+    {
+        try {
+            $courseId = $request->course_pk;
+
+            if (!$courseId) {
+                return response()->json([]);
+            }
+
+            $sessions = DB::table('timetable')
+                ->select('pk', 'subject_topic', 'START_DATE')
+                ->where('course_master_pk', $courseId)
+                ->where('active_inactive', 1)
+                ->where('feedback_checkbox', 1)
+                ->orderBy('START_DATE', 'desc')
+                ->get()
+                ->map(function ($item) {
+                    $item->label = $item->subject_topic;
+                    if ($item->START_DATE) {
+                        $item->label .= ' (' . date('d-m-Y', strtotime($item->START_DATE)) . ')';
+                    }
+                    return $item;
+                });
+
+            return response()->json($sessions);
+        } catch (\Exception $e) {
+            \Log::error('Get Sessions Error: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to load sessions'], 500);
+        }
+    }
+
+    /**
+     * DataTable AJAX endpoint for summary
+     */
+    public function pendingFeedbackSummaryDataTable(PendingFeedbackSummaryDataTable $dataTable)
+    {
+        try {
+            return $dataTable->ajax();
+        } catch (\Exception $e) {
+            \Log::error('Summary DataTable Error: ' . $e->getMessage());
+            return response()->json([
+                'error' => true,
+                'message' => 'Error loading data: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Export Summary to Excel
+     */
+    public function exportPendingSummaryExcel(Request $request)
+    {
+        try {
+            $query = $this->buildSummaryExportQuery();
+            $this->applySummaryExportFilters($query, $request);
+
+            $students = $query->orderBy('pending_count', 'desc')->get();
+
+            if ($students->isEmpty()) {
+                return back()->with('error', 'No pending feedback records found.');
+            }
+
+            return Excel::download(
+                new PendingFeedbackSummaryExport($students, $request->all()),
+                'pending_feedback_summary_' . now()->format('Y-m-d_H-i') . '.xlsx'
+            );
+        } catch (\Exception $e) {
+            \Log::error('Summary Excel Export Error: ' . $e->getMessage());
+            return back()->with('error', 'Failed to export Excel: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Export Summary to PDF
+     */
+    /**
+     * Export Summary to PDF
+     */
+    public function exportPendingSummaryPDF(Request $request)
+    {
+        try {
+            set_time_limit(300);
+            ini_set('memory_limit', '1024M');
+
+            $query = $this->buildSummaryExportQuery();
+            $this->applySummaryExportFilters($query, $request);
+
+            $students = $query->orderBy('pending_count', 'desc')->get();
+
+            if ($students->isEmpty()) {
+                return back()->with('error', 'No pending feedback records found.');
+            }
+
+            // Get course name if course filter is applied
+            $courseName = null;
+            if ($request->filled('filter_course_pk')) {
+                $course = DB::table('course_master')
+                    ->where('pk', $request->filter_course_pk)
+                    ->first();
+                $courseName = $course ? $course->course_name : null;
+            }
+
+            // Get session name if session filter is applied
+            $sessionName = null;
+            if ($request->filled('filter_session_id')) {
+                $session = DB::table('timetable')
+                    ->where('pk', $request->filter_session_id)
+                    ->first();
+                if ($session) {
+                    $sessionName = $session->subject_topic;
+                    if ($session->START_DATE) {
+                        $sessionName .= ' (' . date('d-m-Y', strtotime($session->START_DATE)) . ')';
+                    }
+                }
+            }
+
+            $pdf = Pdf::loadView('admin.feedback.pending_feedback_summary_pdf', [
+                'students' => $students,
+                'export_date' => now()->format('d-m-Y H:i:s'),
+                'total_count' => $students->count(),
+                'filters' => $request->all(),
+                'courseName' => $courseName,
+                'sessionName' => $sessionName  // Pass session name to view
+            ])->setPaper('A4', 'landscape');
+
+            return $pdf->download('pending_feedback_summary_' . now()->format('Ymd_His') . '.pdf');
+        } catch (\Exception $e) {
+            \Log::error('Summary PDF Export Error: ' . $e->getMessage());
+            return back()->with('error', 'Failed to export PDF: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Build summary export query
+     */
+    /**
+     * Build summary export query
+     */
+    private function buildSummaryExportQuery()
+    {
+        return DB::table('timetable as t')
+            ->select([
+                DB::raw("CONCAT(
+                COALESCE(sm.first_name, ''),
+                ' ',
+                COALESCE(sm.middle_name, ''),
+                ' ',
+                COALESCE(sm.last_name, '')
+            ) as user_name"),
+                'sm.email',
+                'sm.contact_no',
+                'c.course_name',  // This is included
+                DB::raw("'Multiple Sessions' as session_info"),
+                DB::raw("CONCAT(
+                DATE_FORMAT(MIN(t.START_DATE), '%d-%m-%Y'),
+                ' to ',
+                DATE_FORMAT(MAX(t.START_DATE), '%d-%m-%Y')
+            ) as date_range"),
+                DB::raw('COUNT(DISTINCT t.pk) as pending_count')
+            ])
+            ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')  // Join with course_master
+            ->join('student_master_course__map as smcm', function ($join) {
+                $join->on('smcm.course_master_pk', '=', 't.course_master_pk')
+                    ->where('smcm.active_inactive', 1);
+            })
+            ->join('student_master as sm', 'sm.pk', '=', 'smcm.student_master_pk')
+            ->join('course_student_attendance as csa', function ($join) {
+                $join->on('csa.timetable_pk', '=', 't.pk')
+                    ->on('csa.Student_master_pk', '=', 'sm.pk')
+                    ->where('csa.status', '1');
+            })
+            ->leftJoin('topic_feedback as tf', function ($join) {
+                $join->on('tf.timetable_pk', '=', 't.pk')
+                    ->on('tf.student_master_pk', '=', 'sm.pk')
+                    ->where('tf.is_submitted', 1);
+            })
+            ->where('t.feedback_checkbox', 1)
+            ->whereNull('tf.pk')
+            ->where('t.START_DATE', '<=', now())
+            ->whereRaw("
+            ADDTIME(t.END_DATE, 
                 STR_TO_DATE(
                     TRIM(SUBSTRING_INDEX(t.class_session, '-', -1)),
                     '%h:%i %p'
                 )
             ) <= NOW()
         ")
-            ->distinct();
+            ->groupBy('sm.pk', 'sm.first_name', 'sm.middle_name', 'sm.last_name', 'sm.email', 'sm.contact_no', 'c.course_name');
+    }
+
+    /**
+     * Apply filters to summary export query
+     */
+    /**
+     * Apply filters to summary export query
+     */
+    private function applySummaryExportFilters($query, Request $request)
+    {
+        // Apply course filter
+        if ($request->filled('filter_course_pk')) {
+            $query->where('t.course_master_pk', $request->filter_course_pk);
+        }
+
+        // Apply session filter
+        if ($request->filled('filter_session_id')) {
+            $query->where('t.pk', $request->filter_session_id);
+        }
+
+        // Apply user name filter
+        if ($request->filled('filter_user_name')) {
+            $query->where(function ($q) use ($request) {
+                $q->where('sm.display_name', 'LIKE', '%' . $request->filter_user_name . '%')
+                    ->orWhere('sm.first_name', 'LIKE', '%' . $request->filter_user_name . '%')
+                    ->orWhere('sm.last_name', 'LIKE', '%' . $request->filter_user_name . '%');
+            });
+        }
+
+        // Apply email filter
+        if ($request->filled('filter_email')) {
+            $query->where('sm.email', 'LIKE', '%' . $request->filter_email . '%');
+        }
+
+        // Apply date filters
+        if ($request->filled('filter_from_date')) {
+            $query->whereDate('t.START_DATE', '>=', $request->filter_from_date);
+        }
+
+        if ($request->filled('filter_to_date')) {
+            $query->whereDate('t.START_DATE', '<=', $request->filter_to_date);
+        }
+
+        // Apply global search (ot_name is the DataTable search input)
+        if ($request->filled('ot_name')) {
+            $searchTerm = $request->ot_name;
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where(DB::raw("CONCAT(
+                COALESCE(sm.first_name, ''),
+                ' ',
+                COALESCE(sm.middle_name, ''),
+                ' ',
+                COALESCE(sm.last_name, '')
+            )"), 'LIKE', '%' . $searchTerm . '%')
+                    ->orWhere('sm.email', 'LIKE', '%' . $searchTerm . '%')
+                    ->orWhere('c.course_name', 'LIKE', '%' . $searchTerm . '%')
+                    ->orWhere('sm.first_name', 'LIKE', '%' . $searchTerm . '%')
+                    ->orWhere('sm.last_name', 'LIKE', '%' . $searchTerm . '%');
+            });
+        }
     }
 
 
@@ -3015,24 +3545,24 @@ class FeedbackController extends Controller
     /**
      * Get course name helper - SIMPLIFIED VERSION
      */
-    private function getCourseName($course_pk)
-    {
-        if (!$course_pk) {
-            return 'All Courses';
-        }
+    // private function getCourseName($course_pk)
+    // {
+    //     if (!$course_pk) {
+    //         return 'All Courses';
+    //     }
 
-        try {
-            // Direct query without caching to avoid issues
-            $result = DB::table('course_master')
-                ->where('pk', $course_pk)
-                ->value('course_name'); // Use value() to get just the course_name
+    //     try {
+    //         // Direct query without caching to avoid issues
+    //         $result = DB::table('course_master')
+    //             ->where('pk', $course_pk)
+    //             ->value('course_name'); // Use value() to get just the course_name
 
-            return $result ?: 'All Courses';
-        } catch (\Exception $e) {
-            \Log::error('Error getting course name for pk ' . $course_pk . ': ' . $e->getMessage());
-            return 'All Courses';
-        }
-    }
+    //         return $result ?: 'All Courses';
+    //     } catch (\Exception $e) {
+    //         \Log::error('Error getting course name for pk ' . $course_pk . ': ' . $e->getMessage());
+    //         return 'All Courses';
+    //     }
+    // }
 
     /**
      * Simple slug creation function (alternative to Str::slug)
