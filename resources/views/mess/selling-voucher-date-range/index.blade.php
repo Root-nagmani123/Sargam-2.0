@@ -235,6 +235,7 @@
 'searchDelay' => 0,
 'scrollX' => true
 ])
+@include('mess.partials.modal-dropdown-stability')
 
 @push('scripts')
 <script>
@@ -385,8 +386,27 @@ document.addEventListener('DOMContentLoaded', function () {
         border-bottom: 1px solid var(--bs-border-color-translucent);
     }
 
+    /* Responsive modal sizing across viewport widths */
+    #addReportModal .modal-dialog,
+    #viewReportModal .modal-dialog,
+    #editReportModal .modal-dialog,
+    #returnItemModal .modal-dialog {
+        width: calc(100vw - 1rem);
+        max-width: min(var(--bs-modal-width), calc(100vw - 1rem));
+    }
+
+    @media (min-width: 576px) {
+        #addReportModal .modal-dialog,
+        #viewReportModal .modal-dialog,
+        #editReportModal .modal-dialog,
+        #returnItemModal .modal-dialog {
+            width: calc(100vw - 2rem);
+            max-width: min(var(--bs-modal-width), calc(100vw - 2rem));
+        }
+    }
+
     #addReportModal .modal-dialog {
-        max-height: calc(100vh - 2rem);
+        max-height: calc(100dvh - 2rem);
         margin: 1rem auto;
     }
 
@@ -394,7 +414,7 @@ document.addEventListener('DOMContentLoaded', function () {
     #viewReportModal .modal-content,
     #editReportModal .modal-content,
     #returnItemModal .modal-content {
-        max-height: calc(100vh - 2rem);
+        max-height: calc(100dvh - 2rem);
         display: flex;
         flex-direction: column;
         border: 0;
@@ -441,8 +461,8 @@ document.addEventListener('DOMContentLoaded', function () {
     #addReportModal .dr-item-details-table-wrap,
     #editReportModal .dr-item-details-table-wrap {
         /* Show all item columns in one view */
-        overflow-x: hidden;
-        overflow-y: visible;
+        overflow-x: auto;
+        overflow-y: hidden;
         width: 100%;
     }
     #addReportModal .dr-item-details-table-wrap .table,
@@ -470,6 +490,25 @@ document.addEventListener('DOMContentLoaded', function () {
     #addReportItemsTable th:nth-child(7), #editReportItemsTable th:nth-child(7) { width: 9%; }
     #addReportItemsTable th:nth-child(8), #editReportItemsTable th:nth-child(8) { width: 11%; }
     #addReportItemsTable th:nth-child(9), #editReportItemsTable th:nth-child(9) { width: 5%; }
+
+    @media (max-width: 991.98px) {
+        #addReportModal .dr-item-details-table-wrap,
+        #editReportModal .dr-item-details-table-wrap {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        #addReportModal .dr-item-details-table-wrap .table,
+        #editReportModal .dr-item-details-table-wrap .table {
+            min-width: 980px;
+            table-layout: auto;
+        }
+        #addReportItemsTable th,
+        #addReportItemsTable td,
+        #editReportItemsTable th,
+        #editReportItemsTable td {
+            white-space: nowrap;
+        }
+    }
     /* Item dropdowns use fixed-position panel; no need to relax container overflow */
     #addReportModal .card:has(#addModalItemsBody) .card-body,
     #editReportModal .card:has(#editModalItemsBody) .card-body {
@@ -546,7 +585,7 @@ document.addEventListener('DOMContentLoaded', function () {
     #editReportModal .modal-body,
     #returnItemModal .modal-body {
         overflow-y: auto;
-        max-height: calc(100vh - 10rem);
+        max-height: calc(100dvh - 10rem);
     }
 
     #addReportModal .card,
@@ -600,7 +639,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 </style>
 <div class="modal fade" id="addReportModal" tabindex="-1" aria-labelledby="addReportModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-xl-down modal-dialog-centered">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-lg-down modal-dialog-centered">
         <div class="modal-content border-0 shadow">
             <form action="{{ route('admin.mess.selling-voucher-date-range.store') }}" method="POST" id="addReportForm" enctype="multipart/form-data">
                 @csrf
@@ -796,12 +835,12 @@ document.addEventListener('DOMContentLoaded', function () {
 {{-- View Selling Voucher with Date Range Modal (same columns as Selling Voucher view modal + Issue Date) --}}
 <style>
     #viewReportModal .modal-dialog {
-        max-height: calc(100vh - 2rem);
+        max-height: calc(100dvh - 2rem);
         margin: 1rem auto;
     }
 
     #viewReportModal .modal-content {
-        max-height: calc(100vh - 2rem);
+        max-height: calc(100dvh - 2rem);
         display: flex;
         flex-direction: column;
         background: #fff;
@@ -823,7 +862,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     #viewReportModal .modal-body {
         overflow-y: auto;
-        max-height: calc(100vh - 10rem);
+        max-height: calc(100dvh - 10rem);
         background: #fff;
         color: #212529 !important;
     }
@@ -909,7 +948,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 </style>
 <div class="modal fade" id="viewReportModal" tabindex="-1" aria-labelledby="viewReportModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-xl-down modal-dialog-centered">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-lg-down modal-dialog-centered">
         <div class="modal-content border-0 shadow">
             <div class="modal-header border-bottom">
                 <h5 class="modal-title fw-semibold" id="viewReportModalLabel">View Selling Voucher with Date Range</h5>
@@ -1011,7 +1050,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 {{-- Return Item Modal (Transfer To) --}}
 <div class="modal fade" id="returnItemModal" tabindex="-1" aria-labelledby="returnItemModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable modal-fullscreen-lg-down">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable modal-dialog-centered modal-fullscreen-lg-down">
         <div class="modal-content">
             <form id="returnItemForm" method="POST" action="">
                 @csrf
@@ -1062,23 +1101,23 @@ document.addEventListener('DOMContentLoaded', function () {
 {{-- Edit Report Modal --}}
 <style>
     #editReportModal .modal-dialog {
-        max-height: calc(100vh - 2rem);
+        max-height: calc(100dvh - 2rem);
         margin: 1rem auto;
     }
 
     #editReportModal .modal-content {
-        max-height: calc(100vh - 2rem);
+        max-height: calc(100dvh - 2rem);
         display: flex;
         flex-direction: column;
     }
 
     #editReportModal .modal-body {
         overflow-y: auto;
-        max-height: calc(100vh - 10rem);
+        max-height: calc(100dvh - 10rem);
     }
 </style>
 <div class="modal fade" id="editReportModal" tabindex="-1" aria-labelledby="editReportModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-xl-down modal-dialog-centered">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-lg-down modal-dialog-centered">
         <div class="modal-content">
             <form id="editReportForm" method="POST" action="" enctype="multipart/form-data">
                 @csrf
@@ -1467,6 +1506,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     settings.onDropdownOpen.call(api, choices.dropdown ? choices.dropdown.element : null);
                 }
             });
+            selectEl.addEventListener('hideDropdown', function() {
+                if (typeof settings.onDropdownClose === 'function') {
+                    settings.onDropdownClose.call(api, choices.dropdown ? choices.dropdown.element : null);
+                }
+            });
             if (typeof settings.onInitialize === 'function') settings.onInitialize.call(api);
 
             if (selectEl.classList.contains('dr-item-select') || selectEl.classList.contains('edit-dr-item-select')) {
@@ -1613,6 +1657,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 },
                 onDropdownOpen: function (dropdown) {
                     var self = this;
+                    var modalEl = self.input && self.input.closest ? self.input.closest('.modal') : null;
+                    var modalBody = modalEl ? modalEl.querySelector('.modal-body') : null;
+                    var helper = window.MessModalDropdownStability;
+                    self._modalDropdownState = helper && modalEl ? helper.onOpen(modalEl) : null;
+                    if (!self._modalDropdownState && modalBody) self._modalDropdownState = { scrollTop: modalBody.scrollTop };
                     function clearInputAndCursor() {
                         var prevWinTop = (typeof window !== 'undefined') ? (window.scrollY || window.pageYOffset || 0) : 0;
                         // Choices dropdown me visible cloned input ko priority do.
@@ -1639,6 +1688,11 @@ document.addEventListener('DOMContentLoaded', function () {
                             });
                             setTimeout(function() { try { window.scrollTo(0, prevWinTop); } catch (e) {} }, 0);
                         }
+                        if (helper && modalEl) {
+                            helper.keepScroll(modalEl, self._modalDropdownState);
+                        } else if (modalBody && self._modalDropdownState && typeof self._modalDropdownState.scrollTop === 'number') {
+                            modalBody.scrollTop = self._modalDropdownState.scrollTop;
+                        }
                     }
                     // Agar clearOnOpen true hai to har open par selection bhi hatao
                     if (self.settings && self.settings.clearOnOpen) {
@@ -1658,6 +1712,18 @@ document.addEventListener('DOMContentLoaded', function () {
                             });
                         }, 0);
                     }
+                },
+                onDropdownClose: function () {
+                    var self = this;
+                    var modalEl = self.input && self.input.closest ? self.input.closest('.modal') : null;
+                    var modalBody = modalEl ? modalEl.querySelector('.modal-body') : null;
+                    var helper = window.MessModalDropdownStability;
+                    if (helper && modalEl) {
+                        helper.onClose(modalEl, self._modalDropdownState);
+                    } else if (modalBody && self._modalDropdownState && typeof self._modalDropdownState.scrollTop === 'number') {
+                        modalBody.scrollTop = self._modalDropdownState.scrollTop;
+                    }
+                    self._modalDropdownState = null;
                 }
             }, extra || {});
         }

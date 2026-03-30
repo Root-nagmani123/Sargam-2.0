@@ -285,6 +285,7 @@
     'actionColumnIndex' => 5,
     'infoLabel' => 'purchase orders'
 ])
+@include('mess.partials.modal-dropdown-stability')
 
 @push('scripts')
 <script>
@@ -327,24 +328,39 @@
 {{-- Create Purchase Order Modal --}}
 <style>
 #createPurchaseOrderModal .modal-dialog {
-    max-height: calc(100vh - 2rem);
+    max-height: calc(100dvh - 2rem);
     margin: 1rem auto;
 }
 #createPurchaseOrderModal .modal-content {
-    max-height: calc(100vh - 2rem);
+    max-height: calc(100dvh - 2rem);
     display: flex;
     flex-direction: column;
 }
 #createPurchaseOrderModal .modal-body {
     overflow-y: auto;
-    max-height: calc(100vh - 10rem);
+    max-height: calc(100dvh - 10rem);
 }
-#editPurchaseOrderModal .modal-dialog { max-height: calc(100vh - 2rem); margin: 1rem auto; }
-#editPurchaseOrderModal .modal-content { max-height: calc(100vh - 2rem); display: flex; flex-direction: column; }
-#editPurchaseOrderModal .modal-body { overflow-y: auto; max-height: calc(100vh - 10rem); }
-#viewPurchaseOrderModal .modal-dialog { max-height: calc(100vh - 2rem); margin: 1rem auto; }
-#viewPurchaseOrderModal .modal-content { max-height: calc(100vh - 2rem); display: flex; flex-direction: column; }
-#viewPurchaseOrderModal .modal-body { overflow-y: auto; max-height: calc(100vh - 10rem); }
+#editPurchaseOrderModal .modal-dialog { max-height: calc(100dvh - 2rem); margin: 1rem auto; }
+#editPurchaseOrderModal .modal-content { max-height: calc(100dvh - 2rem); display: flex; flex-direction: column; }
+#editPurchaseOrderModal .modal-body { overflow-y: auto; max-height: calc(100dvh - 10rem); }
+#viewPurchaseOrderModal .modal-dialog { max-height: calc(100dvh - 2rem); margin: 1rem auto; }
+#viewPurchaseOrderModal .modal-content { max-height: calc(100dvh - 2rem); display: flex; flex-direction: column; }
+#viewPurchaseOrderModal .modal-body { overflow-y: auto; max-height: calc(100dvh - 10rem); }
+
+#createPurchaseOrderModal .modal-dialog,
+#editPurchaseOrderModal .modal-dialog,
+#viewPurchaseOrderModal .modal-dialog {
+    width: calc(100vw - 1rem);
+    max-width: min(var(--bs-modal-width), calc(100vw - 1rem));
+}
+@media (min-width: 576px) {
+    #createPurchaseOrderModal .modal-dialog,
+    #editPurchaseOrderModal .modal-dialog,
+    #viewPurchaseOrderModal .modal-dialog {
+        width: calc(100vw - 2rem);
+        max-width: min(var(--bs-modal-width), calc(100vw - 2rem));
+    }
+}
 
 /* Tom Select Dropdown Fix - Ensure dropdowns appear above everything */
 .ts-dropdown {
@@ -364,27 +380,19 @@
     contain: layout style paint;
 }
 
-/* Fix for table responsive container clipping dropdowns */
-.table-responsive {
-    overflow: visible !important;
-}
-
-/* Ensure modal allows dropdowns to overflow */
-.modal-body .table-responsive {
+/* Keep table scroll stable inside modals (Tom Select uses dropdownParent: body) */
+#createPurchaseOrderModal .modal-body .table-responsive,
+#editPurchaseOrderModal .modal-body .table-responsive {
     overflow-x: auto;
-    overflow-y: visible !important;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
 }
 
-/* Fix table body overflow in modals */
-.modal .card-body {
-    overflow: visible !important;
+#createPurchaseOrderModal .card-body,
+#editPurchaseOrderModal .card-body {
+    overflow: hidden;
 }
 
-/* Specific fix for item details table */
-#poItemsTable,
-#poItemsTable .table-responsive {
-    overflow: visible !important;
-}
 
 /* ========================================
    Choices.js-like Styling for Tom Select
@@ -577,7 +585,7 @@
 }
 </style>
 <div class="modal fade" id="createPurchaseOrderModal" tabindex="-1" aria-labelledby="createPurchaseOrderModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-lg-down modal-dialog-centered">
         <div class="modal-content">
             <form method="POST" action="{{ route('admin.mess.purchaseorders.store') }}" id="createPOForm" enctype="multipart/form-data">
                 @csrf
@@ -734,7 +742,7 @@
 
 {{-- Edit Purchase Order Modal --}}
 <div class="modal fade" id="editPurchaseOrderModal" tabindex="-1" aria-labelledby="editPurchaseOrderModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-lg-down modal-dialog-centered">
         <div class="modal-content">
             <form method="POST" id="editPOForm" action="" enctype="multipart/form-data">
                 @csrf
@@ -1049,6 +1057,11 @@
 
                     // Kis original <select> par ye dropdown laga hai
                     const originalSelect = this.input || this.original_input || this.select;
+                    const modalEl = originalSelect && originalSelect.closest ? originalSelect.closest('.modal') : null;
+                    const modalBody = modalEl ? modalEl.querySelector('.modal-body') : null;
+                    const helper = window.MessModalDropdownStability;
+                    this._modalDropdownState = helper && modalEl ? helper.onOpen(modalEl) : null;
+                    if (!this._modalDropdownState && modalBody) this._modalDropdownState = { scrollTop: modalBody.scrollTop };
                     // Filters (Vendor/Store) + Item Name dropdowns par selection clear rakhni hai
                     const shouldClearOnOpen =
                         originalSelect &&
@@ -1076,6 +1089,11 @@
                     // Cursor ko hamesha input ke starting me le jao
                     if (searchInput) {
                         setTimeout(() => {
+                            if (helper && modalEl) {
+                                helper.keepScroll(modalEl, this._modalDropdownState);
+                            } else if (modalBody && this._modalDropdownState && typeof this._modalDropdownState.scrollTop === 'number') {
+                                modalBody.scrollTop = this._modalDropdownState.scrollTop;
+                            }
                             searchInput.focus();
                             try {
                                 searchInput.setSelectionRange(0, 0);
@@ -1083,6 +1101,18 @@
                             searchInput.scrollLeft = 0;
                         }, 0);
                     }
+                },
+                onDropdownClose: function() {
+                    const originalSelect = this.input || this.original_input || this.select;
+                    const modalEl = originalSelect && originalSelect.closest ? originalSelect.closest('.modal') : null;
+                    const modalBody = modalEl ? modalEl.querySelector('.modal-body') : null;
+                    const helper = window.MessModalDropdownStability;
+                    if (helper && modalEl) {
+                        helper.onClose(modalEl, this._modalDropdownState);
+                    } else if (modalBody && this._modalDropdownState && typeof this._modalDropdownState.scrollTop === 'number') {
+                        modalBody.scrollTop = this._modalDropdownState.scrollTop;
+                    }
+                    this._modalDropdownState = null;
                 },
                 onFocus: function() {
                     // Position cursor at start when field is focused
