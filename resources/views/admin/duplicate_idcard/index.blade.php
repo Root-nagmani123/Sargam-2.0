@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Request For Duplicate ID Card - Sargam')
-@section('setup_content')
+@section('content')
 <div class="container-fluid">
     <x-breadcrum title="Request For Duplicate ID Card"></x-breadcrum>
 

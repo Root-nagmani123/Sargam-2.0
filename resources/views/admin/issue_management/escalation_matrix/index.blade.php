@@ -41,8 +41,8 @@
                 @endif
 
                 <div class="table-responsive">
-                    <table class="table table-bordered">
-                        <thead class="table-light">
+                    <table class="table">
+                        <thead>
                             <tr>
                                 <th width="5%">#</th>
                                 <th width="20%">Complaint Category</th>

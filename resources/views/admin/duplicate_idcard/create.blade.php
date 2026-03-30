@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Request For Duplicate ID Card - Sargam')
-@section('setup_content')
+@section('content')
 <div class="container-fluid">
     <x-breadcrum title="{{ isset($edit_id) ? 'Edit Duplicate ID Card Request' : 'Request For Duplicate ID Card' }}"></x-breadcrum>
 

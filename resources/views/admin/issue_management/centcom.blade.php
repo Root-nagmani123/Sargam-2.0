@@ -12,7 +12,7 @@
 </style>
 @endsection
 
-@section('setup_content')
+@section('content')
 <div class="container-fluid">
     <x-breadcrum title="CENTCOM - Issues Assigned To You" />
     <div class="datatables">
