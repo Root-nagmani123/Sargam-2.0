@@ -1,6 +1,164 @@
 {{-- Modern & Elegant Breadcrumb Component --}}
-@props(['title' => 'Page', 'variant' => 'glass'])
-@php $variant = $variant ?? 'glass'; @endphp
+@props(['title' => 'Page', 'variant' => 'glass', 'items' => null, 'section' => null])
+@php
+    $variant = $variant ?? 'glass';
+    $routeName = request()->route()?->getName();
+    $requestPath = request()->path();
+
+    $matchesSection = function (array $routePatterns = [], array $pathPatterns = []) use ($routeName, $requestPath) {
+        return (!empty($routePatterns) && \Illuminate\Support\Str::is($routePatterns, $routeName ?? ''))
+            || (!empty($pathPatterns) && \Illuminate\Support\Str::is($pathPatterns, $requestPath));
+    };
+
+    $resolvedSection = $section ?? (function () use ($matchesSection) {
+        if ($matchesSection(['admin.mess.*'], ['admin/mess*'])) {
+            return 'Mess Management';
+        }
+
+        if ($matchesSection(
+            ['admin.security.*', 'admin.employee_idcard.*', 'admin.duplicate_idcard.*', 'admin.family_idcard.*'],
+            ['security*', 'admin/employee-idcard*', 'admin/duplicate-idcard*', 'admin/family-idcard*']
+        )) {
+            return 'Security';
+        }
+
+        if ($matchesSection(
+            [
+                'admin.issue-management.*',
+                'admin.issue-categories.*',
+                'admin.issue-sub-categories.*',
+                'admin.issue-priorities.*',
+                'admin.issue-escalation-matrix.*',
+                'issue-management.*',
+                'issue-categories.*',
+                'issue-sub-categories.*',
+                'issue-priorities.*',
+                'issue-escalation-matrix.*',
+            ],
+            ['issue-management*', 'issue-categories*', 'issue-sub-categories*', 'issue-priorities*', 'issue-escalation-matrix*']
+        )) {
+            return 'Centcom';
+        }
+
+        if ($matchesSection(['admin.estate.*'], ['admin/estate*'])) {
+            return 'Estate Management';
+        }
+
+        if ($matchesSection(['forms.*'], ['forms*'])) {
+            return 'FC Forms';
+        }
+
+        if ($matchesSection(
+            [
+                'calendar.*',
+                'attendance.*',
+                'send.notice.management.*',
+                'memo.notice.management.*',
+                'memo.discipline.*',
+                'admin.memo-notice.*',
+                'feedback.get.*',
+                'subject.*',
+                'subject-module.*',
+            ],
+            ['calendar*', 'attendance*', 'memo/discipline*']
+        )) {
+            return 'Time Table';
+        }
+
+        if ($matchesSection(
+            [
+                'programme.*',
+                'group.mapping.*',
+                'master.course.group.type.*',
+                'student.medical.exemption.*',
+                'mdo-escrot-exemption.*',
+                'master.exemption.*',
+                'master.mdo_duty_type.*',
+                'master.memo.type.master.*',
+                'master.memo.conclusion.master.*',
+                'course.memo.decision.*',
+                'admin.feedback.*',
+                'feedback.average*',
+                'medical.exception.*',
+                'ot.*',
+                'faculty.mdo.*',
+                'faculty.notice.*',
+                'peer.*',
+                'admin.course-repository.user.*',
+            ]
+        )) {
+            return 'Academic';
+        }
+
+        if ($matchesSection(
+            ['member.profile.edit', 'admin.dashboard*', 'admin.notice.*'],
+            ['dashboard*', 'member/profile/edit*']
+        )) {
+            return 'General';
+        }
+
+        if ($matchesSection(
+            [
+                'member.*',
+                'faculty.*',
+                'master.employee.*',
+                'master.department.*',
+                'master.designation.*',
+                'master.caste.category.*',
+                'master.faculty.*',
+                'admin.faculty.whos-who',
+                'admin.roles.*',
+                'admin.users.*',
+                'admin.setup.quick_links.*',
+                'admin.setup.useful_links.*',
+                'course-repository.*',
+            ],
+            ['member*', 'faculty*', 'users*']
+        )) {
+            return 'Users';
+        }
+
+        if ($matchesSection(
+            [
+                'Venue-Master.*',
+                'master.class.session.*',
+                'stream.*',
+                'master.country.*',
+                'master.state.*',
+                'master.district.*',
+                'master.city.*',
+                'master.hostel.*',
+                'hostel.*',
+            ]
+        )) {
+            return 'Master';
+        }
+
+        return 'General';
+    })();
+
+    $breadcrumbItems = collect(
+        is_array($items) && count($items)
+            ? array_values(array_filter($items, fn ($item) => filled($item)))
+            : ['Home', $resolvedSection, $title]
+    )
+        ->map(function ($item) {
+            if (is_array($item)) {
+                return [
+                    'label' => $item['label'] ?? $item['title'] ?? null,
+                    'url' => $item['url'] ?? $item['href'] ?? null,
+                ];
+            }
+
+            return [
+                'label' => $item,
+                'url' => null,
+            ];
+        })
+        ->filter(fn ($item) => filled($item['label']))
+        ->values()
+        ->all();
+@endphp
 
 <div class="modern-breadcrumb-wrapper mb-4" data-variant="{{ $variant }}">
     
@@ -43,7 +201,20 @@
                     <div class="breadcrumb-title-wrapper">
                         <div class="title-indicator"></div>
                         <div class="title-content">
-                            <h1 class="breadcrumb-title">{{ $title }}</h1>
+                            <nav aria-label="breadcrumb" class="breadcrumb-nav">
+                                <ol class="breadcrumb-trail">
+                                    @foreach ($breadcrumbItems as $index => $item)
+                                        @php $isLast = $index === count($breadcrumbItems) - 1; @endphp
+                                        <li style="font-size: 16px;" class="trail-item {{ $isLast ? 'active' : '' }}" @if ($isLast) aria-current="page" @endif>
+                                            @if (!$isLast && filled($item['url']))
+                                                <a href="{{ $item['url'] }}" class="trail-link">{{ $item['label'] }}</a>
+                                            @else
+                                                <span class="{{ $isLast ? 'trail-current' : 'trail-label' }}">{{ $item['label'] }}</span>
+                                            @endif
+                                        </li>
+                                    @endforeach
+                                </ol>
+                            </nav>
                             <div class="title-underline"></div>
                         </div>
                     </div>
@@ -284,6 +455,58 @@
         flex-grow: 1;
         min-width: 0;
     }
+
+    .breadcrumb-nav {
+        margin-bottom: 0.25rem;
+    }
+
+    .breadcrumb-trail {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+        margin: 0 0 0.35rem;
+        padding: 0;
+        list-style: none;
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: #6c757d;
+    }
+
+    .trail-item {
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .trail-item + .trail-item::before {
+        content: ">";
+        margin-right: 0.35rem;
+        color: #9aa3ad;
+        font-weight: 600;
+    }
+
+    .trail-link,
+    .trail-label,
+    .trail-current {
+        color: inherit;
+        text-decoration: none;
+    }
+
+    .trail-link {
+        transition: color 0.2s ease;
+    }
+
+    .trail-link:hover,
+    .trail-link:focus-visible {
+        color: #0d6efd;
+        text-decoration: underline;
+        text-underline-offset: 0.15em;
+    }
+
+    .trail-item.active {
+        color: #0d6efd;
+        font-weight: 600;
+    }
     
     .breadcrumb-title {
         margin: 0;
@@ -378,53 +601,6 @@
         }
     }
     
-    /* Dark Mode Support */
-    @media (prefers-color-scheme: dark) {
-        .modern-breadcrumb-card {
-            background: #1a1d23;
-            box-shadow: 
-                0 2px 8px rgba(0, 0, 0, 0.2),
-                0 4px 16px rgba(0, 0, 0, 0.3),
-                0 0 0 1px rgba(255, 255, 255, 0.05);
-        }
-        
-        .modern-breadcrumb-card:hover {
-            box-shadow: 
-                0 4px 16px rgba(0, 0, 0, 0.3),
-                0 8px 24px rgba(0, 0, 0, 0.4),
-                0 0 0 1px rgba(13, 110, 253, 0.3);
-        }
-        
-        .modern-back-button {
-            background: linear-gradient(135deg, #2a2d35 0%, #23262d 100%);
-            border-color: #3a3d45;
-            color: #e9ecef;
-        }
-        
-        .modern-back-button:hover {
-            background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
-            border-color: #0d6efd;
-            color: #ffffff;
-        }
-        
-        .breadcrumb-title {
-            color: #f8f9fa;
-        }
-        
-        .breadcrumb-separator {
-            background: linear-gradient(180deg, transparent 0%, #3a3d45 50%, transparent 100%);
-        }
-        
-        .decoration-gradient {
-            background: radial-gradient(ellipse at top right, rgba(13, 110, 253, 0.1), transparent 70%);
-        }
-        
-        .decoration-pattern {
-            background-image: 
-                radial-gradient(circle at 20px 20px, rgba(13, 110, 253, 0.03) 1px, transparent 1px);
-        }
-    }
-    
     /* Reduced Motion */
     @media (prefers-reduced-motion: reduce) {
         .modern-breadcrumb-wrapper,
@@ -470,6 +646,10 @@
         
         .breadcrumb-title {
             font-size: 1.125rem;
+        }
+
+        .breadcrumb-trail {
+            font-size: 0.75rem;
         }
         
         .title-underline {

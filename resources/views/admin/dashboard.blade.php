@@ -467,7 +467,7 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
         </div>
         <div class="d-none d-sm-block">
             <span class="material-icons material-symbols-rounded align-middle me-1">calendar_month</span>
-            <span class="small">{{ now()->format('h:i A') }}</span>
+            <span class="small" id="dashboard-live-time">{{ now()->format('h:i A') }}</span>
         </div>
     </div>
 
@@ -933,6 +933,12 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                                                     {{ $employee->mobile }}
                                                 </span>
                                             @endif
+                                            @if(!empty($employee->office_extension_no))
+                                                <span class="text-truncate">
+                                                    <span class="material-icons material-symbols-rounded align-middle">local_phone</span>
+                                                    Ext {{ $employee->office_extension_no }}
+                                                </span>
+                                            @endif
                                         </div>
                                     </div>
                                 </div>
@@ -953,7 +959,9 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                     </span>
                 </div>
                 <div class="card-body p-3 p-md-4">
-                    <x-calendar :year="$year" :month="$month" :selected="now()->toDateString()" :events="$events" theme="gov-red" />
+                    <div id="dashboard-calendar-container">
+                        <x-calendar :year="$year" :month="$month" :selected="now()->toDateString()" :events="$events" theme="gov-red" />
+                    </div>
                 </div>
             </div>
         </div>
@@ -1014,7 +1022,73 @@ document.addEventListener('click', function (e) {
 });
 
 document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.calendar-component').forEach(function(comp) {
+    const liveTimeEl = document.getElementById('dashboard-live-time');
+    if (liveTimeEl) {
+        const formatLiveTime = function(date) {
+            let hours = date.getHours();
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12;
+            hours = hours ? hours : 12;
+            return String(hours).padStart(2, '0') + ':' + minutes + ' ' + ampm;
+        };
+
+        const updateLiveTime = function() {
+            liveTimeEl.textContent = formatLiveTime(new Date());
+        };
+
+        updateLiveTime();
+        setInterval(updateLiveTime, 1000);
+    }
+
+    const calendarContainer = document.getElementById('dashboard-calendar-container');
+
+    function loadDashboardCalendar(year, month) {
+        if (!calendarContainer) return;
+
+        const url = new URL("{{ route('admin.dashboard') }}", window.location.origin);
+        url.searchParams.set('year', year);
+        url.searchParams.set('month', month);
+        url.searchParams.set('calendar_only', '1');
+
+        calendarContainer.style.opacity = '0.6';
+        calendarContainer.style.pointerEvents = 'none';
+
+        fetch(url.toString(), {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json',
+            },
+        })
+            .then(function(response) {
+                return response.json().then(function(data) {
+                    return { ok: response.ok, data: data };
+                });
+            })
+            .then(function(result) {
+                if (!result.ok || !result.data || !result.data.html) {
+                    throw new Error('Failed to load calendar');
+                }
+
+                calendarContainer.innerHTML = result.data.html;
+                const refreshedComponent = calendarContainer.querySelector('.calendar-component');
+                if (refreshedComponent) {
+                    bindCalendarComponent(refreshedComponent);
+                }
+            })
+            .catch(function(error) {
+                console.error(error);
+            })
+            .finally(function() {
+                calendarContainer.style.opacity = '1';
+                calendarContainer.style.pointerEvents = 'auto';
+            });
+    }
+
+    function bindCalendarComponent(comp) {
+        if (!comp || comp.dataset.bound === 'true') return;
+        comp.dataset.bound = 'true';
+
         const yearSel = comp.querySelector('.calendar-year');
         const monthSel = comp.querySelector('.calendar-month');
         const cells = comp.querySelectorAll('.calendar-cell');
@@ -1051,19 +1125,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (yearSel && monthSel) {
             yearSel.addEventListener('change', function() {
-                const url = new URL(window.location.href);
-                url.searchParams.set('year', this.value);
-                url.searchParams.set('month', monthSel.value);
-                window.location.href = url.toString();
+                loadDashboardCalendar(this.value, monthSel.value);
             });
 
             monthSel.addEventListener('change', function() {
-                const url = new URL(window.location.href);
-                url.searchParams.set('year', yearSel.value);
-                url.searchParams.set('month', this.value);
-                window.location.href = url.toString();
+                loadDashboardCalendar(yearSel.value, this.value);
             });
         }
+    }
+
+    document.querySelectorAll('.calendar-component').forEach(function(comp) {
+        bindCalendarComponent(comp);
     });
 });
 </script>

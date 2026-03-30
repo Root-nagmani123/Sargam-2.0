@@ -10,31 +10,47 @@ class HolidaySeeder extends Seeder
 {
     /**
      * Run the database seeds.
-     * LBSNAA Holidays for 2026 including Gazetted and Restricted Holidays
+     * LBSNAA Holidays for 2026 mapped from the provided reference calendar
      */
     public function run(): void
     {
+        Holiday::where('year', 2026)->delete();
+
         $holidays = [
             // Gazetted Holidays 2026
             [
                 'holiday_name' => 'Republic Day',
                 'holiday_date' => '2026-01-26',
                 'holiday_type' => 'gazetted',
-                'description' => 'Republic Day of India',
-                'year' => 2026
-            ],
-            [
-                'holiday_name' => 'Maha Shivaratri',
-                'holiday_date' => '2026-03-03',
-                'holiday_type' => 'gazetted',
-                'description' => 'Maha Shivaratri',
+                'description' => 'Republic Day',
                 'year' => 2026
             ],
             [
                 'holiday_name' => 'Holi',
-                'holiday_date' => '2026-03-15',
+                'holiday_date' => '2026-03-04',
                 'holiday_type' => 'gazetted',
-                'description' => 'Festival of Colors',
+                'description' => 'Holi',
+                'year' => 2026
+            ],
+            [
+                'holiday_name' => 'Id-ul-Fitr',
+                'holiday_date' => '2026-03-21',
+                'holiday_type' => 'gazetted',
+                'description' => 'Id-ul-Fitr',
+                'year' => 2026
+            ],
+            [
+                'holiday_name' => 'Ram Navami',
+                'holiday_date' => '2026-03-26',
+                'holiday_type' => 'gazetted',
+                'description' => 'Ram Navami',
+                'year' => 2026
+            ],
+            [
+                'holiday_name' => 'Mahavir Jayanti',
+                'holiday_date' => '2026-03-31',
+                'holiday_type' => 'gazetted',
+                'description' => 'Mahavir Jayanti',
                 'year' => 2026
             ],
             [
@@ -42,27 +58,6 @@ class HolidaySeeder extends Seeder
                 'holiday_date' => '2026-04-03',
                 'holiday_type' => 'gazetted',
                 'description' => 'Good Friday',
-                'year' => 2026
-            ],
-            [
-                'holiday_name' => 'Ram Navami',
-                'holiday_date' => '2026-04-02',
-                'holiday_type' => 'gazetted',
-                'description' => 'Ram Navami',
-                'year' => 2026
-            ],
-            [
-                'holiday_name' => 'Mahavir Jayanti',
-                'holiday_date' => '2026-04-09',
-                'holiday_type' => 'gazetted',
-                'description' => 'Birth anniversary of Lord Mahavir',
-                'year' => 2026
-            ],
-            [
-                'holiday_name' => 'Id-ul-Fitr',
-                'holiday_date' => '2026-04-21',
-                'holiday_type' => 'gazetted',
-                'description' => 'Eid-ul-Fitr (subject to sighting of moon)',
                 'year' => 2026
             ],
             [
@@ -74,14 +69,14 @@ class HolidaySeeder extends Seeder
             ],
             [
                 'holiday_name' => 'Id-ul-Zuha (Bakrid)',
-                'holiday_date' => '2026-06-28',
+                'holiday_date' => '2026-05-27',
                 'holiday_type' => 'gazetted',
-                'description' => 'Eid-ul-Adha (subject to sighting of moon)',
+                'description' => 'Id-ul-Zuha (Bakrid)',
                 'year' => 2026
             ],
             [
                 'holiday_name' => 'Muharram',
-                'holiday_date' => '2026-07-18',
+                'holiday_date' => '2026-06-26',
                 'holiday_type' => 'gazetted',
                 'description' => 'Muharram',
                 'year' => 2026
@@ -90,53 +85,53 @@ class HolidaySeeder extends Seeder
                 'holiday_name' => 'Independence Day',
                 'holiday_date' => '2026-08-15',
                 'holiday_type' => 'gazetted',
-                'description' => 'Independence Day of India',
+                'description' => 'Independence Day',
                 'year' => 2026
             ],
             [
-                'holiday_name' => 'Janmashtami',
-                'holiday_date' => '2026-08-25',
+                'holiday_name' => 'Milad-un-Nabi or Id-e-Milad',
+                'holiday_date' => '2026-08-26',
                 'holiday_type' => 'gazetted',
-                'description' => 'Birth of Lord Krishna',
+                'description' => 'Birthday of Prophet Mohammad',
                 'year' => 2026
             ],
             [
-                'holiday_name' => 'Milad-un-Nabi',
-                'holiday_date' => '2026-09-27',
+                'holiday_name' => 'Janmashtami (Vaishnava)',
+                'holiday_date' => '2026-09-04',
                 'holiday_type' => 'gazetted',
-                'description' => 'Birthday of Prophet Muhammad',
+                'description' => 'Janmashtami',
                 'year' => 2026
             ],
             [
-                'holiday_name' => 'Mahatma Gandhi Birthday',
+                'holiday_name' => "Mahatma Gandhi's Birthday",
                 'holiday_date' => '2026-10-02',
                 'holiday_type' => 'gazetted',
-                'description' => 'Gandhi Jayanti',
+                'description' => "Mahatma Gandhi's Birthday",
                 'year' => 2026
             ],
             [
                 'holiday_name' => 'Dussehra',
-                'holiday_date' => '2026-10-13',
+                'holiday_date' => '2026-10-20',
                 'holiday_type' => 'gazetted',
-                'description' => 'Vijaya Dashami',
+                'description' => 'Dussehra',
                 'year' => 2026
             ],
             [
-                'holiday_name' => 'Diwali',
-                'holiday_date' => '2026-11-01',
+                'holiday_name' => 'Diwali (Deepawali)',
+                'holiday_date' => '2026-11-08',
                 'holiday_type' => 'gazetted',
-                'description' => 'Festival of Lights',
+                'description' => 'Diwali',
                 'year' => 2026
             ],
             [
-                'holiday_name' => 'Guru Nanak Birthday',
-                'holiday_date' => '2026-11-20',
+                'holiday_name' => "Guru Nanak's Birthday",
+                'holiday_date' => '2026-11-24',
                 'holiday_type' => 'gazetted',
-                'description' => 'Guru Nanak Jayanti',
+                'description' => "Guru Nanak's Birthday",
                 'year' => 2026
             ],
             [
-                'holiday_name' => 'Christmas',
+                'holiday_name' => 'Christmas Day',
                 'holiday_date' => '2026-12-25',
                 'holiday_type' => 'gazetted',
                 'description' => 'Christmas Day',
@@ -145,199 +140,248 @@ class HolidaySeeder extends Seeder
 
             // Restricted Holidays 2026
             [
-                'holiday_name' => 'Lohri',
-                'holiday_date' => '2026-01-13',
+                'holiday_name' => "New Year's Day",
+                'holiday_date' => '2026-01-01',
                 'holiday_type' => 'restricted',
-                'description' => 'Punjabi festival marking the end of winter',
+                'description' => "New Year's Day",
+                'year' => 2026
+            ],
+            [
+                'holiday_name' => "Hazarat Ali's Birthday",
+                'holiday_date' => '2026-01-03',
+                'holiday_type' => 'restricted',
+                'description' => "Hazarat Ali's Birthday",
                 'year' => 2026
             ],
             [
                 'holiday_name' => 'Makar Sankranti',
                 'holiday_date' => '2026-01-14',
                 'holiday_type' => 'restricted',
-                'description' => 'Harvest festival',
+                'description' => 'Makar Sankranti',
                 'year' => 2026
             ],
             [
-                'holiday_name' => 'Basant Panchami',
+                'holiday_name' => 'Magha Bihu / Pongal',
+                'holiday_date' => '2026-01-14',
+                'holiday_type' => 'restricted',
+                'description' => 'Magha Bihu / Pongal',
+                'year' => 2026
+            ],
+            [
+                'holiday_name' => 'Sri Panchami / Basant Panchami',
+                'holiday_date' => '2026-01-23',
+                'holiday_type' => 'restricted',
+                'description' => 'Sri Panchami / Basant Panchami',
+                'year' => 2026
+            ],
+            [
+                'holiday_name' => "Guru Ravidas's Birthday",
                 'holiday_date' => '2026-02-01',
                 'holiday_type' => 'restricted',
-                'description' => 'Festival of Saraswati',
+                'description' => "Guru Ravidas's Birthday",
                 'year' => 2026
             ],
             [
-                'holiday_name' => 'Swami Dayananda Saraswati Jayanti',
+                'holiday_name' => 'Birthday of Swami Dayananda Saraswati',
+                'holiday_date' => '2026-02-12',
+                'holiday_type' => 'restricted',
+                'description' => 'Birthday of Swami Dayananda Saraswati',
+                'year' => 2026
+            ],
+            [
+                'holiday_name' => 'Maha Shivaratri',
+                'holiday_date' => '2026-02-15',
+                'holiday_type' => 'restricted',
+                'description' => 'Maha Shivaratri',
+                'year' => 2026
+            ],
+            [
+                'holiday_name' => 'Shivaji Jayanti',
                 'holiday_date' => '2026-02-19',
                 'holiday_type' => 'restricted',
-                'description' => 'Birth anniversary of Swami Dayananda Saraswati',
+                'description' => 'Shivaji Jayanti',
                 'year' => 2026
             ],
             [
                 'holiday_name' => 'Holika Dahan',
-                'holiday_date' => '2026-03-14',
+                'holiday_date' => '2026-03-03',
                 'holiday_type' => 'restricted',
-                'description' => 'Day before Holi',
+                'description' => 'Holika Dahan',
                 'year' => 2026
             ],
             [
-                'holiday_name' => 'Chaitra Sukhladi / Ugadi / Gudi Padava',
-                'holiday_date' => '2026-03-22',
+                'holiday_name' => 'Dolyatra',
+                'holiday_date' => '2026-03-03',
                 'holiday_type' => 'restricted',
-                'description' => 'New Year for Hindus',
+                'description' => 'Dolyatra',
                 'year' => 2026
             ],
             [
-                'holiday_name' => 'Hazrat Ali Birthday',
-                'holiday_date' => '2026-04-13',
+                'holiday_name' => 'Jhanda Aarohan',
+                'holiday_date' => '2026-03-08',
                 'holiday_type' => 'restricted',
-                'description' => 'Birthday of Hazrat Ali',
+                'description' => 'Jhanda Aarohan',
                 'year' => 2026
             ],
             [
-                'holiday_name' => 'Mesadi / Vaisakhi',
-                'holiday_date' => '2026-04-14',
+                'holiday_name' => 'Chaitra Sukladi / Gudi Padava / Ugadi / Cheti Chand',
+                'holiday_date' => '2026-03-19',
                 'holiday_type' => 'restricted',
-                'description' => 'Sikh New Year and harvest festival',
+                'description' => 'Chaitra Sukladi / Gudi Padava / Ugadi / Cheti Chand',
                 'year' => 2026
             ],
             [
                 'holiday_name' => 'Jamat-Ul-Vida',
-                'holiday_date' => '2026-04-17',
+                'holiday_date' => '2026-03-20',
                 'holiday_type' => 'restricted',
-                'description' => 'Last Friday of Ramadan',
+                'description' => 'Jamat-Ul-Vida',
                 'year' => 2026
             ],
             [
-                'holiday_name' => 'Shab-e-Qadr',
-                'holiday_date' => '2026-04-18',
+                'holiday_name' => 'Easter Sunday',
+                'holiday_date' => '2026-04-05',
                 'holiday_type' => 'restricted',
-                'description' => 'Night of Power',
+                'description' => 'Easter Sunday',
                 'year' => 2026
             ],
             [
-                'holiday_name' => 'Maharana Pratap Jayanti',
-                'holiday_date' => '2026-05-13',
+                'holiday_name' => "Vaisakhi / Vishu / Meshadi (Tamil's New Year's Day)",
+                'holiday_date' => '2026-04-14',
                 'holiday_type' => 'restricted',
-                'description' => 'Birth anniversary of Maharana Pratap',
+                'description' => "Vaisakhi / Vishu / Meshadi (Tamil's New Year's Day)",
+                'year' => 2026
+            ],
+            [
+                'holiday_name' => 'Vaisakhadi (Bengal) / Bahag Bihu (Assam)',
+                'holiday_date' => '2026-04-15',
+                'holiday_type' => 'restricted',
+                'description' => 'Vaisakhadi (Bengal) / Bahag Bihu (Assam)',
+                'year' => 2026
+            ],
+            [
+                'holiday_name' => "Guru Rabindranath's Birthday",
+                'holiday_date' => '2026-05-09',
+                'holiday_type' => 'restricted',
+                'description' => "Guru Rabindranath's Birthday",
                 'year' => 2026
             ],
             [
                 'holiday_name' => 'Rath Yatra',
-                'holiday_date' => '2026-06-24',
+                'holiday_date' => '2026-07-16',
                 'holiday_type' => 'restricted',
-                'description' => 'Jagannath Rath Yatra',
+                'description' => 'Rath Yatra',
+                'year' => 2026
+            ],
+            [
+                'holiday_name' => "Parsi New Year's Day / Nauroj",
+                'holiday_date' => '2026-08-15',
+                'holiday_type' => 'restricted',
+                'description' => "Parsi New Year's Day / Nauroj",
+                'year' => 2026
+            ],
+            [
+                'holiday_name' => 'Onam or Thiru Onam Day',
+                'holiday_date' => '2026-08-26',
+                'holiday_type' => 'restricted',
+                'description' => 'Onam or Thiru Onam Day',
                 'year' => 2026
             ],
             [
                 'holiday_name' => 'Raksha Bandhan',
-                'holiday_date' => '2026-08-12',
+                'holiday_date' => '2026-08-28',
                 'holiday_type' => 'restricted',
-                'description' => 'Festival of brother-sister bond',
+                'description' => 'Raksha Bandhan',
                 'year' => 2026
             ],
             [
-                'holiday_name' => 'Nag Panchami',
-                'holiday_date' => '2026-08-13',
+                'holiday_name' => 'Ganesh Chaturthi / Vinayaka Chaturthi',
+                'holiday_date' => '2026-09-14',
                 'holiday_type' => 'restricted',
-                'description' => 'Festival dedicated to snakes',
+                'description' => 'Ganesh Chaturthi / Vinayaka Chaturthi',
                 'year' => 2026
             ],
             [
-                'holiday_name' => 'Parsi New Year',
-                'holiday_date' => '2026-08-18',
+                'holiday_name' => 'Dussehra (Saptami)',
+                'holiday_date' => '2026-10-18',
                 'holiday_type' => 'restricted',
-                'description' => 'Parsi New Year (Navroz)',
+                'description' => 'Dussehra (Saptami)',
                 'year' => 2026
             ],
             [
-                'holiday_name' => 'Onam',
-                'holiday_date' => '2026-08-30',
+                'holiday_name' => 'Dussehra (Mahashtami)',
+                'holiday_date' => '2026-10-19',
                 'holiday_type' => 'restricted',
-                'description' => 'Kerala harvest festival',
+                'description' => 'Dussehra (Mahashtami)',
                 'year' => 2026
             ],
             [
-                'holiday_name' => 'Ganesh Chaturthi',
-                'holiday_date' => '2026-09-05',
+                'holiday_name' => 'Dussehra (Mahanavami)',
+                'holiday_date' => '2026-10-20',
                 'holiday_type' => 'restricted',
-                'description' => 'Birth of Lord Ganesha',
+                'description' => 'Dussehra (Mahanavami)',
                 'year' => 2026
             ],
             [
-                'holiday_name' => 'Mahalaya / Pitru Paksha Amavasya',
-                'holiday_date' => '2026-09-27',
+                'holiday_name' => "Maharishi Valmiki's Birthday",
+                'holiday_date' => '2026-10-26',
                 'holiday_type' => 'restricted',
-                'description' => 'Ancestor worship day',
+                'description' => "Maharishi Valmiki's Birthday",
                 'year' => 2026
             ],
             [
-                'holiday_name' => 'First Day of Durga Puja',
-                'holiday_date' => '2026-10-08',
+                'holiday_name' => 'Karaka Chaturthi (Karva Chouth)',
+                'holiday_date' => '2026-10-29',
                 'holiday_type' => 'restricted',
-                'description' => 'Maha Saptami',
-                'year' => 2026
-            ],
-            [
-                'holiday_name' => 'Maha Ashtami',
-                'holiday_date' => '2026-10-09',
-                'holiday_type' => 'restricted',
-                'description' => 'Eighth day of Durga Puja',
-                'year' => 2026
-            ],
-            [
-                'holiday_name' => 'Maha Navami',
-                'holiday_date' => '2026-10-10',
-                'holiday_type' => 'restricted',
-                'description' => 'Ninth day of Durga Puja',
-                'year' => 2026
-            ],
-            [
-                'holiday_name' => 'Maharishi Valmiki Birthday',
-                'holiday_date' => '2026-10-13',
-                'holiday_type' => 'restricted',
-                'description' => 'Birth anniversary of Maharishi Valmiki',
-                'year' => 2026
-            ],
-            [
-                'holiday_name' => 'Karva Chauth',
-                'holiday_date' => '2026-10-21',
-                'holiday_type' => 'restricted',
-                'description' => 'Festival for married women',
+                'description' => 'Karaka Chaturthi (Karva Chouth)',
                 'year' => 2026
             ],
             [
                 'holiday_name' => 'Naraka Chaturdasi',
-                'holiday_date' => '2026-10-31',
+                'holiday_date' => '2026-11-08',
                 'holiday_type' => 'restricted',
-                'description' => 'Day before Diwali',
+                'description' => 'Naraka Chaturdasi',
                 'year' => 2026
             ],
             [
                 'holiday_name' => 'Govardhan Puja',
-                'holiday_date' => '2026-11-02',
+                'holiday_date' => '2026-11-09',
                 'holiday_type' => 'restricted',
-                'description' => 'Day after Diwali',
+                'description' => 'Govardhan Puja',
                 'year' => 2026
             ],
             [
-                'holiday_name' => 'Bhai Dooj',
-                'holiday_date' => '2026-11-03',
+                'holiday_name' => 'Bhai Duj',
+                'holiday_date' => '2026-11-11',
                 'holiday_type' => 'restricted',
-                'description' => 'Festival of brother-sister',
+                'description' => 'Bhai Duj',
                 'year' => 2026
             ],
             [
-                'holiday_name' => 'Chhath Puja',
-                'holiday_date' => '2026-11-06',
+                'holiday_name' => 'Prathar Sasthi or Surya Sasthi (Chhat Puja)',
+                'holiday_date' => '2026-11-15',
                 'holiday_type' => 'restricted',
-                'description' => 'Worship of Sun God',
+                'description' => 'Prathar Sasthi or Surya Sasthi (Chhat Puja)',
                 'year' => 2026
             ],
             [
-                'holiday_name' => 'Guru Teg Bahadur Martyrdom Day',
-                'holiday_date' => '2026-12-01',
+                'holiday_name' => "Guru Teg Bahadur's Martyrdom Day",
+                'holiday_date' => '2026-11-24',
                 'holiday_type' => 'restricted',
-                'description' => 'Martyrdom day of Guru Teg Bahadur',
+                'description' => "Guru Teg Bahadur's Martyrdom Day",
+                'year' => 2026
+            ],
+            [
+                'holiday_name' => "Hazarat Ali's Birthday",
+                'holiday_date' => '2026-12-23',
+                'holiday_type' => 'restricted',
+                'description' => "Hazarat Ali's Birthday",
+                'year' => 2026
+            ],
+            [
+                'holiday_name' => 'Christmas Eve',
+                'holiday_date' => '2026-12-24',
+                'holiday_type' => 'restricted',
+                'description' => 'Christmas Eve',
                 'year' => 2026
             ]
         ];

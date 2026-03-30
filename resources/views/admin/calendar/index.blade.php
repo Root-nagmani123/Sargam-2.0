@@ -12,6 +12,7 @@
 @endphp
 
 <link rel="stylesheet" href="{{asset('admin_assets/css/styles.css')}}">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
 <style>
         :root {
         --primary: #004a93;
@@ -119,6 +120,38 @@
     border-top-right-radius: 0.875rem;
     border-bottom-right-radius: 0.875rem;
     min-height: fit-content;
+}
+
+/* Choices.js + Bootstrap look for course filter */
+.calendar-choices-bootstrap .choices__inner.form-select {
+    background-color: var(--bs-body-bg);
+    border: var(--bs-border-width) solid var(--bs-border-color);
+    min-height: calc(1.5em + 0.75rem + var(--bs-border-width) * 2);
+    padding-top: 0.375rem;
+    padding-bottom: 0.375rem;
+    background-image: none !important;
+    padding-inline-end: 2.25rem;
+}
+
+.calendar-choices-bootstrap .choices.is-focused .choices__inner.form-select,
+.calendar-choices-bootstrap .choices.is-open .choices__inner.form-select {
+    border-color: var(--bs-focus-border-color);
+    box-shadow: 0 0 0 0.25rem rgba(var(--bs-focus-ring-rgb), 0.25);
+}
+
+.calendar-choices-bootstrap .choices__list--dropdown.dropdown-menu,
+.calendar-choices-bootstrap .choices__list[aria-expanded].dropdown-menu {
+    border: var(--bs-border-width) solid var(--bs-border-color);
+}
+
+.calendar-choices-bootstrap .choices {
+    position: relative;
+    z-index: 1200;
+}
+
+.calendar-choices-bootstrap .choices.is-open .choices__list--dropdown,
+.calendar-choices-bootstrap .choices.is-open .choices__list[aria-expanded] {
+    z-index: 1250;
 }
 
 .fc-event-card::before {
@@ -977,6 +1010,9 @@
 .control-panel {
     backdrop-filter: blur(10px);
     border: 1px solid rgba(0, 74, 147, 0.1) !important;
+    overflow: visible !important;
+    position: relative;
+    z-index: 20;
 }
 
 .bg-gradient {
@@ -1144,18 +1180,6 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
     height: 20px;
     line-height: 20px;
     font-size: 1rem;
-}
-
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-    .fc-event-card,
-    .list-event-card,
-    .timeline-event-card {
-        background: #111827;
-        color: #E5E7EB;
-        border-color: rgba(255, 255, 255, 0.12);
-    }
-    .list-event-card .meta, .fc-event-card .meta-item { color: #9CA3AF; }
 }
 
 /* FullCalendar "+ more" text styling */
@@ -2095,17 +2119,17 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
         Calendar Control Panel
     </h2>
 
-    <div class="d-flex justify-content-between align-items-center flex-wrap gap-4">
+    <div class="d-flex flex-column flex-xl-row justify-content-between align-items-stretch align-items-xl-center gap-3 gap-xl-4">
 
         <!-- Filters & View Controls -->
-        <fieldset class="d-flex flex-wrap align-items-center gap-3 mb-0">
+        <fieldset class="d-flex flex-column flex-md-row align-items-stretch align-items-md-end gap-3 mb-0">
             <legend class="visually-hidden">View and Filter Controls</legend>
 
             <!-- Density Toggle -->
-            <div class="btn-group" role="group" aria-label="Toggle calendar density">
+            <div class="btn-group shadow-sm" role="group" aria-label="Toggle calendar density">
                 <button
                     type="button"
-                    class="btn btn-outline-secondary d-flex align-items-center gap-2"
+                    class="btn btn-outline-secondary d-inline-flex align-items-center gap-2 px-3 py-2 rounded-2"
                     id="toggleDensityBtn"
                     aria-pressed="false"
                     aria-expanded="false"
@@ -2116,9 +2140,10 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
             </div>
 
             <!-- Course Filter -->
-            <div class="form-floating">
+            <div class="calendar-choices-bootstrap d-flex flex-column gap-1 min-w-0" style="min-width: 260px;">
+                <label for="courseFilter" class="form-label mb-0 fw-semibold text-secondary small">Filter by Course</label>
                 <select
-                    class="form-select"
+                    class="form-select js-calendar-course-choice"
                     id="courseFilter"
                     aria-describedby="courseFilterHelp"
                 >
@@ -2130,16 +2155,15 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
                         </option>
                     @endforeach
                 </select>
-                <label for="courseFilter">Filter by Course</label>
             </div>
         </fieldset>
 
         <!-- Primary Actions -->
         @if(hasRole('Training') || hasRole('Admin') || hasRole('Training-MCTP') || hasRole('IST'))
-        <div class="d-flex align-items-center gap-2">
+        <div class="d-flex align-items-center justify-content-start justify-content-xl-end gap-2">
             <button
                 type="button"
-                class="btn btn-primary px-4 d-flex align-items-center gap-2"
+                class="btn btn-primary px-4 py-2 d-inline-flex align-items-center gap-2 shadow-sm rounded-2"
                 id="createEventButton"
                 data-bs-toggle="modal"
                 data-bs-target="#eventModal"
@@ -2284,6 +2308,7 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
 @include('admin.calendar.partials.confirmation')
 
   <script src="{{asset('admin_assets/libs/fullcalendar/index.global.min.js')}}"></script>
+  <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 <!-- Modern JavaScript with improved accessibility -->
 <script>
 console.log('FullCalendar loaded:', typeof FullCalendar !== 'undefined');
@@ -2318,6 +2343,38 @@ const CalendarConfig = {
     minTime: '08:00',
     maxTime: '20:00'
 };
+
+function initCourseFilterChoices() {
+    const select = document.getElementById('courseFilter');
+    if (!select || typeof window.Choices === 'undefined') return;
+    if (select.dataset.choicesInitialized === 'true') return;
+
+    const courseChoicesOptions = {
+        shouldSort: false,
+        searchEnabled: true,
+        searchPlaceholderValue: 'Search courses...',
+        searchResultLimit: 50,
+        searchFloor: 1,
+        itemSelectText: '',
+        allowHTML: false,
+        classNames: {
+            containerInner: ['choices__inner', 'form-select', 'shadow-sm'],
+            input: ['choices__input', 'form-control', 'form-control-sm', 'border-0', 'shadow-none', 'my-1'],
+            inputCloned: ['choices__input--cloned'],
+            listDropdown: ['choices__list--dropdown', 'dropdown-menu', 'mt-1', 'p-0', 'shadow-sm', 'w-100'],
+            item: ['choices__item', 'dropdown-item', 'rounded-0'],
+            itemSelectable: ['choices__item--selectable'],
+            itemDisabled: ['choices__item--disabled', 'disabled'],
+            itemChoice: ['choices__item--choice'],
+            placeholder: ['choices__placeholder', 'text-muted', 'opacity-75'],
+            highlightedState: ['is-highlighted', 'active'],
+            notice: ['choices__notice', 'dropdown-item-text', 'text-muted', 'small', 'py-2']
+        }
+    };
+
+    select._courseChoices = new Choices(select, courseChoicesOptions);
+    select.dataset.choicesInitialized = 'true';
+}
 
 // Calendar Manager Class
 class CalendarManager {
@@ -3104,6 +3161,10 @@ class CalendarManager {
             select.appendChild(option);
         });
 
+        if (window.calendarModalChoices?.rebuildById) {
+            window.calendarModalChoices.rebuildById('group_type');
+        }
+
         // Set up change handler
         select.onchange = () => {
             this.populateGroupCheckboxes(grouped[select.value] || []);
@@ -3212,6 +3273,10 @@ class CalendarManager {
             option.textContent = subject.subject_name;
             select.appendChild(option);
         });
+
+        if (window.calendarModalChoices?.rebuildById) {
+            window.calendarModalChoices.rebuildById('subject_name');
+        }
     }
 
     updateFacultyType() {
@@ -3486,9 +3551,26 @@ class CalendarManager {
         document.getElementById('start_datetime').value = event.START_DATE;
         // Handle multiple faculty selection
         const facultyIds = Array.isArray(event.faculty_master) ? event.faculty_master : [event.faculty_master];
-        $('#faculty').val(facultyIds).trigger('change');
+        const facultySelectEl = document.getElementById('faculty');
+        if (facultySelectEl) {
+            const normalizedFacultyIds = facultyIds.map(id => String(id));
+            Array.from(facultySelectEl.options).forEach(option => {
+                option.selected = normalizedFacultyIds.includes(String(option.value));
+            });
+            facultySelectEl.dispatchEvent(new Event('change', { bubbles: true }));
+        }
         document.getElementById('faculty_type').value = event.faculty_type;
         document.getElementById('vanue').value = event.venue_id;
+
+        if (window.calendarModalChoices?.syncById) {
+            window.calendarModalChoices.syncById('Course_name');
+            window.calendarModalChoices.syncById('subject_module');
+            window.calendarModalChoices.syncById('subject_name');
+            window.calendarModalChoices.syncById('faculty');
+            window.calendarModalChoices.syncById('faculty_type');
+            window.calendarModalChoices.syncById('vanue');
+            window.calendarModalChoices.syncById('shift');
+        }
 
         // Shift settings
         if (event.session_type == 2) {
@@ -3667,6 +3749,9 @@ async setInternalFaculty(internalFacultyIds) {
                 
                 if (matchingValue) {
                     groupTypeSelect.value = matchingValue;
+                    if (window.calendarModalChoices?.syncById) {
+                        window.calendarModalChoices.syncById('group_type');
+                    }
                     
                     // Use the grouped data to populate checkboxes directly with selected values
                     const groups = groupedData[matchingValue] || [];
@@ -3687,6 +3772,9 @@ async setInternalFaculty(internalFacultyIds) {
         // Set subject name after a delay (wait for AJAX)
         setTimeout(() => {
             document.getElementById('subject_name').value = event.subject_master_pk;
+            if (window.calendarModalChoices?.syncById) {
+                window.calendarModalChoices.syncById('subject_name');
+            }
         }, 300);
     }
 
@@ -4224,6 +4312,7 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM Content Loaded - Initializing calendar...');
     console.log('Calendar element exists:', !!document.getElementById('calendar'));
     console.log('Loading overlay exists:', !!document.getElementById('calendarLoadingOverlay'));
+    initCourseFilterChoices();
     
     // Absolute fallback - hide loader after 3 seconds no matter what
     setTimeout(() => {

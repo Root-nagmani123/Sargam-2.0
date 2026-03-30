@@ -35,9 +35,11 @@ use App\Http\Controllers\Admin\{
     NotificationController,
     MemoDisciplineController,
     DashboardController,
+    DirectoryController,
     CourseRepositoryController,
     WhosWhoController,
     EstateController,
+    QuickLinkController,
 };
 use App\Http\Controllers\Dashboard\Calendar1Controller;
 use App\Http\Controllers\Admin\MemoNoticeController;
@@ -97,6 +99,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('users/assign-role/{id}', [UserController::class, 'assignRole'])->name('users.assignRole');
         Route::post('users/assign-role-save', [UserController::class, 'assignRoleSave'])
             ->name('users.assignRoleSave');
+
+        Route::post('quick-links', [QuickLinkController::class, 'store'])->name('quick-links.store');
+        Route::delete('quick-links/{id}', [QuickLinkController::class, 'destroy'])->name('quick-links.destroy');
     });
 
 
@@ -104,6 +109,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard/students', [UserController::class, 'studentList'])->name('admin.dashboard.students');
     Route::get('/dashboard/my-counselee', [UserController::class, 'myCounselee'])->name('admin.dashboard.my-counselee');
     Route::get('/dashboard/students/{id}/detail', [UserController::class, 'studentDetail'])->name('admin.dashboard.students.detail');
+    Route::get('/directory/lbsnaa', [DirectoryController::class, 'lbsnaa'])->name('admin.directory.lbsnaa');
+    Route::get('/directory/ot', [DirectoryController::class, 'ot'])->name('admin.directory.ot');
 
     // Dashboard Statistics (Batch Profile)
     // NOTE: Currently served by a Blade view; replace with controller when business logic is ready.
@@ -280,6 +287,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('create', 'create')->name('create');
         Route::get('edit/{id}', 'edit')->name('edit');
+        Route::get('profile/edit/{id}', 'editProfile')->name('profile.edit');
         Route::get('show/{id}', 'show')->name('show');
         Route::get('/step/{step}', 'loadStep')->name('load-step');
         Route::get('/edit-step/{step}/{id}', 'editStep')->name('edit-step');
@@ -535,42 +543,42 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/reject/{id}', 'reject')->name('reject');
     });
 
-// Employee ID Card Approval Routes (Approval I & II)
-Route::prefix('security/employee-idcard-approval')->name('admin.security.employee_idcard_approval.')->controller(\App\Http\Controllers\Admin\Security\EmployeeIDCardApprovalController::class)->group(function () {
-    Route::get('/approval1', 'approval1')->name('approval1');
-    Route::get('/approval2', 'approval2')->name('approval2');
-    Route::get('/approval3', 'approval3')->name('approval3');
-    Route::get('/all', 'all')->name('all');
-    Route::get('/show/{id}', 'show')->name('show');
-    Route::get('/export', 'export')->name('export');
-    Route::post('/approve1/{id}', 'approve1')->name('approve1');
-    Route::post('/approve2/{id}', 'approve2')->name('approve2');
-    Route::post('/approve3/{id}', 'approve3')->name('approve3');
-    Route::post('/reject1/{id}', 'reject1')->name('reject1');
-    Route::post('/reject2/{id}', 'reject2')->name('reject2');
-    Route::post('/reject3/{id}', 'reject3')->name('reject3');
-});
+    // Employee ID Card Approval Routes (Approval I & II)
+    Route::prefix('security/employee-idcard-approval')->name('admin.security.employee_idcard_approval.')->controller(\App\Http\Controllers\Admin\Security\EmployeeIDCardApprovalController::class)->group(function () {
+        Route::get('/approval1', 'approval1')->name('approval1');
+        Route::get('/approval2', 'approval2')->name('approval2');
+        Route::get('/approval3', 'approval3')->name('approval3');
+        Route::get('/all', 'all')->name('all');
+        Route::get('/show/{id}', 'show')->name('show');
+        Route::get('/export', 'export')->name('export');
+        Route::post('/approve1/{id}', 'approve1')->name('approve1');
+        Route::post('/approve2/{id}', 'approve2')->name('approve2');
+        Route::post('/approve3/{id}', 'approve3')->name('approve3');
+        Route::post('/reject1/{id}', 'reject1')->name('reject1');
+        Route::post('/reject2/{id}', 'reject2')->name('reject2');
+        Route::post('/reject3/{id}', 'reject3')->name('reject3');
+    });
 
-// ID Card - Card Type Master (sec_id_cardno_master)
-Route::prefix('security/idcard-card-type')->name('admin.security.idcard_card_type.')->controller(\App\Http\Controllers\Admin\Security\CardTypeMasterController::class)->group(function () {
-    Route::get('/', 'index')->name('index');
-    Route::get('/create', 'create')->name('create');
-    Route::post('/store', 'store')->name('store');
-    Route::get('/edit/{id}', 'edit')->name('edit');
-    Route::post('/update/{id}', 'update')->name('update');
-    Route::post('/toggle-status/{id}', 'toggleStatus')->name('toggleStatus');
-    Route::delete('/delete/{id}', 'delete')->name('delete');
-});
+    // ID Card - Card Type Master (sec_id_cardno_master)
+    Route::prefix('security/idcard-card-type')->name('admin.security.idcard_card_type.')->controller(\App\Http\Controllers\Admin\Security\CardTypeMasterController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::post('/update/{id}', 'update')->name('update');
+        Route::post('/toggle-status/{id}', 'toggleStatus')->name('toggleStatus');
+        Route::delete('/delete/{id}', 'delete')->name('delete');
+    });
 
-// ID Card - Sub Type & Mapping Master (sec_id_cardno_config_map)
-Route::prefix('security/idcard-sub-type')->name('admin.security.idcard_sub_type.')->controller(\App\Http\Controllers\Admin\Security\CardSubTypeMasterController::class)->group(function () {
-    Route::get('/', 'index')->name('index');
-    Route::get('/create', 'create')->name('create');
-    Route::post('/store', 'store')->name('store');
-    Route::get('/edit/{id}', 'edit')->name('edit');
-    Route::post('/update/{id}', 'update')->name('update');
-    Route::delete('/delete/{id}', 'delete')->name('delete');
-});
+    // ID Card - Sub Type & Mapping Master (sec_id_cardno_config_map)
+    Route::prefix('security/idcard-sub-type')->name('admin.security.idcard_sub_type.')->controller(\App\Http\Controllers\Admin\Security\CardSubTypeMasterController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::post('/update/{id}', 'update')->name('update');
+        Route::delete('/delete/{id}', 'delete')->name('delete');
+    });
 
     // Family ID Card Approval Routes
     Route::prefix('security/family-idcard-approval')->name('admin.security.family_idcard_approval.')->controller(\App\Http\Controllers\Admin\Security\FamilyIDCardApprovalController::class)->group(function () {
@@ -835,6 +843,8 @@ use App\Http\Controllers\Admin\Setup\EmployeeGroupController;
 use App\Http\Controllers\Admin\Setup\DepartmentMasterSetupController;
 use App\Http\Controllers\Admin\Setup\DesignationMasterSetupController;
 use App\Http\Controllers\Admin\Setup\CasteCategoryController;
+use App\Http\Controllers\Admin\Setup\QuickLinksSetupController;
+use App\Http\Controllers\Admin\Setup\UsefulLinksSetupController;
 
 // Setup -> Employee Type (moved to controller with modal CRUD)
 Route::middleware(['auth'])->group(function () {
@@ -893,6 +903,29 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/edit/{id}', 'edit')->name('edit');
         Route::post('/update/{id}', 'update')->name('update');
         Route::delete('/delete/{id}', 'delete')->name('delete');
+    });
+
+    // Quick Links master
+    Route::prefix('admin/setup/quick-links')->name('admin.setup.quick_links.')->controller(QuickLinksSetupController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::post('/update/{id}', 'update')->name('update');
+        Route::delete('/delete/{id}', 'delete')->name('delete');
+        Route::post('/reorder/{id}', 'reorder')->name('reorder');
+        Route::post('/bulk-reorder', 'bulkReorder')->name('bulk-reorder');
+    });
+
+    // Useful Links master
+    Route::prefix('admin/setup/useful-links')->name('admin.setup.useful_links.')->controller(UsefulLinksSetupController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::post('/update/{id}', 'update')->name('update');
+        Route::delete('/delete/{id}', 'delete')->name('delete');
+        Route::post('/bulk-reorder', 'bulkReorder')->name('bulk-reorder');
     });
 
 
@@ -1022,14 +1055,56 @@ Route::middleware(['auth'])->group(function () {
 });
 
 Route::get('/student-faculty-feedback', [CalendarController::class, 'studentFacultyFeedback'])->name('feedback.get.studentFacultyFeedback');
-Route::get('/admin/feedback/pending-students', [FeedbackController::class, 'pendingStudents'])->name('admin.feedback.pending.students');
-// Change export routes to POST
-Route::post('/admin/feedback/pending-students/export/pdf', [FeedbackController::class, 'exportPendingStudentsPDF'])
-    ->name('admin.feedback.export.pdf');
+// Route::get('/admin/feedback/pending-students', [FeedbackController::class, 'pendingStudents'])->name('admin.feedback.pending.students');
+// Route::get('admin/get-sessions-by-course', [FeedbackController::class, 'getSessionsByCourse'])->name('admin.get.sessions.by.course');
+// // Change export routes to POST
+// Route::post('/admin/feedback/pending-students/export/pdf', [FeedbackController::class, 'exportPendingStudentsPDF'])
+//     ->name('admin.feedback.export.pdf');
 
-Route::post('/admin/feedback/pending-students/export/excel', [FeedbackController::class, 'exportPendingStudentsExcel'])
-    ->name('admin.feedback.export.excel');
+// Route::post('/admin/feedback/pending-students/export/excel', [FeedbackController::class, 'exportPendingStudentsExcel'])
+//     ->name('admin.feedback.export.excel');
 
+
+Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
+    // Pending Feedback Routes
+    Route::get('/feedback/pending-students', [FeedbackController::class, 'pendingStudents'])
+        ->name('feedback.pending.students');
+
+    // DataTable AJAX Route (ADD THIS)
+    Route::get('/feedback/pending-students/datatable', [FeedbackController::class, 'pendingStudentsDataTable'])
+        ->name('feedback.pending.datatable');
+
+    // Sessions by course (AJAX)
+    Route::get('/get-sessions-by-course', [FeedbackController::class, 'getSessionsByCourse'])
+        ->name('get.sessions.by.course');
+
+    // Export Routes
+    Route::post('/feedback/pending-students/export/pdf', [FeedbackController::class, 'exportPendingStudentsPDF'])
+        ->name('feedback.export.pdf');
+
+    Route::post('/feedback/pending-students/export/excel', [FeedbackController::class, 'exportPendingStudentsExcel'])
+        ->name('feedback.export.excel');
+});
+
+//feedback count wise summary
+
+Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
+    // Pending Feedback Summary Routes
+    Route::get('/feedback/pending-summary', [FeedbackController::class, 'pendingFeedbackSummary'])
+        ->name('feedback.pending.summary');
+
+    Route::get('/feedback/pending-summary/datatable', [FeedbackController::class, 'pendingFeedbackSummaryDataTable'])
+        ->name('feedback.summary.datatable');
+
+    Route::post('/feedback/pending-summary/export/pdf', [FeedbackController::class, 'exportPendingSummaryPDF'])
+        ->name('feedback.summary.export.pdf');
+
+    Route::post('/feedback/pending-summary/export/excel', [FeedbackController::class, 'exportPendingSummaryExcel'])
+        ->name('feedback.summary.export.excel');
+});
+// For getting sessions by course (reuse the existing one)
+Route::get('/get-sessions-by-course', [FeedbackController::class, 'getSessionsByCourse'])
+    ->name('get.sessions.by.course');
 // ============================================
 // Issue Management Module Routes (CENTCOM)
 // ============================================

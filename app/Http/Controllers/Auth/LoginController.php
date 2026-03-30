@@ -135,9 +135,7 @@ class LoginController extends Controller
 
         Session::put('user_roles', $roles);
 
-        // Always redirect to the dashboard after login,
-        // instead of going to the originally intended URL.
-        return redirect($this->redirectTo)
+        return redirect()->intended($this->redirectTo)
             ->cookie(cookie()->make('fresh_login', 'true', 0));
 
         // When the user can see low stock information, create a notification instead of showing a popup.

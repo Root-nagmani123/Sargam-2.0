@@ -1,9 +1,10 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="admin-force-light">
 
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    
     <title>Registration - Foundation Course | Lal Bahadur Shastri National Academy of Administration</title>
     <link rel="shortcut icon" type="image/x-icon" href="{{ asset('admin_assets/images/logos/favicon.ico') }}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
@@ -125,7 +126,7 @@
     </style>
 </head>
 
-<body>
+<body class="admin-force-light">
     <!-- Top Blue Bar (Govt of India) -->
     <div class="top-header d-flex justify-content-between align-items-center d-none d-md-block">
         <div class="container">
