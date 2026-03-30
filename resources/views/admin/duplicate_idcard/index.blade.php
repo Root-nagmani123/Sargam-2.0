@@ -43,7 +43,7 @@
                     </form>
                     <a href="{{ route('admin.duplicate_idcard.create') }}" class="btn btn-sm btn-success">
                         <i class="material-icons material-symbols-rounded" style="font-size:18px;vertical-align:middle;"></i>
-                        Add Duplicate ID Card
+                        Add New Duplicate id card
                     </a>
                 </div>
             </div>

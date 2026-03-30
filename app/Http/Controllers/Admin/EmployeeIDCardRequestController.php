@@ -136,6 +136,20 @@ class EmployeeIDCardRequestController extends Controller
                 return $row;
             }
 
+            // For contractual employees: check if security member has approved (status=1, recommend_status=1)
+            if ($isContractual) {
+                $contractualSecurityMemberApproved = DB::table('security_con_oth_id_apply_approval')
+                    ->where('security_parm_id_apply_pk', $row->emp_id_apply ?? null)
+                    ->where('status', 1)
+                    ->where('recommend_status', 1)
+                    ->exists();
+                
+                if ($contractualSecurityMemberApproved) {
+                    $row->pending_status_tooltip = 'Pending with Security Head';
+                    return $row;
+                }
+            }
+
             // For contractual employees: check if approved by section authority (depart_approval_status=2)
             // If so, it's now at Security Member level (not section level anymore)
             $isContractualApprovedBySection = $isContractual && (int) ($row->depart_approval_status ?? 0) === 2;
@@ -154,6 +168,12 @@ class EmployeeIDCardRequestController extends Controller
                         $row->pending_status_tooltip .= ' (' . $approvalAuthName . ')';
                     }
                 }
+                return $row;
+            }
+
+            // For permanent employees: they bypass section head approval and go directly to security member
+            if (!$isContractual) {
+                $row->pending_status_tooltip = 'Pending with Security Member';
                 return $row;
             }
 
@@ -409,7 +429,7 @@ class EmployeeIDCardRequestController extends Controller
             'date_of_birth' => 'nullable|date',
             'father_name' => 'nullable|string|max:255',
             'academy_joining' => 'nullable|date',
-            'id_card_valid_upto' => 'nullable|string|max:50',
+            'id_card_valid_upto' => 'nullable|string|max:50|after:today',
             'id_card_valid_from' => 'nullable|string|max:50',
             'id_card_number' => 'nullable|string|max:50',
             'mobile_number' => 'nullable|string|max:20',
@@ -430,6 +450,7 @@ class EmployeeIDCardRequestController extends Controller
         ], [
             'fir_receipt.required_if' => 'FIR Receipt is required when the card is reported as Lost.',
             'approval_authority.required_if' => 'Approval Authority is required for Contractual Employees.',
+            'id_card_valid_upto.after' => 'ID Card Valid Upto date must be a future date.',
         ]);
 
         $authEmpPk = Auth::user()->user_id ?? Auth::id();

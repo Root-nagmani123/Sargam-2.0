@@ -51,7 +51,7 @@
             </div>
             <a href="{{ route('admin.employee_idcard.create') }}" class="btn btn-primary px-4 py-2 rounded-3 d-flex align-items-center gap-2 shadow-sm focus-ring">
                
-                Generate New ID Card
+                Add New ID card
             </a>
         </div>
     </div>

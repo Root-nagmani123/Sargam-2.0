@@ -160,7 +160,7 @@
                         </div>
                         <div class="col-6">
                             <label for="id_card_valid_upto_perm" class="form-label">ID Card Valid Upto</label>
-                            <input type="date" name="id_card_valid_upto" id="id_card_valid_upto_perm" class="form-control idcard-perm-field" data-field="id_card_valid_upto" value="{{ $oldIdValid }}" placeholder="DD/MM/YYYY">
+                            <input type="date" name="id_card_valid_upto" id="id_card_valid_upto_perm" class="form-control idcard-perm-field" data-field="id_card_valid_upto" value="{{ $oldIdValid }}" placeholder="DD/MM/YYYY" min="{{ now()->format('Y-m-d') }}">
                             @error('id_card_valid_upto')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-6">
@@ -257,7 +257,7 @@
                         </div>
                         <div class="col-md-6">
                             <label for="id_card_valid_upto_cont" class="form-label">ID Card Valid Upto</label>
-                            <input type="date" name="id_card_valid_upto" id="id_card_valid_upto_cont" class="form-control idcard-cont-field " value="{{ $oldIdValid }}" >
+                            <input type="date" name="id_card_valid_upto" id="id_card_valid_upto_cont" class="form-control idcard-cont-field " value="{{ $oldIdValid }}" min="{{ now()->format('Y-m-d') }}">
                         </div>
                         <div class="col-md-6">
                             <label for="mobile_number_cont" class="form-label">Mobile Number</label>
