@@ -2967,74 +2967,7 @@ class FeedbackController extends Controller
         }
     }
 
-
-    /**
-     * Build optimized pending feedback query
-     */
-    // private function buildExportQuery()
-    // {
-    //     return DB::table('timetable as t')
-    //         ->select([
-    //             't.pk as timetable_pk',
-    //             't.subject_topic',
-    //             'c.course_name',
-    //             'v.venue_name',
-    //             'f.full_name as faculty_name',
-    //             DB::raw("TRIM(CONCAT(
-    //                 COALESCE(sm.first_name, ''),
-    //                 ' ',
-    //                 COALESCE(sm.middle_name, ''),
-    //                 ' ',
-    //                 COALESCE(sm.last_name, '')
-    //             )) as student_name"),
-    //             'sm.email',
-    //             'sm.contact_no',
-    //             'sm.generated_OT_code',
-    //             't.START_DATE as from_date',
-    //             't.END_DATE as to_date',
-    //             't.class_session'
-    //         ])
-    //         ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
-    //         ->join('venue_master as v', 't.venue_id', '=', 'v.venue_id')
-    //         ->leftJoin('faculty_master as f', function ($join) {
-    //             $join->on('f.pk', '=', DB::raw("
-    //                 CAST(
-    //                     CASE 
-    //                         WHEN JSON_VALID(t.faculty_master) 
-    //                         THEN JSON_UNQUOTE(JSON_EXTRACT(t.faculty_master, '$[0]'))
-    //                         ELSE t.faculty_master
-    //                     END AS UNSIGNED
-    //                 )
-    //             "));
-    //         })
-    //         ->join('student_master_course__map as smcm', function ($join) {
-    //             $join->on('smcm.course_master_pk', '=', 't.course_master_pk')
-    //                 ->where('smcm.active_inactive', 1);
-    //         })
-    //         ->join('student_master as sm', 'sm.pk', '=', 'smcm.student_master_pk')
-    //         ->join('course_student_attendance as csa', function ($join) {
-    //             $join->on('csa.timetable_pk', '=', 't.pk')
-    //                 ->on('csa.Student_master_pk', '=', 'sm.pk')
-    //                 ->where('csa.status', '1');
-    //         })
-    //         ->leftJoin('topic_feedback as tf', function ($join) {
-    //             $join->on('tf.timetable_pk', '=', 't.pk')
-    //                 ->on('tf.student_master_pk', '=', 'sm.pk')
-    //                 ->where('tf.is_submitted', 1);
-    //         })
-    //         ->where('t.feedback_checkbox', 1)
-    //         ->whereNull('tf.pk')
-    //         ->where('t.START_DATE', '<=', now())
-    //         ->whereRaw("
-    //             ADDTIME(t.END_DATE, 
-    //                 STR_TO_DATE(
-    //                     TRIM(SUBSTRING_INDEX(t.class_session, '-', -1)),
-    //                     '%h:%i %p'
-    //                 )
-    //             ) <= NOW()
-    //         ")
-    //         ->distinct();
-    // }
+   
     private function buildExportQuery()
     {
         //  Pre-aggregated feedback (FAST)
@@ -3388,64 +3321,6 @@ class FeedbackController extends Controller
             return back()->with('error', 'Failed to export PDF: ' . $e->getMessage());
         }
     }
-
-    /**
-     * Build summary export query
-     */
-    /**
-     * Build summary export query
-     */
-    // private function buildSummaryExportQuery()
-    // {
-    //     return DB::table('timetable as t')
-    //         ->select([
-    //             DB::raw("CONCAT(
-    //             COALESCE(sm.first_name, ''),
-    //             ' ',
-    //             COALESCE(sm.middle_name, ''),
-    //             ' ',
-    //             COALESCE(sm.last_name, '')
-    //         ) as user_name"),
-    //             'sm.email',
-    //             'sm.contact_no',
-    //             'c.course_name',  // This is included
-    //             DB::raw("'Multiple Sessions' as session_info"),
-    //             DB::raw("CONCAT(
-    //             DATE_FORMAT(MIN(t.START_DATE), '%d-%m-%Y'),
-    //             ' to ',
-    //             DATE_FORMAT(MAX(t.START_DATE), '%d-%m-%Y')
-    //         ) as date_range"),
-    //             DB::raw('COUNT(DISTINCT t.pk) as pending_count')
-    //         ])
-    //         ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')  // Join with course_master
-    //         ->join('student_master_course__map as smcm', function ($join) {
-    //             $join->on('smcm.course_master_pk', '=', 't.course_master_pk')
-    //                 ->where('smcm.active_inactive', 1);
-    //         })
-    //         ->join('student_master as sm', 'sm.pk', '=', 'smcm.student_master_pk')
-    //         ->join('course_student_attendance as csa', function ($join) {
-    //             $join->on('csa.timetable_pk', '=', 't.pk')
-    //                 ->on('csa.Student_master_pk', '=', 'sm.pk')
-    //                 ->where('csa.status', '1');
-    //         })
-    //         ->leftJoin('topic_feedback as tf', function ($join) {
-    //             $join->on('tf.timetable_pk', '=', 't.pk')
-    //                 ->on('tf.student_master_pk', '=', 'sm.pk')
-    //                 ->where('tf.is_submitted', 1);
-    //         })
-    //         ->where('t.feedback_checkbox', 1)
-    //         ->whereNull('tf.pk')
-    //         ->where('t.START_DATE', '<=', now())
-    //         ->whereRaw("
-    //         ADDTIME(t.END_DATE, 
-    //             STR_TO_DATE(
-    //                 TRIM(SUBSTRING_INDEX(t.class_session, '-', -1)),
-    //                 '%h:%i %p'
-    //             )
-    //         ) <= NOW()
-    //     ")
-    //         ->groupBy('sm.pk', 'sm.first_name', 'sm.middle_name', 'sm.last_name', 'sm.email', 'sm.contact_no', 'c.course_name');
-    // }
 
     private function buildSummaryExportQuery()
     {
