@@ -398,6 +398,11 @@ class MemberController extends Controller
         return view('admin.member.edit', compact('member'));
     }
 
+    public function editProfile($id) {
+        $member = EmployeeMaster::findOrFail($id);
+        return view('admin.member.edit_profile', compact('member'));
+    }
+
     function editStep($step, $id)
     {
         $member = EmployeeMaster::findOrFail($id);

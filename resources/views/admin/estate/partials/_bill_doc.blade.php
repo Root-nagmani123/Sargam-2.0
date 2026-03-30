@@ -71,10 +71,11 @@
 <div class="bill-doc">
     <div class="bill-header">
         <span class="bill-badge">Consumer Copy</span>
-        <div class="bill-emblem">LBSNAA</div>
-        <p class="org-name">Lal Bahadur Shastri National Academy of Administration</p>
-        <p class="org-sub">Mussoorie · Estate Section</p>
-        <h1 class="bill-title">Estate Bill — Electricity, Water &amp; Licence</h1>
+        <div class="bill-header-main">
+            <img src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png" alt="LBSNAA Official Logo" class="bill-logo" style="width: 300px; height: 100px; margin-bottom: 3px; object-fit: contain;">
+            <p class="org-sub" style="font-size: 10px; margin: 0;">Mussoorie · Estate Section</p>
+            <h1 class="bill-title" style="font-size: 12px; font-weight: 700; margin: 10px 0 0 0;">Estate Bill — Electricity, Water &amp; Licence</h1>
+        </div>
     </div>
     <div class="bill-meta-bar">
         <span class="bill-no">Bill No.: {{ $bill->bill_no ?? '—' }}</span>
@@ -83,10 +84,16 @@
     <div class="bill-consumer">
         <p class="bill-consumer-title">Consumer / Employee Details</p>
         <table class="bill-consumer-table">
+            <colgroup>
+                <col style="width: 24%;">
+                <col style="width: 26%;">
+                <col style="width: 24%;">
+                <col style="width: 26%;">
+            </colgroup>
             <tr>
                 <td class="label">Name of Employee</td>
-                <td class="value" style="width: 24%;"><strong>{{ $bill->emp_name ?? '—' }}</strong></td>
-                <td class="label" style="width: 26%;">Designation</td>
+                <td class="value"><strong>{{ $bill->emp_name ?? '—' }}</strong></td>
+                <td class="label">Designation</td>
                 <td class="value">{{ $bill->emp_designation ?? '—' }}</td>
             </tr>
             <tr>

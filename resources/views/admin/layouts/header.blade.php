@@ -13,7 +13,7 @@
         str_starts_with($path, 'admin/employee-idcard') || str_starts_with($path, 'admin/issue-management') ||
         str_starts_with($path, 'courseAttendanceNoticeMap') || str_starts_with($path, 'course_memo') ||
         str_starts_with($path, 'building_floor') || str_starts_with($path, 'group_mapping') ||
-        str_starts_with($path, 'course-repository') || str_starts_with($path, 'feedback') ||
+        str_starts_with($path, 'course-repository') || str_starts_with($path, 'feedback') || str_starts_with($path, 'admin/feedback') ||
         str_starts_with($path, 'admin/notice') || str_starts_with($path, 'attendance') ||
         str_starts_with($path, 'security') || str_starts_with($path, 'ot_notice') ||
         str_starts_with($path, 'forms') || str_starts_with($path, 'registration') ||
@@ -23,7 +23,7 @@
         str_starts_with($path, 'stream') || str_starts_with($path, 'subject') || str_starts_with($path, 'Venue-Master') ||
         str_starts_with($path, 'batch') || str_starts_with($path, 'curriculum') || str_starts_with($path, 'mapping') ||
         str_starts_with($path, 'admin/master') || str_contains($path, 'breadcrumb-showcase') || str_starts_with($path, 'password') ||
-        request()->routeIs('calendar.index') || str_starts_with($path, 'calendar') ||
+        request()->routeIs('calendar.index') || request()->routeIs('feedback.*') || str_starts_with($path, 'calendar') ||
         str_starts_with($path, 'expertise') || str_starts_with($path, 'faculty_notice') || str_starts_with($path, 'faculty_mdo')
     ) {
         $activeNavTab = '#tab-setup';
@@ -86,7 +86,7 @@
                 <li class="nav-item d-flex d-xl-none">
                     <a class="nav-link nav-icon-hover-bg rounded-circle sidebartoggler" id="headerCollapse"
                         href="javascript:void(0)">
-                        <iconify-icon icon="solar:hamburger-menu-line-duotone" class="fs-6"></iconify-icon>
+                        <i class="material-icons material-symbols-rounded fs-6">menu</i>
                     </a>
                 </li>
             </ul>
@@ -99,7 +99,7 @@
             <a class="navbar-toggler p-0 border-0 nav-icon-hover-bg rounded-circle" data-bs-toggle="collapse"
                 data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false"
                 aria-label="Toggle navigation">
-                <iconify-icon icon="solar:menu-dots-bold-duotone" class="fs-6"></iconify-icon>
+                <i class="material-icons material-symbols-rounded fs-6">more_vert</i>
             </a>
 
             <div class="collapse navbar-collapse" id="navbarNav">
@@ -125,12 +125,17 @@
                                     data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-setup' ? 'true' : 'false' }}" aria-controls="setup-panel"
                                     id="setup-tab">
 
-                                    @if(hasRole('Admin')|| hasRole('Mess-Admin') || hasRole('Mess-Staff') || hasRole('Training-Induction') ||  hasRole('Staff') || hasRole('IST'))
+                                    @if(hasRole('Admin')|| hasRole('Mess-Admin') || hasRole('Mess-Staff') || hasRole('Training-Induction') || hasRole('IST'))
                                     <span>Setup</span>
                                     @elseif(hasRole('Internal Faculty') || hasRole('Guest Faculty') ||
                                     hasRole('Student-OT'))
                                     <span>Academics</span>
+                                    @elseif(hasRole('Staff'))
+                                    <span>Communication</span>
+                                    @else
+                                    <span>Setup</span>
                                     @endif
+
                                 </a>
                             </li>
                         </ul>
@@ -884,6 +889,20 @@
                     left: 0 !important;
                 }
             }
+
+            /* Medium desktop fallback (e.g., 1280x1024 at 100% zoom):
+               keep content shifted so fixed sidebar doesn't overlap mid section. */
+            @media (min-width: 992px) and (max-width: 1299.98px) {
+                html[data-layout="vertical"] body[data-sidebartype="full"] .page-wrapper {
+                    margin-left: calc(80px + 240px) !important;
+                    width: calc(100% - 320px) !important;
+                }
+
+                html[data-layout="vertical"] body[data-sidebartype="mini-sidebar"] .page-wrapper {
+                    margin-left: 80px !important;
+                    width: calc(100% - 80px) !important;
+                }
+            }
             </style>
 <script>
     const root = document.documentElement;
@@ -1451,14 +1470,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function showPane(targetId) {
         if (!targetId || targetId === '#') return; // Skip empty hrefs
-        
-        panes.forEach(p => {
-            if ('#' + p.id === targetId) {
-                p.classList.add('show', 'active');
-            } else {
-                p.classList.remove('show', 'active');
-            }
-        });
+
+        // If the target pane has no server-rendered section on this page,
+        // keep current body content as-is; still switch header/sidebar tab state.
+        const targetPaneId = getMainContentPaneId(targetId);
+        const targetPane = targetPaneId ? document.getElementById(targetPaneId) : null;
+        const canSwitchBodyPane = !!(targetPane && targetPane.children.length > 0);
+
+        if (canSwitchBodyPane) {
+            panes.forEach(p => {
+                if ('#' + p.id === targetId) {
+                    p.classList.add('show', 'active');
+                } else {
+                    p.classList.remove('show', 'active');
+                }
+            });
+        }
         
         // Update all tabs (desktop and mobile)
         tabLinks.forEach(l => {
@@ -1476,6 +1503,76 @@ document.addEventListener('DOMContentLoaded', function() {
         localStorage.setItem('activeMainTab', targetId);
     }
 
+    function getMainContentPaneId(targetId) {
+        const map = {
+            '#home': 'home',
+            '#tab-setup': 'tab-setup',
+            '#tab-communications': 'tab-communications',
+            '#tab-academics': 'tab-academics',
+            '#tab-material-management': 'tab-material-management'
+        };
+        return map[targetId] || null;
+    }
+
+    function isMainContentPaneEmpty(targetId) {
+        const pid = getMainContentPaneId(targetId);
+        if (!pid) return true;
+        const pane = document.querySelector('#mainNavbarContent #' + pid);
+        if (!pane) return true;
+        return pane.children.length === 0;
+    }
+
+    /**
+     * After a tab switch, show the first mini-nav submenu so the sidebar is never blank.
+     */
+    function activateDefaultSubmenuForPane(targetId) {
+        const sidebarTabMap = {
+            '#home': '#sidebar-home',
+            '#tab-setup': '#sidebar-setup',
+            '#tab-communications': '#sidebar-communications',
+            '#tab-academics': '#sidebar-academics',
+            '#tab-material-management': '#sidebar-purchase-order'
+        };
+        const sidebarPaneSel = sidebarTabMap[targetId];
+        if (!sidebarPaneSel) return;
+
+        const pane = document.querySelector('#sidebarTabContent ' + sidebarPaneSel + '.tab-pane');
+        if (!pane) return;
+
+        const storageKey = 'active-mini-nav-' + (pane.id || 'global');
+        let storedId = localStorage.getItem(storageKey);
+        let itemEl = null;
+        if (storedId) {
+            try {
+                itemEl = pane.querySelector('#' + (typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(storedId) : storedId.replace(/([#.;?+*^$[\]\\(){}|\-])/g, '\\$1')));
+            } catch (err) {
+                itemEl = null;
+            }
+        }
+        if (!itemEl) {
+            itemEl = pane.querySelector('.mini-nav .mini-nav-item[id]') || pane.querySelector('.mini-nav .mini-nav-item');
+        }
+        if (!itemEl || !itemEl.id) return;
+
+        pane.querySelectorAll('.mini-nav .mini-nav-item').forEach(el => el.classList.remove('selected'));
+        itemEl.classList.add('selected');
+
+        const targetMenuId = 'menu-right-' + itemEl.id;
+        const allMenus = pane.querySelectorAll('.sidebarmenu nav');
+        allMenus.forEach(nav => {
+            nav.classList.remove('d-block');
+            nav.style.display = 'none';
+        });
+        const safeId = targetMenuId.replace(/([#.;?+*^$[\]\\(){}|\-])/g, '\\$1');
+        const targetMenu = pane.querySelector('#' + safeId);
+        if (targetMenu) {
+            targetMenu.classList.add('d-block');
+            targetMenu.style.display = 'block';
+            document.body.setAttribute('data-sidebartype', 'full');
+        }
+
+    }
+
     // Handle clicks on all tabs (desktop and mobile)
     tabLinks.forEach(link => {
         link.addEventListener('click', function(e) {
@@ -1488,11 +1585,8 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             showPane(target);
             history.replaceState(null, '', target);
-            
-            // Ensure default content within the activated tab
-            if (typeof activateDefaultSubmenuForPane === 'function') {
-                activateDefaultSubmenuForPane(target);
-            }
+            // Defer so #sidebarTabContent sync (other listeners) runs first
+            setTimeout(function() { activateDefaultSubmenuForPane(target); }, 0);
         });
     });
 
@@ -1562,10 +1656,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Apply default submenu/content for initial tab
-    if (typeof activateDefaultSubmenuForPane === 'function') {
-        activateDefaultSubmenuForPane(initial);
-    }
+    // Apply default submenu/content for initial tab (after sidebar init)
+    setTimeout(function() { activateDefaultSubmenuForPane(initial); }, 0);
 });
 </script>
 <!-- 🌟 Header End -->

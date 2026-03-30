@@ -1,118 +1,223 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="utf-8">
     <title>Pending Feedback Report</title>
-
     <style>
+        @page {
+            size: A4 landscape;
+            margin: 15mm 10mm;
+        }
+        
+        @media print {
+            body {
+                margin: 0;
+                padding: 0;
+            }
+        }
+        
         body {
-            font-family: DejaVu Sans, sans-serif;
+            font-family: DejaVu Sans, Arial, sans-serif;
             font-size: 11px;
+            margin: 16px 18px;
+            color: #222;
+            max-width: 297mm;
+            background: white;
         }
-
-        .header {
-            text-align: center;
-            margin-bottom: 15px;
-            border-bottom: 1px solid #000;
+        
+        .page-header {
+            border-bottom: 2px solid #004a93;
             padding-bottom: 8px;
+            margin-bottom: 12px;
+            page-break-after: avoid;
         }
-
-        .header h2 {
+        
+        .page-header-top {
+            display: table;
+            width: 100%;
+        }
+        
+        .page-header-col {
+            display: table-cell;
+            vertical-align: middle;
+        }
+        
+        .page-header-title {
+            text-align: center;
+        }
+        
+        .page-header-title h1 {
+            font-size: 14px;
             margin: 0;
-            font-size: 16px;
+            text-transform: uppercase;
+            letter-spacing: .04em;
         }
-
-        .meta {
-            margin-bottom: 10px;
+        
+        .page-header-title h2 {
+            font-size: 13px;
+            margin: 4px 0 0;
+            text-transform: uppercase;
+            color: #004a93;
+            font-weight: bold;
+        }
+        
+        .page-header-sub {
             font-size: 10px;
+            margin-top: 3px;
+            color: #555;
         }
-
+        
+        .meta-row {
+            font-size: 10px;
+            margin-top: 8px;
+        }
+        
+        .meta-row span {
+            display: inline-block;
+            margin-right: 20px;
+        }
+        
         table {
             width: 100%;
             border-collapse: collapse;
-        }
-
-        th {
-            background: #333;
-            color: #fff;
-            font-weight: bold;
-            padding: 6px;
-            border: 1px solid #000;
-            font-size: 10px;
-        }
-
-        td {
-            padding: 6px;
-            border: 1px solid #000;
-            font-size: 10px;
-        }
-
-        .text-center {
-            text-align: center;
-        }
-
-        .footer {
-            margin-top: 15px;
-            text-align: center;
             font-size: 9px;
-            border-top: 1px solid #000;
+            margin-top: 8px;
+            page-break-inside: auto;
+        }
+        
+        tr {
+            page-break-inside: avoid;
+            page-break-after: auto;
+        }
+        
+        thead {
+            display: table-header-group;
+        }
+        
+        tfoot {
+            display: table-footer-group;
+        }
+        
+        th, td {
+            padding: 6px 4px;
+            border: 1px solid #dde2ea;
+        }
+        
+        thead th {
+            background: #e6ecf5;
+            font-weight: 600;
+            font-size: 9px;
+        }
+        
+        .text-center { text-align: center; }
+        .text-end { text-align: right; }
+        .text-start { text-align: left; }
+        
+        tbody tr:nth-child(even) td {
+            background: #fafbfc;
+        }
+        
+        .footer {
+            border-top: 1px solid #dde2ea;
+            font-size: 8px;
+            color: #666;
+            text-align: center;
             padding-top: 5px;
+            margin-top: 8px;
+        }
+        
+        .summary-stats {
+            font-size: 11px;
+            margin-bottom: 10px;
+            padding: 6px 0;
+        }
+        
+        .summary-stats span {
+            display: inline-block;
+            margin-right: 25px;
+            background: #f5f5f5;
+            padding: 3px 10px;
+            border-radius: 3px;
+        }
+        
+        .summary-stats strong {
+            color: #004a93;
+            font-size: 12px;
+        }
+        
+        .badge-pending {
+            color: #dc3545;
+            font-weight: bold;
         }
     </style>
 </head>
-
 <body>
-
-<div class="header">
-    <h2>Pending Feedback Report</h2>
+<div class="page-header">
+    <div class="page-header-top">
+        <div class="page-header-col page-header-title">
+            <h1>LAL BAHADUR SHASTRI NATIONAL ACADEMY OF ADMINISTRATION</h1>
+            <h2>PENDING FEEDBACK REPORT</h2>
+            <div class="page-header-sub">Student Feedback Status Report</div>
+        </div>
+    </div>
+    <div class="meta-row">
+        <span><strong>Course:</strong> {{ $course_name ?? 'All Courses' }}</span>
+        <span><strong>Generated On:</strong> {{ $export_date ?? now()->format('d-m-Y H:i:s') }}</span>
+        <span><strong>Total Records:</strong> {{ $students->count() }}</span>
+    </div>
 </div>
 
-<div class="meta">
-    <strong>Course:</strong> {{ $course_name ?? 'All Courses' }} <br>
-    <strong>Generated On:</strong> {{ $export_date }} <br>
-    <strong>Total Records:</strong> {{ $students->count() }}
-</div>
+@if($students->count() > 0)
+    @php
+        $totalPending = $students->count();
+    @endphp
+    
+    <div class="summary-stats">
+        <span><strong>Total Pending Feedbacks:</strong> {{ $totalPending }}</span>
+    </div>
 
-@if($students->count())
-
-<table>
-    <thead>
+    <table>
+        <thead>
         <tr>
-            <th width="4%">#</th>
-            <th width="12%">Student</th>
-            <th width="18%">Email</th>
-            <th width="10%">Phone</th>
-            <th width="8%">OT</th>
-            <th width="14%">Course</th>
-            <th width="14%">Session</th>
-            <th width="10%">Faculty</th>
-            <th width="10%">Date</th>
+            <th class="text-center" width="4%">#</th>
+            <th class="text-start" width="12%">Student Name</th>
+            <th class="text-start" width="14%">Email</th>
+            <th class="text-center" width="8%">Phone</th>
+            <th class="text-center" width="8%">OT Code</th>
+            <th class="text-start" width="12%">Course</th>
+            <th class="text-start" width="12%">Session Topic</th>
+            <th class="text-center" width="8%">Start Date</th>
+            <th class="text-center" width="8%">End Date</th>
+            <th class="text-center" width="8%">Session Time</th>
+            <th class="text-center" width="8%">Generated On</th>
         </tr>
-    </thead>
-    <tbody>
+        </thead>
+        <tbody>
         @foreach($students as $i => $row)
-        <tr>
+         <tr>
             <td class="text-center">{{ $i + 1 }}</td>
-            <td>{{ $row->student_name }}</td>
-            <td>{{ $row->email }}</td>
-            <td>{{ $row->contact_no }}</td>
-            <td>{{ $row->generated_OT_code }}</td>
-            <td>{{ $row->course_name }}</td>
-            <td>{{ $row->subject_topic }}</td>
-            <td>{{ $row->faculty_name ?? 'N/A' }}</td>
-            <td>{{ date('d-m-Y', strtotime($row->from_date)) }}</td>
-        </tr>
+            <td class="text-start">{{ $row->student_name ?? '—' }}</td>
+            <td class="text-start">{{ $row->email ?? '—' }}</td>
+            <td class="text-center">{{ $row->contact_no ?? '—' }}</td>
+            <td class="text-center">{{ $row->generated_OT_code ?? '—' }}</td>
+            <td class="text-start">{{ $row->course_name ?? '—' }}</td>
+            <td class="text-start">{{ $row->subject_topic ?? '—' }}</td>
+            <td class="text-center">{{ isset($row->from_date) ? date('d-m-Y', strtotime($row->from_date)) : '—' }}</td>
+            <td class="text-center">{{ isset($row->to_date) ? date('d-m-Y', strtotime($row->to_date)) : '—' }}</td>
+            <td class="text-center">{{ $row->class_session ?? '—' }}</td>
+            <td class="text-center">{{ now()->format('d-m-Y H:i:s') }}</td>
+         </tr>
         @endforeach
-    </tbody>
-</table>
+        </tbody>
+     </table>
 
 @else
-    <p style="text-align:center;">No pending feedback records found.</p>
+    <p style="text-align:center; font-size: 12px; padding: 20px;">No pending feedback records found.</p>
 @endif
 
 <div class="footer">
-    Generated by {{ config('app.name') }} • This is a system generated report
+    <small>This is a computer-generated report - No signature required</small><br>
+    <small>Lal Bahadur Shastri National Academy of Administration, Mussoorie</small>
 </div>
-
 </body>
 </html>

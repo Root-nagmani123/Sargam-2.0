@@ -134,37 +134,7 @@
 </style>
 <div class="container-fluid">
     <!-- Breadcrumb -->
-    <nav aria-label="breadcrumb" class="mb-4">
-        <div class="card border-0 shadow-sm">
-            <div class="card-body py-3 px-4">
-                <ol class="breadcrumb mb-0 breadcrumb-divider-chevron">
-
-                    <li class="breadcrumb-item">
-                        <a href="{{ route('course-repository.index') }}" class="breadcrumb-link">
-                            Academics
-                        </a>
-                    </li>
-
-                    <li class="breadcrumb-item">
-                        <a href="{{ route('course-repository.index') }}" class="breadcrumb-link">
-                            MCTP
-                        </a>
-                    </li>
-
-                    <li class="breadcrumb-item">
-                        <a href="{{ route('course-repository.index') }}" class="breadcrumb-link">
-                            Course Repository Admin
-                        </a>
-                    </li>
-
-                    <li class="breadcrumb-item active fw-semibold text-primary" aria-current="page">
-                        Course Repository
-                    </li>
-
-                </ol>
-            </div>
-        </div>
-    </nav>
+<x-breadcrum title="Course Repository" />
 
 
     <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
@@ -217,8 +187,8 @@
                 </a>
             </div>
             @else
-            <div class="table-responsive rounded-3 overflow-hidden border">
-                <table class="table align-middle mb-0">
+            <div class="table-responsive">
+                <table class="table align-middle mb-0 datatable" data-export="false">
                     <thead>
                         <tr>
                             <th class="col">#</th>
@@ -279,29 +249,6 @@
                         @endforeach
                     </tbody>
                 </table>
-            </div>
-
-            <div
-                class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-3 mt-4 pt-3 border-top">
-                <div class="d-flex flex-wrap align-items-center gap-3">
-                    <p class="text-muted small mb-0">
-                        Showing <span class="fw-medium">{{ $repositories->firstItem() }}</span>–<span
-                            class="fw-medium">{{ $repositories->lastItem() }}</span> of <span
-                            class="fw-medium">{{ $repositories->total() }}</span> categories
-                    </p>
-                    <div class="d-flex align-items-center gap-2">
-                        <label for="per_page" class="text-muted small mb-0">Rows per page</label>
-                        <select id="per_page" class="form-select form-select-sm" style="width: auto;"
-                            aria-label="Rows per page">
-                            @foreach([10, 15, 25, 50, 100] as $n)
-                            <option value="{{ $n }}" {{ ($perPage ?? 15) == $n ? 'selected' : '' }}>{{ $n }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                </div>
-                <nav aria-label="Course repository pagination" class="mt-2 mt-sm-0">
-                    {{ $repositories->links('pagination::bootstrap-5') }}
-                </nav>
             </div>
             <script>
             document.getElementById('per_page')?.addEventListener('change', function() {

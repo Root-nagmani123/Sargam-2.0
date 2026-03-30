@@ -3,6 +3,7 @@
 @section('title', 'Feedback - Sargam | Lal Bahadur')
 
 @section('setup_content')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
 <style>
     :root {
         --lbsnaa-blue: #004a93;
@@ -552,7 +553,7 @@
                         <i class="material-icons" aria-hidden="true">school</i>
                         Course
                     </label>
-                    <select class="form-select-enhanced" id="courseFilter" name="course" 
+                    <select class="form-select-enhanced js-feedback-choice" id="courseFilter" name="course" 
                             aria-label="Filter by course">
                         <option value="">All Courses</option>
                         @foreach($courses as $course)
@@ -567,7 +568,7 @@
                         <i class="material-icons" aria-hidden="true">person</i>
                         Faculty
                     </label>
-                    <select class="form-select-enhanced" id="facultyFilter" name="faculty" 
+                    <select class="form-select-enhanced js-feedback-choice" id="facultyFilter" name="faculty" 
                             aria-label="Filter by faculty">
                         <option value="">All Faculty</option>
                         @foreach($faculties as $faculty)
@@ -582,7 +583,7 @@
                         <i class="material-icons" aria-hidden="true">subject</i>
                         Subject
                     </label>
-                    <select class="form-select-enhanced" id="subjectFilter" name="subject" 
+                    <select class="form-select-enhanced js-feedback-choice" id="subjectFilter" name="subject" 
                             aria-label="Filter by subject">
                         <option value="">All Subjects</option>
                         @foreach($subjects as $subject)
@@ -615,7 +616,7 @@
                     <div class="row g-3">
                         <div class="col-md-3">
                             <label for="ratingFilter" class="form-label small fw-semibold">Rating</label>
-                            <select class="form-select form-select-sm" id="ratingFilter" name="rating">
+                            <select class="form-select form-select-sm js-feedback-choice" id="ratingFilter" name="rating">
                                 <option value="">All Ratings</option>
                                 <option value="5">Excellent (5 Stars)</option>
                                 <option value="4">Good (4 Stars)</option>
@@ -626,7 +627,7 @@
                         </div>
                         <div class="col-md-3">
                             <label for="statusFilter" class="form-label small fw-semibold">Status</label>
-                            <select class="form-select form-select-sm" id="statusFilter" name="status">
+                            <select class="form-select form-select-sm js-feedback-choice" id="statusFilter" name="status">
                                 <option value="">All Status</option>
                                 <option value="submitted">Submitted</option>
                                 <option value="reviewed">Reviewed</option>
@@ -954,8 +955,74 @@
 @endsection
 
 @section('scripts')
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    const feedbackChoicesInstances = new Map();
+
+    if (typeof Choices !== 'undefined') {
+        const feedbackChoiceOpts = {
+            searchEnabled: true,
+            shouldSort: false,
+            itemSelectText: '',
+            allowHTML: false,
+            classNames: {
+                containerOuter: ['choices', 'w-100'],
+                containerInner: ['choices__inner', 'form-control', 'shadow-sm'],
+                input: ['choices__input', 'form-control', 'form-control-sm', 'border-0', 'shadow-none', 'my-1'],
+                inputCloned: ['choices__input--cloned'],
+                list: ['choices__list'],
+                listItems: ['choices__list--multiple'],
+                listSingle: ['choices__list--single'],
+                listDropdown: ['choices__list--dropdown', 'dropdown-menu', 'mt-1', 'p-0', 'shadow-sm', 'w-100'],
+                item: ['choices__item', 'dropdown-item', 'rounded-0'],
+                itemSelectable: ['choices__item--selectable'],
+                itemDisabled: ['choices__item--disabled', 'disabled'],
+                itemChoice: ['choices__item--choice'],
+                description: ['choices__description', 'small', 'text-muted'],
+                placeholder: ['choices__placeholder', 'text-muted', 'opacity-75'],
+                group: ['choices__group'],
+                groupHeading: ['choices__heading', 'dropdown-header', 'text-uppercase', 'small'],
+                button: ['choices__button'],
+                activeState: ['is-active'],
+                focusState: ['is-focused'],
+                openState: ['is-open'],
+                disabledState: ['is-disabled'],
+                highlightedState: ['is-highlighted', 'active'],
+                flippedState: ['is-flipped'],
+                loadingState: ['is-loading'],
+                invalidState: ['is-invalid'],
+                notice: ['choices__notice', 'dropdown-item-text', 'text-muted', 'small', 'py-2'],
+                addChoice: ['choices__item--selectable', 'add-choice'],
+                noResults: ['has-no-results'],
+                noChoices: ['has-no-choices']
+            }
+        };
+
+        document.querySelectorAll('.js-feedback-choice').forEach(selectEl => {
+            if (selectEl.dataset.choicesInitialized === 'true') return;
+            const instance = new Choices(selectEl, feedbackChoiceOpts);
+            feedbackChoicesInstances.set(selectEl.id, instance);
+            selectEl.dataset.choicesInitialized = 'true';
+        });
+    }
+
+    function syncChoiceValue(selectEl, value) {
+        if (!selectEl) return;
+
+        const safeValue = value ?? '';
+        const instance = feedbackChoicesInstances.get(selectEl.id);
+
+        if (!instance) {
+            selectEl.value = safeValue;
+            return;
+        }
+
+        instance.removeActiveItems();
+        instance.setChoiceByValue(String(safeValue));
+        selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
     // Initialize date range picker
     const dateRangePicker = new DateRangePicker(document.getElementById('dateRange'), {
         format: 'yyyy-mm-dd',
@@ -1045,6 +1112,9 @@ document.addEventListener('DOMContentLoaded', function() {
     function resetFilters() {
         document.getElementById('feedbackFilterForm').reset();
         document.getElementById('dateRange').value = '';
+        document.querySelectorAll('.js-feedback-choice').forEach(selectEl => {
+            syncChoiceValue(selectEl, selectEl.value);
+        });
         applyFilters();
     }
 
@@ -1062,7 +1132,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const filters = JSON.parse(localStorage.getItem(`feedbackFilters_${tab}`) || '{}');
         Object.keys(filters).forEach(key => {
             const element = document.querySelector(`[name="${key}"]`);
-            if (element) element.value = filters[key];
+            if (!element) return;
+
+            element.value = filters[key];
+            if (element.matches('select')) {
+                syncChoiceValue(element, filters[key]);
+            }
         });
     }
 
@@ -1270,7 +1345,38 @@ document.addEventListener('DOMContentLoaded', function() {
         localStorage.setItem(`feedbackFilters_${activeTab}`, JSON.stringify(filters));
     });
 
-    // Initialize filters from localStorage
+    // Always open with Active Feedback tab by default
+    function enforceActiveFeedbackDefault() {
+        const activeTabButton = document.getElementById('active-tab');
+        const archiveTabButton = document.getElementById('archive-tab');
+        const activePane = document.getElementById('active-content');
+        const archivePane = document.getElementById('archive-content');
+
+        if (!activeTabButton || !activePane) return;
+
+        // First force DOM classes (works even without Bootstrap JS)
+        activeTabButton.classList.add('active');
+        activeTabButton.setAttribute('aria-selected', 'true');
+        activePane.classList.add('show', 'active');
+
+        if (archiveTabButton) {
+            archiveTabButton.classList.remove('active');
+            archiveTabButton.setAttribute('aria-selected', 'false');
+        }
+
+        if (archivePane) {
+            archivePane.classList.remove('show', 'active');
+        }
+
+        // Then ask Bootstrap to sync internal tab state (if available)
+        if (window.bootstrap && window.bootstrap.Tab) {
+            window.bootstrap.Tab.getOrCreateInstance(activeTabButton).show();
+        }
+    }
+
+    enforceActiveFeedbackDefault();
+
+    // Initialize filters from localStorage for whichever tab is active
     const activeTab = document.querySelector('#feedbackTab .nav-link.active').getAttribute('aria-controls');
     updateFilterState(activeTab);
 });
