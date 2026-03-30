@@ -35,9 +35,11 @@ use App\Http\Controllers\Admin\{
     NotificationController,
     MemoDisciplineController,
     DashboardController,
+    DirectoryController,
     CourseRepositoryController,
     WhosWhoController,
     EstateController,
+    QuickLinkController,
 };
 use App\Http\Controllers\Dashboard\Calendar1Controller;
 use App\Http\Controllers\Admin\MemoNoticeController;
@@ -97,6 +99,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('users/assign-role/{id}', [UserController::class, 'assignRole'])->name('users.assignRole');
         Route::post('users/assign-role-save', [UserController::class, 'assignRoleSave'])
             ->name('users.assignRoleSave');
+
+        Route::post('quick-links', [QuickLinkController::class, 'store'])->name('quick-links.store');
+        Route::delete('quick-links/{id}', [QuickLinkController::class, 'destroy'])->name('quick-links.destroy');
     });
 
 
@@ -104,6 +109,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard/students', [UserController::class, 'studentList'])->name('admin.dashboard.students');
     Route::get('/dashboard/my-counselee', [UserController::class, 'myCounselee'])->name('admin.dashboard.my-counselee');
     Route::get('/dashboard/students/{id}/detail', [UserController::class, 'studentDetail'])->name('admin.dashboard.students.detail');
+    Route::get('/directory/lbsnaa', [DirectoryController::class, 'lbsnaa'])->name('admin.directory.lbsnaa');
+    Route::get('/directory/ot', [DirectoryController::class, 'ot'])->name('admin.directory.ot');
 
     // Dashboard Statistics (Batch Profile)
     // NOTE: Currently served by a Blade view; replace with controller when business logic is ready.
@@ -280,6 +287,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('create', 'create')->name('create');
         Route::get('edit/{id}', 'edit')->name('edit');
+        Route::get('profile/edit/{id}', 'editProfile')->name('profile.edit');
         Route::get('show/{id}', 'show')->name('show');
         Route::get('/step/{step}', 'loadStep')->name('load-step');
         Route::get('/edit-step/{step}/{id}', 'editStep')->name('edit-step');
@@ -835,6 +843,8 @@ use App\Http\Controllers\Admin\Setup\EmployeeGroupController;
 use App\Http\Controllers\Admin\Setup\DepartmentMasterSetupController;
 use App\Http\Controllers\Admin\Setup\DesignationMasterSetupController;
 use App\Http\Controllers\Admin\Setup\CasteCategoryController;
+use App\Http\Controllers\Admin\Setup\QuickLinksSetupController;
+use App\Http\Controllers\Admin\Setup\UsefulLinksSetupController;
 
 // Setup -> Employee Type (moved to controller with modal CRUD)
 Route::middleware(['auth'])->group(function () {
@@ -893,6 +903,29 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/edit/{id}', 'edit')->name('edit');
         Route::post('/update/{id}', 'update')->name('update');
         Route::delete('/delete/{id}', 'delete')->name('delete');
+    });
+
+    // Quick Links master
+    Route::prefix('admin/setup/quick-links')->name('admin.setup.quick_links.')->controller(QuickLinksSetupController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::post('/update/{id}', 'update')->name('update');
+        Route::delete('/delete/{id}', 'delete')->name('delete');
+        Route::post('/reorder/{id}', 'reorder')->name('reorder');
+        Route::post('/bulk-reorder', 'bulkReorder')->name('bulk-reorder');
+    });
+
+    // Useful Links master
+    Route::prefix('admin/setup/useful-links')->name('admin.setup.useful_links.')->controller(UsefulLinksSetupController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::post('/update/{id}', 'update')->name('update');
+        Route::delete('/delete/{id}', 'delete')->name('delete');
+        Route::post('/bulk-reorder', 'bulkReorder')->name('bulk-reorder');
     });
 
 

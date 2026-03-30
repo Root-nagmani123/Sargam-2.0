@@ -32,7 +32,7 @@
                                 <td>{{ \Carbon\Carbon::parse($course->start_year)->format('d M Y') }}</td>
                                 <td>{{ \Carbon\Carbon::parse($course->end_date)->format('d M Y') }}</td>
                                 <td><a href="{{ route('programme.show', encrypt($course->pk)) }}"
-                                        class="btn btn-sm btn-primary">View Details</a></td>
+                                        class="btn btn-sm btn-primary" target="_blank">View Details</a></td>
                             </tr>
                             @endforeach
 

@@ -71,11 +71,6 @@ table.table-bordered.dataTable td:nth-child(4) {
                         </span>
                     </div>
                 </div>
-
-                <div
-                    class="alert customize-alert rounded-pill alert-success bg-success text-white mt-4 mb-0 border-0 fade show text-center fw-bold">
-                    Attendance has been Marked for the Session
-                </div>
             </div>
         </div>
 
@@ -90,7 +85,11 @@ table.table-bordered.dataTable td:nth-child(4) {
                             <i class="bi bi-file-earmark-excel"></i> Export to Excel
                         </a>
                         @if($currentPath === 'mark')
-                        <button type="submit" class="btn btn-primary">save</button>
+                        @if(!empty($allMarked) && $allMarked)
+                        <button type="submit" class="btn btn-success" disabled>Attendance Already Marked</button>
+                        @else
+                        <button type="submit" class="btn btn-primary">Mark Attendance</button>
+                        @endif
 
                         @endif
                     </div>

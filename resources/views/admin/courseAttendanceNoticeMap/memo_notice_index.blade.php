@@ -76,16 +76,16 @@
                             </td>
                             <td>
                                 @if ($template->course)
-                                <span class="badge bg-info">{{ $template->course->course_name }}</span>
+                                {{ $template->course->course_name }}
                                 @else
-                                <span class="text-muted">General</span>
+                                General
                                 @endif
                             </td>
                             <td>{{ $template->title }}</td>
-                          <td>{{ $template->memo_notice_type }}</td>
+                            <td>{{ $template->memo_notice_type }}</td>
                             <td>
                                 <div class="form-check form-switch d-inline-block ms-2">
-                                    <input class="form-check-input status-toggle-data" 
+                                    <input class="form-check-input status-toggle-data"
                                         type="checkbox"
                                         role="switch"
                                         data-id="{{ $template->pk }}"
@@ -95,42 +95,40 @@
 
                                 </div>
                             </td>
-<td>
-    <div class="d-inline-flex align-items-center gap-2"
-     role="group"
-     aria-label="Memo notice template actions">
+                            <td>
+                                <div class="d-inline-flex align-items-center gap-2"
+                                    role="group"
+                                    aria-label="Memo notice template actions">
 
-    <!-- Edit -->
-    <a href="{{ route('admin.memo-notice.edit', $template->pk) }}"
-       class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1"
-       aria-label="Edit memo notice template">
-        <i class="material-icons material-symbols-rounded"
-           style="font-size:18px;"
-           aria-hidden="true">edit</i>
-        <span class="d-none d-md-inline">Edit</span>
-    </a>
+                                    <!-- Edit -->
+                                    <a href="{{ route('admin.memo-notice.edit', $template->pk) }}"
+                                        class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 bg-transparent border-0 p-0 text-primary"
+                                        aria-label="Edit memo notice template">
+                                        <i class="material-icons material-symbols-rounded"
+                                            style="font-size:18px;"
+                                            aria-hidden="true">edit</i>
+                                    </a>
 
-    <!-- Delete -->
-    <form action="{{ route('admin.memo-notice.destroy', $template->pk) }}"
-          method="POST"
-          class="d-inline"
-          onsubmit="return confirm('Are you sure you want to delete this template?')">
-        @csrf
-        @method('DELETE')
+                                    <!-- Delete -->
+                                    <form action="{{ route('admin.memo-notice.destroy', $template->pk) }}"
+                                        method="POST"
+                                        class="d-inline"
+                                        onsubmit="return confirm('Are you sure you want to delete this template?')">
+                                        @csrf
+                                        @method('DELETE')
 
-        <button type="submit"
-                class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1"
-                aria-label="Delete memo notice template">
-            <i class="material-icons material-symbols-rounded"
-               style="font-size:18px;"
-               aria-hidden="true">delete</i>
-            <span class="d-none d-md-inline">Delete</span>
-        </button>
-    </form>
+                                        <button type="submit"
+                                            class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1 bg-transparent border-0 p-0 text-primary"
+                                            aria-label="Delete memo notice template">
+                                            <i class="material-icons material-symbols-rounded"
+                                                style="font-size:18px;"
+                                                aria-hidden="true">delete</i>
+                                        </button>
+                                    </form>
 
-</div>
+                                </div>
 
-</td>
+                            </td>
 
                         </tr>
                         @endforeach
@@ -150,105 +148,105 @@
 
 @push('styles')
 <style>
-.table th {
-    background-color: #f8f9fa;
-}
+    .table th {
+        background-color: #f8f9fa;
+    }
 
-.badge {
-    font-size: 0.8em;
-}
+    .badge {
+        font-size: 0.8em;
+    }
 
-.btn-group .btn {
-    margin-right: 2px;
-}
+    .btn-group .btn {
+        margin-right: 2px;
+    }
 </style>
 @endpush
 
 
 @section('scripts')
 <script>
-$(document).on('change', '.status-toggle-data', function () {
+    $(document).on('change', '.status-toggle-data', function() {
 
-    let checkbox = $(this);
-    let id = checkbox.data('id');
-    let newStatus = checkbox.is(':checked') ? 1 : 0;
+        let checkbox = $(this);
+        let id = checkbox.data('id');
+        let newStatus = checkbox.is(':checked') ? 1 : 0;
 
-    // extra data
-    let courseId = checkbox.data('course');
-    let type = checkbox.data('type'); // Memo / Notice
+        // extra data
+        let courseId = checkbox.data('course');
+        let type = checkbox.data('type'); // Memo / Notice
 
-    // Old status
-    let oldStatus = newStatus === 1 ? 0 : 1;
+        // Old status
+        let oldStatus = newStatus === 1 ? 0 : 1;
 
-    Swal.fire({
-        title: 'Are you sure?',
-        text: newStatus == 1 
-            ? "Do you want to activate this template?" 
-            : "Do you want to deactivate this template?",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Yes, Continue',
-        cancelButtonText: 'Cancel'
-    }).then((result) => {
+        Swal.fire({
+            title: 'Are you sure?',
+            text: newStatus == 1 ?
+                "Do you want to activate this template?" :
+                "Do you want to deactivate this template?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, Continue',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
 
-        if (!result.isConfirmed) {
-            checkbox.prop('checked', oldStatus == 1);
-            return;
-        }
+            if (!result.isConfirmed) {
+                checkbox.prop('checked', oldStatus == 1);
+                return;
+            }
 
-        checkbox.prop('disabled', true);
+            checkbox.prop('disabled', true);
 
-        $.ajax({
-            url: "/admin/memo-notice/" + id + "/status/" + newStatus,
-            type: "POST",
-            data: { _token: "{{ csrf_token() }}" },
-            success: function (res) {
+            $.ajax({
+                url: "/admin/memo-notice/" + id + "/status/" + newStatus,
+                type: "POST",
+                data: {
+                    _token: "{{ csrf_token() }}"
+                },
+                success: function(res) {
 
-                if (res.status === "success") {
+                    if (res.status === "success") {
 
-                    if (newStatus == 1) {
-                        // 🔥 Deactivate only SAME COURSE & SAME TYPE in UI
-                        $('.status-toggle-data').each(function () {
-                            let other = $(this);
+                        if (newStatus == 1) {
+                            // 🔥 Deactivate only SAME COURSE & SAME TYPE in UI
+                            $('.status-toggle-data').each(function() {
+                                let other = $(this);
 
-                            if (
-                                other.data('id') != id &&
-                                other.data('course') == courseId &&
-                                other.data('type') == type
-                            ) {
-                                other.prop('checked', false);
-                            }
+                                if (
+                                    other.data('id') != id &&
+                                    other.data('course') == courseId &&
+                                    other.data('type') == type
+                                ) {
+                                    other.prop('checked', false);
+                                }
+                            });
+                        }
+
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Success!',
+                            text: 'Status updated successfully.',
+                            timer: 1500,
+                            showConfirmButton: false
                         });
                     }
 
+                    checkbox.prop('disabled', false);
+                },
+                error: function() {
+
                     Swal.fire({
-                        icon: 'success',
-                        title: 'Success!',
-                        text: 'Status updated successfully.',
-                        timer: 1500,
-                        showConfirmButton: false
+                        icon: 'error',
+                        title: 'Error!',
+                        text: 'Something went wrong. Please try again.',
                     });
+
+                    checkbox.prop('disabled', false);
+                    checkbox.prop('checked', oldStatus == 1);
                 }
+            });
 
-                checkbox.prop('disabled', false);
-            },
-            error: function () {
-
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error!',
-                    text: 'Something went wrong. Please try again.',
-                });
-
-                checkbox.prop('disabled', false);
-                checkbox.prop('checked', oldStatus == 1);
-            }
         });
 
     });
-
-});
-
-
 </script>
 @endsection

@@ -202,182 +202,39 @@
         border-color: #198754;
     }
 
-    /* Modern Select2 Styling - Enhanced Specificity */
-    #eventModal .select2-container--default .select2-selection--multiple,
-    #eventModal .select2-container--default .select2-selection--single,
-    .modal-dialog .select2-container--default .select2-selection--multiple,
-    .modal-dialog .select2-container--default .select2-selection--single {
+    /* Choices.js bootstrap-like styling inside event modal */
+    #eventModal .choices {
+        width: 100%;
+    }
+
+    #eventModal .choices__inner.form-select {
         border: 2px solid #e9ecef !important;
         border-radius: 0.5rem !important;
         min-height: 42px !important;
-        transition: all 0.2s ease !important;
-        background-color: #ffffff !important;
+        background: #fff !important;
+        padding: 0.45rem 0.75rem !important;
     }
 
-    #eventModal .select2-container--default .select2-selection--multiple,
-    .modal-dialog .select2-container--default .select2-selection--multiple {
-        padding: 0.375rem 0.5rem !important;
-    }
-
-    #eventModal .select2-container--default .select2-selection--single,
-    .modal-dialog .select2-container--default .select2-selection--single {
-        padding: 0.625rem 0.875rem !important;
-    }
-
-    #eventModal .select2-container--default:hover .select2-selection--multiple,
-    #eventModal .select2-container--default:hover .select2-selection--single,
-    .modal-dialog .select2-container--default:hover .select2-selection--multiple,
-    .modal-dialog .select2-container--default:hover .select2-selection--single {
-        border-color: #ced4da !important;
-    }
-
-    #eventModal .select2-container--default.select2-container--focus .select2-selection--multiple,
-    #eventModal .select2-container--default.select2-container--focus .select2-selection--single,
-    #eventModal .select2-container--default.select2-container--open .select2-selection--multiple,
-    #eventModal .select2-container--default.select2-container--open .select2-selection--single,
-    .modal-dialog .select2-container--default.select2-container--focus .select2-selection--multiple,
-    .modal-dialog .select2-container--default.select2-container--focus .select2-selection--single,
-    .modal-dialog .select2-container--default.select2-container--open .select2-selection--multiple,
-    .modal-dialog .select2-container--default.select2-container--open .select2-selection--single {
+    #eventModal .choices.is-focused .choices__inner.form-select,
+    #eventModal .choices.is-open .choices__inner.form-select {
         border-color: #0d6efd !important;
         box-shadow: var(--input-focus-glow) !important;
-        transform: translateY(-1px) !important;
     }
 
-    #eventModal .select2-container--default .select2-selection--multiple .select2-selection__choice,
-    .modal-dialog .select2-container--default .select2-selection--multiple .select2-selection__choice {
+    #eventModal .choices__list--multiple .choices__item {
         background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%) !important;
         border: none !important;
         border-radius: 0.375rem !important;
-        padding: 0.25rem 0.625rem !important;
-        color: #ffffff !important;
+        color: #fff !important;
         font-size: 0.875rem !important;
-        font-weight: 500 !important;
-        margin: 0.25rem 0.25rem 0.25rem 0 !important;
-        transition: all 0.2s ease !important;
     }
 
-    #eventModal .select2-container--default .select2-selection--multiple .select2-selection__choice:hover,
-    .modal-dialog .select2-container--default .select2-selection--multiple .select2-selection__choice:hover {
-        background: linear-gradient(135deg, #0a58ca 0%, #084298 100%) !important;
-        transform: scale(1.02) !important;
-    }
-
-    #eventModal .select2-container--default .select2-selection--multiple .select2-selection__choice__remove,
-    .modal-dialog .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
-        color: #ffffff !important;
-        font-size: 1.1em !important;
-        margin-right: 0.375rem !important;
-        font-weight: bold !important;
-        transition: all 0.2s ease !important;
-    }
-
-    #eventModal .select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover,
-    .modal-dialog .select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover {
-        color: #ffebee !important;
-        transform: scale(1.15) !important;
-    }
-
-    .select2-dropdown {
+    #eventModal .choices__list--dropdown,
+    #eventModal .choices__list[aria-expanded] {
         border: 2px solid #e9ecef !important;
         border-radius: 0.5rem !important;
         box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15) !important;
-        margin-top: 0.25rem !important;
-        animation: select2FadeIn 0.2s ease-out;
-    }
-
-    @keyframes select2FadeIn {
-        from {
-            opacity: 0;
-            transform: translateY(-10px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    .select2-container--default .select2-results__option {
-        padding: 0.625rem 0.875rem !important;
-        font-size: 0.95rem !important;
-        transition: all 0.15s ease !important;
-    }
-
-    .select2-container--default .select2-results__option--highlighted[aria-selected] {
-        background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%) !important;
-        color: #ffffff !important;
-    }
-
-    .select2-container--default .select2-results__option[aria-selected="true"] {
-        background-color: #e7f3ff !important;
-        color: #e7f3ff !important;
-        font-weight: 500 !important;
-    }
-
-    .select2-container--default .select2-search--dropdown .select2-search__field {
-        border: 2px solid #e9ecef !important;
-        border-radius: 0.375rem !important;
-        padding: 0.5rem 0.75rem !important;
-        font-size: 0.95rem !important;
-        transition: all 0.2s ease !important;
-    }
-
-    .select2-container--default .select2-search--dropdown .select2-search__field:focus {
-        border-color: #0d6efd !important;
-        box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1) !important;
-        outline: none !important;
-    }
-
-    #eventModal .select2-container--default .select2-selection--single .select2-selection__rendered,
-    .modal-dialog .select2-container--default .select2-selection--single .select2-selection__rendered {
-        color: #495057 !important;
-        line-height: normal !important;
-        padding: 0 !important;
-    }
-
-    #eventModal .select2-container--default .select2-selection--single .select2-selection__placeholder,
-    .modal-dialog .select2-container--default .select2-selection--single .select2-selection__placeholder {
-        color: #6c757d !important;
-    }
-
-    #eventModal .select2-container--default .select2-selection--single .select2-selection__arrow,
-    .modal-dialog .select2-container--default .select2-selection--single .select2-selection__arrow {
-        height: 100% !important;
-        right: 0.5rem !important;
-    }
-
-    #eventModal .select2-container--default .select2-selection--single .select2-selection__arrow b,
-    .modal-dialog .select2-container--default .select2-selection--single .select2-selection__arrow b {
-        border-color: #6c757d transparent transparent transparent !important;
-        transition: all 0.2s ease !important;
-    }
-
-    #eventModal .select2-container--default.select2-container--open .select2-selection--single .select2-selection__arrow b,
-    .modal-dialog .select2-container--default.select2-container--open .select2-selection--single .select2-selection__arrow b {
-        border-color: transparent transparent #0d6efd transparent !important;
-    }
-
-    .select2-results__message {
-        color: #6c757d !important;
-        font-style: italic !important;
-        padding: 0.75rem !important;
-    }
-
-    #eventModal .select2-container--default .select2-selection--multiple .select2-search__field,
-    .modal-dialog .select2-container--default .select2-selection--multiple .select2-search__field {
-        margin-top: 0.25rem !important;
-    }
-
-    #eventModal .select2-container--default .select2-selection--multiple .select2-search__field::placeholder,
-    .modal-dialog .select2-container--default .select2-selection--multiple .select2-search__field::placeholder {
-        color: #6c757d !important;
-        font-size: 0.95rem !important;
-    }
-
-    /* Ensure Select2 width is 100% */
-    #eventModal .select2-container,
-    .modal-dialog .select2-container {
-        width: 100% !important;
+        z-index: 2000 !important;
     }
 </style>
 
@@ -736,52 +593,108 @@ document.addEventListener('DOMContentLoaded', function() {
     const faculty_type = document.getElementById('faculty_type');
     // internalFacultyDiv.style.display = 'none'; // Hide initially
 
-    // Initialize Select2 when modal is shown
-    $('#eventModal').on('shown.bs.modal', function() {
-        var modalDialog = $('#eventModal').find('.modal-dialog');
-    
-        // Initialize Select2 for faculty field with enhanced styling
-        if (!$('#faculty').hasClass('select2-hidden-accessible')) {
-            $('#faculty').select2({
-                placeholder: '👤 Select Faculty',
-                allowClear: true,
-                width: '100%',
-                dropdownParent: modalDialog,
-                theme: 'default',
-                selectionCssClass: 'select2-modern',
-                dropdownCssClass: 'select2-modern-dropdown'
-            });
-        }
+    function initChoicesForSelect(el, placeholderText) {
+        if (!el || typeof window.Choices === 'undefined') return null;
+        if (el._choicesInstance) return el._choicesInstance;
+        const isMultiple = !!el.multiple;
 
-        // Update Select2 display if value is set programmatically (for edit mode)
-        setTimeout(function() {
-            if ($('#faculty').hasClass('select2-hidden-accessible') && $('#faculty').val()) {
-                $('#faculty').trigger('change.select2');
+        const instance = new Choices(el, {
+            removeItemButton: isMultiple,
+            shouldSort: false,
+            searchEnabled: true,
+            searchPlaceholderValue: 'Search...',
+            placeholder: true,
+            placeholderValue: placeholderText,
+            itemSelectText: '',
+            allowHTML: false,
+            classNames: {
+                containerInner: ['choices__inner', 'form-select'],
+                input: ['choices__input', 'form-control', 'form-control-sm', 'border-0', 'shadow-none', 'my-1'],
+                inputCloned: ['choices__input--cloned'],
+                listDropdown: ['choices__list--dropdown', 'dropdown-menu', 'mt-1', 'p-0', 'shadow-sm', 'w-100'],
+                item: ['choices__item', 'dropdown-item', 'rounded-0'],
+                itemSelectable: ['choices__item--selectable'],
+                itemDisabled: ['choices__item--disabled', 'disabled'],
+                itemChoice: ['choices__item--choice'],
+                placeholder: ['choices__placeholder', 'text-muted', 'opacity-75'],
+                highlightedState: ['is-highlighted', 'active'],
+                notice: ['choices__notice', 'dropdown-item-text', 'text-muted', 'small', 'py-2']
             }
-        }, 100);
+        });
 
-        if (!$('#internal_faculty').hasClass('select2-hidden-accessible')) {
-            $('#internal_faculty').select2({
-                placeholder: '👥 Select Internal Faculty',
-                allowClear: true,
-                width: '100%',
-                dropdownParent: modalDialog,
-                theme: 'default',
-                selectionCssClass: 'select2-modern',
-                dropdownCssClass: 'select2-modern-dropdown'
-            });
+        el._choicesInstance = instance;
+        return instance;
+    }
+
+    function getPlaceholderText(el) {
+        if (!el) return 'Select option';
+        const label = document.querySelector(`label[for="${el.id}"]`);
+        const labelText = label ? label.textContent.replace(/\s+/g, ' ').trim() : 'Select option';
+        return labelText || 'Select option';
+    }
+
+    function syncChoicesFromSelected(el) {
+        if (!el || !el._choicesInstance) return;
+        const values = Array.from(el.selectedOptions).map(option => option.value);
+        el._choicesInstance.removeActiveItems();
+        if (values.length) {
+            el._choicesInstance.setChoiceByValue(values);
         }
+    }
 
+    function rebuildChoicesForSelect(el) {
+        if (!el || typeof window.Choices === 'undefined') return;
+        const selectedValues = Array.from(el.selectedOptions).map(option => option.value);
+        if (el._choicesInstance) {
+            el._choicesInstance.destroy();
+            el._choicesInstance = null;
+        }
+        initChoicesForSelect(el, getPlaceholderText(el));
+        if (selectedValues.length && el._choicesInstance) {
+            el._choicesInstance.setChoiceByValue(selectedValues);
+        }
+    }
+
+    function initAllModalChoices() {
+        const selects = document.querySelectorAll('#eventModal select.form-control, #eventModal select.form-select');
+        selects.forEach((el) => {
+            initChoicesForSelect(el, getPlaceholderText(el));
+            syncChoicesFromSelected(el);
+        });
+    }
+
+    function destroyAllModalChoices() {
+        const selects = document.querySelectorAll('#eventModal select.form-control, #eventModal select.form-select');
+        selects.forEach((el) => {
+            if (el._choicesInstance) {
+                el._choicesInstance.destroy();
+                el._choicesInstance = null;
+            }
+        });
+    }
+
+    // Expose helpers for dynamic dropdown updates from calendar page scripts
+    window.calendarModalChoices = {
+        init: initAllModalChoices,
+        destroy: destroyAllModalChoices,
+        syncById: function(id) {
+            const el = document.getElementById(id);
+            if (el) syncChoicesFromSelected(el);
+        },
+        rebuildById: function(id) {
+            const el = document.getElementById(id);
+            if (el) rebuildChoicesForSelect(el);
+        }
+    };
+
+    // Initialize Choices.js when modal is shown
+    $('#eventModal').on('shown.bs.modal', function() {
+        initAllModalChoices();
     });
 
-    // Destroy Select2 when modal is hidden to prevent conflicts
+    // Destroy Choices when modal is hidden to prevent conflicts
     $('#eventModal').on('hidden.bs.modal', function() {
-        if ($('#faculty').hasClass('select2-hidden-accessible')) {
-            $('#faculty').select2('destroy');
-        }
-        if ($('#internal_faculty').hasClass('select2-hidden-accessible')) {
-            $('#internal_faculty').select2('destroy');
-        }
+        destroyAllModalChoices();
     });
 
     // Show/hide internal faculty based on faculty_type dropdown

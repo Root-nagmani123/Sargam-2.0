@@ -1683,35 +1683,30 @@ $(document).on('change', '#from_date, #to_date', function () {
     }
 });
 
+function attendanceChoicesClear($select) {
+    var el = $select[0];
+    if (el && el._choicesInstance) {
+        el._choicesInstance.setChoiceByValue('');
+        $select.trigger('change');
+    } else {
+        $select.val('').trigger('change');
+    }
+}
+
 // Reset attendance filter
 $(document).on('click', '#resetAttendance', function () {
     // Clear date fields
     $('#from_date').val('');
     $('#to_date').val('');
     
-    // Reset course dropdown - if select2 is initialized, use select2 method
-    if ($('#programme').hasClass('select2-hidden-accessible')) {
-        $('#programme').val('').trigger('change.select2');
-    } else {
-        $('#programme').val('');
-    }
+    attendanceChoicesClear($('#programme'));
     
     // Reset attendance type to 'full_day'
     $('#full_day').prop('checked', true);
     $('input[name="attendance_type"]').trigger('change');
     
-    // Clear and hide session dropdowns
-    if ($('#session').hasClass('select2-hidden-accessible')) {
-        $('#session').val('').trigger('change.select2');
-    } else {
-        $('#session').val('');
-    }
-    
-    if ($('#manual_session').hasClass('select2-hidden-accessible')) {
-        $('#manual_session').val('').trigger('change.select2');
-    } else {
-        $('#manual_session').val('');
-    }
+    attendanceChoicesClear($('#session'));
+    attendanceChoicesClear($('#manual_session'));
     
     // Hide session containers
     $('#normal_session_container').hide();
@@ -1744,6 +1739,7 @@ function drawAttendanceTable() {
     $('#defaultMessageRow').hide();
 
     attendanceTable = $('#attendanceTable').DataTable({
+        responsive: false,
         processing: true,
         serverSide: true,
         ajax: {
@@ -1762,12 +1758,12 @@ function drawAttendanceTable() {
         },
         columns: [
             { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
-            { data: 'programme_name', name: 'programme_name' },
+            { data: 'subject_topic', name: 'subject_topic' },
             { data: 'mannual_starttime', name: 'mannual_starttime' },
             { data: 'session_time', name: 'session_time', orderable: false, searchable: false },
             { data: 'venue_name', name: 'venue_name' },
             { data: 'group_name', name: 'group_name' },
-            { data: 'subject_topic', name: 'subject_topic' },
+            { data: 'programme_name', name: 'programme_name' },
             { data: 'faculty_name', name: 'faculty_name' },
             { data: 'actions', name: 'actions', orderable: false, searchable: false }
         ]
@@ -1785,8 +1781,8 @@ $(document).ready(function() {
         $('#normal_session_container').hide();
         $('#manual_session_container').hide();
 
-        $('#session').val('').trigger('change');
-        $('#manual_session').val('').trigger('change');
+        attendanceChoicesClear($('#session'));
+        attendanceChoicesClear($('#manual_session'));
 
         if ($(this).val() === 'normal') {
             $('#normal_session_container').show();
