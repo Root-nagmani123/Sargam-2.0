@@ -600,7 +600,8 @@ class ReportController extends Controller
                 $request->from_date ?? null,
                 $request->to_date ?? null,
                 $request->filled('course_master_pk') ? $request->course_master_pk : null,
-                $report['otCourses']
+                $report['otCourses'],
+                (float) $report['grandTotal']
             ),
             $fileName
         );
@@ -643,6 +644,7 @@ class ReportController extends Controller
             'toDateFormatted' => $toDateFormatted,
             'otCourses' => $report['otCourses'],
             'courseMasterPk' => $request->filled('course_master_pk') ? $request->course_master_pk : null,
+            'grandTotal' => (float) $report['grandTotal'],
         ];
 
         $pdf = Pdf::loadView('admin.mess.reports.pdf.category-wise-print-slip-pdf', $data)
@@ -1024,7 +1026,8 @@ class ReportController extends Controller
      *   courseBuyerNames:\Illuminate\Support\Collection,
      *   otherBuyerNames:\Illuminate\Support\Collection,
      *   sectionBuyerNames:\Illuminate\Support\Collection,
-     *   otCourses:\Illuminate\Support\Collection
+     *   otCourses:\Illuminate\Support\Collection,
+     *   grandTotal:float
      * }
      */
     private function buildCategoryWisePrintSlipReportData(Request $request): array
@@ -1182,6 +1185,17 @@ class ReportController extends Controller
             ->orderBy('course_name')
             ->get(['pk', 'course_name']);
 
+        $grandTotal = $vouchers->sum(function ($voucher) {
+            return $voucher->items->sum(function ($item) {
+                $issueQty = (float) ($item->quantity ?? 0);
+                $returnQty = (float) ($item->return_quantity ?? 0);
+                $netQty = max(0, $issueQty - $returnQty);
+                $rate = (float) ($item->rate ?? 0);
+
+                return $netQty * $rate;
+            });
+        });
+
         return [
             'vouchers' => $vouchers,
             'allBuyersSections' => $allBuyersSections,
@@ -1189,6 +1203,7 @@ class ReportController extends Controller
             'otherBuyerNames' => $otherBuyerNames,
             'sectionBuyerNames' => $sectionBuyerNames,
             'otCourses' => $otCourses,
+            'grandTotal' => $grandTotal,
         ];
     }
 
@@ -1215,6 +1230,7 @@ class ReportController extends Controller
             $paginator = null;
             $allBuyersSections = collect();
             $printAll = false;
+            $grandTotal = 0.0;
             $courseBuyerNames = collect();
             $otherBuyerNames = collect();
             $sectionBuyerNames = collect();
@@ -1258,7 +1274,8 @@ class ReportController extends Controller
                 'messStaff',
                 'otCourses',
                 'filtersApplied',
-                'courseBuyerNames'
+                'courseBuyerNames',
+                'grandTotal'
             ));
         }
 
@@ -1298,6 +1315,7 @@ class ReportController extends Controller
             : collect();
 
         $filtersApplied = true;
+        $grandTotal = (float) $report['grandTotal'];
 
         return view('admin.mess.reports.category-wise-print-slip', compact(
             'groupedSections',
@@ -1313,7 +1331,8 @@ class ReportController extends Controller
             'filtersApplied',
             'courseBuyerNames',
             'otherBuyerNames',
-            'sectionBuyerNames'
+            'sectionBuyerNames',
+            'grandTotal'
         ));
     }
     /**

@@ -664,7 +664,7 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                                             <span class="badge bg-danger dashboard-notification-new-tag">New</span>
                                             @endif
                                         </div>
-                                        <p class="dashboard-notification-message mb-0">{{ Str::limit($notification->message ?? '', 80) }}</p>
+                                        <p class="dashboard-notification-message mb-0">{{ Str::limit(\App\Services\NotificationService::stripMessCombinedReceiptPayloadForDisplay($notification->message ?? ''), 80) }}</p>
                                         <span class="dashboard-notification-time">{{ isset($notification->created_at) ? \Carbon\Carbon::parse($notification->created_at)->diffForHumans() : '—' }}</span>
                                     </div>
                                 </div>
