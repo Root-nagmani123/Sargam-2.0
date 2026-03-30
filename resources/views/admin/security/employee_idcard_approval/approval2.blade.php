@@ -100,8 +100,15 @@
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="nav-link {{ ($activeTab ?? 'new') === 'for_approval' ? 'active' : '' }}" id="for-approval-tab" data-bs-toggle="tab" data-bs-target="#for-approval-panel" type="button" role="tab" aria-controls="for-approval-panel" aria-selected="{{ ($activeTab ?? 'new') === 'for_approval' ? 'true' : 'false' }}" data-tab-key="for_approval">
-                        For Approval
+                        processed request
                         <span class="badge bg-secondary ms-1">{{ $forApprovalRequests->total() }}</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link {{ ($activeTab ?? 'new') === 'archive' ? 'active' : '' }}" id="archive-tab" data-bs-toggle="tab" data-bs-target="#archive-panel" type="button" role="tab" aria-controls="archive-panel" aria-selected="{{ ($activeTab ?? 'new') === 'archive' ? 'true' : 'false' }}" data-tab-key="archive">
+                        <i class="material-icons material-symbols-rounded" style="font-size:16px;vertical-align:middle;">archive</i>
+                        Archive
+                        <span class="badge bg-secondary ms-1">{{ $archiveRequests->total() }}</span>
                     </button>
                 </li>
             </ul>
@@ -120,6 +127,22 @@
                         <small class="text-muted">Showing {{ $forApprovalRequests->firstItem() ?? 0 }} to {{ $forApprovalRequests->lastItem() ?? 0 }} of {{ $forApprovalRequests->total() }} entries</small>
                         {{ $forApprovalRequests->appends(array_merge(request()->query(), ['tab' => 'for_approval']))->links() }}
                     </div>
+                </div>
+
+                {{-- Archive: Rejected + Moved-to-archive records --}}
+                <div class="tab-pane {{ ($activeTab ?? 'new') === 'archive' ? 'show active' : '' }}" id="archive-panel" role="tabpanel" aria-labelledby="archive-tab" style="{{ ($activeTab ?? 'new') === 'archive' ? 'display:block;' : 'display:none;' }}">
+                    @if($archiveRequests->total() === 0)
+                        <div class="text-center text-muted py-5">
+                            <i class="material-icons material-symbols-rounded" style="font-size:48px;opacity:.3;">archive</i>
+                            <p class="mt-2 mb-0">No archived records found.</p>
+                        </div>
+                    @else
+                        @include('admin.security.employee_idcard_approval._approval_table', ['requests' => $archiveRequests, 'approvalStage' => 0])
+                        <div class="mt-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <small class="text-muted">Showing {{ $archiveRequests->firstItem() ?? 0 }} to {{ $archiveRequests->lastItem() ?? 0 }} of {{ $archiveRequests->total() }} entries</small>
+                            {{ $archiveRequests->appends(array_merge(request()->query(), ['tab' => 'archive']))->links() }}
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>
@@ -185,33 +208,34 @@ document.addEventListener('DOMContentLoaded', function () {
     try {
         var url = new URL(window.location.href);
         var tab = url.searchParams.get('tab');
-        var tabKey = (tab === 'for_approval') ? 'for_approval' : 'new';
+        var validTabs = ['new', 'for_approval', 'archive'];
+        var tabKey = validTabs.indexOf(tab) !== -1 ? tab : 'new';
         var tabInput = document.getElementById('activeTabInput');
         if (tabInput) tabInput.value = tabKey;
 
-        var newTabBtn = document.getElementById('new-request-tab');
-        var forTabBtn = document.getElementById('for-approval-tab');
-        var newPanel = document.getElementById('new-request-panel');
-        var forPanel = document.getElementById('for-approval-panel');
+        var tabBtns = {
+            'new': document.getElementById('new-request-tab'),
+            'for_approval': document.getElementById('for-approval-tab'),
+            'archive': document.getElementById('archive-tab'),
+        };
+        var panels = {
+            'new': document.getElementById('new-request-panel'),
+            'for_approval': document.getElementById('for-approval-panel'),
+            'archive': document.getElementById('archive-panel'),
+        };
 
-        if (newTabBtn && forTabBtn && newPanel && forPanel) {
-            var isNew = tabKey === 'new';
-
-            newTabBtn.classList.toggle('active', isNew);
-            newTabBtn.setAttribute('aria-selected', isNew ? 'true' : 'false');
-            forTabBtn.classList.toggle('active', !isNew);
-            forTabBtn.setAttribute('aria-selected', !isNew ? 'true' : 'false');
-
-            newPanel.classList.toggle('show', isNew);
-            newPanel.classList.toggle('active', isNew);
-            newPanel.style.display = isNew ? 'block' : 'none';
-
-            forPanel.classList.toggle('show', !isNew);
-            forPanel.classList.toggle('active', !isNew);
-            forPanel.style.display = !isNew ? 'block' : 'none';
-
-            // No bootstrap.Tab.show() call here; we manage pane visibility explicitly.
-        }
+        validTabs.forEach(function (key) {
+            var isActive = key === tabKey;
+            if (tabBtns[key]) {
+                tabBtns[key].classList.toggle('active', isActive);
+                tabBtns[key].setAttribute('aria-selected', isActive ? 'true' : 'false');
+            }
+            if (panels[key]) {
+                panels[key].classList.toggle('show', isActive);
+                panels[key].classList.toggle('active', isActive);
+                panels[key].style.display = isActive ? 'block' : 'none';
+            }
+        });
     } catch (e) {}
 });
 
@@ -234,20 +258,20 @@ document.querySelectorAll('#approval2Tabs .nav-link').forEach(function(btn) {
     btn.addEventListener('shown.bs.tab', function() {
         var tabKey = this.dataset.tabKey || 'new';
         var tabInput = document.getElementById('activeTabInput');
-        if (tabInput) {
-            tabInput.value = tabKey;
-        }
-        var newPanel = document.getElementById('new-request-panel');
-        var forPanel = document.getElementById('for-approval-panel');
-        if (newPanel && forPanel) {
-            if (tabKey === 'for_approval') {
-                newPanel.style.display = 'none';
-                forPanel.style.display = 'block';
-            } else {
-                newPanel.style.display = 'block';
-                forPanel.style.display = 'none';
+        if (tabInput) tabInput.value = tabKey;
+        var panels = {
+            'new': document.getElementById('new-request-panel'),
+            'for_approval': document.getElementById('for-approval-panel'),
+            'archive': document.getElementById('archive-panel'),
+        };
+        ['new', 'for_approval', 'archive'].forEach(function (key) {
+            if (panels[key]) {
+                var isActive = key === tabKey;
+                panels[key].style.display = isActive ? 'block' : 'none';
+                panels[key].classList.toggle('show', isActive);
+                panels[key].classList.toggle('active', isActive);
             }
-        }
+        });
         try {
             var url = new URL(window.location.href);
             url.searchParams.set('tab', tabKey);

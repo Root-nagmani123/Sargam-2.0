@@ -93,7 +93,7 @@
                 </ul>
             </div>
             <a href="{{ route('admin.security.vehicle_pass.create') }}" class="btn btn-primary px-4 py-2 rounded-1 shadow-sm">
-                <i class="material-icons material-symbols-rounded align-middle me-1" style="font-size:20px;">add</i>
+               
                 Generate New Vehicle Pass
             </a>
         </div>

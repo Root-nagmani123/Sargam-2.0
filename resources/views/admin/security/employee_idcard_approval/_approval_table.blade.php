@@ -121,7 +121,7 @@
                                         <div class="form-check form-check-inline m-0">
                                             <input class="form-check-input archive-check-input" type="checkbox" id="archive-check-{{ md5((string) $encryptedId . '-' . (string) $index) }}">
                                             <label class="form-check-label small text-muted" for="archive-check-{{ md5((string) $encryptedId . '-' . (string) $index) }}">
-                                                Move to Archive
+                                               card print
                                             </label>
                                         </div>
                                     </form>
@@ -207,7 +207,7 @@
 
                 if (typeof Swal !== 'undefined') {
                     Swal.fire({
-                        title: 'Move to archive?',
+                        title: 'card print?',
                         text: 'This approved record will be removed from this list.',
                         icon: 'warning',
                         showCancelButton: true,

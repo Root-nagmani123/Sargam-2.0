@@ -48,8 +48,17 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="col-md-3 d-flex gap-2">
-                                <button type="submit" class="btn btn-primary flex-grow-1">
+                            <div class="col-md-2">
+                                <label for="status" class="form-label">Status</label>
+                                <select name="status" id="status" class="form-select">
+                                    <option value="" {{ $statusFilter === '' ? 'selected' : '' }}>All</option>
+                                    <option value="pending" {{ $statusFilter === 'pending' ? 'selected' : '' }}>Pending</option>
+                                    <option value="approved" {{ $statusFilter === 'approved' ? 'selected' : '' }}>Approved</option>
+                                    <option value="rejected" {{ $statusFilter === 'rejected' ? 'selected' : '' }}>Rejected</option>
+                                </select>
+                            </div>
+                            <div class="col-12 d-flex gap-2">
+                                <button type="submit" class="btn btn-primary">
                                     <i class="material-icons material-symbols-rounded" style="font-size:18px;">search</i> Search
                                 </button>
                                 <a href="{{ route('admin.security.employee_idcard_approval.approval3') }}" class="btn btn-outline-secondary">

@@ -276,6 +276,7 @@ class EmployeeIDCardApprovalController extends Controller
         $perPage = in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 10;
         $newPage = max(1, (int) $request->get('new_page', 1));
         $forApprovalPage = max(1, (int) $request->get('for_page', 1));
+        $archivePage = max(1, (int) $request->get('archive_page', 1));
 
         // For tab-wise split + independent pagination we need complete filtered sets.
         $permRows = $permQuery->get();
@@ -550,8 +551,179 @@ class EmployeeIDCardApprovalController extends Controller
             ['path' => $request->url(), 'pageName' => 'for_page', 'query' => $request->query()]
         );
 
+        // ── Archive Tab ────────────────────────────────────────────────────────
+        // Includes: rejected records (id_status=3) + moved-to-archive records (id_card_generate_date IS NOT NULL)
+
+        // Archive – Permanent Regular
+        $archivePermQuery = SecurityParmIdApply::with(['employee.designation', 'employee.department', 'creator.department', 'approvals.approver'])
+            ->orderBy('created_date', 'desc')
+            ->where(function ($q) {
+                $q->where('id_status', 3);
+                if (Schema::hasColumn('security_parm_id_apply', 'id_card_generate_date')) {
+                    $q->orWhereNotNull('id_card_generate_date');
+                }
+            });
+        if ($request->filled('search')) {
+            $searchLike = '%' . trim($request->search) . '%';
+            $archivePermQuery->where(function ($q) use ($searchLike) {
+                $q->whereHas('employee', fn ($eq) => $eq->whereRaw("CONCAT(COALESCE(first_name, ''), ' ', COALESCE(last_name, '')) LIKE ?", [$searchLike]))
+                    ->orWhere('id_card_no', 'like', $searchLike);
+            });
+        }
+        if ($request->filled('date_from')) {
+            $archivePermQuery->where('created_date', '>=', \Carbon\Carbon::parse($request->date_from)->startOfDay()->toDateTimeString());
+        }
+        if ($request->filled('date_to')) {
+            $archivePermQuery->where('created_date', '<=', \Carbon\Carbon::parse($request->date_to)->endOfDay()->toDateTimeString());
+        }
+        $archivePermDtos = $archivePermQuery->get()->map(fn ($r) => IdCardSecurityMapper::toEmployeeRequestDto($r));
+
+        // Archive – Permanent Duplicate
+        $archiveDupPermQuery = DB::table('security_dup_perm_id_apply as dup')
+            ->leftJoin('employee_master as emp', 'dup.employee_master_pk', '=', 'emp.pk')
+            ->leftJoin('designation_master as desig', function ($j) {
+                $j->on('dup.designation_pk', '=', 'desig.pk')->orOn('emp.designation_master_pk', '=', 'desig.pk');
+            })
+            ->leftJoin('department_master as dept', 'emp.department_master_pk', '=', 'dept.pk')
+            ->where(function ($q) {
+                $q->where('dup.id_status', 3);
+                if (Schema::hasColumn('security_dup_perm_id_apply', 'id_card_generate_date')) {
+                    $q->orWhereNotNull('dup.id_card_generate_date');
+                }
+            })
+            ->orderByDesc('dup.created_date')
+            ->select(['dup.*', 'emp.first_name', 'emp.last_name', 'desig.designation_name', 'dept.department_name']);
+        if ($request->filled('search')) {
+            $searchLike = '%' . trim($request->search) . '%';
+            $archiveDupPermQuery->where(function ($q) use ($searchLike) {
+                $q->where('dup.id_card_no', 'like', $searchLike)
+                    ->orWhereRaw("CONCAT(COALESCE(emp.first_name, ''), ' ', COALESCE(emp.last_name, '')) LIKE ?", [$searchLike]);
+            });
+        }
+        if ($request->filled('date_from')) {
+            $archiveDupPermQuery->where('dup.created_date', '>=', \Carbon\Carbon::parse($request->date_from)->startOfDay()->toDateTimeString());
+        }
+        if ($request->filled('date_to')) {
+            $archiveDupPermQuery->where('dup.created_date', '<=', \Carbon\Carbon::parse($request->date_to)->endOfDay()->toDateTimeString());
+        }
+        $archiveDupPermRows = $archiveDupPermQuery->get();
+        $archiveDupPermCardLabels = $this->mapDupPermIdCardTypeLabels($archiveDupPermRows);
+        $archiveDupPermDtos = $archiveDupPermRows->map(function ($r) use ($archiveDupPermCardLabels) {
+            $fullName = trim(($r->first_name ?? '') . ' ' . ($r->last_name ?? '')) ?: ($r->employee_name ?? '--');
+            $applyKey = (string) ($r->emp_id_apply ?? '');
+            $idStatus = (int) ($r->id_status ?? 1);
+            return (object) [
+                'id'                => $r->emp_id_apply,
+                'employee_type'     => 'Permanent Employee',
+                'name'              => $fullName,
+                'designation'       => $r->designation_name ?? null,
+                'father_name'       => null,
+                'id_card_number'    => $r->id_card_no,
+                'card_type'         => trim((string) ($archiveDupPermCardLabels[$applyKey] ?? '--')) ?: '--',
+                'date_of_birth'     => $r->employee_dob,
+                'blood_group'       => $r->blood_group,
+                'mobile_number'     => $r->mobile_no,
+                'telephone_number'  => null,
+                'id_card_valid_from' => $r->card_valid_from,
+                'id_card_valid_upto' => $r->card_valid_to,
+                'photo'             => $r->id_photo_path,
+                'created_at'        => isset($r->created_date) ? \Carbon\Carbon::parse($r->created_date) : null,
+                'requested_by'      => $fullName,
+                'requested_section' => $r->department_name ?? null,
+                'request_type'      => 'duplicate',
+                'status'            => match ($idStatus) { 1 => 'Pending', 2 => 'Approved', 3 => 'Rejected', default => 'Unknown' },
+            ];
+        });
+
+        // Archive – Contractual Regular (only those that reached Approval 2)
+        $archiveContQuery = DB::table('security_con_oth_id_apply')
+            ->where('depart_approval_status', 2)
+            ->where(function ($q) {
+                $q->where('id_status', 3);
+                if (Schema::hasColumn('security_con_oth_id_apply', 'id_card_generate_date')) {
+                    $q->orWhereNotNull('id_card_generate_date');
+                }
+            })
+            ->orderByDesc('created_date');
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $archiveContQuery->where(function ($q) use ($search) {
+                $q->where('employee_name', 'like', '%' . $search . '%')->orWhere('id_card_no', 'like', '%' . $search . '%');
+            });
+        }
+        if ($request->filled('date_from')) {
+            $archiveContQuery->where('created_date', '>=', \Carbon\Carbon::parse($request->date_from)->startOfDay()->toDateTimeString());
+        }
+        if ($request->filled('date_to')) {
+            $archiveContQuery->where('created_date', '<=', \Carbon\Carbon::parse($request->date_to)->endOfDay()->toDateTimeString());
+        }
+        $archiveContDtos = $archiveContQuery->get()->map(fn ($r) => IdCardSecurityMapper::toContractualRequestDto($r));
+
+        // Archive – Contractual Duplicate (only those that reached Approval 2)
+        $archiveDupContQuery = DB::table('security_dup_other_id_apply')
+            ->where('depart_approval_status', 2)
+            ->where(function ($q) {
+                $q->where('id_status', 3);
+                if (Schema::hasColumn('security_dup_other_id_apply', 'id_card_generate_date')) {
+                    $q->orWhereNotNull('id_card_generate_date');
+                }
+            })
+            ->orderByDesc('created_date');
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $archiveDupContQuery->where(function ($q) use ($search) {
+                $q->where('employee_name', 'like', '%' . $search . '%')->orWhere('id_card_no', 'like', '%' . $search . '%');
+            });
+        }
+        if ($request->filled('date_from')) {
+            $archiveDupContQuery->where('created_date', '>=', \Carbon\Carbon::parse($request->date_from)->startOfDay()->toDateTimeString());
+        }
+        if ($request->filled('date_to')) {
+            $archiveDupContQuery->where('created_date', '<=', \Carbon\Carbon::parse($request->date_to)->endOfDay()->toDateTimeString());
+        }
+        $archiveDupContRows = $archiveDupContQuery->get();
+        $archiveDupContCardLabels = $this->mapDupOtherIdCardTypeLabels($archiveDupContRows);
+        $archiveDupContDtos = $archiveDupContRows->map(function ($r) use ($deptMap, $archiveDupContCardLabels) {
+            $requestedSection = !empty($r->section) ? ($deptMap[$r->section] ?? null) : null;
+            $idStatus = (int) ($r->id_status ?? 1);
+            return (object) [
+                'id'                => 'c-' . $r->emp_id_apply,
+                'employee_type'     => 'Contractual Employee',
+                'name'              => $r->employee_name ?? '--',
+                'designation'       => $r->designation_name ?? '--',
+                'father_name'       => null,
+                'id_card_number'    => $r->id_card_no,
+                'card_type'         => $archiveDupContCardLabels[(string) ($r->emp_id_apply ?? '')] ?? '--',
+                'date_of_birth'     => $r->employee_dob,
+                'blood_group'       => $r->blood_group,
+                'mobile_number'     => $r->mobile_no,
+                'telephone_number'  => null,
+                'id_card_valid_from' => $r->card_valid_from,
+                'id_card_valid_upto' => $r->card_valid_to,
+                'photo'             => $r->id_photo_path,
+                'created_at'        => isset($r->created_date) ? \Carbon\Carbon::parse($r->created_date) : null,
+                'requested_by'      => null,
+                'requested_section' => $requestedSection,
+                'request_type'      => 'duplicate',
+                'status'            => match ($idStatus) { 1 => 'Pending', 2 => 'Approved', 3 => 'Rejected', default => 'Unknown' },
+            ];
+        });
+
+        $archiveMerged = $archivePermDtos->concat($archiveDupPermDtos)->concat($archiveContDtos)->concat($archiveDupContDtos)
+            ->sortByDesc(fn ($d) => $d->created_at ? (\Carbon\Carbon::parse($d->created_at)->timestamp ?? 0) : 0)
+            ->values();
+
+        $archiveRequests = new LengthAwarePaginator(
+            $archiveMerged->forPage($archivePage, $perPage)->values(),
+            $archiveMerged->count(),
+            $perPage,
+            $archivePage,
+            ['path' => $request->url(), 'pageName' => 'archive_page', 'query' => $request->query()]
+        );
+        // ──────────────────────────────────────────────────────────────────────
+
         $activeTab = $request->get('tab', 'new');
-        if (!in_array($activeTab, ['new', 'for_approval'], true)) {
+        if (!in_array($activeTab, ['new', 'for_approval', 'archive'], true)) {
             $activeTab = 'new';
         }
 
@@ -560,6 +732,7 @@ class EmployeeIDCardApprovalController extends Controller
         return view('admin.security.employee_idcard_approval.approval2', compact(
             'newRequests',
             'forApprovalRequests',
+            'archiveRequests',
             'activeTab',
             'cardTypes'
         ));
@@ -623,16 +796,23 @@ class EmployeeIDCardApprovalController extends Controller
         $dateTo = $request->get('date_to');
         $dateFromDt = empty($dateFrom) ? null : \Carbon\Carbon::parse($dateFrom)->startOfDay()->toDateTimeString();
         $dateToDt = empty($dateTo) ? null : \Carbon\Carbon::parse($dateTo)->endOfDay()->toDateTimeString();
+        
+        // Status filter: pending=1, approved=2, rejected=3
+        $statusFilter = trim($request->get('status', ''));
+        $statusIds = [1, 2, 3]; // default: all statuses
+        if ($statusFilter === 'pending') {
+            $statusIds = [1];
+        } elseif ($statusFilter === 'approved') {
+            $statusIds = [2];
+        } elseif ($statusFilter === 'rejected') {
+            $statusIds = [3];
+        }
 
         $hasA2 = SecurityParmIdApplyApproval::select('security_parm_id_apply_pk')
             ->where('status', SecurityParmIdApplyApproval::STATUS_APPROVAL_2);
 
         $permQuery = SecurityParmIdApply::with(['employee.designation', 'employee.department', 'creator.department', 'approvals.approver'])
-            ->whereIn('id_status', [
-                SecurityParmIdApply::ID_STATUS_PENDING,
-                SecurityParmIdApply::ID_STATUS_APPROVED,
-                SecurityParmIdApply::ID_STATUS_REJECTED,
-            ])
+            ->whereIn('id_status', $statusIds)
             ->whereIn('emp_id_apply', $hasA2)
             ->orderBy('created_date', 'desc');
 
@@ -666,7 +846,7 @@ class EmployeeIDCardApprovalController extends Controller
                     ->orOn('emp.designation_master_pk', '=', 'desig.pk');
             })
             ->leftJoin('department_master as dept', 'emp.department_master_pk', '=', 'dept.pk')
-            ->whereIn('dup.id_status', [1, 2, 3]);
+            ->whereIn('dup.id_status', $statusIds);
 
         if ($dupPermRecommended->isNotEmpty()) {
             $dupPermQuery->whereIn('dup.emp_id_apply', $dupPermRecommended);
@@ -739,7 +919,7 @@ class EmployeeIDCardApprovalController extends Controller
             ->pluck('security_parm_id_apply_pk');
 
         $contQuery = DB::table('security_con_oth_id_apply')
-            ->whereIn('id_status', [1, 2, 3]);
+            ->whereIn('id_status', $statusIds);
         if ($contHasA2->isNotEmpty()) {
             $contQuery->whereIn('emp_id_apply', $contHasA2);
         } else {
@@ -768,7 +948,7 @@ class EmployeeIDCardApprovalController extends Controller
             ->where('recommend_status', 1)
             ->pluck('security_con_id_apply_pk');
         $dupContQuery = DB::table('security_dup_other_id_apply')
-            ->whereIn('id_status', [1, 2, 3])
+            ->whereIn('id_status', $statusIds)
             ->where('depart_approval_status', 2);
         if ($dupContRecommended->isNotEmpty()) {
             $dupContQuery->whereIn('emp_id_apply', $dupContRecommended);
@@ -852,7 +1032,7 @@ class EmployeeIDCardApprovalController extends Controller
             ['path' => $request->url(), 'query' => $request->query()]
         );
 
-        return view('admin.security.employee_idcard_approval.approval3', compact('requests'));
+        return view('admin.security.employee_idcard_approval.approval3', compact('requests', 'statusFilter'));
     }
 
     public function show(Request $httpRequest, $id)

@@ -32,18 +32,16 @@
                 <div class="d-flex flex-wrap gap-4 align-items-center">
                     <div class="form-check idcard-radio-option mb-0">
                         <input class="form-check-input" type="radio" name="employee_type" id="permanent" value="Permanent Employee"
-                               {{ $selectedType == 'Permanent Employee' ? 'checked' : '' }}
-                               @if($lockedType === 'Contractual Employee') disabled @endif required>
+                               {{ $selectedType == 'Permanent Employee' ? 'checked' : '' }} @if($lockedType === 'Contractual Employee') disabled @endif required>
                         <label class="form-check-label" for="permanent">Permanent Employee</label>
                     </div>
                     <div class="form-check idcard-radio-option mb-0">
                         <input class="form-check-input" type="radio" name="employee_type" id="contractual" value="Contractual Employee"
-                               {{ $selectedType == 'Contractual Employee' ? 'checked' : '' }}
-                               @if($lockedType === 'Permanent Employee') disabled @endif required>
+                               {{ $selectedType == 'Contractual Employee' ? 'checked' : '' }} required>
                         <label class="form-check-label" for="contractual">Contractual Employee</label>
                     </div>
                 </div>
-                @if($lockedType)
+                @if($lockedType === 'Contractual Employee')
                     <small class="text-muted d-block mt-2">
                         Your profile type is <strong>{{ $lockedType }}</strong>. Only this type is allowed.
                     </small>
@@ -545,20 +543,10 @@
     }
 
     permRad.addEventListener('change', function() {
-        if (lockedEmployeeType === 'Contractual Employee') {
-            contRad.checked = true;
-            showContractual();
-            return;
-        }
         showPermanent();
         idcardResetFlow();
     });
     contRad.addEventListener('change', function() {
-        if (lockedEmployeeType === 'Permanent Employee') {
-            permRad.checked = true;
-            showPermanent();
-            return;
-        }
         showContractual();
         idcardResetFlow();
     });
