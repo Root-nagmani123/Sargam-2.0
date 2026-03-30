@@ -9,45 +9,37 @@
     <div class="card border-0 shadow-sm">
         <div class="card-body">
             <form method="GET" action="{{ route('admin.directory.lbsnaa') }}" class="mb-3">
-                <div class="row g-2 align-items-center">
-                    <div class="col-md-4">
-                        <label class="form-label mb-1 fw-semibold">Search</label>
-                        <input type="text" name="search" value="{{ $search ?? '' }}" class="form-control" placeholder="Name, email, mobile, designation">
+                <div class="border rounded-3 p-3 bg-white">
+                    <div class="row g-2 align-items-end lbsnaa-toolbar-row">
+                        <div class="col-12 col-lg-6">
+                            <label for="lbsnaaSearchInput" class="form-label mb-1 fw-semibold">Search</label>
+                            <input
+                                id="lbsnaaSearchInput"
+                                type="text"
+                                name="search"
+                                value="{{ $search ?? '' }}"
+                                class="form-control"
+                                placeholder="Name, email, mobile, designation"
+                                autocomplete="off"
+                            >
+                        </div>
+                        <div class="col-6 col-lg-2 d-grid">
+                            <button type="submit" class="btn btn-primary">Apply</button>
+                        </div>
+                        <div class="col-6 col-lg-1 d-grid">
+                            <a href="{{ route('admin.directory.lbsnaa') }}" class="btn btn-outline-secondary">Reset</a>
+                        </div>
+                        <div class="col-6 col-lg-1 d-grid">
+                            <button type="submit" name="export" value="csv" class="btn btn-outline-success btn-sm">CSV</button>
+                        </div>
+                        <div class="col-6 col-lg-1 d-grid">
+                            <button type="submit" name="export" value="excel" class="btn btn-outline-success btn-sm">Excel</button>
+                        </div>
                     </div>
-                    <div class="col-md-3">
-                        <label class="form-label mb-1 fw-semibold">Sort by</label>
-                        <select name="sort" class="form-select">
-                            <option value="name_asc" {{ ($sort ?? 'name_asc') === 'name_asc' ? 'selected' : '' }}>Name (A-Z)</option>
-                            <option value="name_desc" {{ ($sort ?? 'name_asc') === 'name_desc' ? 'selected' : '' }}>Name (Z-A)</option>
-                            <option value="designation_asc" {{ ($sort ?? 'name_asc') === 'designation_asc' ? 'selected' : '' }}>Designation (A-Z)</option>
-                            <option value="designation_desc" {{ ($sort ?? 'name_asc') === 'designation_desc' ? 'selected' : '' }}>Designation (Z-A)</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label mb-1 fw-semibold">Per page</label>
-                        <select name="per_page" class="form-select">
-                            <option value="25" {{ (int) ($perPage ?? 50) === 25 ? 'selected' : '' }}>25</option>
-                            <option value="50" {{ (int) ($perPage ?? 50) === 50 ? 'selected' : '' }}>50</option>
-                            <option value="100" {{ (int) ($perPage ?? 50) === 100 ? 'selected' : '' }}>100</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3 d-flex gap-2 pt-md-4">
-                        <button type="submit" class="btn btn-primary">Apply</button>
-                        <a href="{{ route('admin.directory.lbsnaa') }}" class="btn btn-outline-secondary">Reset</a>
-                    </div>
-                </div>
-                <div class="d-flex gap-2 mt-2">
-                    <button type="submit" name="export" value="csv" class="btn btn-outline-success btn-sm">Export CSV</button>
-                    <button type="submit" name="export" value="excel" class="btn btn-outline-success btn-sm">Export Excel</button>
                 </div>
             </form>
-            @if($employees->total() > 0)
-                <p class="mb-2 text-muted small">
-                    Showing {{ $employees->firstItem() }} to {{ $employees->lastItem() }} of {{ $employees->total() }} records
-                </p>
-            @endif
             <div class="table-responsive lbsnaa-directory-scroll">
-                <table class="table align-middle" id="lbsnaaDirectoryTable">
+                <table class="table align-middle datatable" id="lbsnaaDirectoryTable" data-export="false" data-responsive="false">
                     <thead>
                         <tr>
                             <th>S.No.</th>
@@ -90,15 +82,28 @@
                     </tbody>
                 </table>
             </div>
-            <div class="mt-3">
-                {{ $employees->links() }}
-            </div>
         </div>
     </div>
 </div>
 
 @push('styles')
 <style>
+    .lbsnaa-toolbar-row .btn {
+        white-space: nowrap;
+    }
+    @media (min-width: 992px) {
+        .lbsnaa-toolbar-row {
+            flex-wrap: nowrap;
+        }
+        .lbsnaa-toolbar-row > [class*="col-lg-"] {
+            min-width: 0;
+        }
+    }
+    @media (max-width: 991.98px) {
+        .lbsnaa-toolbar-row .btn {
+            width: 100%;
+        }
+    }
     #lbsnaaDirectoryTable thead th {
         background: #2f7fc0;
         color: #fff;
@@ -110,14 +115,34 @@
         font-size: 12px;
         vertical-align: middle;
     }
-    #lbsnaaDirectoryTable tbody tr:nth-child(odd) {
-        background: #ecebff;
-    }
     .directory-photo {
         width: 56px;
         height: 56px;
         object-fit: cover;
         border-radius: 6px;
+    }
+    @media (max-width: 768px) {
+        .lbsnaa-directory-scroll,
+        .lbsnaa-directory-scroll.table-responsive {
+            max-height: 65vh;
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+            -webkit-overflow-scrolling: touch;
+        }
+        #lbsnaaDirectoryTable {
+            table-layout: fixed !important;
+            width: 100% !important;
+            margin-bottom: 0 !important;
+        }
+        #lbsnaaDirectoryTable thead th,
+        #lbsnaaDirectoryTable tbody td {
+            white-space: normal !important;
+            word-break: break-word !important;
+            overflow-wrap: anywhere !important;
+            hyphens: auto;
+            font-size: 11px;
+            padding: 0.45rem;
+        }
     }
 </style>
 @endpush
