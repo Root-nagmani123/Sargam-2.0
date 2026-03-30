@@ -98,69 +98,181 @@ class PendingFeedbackSummaryDataTable extends DataTable
         }
     }
 
+    // public function query()
+    // {
+    //     try {
+    //         $request = request();
+
+    //         // =========================
+    //         // 🔹 CASE 1: SESSION FILTER (FAST MODE)
+    //         // =========================
+    //         if ($request->filled('filter_session_id')) {
+
+    //             $query = DB::table('timetable as t')
+    //                 ->select([
+    //                     DB::raw("CONCAT(
+    //                         COALESCE(sm.first_name, ''),
+    //                         ' ',
+    //                         COALESCE(sm.middle_name, ''),
+    //                         ' ',
+    //                         COALESCE(sm.last_name, '')
+    //                     ) as user_name"),
+    //                     'sm.email',
+    //                     'sm.contact_no',
+    //                     'c.course_name',
+
+    //                     DB::raw("
+    //                         CONCAT(
+    //                             COALESCE(t.subject_topic, 'Session'),
+    //                             ' (', DATE_FORMAT(t.START_DATE, '%d-%m-%Y'), ')'
+    //                         ) as session_info
+    //                     "),
+
+    //                     DB::raw("DATE_FORMAT(t.START_DATE, '%d-%m-%Y') as date_range"),
+
+    //                     DB::raw("1 as pending_count")
+    //                 ])
+    //                 ->where('t.pk', $request->filter_session_id)
+    //                 ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
+    //                 ->join('course_student_attendance as csa', function ($join) {
+    //                     $join->on('csa.timetable_pk', '=', 't.pk')
+    //                         ->where('csa.status', '1');
+    //                 })
+    //                 ->join('student_master as sm', 'sm.pk', '=', 'csa.Student_master_pk')
+    //                 ->join('student_master_course__map as smcm', function ($join) {
+    //                     $join->on('smcm.student_master_pk', '=', 'sm.pk')
+    //                         ->on('smcm.course_master_pk', '=', 't.course_master_pk')
+    //                         ->where('smcm.active_inactive', 1);
+    //                 })
+    //                 ->leftJoin('topic_feedback as tf', function ($join) {
+    //                     $join->on('tf.timetable_pk', '=', 't.pk')
+    //                         ->on('tf.student_master_pk', '=', 'sm.pk')
+    //                         ->where('tf.is_submitted', 1);
+    //                 })
+    //                 ->where('t.feedback_checkbox', 1)
+    //                 ->whereNull('tf.pk')
+    //                 ->where('t.START_DATE', '<=', now());
+
+    //             return $query;
+    //         }
+
+    //         // =========================
+    //         // 🔹 CASE 2: SUMMARY MODE
+    //         // =========================
+
+    //         $query = DB::table('timetable as t')
+    //             ->select([
+    //                 DB::raw("CONCAT(
+    //                     COALESCE(sm.first_name, ''),
+    //                     ' ',
+    //                     COALESCE(sm.middle_name, ''),
+    //                     ' ',
+    //                     COALESCE(sm.last_name, '')
+    //                 ) as user_name"),
+    //                 'sm.email',
+    //                 'sm.contact_no',
+    //                 'c.course_name',
+    //                 DB::raw("'Multiple Sessions' as session_info"),
+    //                 DB::raw("CONCAT(
+    //                     DATE_FORMAT(MIN(t.START_DATE), '%d-%m-%Y'),
+    //                     ' to ',
+    //                     DATE_FORMAT(MAX(t.START_DATE), '%d-%m-%Y')
+    //                 ) as date_range"),
+    //                 DB::raw('COUNT(DISTINCT t.pk) as pending_count')
+    //             ])
+    //             ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
+    //             ->join('student_master_course__map as smcm', function ($join) {
+    //                 $join->on('smcm.course_master_pk', '=', 't.course_master_pk')
+    //                     ->where('smcm.active_inactive', 1);
+    //             })
+    //             ->join('student_master as sm', 'sm.pk', '=', 'smcm.student_master_pk')
+    //             ->join('course_student_attendance as csa', function ($join) {
+    //                 $join->on('csa.timetable_pk', '=', 't.pk')
+    //                     ->on('csa.Student_master_pk', '=', 'sm.pk')
+    //                     ->where('csa.status', '1');
+    //             })
+    //             ->leftJoin('topic_feedback as tf', function ($join) {
+    //                 $join->on('tf.timetable_pk', '=', 't.pk')
+    //                     ->on('tf.student_master_pk', '=', 'sm.pk')
+    //                     ->where('tf.is_submitted', 1);
+    //             })
+    //             ->where('t.feedback_checkbox', 1)
+    //             ->whereNull('tf.pk')
+    //             ->where('t.START_DATE', '<=', now())
+    //             ->whereRaw("
+    //                 ADDTIME(t.END_DATE, 
+    //                     STR_TO_DATE(
+    //                         TRIM(SUBSTRING_INDEX(t.class_session, '-', -1)),
+    //                         '%h:%i %p'
+    //                     )
+    //                 ) <= NOW()
+    //             ")
+    //             ->groupBy(
+    //                 'sm.pk',
+    //                 'sm.first_name',
+    //                 'sm.middle_name',
+    //                 'sm.last_name',
+    //                 'sm.email',
+    //                 'sm.contact_no',
+    //                 'c.course_name'
+    //             );
+
+    //         return $query;
+
+    //     } catch (\Exception $e) {
+    //         \Log::error('Summary Query Build Error: ' . $e->getMessage());
+    //         throw $e;
+    //     }
+    // }
+
     public function query()
-    {
-        try {
-            $request = request();
+{
+    try {
+        $request = request();
 
-            // =========================
-            // 🔹 CASE 1: SESSION FILTER (FAST MODE)
-            // =========================
-            if ($request->filled('filter_session_id')) {
+        // =========================
+        // 🔹 COMMON: PRE-AGGREGATED FEEDBACK SUBQUERY
+        // =========================
+        $feedbackSub = DB::raw("
+            (
+                SELECT 
+                    timetable_pk,
+                    student_master_pk,
+                    COUNT(*) as submitted_count
+                FROM topic_feedback
+                WHERE is_submitted = 1
+                GROUP BY timetable_pk, student_master_pk
+            ) as tf
+        ");
 
-                $query = DB::table('timetable as t')
-                    ->select([
-                        DB::raw("CONCAT(
-                            COALESCE(sm.first_name, ''),
-                            ' ',
-                            COALESCE(sm.middle_name, ''),
-                            ' ',
-                            COALESCE(sm.last_name, '')
-                        ) as user_name"),
-                        'sm.email',
-                        'sm.contact_no',
-                        'c.course_name',
+        // =========================
+        // 🔹 CASE 1: SESSION FILTER
+        // =========================
+        if ($request->filled('filter_session_id')) {
 
-                        DB::raw("
-                            CONCAT(
-                                COALESCE(t.subject_topic, 'Session'),
-                                ' (', DATE_FORMAT(t.START_DATE, '%d-%m-%Y'), ')'
-                            ) as session_info
-                        "),
+            return DB::table('timetable as t')
 
-                        DB::raw("DATE_FORMAT(t.START_DATE, '%d-%m-%Y') as date_range"),
+                ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
 
-                        DB::raw("1 as pending_count")
-                    ])
-                    ->where('t.pk', $request->filter_session_id)
-                    ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
-                    ->join('course_student_attendance as csa', function ($join) {
-                        $join->on('csa.timetable_pk', '=', 't.pk')
-                            ->where('csa.status', '1');
-                    })
-                    ->join('student_master as sm', 'sm.pk', '=', 'csa.Student_master_pk')
-                    ->join('student_master_course__map as smcm', function ($join) {
-                        $join->on('smcm.student_master_pk', '=', 'sm.pk')
-                            ->on('smcm.course_master_pk', '=', 't.course_master_pk')
-                            ->where('smcm.active_inactive', 1);
-                    })
-                    ->leftJoin('topic_feedback as tf', function ($join) {
-                        $join->on('tf.timetable_pk', '=', 't.pk')
-                            ->on('tf.student_master_pk', '=', 'sm.pk')
-                            ->where('tf.is_submitted', 1);
-                    })
-                    ->where('t.feedback_checkbox', 1)
-                    ->whereNull('tf.pk')
-                    ->where('t.START_DATE', '<=', now());
+                ->join('course_student_attendance as csa', function ($join) {
+                    $join->on('csa.timetable_pk', '=', 't.pk')
+                        ->where('csa.status', '1');
+                })
 
-                return $query;
-            }
+                ->join('student_master as sm', 'sm.pk', '=', 'csa.Student_master_pk')
 
-            // =========================
-            // 🔹 CASE 2: SUMMARY MODE
-            // =========================
+                ->join('student_master_course__map as smcm', function ($join) {
+                    $join->on('smcm.student_master_pk', '=', 'sm.pk')
+                        ->on('smcm.course_master_pk', '=', 't.course_master_pk')
+                        ->where('smcm.active_inactive', 1);
+                })
 
-            $query = DB::table('timetable as t')
+                // ✅ FAST FEEDBACK JOIN
+                ->leftJoin($feedbackSub, function ($join) {
+                    $join->on('tf.timetable_pk', '=', 't.pk')
+                        ->on('tf.student_master_pk', '=', 'sm.pk');
+                })
+
                 ->select([
                     DB::raw("CONCAT(
                         COALESCE(sm.first_name, ''),
@@ -169,61 +281,143 @@ class PendingFeedbackSummaryDataTable extends DataTable
                         ' ',
                         COALESCE(sm.last_name, '')
                     ) as user_name"),
+
                     'sm.email',
                     'sm.contact_no',
                     'c.course_name',
-                    DB::raw("'Multiple Sessions' as session_info"),
-                    DB::raw("CONCAT(
-                        DATE_FORMAT(MIN(t.START_DATE), '%d-%m-%Y'),
-                        ' to ',
-                        DATE_FORMAT(MAX(t.START_DATE), '%d-%m-%Y')
-                    ) as date_range"),
-                    DB::raw('COUNT(DISTINCT t.pk) as pending_count')
+
+                    DB::raw("
+                        CONCAT(
+                            COALESCE(t.subject_topic, 'Session'),
+                            ' (', DATE_FORMAT(t.START_DATE, '%d-%m-%Y'), ')'
+                        ) as session_info
+                    "),
+
+                    DB::raw("DATE_FORMAT(t.START_DATE, '%d-%m-%Y') as date_range"),
+
+                    DB::raw("
+                        (
+                            CASE 
+                                WHEN JSON_VALID(t.faculty_master) 
+                                THEN JSON_LENGTH(t.faculty_master)
+                                ELSE 1
+                            END
+                        )
+                        -
+                        COALESCE(tf.submitted_count, 0)
+                        as pending_count
+                    ")
                 ])
-                ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
-                ->join('student_master_course__map as smcm', function ($join) {
-                    $join->on('smcm.course_master_pk', '=', 't.course_master_pk')
-                        ->where('smcm.active_inactive', 1);
-                })
-                ->join('student_master as sm', 'sm.pk', '=', 'smcm.student_master_pk')
-                ->join('course_student_attendance as csa', function ($join) {
-                    $join->on('csa.timetable_pk', '=', 't.pk')
-                        ->on('csa.Student_master_pk', '=', 'sm.pk')
-                        ->where('csa.status', '1');
-                })
-                ->leftJoin('topic_feedback as tf', function ($join) {
-                    $join->on('tf.timetable_pk', '=', 't.pk')
-                        ->on('tf.student_master_pk', '=', 'sm.pk')
-                        ->where('tf.is_submitted', 1);
-                })
+
+                ->where('t.pk', $request->filter_session_id)
                 ->where('t.feedback_checkbox', 1)
-                ->whereNull('tf.pk')
-                ->where('t.START_DATE', '<=', now())
+
                 ->whereRaw("
-                    ADDTIME(t.END_DATE, 
+                    TIMESTAMP(
+                        t.END_DATE,
                         STR_TO_DATE(
                             TRIM(SUBSTRING_INDEX(t.class_session, '-', -1)),
                             '%h:%i %p'
                         )
                     ) <= NOW()
                 ")
-                ->groupBy(
-                    'sm.pk',
-                    'sm.first_name',
-                    'sm.middle_name',
-                    'sm.last_name',
-                    'sm.email',
-                    'sm.contact_no',
-                    'c.course_name'
-                );
 
-            return $query;
-
-        } catch (\Exception $e) {
-            \Log::error('Summary Query Build Error: ' . $e->getMessage());
-            throw $e;
+                ->havingRaw('pending_count > 0');
         }
+
+        // =========================
+        // 🔹 CASE 2: SUMMARY MODE
+        // =========================
+
+        return DB::table('timetable as t')
+
+            ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
+
+            ->join('student_master_course__map as smcm', function ($join) {
+                $join->on('smcm.course_master_pk', '=', 't.course_master_pk')
+                    ->where('smcm.active_inactive', 1);
+            })
+
+            ->join('student_master as sm', 'sm.pk', '=', 'smcm.student_master_pk')
+
+            ->join('course_student_attendance as csa', function ($join) {
+                $join->on('csa.timetable_pk', '=', 't.pk')
+                    ->on('csa.Student_master_pk', '=', 'sm.pk')
+                    ->where('csa.status', '1');
+            })
+
+            // ✅ FAST FEEDBACK JOIN
+            ->leftJoin($feedbackSub, function ($join) {
+                $join->on('tf.timetable_pk', '=', 't.pk')
+                    ->on('tf.student_master_pk', '=', 'sm.pk');
+            })
+
+            ->select([
+                DB::raw("CONCAT(
+                    COALESCE(sm.first_name, ''),
+                    ' ',
+                    COALESCE(sm.middle_name, ''),
+                    ' ',
+                    COALESCE(sm.last_name, '')
+                ) as user_name"),
+
+                'sm.email',
+                'sm.contact_no',
+                'c.course_name',
+
+                DB::raw("'Multiple Sessions' as session_info"),
+
+                DB::raw("CONCAT(
+                    DATE_FORMAT(MIN(t.START_DATE), '%d-%m-%Y'),
+                    ' to ',
+                    DATE_FORMAT(MAX(t.START_DATE), '%d-%m-%Y')
+                ) as date_range"),
+
+                //  aggregation
+                DB::raw("
+                    SUM(
+                        (
+                            CASE 
+                                WHEN JSON_VALID(t.faculty_master) 
+                                THEN JSON_LENGTH(t.faculty_master)
+                                ELSE 1
+                            END
+                        )
+                        -
+                        COALESCE(tf.submitted_count, 0)
+                    ) as pending_count
+                ")
+            ])
+
+            ->where('t.feedback_checkbox', 1)
+
+            ->whereRaw("
+                TIMESTAMP(
+                    t.END_DATE,
+                    STR_TO_DATE(
+                        TRIM(SUBSTRING_INDEX(t.class_session, '-', -1)),
+                        '%h:%i %p'
+                    )
+                ) <= NOW()
+            ")
+
+            ->groupBy(
+                'sm.pk',
+                'sm.first_name',
+                'sm.middle_name',
+                'sm.last_name',
+                'sm.email',
+                'sm.contact_no',
+                'c.course_name'
+            )
+
+            ->havingRaw('pending_count > 0');
+
+    } catch (\Exception $e) {
+        \Log::error('Summary Query Build Error: ' . $e->getMessage());
+        throw $e;
     }
+}
 
     public function html(): HtmlBuilder
     {
