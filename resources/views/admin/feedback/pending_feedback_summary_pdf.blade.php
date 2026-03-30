@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>Pending Feedback Report</title>
+    <title>Pending Feedback Summary Report</title>
     <style>
         @page {
             size: A4 landscape;
@@ -80,7 +80,7 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 9px;
+            font-size: 10px;
             margin-top: 8px;
             page-break-inside: auto;
         }
@@ -106,7 +106,7 @@
         thead th {
             background: #e6ecf5;
             font-weight: 600;
-            font-size: 9px;
+            font-size: 10px;
         }
         
         .text-center { text-align: center; }
@@ -124,6 +124,24 @@
             text-align: center;
             padding-top: 5px;
             margin-top: 8px;
+        }
+        
+        .badge-high {
+            color: #dc3545;
+            font-weight: bold;
+            font-size: 11px;
+        }
+        
+        .badge-medium {
+            color: #ff9800;
+            font-weight: bold;
+            font-size: 11px;
+        }
+        
+        .badge-low {
+            color: #28a745;
+            font-weight: bold;
+            font-size: 11px;
         }
         
         .summary-stats {
@@ -144,11 +162,6 @@
             color: #004a93;
             font-size: 12px;
         }
-        
-        .badge-pending {
-            color: #dc3545;
-            font-weight: bold;
-        }
     </style>
 </head>
 <body>
@@ -156,63 +169,76 @@
     <div class="page-header-top">
         <div class="page-header-col page-header-title">
             <h1>LAL BAHADUR SHASTRI NATIONAL ACADEMY OF ADMINISTRATION</h1>
-            <h2>PENDING FEEDBACK REPORT</h2>
+            <h2>PENDING FEEDBACK SUMMARY REPORT</h2>
             <div class="page-header-sub">Student Feedback Status Report</div>
         </div>
     </div>
     <div class="meta-row">
-        <span><strong>Course:</strong> {{ $course_name ?? 'All Courses' }}</span>
-        <span><strong>Generated On:</strong> {{ $export_date ?? now()->format('d-m-Y H:i:s') }}</span>
-        <span><strong>Total Records:</strong> {{ $students->count() }}</span>
+        @php
+            if (!empty($filters['filter_from_date']) && !empty($filters['filter_to_date'])) {
+                $periodText = date('d-M-Y', strtotime($filters['filter_from_date'])) . ' To ' . date('d-M-Y', strtotime($filters['filter_to_date']));
+            } elseif (!empty($filters['filter_from_date'])) {
+                $periodText = 'From ' . date('d-M-Y', strtotime($filters['filter_from_date']));
+            } elseif (!empty($filters['filter_to_date'])) {
+                $periodText = 'Until ' . date('d-M-Y', strtotime($filters['filter_to_date']));
+            }
+        @endphp
+        @if(!empty($courseName))
+        <span><strong>Course:</strong> {{ $courseName }}</span>
+        @endif
+        @if(!empty($sessionName))
+        <span><strong>Session:</strong> {{ $sessionName }}</span>
+        @endif
+        <span><strong>Generated on:</strong> {{ $export_date ?? now()->format('d-m-Y H:i') }}</span>
     </div>
 </div>
 
-@if($students->count() > 0)
+@if(empty($students) || $students->isEmpty())
+    <p style="font-size: 12px;">No pending feedback records found.</p>
+@else
     @php
-        $totalPending = $students->count();
+        $totalPending = $students->sum('pending_count');
     @endphp
     
     <div class="summary-stats">
+        <span><strong>Total Students:</strong> {{ $total_count }}</span>
         <span><strong>Total Pending Feedbacks:</strong> {{ $totalPending }}</span>
     </div>
 
-    <table>
+     <table>
         <thead>
-        <tr>
-            <th class="text-center" width="4%">#</th>
-            <th class="text-start" width="12%">Student Name</th>
-            <th class="text-start" width="14%">Email</th>
-            <th class="text-center" width="8%">Phone</th>
-            <th class="text-center" width="8%">OT Code</th>
-            <th class="text-start" width="12%">Course</th>
-            <th class="text-start" width="12%">Session Topic</th>
-            <th class="text-center" width="8%">Start Date</th>
-            <th class="text-center" width="8%">End Date</th>
-            <th class="text-center" width="8%">Session Time</th>
-            <th class="text-center" width="8%">Generated On</th>
-        </tr>
+         <tr>
+            <th class="text-center" style="width: 40px;">S.No.</th>
+            <th class="text-start" style="min-width: 110px;">User Name</th>
+            <th class="text-start" style="min-width: 130px;">Email</th>
+            <th class="text-center" style="width: 70px;">Contact</th>
+            <th class="text-start" style="min-width: 110px;">Course</th>
+            <th class="text-start" style="min-width: 100px;">Session Info</th>
+            <th class="text-start" style="min-width: 100px;">Date Range</th>
+            <th class="text-center" style="width: 70px;">Pending Count</th>
+         </tr>
         </thead>
         <tbody>
-        @foreach($students as $i => $row)
-         <tr>
-            <td class="text-center">{{ $i + 1 }}</td>
-            <td class="text-start">{{ $row->student_name ?? '—' }}</td>
-            <td class="text-start">{{ $row->email ?? '—' }}</td>
-            <td class="text-center">{{ $row->contact_no ?? '—' }}</td>
-            <td class="text-center">{{ $row->generated_OT_code ?? '—' }}</td>
-            <td class="text-start">{{ $row->course_name ?? '—' }}</td>
-            <td class="text-start">{{ $row->subject_topic ?? '—' }}</td>
-            <td class="text-center">{{ isset($row->from_date) ? date('d-m-Y', strtotime($row->from_date)) : '—' }}</td>
-            <td class="text-center">{{ isset($row->to_date) ? date('d-m-Y', strtotime($row->to_date)) : '—' }}</td>
-            <td class="text-center">{{ $row->class_session ?? '—' }}</td>
-            <td class="text-center">{{ now()->format('d-m-Y H:i:s') }}</td>
-         </tr>
+        @foreach($students as $index => $student)
+            @php
+                $count = $student->pending_count ?? 0;
+                $badgeClass = $count > 10 ? 'badge-high' : ($count > 5 ? 'badge-medium' : 'badge-low');
+                // Use session name from controller if session filter applied
+                $sessionInfo = !empty($sessionName) ? $sessionName : ($student->session_info ?? 'Multiple Sessions');
+            @endphp
+             <tr>
+                <td class="text-center">{{ $index + 1 }}</td>
+                <td class="text-start">{{ $student->user_name ?? '—' }}</td>
+                <td class="text-start">{{ $student->email ?? '—' }}</td>
+                <td class="text-center">{{ $student->contact_no ?? '—' }}</td>
+                <td class="text-start">{{ $student->course_name ?? '—' }}</td>
+                <td class="text-start">{{ $sessionInfo }}</td>
+                <td class="text-start">{{ $student->date_range ?? '—' }}</td>
+                <td class="text-center"><span class="{{ $badgeClass }}">{{ $count }}</span></td>
+             </tr>
         @endforeach
         </tbody>
      </table>
-
-@else
-    <p style="text-align:center; font-size: 12px; padding: 20px;">No pending feedback records found.</p>
 @endif
 
 <div class="footer">
