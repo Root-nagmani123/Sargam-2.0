@@ -22,13 +22,13 @@
     </div>
 
     {{-- Page header --}}
-    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4 no-print p-4 rounded-3 shadow-sm" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4 no-print p-4 rounded-3 shadow-sm" style="background: #004a93; color: white;">
         <div>
             <h4 class="mb-2 fw-bold d-flex align-items-center gap-2">
                 <i class="material-symbols-rounded" style="font-size: 2rem;">receipt_long</i>
                 Process Mess Bills
             </h4>
-            <p class="mb-0 small opacity-90">View mess bills for Employee, OT, Course & Other, generate invoices, and mark payments. Filter by date to see bills from Selling Voucher and Date Range reports.</p>
+            <p class="mb-0 small opacity-90 text-white">View mess bills for Employee, OT, Course & Other, generate invoices, and mark payments. Filter by date to see bills from Selling Voucher and Date Range reports.</p>
         </div>
         <button type="button" class="btn btn-light shadow d-inline-flex align-items-center gap-2 px-4" data-bs-toggle="modal" data-bs-target="#addProcessMessBillsModal" style="font-weight: 600;">
             <i class="material-symbols-rounded" style="font-size: 1.3rem;">add_circle</i>
