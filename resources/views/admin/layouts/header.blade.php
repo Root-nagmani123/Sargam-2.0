@@ -207,7 +207,7 @@
                                         <span class="badge bg-danger notification-new-tag">New</span>
                                         @endif
                                     </div>
-                                    <p class="notification-item-message">{{ Str::limit($notification->message ?? '', 60) }}</p>
+                                    <p class="notification-item-message">{{ Str::limit(\App\Services\NotificationService::stripMessCombinedReceiptPayloadForDisplay($notification->message ?? ''), 60) }}</p>
                                     <span class="notification-item-time">{{ \Carbon\Carbon::parse($notification->created_at)->diffForHumans() }}</span>
                                 </div>
                             </a>
@@ -321,7 +321,7 @@
                                     <span class="badge bg-danger notification-new-tag">New</span>
                                     @endif
                                 </div>
-                                <p class="notification-item-message">{{ Str::limit($notification->message ?? '', 80) }}</p>
+                                <p class="notification-item-message">{{ Str::limit(\App\Services\NotificationService::stripMessCombinedReceiptPayloadForDisplay($notification->message ?? ''), 80) }}</p>
                                 <span class="notification-item-time">{{ \Carbon\Carbon::parse($notification->created_at)->diffForHumans() }}</span>
                             </div>
                         </a>

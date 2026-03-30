@@ -15,7 +15,8 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        // $schedule->command('inspire')->hourly();
+        // Runs twice daily; system cron should call `php artisan schedule:run` every minute.
+        $schedule->command('send:stock_alert')->twiceDaily(12, 17);
     }
 
     /**

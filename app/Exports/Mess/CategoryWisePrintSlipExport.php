@@ -29,18 +29,22 @@ class CategoryWisePrintSlipExport implements FromCollection, WithStyles, WithEve
     /** @var \Illuminate\Support\Collection|null */
     protected $otCourses;
 
+    protected float $grandTotal;
+
     public function __construct(
         $allBuyersSections,
         ?string $fromDate = null,
         ?string $toDate = null,
         ?string $courseMasterPk = null,
-        $otCourses = null
+        $otCourses = null,
+        float $grandTotal = 0.0
     ) {
         $this->allBuyersSections = $allBuyersSections;
         $this->fromDate = $fromDate;
         $this->toDate = $toDate;
         $this->courseMasterPk = $courseMasterPk;
         $this->otCourses = $otCourses ?? collect();
+        $this->grandTotal = $grandTotal;
     }
 
     public function collection(): Collection
@@ -115,6 +119,8 @@ class CategoryWisePrintSlipExport implements FromCollection, WithStyles, WithEve
             }
         }
 
+        $rows[] = ['', '', '', '', '', '', 'GRAND TOTAL', number_format($this->grandTotal, 2)];
+
         return collect($rows);
     }
 
@@ -165,13 +171,13 @@ class CategoryWisePrintSlipExport implements FromCollection, WithStyles, WithEve
                 $sheet->getStyle("A{$row}:H{$row}")->getFont()->setBold(true);
             }
             $g = (string) $sheet->getCell("G{$row}")->getValue();
-            if ($g === 'TOTAL') {
+            if ($g === 'TOTAL' || $g === 'GRAND TOTAL') {
                 $sheet->getStyle("A{$row}:H{$row}")->getFont()->setBold(true);
                 $sheet->getStyle("A{$row}:H{$row}")
                     ->getFill()
                     ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
                     ->getStartColor()
-                    ->setARGB('FFF3F4F6');
+                    ->setARGB($g === 'GRAND TOTAL' ? 'FFE2E8F0' : 'FFF3F4F6');
             }
         }
 

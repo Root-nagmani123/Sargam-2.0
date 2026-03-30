@@ -12,6 +12,7 @@ use App\Models\FacultyMaster;
 use App\Models\EmployeeMaster;
 use App\Models\DepartmentMaster;
 use App\Models\CourseMaster;
+use App\Models\Notification;
 use App\Exports\ProcessMessBillsExport;
 use App\Services\NotificationService;
 use Carbon\Carbon;
@@ -36,6 +37,13 @@ class ProcessMessBillsEmployeeController extends Controller
         KitchenIssueMaster::CLIENT_COURSE,
         KitchenIssueMaster::CLIENT_OTHER,
     ];
+
+    /** Process-mess kitchen rows: standard selling voucher + date-range variant stored on kitchen_issue_master */
+    private const KITCHEN_MESS_SELLING_ISSUE_TYPES = [
+        KitchenIssueMaster::TYPE_SELLING_VOUCHER,
+        KitchenIssueMaster::TYPE_SELLING_VOUCHER_DATE_RANGE,
+    ];
+
     public function index(Request $request)
     {
         $dateFrom = $request->filled('date_from') ? $this->parseDate($request->date_from) : now()->startOfMonth()->format('Y-m-d');
@@ -103,7 +111,7 @@ class ProcessMessBillsEmployeeController extends Controller
                 DB::raw("'kitchen_issue' as source_type")
             ])
             ->whereIn('client_type', $kitchenClientTypes)
-            ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER);
+            ->whereIn('kitchen_issue_type', self::KITCHEN_MESS_SELLING_ISSUE_TYPES);
 
         if ($clientTypePk) {
             $kitchenIssueQuery->where('client_type_pk', $clientTypePk);
@@ -381,6 +389,47 @@ class ProcessMessBillsEmployeeController extends Controller
     }
 
     /**
+     * For modal rows: map "receiver_user_id|combined_id" => true when a MessInvoiceCombined notification exists.
+     *
+     * @param  \Illuminate\Support\Collection<int, object>  $combinedBills
+     * @return array<string, true>
+     */
+    private function messCombinedInvoiceNotificationSentKeys($combinedBills): array
+    {
+        $receiverIds = [];
+        foreach ($combinedBills as $cb) {
+            $rid = $this->resolveReceiverUserIdFromAnyBill($cb->bills->all());
+            if ($rid !== null && $rid > 0) {
+                $receiverIds[] = $rid;
+            }
+        }
+        $receiverIds = array_values(array_unique($receiverIds));
+        if ($receiverIds === []) {
+            return [];
+        }
+
+        $keys = [];
+        $notifications = Notification::query()
+            ->where('type', 'mess')
+            ->where('module_name', 'MessInvoiceCombined')
+            ->whereIn('receiver_user_id', $receiverIds)
+            ->get(['receiver_user_id', 'message']);
+
+        foreach ($notifications as $n) {
+            $parsed = NotificationService::parseMessCombinedReceiptPayload($n->message);
+            if ($parsed === null || $parsed['i'] === '') {
+                continue;
+            }
+            $rid = (int) $n->receiver_user_id;
+            if ($rid > 0) {
+                $keys[$rid . '|' . $parsed['i']] = true;
+            }
+        }
+
+        return $keys;
+    }
+
+    /**
      * Get summary statistics for mess bills (Employee, OT, Course, Other) in the given date range.
      */
     private function getSummaryStats(?string $dateFrom, ?string $dateTo, ?string $search, ?string $clientType = null, ?string $buyerName = null): array
@@ -407,7 +456,7 @@ class ProcessMessBillsEmployeeController extends Controller
             : self::ALLOWED_KITCHEN_CLIENT_TYPES;
         $kitchenBase = KitchenIssueMaster::query()
             ->whereIn('client_type', $kitchenClientTypes)
-            ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER);
+            ->whereIn('kitchen_issue_type', self::KITCHEN_MESS_SELLING_ISSUE_TYPES);
         if ($buyerName) {
             $kitchenBase->where('client_name', 'like', '%' . $buyerName . '%');
         }
@@ -497,7 +546,7 @@ class ProcessMessBillsEmployeeController extends Controller
                 DB::raw("'kitchen_issue' as source_type")
             ])
             ->whereIn('client_type', $kitchenClientTypes)
-            ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER);
+            ->whereIn('kitchen_issue_type', self::KITCHEN_MESS_SELLING_ISSUE_TYPES);
 
         if ($buyerName) {
             $kitchenIssueQuery->where('client_name', 'like', '%' . $buyerName . '%');
@@ -745,7 +794,7 @@ class ProcessMessBillsEmployeeController extends Controller
         } elseif ($isDateRange === false) {
             $bill = KitchenIssueMaster::with(['store', 'subStore', 'clientTypeCategory', 'course', 'items.itemSubcategory'])
                 ->whereIn('client_type', self::ALLOWED_KITCHEN_CLIENT_TYPES)
-                ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+                ->whereIn('kitchen_issue_type', self::KITCHEN_MESS_SELLING_ISSUE_TYPES)
                 ->where('pk', $numericId)
                 ->firstOrFail();
             $isDateRange = false;
@@ -758,7 +807,7 @@ class ProcessMessBillsEmployeeController extends Controller
             if (!$bill) {
                 $bill = KitchenIssueMaster::with(['store', 'subStore', 'clientTypeCategory', 'course', 'items.itemSubcategory'])
                     ->whereIn('client_type', self::ALLOWED_KITCHEN_CLIENT_TYPES)
-                    ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+                    ->whereIn('kitchen_issue_type', self::KITCHEN_MESS_SELLING_ISSUE_TYPES)
                     ->where('pk', $id)
                     ->firstOrFail();
             }
@@ -809,7 +858,7 @@ class ProcessMessBillsEmployeeController extends Controller
             ->get();
 
         $kitchenBills = KitchenIssueMaster::with(['store', 'clientTypeCategory', 'course', 'items'])
-            ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+            ->whereIn('kitchen_issue_type', self::KITCHEN_MESS_SELLING_ISSUE_TYPES)
             ->where('client_type', $this->clientTypeSlugToKitchenId($clientTypeSlug))
             ->where('client_name', $buyerName)
             ->where('issue_date', '>=', $dateFrom)
@@ -1064,7 +1113,7 @@ class ProcessMessBillsEmployeeController extends Controller
             : self::ALLOWED_KITCHEN_CLIENT_TYPES;
         $kitchenIssueQuery = KitchenIssueMaster::with(['store', 'clientTypeCategory', 'items'])
             ->whereIn('client_type', $kitchenClientTypes)
-            ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+            ->whereIn('kitchen_issue_type', self::KITCHEN_MESS_SELLING_ISSUE_TYPES)
             ->where('status', '!=', 2); // Only unpaid bills
 
         if ($clientTypePk) {
@@ -1088,8 +1137,16 @@ class ProcessMessBillsEmployeeController extends Controller
 
         $paymentTypeMap = [0 => 'Cash', 1 => 'Deduct From Salary', 2 => 'Online', 5 => 'Deduct From Salary'];
 
-        $rows = $combinedBills->map(function ($cb, $index) use ($paymentTypeMap) {
+        $invoiceSentKeys = $this->messCombinedInvoiceNotificationSentKeys($combinedBills);
+
+        $rows = $combinedBills->map(function ($cb, $index) use ($paymentTypeMap, $invoiceSentKeys) {
             $invoiceNo = $cb->combined_invoice_no ?? ('CB-' . date('Ymd') . '-' . str_pad((string) ($index + 1), 5, '0', STR_PAD_LEFT));
+            $receiverId = $this->resolveReceiverUserIdFromAnyBill($cb->bills->all());
+            $sentKey = ($receiverId !== null && $receiverId > 0)
+                ? $receiverId . '|' . $cb->combined_id
+                : null;
+            $invoiceNotificationSent = $sentKey !== null && isset($invoiceSentKeys[$sentKey]);
+
             return [
                 'id' => $cb->combined_id,
                 'bill_id' => $cb->combined_id,
@@ -1101,6 +1158,7 @@ class ProcessMessBillsEmployeeController extends Controller
                 'total' => number_format($cb->total, 2),
                 'paid_amount' => number_format($cb->paid, 2),
                 'bill_no' => $invoiceNo,
+                'invoice_notification_sent' => $invoiceNotificationSent,
             ];
         })->values();
 
@@ -1119,22 +1177,33 @@ class ProcessMessBillsEmployeeController extends Controller
                 return response()->json(['success' => false, 'message' => 'No bills found for this buyer in the selected date range.'], 404);
             }
             $first = $bills[0];
-            $referencePk = (int) ($first->id ?? $first->pk ?? 0);
-            $receiverUserId = $this->getReceiverUserIdForBill($first, !($first instanceof SellingVoucherDateRangeReport));
+            $receiverUserId = $this->resolveReceiverUserIdFromAnyBill($bills);
             if ($receiverUserId === null || $receiverUserId <= 0) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Invoice generated, but notification could not be sent because user mapping was not found.',
                 ], 422);
             }
+            $dateFromYmd = $request->filled('date_from')
+                ? $this->parseDate($request->date_from)
+                : now()->startOfMonth()->format('Y-m-d');
+            $dateToYmd = $request->filled('date_to')
+                ? $this->parseDate($request->date_to)
+                : now()->endOfMonth()->format('Y-m-d');
+            $invoiceMessage = NotificationService::appendMessCombinedReceiptPayload(
+                'Your combined mess bill is pending. Please review and pay via Process Mess Bills.',
+                $id,
+                $dateFromYmd,
+                $dateToYmd
+            );
             try {
                 app(NotificationService::class)->create(
                     $receiverUserId,
                     'mess',
-                    'MessInvoice',
-                    $referencePk,
+                    'MessInvoiceCombined',
+                    0,
                     'Mess Payment Pending',
-                    'Your combined mess bill is pending. Please review and pay via Process Mess Bills.'
+                    $invoiceMessage
                 );
             } catch (\Throwable $e) {
                 report($e);
@@ -1209,7 +1278,7 @@ class ProcessMessBillsEmployeeController extends Controller
         if ($preferDateRange === false) {
             $bill = KitchenIssueMaster::with(['store', 'subStore', 'clientTypeCategory', 'items'])
                 ->whereIn('client_type', self::ALLOWED_KITCHEN_CLIENT_TYPES)
-                ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+                ->whereIn('kitchen_issue_type', self::KITCHEN_MESS_SELLING_ISSUE_TYPES)
                 ->where('pk', $numericId)
                 ->firstOrFail();
             return [$bill, false];
@@ -1223,7 +1292,7 @@ class ProcessMessBillsEmployeeController extends Controller
         }
         $bill = KitchenIssueMaster::with(['store', 'subStore', 'clientTypeCategory', 'items'])
             ->whereIn('client_type', self::ALLOWED_KITCHEN_CLIENT_TYPES)
-            ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+            ->whereIn('kitchen_issue_type', self::KITCHEN_MESS_SELLING_ISSUE_TYPES)
             ->where('pk', $numericId)
             ->firstOrFail();
         return [$bill, false];
@@ -1256,15 +1325,60 @@ class ProcessMessBillsEmployeeController extends Controller
                 return $clientId;
             }
 
+            // Other: often a named buyer without student/employee pk — try employee directory by name
+            if ($clientType === KitchenIssueMaster::CLIENT_OTHER) {
+                $clientName = trim($bill->client_name ?? ($bill->clientTypeCategory->client_name ?? ''));
+                return $clientName !== '' ? $this->resolveReceiverUserIdByClientName($clientName) : null;
+            }
+
             return null;
         }
 
-        // Selling Voucher Date Range: only employee has single-user mapping (by client_name -> employee)
+        // Selling Voucher Date Range: map buyer name to app user (employee or student by type)
+        $slug = (string) ($bill->client_type_slug ?? '');
         $clientName = trim($bill->client_name ?? ($bill->clientTypeCategory->client_name ?? ''));
-        if (($bill->client_type_slug ?? '') !== 'employee' || $clientName === '') {
+        if ($clientName === '') {
             return null;
         }
-        return $this->resolveReceiverUserIdByClientName($clientName);
+
+        if ($slug === 'employee' || $slug === 'other') {
+            return $this->resolveReceiverUserIdByClientName($clientName);
+        }
+
+        if (in_array($slug, ['ot', 'course'], true)) {
+            return $this->resolveReceiverUserIdByStudentName($clientName);
+        }
+
+        return null;
+    }
+
+    /**
+     * For combined mess bills: use the first bill that maps to a notification receiver.
+     *
+     * @param  array<int, KitchenIssueMaster|SellingVoucherDateRangeReport>|\Illuminate\Support\Collection  $bills
+     */
+    private function resolveReceiverUserIdFromAnyBill($bills): ?int
+    {
+        $list = is_array($bills) ? $bills : $bills->all();
+        foreach ($list as $bill) {
+            $isKitchen = !($bill instanceof SellingVoucherDateRangeReport);
+            $uid = $this->getReceiverUserIdForBill($bill, $isKitchen);
+            if ($uid !== null && $uid > 0) {
+                return $uid;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Normalized full name expression (matches typical "First Last" bill text without double spaces when middle is empty).
+     *
+     * @param  'e'|'s'  $tableAlias  employee_master or student_master alias
+     */
+    private function sqlNormalizedPersonFullName(string $tableAlias): string
+    {
+        return "TRIM(CONCAT_WS(' ', NULLIF(TRIM({$tableAlias}.first_name), ''), NULLIF(TRIM({$tableAlias}.middle_name), ''), NULLIF(TRIM({$tableAlias}.last_name), '')))";
     }
 
     /**
@@ -1279,12 +1393,24 @@ class ProcessMessBillsEmployeeController extends Controller
         ];
         $candidates = array_values(array_unique(array_filter($candidates, fn ($name) => $name !== '')));
 
+        $empNameExpr = $this->sqlNormalizedPersonFullName('e');
+
         foreach ($candidates as $candidateName) {
             $escaped = str_replace(['%', '_', '\\'], ['\\%', '\\_', '\\\\'], $candidateName);
 
             $row = DB::table('user_credentials as uc')
                 ->join('employee_master as e', 'uc.user_id', '=', 'e.pk')
-                ->whereRaw('TRIM(CONCAT(COALESCE(e.first_name, \'\'), \' \', COALESCE(e.middle_name, \'\'), \' \', COALESCE(e.last_name, \'\'))) = ?', [$candidateName])
+                ->whereRaw("{$empNameExpr} = ?", [$candidateName])
+                ->where('uc.user_category', '!=', 'S')
+                ->value('uc.user_id');
+            if ($row !== null) {
+                return (int) $row;
+            }
+
+            $normCandidate = preg_replace('/\s+/u', ' ', $candidateName) ?? $candidateName;
+            $row = DB::table('user_credentials as uc')
+                ->join('employee_master as e', 'uc.user_id', '=', 'e.pk')
+                ->whereRaw("{$empNameExpr} = ?", [trim($normCandidate)])
                 ->where('uc.user_category', '!=', 'S')
                 ->value('uc.user_id');
             if ($row !== null) {
@@ -1293,7 +1419,7 @@ class ProcessMessBillsEmployeeController extends Controller
 
             $row = DB::table('user_credentials as uc')
                 ->join('employee_master as e', 'uc.user_id', '=', 'e.pk')
-                ->whereRaw('TRIM(CONCAT(COALESCE(e.first_name, \'\'), \' \', COALESCE(e.middle_name, \'\'), \' \', COALESCE(e.last_name, \'\'))) LIKE ?', [$escaped . '%'])
+                ->whereRaw("{$empNameExpr} LIKE ?", [$escaped . '%'])
                 ->where('uc.user_category', '!=', 'S')
                 ->value('uc.user_id');
             if ($row !== null) {
@@ -1305,6 +1431,69 @@ class ProcessMessBillsEmployeeController extends Controller
                     ->where('name', $candidateName)
                     ->where('user_category', '!=', 'S')
                     ->value('user_id');
+                if ($row !== null) {
+                    return (int) $row;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Resolve student portal user (user_credentials.user_id = student_master.pk, user_category S) from buyer name.
+     */
+    private function resolveReceiverUserIdByStudentName(string $clientName): ?int
+    {
+        if (!Schema::hasTable('student_master')) {
+            return null;
+        }
+
+        $candidates = [
+            trim($clientName),
+            $this->sanitizeBuyerNameForUserLookup($clientName),
+        ];
+        $candidates = array_values(array_unique(array_filter($candidates, fn ($name) => $name !== '')));
+
+        $stuNameExpr = $this->sqlNormalizedPersonFullName('s');
+
+        foreach ($candidates as $candidateName) {
+            $escaped = str_replace(['%', '_', '\\'], ['\\%', '\\_', '\\\\'], $candidateName);
+
+            $row = DB::table('user_credentials as uc')
+                ->join('student_master as s', 'uc.user_id', '=', 's.pk')
+                ->where('uc.user_category', 'S')
+                ->whereRaw("{$stuNameExpr} = ?", [$candidateName])
+                ->value('uc.user_id');
+            if ($row !== null) {
+                return (int) $row;
+            }
+
+            $normCandidate = preg_replace('/\s+/u', ' ', $candidateName) ?? $candidateName;
+            $row = DB::table('user_credentials as uc')
+                ->join('student_master as s', 'uc.user_id', '=', 's.pk')
+                ->where('uc.user_category', 'S')
+                ->whereRaw("{$stuNameExpr} = ?", [trim($normCandidate)])
+                ->value('uc.user_id');
+            if ($row !== null) {
+                return (int) $row;
+            }
+
+            $row = DB::table('user_credentials as uc')
+                ->join('student_master as s', 'uc.user_id', '=', 's.pk')
+                ->where('uc.user_category', 'S')
+                ->whereRaw("{$stuNameExpr} LIKE ?", [$escaped . '%'])
+                ->value('uc.user_id');
+            if ($row !== null) {
+                return (int) $row;
+            }
+
+            if (Schema::hasColumn('student_master', 'display_name')) {
+                $row = DB::table('user_credentials as uc')
+                    ->join('student_master as s', 'uc.user_id', '=', 's.pk')
+                    ->where('uc.user_category', 'S')
+                    ->where('s.display_name', $candidateName)
+                    ->value('uc.user_id');
                 if ($row !== null) {
                     return (int) $row;
                 }
@@ -1343,6 +1532,28 @@ class ProcessMessBillsEmployeeController extends Controller
     {
         $map = ['cash' => 0, 'online' => 1, 'cheque' => 2, 'deduct_from_salary' => 0];
         return $map[strtolower((string) $mode)] ?? 0;
+    }
+
+    /**
+     * kitchen_issue_payment_details.kitchen_issue_master_pk must reference an existing kitchen_issue_master.pk.
+     */
+    private function kitchenIssueMasterPkForPayment(KitchenIssueMaster $bill): ?int
+    {
+        $pk = (int) ($bill->getAttribute('pk') ?? 0);
+        if ($pk > 0 && KitchenIssueMaster::query()->where('pk', $pk)->exists()) {
+            return $pk;
+        }
+        if (Schema::hasColumn('kitchen_issue_master', 'id')) {
+            $legacyId = (int) ($bill->getAttribute('id') ?? 0);
+            if ($legacyId > 0) {
+                $resolved = KitchenIssueMaster::query()->where('id', $legacyId)->value('pk');
+                if ($resolved !== null) {
+                    return (int) $resolved;
+                }
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -1387,60 +1598,95 @@ class ProcessMessBillsEmployeeController extends Controller
                     'message' => 'Payment amount cannot exceed the balance due (₹ ' . number_format($totalDue, 2) . ').',
                 ], 400);
             }
-            $remaining = $amount;
-            foreach ($bills as $bill) {
-                if ($remaining <= 0) break;
-                $isDr = $bill instanceof SellingVoucherDateRangeReport;
-                $billTotal = (float) $bill->net_total;
-                $billPaid = $this->getBillPaidAmount($bill, $isDr);
-                $billDue = max(0, $billTotal - $billPaid);
-                if ($billDue <= 0) continue;
-                $payThis = min($remaining, $billDue);
-                if ($isDr) {
-                    SvDateRangePaymentDetail::create([
-                        'sv_date_range_report_id' => $bill->id,
-                        'paid_amount' => $payThis,
-                        'payment_date' => $paymentDate,
-                        'payment_mode' => $paymentMode,
-                        'bank_name' => $request->input('bank_name'),
-                        'cheque_number' => $request->input('cheque_number'),
-                        'cheque_date' => $request->filled('cheque_date') ? $this->parseDate($request->cheque_date) : null,
-                        'remarks' => $request->input('remarks'),
-                    ]);
-                    $bill->paid_amount = ($bill->paid_amount ?? 0) + $payThis;
-                    $bill->status = ($bill->paid_amount >= $billTotal) ? 2 : 1;
-                    $bill->save();
-                } else {
-                    $bill->load('paymentDetails');
-                    KitchenIssuePaymentDetail::create([
-                        'kitchen_issue_master_pk' => $bill->pk,
-                        'paid_amount' => $payThis,
-                        'payment_date' => $paymentDate,
-                        'payment_mode' => $this->kitchenPaymentModeValue($paymentMode),
-                        'transaction_ref' => $request->input('cheque_number'),
-                        'remarks' => $request->input('remarks'),
-                    ]);
-                    $newPaid = $this->getBillPaidAmount($bill, false);
-                    $bill->status = ($newPaid >= $billTotal) ? 2 : 1;
-                    $bill->save();
+            try {
+                DB::beginTransaction();
+                $remaining = $amount;
+                foreach ($bills as $bill) {
+                    if ($remaining <= 0) break;
+                    $isDr = $bill instanceof SellingVoucherDateRangeReport;
+                    $billTotal = (float) $bill->net_total;
+                    $billPaid = $this->getBillPaidAmount($bill, $isDr);
+                    $billDue = max(0, $billTotal - $billPaid);
+                    if ($billDue <= 0) continue;
+                    $payThis = min($remaining, $billDue);
+                    if ($isDr) {
+                        SvDateRangePaymentDetail::create([
+                            'sv_date_range_report_id' => $bill->id,
+                            'paid_amount' => $payThis,
+                            'payment_date' => $paymentDate,
+                            'payment_mode' => $paymentMode,
+                            'bank_name' => $request->input('bank_name'),
+                            'cheque_number' => $request->input('cheque_number'),
+                            'cheque_date' => $request->filled('cheque_date') ? $this->parseDate($request->cheque_date) : null,
+                            'remarks' => $request->input('remarks'),
+                        ]);
+                        $bill->paid_amount = ($bill->paid_amount ?? 0) + $payThis;
+                        $bill->status = ($bill->paid_amount >= $billTotal) ? 2 : 1;
+                        $bill->save();
+                    } else {
+                        /** @var KitchenIssueMaster $bill */
+                        $parentPk = $this->kitchenIssueMasterPkForPayment($bill);
+                        if ($parentPk === null) {
+                            DB::rollBack();
+                            $rawPk = (int) ($bill->getAttribute('pk') ?? 0);
+
+                            return response()->json([
+                                'success' => false,
+                                'message' => 'Cannot record payment: kitchen selling voucher (reference pk ' . ($rawPk > 0 ? $rawPk : 'missing') . ') does not exist in the database. It may have been deleted or mismatched. Reload the bill list and try again.',
+                            ], 422);
+                        }
+                        $bill->load('paymentDetails');
+                        KitchenIssuePaymentDetail::create([
+                            'kitchen_issue_master_pk' => $parentPk,
+                            'paid_amount' => $payThis,
+                            'payment_date' => $paymentDate,
+                            'payment_mode' => $this->kitchenPaymentModeValue($paymentMode),
+                            'transaction_ref' => $request->input('cheque_number'),
+                            'remarks' => $request->input('remarks'),
+                        ]);
+                        $newPaid = $this->getBillPaidAmount($bill, false);
+                        $bill->status = ($newPaid >= $billTotal) ? 2 : 1;
+                        $bill->save();
+                    }
+                    $remaining -= $payThis;
                 }
-                $remaining -= $payThis;
+                DB::commit();
+            } catch (\Illuminate\Database\QueryException $e) {
+                DB::rollBack();
+                report($e);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Payment could not be saved due to a database error. If this mentions a missing kitchen voucher, reload the page and verify the bill still exists.',
+                ], 422);
             }
             $clientName = trim((string) ($bills[0]->client_name ?? ($bills[0]->clientTypeCategory->client_name ?? '—')));
-            $referencePk = (int) ($bills[0]->id ?? $bills[0]->pk ?? 0);
-            $receiverUserId = $this->getReceiverUserIdForBill($bills[0], !($bills[0] instanceof SellingVoucherDateRangeReport));
+            $receiverUserId = $this->resolveReceiverUserIdFromAnyBill($bills);
             if ($receiverUserId !== null && $receiverUserId > 0) {
                 try {
                     $isFullPayment = ($remaining <= 0 && $amount >= $totalDue);
+                    $dateFromYmd = $request->filled('date_from')
+                        ? $this->parseDate($request->date_from)
+                        : now()->startOfMonth()->format('Y-m-d');
+                    $dateToYmd = $request->filled('date_to')
+                        ? $this->parseDate($request->date_to)
+                        : now()->endOfMonth()->format('Y-m-d');
+                    $paymentVisible = $isFullPayment
+                        ? 'Your combined payment of ₹' . number_format($amount, 2) . ' has been successfully completed.'
+                        : '₹' . number_format($amount, 2) . ' payment received. Remaining due: ₹ ' . number_format(max(0, $totalDue - $amount), 2);
+                    $paymentMessage = NotificationService::appendMessCombinedReceiptPayload(
+                        $paymentVisible,
+                        $id,
+                        $dateFromYmd,
+                        $dateToYmd
+                    );
                     app(NotificationService::class)->create(
                         $receiverUserId,
                         'mess',
-                        'MessPayment',
-                        $referencePk,
+                        'MessPaymentCombined',
+                        0,
                         $isFullPayment ? 'Payment Successfully Done' : 'Partial Payment Received',
-                        $isFullPayment
-                            ? 'Your combined payment of ₹' . number_format($amount, 2) . ' has been successfully completed.'
-                            : '₹' . number_format($amount, 2) . ' payment received. Remaining due: ₹ ' . number_format(max(0, $totalDue - $amount), 2)
+                        $paymentMessage
                     );
                 } catch (\Throwable $e) {
                     report($e);
@@ -1484,8 +1730,17 @@ class ProcessMessBillsEmployeeController extends Controller
         }
 
         if ($isKitchenIssue) {
+            $parentPk = $this->kitchenIssueMasterPkForPayment($bill);
+            if ($parentPk === null) {
+                $rawPk = (int) ($bill->getAttribute('pk') ?? 0);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot record payment: kitchen selling voucher (reference pk ' . ($rawPk > 0 ? $rawPk : 'missing') . ') does not exist in the database. Reload and try again.',
+                ], 422);
+            }
             KitchenIssuePaymentDetail::create([
-                'kitchen_issue_master_pk' => $bill->pk,
+                'kitchen_issue_master_pk' => $parentPk,
                 'paid_amount' => $amount,
                 'payment_date' => $paymentDate,
                 'payment_mode' => $this->kitchenPaymentModeValue($paymentMode),

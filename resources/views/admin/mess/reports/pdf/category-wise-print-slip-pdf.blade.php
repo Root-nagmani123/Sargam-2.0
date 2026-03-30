@@ -101,6 +101,11 @@
             background-color: #e9ecef;
             font-weight: bold;
         }
+        .grand-total-row {
+            background-color: #d8e4ef;
+            font-weight: bold;
+            border-top: 2px solid #004a93;
+        }
         .footer {
             border-top: 1px solid #dde2ea;
             font-size: 7px;
@@ -233,6 +238,56 @@
             </div>
         </div>
     @endforeach
+
+        <div class="page">
+            <div class="page-header">
+                <div class="page-header-top">
+                    <div class="page-header-col page-header-title">
+                        <h1>OFFICER'S MESS LBSNAA MUSSOORIE</h1>
+                        <h2>Sale Voucher Report</h2>
+                        <div class="page-header-sub">Grand total — all buyers</div>
+                    </div>
+                </div>
+                <div class="meta-row">
+                    @php
+                        $fromTextGt = $fromLabel ?? 'Start';
+                        $toTextGt = $toLabel ?? 'End';
+                    @endphp
+                    <span><strong>Period:</strong>
+                        @if($fromLabel || $toLabel)
+                            Between {{ $fromTextGt }} To {{ $toTextGt }}
+                        @else
+                            All Dates
+                        @endif
+                    </span>
+                    <span><strong>Generated on:</strong> {{ now()->format('d-m-Y H:i') }}</span>
+                </div>
+            </div>
+            <table style="font-size: 14px;">
+                <thead>
+                <tr>
+                    <th>Slip No.</th>
+                    <th style="width: 150px;">Buyer Name</th>
+                    <th>Remark</th>
+                    <th>Item Name</th>
+                    <th>Request Date</th>
+                    <th style="text-align: right;">Quantity</th>
+                    <th style="text-align: right;">Price</th>
+                    <th style="text-align: right;">Amount</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr class="grand-total-row">
+                    <td colspan="6"></td>
+                    <td class="text-end"><strong>GRAND TOTAL</strong></td>
+                    <td class="text-end"><strong>{{ number_format($grandTotal ?? 0, 2) }}</strong></td>
+                </tr>
+                </tbody>
+            </table>
+            <div class="footer">
+                <small>Officer's Mess LBSNAA Mussoorie &mdash; Sale Voucher Report</small>
+            </div>
+        </div>
 @endif
 </body>
 </html>

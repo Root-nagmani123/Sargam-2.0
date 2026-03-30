@@ -10,6 +10,9 @@ use Illuminate\Support\Facades\Route;
 
 class NotificationService
 {
+    /** Invisible trailer on notification message: combined mess bill id + date range for correct print-receipt URL */
+    private const MESS_COMBINED_RECEIPT_MARKER = "\u{2060}MESS_COMBINED_RECEIPT\x1F";
+
     /**
      * Create a new notification
      * 
@@ -86,6 +89,66 @@ class NotificationService
         }
 
         return DB::table('notifications')->insert($notifications) ? count($notifications) : 0;
+    }
+
+    /**
+     * Append encoded combined mess bill payload (id + filter dates) for redirect to full combined receipt.
+     */
+    public static function appendMessCombinedReceiptPayload(
+        string $visibleMessage,
+        string $combinedId,
+        string $dateFromYmd,
+        string $dateToYmd
+    ): string {
+        $payload = json_encode([
+            'i' => $combinedId,
+            'f' => $dateFromYmd,
+            't' => $dateToYmd,
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+        return $visibleMessage . self::MESS_COMBINED_RECEIPT_MARKER . base64_encode((string) $payload);
+    }
+
+    /**
+     * @return array{i: string, f: string, t: string}|null
+     */
+    public static function parseMessCombinedReceiptPayload(?string $message): ?array
+    {
+        if ($message === null || $message === '') {
+            return null;
+        }
+        $pos = strpos($message, self::MESS_COMBINED_RECEIPT_MARKER);
+        if ($pos === false) {
+            return null;
+        }
+        $b64 = substr($message, $pos + strlen(self::MESS_COMBINED_RECEIPT_MARKER));
+        $json = base64_decode($b64, true);
+        if ($json === false) {
+            return null;
+        }
+        $data = json_decode($json, true);
+        if (!is_array($data) || empty($data['i']) || !is_string($data['i'])) {
+            return null;
+        }
+
+        return [
+            'i' => $data['i'],
+            'f' => isset($data['f']) && is_string($data['f']) ? $data['f'] : '',
+            't' => isset($data['t']) && is_string($data['t']) ? $data['t'] : '',
+        ];
+    }
+
+    public static function stripMessCombinedReceiptPayloadForDisplay(?string $message): string
+    {
+        if ($message === null || $message === '') {
+            return '';
+        }
+        $pos = strpos($message, self::MESS_COMBINED_RECEIPT_MARKER);
+        if ($pos === false) {
+            return $message;
+        }
+
+        return trim(substr($message, 0, $pos));
     }
 
     /**
@@ -317,6 +380,20 @@ class NotificationService
         //print_r($config);
         $type = strtolower(trim($notification->type ?? ''));
         $moduleName = strtolower(trim($notification->module_name ?? ''));
+
+        // Combined Process Mess Bill: reference_pk was only the first voucher id; open full combined receipt with date range.
+        if ($type === 'mess' && ($moduleName === 'messinvoicecombined' || $moduleName === 'messpaymentcombined')) {
+            $parsed = self::parseMessCombinedReceiptPayload($notification->message);
+            if ($parsed !== null && $parsed['i'] !== '') {
+                $query = array_filter([
+                    'date_from' => $parsed['f'] !== '' ? $parsed['f'] : null,
+                    'date_to' => $parsed['t'] !== '' ? $parsed['t'] : null,
+                ], static fn ($v) => $v !== null && $v !== '');
+                $url = route('admin.mess.process-mess-bills-employee.print-receipt', ['id' => $parsed['i']]);
+
+                return $url . (count($query) > 0 ? '?' . http_build_query($query) : '');
+            }
+        }
 
         // Estate: when estate bill is ready, redirect to Generate Estate Bill
         // page for the bill's month and auto-open the specific bill print.

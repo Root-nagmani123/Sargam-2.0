@@ -671,13 +671,14 @@
                                 <th class="text-nowrap py-3 fw-semibold">Invoice No.</th>
                                 <th class="text-nowrap py-3 fw-semibold">Payment Type</th>
                                 <th class="text-nowrap py-3 fw-semibold text-end">Total</th>
+                                <th class="text-nowrap py-3 fw-semibold text-center">Status</th>
                                 <th class="text-nowrap py-3 fw-semibold text-center">Actions</th>
                                 <th class="text-nowrap py-3 fw-semibold text-center">Receipt</th>
                             </tr>
                         </thead>
                         <tbody id="modalBillsTableBody">
                             <tr>
-                                <td colspan="8" class="text-center py-5 text-muted">
+                                <td colspan="9" class="text-center py-5 text-muted">
                                     <i class="material-symbols-rounded d-block mb-2 text-primary" style="font-size: 3rem;">description</i>
                                     <div class="fw-semibold">Select date range and click <strong class="text-primary">Load Bills</strong> to load unpaid bills.</div>
                                 </td>
@@ -914,7 +915,8 @@ document.addEventListener('DOMContentLoaded', function() {
             return (b.buyer_name || '').toLowerCase().indexOf(search) >= 0 ||
                    String(b.invoice_no || '').indexOf(search) >= 0 ||
                    (b.payment_type || '').toLowerCase().indexOf(search) >= 0 ||
-                   String(b.total || '').indexOf(search) >= 0;
+                   String(b.total || '').indexOf(search) >= 0 ||
+                   (b.invoice_notification_sent && 'invoice sent'.indexOf(search) >= 0);
         });
     }
 
@@ -954,11 +956,14 @@ document.addEventListener('DOMContentLoaded', function() {
         var pageData = filtered.slice(start, start + perPage);
 
         if (pageData.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">No unpaid bills found. Adjust date range and click Load Bills.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted">No unpaid bills found. Adjust date range and click Load Bills.</td></tr>';
         } else {
             tbody.innerHTML = pageData.map(function(b, i) {
                 var sn = start + i + 1;
                 var printUrl = printReceiptBaseUrl.replace('__ID__', b.id);
+                var statusCell = b.invoice_notification_sent
+                    ? '<span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle fw-semibold">Invoice Sent</span>'
+                    : '<span class="text-muted small">—</span>';
                 return '<tr class="' + (i % 2 === 0 ? 'table-light' : '') + '">' +
                     '<td><input type="checkbox" class="form-check-input modal-bill-check" data-id="' + b.id + '" data-name="' + (b.buyer_name || '').replace(/"/g, '&quot;') + '"></td>' +
                     '<td>' + sn + '</td>' +
@@ -966,6 +971,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     '<td>' + (b.invoice_no || '—') + '</td>' +
                     '<td>' + (b.payment_type || '—') + '</td>' +
                     '<td class="text-end">' + (b.total || '0') + '</td>' +
+                    '<td class="text-center">' + statusCell + '</td>' +
                     '<td class="text-center"><div class="btn-group btn-group-sm">' +
                     '<button type="button" class="btn btn-outline-primary generate-invoice-btn" data-bill-id="' + b.id + '" data-buyer-name="' + (b.buyer_name || '').replace(/"/g, '&quot;') + '" title="Generate Invoice">Invoice</button>' +
                     '<button type="button" class="btn btn-outline-success generate-payment-btn" data-bill-id="' + b.id + '" data-buyer-name="' + (b.buyer_name || '').replace(/"/g, '&quot;') + '" title="Mark as Paid">Payment</button>' +
@@ -2339,10 +2345,10 @@ function printProcessMessBillsTable() {
     var originalThead = table.querySelector('thead');
     var headerRow = originalThead ? originalThead.querySelector('tr') : null;
     var headerCells = headerRow ? Array.from(headerRow.children) : [];
-    // Remove Checkbox (0), Actions (6) and Receipt (7) columns from print
-    var removeIdx = { 0: true, 6: true, 7: true };
+    // Remove Checkbox (0), Actions (7) and Receipt (8) columns from print
+    var removeIdx = { 0: true, 7: true, 8: true };
     var printHeaderCells = headerCells.filter(function (_, idx) { return !removeIdx[idx]; });
-    var columnsCount = printHeaderCells.length || 6;
+    var columnsCount = printHeaderCells.length || 7;
     var columnHeadHtml = '<tr>' + printHeaderCells.map(function (th) { return '<th>' + th.innerHTML + '</th>'; }).join('') + '</tr>';
 
     var filtered = (typeof getFilteredModalBills === 'function') ? getFilteredModalBills() : [];
@@ -2354,6 +2360,7 @@ function printProcessMessBillsTable() {
             '<td>' + (b.invoice_no || '—') + '</td>' +
             '<td>' + (b.payment_type || '—') + '</td>' +
             '<td class="text-end">' + (b.total || '0') + '</td>' +
+            '<td>' + (b.invoice_notification_sent ? 'Invoice Sent' : '—') + '</td>' +
             '</tr>';
     }).join('');
 
