@@ -291,10 +291,33 @@ document.addEventListener('DOMContentLoaded', function () {
         width: 100% !important;
         min-width: 100% !important;
     }
+    /* Niche open: search upar | Uper (flipped) open: search niche */
+    .ts-wrapper.choices .choices__list--dropdown.is-active {
+        display: flex;
+        flex-direction: column;
+    }
+    .ts-wrapper.choices.is-flipped .choices__list--dropdown.is-active { flex-direction: column-reverse; }
+    .ts-wrapper.choices .choices__list--dropdown.is-active .choices__list {
+        flex: 1 1 auto;
+        min-height: 0;
+    }
+    .ts-wrapper.choices[data-type*="select-one"] .choices__list--dropdown .choices__input--cloned,
+    .ts-wrapper.choices[data-type*="select-one"] .choices__list--dropdown .choices__input {
+        border-top: none !important;
+        border-bottom: 1px solid #ced4da !important;
+        margin-bottom: 0 !important;
+    }
+    .ts-wrapper.choices.is-flipped[data-type*="select-one"] .choices__list--dropdown .choices__input--cloned,
+    .ts-wrapper.choices.is-flipped[data-type*="select-one"] .choices__list--dropdown .choices__input {
+        border-bottom: none !important;
+        border-top: 1px solid #ced4da !important;
+        margin-bottom: 0 !important;
+    }
     .ts-wrapper.choices .choices__list--dropdown .choices__input--cloned {
         display: block !important;
         position: relative !important;
         opacity: 1 !important;
+        flex-shrink: 0;
         min-height: 34px;
         width: 100% !important;
     }
@@ -1394,6 +1417,21 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         // Native Choices.js instance helper (keeps legacy alias for existing logic).
+        function normalizeChoicesSearchText(text) {
+            return String(text || '').replace(/\s+/g, ' ').trim().toLowerCase();
+        }
+        function applyExactChoicesSearchFilter(api, dropdownEl, rawQuery) {
+            if (!dropdownEl) return;
+            var query = normalizeChoicesSearchText(rawQuery);
+            var choiceItems = dropdownEl.querySelectorAll('.choices__item--choice');
+            if (!choiceItems || !choiceItems.length) return;
+            choiceItems.forEach(function(item) {
+                if (item.classList.contains('choices__placeholder')) return;
+                var label = normalizeChoicesSearchText(item.textContent || '');
+                var show = !query || label === query;
+                item.style.display = show ? '' : 'none';
+            });
+        }
         function createChoicesInstance(selectEl, settings) {
             if (!selectEl || typeof window.Choices === 'undefined') return null;
             if (selectEl.choicesInstance) return selectEl.choicesInstance;
@@ -1463,10 +1501,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
             selectEl.addEventListener('change', function() { api.syncItems(); });
             selectEl.addEventListener('showDropdown', function() {
+                if (api.control_input) {
+                    applyExactChoicesSearchFilter(api, choices.dropdown ? choices.dropdown.element : null, api.control_input.value || '');
+                }
                 if (typeof settings.onDropdownOpen === 'function') {
                     settings.onDropdownOpen.call(api, choices.dropdown ? choices.dropdown.element : null);
                 }
             });
+            if (api.control_input) {
+                api.control_input.addEventListener('input', function() {
+                    applyExactChoicesSearchFilter(api, choices.dropdown ? choices.dropdown.element : null, this.value || '');
+                });
+            }
             if (typeof settings.onInitialize === 'function') settings.onInitialize.call(api);
 
             if (selectEl.classList.contains('dr-item-select') || selectEl.classList.contains('edit-dr-item-select')) {

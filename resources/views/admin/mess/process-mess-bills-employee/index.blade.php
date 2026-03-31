@@ -129,25 +129,27 @@
                             <option value="">All</option>
                         </select>
                     </div>
-                        <div class="col-md-3">
+                    @php
+                        $selectedBuyerNames = (array) ($buyerName ?? request('buyer_name', []));
+                    @endphp
+                    <div class="col-md-3">
                         <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">badge</i>Buyer Name</label>
-                        <select name="buyer_name" id="filterBuyerName" class="form-select shadow-sm border-0 choices-select">
-                            <option value="">All Buyers</option>
+                        <select name="buyer_name[]" id="filterBuyerName" class="form-select shadow-sm border-0 choices-select" multiple data-placeholder="All Buyers">
                             @if(($clientType ?? request('client_type')) === 'ot' && isset($otBuyerNames) && $otBuyerNames->isNotEmpty())
                                 @foreach($otBuyerNames as $buyer)
-                                    <option value="{{ $buyer }}" {{ ($buyerName ?? request('buyer_name')) === $buyer ? 'selected' : '' }}>{{ $buyer }}</option>
+                                    <option value="{{ $buyer }}" {{ in_array($buyer, $selectedBuyerNames, true) ? 'selected' : '' }}>{{ $buyer }}</option>
                                 @endforeach
                             @elseif(($clientType ?? request('client_type')) === 'course' && isset($courseBuyerNames) && $courseBuyerNames->isNotEmpty())
                                 @foreach($courseBuyerNames as $buyer)
-                                    <option value="{{ $buyer }}" {{ ($buyerName ?? request('buyer_name')) === $buyer ? 'selected' : '' }}>{{ $buyer }}</option>
+                                    <option value="{{ $buyer }}" {{ in_array($buyer, $selectedBuyerNames, true) ? 'selected' : '' }}>{{ $buyer }}</option>
                                 @endforeach
                             @elseif(($clientType ?? request('client_type')) === 'other' && isset($otherBuyerNames) && $otherBuyerNames->isNotEmpty())
                                 @foreach($otherBuyerNames as $buyer)
-                                    <option value="{{ $buyer }}" {{ ($buyerName ?? request('buyer_name')) === $buyer ? 'selected' : '' }}>{{ $buyer }}</option>
+                                    <option value="{{ $buyer }}" {{ in_array($buyer, $selectedBuyerNames, true) ? 'selected' : '' }}>{{ $buyer }}</option>
                                 @endforeach
                             @elseif(($clientType ?? request('client_type')) === 'section' && isset($sectionBuyerNames) && $sectionBuyerNames->isNotEmpty())
                                 @foreach($sectionBuyerNames as $buyer)
-                                    <option value="{{ $buyer }}" {{ ($buyerName ?? request('buyer_name')) === $buyer ? 'selected' : '' }}>{{ $buyer }}</option>
+                                    <option value="{{ $buyer }}" {{ in_array($buyer, $selectedBuyerNames, true) ? 'selected' : '' }}>{{ $buyer }}</option>
                                 @endforeach
                             @endif
                         </select>
@@ -187,7 +189,9 @@
                 <input type="hidden" name="date_to" value="{{ $effectiveDateTo ?? request('date_to') }}">
                 <input type="hidden" name="client_type" value="{{ $clientType ?? request('client_type') }}">
                 <input type="hidden" name="client_type_pk" value="{{ $clientTypePk ?? request('client_type_pk') }}">
-                <input type="hidden" name="buyer_name" value="{{ $buyerName ?? request('buyer_name') }}">
+                @foreach((array) ($buyerName ?? request('buyer_name', [])) as $selectedBuyerName)
+                    <input type="hidden" name="buyer_name[]" value="{{ $selectedBuyerName }}">
+                @endforeach
                 <input type="hidden" name="status" value="{{ $statusFilter ?? request('status') }}">
                 <div class="d-flex flex-wrap justify-content-end align-items-right mb-3 gap-2">
                     <div class="d-flex align-items-center gap-2">
@@ -542,7 +546,7 @@
 }
 </style>
 <div class="modal fade" id="addProcessMessBillsModal" tabindex="-1" aria-labelledby="addProcessMessBillsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered modal-fullscreen-md-down">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-md-down">
         <div class="modal-content border-0 shadow-lg rounded-3">
             <div class="modal-header bg-light border-0 py-3">
                 <h5 class="modal-title fw-semibold d-flex align-items-center gap-2" id="addProcessMessBillsModalLabel">
@@ -582,21 +586,23 @@
                                 <option value="">All</option>
                             </select>
                         </div>
+                        @php
+                            $selectedModalBuyerNames = (array) ($buyerName ?? request('buyer_name', []));
+                        @endphp
                         <div class="col-md-3">
                         <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">badge</i>Buyer Name</label>
-                        <select name="modal_buyer_name" id="modal_buyer_name" class="form-select choices-select">
-                            <option value="">All Buyers</option>
+                        <select name="modal_buyer_name[]" id="modal_buyer_name" class="form-select choices-select" multiple data-placeholder="All Buyers">
                             @if(($clientType ?? request('client_type')) === 'course' && isset($courseBuyerNames) && $courseBuyerNames->isNotEmpty())
                                 @foreach($courseBuyerNames as $buyer)
-                                    <option value="{{ $buyer }}" {{ ($buyerName ?? request('buyer_name')) === $buyer ? 'selected' : '' }}>{{ $buyer }}</option>
+                                    <option value="{{ $buyer }}" {{ in_array($buyer, $selectedModalBuyerNames, true) ? 'selected' : '' }}>{{ $buyer }}</option>
                                 @endforeach
                             @elseif(($clientType ?? request('client_type')) === 'other' && isset($otherBuyerNames) && $otherBuyerNames->isNotEmpty())
                                 @foreach($otherBuyerNames as $buyer)
-                                    <option value="{{ $buyer }}" {{ ($buyerName ?? request('buyer_name')) === $buyer ? 'selected' : '' }}>{{ $buyer }}</option>
+                                    <option value="{{ $buyer }}" {{ in_array($buyer, $selectedModalBuyerNames, true) ? 'selected' : '' }}>{{ $buyer }}</option>
                                 @endforeach
                             @elseif(($clientType ?? request('client_type')) === 'section' && isset($sectionBuyerNames) && $sectionBuyerNames->isNotEmpty())
                                 @foreach($sectionBuyerNames as $buyer)
-                                    <option value="{{ $buyer }}" {{ ($buyerName ?? request('buyer_name')) === $buyer ? 'selected' : '' }}>{{ $buyer }}</option>
+                                    <option value="{{ $buyer }}" {{ in_array($buyer, $selectedModalBuyerNames, true) ? 'selected' : '' }}>{{ $buyer }}</option>
                                 @endforeach
                             @endif
                         </select>
@@ -714,9 +720,78 @@
     .choices__list--dropdown {
         z-index: 2000;
     }
+    .ts-wrapper.choices {
+        position: relative;
+    }
+    .ts-wrapper.choices .choices__list--dropdown {
+        position: absolute !important;
+        top: 100%;
+        left: 0;
+        right: 0;
+    }
+    .ts-wrapper.choices.is-flipped .choices__list--dropdown {
+        top: auto;
+        bottom: 100%;
+    }
+    .ts-wrapper.choices[data-type*="select-one"] .choices__input {
+        display: block !important;
+        width: 100% !important;
+        min-width: 100% !important;
+    }
+    /* Niche open: search upar | Uper (flipped) open: search niche */
+    .ts-wrapper.choices .choices__list--dropdown.is-active {
+        display: flex;
+        flex-direction: column;
+    }
+    .ts-wrapper.choices.is-flipped .choices__list--dropdown.is-active {
+        flex-direction: column-reverse;
+    }
+    .ts-wrapper.choices .choices__list--dropdown.is-active .choices__list {
+        flex: 1 1 auto;
+        min-height: 0;
+    }
+    .ts-wrapper.choices[data-type*="select-one"] .choices__list--dropdown .choices__input--cloned,
+    .ts-wrapper.choices[data-type*="select-one"] .choices__list--dropdown .choices__input {
+        border-top: none !important;
+        border-bottom: 1px solid #ced4da !important;
+        margin-bottom: 0 !important;
+    }
+    .ts-wrapper.choices.is-flipped[data-type*="select-one"] .choices__list--dropdown .choices__input--cloned,
+    .ts-wrapper.choices.is-flipped[data-type*="select-one"] .choices__list--dropdown .choices__input {
+        border-bottom: none !important;
+        border-top: 1px solid #ced4da !important;
+    }
+    .ts-wrapper.choices .choices__list--dropdown .choices__input--cloned {
+        display: block !important;
+        position: relative !important;
+        opacity: 1 !important;
+        flex-shrink: 0;
+        min-height: 34px;
+        width: 100% !important;
+    }
 </style>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    function normalizeChoicesSearchText(text) {
+        return String(text || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    }
+
+    function applyExactChoicesSearchFilter(instance, rawQuery) {
+        if (!instance || !instance.dropdown || !instance.dropdown.element) return;
+        var dropdownEl = instance.dropdown.element;
+        var query = normalizeChoicesSearchText(rawQuery);
+        var choiceItems = dropdownEl.querySelectorAll('.choices__item--choice');
+        if (!choiceItems || !choiceItems.length) return;
+
+        choiceItems.forEach(function(item) {
+            if (item.classList.contains('choices__placeholder')) return;
+            var label = normalizeChoicesSearchText(item.textContent || '');
+            var value = normalizeChoicesSearchText(item.getAttribute('data-value') || '');
+            var show = !query || label === query || value === query;
+            item.style.display = show ? '' : 'none';
+        });
+    }
+
     if (typeof flatpickr !== 'undefined') {
         var dateFromInput = document.getElementById('date_from');
         var dateToInput = document.getElementById('date_to');
@@ -758,16 +833,42 @@ document.addEventListener('DOMContentLoaded', function() {
         if (el.dataset.choicesInitialized === 'true') return;
 
         var placeholder = el.getAttribute('data-placeholder') || 'Select';
-        var shouldSearch = (el.options && el.options.length > 10);
+        // Keep search enabled for all Choices dropdowns.
+        var shouldSearch = el.getAttribute('data-search') !== 'false';
+        var isMultiple = !!el.multiple;
 
         var instance = new Choices(el, {
             searchEnabled: shouldSearch,
-            removeItemButton: false,
+            // Disable built-in fuzzy filter; we apply our own exact filter below.
+            searchChoices: false,
+            removeItemButton: isMultiple,
             itemSelectText: '',
             shouldSort: false,
+            position: 'bottom',
             placeholderValue: placeholder,
-            allowHTML: false
+            allowHTML: false,
+            closeDropdownOnSelect: !isMultiple
         });
+        if (instance.containerOuter && instance.containerOuter.element && instance.containerOuter.element.classList) {
+            instance.containerOuter.element.classList.add('ts-wrapper');
+        }
+        if (instance.dropdown && instance.dropdown.element && instance.dropdown.element.classList) {
+            instance.dropdown.element.classList.add('ts-dropdown');
+        }
+        function applyExactAfterRender() {
+            var typed = (instance.input && instance.input.element) ? (instance.input.element.value || '') : '';
+            // Wait one frame so Choices can finish rendering its current search results.
+            requestAnimationFrame(function () {
+                applyExactChoicesSearchFilter(instance, typed);
+            });
+        }
+        el.addEventListener('showDropdown', applyExactAfterRender);
+        if (instance.input && instance.input.element) {
+            instance.input.element.addEventListener('input', function() {
+                applyExactAfterRender();
+            });
+            instance.input.element.addEventListener('keyup', applyExactAfterRender);
+        }
 
         el.dataset.choicesInitialized = 'true';
         el.choicesInstance = instance;
@@ -853,11 +954,17 @@ document.addEventListener('DOMContentLoaded', function() {
         var dateTo = (dt && dt.value) ? toYmd(dt.value) : '';
         var clientType = (ct && ct.value) ? ct.value : '';
         var clientTypePk = (ctp && ctp.value) ? ctp.value : '';
-        var buyerName = (bn && bn.value) ? bn.value.trim() : '';
+        var buyerNames = bn
+            ? Array.from(bn.selectedOptions || []).map(function (o) { return String(o.value || '').trim(); }).filter(Boolean)
+            : [];
         var url = '{{ route("admin.mess.process-mess-bills-employee.modal-data") }}?date_from=' + encodeURIComponent(dateFrom) + '&date_to=' + encodeURIComponent(dateTo);
         if (clientType) url += '&client_type=' + encodeURIComponent(clientType);
         if (clientTypePk) url += '&client_type_pk=' + encodeURIComponent(clientTypePk);
-        if (buyerName) url += '&buyer_name=' + encodeURIComponent(buyerName);
+        if (buyerNames.length) {
+            buyerNames.forEach(function (name) {
+                url += '&buyer_name[]=' + encodeURIComponent(name);
+            });
+        }
         fetch(url)
             .then(function(r) { return r.json(); })
             .then(function(data) {
@@ -879,7 +986,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 .filter(function (name) { return !!name; })
                         ));
 
-                        buyerSelect.innerHTML = '<option value=\"\">All Buyers</option>';
+                        buyerSelect.innerHTML = '';
 
                         buyers.forEach(function (name) {
                             var opt = document.createElement('option');
@@ -1032,10 +1139,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         var bn = document.getElementById('modal_buyer_name');
         if (bn) {
-            bn.innerHTML = '<option value=\"\">All Buyers</option>';
+            bn.innerHTML = '';
             if (bn.choicesInstance) {
                 bn.choicesInstance.clearStore();
-                bn.choicesInstance.setChoices([{ value: '', label: 'All Buyers', selected: true }], 'value', 'label', true);
+                bn.choicesInstance.setChoices([], 'value', 'label', true);
             }
         }
         var mp = document.getElementById('modal_mode_of_payment');
@@ -1185,12 +1292,12 @@ document.addEventListener('DOMContentLoaded', function() {
         function fillModalBuyerNames() {
             var slug = modalClientType.value;
             var selectedPk = modalClientTypePk.value;
-            modalBuyerName.innerHTML = '<option value=\"\">All Buyers</option>';
+            modalBuyerName.innerHTML = '';
 
             var choicesBuyer = modalBuyerName.choicesInstance || null;
             if (choicesBuyer) {
                 choicesBuyer.clearStore();
-                choicesBuyer.setChoices([{ value: '', label: 'All Buyers', selected: true }], 'value', 'label', true);
+                choicesBuyer.setChoices([], 'value', 'label', true);
             }
 
             function syncChoicesBuyer() {
@@ -1281,7 +1388,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         syncChoicesBuyer();
                     })
                     .catch(function () {
-                        // ignore error; All Buyers hi rahe
+                        // ignore error; no buyer options
                         syncChoicesBuyer();
                     });
             } else if (slug === 'ot' && !selectedPk) {
@@ -1413,7 +1520,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var buyersForReportUrl = "{{ route('admin.mess.reports.category-wise-print-slip.buyers') }}";
         var courseBuyersByCourseUrl = "{{ url('/admin/mess/reports/category-wise-print-slip/course-buyers') }}";
         var preservedClientTypePk = {!! json_encode($clientTypePk ?? request('client_type_pk', '')) !!};
-        var preservedBuyerName = {!! json_encode($buyerName ?? request('buyer_name', '')) !!};
+        var preservedBuyerName = {!! json_encode((array) ($buyerName ?? request('buyer_name', []))) !!};
 
         if (!clientTypeSlug || !clientTypePk || !buyerSelect) {
             return;
@@ -1537,7 +1644,7 @@ document.addEventListener('DOMContentLoaded', function() {
         function fillBuyerSelect(preserve) {
             var slug = clientTypeSlug.value;
             var selectedPk = clientTypePk.value;
-            var currentBuyer = preserve ? preservedBuyerName : '';
+            var currentBuyer = preserve ? preservedBuyerName : [];
             console.log('=== fillBuyerSelect START ===');
             console.log('slug:', slug, 'selectedPk:', selectedPk, 'preserve:', preserve);
             console.log('buyerSelect.choicesInstance exists?', !!buyerSelect.choicesInstance);
@@ -1566,9 +1673,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     buyerSelect.appendChild(opt);
                     console.log('Added option:', o.text);
                 });
-                if (currentBuyer) {
-                    buyerSelect.value = currentBuyer;
-                    console.log('Set current buyer to:', currentBuyer);
+                if (Array.isArray(currentBuyer) && currentBuyer.length) {
+                    Array.from(buyerSelect.options).forEach(function (option) {
+                        option.selected = currentBuyer.indexOf(option.value) !== -1;
+                    });
+                    console.log('Set current buyers to:', currentBuyer);
                 }
             }
 
@@ -1623,7 +1732,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                         if (typeof window.Choices !== 'undefined') {
                             initChoicesElement(buyerSelect);
-                            if (currentBuyer && buyerSelect.choicesInstance) {
+                            if (Array.isArray(currentBuyer) && currentBuyer.length && buyerSelect.choicesInstance) {
                                 buyerSelect.choicesInstance.setChoiceByValue(currentBuyer);
                             }
                         }
@@ -1682,7 +1791,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         // Re-initialize Choices.js after async data load
                         if (typeof window.Choices !== 'undefined') {
                             initChoicesElement(buyerSelect);
-                            if (currentBuyer) {
+                            if (Array.isArray(currentBuyer) && currentBuyer.length) {
                                 buyerSelect.choicesInstance.setChoiceByValue(currentBuyer);
                             }
                         }
@@ -1708,7 +1817,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 function initBuyerChoicesAfterAsync() {
                     if (typeof window.Choices !== 'undefined') {
                         initChoicesElement(buyerSelect);
-                        if (currentBuyer && buyerSelect.choicesInstance) {
+                        if (Array.isArray(currentBuyer) && currentBuyer.length && buyerSelect.choicesInstance) {
                             try { buyerSelect.choicesInstance.setChoiceByValue(currentBuyer); } catch (e) {}
                         }
                     }

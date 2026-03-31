@@ -158,8 +158,8 @@
                     $typeSuffix = ($slug === 'employee') ? 'Employee' : (($slug === 'ot') ? 'OT' : ucfirst($slug));
                     if (!$typeSuffix) $typeSuffix = 'N/A';
                     $courseDisplay = null;
-                    if ($slug === 'course' && !empty($courseMasterPk) && isset($otCourses) && $otCourses->isNotEmpty()) {
-                        $selectedCourse = $otCourses->firstWhere('pk', $courseMasterPk);
+                    if (in_array($slug, ['course', 'ot'], true) && isset($otCourses) && $otCourses->isNotEmpty()) {
+                        $selectedCourse = $otCourses->firstWhere('pk', $first->client_type_pk ?? null);
                         if ($selectedCourse) {
                             $courseDisplay = $selectedCourse->course_name;
                         }

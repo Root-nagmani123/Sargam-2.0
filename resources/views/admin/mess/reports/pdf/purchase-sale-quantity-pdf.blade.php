@@ -115,6 +115,12 @@
             {{ $viewType === 'item_wise' ? 'Item-wise' : ($viewType === 'subcategory_wise' ? 'Subcategory-wise' : 'Category-wise') }}
         </span>
         <span>
+            <strong>Store:</strong> {{ $selectedStoreName ?? 'All Stores' }}
+        </span>
+        <span>
+            <strong>Items:</strong> {{ $selectedItemNamesLabel ?? 'All Items' }}
+        </span>
+        <span>
             <strong>Generated on:</strong> {{ now()->format('d-m-Y H:i') }}
         </span>
     </div>

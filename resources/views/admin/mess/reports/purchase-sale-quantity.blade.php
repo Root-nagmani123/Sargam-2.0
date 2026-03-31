@@ -1,6 +1,12 @@
 @extends('admin.layouts.master')
 @section('title', 'Item Report')
 @section('setup_content')
+@php
+    /** @var array<int> $storeIds */
+    $storeIds = isset($storeIds) ? $storeIds : [];
+    /** @var array<int> $itemIds */
+    $itemIds = isset($itemIds) ? $itemIds : [];
+@endphp
 <div class="container-fluid purchase-sale-quantity-report py-3">
     <x-breadcrum title="Item Report"></x-breadcrum>
 
@@ -12,7 +18,7 @@
                     <span class="material-symbols-rounded text-primary fs-4">filter_list</span>
                     <h5 class="mb-0 fw-semibold text-dark">Filter Item Report</h5>
                 </div>
-                <span class="text-muted small">Refine results by date range, view type &amp; category</span>
+                <span class="text-muted small">Refine results by date range, view type, category, items &amp; store</span>
             </div>
         </div>
         <div class="card-body pt-0 pb-3">
@@ -44,19 +50,44 @@
                         </select>
                     </div>
                     <div class="col-12 col-sm-6 col-md-4 col-lg-3">
-                        <label class="form-label">Item</label>
-                        <select name="item_id" class="form-select choices-select" data-placeholder="All Items">
-                            <option value="">All Items</option>
+                        <label for="purchase_sale_item_id" class="form-label">Item</label>
+                        <select name="item_id[]"
+                                id="purchase_sale_item_id"
+                                class="form-select purchase-sale-item-multiselect"
+                                multiple
+                                data-placeholder="All Items">
                             @foreach($allItems as $it)
                                 <option
                                     value="{{ $it->id }}"
                                     data-category-id="{{ $it->category_id ?? '' }}"
-                                    {{ ($itemId ?? '') == $it->id ? 'selected' : '' }}
+                                    @selected(in_array((int) $it->id, $itemIds, true))
                                 >
                                     {{ $it->item_name ?? $it->subcategory_name ?? $it->name ?? '—' }}
                                 </option>
                             @endforeach
                         </select>
+                    </div>
+                </div>
+                <div class="row g-3 g-md-4">
+                    <div class="col-12 col-md-6 col-lg-4">
+                        <label for="purchase_sale_store_id" class="form-label">Store</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-body-secondary" id="store_id_addon">
+                                <span class="material-symbols-rounded" style="font-size: 1.1rem;" aria-hidden="true">storefront</span>
+                            </span>
+                            <select name="store_id[]"
+                                    id="purchase_sale_store_id"
+                                    class="form-select purchase-sale-store-multiselect"
+                                    multiple
+                                    data-placeholder="All Stores"
+                                    aria-describedby="store_id_addon">
+                                @foreach($stores ?? [] as $store)
+                                    <option value="{{ $store->id }}" @selected(in_array((int) $store->id, $storeIds, true))>
+                                        {{ $store->store_name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
                     </div>
                 </div>
             </form>
@@ -96,6 +127,12 @@
             <h4 class="fw-bold mb-1 text-primary">Item Report</h4>
             <p class="mb-0 text-body-secondary small">
                 From {{ date('d-M-Y', strtotime($fromDate)) }} to {{ date('d-M-Y', strtotime($toDate)) }}
+            </p>
+            <p class="mb-0 text-body-secondary small">
+                Store: {{ $selectedStoreName ?? 'All Stores' }}
+            </p>
+            <p class="mb-0 text-body-secondary small">
+                Items: {{ $selectedItemNamesLabel ?? 'All Items' }}
             </p>
         </div>
         <div class="card-body p-0">
@@ -189,8 +226,9 @@
     </div>
 </div>
 
-{{-- Choices.js (enhanced dropdowns) --}}
+{{-- Choices.js (enhanced dropdowns) + Tom Select (store multiselect) --}}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" rel="stylesheet" />
 
 <style>
@@ -213,60 +251,149 @@
     .purchase-sale-quantity-report .card-footer .btn {
         transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out;
     }
+
+    .purchase-sale-quantity-report .input-group .ts-wrapper {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .purchase-sale-quantity-report .input-group .ts-control {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+    }
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    var filterForm = document.getElementById('purchaseSaleQuantityFilterForm');
+    if (typeof window.TomSelect !== 'undefined') {
+        document.querySelectorAll('.purchase-sale-quantity-report select.purchase-sale-store-multiselect').forEach(function (el) {
+            if (el.dataset.tomselectInitialized === 'true') return;
+            var placeholder = el.getAttribute('data-placeholder') || 'Select';
+            new TomSelect(el, {
+                placeholder: placeholder,
+                maxItems: null,
+                maxOptions: 500,
+                plugins: ['remove_button', 'dropdown_input'],
+                sortField: { field: 'text', direction: 'asc' }
+            });
+            el.dataset.tomselectInitialized = 'true';
+        });
+    }
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
     var viewType = document.getElementById('viewType');
     var categoryIdWrap = document.getElementById('categoryIdWrap');
     var categorySelect = document.querySelector('select[name="category_id"]');
-    var itemSelectEl = document.querySelector('select[name="item_id"]');
-    var rebuildItemChoicesFn = null; // will be assigned once Choices + items are initialised
+    var itemSelectEl = document.getElementById('purchase_sale_item_id');
+    var originalItemOptions = null;
+
+    function parseOriginalItemOptionsFromDom() {
+        if (!itemSelectEl) return [];
+        return Array.from(itemSelectEl.querySelectorAll('option')).map(function (opt) {
+            return {
+                value: opt.value,
+                label: opt.textContent ? opt.textContent.trim() : '',
+                categoryId: opt.getAttribute('data-category-id') || ''
+            };
+        }).filter(function (o) { return o.value !== ''; });
+    }
+
+    function getSelectedCategoryIdForItemFilter() {
+        if (!categoryIdWrap || categoryIdWrap.style.display === 'none') return '';
+        return categorySelect ? String(categorySelect.value || '') : '';
+    }
+
+    function getFilteredItemOptionsList() {
+        var selectedCategoryId = getSelectedCategoryIdForItemFilter();
+        if (!originalItemOptions) return [];
+        return originalItemOptions.filter(function (opt) {
+            if (!selectedCategoryId) return true;
+            return String(opt.categoryId || '') === selectedCategoryId;
+        });
+    }
+
+    function syncItemSelectOptions(filteredList, preselectedValues) {
+        var set = new Set((preselectedValues || []).map(String));
+        itemSelectEl.innerHTML = '';
+        filteredList.forEach(function (o) {
+            var opt = document.createElement('option');
+            opt.value = o.value;
+            opt.textContent = o.label;
+            opt.setAttribute('data-category-id', o.categoryId);
+            if (set.has(String(o.value))) opt.selected = true;
+            itemSelectEl.appendChild(opt);
+        });
+    }
+
+    function initOrRebuildItemTomSelect(opts) {
+        opts = opts || {};
+        var forceClear = opts.clear === true;
+        if (!itemSelectEl || typeof window.TomSelect === 'undefined') return;
+
+        var prevSelected = [];
+        if (itemSelectEl.tomselect) {
+            if (!forceClear) {
+                prevSelected = itemSelectEl.tomselect.getValue();
+                if (!Array.isArray(prevSelected)) {
+                    prevSelected = prevSelected ? [String(prevSelected)] : [];
+                }
+            }
+            itemSelectEl.tomselect.destroy();
+        } else if (!forceClear) {
+            prevSelected = Array.from(itemSelectEl.selectedOptions).map(function (o) { return o.value; });
+        }
+
+        var filtered = getFilteredItemOptionsList();
+        var allowed = new Set(filtered.map(function (f) { return String(f.value); }));
+        var newSelected = forceClear ? [] : prevSelected.filter(function (v) { return allowed.has(String(v)); });
+
+        syncItemSelectOptions(filtered, newSelected);
+
+        new TomSelect(itemSelectEl, {
+            placeholder: itemSelectEl.getAttribute('data-placeholder') || 'All Items',
+            maxItems: null,
+            maxOptions: 500,
+            plugins: ['remove_button', 'dropdown_input'],
+            sortField: { field: 'text', direction: 'asc' }
+        });
+    }
+
+    if (itemSelectEl) {
+        originalItemOptions = parseOriginalItemOptionsFromDom();
+    }
 
     if (viewType && categoryIdWrap) {
         function toggleCategory() {
             var isCategoryWise = viewType.value === 'category_wise';
             categoryIdWrap.style.display = isCategoryWise ? 'block' : 'none';
-
-            // If view is not category_wise, clear category filter and show all items
-            if (!isCategoryWise && categorySelect) {
-                if (categorySelect.value) {
-                    categorySelect.value = '';
-                    if (typeof categorySelect.dispatchEvent === 'function') {
-                        // let any listeners (including Choices) react
-                        categorySelect.dispatchEvent(new Event('change'));
-                    }
-                }
-                // Reset item dropdown also
-                if (itemSelectEl) {
-                    itemSelectEl.value = '';
-                }
-                if (typeof rebuildItemChoicesFn === 'function') {
-                    rebuildItemChoicesFn();
-                }
+            if (!isCategoryWise && categorySelect && categorySelect.value) {
+                categorySelect.value = '';
+                categorySelect.dispatchEvent(new Event('change'));
             }
         }
         toggleCategory();
         viewType.addEventListener('change', function () {
+            var isCategoryWise = viewType.value === 'category_wise';
             toggleCategory();
-            // Requirement: View change => dependent filters (Category -> Item) reset
-            if (viewType.value === 'category_wise') {
+            if (isCategoryWise) {
                 if (categorySelect) {
                     categorySelect.value = '';
                     categorySelect.dispatchEvent(new Event('change'));
                 }
-                if (itemSelectEl) itemSelectEl.value = '';
-                if (typeof rebuildItemChoicesFn === 'function') rebuildItemChoicesFn();
+            } else {
+                if (categorySelect) categorySelect.value = '';
+                initOrRebuildItemTomSelect({ clear: true });
             }
         });
     }
 
     if (typeof window.Choices !== 'undefined') {
-        var choicesInstances = new Map();
-
         document
             .querySelectorAll('.purchase-sale-quantity-report select.choices-select')
             .forEach(function (el) {
@@ -274,95 +401,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 el.dataset.choices = 'initialized';
 
                 var placeholder = el.getAttribute('data-placeholder') || 'Select';
-                var isItemSelect = el.getAttribute('name') === 'item_id';
 
-                var instance = new Choices(el, {
+                new Choices(el, {
                     searchEnabled: true,
                     shouldSort: false,
-                    // For item dropdown we already have an explicit "All Items" option,
-                    // so disable Choices' own placeholder to avoid duplicate "All Items".
-                    placeholder: !isItemSelect,
-                    placeholderValue: isItemSelect ? '' : placeholder,
+                    placeholder: true,
+                    placeholderValue: placeholder,
                     itemSelectText: '',
                     allowHTML: false,
                     removeItemButton: false,
                 });
-
-                choicesInstances.set(el, instance);
             });
+    }
 
-        // Filter Item dropdown options based on selected category.
-        // Uses the original <option data-category-id="..."> values rendered by Blade.
-        if (itemSelectEl && choicesInstances.has(itemSelectEl)) {
-            var itemChoices = choicesInstances.get(itemSelectEl);
+    if (categorySelect) {
+        categorySelect.addEventListener('change', function () {
+            if (!categoryIdWrap || categoryIdWrap.style.display === 'none') return;
+            initOrRebuildItemTomSelect({ clear: true });
+        });
+    }
 
-            var originalItemOptions = Array.from(itemSelectEl.querySelectorAll('option')).map(function (opt) {
-                return {
-                    value: opt.value,
-                    label: opt.textContent ? opt.textContent.trim() : '',
-                    categoryId: opt.getAttribute('data-category-id') || '',
-                    selected: opt.selected
-                };
-            });
-
-            function rebuildItemChoices() {
-                var selectedCategoryId = categorySelect ? String(categorySelect.value || '') : '';
-
-                // Keep current selection if still valid after filtering.
-                var currentValue = itemSelectEl.value || '';
-
-                // Build filtered list, ensuring ONLY ONE "All Items" (empty value) entry
-                var filtered = [];
-                originalItemOptions.forEach(function (opt) {
-                    if (!opt.value) {
-                        // Only push the first empty option
-                        if (!filtered.some(function (f) { return !f.value; })) {
-                            filtered.push(opt);
-                        }
-                        return;
-                    }
-                    if (!selectedCategoryId) {
-                        filtered.push(opt);
-                    } else if (String(opt.categoryId || '') === selectedCategoryId) {
-                        filtered.push(opt);
-                    }
-                });
-
-                itemChoices.clearChoices();
-                itemChoices.setChoices(
-                    filtered.map(function (opt) {
-                        return {
-                            value: opt.value,
-                            label: opt.label,
-                            selected: opt.value === currentValue
-                        };
-                    }),
-                    'value',
-                    'label',
-                    true
-                );
-
-                // If current value got removed, reset to empty option
-                var stillExists = filtered.some(function (opt) { return opt.value === currentValue; });
-                if (!stillExists) {
-                    itemChoices.setChoiceByValue('');
-                }
-            }
-
-            // Expose for viewType toggle logic
-            rebuildItemChoicesFn = rebuildItemChoices;
-
-            // Run once on load (handles pre-selected category on page load)
-            rebuildItemChoices();
-
-            if (categorySelect) {
-                categorySelect.addEventListener('change', function() {
-                    // Requirement: when Category changes, reset Item dropdown to "All Items"
-                    if (itemSelectEl) itemSelectEl.value = '';
-                    rebuildItemChoices();
-                });
-            }
-        }
+    if (itemSelectEl && originalItemOptions) {
+        initOrRebuildItemTomSelect();
     }
 });
 
@@ -375,6 +435,7 @@ function printPurchaseSaleQuantity() {
 
     const title = 'Item Report - Purchase/Sale Quantity';
     const dateRange = '{{ "From " . date("d-F-Y", strtotime($fromDate)) . " To " . date("d-F-Y", strtotime($toDate)) }}';
+    const storeLabel = @json($selectedStoreName ? $selectedStoreName : 'All Stores');
 
     const printWindow = window.open('', '_blank');
     if (!printWindow) { window.print(); return; }
@@ -410,6 +471,8 @@ function printPurchaseSaleQuantity() {
               <div class="d-flex flex-wrap justify-content-between align-items-center report-meta">
                 <span><strong>${title}</strong></span>
                 <span>${dateRange}</span>
+                <span><strong>Store:</strong> ${storeLabel}</span>
+                <span><strong>Items:</strong> ${itemsLabel}</span>
                 <span><strong>Printed on:</strong> ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}</span>
               </div>
             </th>

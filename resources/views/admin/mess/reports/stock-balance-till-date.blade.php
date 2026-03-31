@@ -1,6 +1,10 @@
 @extends('admin.layouts.master')
 @section('title', 'Stock Balance as of Till Date')
 @section('setup_content')
+@php
+    /** @var array<int> $storeIds */
+    $storeIds = isset($storeIds) ? $storeIds : [];
+@endphp
 <div class="container-fluid stock-balance-report min-vh-100 d-flex flex-column">
     <x-breadcrum title="Stock Balance as of Till Date"></x-breadcrum>
     <!-- Header Section -->
@@ -34,14 +38,14 @@
                             <span class="input-group-text bg-body-secondary" id="store_id_addon">
                                 <span class="material-symbols-rounded" style="font-size: 20px;" aria-hidden="true">storefront</span>
                             </span>
-                            <select name="store_id"
+                            <select name="store_id[]"
                                     id="store_id"
-                                    class="form-select"
+                                    class="form-select stock-balance-store-multiselect"
+                                    multiple
                                     data-placeholder="All Stores"
                                     aria-describedby="store_id_addon">
-                                <option value="">All Stores</option>
                                 @foreach($stores as $store)
-                                    <option value="{{ $store->id }}" {{ $storeId == $store->id ? 'selected' : '' }}>
+                                    <option value="{{ $store->id }}" @selected(in_array((int) $store->id, $storeIds, true))>
                                         {{ $store->store_name }}
                                     </option>
                                 @endforeach
@@ -87,9 +91,7 @@
         <!-- Report Heading (Print Only) -->
         <div class="report-header text-center mb-4">
             <h4 class="fw-bold text-uppercase mb-1">Stock Balance as of Till Date</h4>
-            @if($selectedStoreName)
-                <h5 class="text-primary mb-1">Store Name: {{ $selectedStoreName }}</h5>
-            @endif
+            <h5 class="text-primary mb-1">Store: {{ $selectedStoreName ?? 'All Stores' }}</h5>
             <p class="mb-0 text-muted">As on: {{ date('d-M-Y', strtotime($tillDate)) }}</p>
         </div>
 
@@ -245,86 +247,26 @@
         color: #af2910;
     }
 
-    /* Choices.js – Bootstrap form-control appearance (keep Choices default structure for dropdown to work) */
-    .stock-balance-report .choices {
-        margin-bottom: 0;
-        font-size: 1rem;
-    }
-    .stock-balance-report .choices .choices__inner {
-        display: inline-block;
-        width: 100%;
-        min-height: 38px;
-        padding: 0.375rem 2.25rem 0.375rem 0.75rem;
-        font-size: 1rem;
-        font-weight: 400;
-        line-height: 1.5;
-        color: var(--bs-body-color);
-        background-color: var(--bs-body-bg);
-        border: 1px solid var(--bs-border-color);
-        border-radius: var(--bs-border-radius);
-    }
-    .stock-balance-report .choices.is-focused .choices__inner,
-    .stock-balance-report .choices.is-open .choices__inner {
-        border-color: #86b7fe;
-        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-    }
-    .stock-balance-report .choices[data-type*="select-one"] .choices__inner {
-        padding-bottom: 0.375rem;
-    }
-    .stock-balance-report .choices__list--single {
-        padding: 0;
-    }
-    .stock-balance-report .choices__list--single .choices__item {
-        padding: 0;
-    }
-    .stock-balance-report .choices[data-type*="select-one"] .choices__input {
-        padding: 0.375rem 0.75rem;
-        background-color: var(--bs-body-bg);
-    }
-    .stock-balance-report .choices__list--dropdown .choices__item,
-    .stock-balance-report .choices__list[aria-expanded] .choices__item {
-        padding: 0.375rem 0.75rem;
-    }
-    .stock-balance-report .choices__list--dropdown .choices__item--selectable.is-highlighted,
-    .stock-balance-report .choices__list[aria-expanded] .choices__item--selectable.is-highlighted {
-        background-color: var(--bs-primary-bg-subtle);
-        color: var(--bs-primary);
-    }
-    .stock-balance-report .choices__list--dropdown,
-    .stock-balance-report .choices__list[aria-expanded] {
-        border-color: var(--bs-border-color);
-        border-radius: var(--bs-border-radius);
-        box-shadow: var(--bs-box-shadow);
-        z-index: 1060;
-    }
 </style>
 
-{{-- Choices.js – default CSS required for dropdown; script below --}}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/styles/choices.min.css"/>
-<script src="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/scripts/choices.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css">
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 <script>
-    (function () {
-        document.addEventListener('DOMContentLoaded', function () {
-            if (typeof window.TomSelect === 'undefined') return;
-
-            document
-                .querySelectorAll('.stock-balance-report select')
-                .forEach(function (el) {
-                        if (el.dataset.tomselectInitialized === 'true') return;
-
-                    var placeholder = el.getAttribute('data-placeholder') || 'Select';
-
-                    new Choices(el, {
-                        shouldSort: false,
-                        placeholder: true,
-                        placeholderValue: placeholder,
-                        searchPlaceholderValue: 'Search...'
-                    });
-
-                    el.dataset.tomselectInitialized = 'true';
-                });
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof window.TomSelect === 'undefined') return;
+        document.querySelectorAll('.stock-balance-report select.stock-balance-store-multiselect').forEach(function (el) {
+            if (el.dataset.tomselectInitialized === 'true') return;
+            var placeholder = el.getAttribute('data-placeholder') || 'Select';
+            new TomSelect(el, {
+                placeholder: placeholder,
+                maxItems: null,
+                maxOptions: 500,
+                plugins: ['remove_button', 'dropdown_input'],
+                sortField: { field: 'text', direction: 'asc' }
+            });
+            el.dataset.tomselectInitialized = 'true';
         });
-    })();
+    });
 </script>
 <script>
 function printStockBalance() {
@@ -336,7 +278,7 @@ function printStockBalance() {
 
     const title     = 'Stock Balance as of Till Date';
     const dateLabel = @json('As on ' . date('d-F-Y', strtotime($tillDate)));
-    const storeName = @json($selectedStoreName ?? 'All Stores');
+    const storeName = @json($selectedStoreName ? $selectedStoreName : 'All Stores');
 
     // Build a new table so the header (with logos + meta + column headings)
     // lives inside <thead> and repeats on every printed page.

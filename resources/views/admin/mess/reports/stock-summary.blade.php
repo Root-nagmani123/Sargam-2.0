@@ -1,6 +1,10 @@
 @extends('admin.layouts.master')
 @section('title', 'Stock Summary Report')
 @section('setup_content')
+@php
+    /** @var array<int> $storeIds */
+    $storeIds = $storeIds ?? [];
+@endphp
 <div class="container-fluid stock-summary-report">
     <x-breadcrum title="Stock Summary Report"></x-breadcrum>
     <!-- Filters Section (Hide on Print) -->
@@ -26,17 +30,16 @@
                     </div>
                     <div class="col-md-3">
                         <label class="form-label fw-semibold text-uppercase mb-1 text-muted">Store Type</label>
-                        <select name="store_type" id="store_type" class="form-select" data-placeholder="Select Store Type">
-                            <option value="main" {{ $storeType == 'main' ? 'selected' : '' }}>Main Store</option>
-                            <option value="sub" {{ $storeType == 'sub' ? 'selected' : '' }}>Sub Store</option>
+                        <select name="store_type" id="store_type" class="form-select stock-summary-store-type" data-placeholder="Select Store Type">
+                            <option value="main" @selected($storeType == 'main')>Main Store</option>
+                            <option value="sub" @selected($storeType == 'sub')>Sub Store</option>
                         </select>
                     </div>
                     <div class="col-md-3" id="main_store_div" style="display: {{ $storeType == 'main' ? 'block' : 'none' }};">
                         <label class="form-label fw-semibold text-uppercase mb-1 text-muted">Main Store</label>
-                        <select name="main_store_id" class="form-select form-select-sm" data-placeholder="All Main Stores">
-                            <option value="">All Main Stores</option>
+                        <select name="main_store_id[]" id="stock_summary_main_store" class="form-select form-select-sm stock-summary-store-multiselect" multiple data-placeholder="All Main Stores">
                             @foreach($stores as $store)
-                                <option value="{{ $store->id }}" {{ $storeId == $store->id && $storeType == 'main' ? 'selected' : '' }}>
+                                <option value="{{ $store->id }}" @selected($storeType === 'main' && in_array((int) $store->id, $storeIds, true))>
                                     {{ $store->store_name }}
                                 </option>
                             @endforeach
@@ -44,10 +47,9 @@
                     </div>
                     <div class="col-md-3" id="sub_store_div" style="display: {{ $storeType == 'sub' ? 'block' : 'none' }};">
                         <label class="form-label small fw-semibold text-uppercase mb-1 text-muted">Sub Store</label>
-                        <select name="sub_store_id" class="form-select form-select-sm" data-placeholder="All Sub Stores">
-                            <option value="">All Sub Stores</option>
+                        <select name="sub_store_id[]" id="stock_summary_sub_store" class="form-select form-select-sm stock-summary-store-multiselect" multiple data-placeholder="All Sub Stores">
                             @foreach($subStores as $subStore)
-                                <option value="{{ $subStore->id }}" {{ $storeId == $subStore->id && $storeType == 'sub' ? 'selected' : '' }}>
+                                <option value="{{ $subStore->id }}" @selected($storeType === 'sub' && in_array((int) $subStore->id, $storeIds, true))>
                                     {{ $subStore->sub_store_name }}
                                 </option>
                             @endforeach
@@ -375,30 +377,15 @@ document.addEventListener('DOMContentLoaded', function () {
 </style>
 
 <script>
-    // Store Type Selection Handler
     document.addEventListener('DOMContentLoaded', function() {
-        const storeTypeSelect = document.getElementById('store_type');
-        const mainStoreDiv = document.getElementById('main_store_div');
-        const subStoreDiv = document.getElementById('sub_store_div');
-
-        if (storeTypeSelect) {
-            storeTypeSelect.addEventListener('change', function() {
-                if (this.value === 'main') {
-                    mainStoreDiv.style.display = 'block';
-                    subStoreDiv.style.display = 'none';
-                } else {
-                    mainStoreDiv.style.display = 'none';
-                    subStoreDiv.style.display = 'block';
-                }
-            });
-        }
-
         // Robust sticky header inside scroll container (works reliably with rowspan/colspan headers)
         try {
             const scroller = document.querySelector('.stock-summary-report .table-fit-single-view');
             const table = scroller ? scroller.querySelector('table.table-fit') : null;
             const thead = table ? table.querySelector('thead') : null;
-            if (!scroller || !table || !thead) return;
+            if (!scroller || !table || !thead) {
+                return;
+            }
 
             // Remove existing sticky header (if any)
             const old = scroller.querySelector('.ssr-sticky-head');
@@ -462,31 +449,81 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 </script>
 
-{{-- Tom Select (enhanced dropdowns) --}}
+{{-- Tom Select: store type (single); main/sub stores (multiselect; inactive side cleared + disabled so it is not submitted) --}}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css">
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         if (typeof window.TomSelect === 'undefined') return;
 
-        document
-            .querySelectorAll('.stock-summary-report select')
-            .forEach(function (el) {
-                if (el.tomselect) return;
+        var storeTypeSelect = document.getElementById('store_type');
+        var mainStoreDiv = document.getElementById('main_store_div');
+        var subStoreDiv = document.getElementById('sub_store_div');
 
-                var placeholder = el.getAttribute('data-placeholder') || 'Select';
-
-                new TomSelect(el, {
-                    create: false,
-                    allowEmptyOption: true,
-                    placeholder: placeholder,
-                    plugins: ['dropdown_input'],
-                    sortField: {
-                        field: 'text',
-                        direction: 'asc'
-                    }
-                });
+        function initStoreMultiselect(el) {
+            if (!el || el.tomselect) return;
+            var placeholder = el.getAttribute('data-placeholder') || 'Select';
+            new TomSelect(el, {
+                create: false,
+                maxItems: null,
+                placeholder: placeholder,
+                plugins: ['remove_button', 'dropdown_input'],
+                sortField: { field: 'text', direction: 'asc' }
             });
+        }
+
+        function syncStoreMultiselects() {
+            var isMain = storeTypeSelect && storeTypeSelect.value === 'main';
+            var mainSel = document.getElementById('stock_summary_main_store');
+            var subSel = document.getElementById('stock_summary_sub_store');
+            if (mainSel) {
+                mainSel.disabled = !isMain;
+                if (isMain) {
+                    initStoreMultiselect(mainSel);
+                    if (mainSel.tomselect) mainSel.tomselect.enable();
+                } else if (mainSel.tomselect) {
+                    try { mainSel.tomselect.clear(true); } catch (e) {}
+                    mainSel.tomselect.disable();
+                }
+            }
+            if (subSel) {
+                subSel.disabled = isMain;
+                if (!isMain) {
+                    initStoreMultiselect(subSel);
+                    if (subSel.tomselect) subSel.tomselect.enable();
+                } else if (subSel.tomselect) {
+                    try { subSel.tomselect.clear(true); } catch (e) {}
+                    subSel.tomselect.disable();
+                }
+            }
+        }
+
+        if (storeTypeSelect) {
+            storeTypeSelect.addEventListener('change', function () {
+                if (this.value === 'main') {
+                    if (mainStoreDiv) mainStoreDiv.style.display = 'block';
+                    if (subStoreDiv) subStoreDiv.style.display = 'none';
+                } else {
+                    if (mainStoreDiv) mainStoreDiv.style.display = 'none';
+                    if (subStoreDiv) subStoreDiv.style.display = 'block';
+                }
+                syncStoreMultiselects();
+            });
+        }
+
+        var typeEl = document.getElementById('store_type');
+        if (typeEl && !typeEl.tomselect) {
+            new TomSelect(typeEl, {
+                create: false,
+                maxItems: 1,
+                allowEmptyOption: false,
+                placeholder: typeEl.getAttribute('data-placeholder') || 'Select',
+                plugins: ['dropdown_input'],
+                sortField: { field: 'text', direction: 'asc' }
+            });
+        }
+
+        syncStoreMultiselects();
     });
 </script>
 @endsection

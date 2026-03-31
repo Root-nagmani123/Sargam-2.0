@@ -1,6 +1,10 @@
 @extends('admin.layouts.master')
 @section('title', 'Stock Purchase Details Report')
 @section('setup_content')
+@php
+    $selectedVendorIds = $selectedVendors->pluck('id')->map(fn ($id) => (int) $id)->all();
+    $selectedStoreIds = $selectedStores->pluck('id')->map(fn ($id) => (int) $id)->all();
+@endphp
 <div class="container-fluid stock-purchase-report">
     <x-breadcrum title="Stock Purchase Details Report"></x-breadcrum>
     <!-- Filters Section (Top - same pattern as other report pages) -->
@@ -25,19 +29,17 @@
                     </div>
                     <div class="col-md-3">
                         <label class="form-label small fw-semibold">Select Vendor Name</label>
-                        <select name="vendor_id" class="form-select form-select-sm rounded-1 choices-select" data-placeholder="All Vendors">
-                            <option value="">All Vendors</option>
+                        <select name="vendor_id[]" class="form-select form-select-sm rounded-1 choices-select" multiple data-placeholder="All Vendors">
                             @foreach($vendors as $vendor)
-                                <option value="{{ $vendor->id }}" {{ request('vendor_id') == $vendor->id ? 'selected' : '' }}>{{ $vendor->name }}</option>
+                                <option value="{{ $vendor->id }}" @selected(in_array((int) $vendor->id, $selectedVendorIds, true))>{{ $vendor->name }}</option>
                             @endforeach
                         </select>
                     </div>
                     <div class="col-md-3">
                         <label class="form-label small fw-semibold">Select Store Name</label>
-                        <select name="store_id" class="form-select form-select-sm rounded-1 choices-select" data-placeholder="All Stores">
-                            <option value="">All Stores</option>
+                        <select name="store_id[]" class="form-select form-select-sm rounded-1 choices-select" multiple data-placeholder="All Stores">
                             @foreach($stores as $store)
-                                <option value="{{ $store->id }}" {{ request('store_id') == $store->id ? 'selected' : '' }}>{{ $store->store_name }}</option>
+                                <option value="{{ $store->id }}" @selected(in_array((int) $store->id, $selectedStoreIds, true))>{{ $store->store_name }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -85,7 +87,11 @@
                         </div>
                         <div class="report-vendor-name fw-semibold mb-0 mt-2 text-center">
                             <span class="text-muted">Vendor:</span>
-                            <span class="ms-1">{{ $selectedVendor ? $selectedVendor->name : 'All Vendors' }}</span>
+                            <span class="ms-1">{{ $selectedVendors->isEmpty() ? 'All Vendors' : $selectedVendors->pluck('name')->implode(', ') }}</span>
+                        </div>
+                        <div class="report-store-name fw-semibold mb-0 mt-1 text-center small">
+                            <span class="text-muted">Store:</span>
+                            <span class="ms-1">{{ $selectedStores->isEmpty() ? 'All Stores' : $selectedStores->pluck('store_name')->implode(', ') }}</span>
                         </div>
                     </div>
 
@@ -185,9 +191,9 @@
 
                     new TomSelect(el, {
                         placeholder: placeholder,
-                        allowEmptyOption: true,
+                        maxItems: null,
                         maxOptions: 500,
-                        plugins: ['dropdown_input'],
+                        plugins: ['remove_button', 'dropdown_input'],
                         sortField: {
                             field: 'text',
                             direction: 'asc'
@@ -215,16 +221,19 @@ function printStockPurchaseTable() {
     var title = 'Stock Purchase Details';
     var dateRange = 'Stock Purchase Details Report Between {{ date('d-F-Y', strtotime($fromDate)) }} To {{ date('d-F-Y', strtotime($toDate)) }}';
     var vendorDetails = {!! json_encode(
-        $selectedVendor
-            ? trim(implode(' | ', array_filter([
-                'Name: ' . $selectedVendor->name,
-                !empty($selectedVendor->contact_person) ? 'Contact: ' . $selectedVendor->contact_person : null,
-                !empty($selectedVendor->phone) ? 'Phone: ' . $selectedVendor->phone : null,
-                !empty($selectedVendor->email) ? 'Email: ' . $selectedVendor->email : null,
-                !empty($selectedVendor->address) ? 'Address: ' . $selectedVendor->address : null,
-            ])))
-            : 'All Vendors'
+        $selectedVendors->isEmpty()
+            ? 'All Vendors'
+            : $selectedVendors->map(function ($v) {
+                return trim(implode(' | ', array_filter([
+                    'Name: ' . $v->name,
+                    !empty($v->contact_person) ? 'Contact: ' . $v->contact_person : null,
+                    !empty($v->phone) ? 'Phone: ' . $v->phone : null,
+                    !empty($v->email) ? 'Email: ' . $v->email : null,
+                    !empty($v->address) ? 'Address: ' . $v->address : null,
+                ])));
+            })->implode(' || ')
     ) !!};
+    var storeDetails = {!! json_encode($selectedStores->isEmpty() ? 'All Stores' : $selectedStores->pluck('store_name')->implode(', ')) !!};
 
     printWindow.document.open();
     printWindow.document.write(`<!doctype html>
@@ -316,6 +325,7 @@ function printStockPurchaseTable() {
             <div class="report-meta">
                 <span><strong>Period:</strong> ${dateRange}</span>
                 <span><strong>Vendor Details:</strong> ${vendorDetails}</span>
+                <span><strong>Store:</strong> ${storeDetails}</span>
                 <span><strong>Printed on:</strong> ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}</span>
             </div>
         </div>

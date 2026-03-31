@@ -123,7 +123,12 @@
             </div>
             <div class="meta-row">
                 @php
-                    $vendorName = $selectedVendor ? $selectedVendor->name : 'All Vendors';
+                    $vendorName = $selectedVendors->isEmpty()
+                        ? 'All Vendors'
+                        : $selectedVendors->pluck('name')->implode(', ');
+                    $storeName = $selectedStores->isEmpty()
+                        ? 'All Stores'
+                        : $selectedStores->pluck('store_name')->implode(', ');
                     $fromText = $fromLabel ?? 'Start';
                     $toText = $toLabel ?? 'End';
                 @endphp
@@ -134,6 +139,10 @@
                 <span>
                     <strong>Vendor:</strong>
                     {{ $vendorName }}
+                </span>
+                <span>
+                    <strong>Store:</strong>
+                    {{ $storeName }}
                 </span>
                 <span>
                     <strong>Generated on:</strong> {{ now()->format('d-m-Y H:i') }}

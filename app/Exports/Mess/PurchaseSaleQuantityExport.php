@@ -15,13 +15,23 @@ class PurchaseSaleQuantityExport implements FromCollection, WithHeadings, WithEv
     protected string $fromDate;
     protected string $toDate;
     protected string $viewType;
+    protected ?string $selectedStoreName;
+    protected ?string $selectedItemNamesLabel;
 
-    public function __construct(array $reportData, string $fromDate, string $toDate, string $viewType)
-    {
-        $this->reportData = $reportData;
-        $this->fromDate   = $fromDate;
-        $this->toDate     = $toDate;
-        $this->viewType   = $viewType;
+    public function __construct(
+        array $reportData,
+        string $fromDate,
+        string $toDate,
+        string $viewType,
+        ?string $selectedStoreName = null,
+        ?string $selectedItemNamesLabel = null
+    ) {
+        $this->reportData             = $reportData;
+        $this->fromDate               = $fromDate;
+        $this->toDate                 = $toDate;
+        $this->viewType               = $viewType;
+        $this->selectedStoreName      = $selectedStoreName;
+        $this->selectedItemNamesLabel = $selectedItemNamesLabel;
     }
 
     public function collection(): Collection
@@ -90,9 +100,15 @@ class PurchaseSaleQuantityExport implements FromCollection, WithHeadings, WithEv
                     'category_wise'    => 'Category-wise',
                     default            => 'Item-wise',
                 };
+                $storeLabel = ($this->selectedStoreName !== null && $this->selectedStoreName !== '')
+                    ? $this->selectedStoreName
+                    : 'All Stores';
+                $itemsLabel = ($this->selectedItemNamesLabel !== null && $this->selectedItemNamesLabel !== '')
+                    ? $this->selectedItemNamesLabel
+                    : 'All Items';
                 $sheet->setCellValue(
                     'A3',
-                    "From {$formattedFrom} To {$formattedTo} | View: {$viewLabel}"
+                    "From {$formattedFrom} To {$formattedTo} | View: {$viewLabel} | Store: {$storeLabel} | Items: {$itemsLabel}"
                 );
 
                 // Basic styling for header

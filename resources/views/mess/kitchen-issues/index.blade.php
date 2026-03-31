@@ -320,10 +320,33 @@
     width: 100% !important;
     min-width: 100% !important;
 }
+/* Niche open: search upar | Uper (flipped) open: search niche */
+.ts-wrapper.choices .choices__list--dropdown.is-active {
+    display: flex;
+    flex-direction: column;
+}
+.ts-wrapper.choices.is-flipped .choices__list--dropdown.is-active { flex-direction: column-reverse; }
+.ts-wrapper.choices .choices__list--dropdown.is-active .choices__list {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+.ts-wrapper.choices[data-type*="select-one"] .choices__list--dropdown .choices__input--cloned,
+.ts-wrapper.choices[data-type*="select-one"] .choices__list--dropdown .choices__input {
+    border-top: none !important;
+    border-bottom: 1px solid #ced4da !important;
+    margin-bottom: 0 !important;
+}
+.ts-wrapper.choices.is-flipped[data-type*="select-one"] .choices__list--dropdown .choices__input--cloned,
+.ts-wrapper.choices.is-flipped[data-type*="select-one"] .choices__list--dropdown .choices__input {
+    border-bottom: none !important;
+    border-top: 1px solid #ced4da !important;
+    margin-bottom: 0 !important;
+}
 .ts-wrapper.choices .choices__list--dropdown .choices__input--cloned {
     display: block !important;
     position: relative !important;
     opacity: 1 !important;
+    flex-shrink: 0;
     min-height: 34px;
     width: 100% !important;
 }
@@ -841,6 +864,53 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('Selling Voucher script loaded');
     console.log('Bootstrap available:', typeof bootstrap !== 'undefined');
 
+    function safeFocus(el) {
+        if (!el || typeof el.focus !== 'function') return;
+        try {
+            el.focus({ preventScroll: true });
+        } catch (e) {
+            try { el.focus(); } catch (e2) {}
+        }
+    }
+
+    // Keep modal scroll stable; don't toggle overflow classes on dropdown open/close.
+    function installModalScrollGuard(modalId) {
+        var modal = document.getElementById(modalId);
+        if (!modal) return;
+
+        var last = { winTop: 0, bodyTop: 0, has: false };
+        function capture() {
+            var body = modal.querySelector('.modal-body');
+            last.winTop = (typeof window !== 'undefined') ? (window.scrollY || window.pageYOffset || 0) : 0;
+            last.bodyTop = body ? body.scrollTop : 0;
+            last.has = true;
+        }
+        function restoreSoon() {
+            if (!last.has) return;
+            var body = modal.querySelector('.modal-body');
+            function restoreOnce() {
+                try { window.scrollTo(0, last.winTop); } catch (e) {}
+                if (body) body.scrollTop = last.bodyTop;
+            }
+            requestAnimationFrame(restoreOnce);
+            setTimeout(restoreOnce, 0);
+            setTimeout(restoreOnce, 50);
+            setTimeout(restoreOnce, 150);
+        }
+
+        modal.addEventListener('pointerdown', function() {
+            capture();
+            restoreSoon();
+        }, true);
+        modal.addEventListener('focusin', function() {
+            capture();
+            restoreSoon();
+        }, true);
+    }
+
+    installModalScrollGuard('addSellingVoucherModal');
+    installModalScrollGuard('editSellingVoucherModal');
+
     /** Sync modal class when a Choices root (.choices) opens/closes only — not on every list item highlight (avoids huge MutationObserver churn). */
     function initSellingVoucherModalChoicesOpenSync() {
         ['addSellingVoucherModal', 'editSellingVoucherModal'].forEach(function(modalId) {
@@ -866,7 +936,8 @@ document.addEventListener('DOMContentLoaded', function() {
             sync();
         });
     }
-    initSellingVoucherModalChoicesOpenSync();
+    // Disabled to prevent modal jump on dropdown open/close caused by overflow toggles.
+    // initSellingVoucherModalChoicesOpenSync();
 
     /**
      * Item rows: Choices list is position:absolute inside nested overflow/table contexts.
@@ -1048,7 +1119,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         input.style.visibility = 'visible';
                         input.style.opacity = '1';
                         input.value = '';
-                        input.focus();
+                        safeFocus(input);
                         try { input.setSelectionRange(0, 0); } catch (e) {}
                         input.scrollLeft = 0;
                     }
@@ -1095,7 +1166,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
                     if (input) {
                         input.value = '';
-                        input.focus();
+                        safeFocus(input);
                         try { input.setSelectionRange(0, 0); } catch (e) {}
                         input.scrollLeft = 0;
                     }
@@ -1250,7 +1321,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
                             if (input) {
                                 input.value = '';
-                                input.focus();
+                                safeFocus(input);
                                 try { input.setSelectionRange(0, 0); } catch (e) {}
                                 input.scrollLeft = 0;
                             }
@@ -1309,7 +1380,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
                             if (input) {
                                 input.value = '';
-                                input.focus();
+                                safeFocus(input);
                                 try { input.setSelectionRange(0, 0); } catch (e) {}
                                 input.scrollLeft = 0;
                             }
