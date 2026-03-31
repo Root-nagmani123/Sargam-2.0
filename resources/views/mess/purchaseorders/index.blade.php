@@ -357,6 +357,7 @@
     'actionColumnIndex' => 5,
     'infoLabel' => 'purchase orders'
 ])
+@include('mess.partials.modal-dropdown-stability')
 
 @push('scripts')
 <script>
@@ -398,17 +399,11 @@
 <style>
 /* Create PO: use nearly full viewport — one scroll area (header/footer fixed via modal-dialog-scrollable) */
 #createPurchaseOrderModal .modal-dialog {
-    max-height: calc(100vh - 0.5rem);
-    margin: 0.25rem auto;
-    width: auto;
-}
-@media (min-width: 1200px) {
-    #createPurchaseOrderModal .modal-xl {
-        max-width: min(1320px, 98vw);
-    }
+    max-height: calc(100dvh - 2rem);
+    margin: 1rem auto;
 }
 #createPurchaseOrderModal .modal-content {
-    max-height: calc(100vh - 0.5rem);
+    max-height: calc(100dvh - 2rem);
     display: flex;
     flex-direction: column;
 }
@@ -416,122 +411,182 @@
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
-    max-height: none;
+    max-height: calc(100dvh - 10rem);
 }
-#editPurchaseOrderModal .modal-dialog { max-height: calc(100vh - 2rem); margin: 1rem auto; }
-#editPurchaseOrderModal .modal-content { max-height: calc(100vh - 2rem); display: flex; flex-direction: column; }
-#editPurchaseOrderModal .modal-body { overflow-y: auto; max-height: calc(100vh - 10rem); }
-#viewPurchaseOrderModal .modal-dialog { max-height: calc(100vh - 2rem); margin: 1rem auto; }
-#viewPurchaseOrderModal .modal-content { max-height: calc(100vh - 2rem); display: flex; flex-direction: column; }
-#viewPurchaseOrderModal .modal-body { overflow-y: auto; max-height: calc(100vh - 10rem); }
+#editPurchaseOrderModal .modal-dialog { max-height: calc(100dvh - 2rem); margin: 1rem auto; }
+#editPurchaseOrderModal .modal-content { max-height: calc(100dvh - 2rem); display: flex; flex-direction: column; }
+#editPurchaseOrderModal .modal-body { overflow-y: auto; max-height: calc(100dvh - 10rem); }
+#viewPurchaseOrderModal .modal-dialog { max-height: calc(100dvh - 2rem); margin: 1rem auto; }
+#viewPurchaseOrderModal .modal-content { max-height: calc(100dvh - 2rem); display: flex; flex-direction: column; }
+#viewPurchaseOrderModal .modal-body { overflow-y: auto; max-height: calc(100dvh - 10rem); }
 
-/* Choices + modals: avoid clipping dropdowns */
-#createPurchaseOrderModal .modal-body,
-#editPurchaseOrderModal .modal-body {
-    position: relative;
-    z-index: 2;
+#createPurchaseOrderModal .modal-dialog,
+#editPurchaseOrderModal .modal-dialog,
+#viewPurchaseOrderModal .modal-dialog {
+    width: calc(100vw - 1rem);
+    max-width: min(var(--bs-modal-width), calc(100vw - 1rem));
 }
-#createPurchaseOrderModal:not(.po-choices-dropdown-open) .modal-body,
-#editPurchaseOrderModal:not(.po-choices-dropdown-open) .modal-body {
-    overflow-x: auto;
+@media (min-width: 576px) {
+    #createPurchaseOrderModal .modal-dialog,
+    #editPurchaseOrderModal .modal-dialog,
+    #viewPurchaseOrderModal .modal-dialog {
+        width: calc(100vw - 2rem);
+        max-width: min(var(--bs-modal-width), calc(100vw - 2rem));
+    }
 }
-#createPurchaseOrderModal.po-choices-dropdown-open .modal-dialog,
-#editPurchaseOrderModal.po-choices-dropdown-open .modal-dialog {
-    overflow: visible !important;
+
+/* Tom Select Dropdown Fix - Ensure dropdowns appear above everything */
+.ts-dropdown {
+    z-index: 10000 !important;
 }
-#createPurchaseOrderModal.po-choices-dropdown-open .modal-content,
-#createPurchaseOrderModal.po-choices-dropdown-open .modal-body,
-#editPurchaseOrderModal.po-choices-dropdown-open .modal-content,
-#editPurchaseOrderModal.po-choices-dropdown-open .modal-body {
-    overflow: visible !important;
-}
-/* When any Choices dropdown is open, clip guard even if JS class missed (scrollable modal overflow:hidden) */
-#createPurchaseOrderModal:has(.choices.is-open) .modal-dialog,
-#createPurchaseOrderModal:has(.choices.is-open) .modal-content,
-#createPurchaseOrderModal:has(.choices.is-open) .modal-body,
-#editPurchaseOrderModal:has(.choices.is-open) .modal-dialog,
-#editPurchaseOrderModal:has(.choices.is-open) .modal-content,
-#editPurchaseOrderModal:has(.choices.is-open) .modal-body {
-    overflow: visible !important;
-}
-#createPurchaseOrderModal:has(.choices.is-open) .modal-body,
-#editPurchaseOrderModal:has(.choices.is-open) .modal-body {
-    position: relative;
-    z-index: 6;
-}
-#createPurchaseOrderModal:has(.choices.is-open) .modal-footer,
-#editPurchaseOrderModal:has(.choices.is-open) .modal-footer {
-    position: relative;
+
+.ts-control {
     z-index: 1;
 }
-#createPurchaseOrderModal:has(.choices.is-open) .table-responsive,
-#editPurchaseOrderModal:has(.choices.is-open) .table-responsive {
-    overflow: visible !important;
+
+/* Performance optimizations for Tom Select */
+.ts-dropdown .option {
+    will-change: auto;
 }
-.po-item-details-table-wrap {
-    overflow: visible;
-    width: 100%;
+
+.ts-dropdown-content {
+    contain: layout style paint;
 }
-.po-item-details-table-wrap .table-responsive {
-    overflow: visible !important;
+
+/* Keep table scroll stable inside modals (Tom Select uses dropdownParent: body) */
+#createPurchaseOrderModal .modal-body .table-responsive,
+#editPurchaseOrderModal .modal-body .table-responsive {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
 }
-#createPurchaseOrderModal .choices,
-#editPurchaseOrderModal .choices {
-    --choices-z-index: 6200;
+
+#createPurchaseOrderModal .card-body,
+#editPurchaseOrderModal .card-body {
+    overflow: hidden;
 }
-.po-item-details-table-wrap tr:has(.choices.is-open) {
-    position: relative;
-    z-index: 40;
+
+
+/* ========================================
+   Choices.js-like Styling for Tom Select
+   ======================================== */
+
+/* Control (Input Container) - Choices.js style */
+.ts-wrapper .ts-control {
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 4px 8px;
+    min-height: 38px;
+    box-shadow: none;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 }
-.ts-dropdown,
-.choices__list--dropdown.is-active {
-    z-index: 6200 !important;
+
+.ts-wrapper.single .ts-control {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23333' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 16px 12px;
+    padding-right: 2.25rem;
 }
-.choices {
-    position: relative;
+
+/* Focus state - Choices.js style */
+.ts-wrapper.focus .ts-control {
+    border-color: #80bdff;
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
 }
-.choices.is-open {
-    z-index: 6205;
+
+/* Dropdown container - Choices.js style */
+.ts-dropdown {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    background-color: #fff;
+    margin-top: 4px;
 }
-#createPurchaseOrderModal .choices.is-open,
-#editPurchaseOrderModal .choices.is-open {
-    z-index: 9040;
-}
-.modal .choices__list--dropdown,
-.modal .choices__list--dropdown.is-active,
-.modal .choices__list[aria-expanded] {
-    z-index: 9050 !important;
-}
-.ts-wrapper.choices {
-    margin-bottom: 0;
-}
-.ts-wrapper.choices .choices__inner {
-    min-height: calc(1.5em + 0.75rem + 2px);
-    padding: 0.375rem 0.75rem;
-    border: 1px solid var(--bs-border-color, #ced4da);
-    border-radius: var(--bs-border-radius, 0.375rem);
-    background-color: var(--bs-body-bg, #fff);
-    font-size: 1rem;
-}
-.po-item-details-table-wrap .ts-wrapper.choices .choices__inner {
-    min-height: calc(1.5em + 0.5rem + 2px);
-    padding: 0.25rem 0.5rem;
-    font-size: 0.875rem;
-    border-radius: var(--bs-border-radius-sm, 0.25rem);
-}
-.ts-wrapper.choices.is-open .choices__inner,
-.ts-wrapper.choices.is-focused .choices__inner {
-    border-color: var(--bs-border-color-translucent);
-    box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb, 13, 110, 253), 0.25);
-}
-.ts-wrapper.choices[data-type*="select-one"] .choices__list--single {
+
+/* Search input inside dropdown - Choices.js style */
+.ts-dropdown .ts-dropdown-content {
     padding: 0;
 }
-.ts-wrapper.choices[data-type*="select-one"] .choices__input--cloned {
-    display: block !important;
-    width: 100% !important;
-    min-width: 100% !important;
-    min-height: 34px;
+
+.ts-control > input {
+    color: #333;
+    font-size: 14px;
+    padding: 4px 0;
+}
+
+/* Dropdown input (search field) - Choices.js style */
+.ts-dropdown-content input {
+    border: 1px solid #ddd !important;
+    border-radius: 4px;
+    padding: 8px 12px !important;
+    margin: 8px 8px 4px 8px;
+    width: calc(100% - 16px) !important;
+    font-size: 14px;
+    background-color: #f9f9f9;
+    box-sizing: border-box;
+}
+
+.ts-dropdown-content input:focus {
+    outline: none;
+    border-color: #80bdff !important;
+    background-color: #fff;
+}
+
+/* Options list - Choices.js style */
+.ts-dropdown .option {
+    padding: 10px 12px;
+    font-size: 14px;
+    color: #333;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background-color 0.15s ease;
+    background-color: transparent;
+}
+
+.ts-dropdown .option:last-child {
+    border-bottom: none;
+}
+
+/* Option hover state - Choices.js style */
+.ts-dropdown .option:hover {
+    background-color: #f5f5f5;
+    color: #333;
+}
+
+/* Prevent default active state highlighting */
+.ts-dropdown .option.active {
+    background-color: transparent;
+    color: #333;
+}
+
+/* Only show active state on hover */
+.ts-dropdown .option.active:hover {
+    background-color: #f5f5f5;
+    color: #333;
+}
+
+/* Selected option highlight - Choices.js style */
+.ts-dropdown .option.selected {
+    background-color: #e9ecef;
+    color: #333;
+}
+
+/* Aria-selected ko bhi visually normal rakho (auto selected highlight hide) */
+.ts-dropdown .option[aria-selected="true"] {
+    background-color: transparent;
+    color: #333;
+}
+
+/* No results message - Choices.js style */
+.ts-dropdown .no-results {
+    padding: 12px;
+    color: #999;
+    font-size: 14px;
+    text-align: center;
+    background-color: #f9f9f9;
 }
 .po-item-select + .choices .choices__inner {
     min-height: calc(1.5em + 0.5rem + 2px);
@@ -557,8 +612,8 @@
     }
 </style>
 <div class="modal fade" id="createPurchaseOrderModal" tabindex="-1" aria-labelledby="createPurchaseOrderModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-fullscreen-xl-down modal-xl modal-dialog-scrollable modal-dialog-centered">
-        <div class="modal-content border-0 shadow rounded-4 h-100">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-lg-down modal-dialog-centered">
+        <div class="modal-content">
             <form method="POST" action="{{ route('admin.mess.purchaseorders.store') }}" id="createPOForm" enctype="multipart/form-data">
                 @csrf
                 <div class="modal-header border-0 border-bottom bg-body-tertiary py-3 px-4">
@@ -732,8 +787,8 @@
 
 {{-- Edit Purchase Order Modal --}}
 <div class="modal fade" id="editPurchaseOrderModal" tabindex="-1" aria-labelledby="editPurchaseOrderModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
-        <div class="modal-content border-0 shadow rounded-4">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-lg-down modal-dialog-centered">
+        <div class="modal-content">
             <form method="POST" id="editPOForm" action="" enctype="multipart/form-data">
                 @csrf
                 @method('PUT')
@@ -1027,188 +1082,129 @@
         items: []
     };
 
-    function initPoModalChoicesOpenClass() {
-        ['createPurchaseOrderModal', 'editPurchaseOrderModal'].forEach(function (mid) {
-            var modal = document.getElementById(mid);
-            if (!modal) return;
-            modal.addEventListener('showDropdown', function () {
-                modal.classList.add('po-choices-dropdown-open');
-            }, true);
-            modal.addEventListener('hideDropdown', function () {
-                modal.classList.remove('po-choices-dropdown-open');
-            }, true);
-            modal.addEventListener('hidden.bs.modal', function () {
-                modal.classList.remove('po-choices-dropdown-open');
-            });
-        });
-    }
-
-    function createBlankSearchConfig(extra) {
-        return Object.assign({
-            onInitialize: function () {
-                this.activeOption = null;
-            },
-            onDropdownOpen: function (dropdown) {
-                var self = this;
-                function clearInputAndCursor() {
-                    var input = (dropdown && dropdown.querySelector('input.choices__input--cloned')) ||
-                        (dropdown && dropdown.querySelector('input')) ||
-                        self.control_input;
-                    if (typeof self.setTextboxValue === 'function') self.setTextboxValue('');
-                    if (input) {
-                        input.value = '';
-                        input.focus();
-                        try { input.setSelectionRange(0, 0); } catch (e) {}
-                        input.scrollLeft = 0;
-                    }
-                }
-                if (self.settings && self.settings.clearOnOpen) {
-                    self.clear();
-                }
-                clearInputAndCursor();
-                setTimeout(clearInputAndCursor, 0);
-            }
-        }, extra || {});
-    }
-
-    function createPoChoicesInstance(selectEl, settings) {
-        if (!selectEl || typeof window.Choices === 'undefined') return null;
-        if (selectEl.choicesInstance) {
-            selectEl.choicesInstance.destroy();
-        }
-        settings = settings || {};
-        var isMulti = !!selectEl.multiple;
-        var userChoicesCallbackOnInit = settings.callbackOnInit;
-        var choiceConfig = {
-            allowHTML: false,
-            itemSelectText: '',
-            shouldSort: false,
-            searchEnabled: settings.searchEnabled !== false,
-            searchChoices: settings.searchChoices !== false,
-            searchFloor: typeof settings.searchFloor === 'number' ? settings.searchFloor : 0,
-            searchResultLimit: typeof settings.maxOptions === 'number' ? settings.maxOptions : -1,
-            removeItemButton: isMulti || settings.removeItemButton === true,
-            placeholder: true,
-            placeholderValue: settings.placeholder || (selectEl.getAttribute('placeholder') || ''),
-            searchPlaceholderValue: '',
-            callbackOnInit: function () {
-                var el = this.passedElement && this.passedElement.element;
-                if (el) {
-                    var modal = el.closest('.modal');
-                    if (modal) {
-                        el.addEventListener('showDropdown', function () {
-                            modal.classList.add('po-choices-dropdown-open');
-                        });
-                        el.addEventListener('hideDropdown', function () {
-                            window.setTimeout(function () {
-                                if (!modal.querySelector('.choices.is-open')) {
-                                    modal.classList.remove('po-choices-dropdown-open');
-                                }
-                            }, 0);
-                        });
-                    }
-                }
-                if (typeof userChoicesCallbackOnInit === 'function') {
-                    userChoicesCallbackOnInit.call(this);
-                }
-            }
-        };
-        var choices = new window.Choices(selectEl, choiceConfig);
-        var api = {
-            _choices: choices,
-            selectEl: selectEl,
-            settings: settings,
-            input: null,
-            control_input: null,
-            getValue: function () {
-                if (!this.selectEl) return '';
-                if (this.selectEl.multiple) {
-                    return Array.from(this.selectEl.selectedOptions).map(function (o) { return o.value; }).filter(Boolean);
-                }
-                return this.selectEl.value || '';
-            },
-            setValue: function (v) {
-                this._choices.removeActiveItems();
-                if (this.selectEl && this.selectEl.multiple) {
-                    var arr = Array.isArray(v) ? v : (v !== '' && v != null ? [String(v)] : []);
-                    arr.forEach(function (id) {
-                        try { this._choices.setChoiceByValue(String(id)); } catch (e) {}
-                    }.bind(this));
-                } else {
-                    var value = (v === null || typeof v === 'undefined') ? '' : String(v);
-                    if (value !== '') {
-                        try { this._choices.setChoiceByValue(value); } catch (e) {}
-                    }
-                }
-                this.syncItems();
-            },
-            clear: function () {
-                this._choices.removeActiveItems();
-                this.syncItems();
-            },
-            clearOptions: function () {
-                this._choices.clearChoices();
-            },
-            addOption: function (opt) {
-                if (!opt) return;
-                var val = (opt.value === null || typeof opt.value === 'undefined') ? '' : String(opt.value);
-                var txt = opt.text != null ? String(opt.text) : val;
-                this._choices.setChoices([{ value: val, label: txt, selected: false, disabled: val === '' }], 'value', 'label', false);
-            },
-            destroy: function () {
-                if (this._choices) {
-                    try { this._choices.destroy(); } catch (e) {}
-                }
-                if (this.selectEl) {
-                    this.selectEl.choicesInstance = null;
-                    this.selectEl.tomselect = null;
-                }
-            },
-            setTextboxValue: function (v) {
-                if (this.control_input) this.control_input.value = v || '';
-            },
-            syncItems: function () {
-                var v = this.getValue();
-                if (Array.isArray(v)) {
-                    this.items = v.map(String);
-                } else {
-                    this.items = (v === '' || v === null || typeof v === 'undefined') ? [] : [String(v)];
-                }
-            }
-        };
-        var wrapper = choices.containerOuter ? choices.containerOuter.element : null;
-        api.control_input = wrapper ? wrapper.querySelector('input.choices__input--cloned') : null;
-        api.input = api.control_input || wrapper;
-        if (wrapper && wrapper.classList) wrapper.classList.add('ts-wrapper', 'choices');
-        if (choices.dropdown && choices.dropdown.element && choices.dropdown.element.classList) {
-            choices.dropdown.element.classList.add('ts-dropdown');
-        }
-        api.syncItems();
-        selectEl.addEventListener('change', function () { api.syncItems(); });
-        selectEl.addEventListener('showDropdown', function () {
-            if (typeof settings.onDropdownOpen === 'function') {
-                settings.onDropdownOpen.call(api, choices.dropdown ? choices.dropdown.element : null);
-            }
-        });
-        if (typeof settings.onInitialize === 'function') settings.onInitialize.call(api);
-        selectEl.choicesInstance = api;
-        selectEl.tomselect = api;
-        return api;
-    }
-
-    function initChoicesSingle(element, options) {
+    // Initialize Tom Select for a single element
+    function initTomSelect(element, options = {}) {
         if (!element) return null;
-        var settings = Object.assign({}, createBlankSearchConfig({
-            clearOnOpen: element.classList.contains('js-filter-select')
-        }), options || {});
+        if (element.tomselect) {
+            element.tomselect.destroy();
+        }
         try {
-            return createPoChoicesInstance(element, settings);
-        } catch (err) {
-            console.error('Choices initialization failed:', err);
+            const defaultOptions = {
+                allowEmptyOption: true,
+                create: false,
+                dropdownParent: 'body',
+                maxOptions: null,
+                closeAfterSelect: true,
+                hideSelected: false,
+                highlight: false, // Disable auto-highlighting first item
+                // Searchable dropdown input (is par hi typing se filter hota hai)
+                controlInput: '<input>',
+                searchField: ['text'],
+                openOnFocus: true,
+                selectOnTab: false, // Changed to false to prevent accidental selection
+                render: {
+                    no_results: function(data, escape) {
+                        return '<div class="no-results">No results found for "' + escape(data.input) + '"</div>';
+                    }
+                },
+                onInitialize: function() {
+                    // Remove any active option on initialize
+                    this.activeOption = null;
+                },
+                onDropdownOpen: function(dropdown) {
+                    // Dropdown ke andar jo actual search input hai usko pakdo
+                    const searchInput = dropdown.querySelector('.ts-dropdown-content input') || this.control_input;
+
+                    // Kis original <select> par ye dropdown laga hai
+                    const originalSelect = this.input || this.original_input || this.select;
+                    const modalEl = originalSelect && originalSelect.closest ? originalSelect.closest('.modal') : null;
+                    const modalBody = modalEl ? modalEl.querySelector('.modal-body') : null;
+                    const helper = window.MessModalDropdownStability;
+                    this._modalDropdownState = helper && modalEl ? helper.onOpen(modalEl) : null;
+                    if (!this._modalDropdownState && modalBody) this._modalDropdownState = { scrollTop: modalBody.scrollTop };
+                    // Filters (Vendor/Store) + Item Name dropdowns par selection clear rakhni hai
+                    const shouldClearOnOpen =
+                        originalSelect &&
+                        originalSelect.classList &&
+                        (originalSelect.classList.contains('js-filter-select') ||
+                         originalSelect.classList.contains('js-item-select'));
+                    if (shouldClearOnOpen) {
+                        this.clear(true);
+                    }
+
+                    // Clear any previous search text so box is blank
+                    if (searchInput) {
+                        searchInput.value = '';
+                    }
+                    if (typeof this.setTextboxValue === 'function') {
+                        this.setTextboxValue('');
+                    }
+                    if (typeof this.onSearchChange === 'function') {
+                        this.onSearchChange('');
+                    }
+                    if (typeof this.refreshOptions === 'function') {
+                        this.refreshOptions(false);
+                    }
+
+                    // Cursor ko hamesha input ke starting me le jao
+                    if (searchInput) {
+                        setTimeout(() => {
+                            if (helper && modalEl) {
+                                helper.keepScroll(modalEl, this._modalDropdownState);
+                            } else if (modalBody && this._modalDropdownState && typeof this._modalDropdownState.scrollTop === 'number') {
+                                modalBody.scrollTop = this._modalDropdownState.scrollTop;
+                            }
+                            searchInput.focus();
+                            try {
+                                searchInput.setSelectionRange(0, 0);
+                            } catch (e) {}
+                            searchInput.scrollLeft = 0;
+                        }, 0);
+                    }
+                },
+                onDropdownClose: function() {
+                    const originalSelect = this.input || this.original_input || this.select;
+                    const modalEl = originalSelect && originalSelect.closest ? originalSelect.closest('.modal') : null;
+                    const modalBody = modalEl ? modalEl.querySelector('.modal-body') : null;
+                    const helper = window.MessModalDropdownStability;
+                    if (helper && modalEl) {
+                        helper.onClose(modalEl, this._modalDropdownState);
+                    } else if (modalBody && this._modalDropdownState && typeof this._modalDropdownState.scrollTop === 'number') {
+                        modalBody.scrollTop = this._modalDropdownState.scrollTop;
+                    }
+                    this._modalDropdownState = null;
+                },
+                onFocus: function() {
+                    // Position cursor at start when field is focused
+                    const input = this.control_input;
+                    if (input) {
+                        setTimeout(() => {
+                            input.setSelectionRange(0, 0);
+                            input.scrollLeft = 0;
+                        }, 0);
+                    }
+                },
+                onType: function(str) {
+                    // Keep default keyboard highlight behavior for arrow navigation
+                    void str;
+                },
+                ...options
+            };
+            return new TomSelect(element, defaultOptions);
+        } catch (error) {
+            console.error('Tom Select initialization failed:', error);
             return null;
         }
     }
 
+    // Destroy Tom Select instance
+    function destroyTomSelect(element) {
+        if (element && element.tomselect) {
+            element.tomselect.destroy();
+        }
+    }
+
+    // Initialize filter dropdowns
     function initFilterDropdowns() {
         var filterVendor = document.querySelector('form[method="GET"] select[name="vendor_id[]"]');
         var filterStore = document.querySelector('form[method="GET"] select[name="store_id[]"]');
