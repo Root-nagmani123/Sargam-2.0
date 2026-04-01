@@ -5,11 +5,31 @@
     $vendorLine = $selectedVendors->isEmpty()
         ? 'All Vendors'
         : $selectedVendors->pluck('name')->implode(', ');
+    $vendorDetails = $selectedVendors->isEmpty()
+        ? 'All Vendors'
+        : $selectedVendors->map(function ($v) {
+            return trim(implode(' | ', array_filter([
+                'Name: ' . $v->name,
+                !empty($v->contact_person) ? 'Contact: ' . $v->contact_person : null,
+                !empty($v->phone) ? 'Phone: ' . $v->phone : null,
+                !empty($v->email) ? 'Email: ' . $v->email : null,
+                !empty($v->address) ? 'Address: ' . $v->address : null,
+            ])));
+        })->implode(' || ');
     $storeDetails = $selectedStores->isEmpty()
         ? 'All Stores'
         : $selectedStores->pluck('store_name')->implode(', ');
-    $emblemSrc = $emblemSrc ?? 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
-    $lbsnaaLogoSrc = $lbsnaaLogoSrc ?? 'https://www.lbsnaa.gov.in/admin_assets/images/logo.png';
+    $emblemSrc = 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
+    $lbsnaaLogoSrc = 'https://www.lbsnaa.gov.in/admin_assets/images/logo.png';
+
+    // DOMPDF often blocks remote images; use embedded local logo when available.
+    $localLogoPath = public_path('admin_assets/images/logos/logo.png');
+    if (is_file($localLogoPath) && is_readable($localLogoPath)) {
+        $localLogoSvg = @file_get_contents($localLogoPath);
+        if ($localLogoSvg !== false) {
+            $lbsnaaLogoSrc = 'data:image/svg+xml;base64,' . base64_encode($localLogoSvg);
+        }
+    }
 @endphp
 <!doctype html>
 <html lang="en">
@@ -236,22 +256,7 @@
         </div>
 
         <div class="report-meta-print">
-            @if($selectedVendors->isEmpty())
-                <div class="meta-line"><strong>Vendor Details:</strong> All Vendors</div>
-            @else
-                @foreach($selectedVendors as $i => $v)
-                    @php
-                        $line = trim(implode(' | ', array_filter([
-                            'Name: ' . $v->name,
-                            !empty($v->contact_person) ? 'Contact: ' . $v->contact_person : null,
-                            !empty($v->phone) ? 'Phone: ' . $v->phone : null,
-                            !empty($v->email) ? 'Email: ' . $v->email : null,
-                            !empty($v->address) ? 'Address: ' . $v->address : null,
-                        ])));
-                    @endphp
-                    <div class="meta-line"><strong>Vendor {{ $i + 1 }}:</strong> {{ $line }}</div>
-                @endforeach
-            @endif
+            <div class="meta-line"><strong>Vendor Details:</strong> {{ $vendorDetails }}</div>
             <div class="meta-line"><strong>Store:</strong> {{ $storeDetails }}</div>
             <div class="meta-line"><strong>Generated on:</strong> {{ now()->format('d-m-Y H:i') }}</div>
         </div>

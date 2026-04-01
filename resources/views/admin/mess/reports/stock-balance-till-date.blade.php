@@ -89,17 +89,6 @@
                     </div>
                 </div>
             </form>
-            <div class="mt-3 pt-2 border-top border-body-secondary border-opacity-25 d-flex flex-wrap align-items-center gap-2">
-                <span class="small text-uppercase fw-semibold text-body-secondary">Current selection</span>
-                <span class="badge text-bg-primary fw-normal rounded-pill px-3 py-2">
-                    <span class="material-symbols-rounded icon-18 align-text-bottom me-1" aria-hidden="true">store</span>
-                    {{ $selectedStoreName ?: 'All Stores' }}
-                </span>
-                <span class="badge text-bg-body-secondary text-body-emphasis fw-normal rounded-pill px-3 py-2 border border-body-secondary border-opacity-50">
-                    <span class="material-symbols-rounded icon-18 align-text-bottom me-1" aria-hidden="true">event</span>
-                    Till: {{ date('d-F-Y', strtotime($tillDate)) }}
-                </span>
-            </div>
         </div>
     </div>
 
@@ -219,12 +208,6 @@
 
     .stock-balance-report .card-header {
         border-bottom: 1px solid #edf1f5;
-    }
-
-    .stock-balance-report .icon-18 {
-        font-size: 18px;
-        line-height: 1;
-        vertical-align: middle;
     }
 
     @media print {

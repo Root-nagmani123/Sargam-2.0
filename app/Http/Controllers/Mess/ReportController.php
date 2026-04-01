@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Mess;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Models\Mess\Inventory;
 use App\Models\Mess\Store;
 use App\Models\Mess\SubStore;
 use App\Models\Mess\ItemCategory;
@@ -528,8 +529,6 @@ class ReportController extends Controller
             'toDate'          => $queryData['toDate'],
             'selectedVendors' => $queryData['selectedVendors'],
             'selectedStores'  => $queryData['selectedStores'],
-            'emblemSrc'       => $this->messPdfIndiaEmblemForDompdf(),
-            'lbsnaaLogoSrc'   => $this->messPdfLbsnaaLogoForDompdf(),
         ];
 
         $pdf = Pdf::loadView('admin.mess.reports.pdf.stock-purchase-details-pdf', $data)
@@ -815,8 +814,6 @@ class ReportController extends Controller
             'toDateFormatted' => $toDateFormatted,
             'otCourses' => $report['otCourses'],
             'grandTotal' => (float) $report['grandTotal'],
-            'emblemSrc' => $this->messPdfIndiaEmblemForDompdf(),
-            'lbsnaaLogoSrc' => $this->messPdfLbsnaaLogoForDompdf(),
         ];
 
         $pdf = Pdf::loadView('admin.mess.reports.pdf.category-wise-print-slip-pdf', $data)
@@ -866,8 +863,6 @@ class ReportController extends Controller
             'toDateFormatted' => $toDateFormatted,
             'otCourses' => $report['otCourses'],
             'grandTotal' => (float) $report['grandTotal'],
-            'emblemSrc' => $this->messPdfIndiaEmblemForDompdf(),
-            'lbsnaaLogoSrc' => $this->messPdfLbsnaaLogoForDompdf(),
         ]);
     }
 
@@ -1711,11 +1706,6 @@ class ReportController extends Controller
             return [];
         }
         $tillDate = $tillDate ?? now()->format('Y-m-d');
-        $storeIds = is_array($storeId)
-            ? array_values(array_filter(array_map('intval', $storeId), static fn (int $id) => $id > 0))
-            : (($storeId !== null && $storeId !== '') ? [(int) $storeId] : []);
-        $hasStoreFilter = $storeIds !== [];
-
         $items = ItemSubcategory::where('status', 'active')
             ->whereNotNull('alert_quantity')
             ->orderBy('name')
@@ -1723,10 +1713,10 @@ class ReportController extends Controller
         $out = [];
         foreach ($items as $item) {
             $totalPurchased = PurchaseOrderItem::where('item_subcategory_id', $item->id)
-                ->whereHas('purchaseOrder', function ($q) use ($tillDate, $hasStoreFilter, $storeIds) {
+                ->whereHas('purchaseOrder', function ($q) use ($tillDate, $storeId) {
                     $q->where('status', 'approved')->whereDate('po_date', '<=', $tillDate);
-                    if ($hasStoreFilter) {
-                        $q->whereIn('store_id', $storeIds);
+                    if ($storeId) {
+                        $q->where('store_id', $storeId);
                     }
                 })
                 ->sum('quantity');
@@ -1736,7 +1726,7 @@ class ReportController extends Controller
                 ->where('kim.kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
                 ->where('kim.store_type', 'store')
                 ->whereDate('kim.issue_date', '<=', $tillDate)
-                ->when($hasStoreFilter, fn ($q) => $q->whereIn('kim.store_id', $storeIds))
+                ->when($storeId, fn ($q) => $q->where('kim.store_id', $storeId))
                 ->selectRaw('SUM(kii.quantity - COALESCE(kii.return_quantity, 0)) as net')
                 ->value('net') ?? 0;
             $totalIssuedSv = \DB::table('sv_date_range_report_items as svi')
@@ -1744,7 +1734,7 @@ class ReportController extends Controller
                 ->where('svi.item_subcategory_id', $item->id)
                 ->where('svr.store_type', 'store')
                 ->whereDate('svr.issue_date', '<=', $tillDate)
-                ->when($hasStoreFilter, fn ($q) => $q->whereIn('svr.store_id', $storeIds))
+                ->when($storeId, fn ($q) => $q->where('svr.store_id', $storeId))
                 ->selectRaw('SUM(svi.quantity - COALESCE(svi.return_quantity, 0)) as net')
                 ->value('net') ?? 0;
             $remainingQty = $totalPurchased - ($totalIssuedKi + $totalIssuedSv);
@@ -1775,17 +1765,22 @@ class ReportController extends Controller
             ? $request->till_date
             : now()->format('Y-m-d');
 
-        $storeIds = $this->normalizedIdList($request, 'store_id');
+        $storeId = $request->filled('store_id') ? $request->store_id : null;
 
-        $items = self::getLowStockAlertItems($tillDate, $storeIds);
+        $items = self::getLowStockAlertItems($tillDate, $storeId);
         $stores = Store::where('status', 'active')->get();
-        $selectedStoreName = $this->resolveStoreNamesLabel($storeIds);
+
+        $selectedStoreName = null;
+        if ($storeId) {
+            $selectedStore = Store::find($storeId);
+            $selectedStoreName = $selectedStore ? $selectedStore->store_name : null;
+        }
 
         return view('admin.mess.reports.low-stock', compact(
             'items',
             'stores',
             'tillDate',
-            'storeIds',
+            'storeId',
             'selectedStoreName'
         ));
     }
@@ -1799,15 +1794,19 @@ class ReportController extends Controller
             ? $request->till_date
             : now()->format('Y-m-d');
 
-        $storeIds = $this->normalizedIdList($request, 'store_id');
-        $items = self::getLowStockAlertItems($tillDate, $storeIds);
-        $selectedStoreName = $this->resolveStoreNamesLabel($storeIds);
+        $storeId = $request->filled('store_id') ? $request->store_id : null;
+        $items = self::getLowStockAlertItems($tillDate, $storeId);
+
+        $selectedStoreName = null;
+        if ($storeId) {
+            $selectedStore = Store::find($storeId);
+            $selectedStoreName = $selectedStore ? $selectedStore->store_name : null;
+        }
 
         $data = [
             'items' => $items,
             'tillDate' => $tillDate,
             'selectedStoreName' => $selectedStoreName,
-            'lbsnaaLogoSrc' => $this->messPdfLbsnaaLogoForDompdf(),
         ];
 
         $pdf = Pdf::loadView('admin.mess.reports.pdf.low-stock-pdf', $data)
@@ -1822,116 +1821,6 @@ class ReportController extends Controller
         $fileName = 'low-stock-report-' . $tillDate . '-' . now()->format('Y-m-d_His') . '.pdf';
 
         return $pdf->download($fileName);
-    }
-
-    /**
-     * Items List Report — filterable list of item subcategories with computed stock (till date).
-     */
-    public function itemsListReport(Request $request)
-    {
-        $tillDate = $request->filled('till_date')
-            ? $request->till_date
-            : now()->format('Y-m-d');
-
-        $categoryIds = $this->normalizedIdList($request, 'category_id');
-        $search = trim((string) $request->get('search', ''));
-
-        $query = ItemSubcategory::query()->with('category');
-
-        if ($categoryIds !== []) {
-            $query->whereIn('category_id', $categoryIds);
-        }
-
-        if ($search !== '') {
-            $like = '%' . addcslashes($search, '%_\\') . '%';
-            $query->where(function ($q) use ($like) {
-                $q->where('item_name', 'like', $like)
-                    ->orWhere('subcategory_name', 'like', $like)
-                    ->orWhere('name', 'like', $like)
-                    ->orWhere('item_code', 'like', $like)
-                    ->orWhere('subcategory_code', 'like', $like);
-            });
-        }
-
-        $items = $query
-            ->orderBy('id')
-            ->paginate(25)
-            ->withQueryString();
-
-        $storeIds = [];
-        foreach ($items as $item) {
-            $calc = $this->remainingQuantityAndAvgRateForItem($item, $tillDate, $storeIds);
-            $item->setAttribute('current_stock', $calc['remaining']);
-            $item->setAttribute('minimum_stock', Schema::hasColumn('mess_item_subcategories', 'alert_quantity')
-                ? (float) ($item->alert_quantity ?? 0)
-                : 0.0);
-            $item->setAttribute('unit_price', $calc['rate']);
-        }
-
-        $categories = ItemCategory::orderBy('category_name')->get();
-
-        return view('admin.mess.reports.items-list', [
-            'items' => $items,
-            'categories' => $categories,
-            'tillDate' => $tillDate,
-            'categoryIds' => $categoryIds,
-        ]);
-    }
-
-    /**
-     * Remaining quantity and average PO rate for one subcategory (same rules as stock balance till date).
-     *
-     * @param  array<int>  $storeIds  Empty = all stores
-     * @return array{remaining: float, rate: float}
-     */
-    private function remainingQuantityAndAvgRateForItem(ItemSubcategory $item, string $tillDate, array $storeIds = []): array
-    {
-        $hasStoreFilter = $storeIds !== [];
-
-        $totalPurchased = PurchaseOrderItem::where('item_subcategory_id', $item->id)
-            ->whereHas('purchaseOrder', function ($q) use ($tillDate, $hasStoreFilter, $storeIds) {
-                $q->where('status', 'approved')
-                    ->whereDate('po_date', '<=', $tillDate);
-                if ($hasStoreFilter) {
-                    $q->whereIn('store_id', $storeIds);
-                }
-            })
-            ->sum('quantity');
-
-        $totalIssuedKi = DB::table('kitchen_issue_items as kii')
-            ->join('kitchen_issue_master as kim', 'kii.kitchen_issue_master_pk', '=', 'kim.pk')
-            ->where('kii.item_subcategory_id', $item->id)
-            ->where('kim.kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
-            ->where('kim.store_type', 'store')
-            ->whereDate('kim.issue_date', '<=', $tillDate)
-            ->when($hasStoreFilter, fn ($q) => $q->whereIn('kim.store_id', $storeIds))
-            ->selectRaw('SUM(kii.quantity - COALESCE(kii.return_quantity, 0)) as net')
-            ->value('net') ?? 0;
-
-        $totalIssuedSv = DB::table('sv_date_range_report_items as svi')
-            ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
-            ->where('svi.item_subcategory_id', $item->id)
-            ->where('svr.store_type', 'store')
-            ->whereDate('svr.issue_date', '<=', $tillDate)
-            ->when($hasStoreFilter, fn ($q) => $q->whereIn('svr.store_id', $storeIds))
-            ->selectRaw('SUM(svi.quantity - COALESCE(svi.return_quantity, 0)) as net')
-            ->value('net') ?? 0;
-
-        $remaining = (float) $totalPurchased - ((float) $totalIssuedKi + (float) $totalIssuedSv);
-
-        $avgRate = PurchaseOrderItem::where('item_subcategory_id', $item->id)
-            ->whereHas('purchaseOrder', function ($q) use ($tillDate, $hasStoreFilter, $storeIds) {
-                $q->where('status', 'approved')
-                    ->whereDate('po_date', '<=', $tillDate);
-                if ($hasStoreFilter) {
-                    $q->whereIn('store_id', $storeIds);
-                }
-            })
-            ->avg('unit_price');
-
-        $rate = (float) ($avgRate ?? $item->standard_cost ?? 0);
-
-        return ['remaining' => $remaining, 'rate' => $rate];
     }
 
     /**

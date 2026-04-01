@@ -1,12 +1,7 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Items List Report')
-
 @section('setup_content')
-@php
-    use App\Models\Mess\ItemSubcategory;
-@endphp
-<div class="card items-list-report" style="border-left: 4px solid #004a93;">
+<div class="card" style="border-left: 4px solid #004a93;">
     <div class="card-header">
         <h5 class="mb-0">
             <iconify-icon icon="solar:clipboard-list-bold" class="me-2"></iconify-icon>
@@ -14,26 +9,22 @@
         </h5>
     </div>
     <div class="card-body">
+        <!-- Filters -->
         <form method="GET" action="{{ route('admin.mess.reports.items-list') }}" class="mb-3">
-            <div class="row g-2 align-items-end">
-                <div class="col-md-2">
-                    <label class="form-label small text-muted mb-0">Till date</label>
-                    <input type="date" name="till_date" class="form-control form-control-sm" value="{{ $tillDate ?? request('till_date', now()->format('Y-m-d')) }}">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label small text-muted mb-0">Categories</label>
-                    <select name="category_id[]" class="form-select form-select-sm choices-select" data-placeholder="All categories" multiple>
+            <div class="row g-2">
+                <div class="col-md-4">
+                    <select name="category_id" class="form-select form-select-sm">
+                        <option value="">All Categories</option>
                         @foreach($categories as $category)
-                            <option value="{{ $category->id }}" @selected(in_array((int) $category->id, $categoryIds ?? [], true))>
+                            <option value="{{ $category->id }}" {{ request('category_id') == $category->id ? 'selected' : '' }}>
                                 {{ $category->category_name }}
                             </option>
                         @endforeach
                     </select>
                 </div>
-                <div class="col-md-5">
-                    <label class="form-label small text-muted mb-0">Search</label>
-                    <input type="text" name="search" class="form-control form-control-sm"
-                           placeholder="Item name or code..."
+                <div class="col-md-6">
+                    <input type="text" name="search" class="form-control " 
+                           placeholder="Search by item name or code..." 
                            value="{{ request('search') }}">
                 </div>
                 <div class="col-md-2">
@@ -62,15 +53,12 @@
                 </thead>
                 <tbody>
                     @forelse($items as $item)
-                        @php
-                            $isActive = ($item->status === ItemSubcategory::STATUS_ACTIVE);
-                        @endphp
                         <tr class="{{ $item->current_stock < $item->minimum_stock ? 'table-warning' : '' }}">
                             <td>{{ $item->item_code ?? 'N/A' }}</td>
                             <td>{{ $item->item_name }}</td>
                             <td>{{ $item->category->category_name ?? 'N/A' }}</td>
-                            <td class="text-muted">—</td>
-                            <td>{{ $item->unit_measurement ?? 'N/A' }}</td>
+                            <td>{{ $item->subcategory->subcategory_name ?? 'N/A' }}</td>
+                            <td>{{ $item->unit_of_measurement ?? 'N/A' }}</td>
                             <td>
                                 <span class="badge {{ $item->current_stock < $item->minimum_stock ? 'bg-danger' : 'bg-success' }}">
                                     {{ number_format($item->current_stock ?? 0, 2) }}
@@ -80,7 +68,7 @@
                             <td>₹{{ number_format($item->unit_price ?? 0, 2) }}</td>
                             <td>₹{{ number_format(($item->current_stock ?? 0) * ($item->unit_price ?? 0), 2) }}</td>
                             <td>
-                                @if($isActive)
+                                @if($item->is_active)
                                     <span class="badge bg-success">Active</span>
                                 @else
                                     <span class="badge bg-secondary">Inactive</span>
@@ -99,7 +87,7 @@
                 @if($items->count() > 0)
                     <tfoot class="table-light">
                         <tr>
-                            <th colspan="8" class="text-end">Total Stock Value (this page):</th>
+                            <th colspan="8" class="text-end">Total Stock Value:</th>
                             <th colspan="2">₹{{ number_format($items->sum(function($item) { return ($item->current_stock ?? 0) * ($item->unit_price ?? 0); }), 2) }}</th>
                         </tr>
                     </tfoot>
@@ -107,6 +95,7 @@
             </table>
         </div>
 
+        <!-- Summary Cards -->
         <div class="row mt-4">
             <div class="col-md-3">
                 <div class="card bg-primary text-white">
@@ -119,15 +108,15 @@
             <div class="col-md-3">
                 <div class="card bg-success text-white">
                     <div class="card-body">
-                        <h6 class="card-title">Active (this page)</h6>
-                        <h3 class="mb-0">{{ $items->filter(fn ($i) => $i->status === ItemSubcategory::STATUS_ACTIVE)->count() }}</h3>
+                        <h6 class="card-title">Active Items</h6>
+                        <h3 class="mb-0">{{ $items->where('is_active', true)->count() }}</h3>
                     </div>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="card bg-warning text-white">
                     <div class="card-body">
-                        <h6 class="card-title">Low Stock (this page)</h6>
+                        <h6 class="card-title">Low Stock Items</h6>
                         <h3 class="mb-0">{{ $items->filter(function($item) { return $item->current_stock < $item->minimum_stock; })->count() }}</h3>
                     </div>
                 </div>
@@ -135,17 +124,19 @@
             <div class="col-md-3">
                 <div class="card bg-info text-white">
                     <div class="card-body">
-                        <h6 class="card-title">Page value</h6>
+                        <h6 class="card-title">Total Value (Page)</h6>
                         <h4 class="mb-0">₹{{ number_format($items->sum(function($item) { return ($item->current_stock ?? 0) * ($item->unit_price ?? 0); }), 2) }}</h4>
                     </div>
                 </div>
             </div>
         </div>
 
+        <!-- Pagination -->
         <div class="d-flex justify-content-center mt-3">
             {{ $items->withQueryString()->links() }}
         </div>
 
+        <!-- Export Button -->
         <div class="text-center mt-3">
             <button class="btn btn-success" onclick="window.print()">
                 <iconify-icon icon="solar:printer-bold" class="me-1"></iconify-icon>
@@ -161,21 +152,4 @@
     .table { font-size: 12px; }
 }
 </style>
-
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    if (typeof window.TomSelect === 'undefined') return;
-    document.querySelectorAll('.items-list-report select.choices-select').forEach(function (el) {
-        if (el.tomselect) return;
-        var placeholder = el.getAttribute('data-placeholder') || 'Select';
-        new TomSelect(el, {
-            create: false,
-            allowEmptyOption: true,
-            placeholder: placeholder,
-            plugins: ['remove_button', 'dropdown_input'],
-            sortField: { field: 'text', direction: 'asc' }
-        });
-    });
-});
-</script>
 @endsection

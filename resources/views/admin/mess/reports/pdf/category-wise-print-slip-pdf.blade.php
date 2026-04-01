@@ -249,8 +249,8 @@
     'filtersApplied' => true,
     'printPageBreakPerBuyer' => true,
     'showBrandingHeader' => true,
-    'emblemSrc' => $emblemSrc ?? null,
-    'lbsnaaLogoSrc' => $lbsnaaLogoSrc ?? null,
+    'emblemSrc' => 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png',
+    'lbsnaaLogoSrc' => 'https://www.lbsnaa.gov.in/admin_assets/images/logo.png',
 ])
 </body>
 </html>

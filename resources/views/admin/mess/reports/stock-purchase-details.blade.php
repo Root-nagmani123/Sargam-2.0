@@ -222,20 +222,18 @@ function printStockPurchaseTable() {
     var title = 'Stock Purchase Details';
     var dateRange = 'Stock Purchase Details Report Between {{ date('d-F-Y', strtotime($fromDate)) }} To {{ date('d-F-Y', strtotime($toDate)) }}';
     var vendorLine = {!! json_encode($selectedVendors->isEmpty() ? 'All Vendors' : $selectedVendors->pluck('name')->implode(', ')) !!};
-    var vendorDetailsHtml = {!! json_encode(
+    var vendorDetails = {!! json_encode(
         $selectedVendors->isEmpty()
-            ? '<div class="meta-line"><strong>Vendor Details:</strong> All Vendors</div>'
-            : $selectedVendors->map(function ($v, $i) {
-                $line = trim(implode(' | ', array_filter([
+            ? 'All Vendors'
+            : $selectedVendors->map(function ($v) {
+                return trim(implode(' | ', array_filter([
                     'Name: ' . $v->name,
                     !empty($v->contact_person) ? 'Contact: ' . $v->contact_person : null,
                     !empty($v->phone) ? 'Phone: ' . $v->phone : null,
                     !empty($v->email) ? 'Email: ' . $v->email : null,
                     !empty($v->address) ? 'Address: ' . $v->address : null,
                 ])));
-
-                return '<div class="meta-line"><strong>Vendor ' . ((int) $i + 1) . ':</strong> ' . e($line) . '</div>';
-            })->implode('')
+            })->implode(' || ')
     ) !!};
     var storeDetails = {!! json_encode($selectedStores->isEmpty() ? 'All Stores' : $selectedStores->pluck('store_name')->implode(', ')) !!};
     var emblemSrc = 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
@@ -404,7 +402,7 @@ function printStockPurchaseTable() {
     </div>
 
     <div class="report-meta-print">
-        ${vendorDetailsHtml}
+        <div class="meta-line"><strong>Vendor Details:</strong> ${vendorDetails}</div>
         <div class="meta-line"><strong>Store:</strong> ${storeDetails}</div>
         <div class="meta-line"><strong>Printed on:</strong> ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}</div>
     </div>

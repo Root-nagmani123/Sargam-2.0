@@ -1266,7 +1266,6 @@ Route::prefix('admin/mess')->name('admin.mess.')->group(function () {
         Route::get('purchase-sale-quantity/export-pdf', [\App\Http\Controllers\Mess\ReportController::class, 'purchaseSaleQuantityPdf'])->name('purchase-sale-quantity.pdf');
         Route::get('low-stock', [\App\Http\Controllers\Mess\ReportController::class, 'lowStockReport'])->name('low-stock');
         Route::get('low-stock/export-pdf', [\App\Http\Controllers\Mess\ReportController::class, 'lowStockPdf'])->name('low-stock.pdf');
-        Route::get('items-list', [\App\Http\Controllers\Mess\ReportController::class, 'itemsListReport'])->name('items-list');
     });
 });
 
