@@ -37,22 +37,24 @@
             </div>
             <div class="border rounded-3 bg-light p-3">
                 <form method="GET" action="{{ route('admin.mess.material-management.index') }}">
+                    @php
+                        $selectedStatuses = array_map('strval', (array) request('status', []));
+                        $selectedStores = array_map('strval', (array) request('store', []));
+                    @endphp
                     <div class="row g-3">
                         <div class="col-md-2 col-sm-6">
                             <label class="form-label small text-muted mb-1">Status</label>
-                            <select name="status" id="filter_status" class="form-select form-select-sm">
-                                <option value="">All</option>
-                                <option value="0" {{ request('status') === '0' ? 'selected' : '' }}>Pending</option>
-                                <option value="2" {{ request('status') == '2' ? 'selected' : '' }}>Approved</option>
-                                <option value="4" {{ request('status') == '4' ? 'selected' : '' }}>Completed</option>
+                            <select name="status[]" id="filter_status" class="form-select form-select-sm" multiple data-placeholder="All Status">
+                                <option value="0" {{ in_array('0', $selectedStatuses, true) ? 'selected' : '' }}>Pending</option>
+                                <option value="2" {{ in_array('2', $selectedStatuses, true) ? 'selected' : '' }}>Approved</option>
+                                <option value="4" {{ in_array('4', $selectedStatuses, true) ? 'selected' : '' }}>Completed</option>
                             </select>
                         </div>
                         <div class="col-md-2 col-sm-6">
                             <label class="form-label small text-muted mb-1">Store</label>
-                            <select name="store" id="filter_store" class="form-select form-select-sm">
-                                <option value="">All</option>
+                            <select name="store[]" id="filter_store" class="form-select form-select-sm" multiple data-placeholder="All Stores">
                                 @foreach($stores as $store)
-                                    <option value="{{ $store['id'] }}" {{ request('store') == $store['id'] ? 'selected' : '' }}>{{ $store['store_name'] }}</option>
+                                    <option value="{{ $store['id'] }}" {{ in_array((string) $store['id'], $selectedStores, true) ? 'selected' : '' }}>{{ $store['store_name'] }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -1360,8 +1362,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Filter dropdowns (Choices.js)
     if (typeof Choices !== 'undefined') {
-        var filterStatus = document.querySelector('form[method="GET"] select[name="status"]');
-        var filterStore = document.querySelector('form[method="GET"] select[name="store"]');
+        var filterStatus = document.querySelector('form[method="GET"] select[name="status[]"]');
+        var filterStore = document.querySelector('form[method="GET"] select[name="store[]"]');
 
         if (filterStatus) {
             try {

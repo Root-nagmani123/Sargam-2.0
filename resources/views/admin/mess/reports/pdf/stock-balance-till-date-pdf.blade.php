@@ -2,9 +2,10 @@
     $tillLabel = $tillDate ? date('d-F-Y', strtotime($tillDate)) : '-';
     $storeLabel = $selectedStoreName ?? 'All Stores';
     $totalAmount = collect($reportData)->sum('amount');
+    $emblemSrc = 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
 
     $logoDataUri = null;
-    $logoPath = public_path('images/lbsnaa_logo.jpg');
+    $logoPath = public_path('admin_assets/images/logos/logo.png');
     if (is_file($logoPath)) {
         $extension = strtolower(pathinfo($logoPath, PATHINFO_EXTENSION));
         $mime = $extension === 'png' ? 'image/png' : ($extension === 'webp' ? 'image/webp' : 'image/jpeg');
@@ -23,13 +24,13 @@
         body {
             font-family: DejaVu Sans, Arial, sans-serif;
             font-size: 9px;
-            margin: 16px 18px;
+            margin: 14px 18px;
             color: #1f2937;
         }
         .page-header {
             border-bottom: 2px solid #004a93;
             padding-bottom: 8px;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
         .brand-table {
             width: 100%;
@@ -41,49 +42,88 @@
             padding: 0;
         }
         .logo-col {
-            width: 56px;
+            width: 52px;
             text-align: center;
+        }
+        .logo-col-right {
+            width: 400px;
+            text-align: right;
+            white-space: wrap;
         }
         .brand-logo {
-            width: 48px;
-            height: 48px;
+            width: 32px;
+            height: 32px;
             object-fit: contain;
-            border-radius: 50%;
-            border: 1px solid #d6dfec;
-            padding: 2px;
         }
         .title-col {
-            text-align: center;
+            text-align: left;
+            padding-left: 4px !important;
         }
         .title-line-1 {
-            font-size: 10px;
-            letter-spacing: .04em;
+            font-size: 9px;
+            letter-spacing: .06em;
             text-transform: uppercase;
-            color: #4b5563;
+            color: #0d4d9a;
+            font-weight: 600;
         }
         .title-line-2 {
-            font-size: 14px;
+            font-size: 16px;
             font-weight: 700;
             text-transform: uppercase;
-            color: #004a93;
-            margin-top: 2px;
+            color: #0b1f3b;
+            margin-top: 1px;
+            line-height: 1.05;
         }
         .title-line-3 {
-            font-size: 9px;
-            color: #374151;
+            font-size: 8px;
+            color: #2f4d73;
             margin-top: 2px;
+        }
+        .rhs-brand {
+            display: inline-block;
+            text-align: left;
+        }
+        .rhs-logo {
+            width: auto;
+            height: 30px;
+            max-width: 64px;
+            vertical-align: top;
+            margin-right: 4px;
+        }
+        .rhs-text-wrap {
+            display: inline-block;
+            vertical-align: top;
+            line-height: 1.1;
+            margin-top: 1px;
+        }
+        .rhs-line-hi {
+            font-size: 6px;
+            color: #b73a2d;
+            font-weight: 600;
+            margin-bottom: 1px;
+        }
+        .rhs-line-en {
+            font-size: 7px;
+            color: #b73a2d;
+            font-weight: 600;
+            margin-bottom: 1px;
+        }
+        .rhs-line-en-sub {
+            font-size: 6px;
+            color: #b73a2d;
         }
         .meta-row {
             margin-top: 8px;
-            padding: 5px 6px;
-            border: 1px solid #d6dfec;
-            background: #f4f8fc;
-            border-radius: 4px;
-            font-size: 8px;
+            padding: 2px 0 0;
+            border: 0;
+            background: transparent;
+            border-radius: 0;
+            font-size: 7.5px;
+            color: #374151;
         }
         .meta-row span {
             display: inline-block;
-            margin-right: 14px;
+            margin-right: 12px;
         }
         table {
             width: 100%;
@@ -128,19 +168,19 @@
     <table class="brand-table">
         <tr>
             <td class="logo-col">
-                @if($logoDataUri)
-                    <img src="{{ $logoDataUri }}" alt="LBSNAA Logo" class="brand-logo">
-                @endif
+                <img src="{{ $emblemSrc }}" alt="India Emblem" class="brand-logo">
             </td>
             <td class="title-col">
                 <div class="title-line-1">Government of India</div>
                 <div class="title-line-2">Officer's Mess LBSNAA Mussoorie</div>
                 <div class="title-line-3">Lal Bahadur Shastri National Academy of Administration</div>
             </td>
-            <td class="logo-col">
-                @if($logoDataUri)
-                    <img src="{{ $logoDataUri }}" alt="LBSNAA Logo" class="brand-logo">
-                @endif
+            <td class="logo-col-right">
+                <div class="rhs-brand">
+                    @if($logoDataUri)
+                        <img src="{{ $logoDataUri }}" alt="LBSNAA Logo" class="rhs-logo">
+                    @endif
+                </div>
             </td>
         </tr>
     </table>
@@ -162,7 +202,7 @@
             <th class="text-center" style="width: 34px;">Sr.</th>
             <th style="width: 80px;">Item Code</th>
             <th>Item Name</th>
-            <th class="text-end" style="width: 88px;">Remaining Qty</th>
+            <th class="text-end" style="width: 88px;">Remaining Quantity</th>
             <th class="text-center" style="width: 62px;">Unit</th>
             <th class="text-end" style="width: 76px;">Avg Rate</th>
             <th class="text-end" style="width: 90px;">Amount</th>

@@ -27,6 +27,14 @@
             display: table-cell;
             vertical-align: middle;
         }
+        .logo-col {
+            width: 44px;
+        }
+        .logo-col img {
+            width: 34px;
+            height: 34px;
+            object-fit: contain;
+        }
         .page-header-title {
             text-align: center;
         }
@@ -90,6 +98,11 @@
 <body>
 <div class="page-header">
     <div class="page-header-top">
+        <div class="page-header-col logo-col">
+            @if(!empty($lbsnaaLogoSrc))
+                <img src="{{ $lbsnaaLogoSrc }}" alt="LBSNAA Logo">
+            @endif
+        </div>
         <div class="page-header-col page-header-title">
             <h1>OFFICER'S MESS LBSNAA MUSSOORIE</h1>
             <h2>Low Stock Report</h2>

@@ -33,17 +33,37 @@ class SellingVoucherDateRangeController extends Controller
     {
         $query = SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'course', 'items.itemSubcategory']);
 
-        if ($request->filled('store')) {
-            $storeParam = $request->store;
-            if (str_starts_with((string) $storeParam, 'sub_')) {
-                $subStoreId = (int) str_replace('sub_', '', $storeParam);
-                $query->where('store_id', $subStoreId)->where('store_type', 'sub_store');
-            } else {
-                $query->where('store_id', (int) $storeParam)->where('store_type', 'store');
-            }
+        $storeParams = array_values(array_filter(
+            array_map('strval', (array) $request->input('store', [])),
+            static fn ($v) => $v !== ''
+        ));
+        if ($storeParams !== []) {
+            $query->where(function ($storeQuery) use ($storeParams) {
+                foreach ($storeParams as $storeParam) {
+                    if (str_starts_with((string) $storeParam, 'sub_')) {
+                        $subStoreId = (int) str_replace('sub_', '', $storeParam);
+                        if ($subStoreId > 0) {
+                            $storeQuery->orWhere(function ($q) use ($subStoreId) {
+                                $q->where('store_id', $subStoreId)->where('store_type', 'sub_store');
+                            });
+                        }
+                    } else {
+                        $mainStoreId = (int) $storeParam;
+                        if ($mainStoreId > 0) {
+                            $storeQuery->orWhere(function ($q) use ($mainStoreId) {
+                                $q->where('store_id', $mainStoreId)->where('store_type', 'store');
+                            });
+                        }
+                    }
+                }
+            });
         }
-        if ($request->filled('status') && $request->status !== '') {
-            $query->where('status', $request->status);
+        $statusFilters = array_values(array_filter(
+            array_map('strval', (array) $request->input('status', [])),
+            static fn ($v) => $v !== ''
+        ));
+        if ($statusFilters !== []) {
+            $query->whereIn('status', array_map('intval', $statusFilters));
         }
         if ($request->filled('start_date') && $request->filled('end_date')) {
             // Filter strictly by Request Date (date_from) falling within the selected range

@@ -1255,6 +1255,7 @@ Route::prefix('admin/mess')->name('admin.mess.')->group(function () {
         Route::get('category-wise-print-slip/buyers', [\App\Http\Controllers\Mess\ReportController::class, 'getBuyerNamesForReportFilters'])->name('category-wise-print-slip.buyers');
         Route::get('category-wise-print-slip/export', [\App\Http\Controllers\Mess\ReportController::class, 'categoryWisePrintSlipExcel'])->name('category-wise-print-slip.excel');
         Route::get('category-wise-print-slip/export-pdf', [\App\Http\Controllers\Mess\ReportController::class, 'categoryWisePrintSlipPdf'])->name('category-wise-print-slip.pdf');
+        Route::get('category-wise-print-slip/print', [\App\Http\Controllers\Mess\ReportController::class, 'categoryWisePrintSlipPrint'])->name('category-wise-print-slip.print');
         Route::get('stock-balance-till-date', [\App\Http\Controllers\Mess\ReportController::class, 'stockBalanceTillDate'])->name('stock-balance-till-date');
         Route::get('stock-balance-till-date/export', [\App\Http\Controllers\Mess\ReportController::class, 'stockBalanceTillDateExcel'])->name('stock-balance-till-date.excel');
         Route::get('stock-balance-till-date/export-pdf', [\App\Http\Controllers\Mess\ReportController::class, 'stockBalanceTillDatePdf'])->name('stock-balance-till-date.pdf');
@@ -1265,6 +1266,7 @@ Route::prefix('admin/mess')->name('admin.mess.')->group(function () {
         Route::get('purchase-sale-quantity/export-pdf', [\App\Http\Controllers\Mess\ReportController::class, 'purchaseSaleQuantityPdf'])->name('purchase-sale-quantity.pdf');
         Route::get('low-stock', [\App\Http\Controllers\Mess\ReportController::class, 'lowStockReport'])->name('low-stock');
         Route::get('low-stock/export-pdf', [\App\Http\Controllers\Mess\ReportController::class, 'lowStockPdf'])->name('low-stock.pdf');
+        Route::get('items-list', [\App\Http\Controllers\Mess\ReportController::class, 'itemsListReport'])->name('items-list');
     });
 });
 
