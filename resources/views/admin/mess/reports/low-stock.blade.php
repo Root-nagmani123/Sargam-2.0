@@ -1,4 +1,24 @@
 @extends('admin.layouts.master')
+@php
+    $messEmblemSrc = 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
+    $messLbsnaaLogoSrc = asset('images/lbsnaa_logo.jpg');
+    if (! is_file(public_path('images/lbsnaa_logo.jpg'))) {
+        $messLbsnaaLogoSrc = is_file(public_path('images/lbsnaa_logo.png'))
+            ? asset('images/lbsnaa_logo.png')
+            : 'https://www.lbsnaa.gov.in/admin_assets/images/logo.png';
+    }
+    $printOutOfStock = 0;
+    $printBelowMin = 0;
+    foreach (is_array($items ?? null) ? $items : [] as $_row) {
+        $_rem = (float) ($_row['remaining_quantity'] ?? 0);
+        $_alt = (float) ($_row['alert_quantity'] ?? 0);
+        if ($_rem <= 0) {
+            $printOutOfStock++;
+        } elseif ($_rem <= $_alt) {
+            $printBelowMin++;
+        }
+    }
+@endphp
 @section('title', 'Low Stock Report')
 @section('setup_content')
 <div class="container-fluid low-stock-report py-3 py-md-4">
@@ -76,8 +96,9 @@
     </div>
 
     <!-- Report Table -->
-    <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+    <div class="card border-0 shadow-sm rounded-3 overflow-hidden low-stock-report-card">
         <div class="card-body p-4 p-md-5">
+
             <div class="report-header text-center mb-4 pb-3 border-bottom border-body-secondary border-opacity-25">
                 <h4 class="fw-bold text-uppercase mb-3 fs-5 text-body-emphasis">Low Stock Report</h4>
                 <div class="d-flex flex-wrap justify-content-center gap-2 gap-md-3">
@@ -156,6 +177,46 @@
 </div>
 
 <style>
+    .low-stock-report .mess-official-header {
+        border-bottom: 2px solid #004a93;
+        padding-bottom: 10px;
+    }
+    .low-stock-report .mess-official-header-table td {
+        border: 0;
+        vertical-align: middle;
+    }
+    .low-stock-report .mess-official-emblem-img {
+        width: 42px;
+        height: 42px;
+        object-fit: contain;
+        display: block;
+    }
+    .low-stock-report .mess-official-seal-img {
+        width: auto;
+        max-width: 160px;
+        max-height: 72px;
+        object-fit: contain;
+        display: inline-block;
+    }
+    .low-stock-report .mess-official-line-1 {
+        font-size: 0.7rem;
+        color: #004a93;
+        letter-spacing: 0.04em;
+        line-height: 1.3;
+    }
+    .low-stock-report .mess-official-line-2 {
+        font-size: 1rem;
+        color: #111;
+        line-height: 1.25;
+        margin-top: 2px;
+    }
+    .low-stock-report .mess-official-line-3 {
+        font-size: 0.8rem;
+        color: #5c6370;
+        line-height: 1.3;
+        margin-top: 2px;
+    }
+
     .low-stock-report .material-symbols-rounded {
         line-height: 1;
         vertical-align: middle;
@@ -207,16 +268,24 @@
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 <script>
     function printLowStockReport() {
-        var table = document.getElementById('lowStockReportTable');
-        if (!table) {
+        var tableEl = document.getElementById('lowStockReportTable');
+        if (!tableEl) {
             window.print();
             return;
         }
 
+        var table = tableEl.cloneNode(true);
+        table.removeAttribute('id');
+        table.classList.add('low-stock-data');
+        table.classList.remove('table', 'table-hover', 'table-striped', 'align-middle', 'mb-0');
+
         var tillDateText = @json(date('d-F-Y', strtotime($tillDate)));
         var storeNameText = @json($selectedStoreName ?? 'All Stores');
         var totalItems = @json(is_array($items) ? count($items) : 0);
-        var logoUrl = @json(asset('images/lbsnaa_logo.jpg'));
+        var outOfStockCount = @json($printOutOfStock);
+        var belowMinCount = @json($printBelowMin);
+        var emblemSrc = @json($messEmblemSrc);
+        var lbsnaaLogoSrc = @json($messLbsnaaLogoSrc);
 
         var printWindow = window.open('', '_blank', 'width=1200,height=900');
         if (!printWindow) {
@@ -232,183 +301,179 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Low Stock Report - OFFICER'S MESS LBSNAA MUSSOORIE</title>
   <style>
-    :root {
-      --lbsnaa-blue: #004a93;
-      --lbsnaa-light: #f4f8fc;
-      --text: #1f2937;
-      --border: #d7dee7;
-    }
     * { box-sizing: border-box; }
     body {
       font-family: "Segoe UI", Arial, sans-serif;
-      color: var(--text);
+      color: #222;
       margin: 0;
       background: #fff;
-      font-size: 12px;
+      font-size: 11pt;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
-    .page {
-      padding: 12mm 10mm;
-      position: relative;
+    .page { padding: 12mm 10mm; position: relative; }
+    .content { position: relative; }
+
+    /* Match mess PDF (stock-purchase-details / low-stock-pdf) */
+    .lbsnaa-header-wrap {
+      border-bottom: 2px solid #004a93;
+      margin-bottom: 12px;
+      padding: 2px 0 8px;
     }
-    .watermark::before {
-      content: "";
-      position: fixed;
-      inset: 0;
-      background: url("${logoUrl}") center center no-repeat;
-      background-size: 200px;
-      opacity: 0.05;
-      z-index: 0;
-      pointer-events: none;
+    .branding-table { width: 100%; border-collapse: collapse; margin: 0; }
+    .branding-table td { border: 0; padding: 0; vertical-align: middle; }
+    .branding-logo-left { width: 42px; }
+    .branding-text { text-align: left; padding: 0 10px 0 2px; line-height: 1.25; }
+    .branding-logo-right { width: 200px; text-align: right; }
+    .lbsnaa-brand-line-1 {
+      font-size: 8pt;
+      color: #004a93;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 600;
     }
-    .content {
-      position: relative;
-      z-index: 1;
-    }
-    .brand-header {
-      border-bottom: 2px solid var(--lbsnaa-blue);
-      padding-bottom: 10px;
-      margin-bottom: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-    }
-    .brand-text {
-      text-align: center;
-      flex: 1;
-      margin: 0 10px;
-    }
-    .brand-line-1 {
-      font-size: 10px;
-      color: #3f3f46;
-      margin-bottom: 2px;
-    }
-    .brand-line-2 {
-      font-size: 16px;
+    .lbsnaa-brand-line-2 {
+      font-size: 13pt;
+      color: #222;
       font-weight: 700;
-      color: var(--lbsnaa-blue);
-      letter-spacing: 0.3px;
-    }
-    .brand-line-3 {
-      font-size: 10px;
-      color: #4b5563;
+      text-transform: uppercase;
       margin-top: 2px;
     }
-    .brand-logo {
-      width: 58px;
-      height: 58px;
-      object-fit: contain;
-      border-radius: 50%;
-      border: 1px solid var(--border);
-      background: #fff;
-      padding: 4px;
-      flex-shrink: 0;
+    .lbsnaa-brand-line-3 {
+      font-size: 10pt;
+      color: #555;
+      margin-top: 2px;
     }
-    .report-meta {
-      margin: 8px 0 12px;
-      padding: 8px 10px;
-      background: var(--lbsnaa-light);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      font-size: 11px;
-    }
-    .report-meta strong {
-      color: #0f172a;
-    }
+    .header-img-left { width: 34px; height: 34px; object-fit: contain; display: block; }
+    .header-img-right { width: 165px; max-width: 100%; height: auto; object-fit: contain; }
 
-    .table {
+    .report-header-block {
+      text-align: center;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #dee2e6;
+    }
+    .report-title-center {
+      font-size: 14pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      margin: 0 0 8px;
+      color: #212529;
+    }
+    .report-date-bar {
+      background: #004a93;
+      color: #fff;
+      padding: 8px 12px;
+      text-align: center;
+      font-weight: 600;
+      font-size: 10pt;
+      display: inline-block;
+    }
+    .report-store-line {
+      font-size: 10pt;
+      font-weight: 600;
+      margin-top: 8px;
+      color: #212529;
+    }
+    .text-muted { color: #6c757d; font-weight: 600; }
+
+    .report-meta-print {
+      font-size: 9pt;
+      margin: 10px 0 12px;
+      line-height: 1.45;
+      text-align: left;
+    }
+    .report-meta-print .meta-line { margin-bottom: 4px; }
+
+    table.low-stock-data {
       width: 100%;
       border-collapse: collapse;
-      margin: 0;
-      font-size: 11px;
+      font-size: 9pt;
+      margin-bottom: 10px;
     }
-    .table th,
-    .table td {
-      border: 1px solid var(--border);
-      padding: 6px 8px;
+    table.low-stock-data th,
+    table.low-stock-data td {
+      padding: 5px 8px;
+      border: 1px solid #dee2e6;
       vertical-align: middle;
     }
-    .table thead th {
-      background: #eef3f8;
+    table.low-stock-data thead th {
+      background: #d3d6d9;
       font-weight: 600;
-      text-transform: uppercase;
-      font-size: 10px;
-      letter-spacing: 0.2px;
+      text-align: left;
     }
-    .table tbody tr:nth-child(even) td {
-      background: #fcfdff;
-    }
-    .table-danger td {
-      background: #fce7e7 !important;
-    }
+    table.low-stock-data thead th.text-center { text-align: center; }
+    table.low-stock-data thead th.text-end { text-align: right; }
+    table.low-stock-data tbody tr:nth-child(even) td { background: #fafbfc; }
+    table.low-stock-data tbody tr.table-danger td { background: #fdeaea !important; }
+
+    .text-center { text-align: center; }
+    .text-end { text-align: right; }
 
     .badge {
       display: inline-block;
       padding: 3px 8px;
       border-radius: 999px;
-      font-size: 10px;
+      font-size: 9px;
       font-weight: 600;
       line-height: 1.2;
-      border: 1px solid transparent;
       white-space: nowrap;
     }
     .text-bg-danger { background: #dc3545; color: #fff; }
     .text-bg-warning { background: #f59e0b; color: #1f2937; }
     .text-bg-success { background: #198754; color: #fff; }
 
-    .text-center { text-align: center; }
-    .text-end { text-align: right; }
-
     .footer {
-      margin-top: 10px;
-      font-size: 10px;
-      color: #6b7280;
+      border-top: 1px solid #dee2e6;
+      margin-top: 8px;
+      padding-top: 6px;
+      font-size: 8pt;
+      color: #666;
       text-align: center;
     }
 
-    @page {
-      size: A4 portrait;
-      margin: 10mm;
-    }
+    @page { size: A4 portrait; margin: 12mm; }
     @media print {
-      .page {
-        padding: 0;
-      }
-      thead {
-        display: table-header-group;
-      }
+      .page { padding: 0; }
+      thead { display: table-header-group; }
     }
   </style>
 </head>
 <body>
-  <div class="page watermark">
+  <div class="page">
     <div class="content">
-      <div class="brand-header">
-        <img src="${logoUrl}" alt="LBSNAA Logo" class="brand-logo">
-        <div class="brand-text">
-          <div class="brand-line-1">Government of India</div>
-          <div class="brand-line-2">OFFICER'S MESS LBSNAA MUSSOORIE</div>
-          <div class="brand-line-3">Lal Bahadur Shastri National Academy of Administration</div>
-        </div>
-        <img src="${logoUrl}" alt="LBSNAA Logo" class="brand-logo">
+      <div class="lbsnaa-header-wrap">
+        <table class="branding-table">
+          <tr>
+            <td class="branding-logo-left">
+              <img src="${emblemSrc}" alt="Emblem of India" class="header-img-left">
+            </td>
+            <td class="branding-text">
+              <div class="lbsnaa-brand-line-1">Government of India</div>
+              <div class="lbsnaa-brand-line-2">OFFICER'S MESS LBSNAA MUSSOORIE</div>
+              <div class="lbsnaa-brand-line-3">Lal Bahadur Shastri National Academy of Administration</div>
+            </td>
+            <td class="branding-logo-right">
+              <img src="${lbsnaaLogoSrc}" alt="LBSNAA" class="header-img-right">
+            </td>
+          </tr>
+        </table>
       </div>
 
-      <div class="report-meta">
-        <span><strong>Report:</strong> Low Stock Report</span>
-        <span><strong>Till Date:</strong> ${tillDateText}</span>
-        <span><strong>Store:</strong> ${storeNameText}</span>
-        <span><strong>Total Items:</strong> ${totalItems}</span>
-        <span><strong>Printed On:</strong> ${new Date().toLocaleString()}</span>
+      <div class="report-header-block">
+        <h1 class="report-title-center">Low Stock Report</h1>
+        <div class="report-date-bar">Low Stock Report As Of ${tillDateText}</div>
+        <div class="report-store-line"><span class="text-muted">Store:</span> ${storeNameText}</div>
+      </div>
+
+      <div class="report-meta-print">
+        <div class="meta-line"><strong>Printed on:</strong> ${new Date().toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })}</div>
+        ${totalItems > 0 ? '<div class="meta-line"><strong>Summary:</strong> Total items ' + totalItems + ' | Out of stock ' + outOfStockCount + ' | Below minimum ' + belowMinCount + '</div>' : ''}
       </div>
 
       ${table.outerHTML}
 
-      <div class="footer">Officer's Mess LBSNAA Mussoorie</div>
+      <div class="footer"><small>Officer's Mess LBSNAA Mussoorie — Low Stock Report</small></div>
     </div>
   </div>
 

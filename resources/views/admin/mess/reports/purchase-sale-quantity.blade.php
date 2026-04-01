@@ -6,6 +6,16 @@
     $storeIds = isset($storeIds) ? $storeIds : [];
     /** @var array<int> $itemIds */
     $itemIds = isset($itemIds) ? $itemIds : [];
+
+    $messEmblemSrc = 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
+    $messLbsnaaLogoSrc = asset('images/lbsnaa_logo.jpg');
+    if (! is_file(public_path('images/lbsnaa_logo.jpg'))) {
+        $messLbsnaaLogoSrc = is_file(public_path('images/lbsnaa_logo.png'))
+            ? asset('images/lbsnaa_logo.png')
+            : 'https://www.lbsnaa.gov.in/admin_assets/images/logo.png';
+    }
+
+    $messViewLabel = $viewType === 'item_wise' ? 'Item-wise' : ($viewType === 'subcategory_wise' ? 'Subcategory-wise' : 'Category-wise');
 @endphp
 <div class="container-fluid purchase-sale-quantity-report py-3">
     <x-breadcrum title="Item Report"></x-breadcrum>
@@ -135,7 +145,7 @@
                 Items: {{ $selectedItemNamesLabel ?? 'All Items' }}
             </p>
         </div>
-        <div class="card-body p-0">
+        <div id="purchaseSaleReportCardBody" class="card-body p-0" data-view-type="{{ $viewType }}">
             @if($viewType === 'item_wise')
                 <div class="table-responsive">
                     <table class="table align-middle mb-0">
@@ -175,7 +185,7 @@
             @else
                 @php $groupedData = $groupedData ?? []; @endphp
                 @forelse($groupedData as $group)
-                    <div class="mb-0 border-bottom border-secondary border-opacity-25">
+                    <div class="purchase-sale-group-block mb-0 border-bottom border-secondary border-opacity-25">
                         <div class="px-4 pt-3 pb-2">
                             <h6 class="text-primary fw-semibold mb-0 d-flex align-items-center gap-2">
                                 <span class="material-symbols-rounded" style="font-size: 1.25rem;">category</span>
@@ -427,136 +437,235 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function printPurchaseSaleQuantity() {
-    const tables = document.querySelectorAll('.card-body .table-responsive table');
-    if (!tables.length) {
+    var cardBody = document.getElementById('purchaseSaleReportCardBody');
+    if (!cardBody) {
         window.print();
         return;
     }
 
-    const title = 'Item Report - Purchase/Sale Quantity';
-    const dateRange = '{{ "From " . date("d-F-Y", strtotime($fromDate)) . " To " . date("d-F-Y", strtotime($toDate)) }}';
-    const storeLabel = @json($selectedStoreName ? $selectedStoreName : 'All Stores');
+    var viewType = cardBody.getAttribute('data-view-type') || 'item_wise';
+    var emblemSrc = @json($messEmblemSrc);
+    var lbsnaaLogoSrc = @json($messLbsnaaLogoSrc);
+    var periodBar = @json('From ' . date('d-F-Y', strtotime($fromDate)) . ' To ' . date('d-F-Y', strtotime($toDate)));
+    var storeLabel = @json($selectedStoreName ?? 'All Stores');
+    var itemsLabel = @json($selectedItemNamesLabel ?? 'All Items');
+    var viewLabel = @json($messViewLabel);
+    var printedOn = new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString();
 
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) { window.print(); return; }
+    function escapeHtml(str) {
+        if (str == null) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
 
-    let sectionsHtml = '';
-    tables.forEach(function(tbl) {
-        const originalThead = tbl.querySelector('thead');
-        const originalTbody = tbl.querySelector('tbody');
-        const firstHeaderRow = originalThead ? originalThead.querySelector('tr') : null;
-        const columnsCount = firstHeaderRow ? firstHeaderRow.children.length : 7;
+    function tableToPrintFragment(tbl) {
+        var thead = tbl.querySelector('thead');
+        var tbody = tbl.querySelector('tbody');
+        var headHtml = thead ? thead.innerHTML : '';
+        var bodyHtml = tbody ? tbody.innerHTML : '';
+        return (
+            '<table class="purchase-sale-data">' +
+            '<thead>' + headHtml + '</thead>' +
+            '<tbody>' + bodyHtml + '</tbody>' +
+            '</table>'
+        );
+    }
 
-        const columnHeadHtml = originalThead ? originalThead.innerHTML : '';
-        const bodyHtml       = originalTbody ? originalTbody.innerHTML : tbl.innerHTML;
+    var tablesHtml = '';
+    if (viewType === 'item_wise') {
+        var single = cardBody.querySelector('.table-responsive table');
+        if (single) {
+            tablesHtml = tableToPrintFragment(single);
+        }
+    } else {
+        cardBody.querySelectorAll('.purchase-sale-group-block').forEach(function (block) {
+            var titleEl = block.querySelector('h6');
+            var titleText = titleEl ? titleEl.textContent.trim() : '';
+            var tbl = block.querySelector('table');
+            if (titleText) {
+                tablesHtml += '<div class="group-title">' + escapeHtml(titleText) + '</div>';
+            }
+            if (tbl) {
+                tablesHtml += tableToPrintFragment(tbl);
+            }
+        });
+    }
 
-        const printableTable = `
-      <table class="table table-sm table-bordered align-middle mb-0">
-        <thead>
-          <tr>
-            <th colspan="${columnsCount}">
-              <div class="d-flex justify-content-between align-items-center mb-2">
-                <div class="d-flex align-items-center gap-2">
-                  <img src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg" alt="India Emblem" height="40">
-                  <div>
-                    <div class="brand-line-1">Government of India</div>
-                    <div class="brand-line-2">OFFICER'S MESS LBSNAA MUSSOORIE</div>
-                    <div class="brand-line-3">Lal Bahadur Shastri National Academy of Administration</div>
-                  </div>
-                </div>
-                <div class="d-none d-print-block">
-                  <img src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png" alt="LBSNAA Logo" height="40">
-                </div>
-              </div>
-              <div class="d-flex flex-wrap justify-content-between align-items-center report-meta">
-                <span><strong>${title}</strong></span>
-                <span>${dateRange}</span>
-                <span><strong>Store:</strong> ${storeLabel}</span>
-                <span><strong>Items:</strong> ${itemsLabel}</span>
-                <span><strong>Printed on:</strong> ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}</span>
-              </div>
-            </th>
-          </tr>
-          ${columnHeadHtml}
-        </thead>
-        <tbody>
-          ${bodyHtml}
-        </tbody>
-      </table>`;
+    if (!tablesHtml.trim()) {
+        tablesHtml = '<p class="no-data">No data found for the selected filters.</p>';
+    }
 
-        sectionsHtml += `
-      <div class="print-page mb-3">
-        <div class="table-responsive">
-          ${printableTable}
-        </div>
-        <div class="print-footer text-center mt-2 pt-1">
-          <small>OFFICER'S MESS LBSNAA MUSSOORIE</small>
-        </div>
-      </div>`;
-    });
+    var docTitle = 'Item Report - OFFICER\'S MESS LBSNAA MUSSOORIE';
+
+    var printWindow = window.open('', '_blank');
+    if (!printWindow) {
+        window.print();
+        return;
+    }
 
     printWindow.document.open();
-    printWindow.document.write(`<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>${title} - OFFICER'S MESS LBSNAA MUSSOORIE</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-    body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      font-size: 10px;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
-    }
-    .lbsnaa-header { border-bottom: 2px solid #004a93; padding-bottom:.75rem; margin-bottom:1rem; }
-    .brand-line-1 { font-size:.85rem; text-transform:uppercase; letter-spacing:.06em; color:#004a93; }
-    .brand-line-2 { font-size:1.1rem; font-weight:700; text-transform:uppercase; color:#222; }
-    .brand-line-3 { font-size:.8rem; color:#555; }
-    .report-meta { font-size:.8rem; margin-bottom:.75rem; }
-    .report-meta span { display:inline-block; margin-right:1.5rem; }
-    table { width:100%; border-collapse:collapse; font-size: 9px; }
-    th, td { padding:4px 6px; border:1px solid #dee2e6; }
-    thead th { background:#f8f9fa; font-weight:600; }
-    .table,
-    .table * {
-      white-space: normal !important;
-    }
-    .table-responsive {
-      overflow: visible !important;
-    }
-    thead { display:table-header-group; }
-    .print-page {
-      page-break-after: always;
-    }
-    .print-page:last-child {
-      page-break-after: auto;
-    }
-    .print-footer {
-      border-top: 1px solid #dee2e6;
-      font-size: .7rem;
-      color: #666;
-    }
-    @page {
-      size: A4;
-      margin: 0.5in;
-    }
-    @media print {
-      body { margin:0; }
-    }
-  </style>
-</head>
-<body>
-  <div class="container-fluid">
-    ${sectionsHtml}
-  </div>
-
-  <script>
-    window.addEventListener('load', function() { window.print(); });
-  <\/script>
-</body>
-</html>`);
+    printWindow.document.write('<!doctype html>\n' +
+'<html lang="en">\n' +
+'<head>\n' +
+'  <meta charset="utf-8">\n' +
+'  <meta name="viewport" content="width=device-width, initial-scale=1">\n' +
+'  <title>' + docTitle + '</title>\n' +
+'  <style>\n' +
+'    * { box-sizing: border-box; }\n' +
+'    body {\n' +
+'      font-family: "Segoe UI", Arial, "Noto Sans Devanagari", "DejaVu Sans", sans-serif;\n' +
+'      font-size: 9pt;\n' +
+'      margin: 0;\n' +
+'      padding: 10mm 12mm;\n' +
+'      color: #222;\n' +
+'      background: #fff;\n' +
+'      -webkit-print-color-adjust: exact;\n' +
+'      print-color-adjust: exact;\n' +
+'    }\n' +
+'    @page { size: A4 landscape; margin: 10mm 12mm; }\n' +
+'    .lbsnaa-header-wrap {\n' +
+'      border-bottom: 3px solid #003366;\n' +
+'      margin-bottom: 10px;\n' +
+'      padding: 4px 0 10px;\n' +
+'    }\n' +
+'    .branding-table { width: 100%; border-collapse: collapse; margin: 0; }\n' +
+'    .branding-table td { border: 0; padding: 0; vertical-align: middle; }\n' +
+'    .branding-logo-left { width: 48px; }\n' +
+'    .branding-text { text-align: center; padding: 0 12px; line-height: 1.25; }\n' +
+'    .branding-logo-right { width: 220px; }\n' +
+'    .branding-right-inner { width: 100%; border-collapse: collapse; }\n' +
+'    .branding-right-inner td { border: 0; vertical-align: middle; padding: 0; }\n' +
+'    .lbsnaa-brand-line-1 {\n' +
+'      font-size: 8pt;\n' +
+'      color: #0070c0;\n' +
+'      text-transform: uppercase;\n' +
+'      letter-spacing: 0.06em;\n' +
+'      font-weight: 600;\n' +
+'    }\n' +
+'    .lbsnaa-brand-line-2 {\n' +
+'      font-size: 12pt;\n' +
+'      color: #111;\n' +
+'      font-weight: 700;\n' +
+'      text-transform: uppercase;\n' +
+'      margin-top: 3px;\n' +
+'    }\n' +
+'    .lbsnaa-brand-line-3 {\n' +
+'      font-size: 9pt;\n' +
+'      color: #4a5a6a;\n' +
+'      margin-top: 3px;\n' +
+'    }\n' +
+'    .header-img-left { width: 40px; height: 40px; object-fit: contain; display: block; }\n' +
+'    .header-img-right-seal { width: 44px; height: 44px; object-fit: contain; display: block; }\n' +
+'    .branding-right-text { text-align: left; padding-left: 8px; line-height: 1.2; }\n' +
+'    .branding-hindi { font-size: 8pt; color: #7b2d26; font-weight: 600; }\n' +
+'    .branding-en-side { font-size: 7pt; color: #7b2d26; margin-top: 2px; }\n' +
+'    .report-header-block {\n' +
+'      text-align: center;\n' +
+'      margin-bottom: 10px;\n' +
+'      padding-bottom: 8px;\n' +
+'      border-bottom: 1px solid #dee2e6;\n' +
+'    }\n' +
+'    .report-title-center {\n' +
+'      font-size: 13pt;\n' +
+'      font-weight: 700;\n' +
+'      text-transform: uppercase;\n' +
+'      margin: 0 0 6px;\n' +
+'      color: #212529;\n' +
+'    }\n' +
+'    .report-date-bar {\n' +
+'      background: #003366;\n' +
+'      color: #fff;\n' +
+'      padding: 6px 12px;\n' +
+'      text-align: center;\n' +
+'      font-weight: 600;\n' +
+'      font-size: 9pt;\n' +
+'      display: inline-block;\n' +
+'    }\n' +
+'    .report-meta-print { font-size: 8pt; margin: 8px 0 10px; line-height: 1.45; }\n' +
+'    .report-meta-print .meta-line { margin-bottom: 3px; word-wrap: break-word; }\n' +
+'    table.purchase-sale-data {\n' +
+'      width: 100%;\n' +
+'      border-collapse: collapse;\n' +
+'      font-size: 8pt;\n' +
+'      margin-bottom: 8px;\n' +
+'    }\n' +
+'    table.purchase-sale-data thead { display: table-header-group; }\n' +
+'    table.purchase-sale-data th,\n' +
+'    table.purchase-sale-data td { padding: 4px 6px; border: 1px solid #dee2e6; vertical-align: middle; }\n' +
+'    table.purchase-sale-data thead th {\n' +
+'      background: #d3d6d9;\n' +
+'      font-weight: 600;\n' +
+'      text-align: left;\n' +
+'    }\n' +
+'    table.purchase-sale-data thead th.text-end { text-align: right; }\n' +
+'    table.purchase-sale-data thead th.text-center { text-align: center; }\n' +
+'    table.purchase-sale-data .text-end { text-align: right; }\n' +
+'    table.purchase-sale-data .text-center { text-align: center; }\n' +
+'    table.purchase-sale-data tbody tr:nth-child(even) td { background: #fafbfc; }\n' +
+'    .group-title {\n' +
+'      margin-top: 8px;\n' +
+'      margin-bottom: 4px;\n' +
+'      font-weight: 700;\n' +
+'      font-size: 9pt;\n' +
+'      color: #003366;\n' +
+'    }\n' +
+'    .no-data { font-size: 9pt; margin: 10px 0; color: #555; }\n' +
+'    .footer {\n' +
+'      border-top: 1px solid #dee2e6;\n' +
+'      font-size: 7pt;\n' +
+'      color: #666;\n' +
+'      text-align: center;\n' +
+'      padding-top: 5px;\n' +
+'      margin-top: 6px;\n' +
+'    }\n' +
+'  </style>\n' +
+'</head>\n' +
+'<body>\n' +
+'<div class="lbsnaa-header-wrap">\n' +
+'  <table class="branding-table">\n' +
+'    <tr>\n' +
+'      <td class="branding-logo-left">\n' +
+'        <img src="' + escapeHtml(emblemSrc) + '" alt="Emblem of India" class="header-img-left">\n' +
+'      </td>\n' +
+'      <td class="branding-text">\n' +
+'        <div class="lbsnaa-brand-line-1">Government of India</div>\n' +
+'        <div class="lbsnaa-brand-line-2">OFFICER\'S MESS LBSNAA MUSSOORIE</div>\n' +
+'        <div class="lbsnaa-brand-line-3">Lal Bahadur Shastri National Academy of Administration</div>\n' +
+'      </td>\n' +
+'      <td class="branding-logo-right">\n' +
+'        <table class="branding-right-inner">\n' +
+'          <tr>\n' +
+'            <td style="width:48px;"><img src="' + escapeHtml(lbsnaaLogoSrc) + '" alt="LBSNAA" class="header-img-right-seal"></td>\n' +
+'            <td class="branding-right-text">\n' +
+'              <div class="branding-hindi">लाल बहादुर शास्त्री राष्ट्रीय प्रशासन अकादमी</div>\n' +
+'              <div class="branding-en-side">Lal Bahadur Shastri National Academy of Administration</div>\n' +
+'            </td>\n' +
+'          </tr>\n' +
+'        </table>\n' +
+'      </td>\n' +
+'    </tr>\n' +
+'  </table>\n' +
+'</div>\n' +
+'<div class="report-header-block">\n' +
+'  <h1 class="report-title-center">Item Report</h1>\n' +
+'  <div class="report-date-bar">' + escapeHtml(periodBar) + '</div>\n' +
+'</div>\n' +
+'<div class="report-meta-print">\n' +
+'  <div class="meta-line"><strong>View:</strong> ' + escapeHtml(viewLabel) + '</div>\n' +
+'  <div class="meta-line"><strong>Store:</strong> ' + escapeHtml(storeLabel) + '</div>\n' +
+'  <div class="meta-line"><strong>Items:</strong> ' + escapeHtml(itemsLabel) + '</div>\n' +
+'  <div class="meta-line"><strong>Printed on:</strong> ' + escapeHtml(printedOn) + '</div>\n' +
+'</div>\n' +
+tablesHtml +
+'<div class="footer">\n' +
+'  <small>Officer\'s Mess LBSNAA Mussoorie — Item Report (Purchase / Sale Quantity)</small>\n' +
+'</div>\n' +
+'<script>window.addEventListener("load", function () { window.print(); });<\\/script>\n' +
+'</body>\n' +
+'</html>');
     printWindow.document.close();
 }
 </script>

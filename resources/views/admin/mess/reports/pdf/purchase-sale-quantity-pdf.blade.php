@@ -1,141 +1,299 @@
 @php
     $fromLabel = $fromDate ? date('d-F-Y', strtotime($fromDate)) : null;
     $toLabel = $toDate ? date('d-F-Y', strtotime($toDate)) : null;
+    $viewLabel = $viewType === 'item_wise' ? 'Item-wise' : ($viewType === 'subcategory_wise' ? 'Subcategory-wise' : 'Category-wise');
+    $storeLabel = $selectedStoreName ?? 'All Stores';
+    $itemsLabel = $selectedItemNamesLabel ?? 'All Items';
+    $printedOn = now()->format('d/m/Y') . ' ' . now()->format('g:i:s A');
+
+    $emblemSrc = 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
+
+    $lbsnaaLogoSrc = 'https://www.lbsnaa.gov.in/admin_assets/images/logo.png';
+    foreach ([public_path('images/lbsnaa_logo.jpg'), public_path('images/lbsnaa_logo.png')] as $logoPath) {
+        if (is_file($logoPath) && is_readable($logoPath)) {
+            $raw = @file_get_contents($logoPath);
+            if ($raw !== false) {
+                $mime = str_ends_with(strtolower($logoPath), '.png') ? 'image/png' : 'image/jpeg';
+                $lbsnaaLogoSrc = 'data:' . $mime . ';base64,' . base64_encode($raw);
+                break;
+            }
+        }
+    }
+    if (str_starts_with($lbsnaaLogoSrc, 'http')) {
+        foreach ([
+            public_path('admin_assets/images/logos/logo.png'),
+            public_path('admin_assets/images/logos/logo.svg'),
+        ] as $localLogoPath) {
+            if (is_file($localLogoPath) && is_readable($localLogoPath)) {
+                $raw = @file_get_contents($localLogoPath);
+                if ($raw !== false) {
+                    $ext = strtolower(pathinfo($localLogoPath, PATHINFO_EXTENSION));
+                    $mime = match ($ext) {
+                        'svg' => 'image/svg+xml',
+                        'png' => 'image/png',
+                        'jpg', 'jpeg' => 'image/jpeg',
+                        default => null,
+                    };
+                    if ($mime) {
+                        $lbsnaaLogoSrc = 'data:' . $mime . ';base64,' . base64_encode($raw);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    $periodBar = 'From ' . ($fromLabel ?? '—') . ' To ' . ($toLabel ?? '—');
 @endphp
 <!doctype html>
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>Item Report - Purchase/Sale Quantity</title>
+    <title>Item Report - OFFICER'S MESS LBSNAA MUSSOORIE</title>
     <style>
+        @page {
+            size: A4 landscape;
+            margin: 10mm 12mm;
+        }
         body {
             font-family: DejaVu Sans, Arial, sans-serif;
-            font-size: 9px;
-            margin: 16px 18px;
-            color: #222;
-        }
-        .page-header {
-            border-bottom: 2px solid #004a93;
-            padding-bottom: 6px;
-            margin-bottom: 10px;
-        }
-        .page-header-top {
-            display: table;
-            width: 100%;
-        }
-        .page-header-col {
-            display: table-cell;
-            vertical-align: middle;
-        }
-        .page-header-title {
-            text-align: center;
-        }
-        .page-header-title h1 {
-            font-size: 12px;
+            font-size: 9pt;
             margin: 0;
-            text-transform: uppercase;
-            letter-spacing: .04em;
+            padding: 0;
+            color: #222;
+            background: #fff;
         }
-        .page-header-title h2 {
-            font-size: 10px;
-            margin: 2px 0 0;
-            text-transform: uppercase;
-            color: #004a93;
+
+        /* Official header — three columns, colours aligned with institution layout */
+        .lbsnaa-header-wrap {
+            border-bottom: 3px solid #003366;
+            margin-bottom: 10px;
+            padding: 4px 0 10px;
         }
-        .page-header-sub {
-            font-size: 8px;
-            margin-top: 2px;
-            color: #555;
-        }
-        .meta-row {
-            font-size: 8px;
-            margin-top: 6px;
-        }
-        .meta-row span {
-            display: inline-block;
-            margin-right: 14px;
-        }
-        table {
+        .branding-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 8px;
-            margin-top: 6px;
+            margin: 0;
         }
-        th, td {
-            padding: 2px 3px;
-            border: 1px solid #dde2ea;
+        .branding-table td {
+            border: 0;
+            padding: 0;
+            vertical-align: middle;
         }
-        thead th {
-            background: #e6ecf5;
+        .branding-logo-left {
+            width: 48px;
+        }
+        .branding-text {
+            text-align: center;
+            padding: 0 12px;
+            line-height: 1.25;
+        }
+        .branding-logo-right {
+            width: 220px;
+        }
+        .branding-right-inner {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .branding-right-inner td {
+            border: 0;
+            vertical-align: middle;
+            padding: 0;
+        }
+        .lbsnaa-brand-line-1 {
+            font-size: 8pt;
+            color: #0070c0;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
             font-weight: 600;
         }
-        .text-center { text-align: center; }
-        .text-end { text-align: right; }
-        tbody tr:nth-child(even) td {
+        .lbsnaa-brand-line-2 {
+            font-size: 12pt;
+            color: #111;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-top: 3px;
+        }
+        .lbsnaa-brand-line-3 {
+            font-size: 9pt;
+            color: #4a5a6a;
+            margin-top: 3px;
+            font-weight: normal;
+        }
+        .header-img-left {
+            width: 40px;
+            height: 40px;
+            object-fit: contain;
+            display: block;
+        }
+        .header-img-right-seal {
+            width: 44px;
+            height: 44px;
+            object-fit: contain;
+            display: block;
+        }
+        .branding-right-text {
+            text-align: left;
+            padding-left: 8px;
+            line-height: 1.2;
+        }
+        .branding-hindi {
+            font-size: 8pt;
+            color: #7b2d26;
+            font-weight: 600;
+        }
+        .branding-en-side {
+            font-size: 7pt;
+            color: #7b2d26;
+            margin-top: 2px;
+        }
+
+        .report-header-block {
+            text-align: center;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .report-title-center {
+            font-size: 13pt;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin: 0 0 6px;
+            color: #212529;
+        }
+        .report-date-bar {
+            background: #003366;
+            color: #fff;
+            padding: 6px 12px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 9pt;
+            display: inline-block;
+        }
+
+        .report-meta-print {
+            font-size: 8pt;
+            margin: 8px 0 10px;
+            line-height: 1.45;
+            text-align: left;
+        }
+        .report-meta-print .meta-line {
+            margin-bottom: 3px;
+            word-wrap: break-word;
+        }
+
+        table.purchase-sale-data {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 8pt;
+            margin-bottom: 8px;
+        }
+        table.purchase-sale-data thead {
+            display: table-header-group;
+        }
+        table.purchase-sale-data th,
+        table.purchase-sale-data td {
+            padding: 4px 6px;
+            border: 1px solid #dee2e6;
+            vertical-align: middle;
+        }
+        table.purchase-sale-data thead th {
+            background: #d3d6d9;
+            font-weight: 600;
+            text-align: left;
+        }
+        table.purchase-sale-data thead th.text-center {
+            text-align: center;
+        }
+        table.purchase-sale-data thead th.text-end {
+            text-align: right;
+        }
+        table.purchase-sale-data .text-center {
+            text-align: center;
+        }
+        table.purchase-sale-data .text-end {
+            text-align: right;
+        }
+        table.purchase-sale-data tbody tr:nth-child(even) td {
             background: #fafbfc;
         }
+
         .group-title {
-            margin-top: 10px;
+            margin-top: 8px;
             margin-bottom: 4px;
-            font-weight: 600;
-            color: #004a93;
+            font-weight: 700;
+            font-size: 9pt;
+            color: #003366;
         }
+
+        .no-data {
+            font-size: 9pt;
+            margin: 10px 0;
+            color: #555;
+        }
+
         .footer {
-            border-top: 1px solid #dde2ea;
-            font-size: 7px;
+            border-top: 1px solid #dee2e6;
+            font-size: 7pt;
             color: #666;
             text-align: center;
-            padding-top: 3px;
-            margin-top: 4px;
+            padding-top: 5px;
+            margin-top: 6px;
         }
-        thead { display: table-header-group; }
-        tfoot { display: table-footer-group; }
     </style>
 </head>
 <body>
-<div class="page-header">
-    <div class="page-header-top">
-        <div class="page-header-col page-header-title">
-            <h1>OFFICER'S MESS LBSNAA MUSSOORIE</h1>
-            <h2>Item Report - Purchase/Sale Quantity</h2>
-            <div class="page-header-sub">Lal Bahadur Shastri National Academy of Administration</div>
-        </div>
-    </div>
-    <div class="meta-row">
-        @php
-            $fromText = $fromLabel ?? 'Start';
-            $toText = $toLabel ?? 'End';
-        @endphp
-        <span>
-            <strong>Period:</strong>
-            From {{ $fromText }} To {{ $toText }}
-        </span>
-        <span>
-            <strong>View Type:</strong>
-            {{ $viewType === 'item_wise' ? 'Item-wise' : ($viewType === 'subcategory_wise' ? 'Subcategory-wise' : 'Category-wise') }}
-        </span>
-        <span>
-            <strong>Store:</strong> {{ $selectedStoreName ?? 'All Stores' }}
-        </span>
-        <span>
-            <strong>Items:</strong> {{ $selectedItemNamesLabel ?? 'All Items' }}
-        </span>
-        <span>
-            <strong>Generated on:</strong> {{ now()->format('d-m-Y H:i') }}
-        </span>
-    </div>
+
+<div class="lbsnaa-header-wrap">
+    <table class="branding-table">
+        <tr>
+            <td class="branding-logo-left">
+                <img src="{{ $emblemSrc }}" alt="Emblem of India" class="header-img-left">
+            </td>
+            <td class="branding-text">
+                <div class="lbsnaa-brand-line-1">Government of India</div>
+                <div class="lbsnaa-brand-line-2">OFFICER'S MESS LBSNAA MUSSOORIE</div>
+                <div class="lbsnaa-brand-line-3">Lal Bahadur Shastri National Academy of Administration</div>
+            </td>
+            <td class="branding-logo-right">
+                <table class="branding-right-inner">
+                    <tr>
+                        <td style="width: 48px;">
+                            <img src="{{ $lbsnaaLogoSrc }}" alt="LBSNAA" class="header-img-right-seal">
+                        </td>
+                        <td class="branding-right-text">
+                            <div class="branding-hindi">लाल बहादुर शास्त्री राष्ट्रीय प्रशासन अकादमी</div>
+                            <div class="branding-en-side">Lal Bahadur Shastri National Academy of Administration</div>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</div>
+
+<div class="report-header-block">
+    <h1 class="report-title-center">Item Report</h1>
+    <div class="report-date-bar">{{ $periodBar }}</div>
+</div>
+
+<div class="report-meta-print">
+    <div class="meta-line"><strong>View:</strong> {{ $viewLabel }}</div>
+    <div class="meta-line"><strong>Store:</strong> {{ $storeLabel }}</div>
+    <div class="meta-line"><strong>Items:</strong> {{ $itemsLabel }}</div>
+    <div class="meta-line"><strong>Generated on:</strong> {{ $printedOn }}</div>
 </div>
 
 @if($viewType === 'item_wise')
     @if(empty($reportData))
-        <p>No data found for the selected date range.</p>
+        <p class="no-data">No data found for the selected date range.</p>
     @else
-        <table>
+        <table class="purchase-sale-data">
             <thead>
             <tr>
-                <th style="width: 30px;" class="text-center">S. No.</th>
+                <th style="width: 34px;" class="text-center">S. No.</th>
                 <th>Item Name</th>
-                <th>Unit</th>
+                <th style="width: 48px;">Unit</th>
                 <th class="text-end">Total Purchase Qty</th>
                 <th class="text-end">Avg Purchase Price</th>
                 <th class="text-end">Total Sale Qty</th>
@@ -150,11 +308,11 @@
                     <td>{{ $row['unit'] }}</td>
                     <td class="text-end">{{ number_format($row['purchase_qty'], 2) }}</td>
                     <td class="text-end">
-                        {{ $row['avg_purchase_price'] !== null ? number_format($row['avg_purchase_price'], 2) : '—' }}
+                        {{ $row['avg_purchase_price'] !== null ? '₹' . number_format($row['avg_purchase_price'], 2) : '—' }}
                     </td>
                     <td class="text-end">{{ number_format($row['sale_qty'], 2) }}</td>
                     <td class="text-end">
-                        {{ $row['avg_sale_price'] !== null ? number_format($row['avg_sale_price'], 2) : '—' }}
+                        {{ $row['avg_sale_price'] !== null ? '₹' . number_format($row['avg_sale_price'], 2) : '—' }}
                     </td>
                 </tr>
             @endforeach
@@ -164,16 +322,16 @@
 @else
     @php $groupedData = $groupedData ?? []; @endphp
     @if(empty($groupedData))
-        <p>No data found for the selected filters.</p>
+        <p class="no-data">No data found for the selected filters.</p>
     @else
         @foreach($groupedData as $group)
             <div class="group-title">{{ $group['category_name'] }}</div>
-            <table>
+            <table class="purchase-sale-data">
                 <thead>
                 <tr>
-                    <th style="width: 30px;" class="text-center">S. No.</th>
+                    <th style="width: 34px;" class="text-center">S. No.</th>
                     <th>Item Name</th>
-                    <th>Unit</th>
+                    <th style="width: 48px;">Unit</th>
                     <th class="text-end">Total Purchase Qty</th>
                     <th class="text-end">Avg Purchase Price</th>
                     <th class="text-end">Total Sale Qty</th>
@@ -188,11 +346,11 @@
                         <td>{{ $row['unit'] }}</td>
                         <td class="text-end">{{ number_format($row['purchase_qty'], 2) }}</td>
                         <td class="text-end">
-                            {{ isset($row['avg_purchase_price']) && $row['avg_purchase_price'] !== null ? number_format($row['avg_purchase_price'], 2) : '—' }}
+                            {{ isset($row['avg_purchase_price']) && $row['avg_purchase_price'] !== null ? '₹' . number_format($row['avg_purchase_price'], 2) : '—' }}
                         </td>
                         <td class="text-end">{{ number_format($row['sale_qty'], 2) }}</td>
                         <td class="text-end">
-                            {{ isset($row['avg_sale_price']) && $row['avg_sale_price'] !== null ? number_format($row['avg_sale_price'], 2) : '—' }}
+                            {{ isset($row['avg_sale_price']) && $row['avg_sale_price'] !== null ? '₹' . number_format($row['avg_sale_price'], 2) : '—' }}
                         </td>
                     </tr>
                 @endforeach
@@ -203,8 +361,7 @@
 @endif
 
 <div class="footer">
-    <small>Officer's Mess LBSNAA Mussoorie &mdash; Item Report - Purchase/Sale Quantity</small>
+    <small>Officer's Mess LBSNAA Mussoorie — Item Report (Purchase / Sale Quantity)</small>
 </div>
 </body>
 </html>
-
