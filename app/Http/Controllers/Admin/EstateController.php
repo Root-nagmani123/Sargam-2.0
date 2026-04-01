@@ -6192,8 +6192,18 @@ class EstateController extends Controller
             }
         }
 
+        $meterNoQuery = [];
+        if (! empty($storeBillYearStr) && ! empty($storeBillMonthName)) {
+            try {
+                $meterNoQuery['bill_year'] = $storeBillYearStr;
+                $meterNoQuery['bill_month'] = (int) \Carbon\Carbon::parse('1 ' . $storeBillMonthName . ' ' . $storeBillYearStr)->format('n');
+            } catch (\Throwable $e) {
+                $meterNoQuery = [];
+            }
+        }
+
         return redirect()
-            ->route('admin.estate.update-meter-no')
+            ->route('admin.estate.update-meter-no', $meterNoQuery)
             ->with('success', 'Meter readings updated successfully.');
     }
 
@@ -6333,7 +6343,7 @@ class EstateController extends Controller
             }
 
             $orderCol = (int) data_get($request->all(), 'order.0.column', 0);
-            // Default: latest first (so recently updated readings appear on top)
+            // Default: latest meter reading date first, then pk (so just-saved rows rise to top within the month)
             $orderDir = strtolower((string) data_get($request->all(), 'order.0.dir', 'desc')) === 'desc' ? 'desc' : 'asc';
             $orderMap = [
                 0 => 'emrd.pk',
@@ -6346,7 +6356,13 @@ class EstateController extends Controller
                 7 => 'emrd.pk',
             ];
             $orderBy = $orderMap[$orderCol] ?? 'emrd.pk';
-            $query->orderBy($orderBy, $orderDir)->orderBy('emrd.pk', 'desc');
+            if ($orderCol === 0 && $orderDir === 'desc') {
+                $query->orderByRaw('emrd.to_date IS NULL ASC')
+                    ->orderByDesc('emrd.to_date')
+                    ->orderByDesc('emrd.pk');
+            } else {
+                $query->orderBy($orderBy, $orderDir)->orderBy('emrd.pk', 'desc');
+            }
 
             $selectCols = [
                 'emrd.pk',
