@@ -45,6 +45,216 @@ class EstateController extends Controller
     }
 
     /**
+     * Meter number is missing or zero (used when falling back to estate_update_reading.old_meter_no_*).
+     */
+    private function estateMeterNoIsEmpty($value): bool
+    {
+        if ($value === null || $value === '') {
+            return true;
+        }
+
+        return (int) $value === 0;
+    }
+
+    /**
+     * Map one Update Meter No. row (union of permanent + other) to DataTable payload fields.
+     */
+    private function mapUpdateMeterNoListRow(object $r): array
+    {
+        $oldM1Source = $r->prev_meter_one;
+        if ($this->estateMeterNoIsEmpty($oldM1Source) && isset($r->eur_old_meter_one) && $r->eur_old_meter_one !== null && ! $this->estateMeterNoIsEmpty($r->eur_old_meter_one)) {
+            $oldM1Source = $r->eur_old_meter_one;
+        }
+        $oldM2Source = $r->prev_meter_two;
+        if ($this->estateMeterNoIsEmpty($oldM2Source) && isset($r->eur_old_meter_two) && $r->eur_old_meter_two !== null && ! $this->estateMeterNoIsEmpty($r->eur_old_meter_two)) {
+            $oldM2Source = $r->eur_old_meter_two;
+        }
+
+        $oldM1 = ! $this->estateMeterNoIsEmpty($oldM1Source) ? (string) $oldM1Source : '—';
+        $newM1 = $r->emrd_meter_one !== null && $r->emrd_meter_one !== '' ? (string) $r->emrd_meter_one : '—';
+        $oldM2 = ! $this->estateMeterNoIsEmpty($oldM2Source) ? (string) $oldM2Source : '—';
+        $newM2 = $r->emrd_meter_two !== null && $r->emrd_meter_two !== '' ? (string) $r->emrd_meter_two : '—';
+        if ($newM2 === '0') {
+            $newM2 = '—';
+        }
+
+        $oldR1Source = $r->last_month_elec_red;
+        $oldR2Source = $r->last_month_elec_red2;
+        $hasSecondaryMeter = ($r->emrd_meter_two !== null && (int) $r->emrd_meter_two > 0)
+            || ($r->prev_meter_two !== null && (int) $r->prev_meter_two > 0)
+            || (isset($r->eur_old_meter_two) && ! $this->estateMeterNoIsEmpty($r->eur_old_meter_two));
+
+        $possR1 = $r->poss_reading1 ?? null;
+        $possR2 = $r->poss_reading2 ?? null;
+
+        $oldM1Reading = '—';
+        $oldM1ReadingVal = $oldR1Source;
+        if ($oldM1ReadingVal !== null && $oldM1ReadingVal !== '' && (int) $oldM1ReadingVal > 0) {
+            $oldM1Reading = (string) $oldM1ReadingVal;
+        } elseif ($possR1 !== null && (int) $possR1 > 0) {
+            $oldM1Reading = (string) $possR1;
+        } elseif (isset($r->eur_old_reading_one) && $r->eur_old_reading_one !== null && (int) $r->eur_old_reading_one > 0) {
+            $oldM1Reading = (string) $r->eur_old_reading_one;
+        }
+
+        $oldM2Reading = '—';
+        if ($hasSecondaryMeter) {
+            if ($oldR2Source !== null && $oldR2Source !== '' && (int) $oldR2Source > 0) {
+                $oldM2Reading = (string) $oldR2Source;
+            } elseif ($possR2 !== null && (int) $possR2 > 0) {
+                $oldM2Reading = (string) $possR2;
+            } elseif (isset($r->eur_old_reading_two) && $r->eur_old_reading_two !== null && (int) $r->eur_old_reading_two > 0) {
+                $oldM2Reading = (string) $r->eur_old_reading_two;
+            }
+        }
+
+        return [
+            'name' => $r->emp_name ?? 'N/A',
+            'employee_type' => $r->employee_type ?? '—',
+            'unit_type' => $r->unit_type ?? '—',
+            'unit_sub_type' => $r->unit_sub_type ?? '—',
+            'building_name' => $r->building_name ?? '—',
+            'house_no' => $r->house_no ?? '—',
+            'old_meter1_no' => $oldM1,
+            'new_meter1_no' => $newM1,
+            'old_meter2_no' => $oldM2,
+            'new_meter2_no' => $newM2,
+            'old_meter1_reading' => $oldM1Reading,
+            'new_meter1_reading' => $r->curr_month_elec_red !== null && $r->curr_month_elec_red !== '' ? (string) $r->curr_month_elec_red : '—',
+            'old_meter2_reading' => $oldM2Reading,
+            'new_meter2_reading' => $hasSecondaryMeter
+                ? (($r->curr_month_elec_red2 !== null && $r->curr_month_elec_red2 !== '') ? (string) $r->curr_month_elec_red2 : '—')
+                : '—',
+        ];
+    }
+
+    /**
+     * PK for estate_update_reading.created_by (nullable).
+     */
+    private function estateAuditCreatedByPk(): ?int
+    {
+        $u = Auth::user();
+        if (! $u) {
+            return null;
+        }
+        if (isset($u->pk) && $u->pk !== null && $u->pk !== '') {
+            return (int) $u->pk;
+        }
+        if (method_exists($u, 'getAuthIdentifier') && $u->getAuthIdentifier() !== null) {
+            return (int) $u->getAuthIdentifier();
+        }
+
+        return null;
+    }
+
+    /**
+     * estate_home_request_details.employee_pk may store employee_master.pk or pk_old; estate_update_reading.employee_master_pk must always be employee_master.pk.
+     */
+    private function resolveEmployeeMasterCanonicalPk(?int $employeeId): ?int
+    {
+        if ($employeeId === null || $employeeId <= 0) {
+            return null;
+        }
+        $canonical = DB::table('employee_master')
+            ->where(function ($q) use ($employeeId) {
+                $q->where('pk', $employeeId);
+                if (Schema::hasColumn('employee_master', 'pk_old')) {
+                    $q->orWhere('pk_old', $employeeId);
+                }
+            })
+            ->value('pk');
+
+        return $canonical !== null ? (int) $canonical : null;
+    }
+
+    /**
+     * Persist meter number change audit (estate_update_reading). type: l = regular possession, o = other.
+     * FK column estate_possession_details_pk holds epd.pk (l) or epo.pk (o).
+     */
+    private function logEstateMeterNumberChange(
+        string $type,
+        int $possessionPk,
+        ?int $estateHousePk,
+        ?int $campusPk,
+        ?int $unitMasterPk,
+        ?int $blockPk,
+        ?int $unitSubTypePk,
+        string $houseNo,
+        string $meterChangeMonth,
+        int $oldM1,
+        int $oldM2,
+        int $newM1,
+        int $newM2,
+        ?int $oldReading1,
+        ?int $oldReading2,
+        ?int $newReading1,
+        ?int $newReading2,
+        ?int $employeeMasterPk
+    ): void {
+        if (! Schema::hasTable('estate_update_reading')) {
+            return;
+        }
+        $t = strtolower(trim($type));
+        if ($t !== 'l' && $t !== 'o') {
+            return;
+        }
+        if (($oldM1 === $newM1 && $oldM2 === $newM2) || $possessionPk <= 0) {
+            return;
+        }
+        $trimHouse = trim($houseNo);
+        $trimMonth = trim($meterChangeMonth);
+        if ($trimHouse === '' || $trimMonth === '') {
+            return;
+        }
+        $c = $campusPk !== null ? (int) $campusPk : 0;
+        $u = $unitMasterPk !== null ? (int) $unitMasterPk : 0;
+        $b = $blockPk !== null ? (int) $blockPk : 0;
+        $s = $unitSubTypePk !== null ? (int) $unitSubTypePk : 0;
+        if ($c <= 0 || $u <= 0 || $b <= 0 || $s <= 0) {
+            return;
+        }
+
+        $mNum = static function (?int $v): ?int {
+            if ($v === null || $v <= 0) {
+                return null;
+            }
+
+            return $v;
+        };
+        $mRead = static function (?int $v): ?int {
+            return $v;
+        };
+
+        $now = now();
+        $by = $this->estateAuditCreatedByPk();
+        $resolvedEmployeePk = $this->resolveEmployeeMasterCanonicalPk($employeeMasterPk);
+
+        DB::table('estate_update_reading')->insert([
+            'estate_campus_master_pk' => $c,
+            'estate_unit_master_pk' => $u,
+            'estate_block_master_pk' => $b,
+            'estate_unit_sub_type_master_pk' => $s,
+            'house_no' => mb_substr($trimHouse, 0, 20),
+            'old_meter_no_one' => $mNum($oldM1),
+            'new_meter_no_one' => $mNum($newM1),
+            'old_meter_no_two' => $mNum($oldM2),
+            'new_meter_no_two' => $mNum($newM2),
+            'old_meter_reading_one' => $mRead($oldReading1),
+            'new_meter_reading_one' => $mRead($newReading1),
+            'old_meter_reading_two' => $mRead($oldReading2),
+            'new_meter_reading_two' => $mRead($newReading2),
+            'estate_possession_details_pk' => $possessionPk,
+            'estate_house_pk' => ($estateHousePk !== null && $estateHousePk > 0) ? $estateHousePk : null,
+            'type' => $t,
+            'meter_update_date' => $now,
+            'meter_change_month' => mb_substr($trimMonth, 0, 255),
+            'created_date' => $now,
+            'created_by' => $by,
+            'employee_master_pk' => ($resolvedEmployeePk !== null && $resolvedEmployeePk > 0) ? $resolvedEmployeePk : null,
+        ]);
+    }
+
+    /**
      * HAC Person role must not access Request Details / Change Request Details. Abort 403 if HAC Person only.
      * @deprecated No longer used for Change Request Details; HAC Person can access their own via ensureChangeRequestOwnership.
      */
@@ -5661,7 +5871,7 @@ class EstateController extends Controller
                     'old_meter_no' => (string) $meterOne,
                     'electric_meter_reading' => $displayElectric1,
                     'baseline_min_reading' => $baselineMin1,
-                    'new_meter_no' => $row->emrd_meter_one !== null && $row->emrd_meter_one !== '' ? (string) $row->emrd_meter_one : '',
+                    'new_meter_no' => $row->emrd_meter_one !== null && $row->emrd_meter_one !== '' ? (string) $row->emrd_meter_one : (string) $meterOne,
                     'new_meter_reading' => '',
                     'unit' => $unit1,
                 ]));
@@ -5686,7 +5896,7 @@ class EstateController extends Controller
                     'old_meter_no' => (string) $meterTwo,
                     'electric_meter_reading' => $displayElectric2,
                     'baseline_min_reading' => $baselineMin2,
-                    'new_meter_no' => $row->emrd_meter_two !== null && $row->emrd_meter_two !== '' ? (string) $row->emrd_meter_two : '',
+                    'new_meter_no' => $row->emrd_meter_two !== null && $row->emrd_meter_two !== '' ? (string) $row->emrd_meter_two : (string) $meterTwo,
                     'new_meter_reading' => '',
                     'unit' => $unit2,
                 ]));
@@ -6046,6 +6256,7 @@ class EstateController extends Controller
             }
             $row = DB::table('estate_month_reading_details as emrd')
                 ->join('estate_possession_details as epd', 'emrd.estate_possession_details_pk', '=', 'epd.pk')
+                ->join('estate_home_request_details as ehrd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
                 ->leftJoin('estate_house_master as ehm', 'epd.estate_house_master_pk', '=', 'ehm.pk')
                 ->leftJoin('estate_unit_sub_type_master as eust', 'ehm.estate_unit_sub_type_master_pk', '=', 'eust.pk')
                 ->where('emrd.pk', $rowPk)
@@ -6063,9 +6274,20 @@ class EstateController extends Controller
                     'emrd.meter_one_elec_charge',
                     'emrd.meter_two_elec_charge',
                     'emrd.electricty_charges',
+                    'emrd.meter_one as emrd_meter_one_before',
+                    'emrd.meter_two as emrd_meter_two_before',
+                    'emrd.estate_possession_details_pk',
+                    'ehm.pk as audit_estate_house_pk',
+                    'ehm.estate_campus_master_pk as audit_campus_pk',
+                    'ehm.estate_block_master_pk as audit_block_pk',
+                    'ehm.estate_unit_sub_type_master_pk as audit_unit_sub_type_pk',
+                    'ehm.house_no as audit_ehm_house_no',
+                    'emrd.house_no as audit_emrd_house_no',
+                    'ehrd.employee_pk as audit_employee_pk',
                     'epd.electric_meter_reading as epd_electric_meter_reading',
                     $hasSecondaryPossessionReadingCol ? 'epd.electric_meter_reading_2 as epd_electric_meter_reading_2' : \Illuminate\Support\Facades\DB::raw('NULL as epd_electric_meter_reading_2'),
-                    DB::raw(($hasUnitTypeOnSubType ? 'eust.estate_unit_type_master_pk' : 'ehm.estate_unit_master_pk') . ' as unit_type_pk')
+                    DB::raw(($hasUnitTypeOnSubType ? 'eust.estate_unit_type_master_pk' : 'ehm.estate_unit_master_pk') . ' as unit_type_pk'),
+                    DB::raw(($hasUnitTypeOnSubType ? 'eust.estate_unit_type_master_pk' : 'ehm.estate_unit_master_pk') . ' as audit_unit_master_pk')
                 )
                 ->first();
 
@@ -6167,6 +6389,51 @@ class EstateController extends Controller
             }
 
             if (
+                $row
+                && ! empty($update)
+                && Schema::hasTable('estate_update_reading')
+                && (array_key_exists('meter_one', $update) || array_key_exists('meter_two', $update))
+            ) {
+                $beforeM1 = (int) ($row->emrd_meter_one_before ?? 0);
+                $beforeM2 = (int) ($row->emrd_meter_two_before ?? 0);
+                $afterM1 = array_key_exists('meter_one', $update) ? (int) $update['meter_one'] : $beforeM1;
+                $afterM2 = array_key_exists('meter_two', $update) ? (int) $update['meter_two'] : $beforeM2;
+                if ($afterM1 !== $beforeM1 || $afterM2 !== $beforeM2) {
+                    $curr1Existing = $row->curr_month_elec_red !== null ? (int) $row->curr_month_elec_red : null;
+                    $curr2Existing = $row->curr_month_elec_red2 !== null ? (int) $row->curr_month_elec_red2 : null;
+                    $newR1 = array_key_exists('curr_month_elec_red', $update) ? (int) $update['curr_month_elec_red'] : $curr1Existing;
+                    $newR2 = array_key_exists('curr_month_elec_red2', $update) ? (int) $update['curr_month_elec_red2'] : $curr2Existing;
+                    $billM = $storeBillMonthName !== null && $storeBillMonthName !== '' ? $storeBillMonthName : (string) ($row->bill_month ?? '');
+                    $billY = $storeBillYearStr !== null && $storeBillYearStr !== '' ? $storeBillYearStr : (string) ($row->bill_year ?? '');
+                    $mcm = trim($billM . ' ' . $billY);
+                    $houseForAudit = trim((string) ($row->audit_emrd_house_no ?? ''));
+                    if ($houseForAudit === '') {
+                        $houseForAudit = trim((string) ($row->audit_ehm_house_no ?? ''));
+                    }
+                    $this->logEstateMeterNumberChange(
+                        'l',
+                        (int) $row->estate_possession_details_pk,
+                        isset($row->audit_estate_house_pk) ? (int) $row->audit_estate_house_pk : null,
+                        isset($row->audit_campus_pk) ? (int) $row->audit_campus_pk : null,
+                        isset($row->audit_unit_master_pk) ? (int) $row->audit_unit_master_pk : null,
+                        isset($row->audit_block_pk) ? (int) $row->audit_block_pk : null,
+                        isset($row->audit_unit_sub_type_pk) ? (int) $row->audit_unit_sub_type_pk : null,
+                        $houseForAudit,
+                        $mcm,
+                        $beforeM1,
+                        $beforeM2,
+                        $afterM1,
+                        $afterM2,
+                        $curr1Existing,
+                        $curr2Existing,
+                        $newR1,
+                        $newR2,
+                        isset($row->audit_employee_pk) ? (int) $row->audit_employee_pk : null
+                    );
+                }
+            }
+
+            if (
                 $rowPk > 0
                 && ($lastMeterReadingDate || $currentMeterReadingDate)
                 && ($hasLastMeterDateCol || $hasCurrentMeterDateCol)
@@ -6216,9 +6483,9 @@ class EstateController extends Controller
     }
 
     /**
-     * API: Get Update Meter No. list for DataTable (one row per estate_month_reading_details).
-     * When bill_month/bill_year not provided: show ALL saved readings (every Update Reading save appears here).
-     * When provided: filter by that month only.
+     * API: Get Update Meter No. list for DataTable (permanent: estate_month_reading_details; other: estate_month_reading_details_other).
+     * Old meter nos fall back to estate_update_reading (type l = permanent, type o = other; FK column stores possession pk).
+     * When bill_month/bill_year not provided: show ALL saved readings. When provided: filter by that month only.
      */
     public function getUpdateMeterNoList(Request $request)
     {
@@ -6245,12 +6512,31 @@ class EstateController extends Controller
             }
         }
 
-        $hasUnitTypeOnSubType = \Illuminate\Support\Facades\Schema::hasColumn('estate_unit_sub_type_master', 'estate_unit_type_master_pk');
-        $hasEpdReading2 = \Illuminate\Support\Facades\Schema::hasColumn('estate_possession_details', 'electric_meter_reading_2');
-        $hasEpdReading1 = \Illuminate\Support\Facades\Schema::hasColumn('estate_possession_details', 'electric_meter_reading');
+        $hasUnitTypeOnSubType = Schema::hasColumn('estate_unit_sub_type_master', 'estate_unit_type_master_pk');
+        $hasEpdReading2 = Schema::hasColumn('estate_possession_details', 'electric_meter_reading_2');
+        $hasEpdReading1 = Schema::hasColumn('estate_possession_details', 'electric_meter_reading');
+        $hasEpoReading1 = Schema::hasColumn('estate_possession_other', 'meter_reading_oth');
+        $hasEpoReading2 = Schema::hasColumn('estate_possession_other', 'meter_reading_oth1');
+        $hasEurTable = Schema::hasTable('estate_update_reading');
 
-        // Avoid correlated subqueries per row for "previous meter" values.
-        // MySQL 8 supports window functions; LAG gives previous row within possession, ordered by (to_date, pk).
+        $canSeeAllUpdateMeterNo = hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin')
+            || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST');
+
+        $eurLatestPermSub = '(SELECT eur.* FROM estate_update_reading eur INNER JOIN (
+            SELECT estate_possession_details_pk, meter_change_month, MAX(pk) AS max_pk
+            FROM estate_update_reading
+            WHERE LOWER(TRIM(COALESCE(type, \'\'))) = \'l\'
+            GROUP BY estate_possession_details_pk, meter_change_month
+        ) z ON eur.pk = z.max_pk)';
+
+        $eurLatestOtherSub = '(SELECT eur.* FROM estate_update_reading eur INNER JOIN (
+            SELECT estate_possession_details_pk, meter_change_month, MAX(pk) AS max_pk
+            FROM estate_update_reading
+            WHERE LOWER(TRIM(COALESCE(type, \'\'))) = \'o\'
+            GROUP BY estate_possession_details_pk, meter_change_month
+        ) z ON eur.pk = z.max_pk)';
+
+        // LAG previous meter no. per possession (permanent).
         $emrdSub = DB::table('estate_month_reading_details as emrd')
             ->select([
                 'emrd.pk',
@@ -6265,15 +6551,14 @@ class EstateController extends Controller
                 'emrd.curr_month_elec_red',
                 'emrd.last_month_elec_red2',
                 'emrd.curr_month_elec_red2',
-                DB::raw("LAG(emrd.meter_one) OVER (PARTITION BY emrd.estate_possession_details_pk ORDER BY emrd.to_date, emrd.pk) as prev_meter_one"),
-                DB::raw("LAG(emrd.meter_two) OVER (PARTITION BY emrd.estate_possession_details_pk ORDER BY emrd.to_date, emrd.pk) as prev_meter_two"),
+                DB::raw('LAG(emrd.meter_one) OVER (PARTITION BY emrd.estate_possession_details_pk ORDER BY emrd.to_date, emrd.pk) as prev_meter_one'),
+                DB::raw('LAG(emrd.meter_two) OVER (PARTITION BY emrd.estate_possession_details_pk ORDER BY emrd.to_date, emrd.pk) as prev_meter_two'),
             ]);
-
         if ($filterByMonth) {
             $emrdSub->where('emrd.bill_month', $billMonth)->where('emrd.bill_year', $billYear);
         }
 
-        $baseQuery = DB::query()
+        $permBase = DB::query()
             ->fromSub($emrdSub, 'emrd')
             ->join('estate_possession_details as epd', 'emrd.estate_possession_details_pk', '=', 'epd.pk')
             ->join('estate_home_request_details as ehrd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
@@ -6295,188 +6580,97 @@ class EstateController extends Controller
             ->leftJoin('employee_type_master as etm', 'em.emp_type', '=', 'etm.pk')
             ->whereNotNull('epd.estate_house_master_pk');
 
-        // RBAC: Non-admin/estate/super-admin/training/IST users should only see/update their own meter records.
-        if (! (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST'))) {
-            $user = \Illuminate\Support\Facades\Auth::user();
+        if ($hasEurTable) {
+            $permBase->leftJoin(DB::raw($eurLatestPermSub . ' AS eur_hist'), function ($join) {
+                $join->on('eur_hist.estate_possession_details_pk', '=', 'emrd.estate_possession_details_pk')
+                    ->whereRaw("TRIM(COALESCE(eur_hist.meter_change_month, '')) = TRIM(CONCAT(IFNULL(emrd.bill_month, ''), ' ', IFNULL(emrd.bill_year, '')))");
+            });
+        }
+
+        if (! $canSeeAllUpdateMeterNo) {
+            $user = Auth::user();
             if ($user) {
                 $employeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null);
-                if (!empty($employeeIds)) {
+                if (! empty($employeeIds)) {
                     $allowPks = array_values(array_unique(array_merge(
                         $employeeIds,
                         Schema::hasColumn('employee_master', 'pk_old')
                             ? DB::table('employee_master')->whereIn('pk', $employeeIds)->whereNotNull('pk_old')->pluck('pk_old')->map(fn ($v) => (int) $v)->all()
                             : []
                     )));
-                    $baseQuery->whereIn('ehrd.employee_pk', $allowPks);
+                    $permBase->whereIn('ehrd.employee_pk', $allowPks);
                 } else {
-                    $baseQuery->whereRaw('1 = 0');
+                    $permBase->whereRaw('1 = 0');
                 }
             } else {
-                $baseQuery->whereRaw('1 = 0');
+                $permBase->whereRaw('1 = 0');
             }
         }
 
-        if ($isDataTables) {
-            $query = clone $baseQuery;
-
-            $recordsTotal = (clone $baseQuery)->count('emrd.pk');
-
-            if ($searchValue !== '') {
-                $query->where(function ($q) use ($searchValue) {
-                    $like = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $searchValue) . '%';
-                    $q->where('ehrd.emp_name', 'like', $like)
-                        ->orWhere('b.block_name', 'like', $like)
-                        ->orWhere('emrd.house_no', 'like', $like)
-                        ->orWhere('ut.unit_type', 'like', $like)
-                        ->orWhere('ust.unit_sub_type', 'like', $like)
-                        ->orWhere('etm.category_type_name', 'like', $like);
-                });
-            }
-
-            // DataTables needs recordsFiltered, but when there is no global search,
-            // it is identical to recordsTotal. Avoid running a second heavy COUNT
-            // over the joined/windowed query in that common case.
-            if ($searchValue === '') {
-                $recordsFiltered = $recordsTotal;
-            } else {
-                $recordsFiltered = (clone $query)->count('emrd.pk');
-            }
-
-            $orderCol = (int) data_get($request->all(), 'order.0.column', 0);
-            // Default: latest meter reading date first, then pk (so just-saved rows rise to top within the month)
-            $orderDir = strtolower((string) data_get($request->all(), 'order.0.dir', 'desc')) === 'desc' ? 'desc' : 'asc';
-            $orderMap = [
-                0 => 'emrd.pk',
-                1 => 'ehrd.emp_name',
-                2 => 'etm.category_type_name',
-                3 => 'ut.unit_type',
-                4 => 'ust.unit_sub_type',
-                5 => 'b.block_name',
-                6 => 'emrd.house_no',
-                7 => 'emrd.pk',
-            ];
-            $orderBy = $orderMap[$orderCol] ?? 'emrd.pk';
-            if ($orderCol === 0 && $orderDir === 'desc') {
-                $query->orderByRaw('emrd.to_date IS NULL ASC')
-                    ->orderByDesc('emrd.to_date')
-                    ->orderByDesc('emrd.pk');
-            } else {
-                $query->orderBy($orderBy, $orderDir)->orderBy('emrd.pk', 'desc');
-            }
-
-            $selectCols = [
-                'emrd.pk',
-                'emrd.estate_possession_details_pk',
-                'emrd.house_no',
-                'emrd.to_date',
-                'emrd.emrd_meter_one',
-                'emrd.emrd_meter_two',
-                'emrd.last_month_elec_red',
-                'emrd.curr_month_elec_red',
-                'emrd.last_month_elec_red2',
-                'emrd.curr_month_elec_red2',
-                'ehrd.emp_name',
-                'etm.category_type_name as employee_type',
-                'ut.unit_type',
-                'ust.unit_sub_type',
-                'b.block_name as building_name',
-                'emrd.prev_meter_one',
-                'emrd.prev_meter_two',
-            ];
-            if ($hasEpdReading1) {
-                $selectCols[] = 'epd.electric_meter_reading as epd_electric_meter_reading';
-            }
-            if ($hasEpdReading2) {
-                $selectCols[] = 'epd.electric_meter_reading_2 as epd_electric_meter_reading_2';
-            }
-            $rows = $query
-                ->select($selectCols)
-                ->offset($start)
-                ->limit($length)
-                ->get();
-
-            $data = [];
-            $sno = $start + 1;
-            foreach ($rows as $r) {
-                $oldM1Source = $r->prev_meter_one;
-                $oldM2Source = $r->prev_meter_two;
-
-                $oldM1 = $oldM1Source !== null && $oldM1Source !== '' && (int) $oldM1Source !== 0 ? (string) $oldM1Source : '—';
-                $newM1 = $r->emrd_meter_one !== null && $r->emrd_meter_one !== '' ? (string) $r->emrd_meter_one : '—';
-                $oldM2 = $oldM2Source !== null && $oldM2Source !== '' && (int) $oldM2Source !== 0 ? (string) $oldM2Source : '—';
-                $newM2 = $r->emrd_meter_two !== null && $r->emrd_meter_two !== '' ? (string) $r->emrd_meter_two : '—';
-                if ($newM2 === '0') {
-                    $newM2 = '—';
-                }
-
-                $oldR1Source = $r->last_month_elec_red;
-                $oldR2Source = $r->last_month_elec_red2;
-                $hasSecondaryMeter = ($r->emrd_meter_two !== null && (int) $r->emrd_meter_two > 0)
-                    || ($r->prev_meter_two !== null && (int) $r->prev_meter_two > 0);
-
-                // Old Meter1 Reading:
-                // Prefer last_month_elec_red (previous snapshot). If it is missing/0, fall back to
-                // possession's electric_meter_reading (this happens during some change-request flows).
-                $oldM1Reading = '—';
-                $oldM1ReadingVal = $oldR1Source;
-                if ($oldM1ReadingVal !== null && $oldM1ReadingVal !== '' && (int) $oldM1ReadingVal > 0) {
-                    $oldM1Reading = (string) $oldM1ReadingVal;
-                } elseif ($hasEpdReading1 && isset($r->epd_electric_meter_reading) && (int) $r->epd_electric_meter_reading > 0) {
-                    $oldM1Reading = (string) $r->epd_electric_meter_reading;
-                }
-                // Old Meter2 Reading: use last_month_elec_red2; if null/0 and secondary meter exists, fallback to possession's electric_meter_reading_2 (same as Update Meter Reading "Electric Meter Reading")
-                $oldM2Reading = '—';
-                if ($hasSecondaryMeter) {
-                    if ($oldR2Source !== null && $oldR2Source !== '' && (int) $oldR2Source > 0) {
-                        $oldM2Reading = (string) $oldR2Source;
-                    } elseif ($hasEpdReading2 && isset($r->epd_electric_meter_reading_2) && (int) $r->epd_electric_meter_reading_2 > 0) {
-                        $oldM2Reading = (string) $r->epd_electric_meter_reading_2;
-                    }
-                }
-
-                $data[] = [
-                    'sn' => $sno++,
-                    'name' => $r->emp_name ?? 'N/A',
-                    'employee_type' => $r->employee_type ?? '—',
-                    'unit_type' => $r->unit_type ?? '—',
-                    'unit_sub_type' => $r->unit_sub_type ?? '—',
-                    'building_name' => $r->building_name ?? '—',
-                    'house_no' => $r->house_no ?? '—',
-                    'old_meter1_no' => $oldM1,
-                    'new_meter1_no' => $newM1,
-                    'old_meter2_no' => $oldM2,
-                    'new_meter2_no' => $newM2,
-                    'old_meter1_reading' => $oldM1Reading,
-                    'new_meter1_reading' => $r->curr_month_elec_red !== null && $r->curr_month_elec_red !== '' ? (string) $r->curr_month_elec_red : '—',
-                    'old_meter2_reading' => $oldM2Reading,
-                    'new_meter2_reading' => $hasSecondaryMeter
-                        ? (($r->curr_month_elec_red2 !== null && $r->curr_month_elec_red2 !== '') ? (string) $r->curr_month_elec_red2 : '—')
-                        : '—',
-                ];
-            }
-
-            return response()->json([
-                'draw' => $draw,
-                'recordsTotal' => (int) $recordsTotal,
-                'recordsFiltered' => (int) $recordsFiltered,
-                'data' => $data,
+        // Other (estate_month_reading_details_other): same LAG pattern; estate_update_reading.type = o links via estate_possession_other.pk.
+        $emroSub = DB::table('estate_month_reading_details_other as emro')
+            ->select([
+                'emro.pk',
+                'emro.estate_possession_other_pk',
+                'emro.house_no',
+                'emro.to_date',
+                'emro.bill_month',
+                'emro.bill_year',
+                'emro.meter_one as emrd_meter_one',
+                'emro.meter_two as emrd_meter_two',
+                'emro.last_month_elec_red',
+                'emro.curr_month_elec_red',
+                'emro.last_month_elec_red2',
+                'emro.curr_month_elec_red2',
+                DB::raw('LAG(emro.meter_one) OVER (PARTITION BY emro.estate_possession_other_pk ORDER BY emro.to_date, emro.pk) as prev_meter_one'),
+                DB::raw('LAG(emro.meter_two) OVER (PARTITION BY emro.estate_possession_other_pk ORDER BY emro.to_date, emro.pk) as prev_meter_two'),
             ]);
+        if ($filterByMonth) {
+            $emroSub->where('emro.bill_month', $billMonth)->where('emro.bill_year', $billYear);
         }
 
-        // Legacy (non-serverSide) response
-        $query = clone $baseQuery;
-        $query->orderByDesc('emrd.bill_year')
-            ->orderByRaw("FIELD(emrd.bill_month, 'December','November','October','September','August','July','June','May','April','March','February','January')")
-            ->orderBy('b.block_name')
-            ->orderBy('emrd.house_no');
+        $otherBase = DB::query()
+            ->fromSub($emroSub, 'emro')
+            ->join('estate_possession_other as epo', 'emro.estate_possession_other_pk', '=', 'epo.pk')
+            ->join('estate_other_req as eor', 'epo.estate_other_req_pk', '=', 'eor.pk')
+            ->leftJoin('estate_house_master as eohm', 'epo.estate_house_master_pk', '=', 'eohm.pk')
+            ->leftJoin('estate_block_master as bob', 'eohm.estate_block_master_pk', '=', 'bob.pk')
+            ->leftJoin('estate_unit_sub_type_master as oust', 'eohm.estate_unit_sub_type_master_pk', '=', 'oust.pk')
+            ->when($hasUnitTypeOnSubType, function ($q) {
+                $q->leftJoin('estate_unit_type_master as out', 'oust.estate_unit_type_master_pk', '=', 'out.pk');
+            }, function ($q) {
+                $q->leftJoin('estate_unit_type_master as out', 'eohm.estate_unit_master_pk', '=', 'out.pk');
+            })
+            ->whereNotNull('epo.estate_house_master_pk');
 
-        $legacySelectCols = [
-            'emrd.pk',
-            'emrd.estate_possession_details_pk',
+        if (Schema::hasColumn('estate_possession_other', 'return_home_status')) {
+            $otherBase->where(function ($inner) {
+                $inner->whereNull('epo.return_home_status')->orWhere('epo.return_home_status', 0);
+            });
+        }
+
+        if ($hasEurTable) {
+            $otherBase->leftJoin(DB::raw($eurLatestOtherSub . ' AS eur_hist_o'), function ($join) {
+                $join->on('eur_hist_o.estate_possession_details_pk', '=', 'emro.estate_possession_other_pk')
+                    ->whereRaw("TRIM(COALESCE(eur_hist_o.meter_change_month, '')) = TRIM(CONCAT(IFNULL(emro.bill_month, ''), ' ', IFNULL(emro.bill_year, '')))");
+            });
+        }
+
+        if (! $canSeeAllUpdateMeterNo) {
+            $otherBase->whereRaw('1 = 0');
+        }
+
+        $unionColsPerm = [
+            'emrd.pk as reading_pk',
+            DB::raw("'p' as src_kind"),
+            'emrd.bill_month',
+            'emrd.bill_year',
             'emrd.house_no',
             'emrd.to_date',
             'emrd.emrd_meter_one',
             'emrd.emrd_meter_two',
+            'emrd.prev_meter_one',
+            'emrd.prev_meter_two',
             'emrd.last_month_elec_red',
             'emrd.curr_month_elec_red',
             'emrd.last_month_elec_red2',
@@ -6486,75 +6680,136 @@ class EstateController extends Controller
             'ut.unit_type',
             'ust.unit_sub_type',
             'b.block_name as building_name',
-            'emrd.prev_meter_one',
-            'emrd.prev_meter_two',
         ];
-            if ($hasEpdReading1) {
-                $legacySelectCols[] = 'epd.electric_meter_reading as epd_electric_meter_reading';
-            }
-        if ($hasEpdReading2) {
-            $legacySelectCols[] = 'epd.electric_meter_reading_2 as epd_electric_meter_reading_2';
+        if ($hasEurTable) {
+            $unionColsPerm[] = 'eur_hist.old_meter_no_one as eur_old_meter_one';
+            $unionColsPerm[] = 'eur_hist.old_meter_no_two as eur_old_meter_two';
+            $unionColsPerm[] = 'eur_hist.old_meter_reading_one as eur_old_reading_one';
+            $unionColsPerm[] = 'eur_hist.old_meter_reading_two as eur_old_reading_two';
+        } else {
+            $unionColsPerm[] = DB::raw('NULL as eur_old_meter_one');
+            $unionColsPerm[] = DB::raw('NULL as eur_old_meter_two');
+            $unionColsPerm[] = DB::raw('NULL as eur_old_reading_one');
+            $unionColsPerm[] = DB::raw('NULL as eur_old_reading_two');
         }
-        $rows = $query->select($legacySelectCols)->get();
+        $unionColsPerm[] = $hasEpdReading1 ? 'epd.electric_meter_reading as poss_reading1' : DB::raw('NULL as poss_reading1');
+        $unionColsPerm[] = $hasEpdReading2 ? 'epd.electric_meter_reading_2 as poss_reading2' : DB::raw('NULL as poss_reading2');
+
+        $unionColsOther = [
+            'emro.pk as reading_pk',
+            DB::raw("'o' as src_kind"),
+            'emro.bill_month',
+            'emro.bill_year',
+            'emro.house_no',
+            'emro.to_date',
+            'emro.emrd_meter_one',
+            'emro.emrd_meter_two',
+            'emro.prev_meter_one',
+            'emro.prev_meter_two',
+            'emro.last_month_elec_red',
+            'emro.curr_month_elec_red',
+            'emro.last_month_elec_red2',
+            'emro.curr_month_elec_red2',
+            'eor.emp_name',
+            'eor.designation as employee_type',
+            'out.unit_type',
+            'oust.unit_sub_type',
+            'bob.block_name as building_name',
+        ];
+        if ($hasEurTable) {
+            $unionColsOther[] = 'eur_hist_o.old_meter_no_one as eur_old_meter_one';
+            $unionColsOther[] = 'eur_hist_o.old_meter_no_two as eur_old_meter_two';
+            $unionColsOther[] = 'eur_hist_o.old_meter_reading_one as eur_old_reading_one';
+            $unionColsOther[] = 'eur_hist_o.old_meter_reading_two as eur_old_reading_two';
+        } else {
+            $unionColsOther[] = DB::raw('NULL as eur_old_meter_one');
+            $unionColsOther[] = DB::raw('NULL as eur_old_meter_two');
+            $unionColsOther[] = DB::raw('NULL as eur_old_reading_one');
+            $unionColsOther[] = DB::raw('NULL as eur_old_reading_two');
+        }
+        $unionColsOther[] = $hasEpoReading1 ? 'epo.meter_reading_oth as poss_reading1' : DB::raw('NULL as poss_reading1');
+        $unionColsOther[] = $hasEpoReading2 ? 'epo.meter_reading_oth1 as poss_reading2' : DB::raw('NULL as poss_reading2');
+
+        $unionQuery = (clone $permBase)->select($unionColsPerm)->unionAll((clone $otherBase)->select($unionColsOther));
+
+        if ($isDataTables) {
+            $countSub = DB::query()->fromSub(clone $unionQuery, 'umc');
+            $recordsTotal = (int) $countSub->count();
+
+            $filteredSub = DB::query()->fromSub(clone $unionQuery, 'um');
+            if ($searchValue !== '') {
+                $like = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $searchValue) . '%';
+                $filteredSub->where(function ($q) use ($like) {
+                    $q->where('um.emp_name', 'like', $like)
+                        ->orWhere('um.building_name', 'like', $like)
+                        ->orWhere('um.house_no', 'like', $like)
+                        ->orWhere('um.unit_type', 'like', $like)
+                        ->orWhere('um.unit_sub_type', 'like', $like)
+                        ->orWhere('um.employee_type', 'like', $like);
+                });
+            }
+
+            if ($searchValue === '') {
+                $recordsFiltered = $recordsTotal;
+            } else {
+                $recordsFiltered = (int) (clone $filteredSub)->count();
+            }
+
+            $orderCol = (int) data_get($request->all(), 'order.0.column', 0);
+            $orderDir = strtolower((string) data_get($request->all(), 'order.0.dir', 'desc')) === 'desc' ? 'desc' : 'asc';
+            $orderMap = [
+                0 => 'um.reading_pk',
+                1 => 'um.emp_name',
+                2 => 'um.employee_type',
+                3 => 'um.unit_type',
+                4 => 'um.unit_sub_type',
+                5 => 'um.building_name',
+                6 => 'um.house_no',
+                7 => 'um.reading_pk',
+            ];
+            $orderBy = $orderMap[$orderCol] ?? 'um.reading_pk';
+            if ($orderCol === 0 && $orderDir === 'desc') {
+                $filteredSub->orderByRaw('um.to_date IS NULL ASC')
+                    ->orderByDesc('um.to_date')
+                    ->orderByDesc('um.reading_pk')
+                    ->orderBy('um.src_kind');
+            } else {
+                $filteredSub->orderBy($orderBy, $orderDir)->orderBy('um.reading_pk', 'desc')->orderBy('um.src_kind');
+            }
+
+            $rows = $filteredSub
+                ->offset($start)
+                ->limit($length)
+                ->get();
+
+            $data = [];
+            $sno = $start + 1;
+            foreach ($rows as $r) {
+                $row = $this->mapUpdateMeterNoListRow($r);
+                $row['sn'] = $sno++;
+                $data[] = $row;
+            }
+
+            return response()->json([
+                'draw' => $draw,
+                'recordsTotal' => $recordsTotal,
+                'recordsFiltered' => $recordsFiltered,
+                'data' => $data,
+            ]);
+        }
+
+        $legacyOuter = DB::query()->fromSub(clone $unionQuery, 'um')
+            ->orderByDesc('um.bill_year')
+            ->orderByRaw("FIELD(um.bill_month, 'December','November','October','September','August','July','June','May','April','March','February','January')")
+            ->orderBy('um.building_name')
+            ->orderBy('um.house_no');
 
         $data = [];
         $sno = 1;
-        foreach ($rows as $r) {
-            // Old meter numbers should come from previous month snapshot only.
-            // Do not fallback to current house meters (that makes old/new look identical).
-            $oldM1Source = $r->prev_meter_one;
-            $oldM2Source = $r->prev_meter_two;
-
-            $oldM1 = $oldM1Source !== null && $oldM1Source !== '' && (int) $oldM1Source !== 0 ? (string) $oldM1Source : '—';
-            $newM1 = $r->emrd_meter_one !== null && $r->emrd_meter_one !== '' ? (string) $r->emrd_meter_one : '—';
-            $oldM2 = $oldM2Source !== null && $oldM2Source !== '' && (int) $oldM2Source !== 0 ? (string) $oldM2Source : '—';
-            $newM2 = $r->emrd_meter_two !== null && $r->emrd_meter_two !== '' ? (string) $r->emrd_meter_two : '—';
-            if ($newM2 === '0') {
-                $newM2 = '—';
-            }
-
-            // Old readings: last_month_elec_red2; if null/0 and secondary meter, fallback to possession's electric_meter_reading_2 (same as "Electric Meter Reading" on Update Meter Reading).
-            $oldR1Source = $r->last_month_elec_red;
-            $oldR2Source = $r->last_month_elec_red2;
-            $hasSecondaryMeter = ($r->emrd_meter_two !== null && (int) $r->emrd_meter_two > 0)
-                || ($r->prev_meter_two !== null && (int) $r->prev_meter_two > 0);
-
-            // Old Meter1 Reading (legacy response):
-            $oldM1Reading = '—';
-            $oldM1ReadingVal = $oldR1Source;
-            if ($oldM1ReadingVal !== null && $oldM1ReadingVal !== '' && (int) $oldM1ReadingVal > 0) {
-                $oldM1Reading = (string) $oldM1ReadingVal;
-            } elseif ($hasEpdReading1 && isset($r->epd_electric_meter_reading) && (int) $r->epd_electric_meter_reading > 0) {
-                $oldM1Reading = (string) $r->epd_electric_meter_reading;
-            }
-            $oldM2Reading = '—';
-            if ($hasSecondaryMeter) {
-                if ($oldR2Source !== null && $oldR2Source !== '' && (int) $oldR2Source > 0) {
-                    $oldM2Reading = (string) $oldR2Source;
-                } elseif ($hasEpdReading2 && isset($r->epd_electric_meter_reading_2) && (int) $r->epd_electric_meter_reading_2 > 0) {
-                    $oldM2Reading = (string) $r->epd_electric_meter_reading_2;
-                }
-            }
-
-            $data[] = [
-                'sn' => $sno++,
-                'name' => $r->emp_name ?? 'N/A',
-                'employee_type' => $r->employee_type ?? '—',
-                'unit_type' => $r->unit_type ?? '—',
-                'unit_sub_type' => $r->unit_sub_type ?? '—',
-                'building_name' => $r->building_name ?? '—',
-                'house_no' => $r->house_no ?? '—',
-                'old_meter1_no' => $oldM1,
-                'new_meter1_no' => $newM1,
-                'old_meter2_no' => $oldM2,
-                'new_meter2_no' => $newM2,
-                'old_meter1_reading' => $oldM1Reading,
-                'new_meter1_reading' => $r->curr_month_elec_red !== null && $r->curr_month_elec_red !== '' ? (string) $r->curr_month_elec_red : '—',
-                'old_meter2_reading' => $oldM2Reading,
-                'new_meter2_reading' => $hasSecondaryMeter
-                    ? (($r->curr_month_elec_red2 !== null && $r->curr_month_elec_red2 !== '') ? (string) $r->curr_month_elec_red2 : '—')
-                    : '—',
-            ];
+        foreach ($legacyOuter->get() as $r) {
+            $row = $this->mapUpdateMeterNoListRow($r);
+            $row['sn'] = $sno++;
+            $data[] = $row;
         }
 
         return response()->json(['status' => true, 'data' => $data]);
@@ -6578,6 +6833,19 @@ class EstateController extends Controller
         $unitTypeId = $request->get('unit_type_id');
         $unitSubTypeId = $request->get('unit_sub_type_id');
 
+        // Same as regular estate meter reading: unit type filter uses eligibility sub-types when mapped.
+        $unitSubTypeIdsForUnitType = null;
+        if ($unitTypeId) {
+            $unitSubTypeIdsForUnitType = DB::table('estate_eligibility_mapping')
+                ->where('estate_unit_type_master_pk', $unitTypeId)
+                ->whereNotNull('estate_unit_sub_type_master_pk')
+                ->distinct()
+                ->pluck('estate_unit_sub_type_master_pk')
+                ->filter()
+                ->values()
+                ->toArray();
+        }
+
         [$dataMonth, $dataYear] = $this->meterReadingUiToDataPeriod($billMonth, $billYear);
         $billMonthStr = $dataMonth ? $this->normalizeBillMonthForOther($dataMonth) : null;
         $billYearStr = $dataYear ? (string) $dataYear : null;
@@ -6596,11 +6864,14 @@ class EstateController extends Controller
                 'estate_month_reading_details_other.last_month_elec_red2',
                 'estate_month_reading_details_other.curr_month_elec_red2',
                 'estate_month_reading_details_other.house_no',
-                'estate_month_reading_details_other.meter_one',
-                'estate_month_reading_details_other.meter_two',
+                'estate_month_reading_details_other.meter_one as emro_meter_one',
+                'estate_month_reading_details_other.meter_two as emro_meter_two',
+                'ehm.meter_one as ehm_meter_one',
+                'ehm.meter_two as ehm_meter_two',
             ])
             ->join('estate_possession_other as epo', 'estate_month_reading_details_other.estate_possession_other_pk', '=', 'epo.pk')
             ->join('estate_other_req as eor', 'epo.estate_other_req_pk', '=', 'eor.pk')
+            ->leftJoin('estate_house_master as ehm', 'epo.estate_house_master_pk', '=', 'ehm.pk')
             ->orderBy('estate_month_reading_details_other.house_no');
 
         $query->where('estate_month_reading_details_other.bill_month', $billMonthStr);
@@ -6619,7 +6890,9 @@ class EstateController extends Controller
         if ($blockId) {
             $query->where('epo.estate_block_master_pk', $blockId);
         }
-        if ($unitTypeId) {
+        if ($unitTypeId && ! empty($unitSubTypeIdsForUnitType)) {
+            $query->whereIn('epo.estate_unit_sub_type_master_pk', $unitSubTypeIdsForUnitType);
+        } elseif ($unitTypeId) {
             $query->where('epo.estate_unit_type_master_pk', $unitTypeId);
         }
         if ($unitSubTypeId) {
@@ -6654,8 +6927,9 @@ class EstateController extends Controller
             // Show period end date as "Last Month Electric Reading Date" (e.g. 28/02/2026 for February row).
             $lastReadingDate = $row->to_date ? $row->to_date->format('d/m/Y') : ($row->from_date ? $row->from_date->format('d/m/Y') : 'N/A');
 
-            $meterOne = $row->meter_one;
-            $meterTwo = $row->meter_two;
+            // Match regular "Update Meter Reading": use define-house meters when month-reading row has null/0.
+            $meterOne = $row->emro_meter_one ?? $row->ehm_meter_one;
+            $meterTwo = $row->emro_meter_two ?? $row->ehm_meter_two;
             $hasMeterOne = $meterOne !== null && $meterOne !== '' && (int) $meterOne !== 0;
             $hasMeterTwo = $meterTwo !== null && $meterTwo !== '' && (int) $meterTwo !== 0;
 
@@ -6676,6 +6950,8 @@ class EstateController extends Controller
                     'name' => $name,
                     'last_reading_date' => $lastReadingDate,
                     'meter_no' => (string) $meterOne,
+                    'old_meter_no' => (string) $meterOne,
+                    'new_meter_no' => $row->emro_meter_one !== null && $row->emro_meter_one !== '' ? (string) $row->emro_meter_one : (string) $meterOne,
                     'last_month_reading' => $displayLast1 !== null ? $displayLast1 : 'N/A',
                     'curr_month_reading' => null,
                     'unit' => 'N/A',
@@ -6698,6 +6974,8 @@ class EstateController extends Controller
                     'name' => $name,
                     'last_reading_date' => $lastReadingDate,
                     'meter_no' => (string) $meterTwo,
+                    'old_meter_no' => (string) $meterTwo,
+                    'new_meter_no' => $row->emro_meter_two !== null && $row->emro_meter_two !== '' ? (string) $row->emro_meter_two : (string) $meterTwo,
                     'last_month_reading' => $displayLast2 !== null ? $displayLast2 : 'N/A',
                     'curr_month_reading' => null,
                     'unit' => 'N/A',
@@ -6713,13 +6991,16 @@ class EstateController extends Controller
                     $displayLast = (int) $row->last_month_elec_red;
                 }
 
+                $fallbackMeter = $meterOne ?? $meterTwo ?? 'N/A';
                 $rows->push([
                     'pk' => $row->pk,
                     'meter_slot' => 1,
                     'house_no' => $row->house_no ?? 'N/A',
                     'name' => $name,
                     'last_reading_date' => $lastReadingDate,
-                    'meter_no' => $row->meter_one ?? $row->meter_two ?? 'N/A',
+                    'meter_no' => $fallbackMeter,
+                    'old_meter_no' => (string) $fallbackMeter,
+                    'new_meter_no' => '',
                     'last_month_reading' => $displayLast !== null ? $displayLast : 'N/A',
                     'curr_month_reading' => null,
                     'unit' => 'N/A',
@@ -6928,12 +7209,26 @@ class EstateController extends Controller
      */
     public function storeMeterReadingsOther(Request $request)
     {
+        $readingsIn = $request->input('readings', []);
+        if (is_array($readingsIn)) {
+            foreach ($readingsIn as $i => $r) {
+                if (! is_array($r)) {
+                    continue;
+                }
+                if (array_key_exists('new_meter_no', $r) && trim((string) ($r['new_meter_no'] ?? '')) === '') {
+                    $readingsIn[$i]['new_meter_no'] = null;
+                }
+            }
+            $request->merge(['readings' => $readingsIn]);
+        }
+
         $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
             'readings' => 'required|array',
             'readings.*.pk' => 'required|integer|exists:estate_month_reading_details_other,pk',
             'readings.*.meter_slot' => 'nullable|in:1,2',
             'readings.*.selected' => 'nullable|in:1',
             'readings.*.curr_month_elec_red' => 'nullable|integer|min:0',
+            'readings.*.new_meter_no' => 'nullable|string|max:50|regex:/^[0-9]+$/',
             'reading_bill_month' => 'required|date_format:Y-m',
             'reading_meter_reading_date' => 'required|date_format:Y-m-d',
         ]);
@@ -7053,10 +7348,13 @@ class EstateController extends Controller
                 'curr_month_elec_red',
                 'last_month_elec_red2',
                 'curr_month_elec_red2',
+                'meter_one',
+                'meter_two',
                 'meter_one_elec_charge',
                 'meter_two_elec_charge',
                 'electricty_charges',
                 'estate_possession_other_pk',
+                'house_no',
             ])
             ->keyBy('pk');
 
@@ -7071,6 +7369,23 @@ class EstateController extends Controller
             $row = $rows->get($pk);
             if (! $row) {
                 continue;
+            }
+
+            $otherPossessionCtx = null;
+            if (! empty($row->estate_possession_other_pk)) {
+                $otherPossessionCtx = DB::table('estate_possession_other as epo')
+                    ->leftJoin('estate_house_master as ehm', 'epo.estate_house_master_pk', '=', 'ehm.pk')
+                    ->where('epo.pk', (int) $row->estate_possession_other_pk)
+                    ->select([
+                        'epo.estate_campus_master_pk',
+                        'epo.estate_unit_type_master_pk',
+                        'epo.estate_block_master_pk',
+                        'epo.estate_unit_sub_type_master_pk',
+                        'epo.pk as possession_pk',
+                        'ehm.pk as house_pk',
+                        'ehm.house_no as ehm_house_no',
+                    ])
+                    ->first();
             }
 
             if (\Illuminate\Support\Facades\Schema::hasColumn('estate_possession_other', 'return_home_status')
@@ -7089,6 +7404,8 @@ class EstateController extends Controller
             }
 
             $meterSlot = isset($item['meter_slot']) ? (int) $item['meter_slot'] : 1;
+            $newMeterNoRaw = isset($item['new_meter_no']) ? trim((string) $item['new_meter_no']) : '';
+            $newMeterNoDigits = preg_replace('/\D/', '', $newMeterNoRaw ?? '');
             $update = [];
 
             if ($meterSlot === 2) {
@@ -7121,6 +7438,14 @@ class EstateController extends Controller
                 $update['meter_one_elec_charge'] = $charge;
                 $m2 = (float) ($row->meter_two_elec_charge ?? 0);
                 $update['electricty_charges'] = $charge + $m2;
+            }
+
+            if ($newMeterNoDigits !== '') {
+                if ($meterSlot === 2) {
+                    $update['meter_two'] = $newMeterNoDigits;
+                } else {
+                    $update['meter_one'] = $newMeterNoDigits;
+                }
             }
 
             // For reference, store units in per_unit (matches previous behaviour for primary meter).
@@ -7156,6 +7481,50 @@ class EstateController extends Controller
             }
 
             EstateMonthReadingDetailsOther::where('pk', $pk)->update($update);
+
+            if (
+                $newMeterNoDigits !== ''
+                && $otherPossessionCtx
+                && Schema::hasTable('estate_update_reading')
+            ) {
+                $beforeM1o = (int) ($row->meter_one ?? 0);
+                $beforeM2o = (int) ($row->meter_two ?? 0);
+                $afterM1o = ($meterSlot !== 2) ? (int) $newMeterNoDigits : $beforeM1o;
+                $afterM2o = ($meterSlot === 2) ? (int) $newMeterNoDigits : $beforeM2o;
+                if ($afterM1o !== $beforeM1o || $afterM2o !== $beforeM2o) {
+                    $oldR1o = $row->curr_month_elec_red !== null && $row->curr_month_elec_red !== '' ? (int) $row->curr_month_elec_red : null;
+                    $oldR2o = $row->curr_month_elec_red2 !== null && $row->curr_month_elec_red2 !== '' ? (int) $row->curr_month_elec_red2 : null;
+                    $newR1o = array_key_exists('curr_month_elec_red', $update) ? (int) $update['curr_month_elec_red'] : $oldR1o;
+                    $newR2o = array_key_exists('curr_month_elec_red2', $update) ? (int) $update['curr_month_elec_red2'] : $oldR2o;
+                    $billMo = $storeBillMonthNameOther !== null && $storeBillMonthNameOther !== '' ? $storeBillMonthNameOther : (string) ($row->bill_month ?? '');
+                    $billYo = $storeBillYearStrOther !== null && $storeBillYearStrOther !== '' ? $storeBillYearStrOther : (string) ($row->bill_year ?? '');
+                    $mcmo = trim($billMo . ' ' . $billYo);
+                    $houseO = trim((string) ($row->house_no ?? ''));
+                    if ($houseO === '') {
+                        $houseO = trim((string) ($otherPossessionCtx->ehm_house_no ?? ''));
+                    }
+                    $this->logEstateMeterNumberChange(
+                        'o',
+                        (int) $otherPossessionCtx->possession_pk,
+                        isset($otherPossessionCtx->house_pk) ? (int) $otherPossessionCtx->house_pk : null,
+                        isset($otherPossessionCtx->estate_campus_master_pk) ? (int) $otherPossessionCtx->estate_campus_master_pk : null,
+                        isset($otherPossessionCtx->estate_unit_type_master_pk) ? (int) $otherPossessionCtx->estate_unit_type_master_pk : null,
+                        isset($otherPossessionCtx->estate_block_master_pk) ? (int) $otherPossessionCtx->estate_block_master_pk : null,
+                        isset($otherPossessionCtx->estate_unit_sub_type_master_pk) ? (int) $otherPossessionCtx->estate_unit_sub_type_master_pk : null,
+                        $houseO,
+                        $mcmo,
+                        $beforeM1o,
+                        $beforeM2o,
+                        $afterM1o,
+                        $afterM2o,
+                        $oldR1o,
+                        $oldR2o,
+                        $newR1o,
+                        $newR2o,
+                        null
+                    );
+                }
+            }
 
             // Also sync latest reading on base possession record so listing reflects change immediately.
             if (! empty($row->estate_possession_other_pk)) {

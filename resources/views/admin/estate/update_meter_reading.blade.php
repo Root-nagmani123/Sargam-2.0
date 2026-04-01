@@ -358,7 +358,10 @@ $(document).ready(function() {
             tbody.html('');
             window.meterReadingRowData = window.meterReadingRowData || {};
             res.data.forEach(function(row, idx) {
-                var newMeterNo = '';
+                var oldMeterNoStr = (row.old_meter_no != null && row.old_meter_no !== undefined) ? String(row.old_meter_no).trim() : '';
+                var apiNewMeterNo = (row.new_meter_no != null && row.new_meter_no !== undefined) ? String(row.new_meter_no).trim() : '';
+                // Prefer saved new meter on record; otherwise prefill same as Old Meter No. (user may edit before save).
+                var newMeterNo = apiNewMeterNo !== '' ? apiNewMeterNo : (oldMeterNoStr !== '' && oldMeterNoStr !== 'N/A' ? oldMeterNoStr : '');
                 // Electric column shows saved curr_month_elec_red; New Meter Reading stays empty until user enters (saved to curr on submit).
                 var newMeterReading = '';
                 var baselineMin = (row.baseline_min_reading !== undefined && row.baseline_min_reading !== null && row.baseline_min_reading !== '') ? String(row.baseline_min_reading) : '';

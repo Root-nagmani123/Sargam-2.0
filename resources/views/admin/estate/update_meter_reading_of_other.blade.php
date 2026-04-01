@@ -119,8 +119,9 @@
                                 <th>House No.</th>
                                 <th>Name</th>
                                 <th>Last Month Electric Reading Date</th>
-                                <th>Meter No.</th>
+                                <th>Old Meter No.</th>
                                 <th>Last Month Meter Reading</th>
+                                <th>New Meter No.</th>
                                 <th>Current Month Reading <span class="text-danger">*</span></th>
                                 <th>Unit</th>
                             </tr>
@@ -306,14 +307,18 @@ $(document).ready(function() {
                 const existingCurrStored = (row.curr_month_reading !== null && row.curr_month_reading !== undefined && row.curr_month_reading !== '')
                     ? String(row.curr_month_reading) : '';
                 const rowKey = row.pk + '_' + (row.meter_slot || 1);
-                window.otherMeterRowData[rowKey] = { curr_month_elec_red: '' };
+                var oldMeterNoStr = (row.old_meter_no != null && row.old_meter_no !== undefined) ? String(row.old_meter_no).trim() : '';
+                var apiNewMeterNo = (row.new_meter_no != null && row.new_meter_no !== undefined) ? String(row.new_meter_no).trim() : '';
+                var newMeterNoPrefill = apiNewMeterNo !== '' ? apiNewMeterNo : (oldMeterNoStr !== '' && oldMeterNoStr !== 'N/A' ? oldMeterNoStr : '');
+                window.otherMeterRowData[rowKey] = { curr_month_elec_red: '', new_meter_no: newMeterNoPrefill };
                 const tr = '<tr data-last-reading="'+ (lastReading !== null ? lastReading : '') +'" data-existing-curr="'+ existingCurrStored.replace(/"/g, '&quot;') +'" data-pk="'+ row.pk +'" data-meter-slot="'+ (row.meter_slot || 1) +'">' +
                     '<td><input type="checkbox" class="form-check-input row-check" name="readings['+idx+'][selected]" value="1"></td>' +
                     '<td>'+ (row.house_no || 'N/A') +'</td>' +
                     '<td>'+ (row.name || 'N/A') +'</td>' +
                     '<td>'+ (row.last_reading_date || 'N/A') +'</td>' +
-                    '<td>'+ (row.meter_no || 'N/A') +'</td>' +
+                    '<td>'+ (row.old_meter_no != null && String(row.old_meter_no).trim() !== '' ? row.old_meter_no : (row.meter_no || 'N/A')) +'</td>' +
                     '<td>'+ (row.last_month_reading || 'N/A') +'</td>' +
+                    '<td><input type="text" class="form-control form-control-sm new-meter-no" name="readings['+idx+'][new_meter_no]" value="'+ String(newMeterNoPrefill).replace(/"/g, '&quot;') +'" placeholder="Enter new meter no." inputmode="numeric" maxlength="50"></td>' +
                     '<td><input type="number" class="form-control form-control-sm curr-reading" name="readings['+idx+'][curr_month_elec_red]" value="" min="0" step="1" placeholder="Enter" inputmode="numeric">' +
                     '<input type="hidden" name="readings['+idx+'][pk]" value="'+row.pk+'">' +
                     '<input type="hidden" name="readings['+idx+'][meter_slot]" value="'+(row.meter_slot || 1)+'"></td>' +
@@ -348,10 +353,22 @@ $(document).ready(function() {
         window.otherMeterRowData = window.otherMeterRowData || {};
         var key = pk + '_' + meterSlot;
         if (!window.otherMeterRowData[key]) {
-            window.otherMeterRowData[key] = { curr_month_elec_red: '' };
+            window.otherMeterRowData[key] = { curr_month_elec_red: '', new_meter_no: '' };
         }
         window.otherMeterRowData[key].curr_month_elec_red = $row.find('.curr-reading').val() || '';
+        window.otherMeterRowData[key].new_meter_no = $row.find('.new-meter-no').val() || '';
     }
+
+    $(document).on('input change', '.new-meter-no', function() {
+        this.value = String(this.value || '').replace(/\D/g, '').slice(0, 50);
+        syncOtherRowDataFromInputs($(this).closest('tr'));
+    });
+
+    $(document).on('keydown', '.new-meter-no', function(e) {
+        if (['e', 'E', '+', '-', '.', ','].includes(e.key)) {
+            e.preventDefault();
+        }
+    });
 
     $(document).on('input', '.curr-reading', function() {
         const $row = $(this).closest('tr');
