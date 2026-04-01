@@ -287,6 +287,38 @@ class EmployeeIDCardRequestController extends Controller
         return $cont;
     }
 
+    /**
+     * Check if the given employee has an approved ID card that is still valid today.
+     * Treat null card_valid_to as still valid.
+     */
+    private static function hasValidApprovedIdCard(int $employeePk): bool
+    {
+        $today = now()->toDateString();
+
+        $perm = DB::table('security_parm_id_apply')
+            ->where('employee_master_pk', $employeePk)
+            ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
+            ->where(function ($q) use ($today) {
+                $q->whereNull('card_valid_to')
+                    ->orWhereDate('card_valid_to', '>=', $today);
+            })
+            ->exists();
+        if ($perm) {
+            return true;
+        }
+
+        $cont = DB::table('security_con_oth_id_apply')
+            ->where('created_by', $employeePk)
+            ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
+            ->where(function ($q) use ($today) {
+                $q->whereNull('card_valid_to')
+                    ->orWhereDate('card_valid_to', '>=', $today);
+            })
+            ->exists();
+
+        return $cont;
+    }
+
     public function create()
     {
         $authUserId = Auth::user()->user_id ?? Auth::id();
@@ -355,7 +387,8 @@ class EmployeeIDCardRequestController extends Controller
     }
 
     /**
-     * AJAX: Logged-in user's employee details for "Own ID Card" autofill.
+     * AJAX: Logged-in user's employee details for autofill on create form.
+     * Used for Permanent + "Own ID Card" and Contractual + "Others ID Card".
      * Resolves employee by pk or pk_old so data is found either way.
      */
     public function me()
@@ -386,6 +419,23 @@ class EmployeeIDCardRequestController extends Controller
                 ->first(['card_valid_to']);
             if ($parmApply && !empty($parmApply->card_valid_to)) {
                 $idCardValidUpto = \Carbon\Carbon::parse($parmApply->card_valid_to)->format('Y-m-d');
+            }
+        }
+        // Contractual: last approved row for this employee (created_by) may have validity
+        if ($idCardValidUpto === null) {
+            $contApply = DB::table('security_con_oth_id_apply')
+                ->where(function ($q) use ($emp) {
+                    $q->where('created_by', $emp->pk);
+                    if (!empty($emp->pk_old)) {
+                        $q->orWhere('created_by', $emp->pk_old);
+                    }
+                })
+                ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
+                ->whereNotNull('card_valid_to')
+                ->orderByDesc('card_valid_to')
+                ->first(['card_valid_to']);
+            if ($contApply && !empty($contApply->card_valid_to)) {
+                $idCardValidUpto = \Carbon\Carbon::parse($contApply->card_valid_to)->format('Y-m-d');
             }
         }
         $name = trim($emp->first_name . ' ' . ($emp->middle_name ?? '') . ' ' . ($emp->last_name ?? ''));
@@ -425,19 +475,19 @@ class EmployeeIDCardRequestController extends Controller
             'request_for' => 'nullable|string|max:100|in:Own ID Card,Others ID Card,Family ID Card,Replacement,Duplication,Extension',
             'duplication_reason' => 'nullable|string|in:Expired Card,Lost,Damage',
             'name' => 'required|string|max:255',
-            'designation' => 'nullable|string|max:255',
-            'date_of_birth' => 'nullable|date',
-            'father_name' => 'nullable|string|max:255',
-            'academy_joining' => 'nullable|date',
-            'id_card_valid_upto' => 'nullable|string|max:50|after:today',
+            'designation' => 'required_if:employee_type,Contractual Employee|nullable|string|max:255',
+            'date_of_birth' => 'required_if:employee_type,Contractual Employee|nullable|date',
+            'father_name' => 'required_if:employee_type,Contractual Employee|nullable|string|max:255',
+            'academy_joining' => 'required_if:employee_type,Contractual Employee|nullable|date',
+            'id_card_valid_upto' => 'required_if:employee_type,Contractual Employee|nullable|date|after:today',
             'id_card_valid_from' => 'nullable|string|max:50',
             'id_card_number' => 'nullable|string|max:50',
-            'mobile_number' => 'nullable|string|max:20',
+            'mobile_number' => 'required_if:employee_type,Contractual Employee|nullable|string|max:20',
             'telephone_number' => 'nullable|string|max:20',
             'blood_group' => 'nullable|string|max:10',
-            'section' => 'nullable|string|max:255',
+            'section' => 'required_if:employee_type,Contractual Employee|nullable|string|max:255',
             'approval_authority' => 'required_if:employee_type,Contractual Employee|nullable|string|max:255',
-            'vendor_organization_name' => 'nullable|string|max:255',
+            'vendor_organization_name' => 'required_if:employee_type,Contractual Employee|nullable|string|max:255',
             'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'photo_perm' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'photo_cont' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
@@ -450,6 +500,14 @@ class EmployeeIDCardRequestController extends Controller
         ], [
             'fir_receipt.required_if' => 'FIR Receipt is required when the card is reported as Lost.',
             'approval_authority.required_if' => 'Approval Authority is required for Contractual Employees.',
+            'designation.required_if' => 'Designation is required for Contractual Employees.',
+            'date_of_birth.required_if' => 'Date of Birth is required for Contractual Employees.',
+            'father_name.required_if' => 'Father Name is required for Contractual Employees.',
+            'academy_joining.required_if' => 'Academy Joining is required for Contractual Employees.',
+            'id_card_valid_upto.required_if' => 'ID Card Valid Upto is required for Contractual Employees.',
+            'mobile_number.required_if' => 'Mobile Number is required for Contractual Employees.',
+            'section.required_if' => 'Section is required for Contractual Employees.',
+            'vendor_organization_name.required_if' => 'Vendor / Organization Name is required for Contractual Employees.',
             'id_card_valid_upto.after' => 'ID Card Valid Upto date must be a future date.',
         ]);
 
@@ -516,6 +574,15 @@ class EmployeeIDCardRequestController extends Controller
         }
 
         $employeeType = $validated['employee_type'];
+        $isContractualSelfRequest = $isForSelf
+            && $employeeType === 'Contractual Employee'
+            && (($requestFor ?? '') === 'Others ID Card' || ($requestFor ?? '') === 'Own ID Card');
+        if ($isContractualSelfRequest && static::hasValidApprovedIdCard((int) $employeePk)) {
+            throw ValidationException::withMessages([
+                'employee_type' => 'You already have a valid ID card. You can raise a new request for yourself only after expiry, or apply for another person.',
+            ]);
+        }
+
         $cardNameCode = $employeeType === 'Permanent Employee' ? 'p' : 'c';
         $cardMasterPk = IdCardSecurityLookup::resolveCardMasterPk($validated['card_type']);
         if (!$cardMasterPk) {

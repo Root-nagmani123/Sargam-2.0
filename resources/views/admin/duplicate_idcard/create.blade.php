@@ -19,14 +19,21 @@
                 @endif
 
                 <div class="row g-3 align-items-start">
+                    @php
+                        $lockedType = $lockedIdCardType ?? null;
+                        $selectedType = old('id_card_type', $data['id_card_type'] ?? ($lockedType ?: ''));
+                    @endphp
                     <div class="col-md-4">
                         <label class="form-label">ID Card Type <span class="text-danger">*</span></label>
                         <select name="id_card_type" id="id_card_type" class="form-select" {{ isset($edit_id) ? 'disabled' : 'required' }}>
                             <option value="">--Select--</option>
-                            <option value="Permanent" {{ old('id_card_type', $data['id_card_type'] ?? '')==='Permanent' ? 'selected':'' }}>Permanent</option>
-                            <option value="Contractual" {{ old('id_card_type', $data['id_card_type'] ?? '')==='Contractual' ? 'selected':'' }}>Contractual</option>
+                            <option value="Permanent" {{ $selectedType==='Permanent' ? 'selected':'' }} @if($lockedType === 'Contractual') disabled @endif>Permanent</option>
+                            <option value="Contractual" {{ $selectedType==='Contractual' ? 'selected':'' }} @if($lockedType === 'Permanent') disabled @endif>Contractual</option>
                             {{--<option value="Family" {{ old('id_card_type', $data['id_card_type'] ?? '')==='Family' ? 'selected':'' }}>Family</option> --}}
                         </select>
+                        @if($lockedType)
+                            <small class="text-muted d-block mt-1">Allowed type: <strong>{{ $lockedType }}</strong></small>
+                        @endif
                         @error('id_card_type')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
 

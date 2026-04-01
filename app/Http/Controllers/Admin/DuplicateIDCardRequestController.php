@@ -130,6 +130,7 @@ class DuplicateIDCardRequestController extends Controller
         $user = Auth::user();
         $employeePk = $user->user_id ?? $user->pk ?? null;
         $me = null;
+        $lockedIdCardType = null;
         $userDepartmentName = null;
         $approvalAuthorityEmployees = collect();
 
@@ -138,6 +139,10 @@ class DuplicateIDCardRequestController extends Controller
                 ->where('pk', $employeePk)
                 ->orWhere('pk_old', $employeePk)
                 ->first();
+
+            if ($me && \Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'payroll')) {
+                $lockedIdCardType = ((int) ($me->payroll ?? 0) === 0) ? 'Permanent' : 'Contractual';
+            }
 
             if ($me && $me->department_master_pk) {
                 $userDepartmentName = $me->department->department_name ?? null;
@@ -161,7 +166,7 @@ class DuplicateIDCardRequestController extends Controller
         ];
 
         $data = [];
-        return view('admin.duplicate_idcard.create', compact('me', 'idProofOptions', 'data', 'userDepartmentName', 'approvalAuthorityEmployees'));
+        return view('admin.duplicate_idcard.create', compact('me', 'idProofOptions', 'data', 'userDepartmentName', 'approvalAuthorityEmployees', 'lockedIdCardType'));
     }
 
     /**
@@ -680,6 +685,18 @@ class DuplicateIDCardRequestController extends Controller
         }
 
         $validated = $request->validate($baseRules);
+
+        // Enforce logged-in user's allowed duplicate type:
+        // payroll=0 -> Permanent only, otherwise Contractual only.
+        $authEmp = EmployeeMaster::where('pk', $employeePk)->orWhere('pk_old', $employeePk)->first();
+        if ($authEmp && \Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'payroll')) {
+            $expectedType = ((int) ($authEmp->payroll ?? 0) === 0) ? 'Permanent' : 'Contractual';
+            if (($validated['id_card_type'] ?? null) !== $expectedType) {
+                throw ValidationException::withMessages([
+                    'id_card_type' => "You can apply duplicate request only for {$expectedType} ID Card.",
+                ]);
+            }
+        }
 
         // Build approver chain from idcard_request_approvar_master_new
         // Prefer duplicate_status=1; fallback to per_status=1 or cont_status=1 if not configured

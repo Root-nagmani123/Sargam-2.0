@@ -239,39 +239,39 @@
                             <input type="text" name="name" id="name_cont" class="form-control idcard-cont-field idcard-autofill-field" value="{{ $oldName }}" disabled required placeholder="Name">
                         </div>
                         <div class="col-md-6">
-                            <label for="designation_cont" class="form-label">Designation</label>
-                            <input type="text" name="designation" id="designation_cont" class="form-control idcard-cont-field idcard-autofill-field" value="{{ $oldDesignation }}" disabled placeholder="Designation">
+                            <label for="designation_cont" class="form-label">Designation <span class="text-danger">*</span></label>
+                            <input type="text" name="designation" id="designation_cont" class="form-control idcard-cont-field idcard-autofill-field" value="{{ $oldDesignation }}" disabled required placeholder="Designation">
                         </div>
                         <div class="col-md-6">
-                            <label for="date_of_birth_cont" class="form-label">Date Of Birth</label>
-                            <input type="date" name="date_of_birth" id="date_of_birth_cont" class="form-control idcard-cont-field idcard-autofill-field" value="{{ $oldDob }}" disabled>
+                            <label for="date_of_birth_cont" class="form-label">Date Of Birth <span class="text-danger">*</span></label>
+                            <input type="date" name="date_of_birth" id="date_of_birth_cont" class="form-control idcard-cont-field idcard-autofill-field" value="{{ $oldDob }}" disabled required>
                         </div>
                         <div class="col-md-6">
-                            <label for="father_name_cont" class="form-label">Father Name</label>
-                            <input type="text" name="father_name" id="father_name_cont" class="form-control idcard-cont-field idcard-autofill-field" value="{{ old('father_name', '') }}" disabled placeholder="Father Name">
+                            <label for="father_name_cont" class="form-label">Father Name <span class="text-danger">*</span></label>
+                            <input type="text" name="father_name" id="father_name_cont" class="form-control idcard-cont-field idcard-autofill-field" value="{{ old('father_name', '') }}" disabled required placeholder="Father Name">
                             @error('father_name')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-md-6">
-                            <label for="academy_joining_cont" class="form-label">Academy Joining</label>
-                            <input type="date" name="academy_joining" id="academy_joining_cont" class="form-control idcard-cont-field idcard-autofill-field" value="{{ $oldAcademy }}" disabled>
+                            <label for="academy_joining_cont" class="form-label">Academy Joining <span class="text-danger">*</span></label>
+                            <input type="date" name="academy_joining" id="academy_joining_cont" class="form-control idcard-cont-field idcard-autofill-field" value="{{ $oldAcademy }}" disabled required>
                         </div>
                         <div class="col-md-6">
-                            <label for="id_card_valid_upto_cont" class="form-label">ID Card Valid Upto</label>
-                            <input type="date" name="id_card_valid_upto" id="id_card_valid_upto_cont" class="form-control idcard-cont-field " value="{{ $oldIdValid }}" min="{{ now()->format('Y-m-d') }}">
+                            <label for="id_card_valid_upto_cont" class="form-label">ID Card Valid Upto <span class="text-danger">*</span></label>
+                            <input type="date" name="id_card_valid_upto" id="id_card_valid_upto_cont" class="form-control idcard-cont-field " value="{{ $oldIdValid }}" min="{{ now()->format('Y-m-d') }}" required>
                         </div>
                         <div class="col-md-6">
-                            <label for="mobile_number_cont" class="form-label">Mobile Number</label>
-                            <input type="tel" name="mobile_number" id="mobile_number_cont" class="form-control idcard-cont-field idcard-autofill-field" value="{{ $oldMobile }}" placeholder="10 digit mobile number" disabled>
+                            <label for="mobile_number_cont" class="form-label">Mobile Number <span class="text-danger">*</span></label>
+                            <input type="tel" name="mobile_number" id="mobile_number_cont" class="form-control idcard-cont-field idcard-autofill-field" value="{{ $oldMobile }}" placeholder="10 digit mobile number" disabled required>
                         </div>
                         
                         <div class="col-md-6">
-                            <label for="vendor_organization_name_cont" class="form-label">Vender / Organization Name</label>
-                            <input type="text" name="vendor_organization_name" id="vendor_organization_name_cont" class="form-control idcard-cont-field" value="{{ old('vendor_organization_name') }}" disabled placeholder="Vender / Organization Name">
+                            <label for="vendor_organization_name_cont" class="form-label">Vender / Organization Name <span class="text-danger">*</span></label>
+                            <input type="text" name="vendor_organization_name" id="vendor_organization_name_cont" class="form-control idcard-cont-field" value="{{ old('vendor_organization_name') }}" disabled required placeholder="Vender / Organization Name">
                             @error('vendor_organization_name')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-md-6">
-                            <label for="section_cont" class="form-label">Section</label>
-                            <select name="section" id="section_cont" class="form-select idcard-cont-field" disabled>
+                            <label for="section_cont" class="form-label">Section <span class="text-danger">*</span></label>
+                            <select name="section" id="section_cont" class="form-select idcard-cont-field" disabled required>
                                 <option value="">--Select--</option>
                                 @if(!empty($userDepartmentName))
                                     <option value="{{ $userDepartmentName }}" {{ old('section', $userDepartmentName) == $userDepartmentName ? 'selected' : '' }}>{{ $userDepartmentName }}</option>
@@ -601,12 +601,19 @@
         // Blood Group: always enabled so user can select (never disabled)
     }
 
-    function idcardEnableOnlyPhotoAndBlood() {
+    /** @param {boolean} lockAutofill - if true, text/date/tel autofill fields are read-only (Permanent own card); contractual uses false so user can edit after autofill */
+    function idcardEnableOnlyPhotoAndBlood(lockAutofill) {
+        if (typeof lockAutofill === 'undefined') {
+            lockAutofill = true;
+        }
         var step = idcardGetStepFields();
         var view = step.isPerm ? permanentView : contractualView;
         view.querySelectorAll('.idcard-autofill-field').forEach(function(el) {
             el.disabled = false;
-            if (el.tagName === 'INPUT' && el.type !== 'hidden' && (el.type === 'text' || el.type === 'date' || el.type === 'tel')) el.readOnly = true;
+            el.removeAttribute('readonly');
+            if (lockAutofill && el.tagName === 'INPUT' && el.type !== 'hidden' && (el.type === 'text' || el.type === 'date' || el.type === 'tel')) {
+                el.readOnly = true;
+            }
         });
         var photoInput = document.getElementById(step.isPerm ? 'photo_perm' : 'photo_cont');
         var joinInput = document.getElementById(step.isPerm ? 'joining_letter_perm' : 'joining_letter_cont');
@@ -644,6 +651,20 @@
                 step.subType.disabled = false;
                 step.subType.value = '';
                 step.requestFor.disabled = true;
+                if (!step.isPerm && contractualView.style.display !== 'none') {
+                    var oldSub = @json(old('sub_type', ''));
+                    var oldRf = @json(old('request_for', ''));
+                    if (oldSub) {
+                        step.subType.value = oldSub;
+                        step.requestFor.disabled = !step.subType.value;
+                    }
+                    if (oldRf) {
+                        step.requestFor.value = oldRf;
+                    }
+                    if (step.requestFor.value === 'Others ID Card' && step.subType.value) {
+                        idcardLoadMe();
+                    }
+                }
             })
             .catch(function() {
                 step.subType.innerHTML = '<option value="">Select Sub Type</option>';
@@ -653,7 +674,12 @@
 
     function idcardLoadMe() {
         var step = idcardGetStepFields();
-        if (step.requestFor.value !== 'Own ID Card') return;
+        var rf = step.requestFor.value;
+        if (step.isPerm) {
+            if (rf !== 'Own ID Card') return;
+        } else {
+            if (rf !== 'Others ID Card') return;
+        }
         fetch(meUrl)
             .then(function(r) { return r.json(); })
             .then(function(data) {
@@ -683,7 +709,7 @@
                     set('mobile_number_cont', emp.mobile_number);
                     set('id_card_valid_upto_cont', emp.id_card_valid_upto);
                 }
-                idcardEnableOnlyPhotoAndBlood();
+                idcardEnableOnlyPhotoAndBlood(step.isPerm);
             })
             .catch(function() {});
     }
@@ -701,7 +727,11 @@
     });
     document.getElementById('sub_type_cont').addEventListener('change', function() {
         if (contractualView.style.display !== 'none') {
-            document.getElementById('request_for_cont').disabled = !document.getElementById('sub_type_cont').value;
+            var rf = document.getElementById('request_for_cont');
+            rf.disabled = !document.getElementById('sub_type_cont').value;
+            if (rf.value === 'Others ID Card') {
+                idcardLoadMe();
+            }
         }
     });
     document.getElementById('request_for_perm').addEventListener('change', function() {
@@ -710,12 +740,13 @@
     document.getElementById('request_for_cont').addEventListener('change', function() {
         if (contractualView.style.display !== 'none') {
             if (this.value === 'Others ID Card') {
-                contractualView.querySelectorAll('.idcard-autofill-field').forEach(function(el) { el.disabled = false; el.removeAttribute('readonly'); });
+                idcardLoadMe();
                 var sec = document.getElementById('section_cont'); if (sec) sec.disabled = false;
                 var app = document.getElementById('approval_authority_cont'); if (app) app.disabled = false;
                 var ven = document.getElementById('vendor_organization_name_cont'); if (ven) ven.disabled = false;
             } else {
                 contractualView.querySelectorAll('.idcard-autofill-field').forEach(function(el) { el.disabled = true; el.value = ''; });
+                document.getElementById('employee_master_pk_input').value = '';
                 var sec = document.getElementById('section_cont'); if (sec) sec.disabled = true;
                 var app = document.getElementById('approval_authority_cont'); if (app) app.disabled = true;
                 var ven = document.getElementById('vendor_organization_name_cont'); if (ven) ven.disabled = true;
@@ -736,6 +767,11 @@
         document.getElementById('sub_type_cont').disabled = true;
         document.getElementById('request_for_cont').disabled = true;
         if (document.getElementById('card_type_cont').value) idcardLoadSubTypes();
+        var sfcInit = document.getElementById('request_for_cont');
+        var stcInit = document.getElementById('sub_type_cont');
+        if (sfcInit && stcInit && stcInit.value && sfcInit.value === 'Others ID Card') {
+            idcardLoadMe();
+        }
     }
 
     function toggleDuplicationExtension() {
