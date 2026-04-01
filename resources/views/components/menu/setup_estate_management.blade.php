@@ -67,7 +67,7 @@
                                 // For client requirement: Return House menu should NOT appear for self-service users.
                                 $canSeeReturnHouse = $canManageOthersEstate;
                                 // Admin/Super Admin/Estate see "Generate Estate Bill"; everyone else sees "My Estate Bill".
-                                $estateBillMenuLabel = (hasRole('Admin') || hasRole('Super Admin') || hasRole('Estate')) ? 'Generate Estate Bill' : 'My Estate Bill';
+                                $estateBillMenuLabel = (hasRole('Admin') || hasRole('Super Admin') || hasRole('Estate')) ? 'View Estate Bill' : 'My Estate Bill';
                             @endphp
 
                             @if($showEstateSection)
@@ -124,7 +124,7 @@
                                     <li class="sidebar-item">
                                         <a class="sidebar-link {{ request()->routeIs('admin.estate.update-meter-no') ? 'active' : '' }}"
                                             href="{{ route('admin.estate.update-meter-no') }}">
-                                            <span class="hide-menu small small-sm-normal text-nowrap">Update Meter No.</span>
+                                            <span class="hide-menu small small-sm-normal text-nowrap">Update Meter Details</span>
                                         </a>
                                     </li>
                                     @endif
@@ -145,7 +145,7 @@
                                     <li class="sidebar-item">
                                         <a class="sidebar-link {{ request()->routeIs('admin.estate.update-meter-reading-of-other') ? 'active' : '' }}"
                                             href="{{ route('admin.estate.update-meter-reading-of-other') }}">
-                                            <span class="hide-menu small small-sm-normal text-nowrap">Update Meter Reading of Other</span>
+                                            <span class="hide-menu small small-sm-normal text-nowrap">Update Meter Details of Other</span>
                                         </a>
                                     </li>
                                     @endif
@@ -172,7 +172,7 @@
                                     <li class="sidebar-item">
                                         <a class="sidebar-link {{ request()->routeIs('admin.estate.generate-estate-bill-for-other') ? 'active' : '' }}"
                                             href="{{ route('admin.estate.generate-estate-bill-for-other') }}">
-                                            <span class="hide-menu small small-sm-normal text-nowrap">Generate Estate Bill for Other</span>
+                                            <span class="hide-menu small small-sm-normal text-nowrap">View Estate Bill for Other</span>
                                         </a>
                                     </li>
                                     <li class="sidebar-item">

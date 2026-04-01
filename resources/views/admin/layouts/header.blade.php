@@ -5,6 +5,9 @@
     $routeName = request()->route()?->getName() ?? '';
     if (request()->routeIs('admin.dashboard') || request()->routeIs('admin.dashboard.*')) {
         $activeNavTab = '#home';
+    } elseif (request()->routeIs('admin.estate.*')) {
+        // Estate module pages only define @section('setup_content'); without this, #home stays active and content looks blank after redirect.
+        $activeNavTab = '#tab-setup';
     } elseif (
         request()->routeIs('admin.employee_idcard.*') || request()->routeIs('admin.issue-management*') ||
         request()->routeIs('member.*') || request()->routeIs('faculty.*') || request()->routeIs('programme.*') ||

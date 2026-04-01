@@ -1,10 +1,10 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Change Requests (HAC Approved) - Sargam')
+@section('title', 'Change Requests (HAC Approval) - Sargam')
 
 @section('setup_content')
 <div class="container-fluid py-4">
-    <x-breadcrum title="Change Requests (HAC Approved)"></x-breadcrum>
+    <x-breadcrum title="Change Requests (HAC Approval)"></x-breadcrum>
     <x-estate-workflow-stepper current="hac-approved" />
     <x-session_message />
 
@@ -13,7 +13,7 @@
             <div class="d-flex flex-column flex-md-row flex-wrap align-items-start align-items-md-center justify-content-between gap-3">
                 <div class="d-flex align-items-center gap-2 flex-wrap">
                     <span class="badge bg-primary rounded-pill px-3 py-2 fs-6">
-                        <i class="bi bi-check2-circle me-1"></i> HAC Approved
+                        <i class="bi bi-check2-circle me-1"></i> HAC Approval
                     </span>
                     <h1 class="h5 fw-bold mb-0 text-body">Change Requests</h1>
                 </div>

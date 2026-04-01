@@ -3,25 +3,42 @@
 @section('title', 'Update Meter Reading of Other - Sargam')
 
 @section('setup_content')
-<div class="container-fluid py-4">
-    <x-breadcrum title="Update Meter Reading of Other"></x-breadcrum>
-    <x-session_message />
+@php
+    $otherMeterReadingFlashParts = [];
+    if (session('error')) {
+        $otherMeterReadingFlashParts[] = trim((string) session('error'));
+    }
+    if ($errors->any()) {
+        foreach ($errors->all() as $err) {
+            $t = trim((string) $err);
+            if ($t !== '' && ! in_array($t, $otherMeterReadingFlashParts, true)) {
+                $otherMeterReadingFlashParts[] = $t;
+            }
+        }
+    }
+    $otherMeterReadingAlertMessage = ! empty($otherMeterReadingFlashParts)
+        ? implode("\n\n", $otherMeterReadingFlashParts)
+        : null;
+@endphp
+<div class="container-fluid">
+    <x-breadcrum :title="'Update Meter Reading of Other'" :items="['Home', 'Estate Management', 'Update Meter Reading of Other']" />
 
-    <div class="card border-0 shadow-sm rounded-3 border-start border-4 border-primary">
-        <div class="card-body p-4 p-lg-5">
-            <h2 class="h5 fw-semibold mb-1">Update Meter Reading of Other</h2>
-            <p class="text-muted small mb-4">Please Update Meter Reading</p>
-            <hr class="my-4">
-
+    <div class="card shadow-sm">
+        <div class="card-header bg-body-secondary bg-opacity-10 border-0 py-3 px-4 d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <h5 class="card-title mb-0">Please Update Meter Reading (Other)</h5>
+        </div>
+        <div class="card-body p-4">
             <form id="meterReadingFilterForm" class="needs-validation" novalidate>
                 @csrf
-                <div class="row g-3 mb-4">
-                    <div class="col-12 col-md-6 col-lg-4">
-                        <label for="bill_month" class="form-label">Bill Month <span class="text-danger">*</span></label>
-                        <input type="month" class="form-control" id="bill_month" name="bill_month" placeholder="Select Bill Month" max="{{ date('Y-m') }}" required>
-                        <div class="form-text">Select the billing month</div>
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label for="bill_month" class="form-label">Meter Change Month <span class="text-danger">*</span></label>
+                        <input type="month" class="form-control" id="bill_month" name="bill_month" placeholder="Select month" max="{{ date('Y-m') }}" value="{{ old('reading_bill_month') }}" required>
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i> Same as permanent estate: list uses the previous calendar month; rows with reading end date in this month are excluded.
+                        </small>
                     </div>
-                    <div class="col-12 col-md-6 col-lg-4">
+                    <div class="col-md-4">
                         <label for="estate_name" class="form-label">Estate Name <span class="text-danger">*</span></label>
                         <select class="form-select" id="estate_name" name="estate_name">
                             <option value="">---Select---</option>
@@ -29,9 +46,11 @@
                                 <option value="{{ $c->pk }}">{{ $c->campus_name }}</option>
                             @endforeach
                         </select>
-                        <div class="form-text">Select Estate Name</div>
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i> Select Estate Name
+                        </small>
                     </div>
-                    <div class="col-12 col-md-6 col-lg-4">
+                    <div class="col-md-4">
                         <label for="unit_name" class="form-label">Unit Name <span class="text-danger">*</span></label>
                         <select class="form-select" id="unit_name" name="unit_type_id">
                             <option value="">---Select---</option>
@@ -45,16 +64,20 @@
                                 >{{ $ut->unit_type }}</option>
                             @endforeach
                         </select>
-                        <div class="form-text">Select Unit</div>
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i> Select Unit
+                        </small>
                     </div>
-                    <div class="col-12 col-md-6 col-lg-4">
+                    <div class="col-md-4">
                         <label for="building" class="form-label">Building <span class="text-danger">*</span></label>
                         <select class="form-select" id="building" name="building">
                             <option value="">---Select---</option>
                         </select>
-                        <div class="form-text">Select Building</div>
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i> Select Building
+                        </small>
                     </div>
-                    <div class="col-12 col-md-6 col-lg-4">
+                    <div class="col-md-4">
                         <label for="unit_sub_type" class="form-label">Unit Sub Type <span class="text-danger">*</span></label>
                         <select class="form-select" id="unit_sub_type" name="unit_sub_type">
                             <option value="">---Select---</option>
@@ -62,14 +85,20 @@
                                 <option value="{{ $ust->pk }}">{{ $ust->unit_sub_type }}</option>
                             @endforeach
                         </select>
-                        <div class="form-text">Select Unit Sub Type</div>
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i> Select Unit Sub Type
+                        </small>
                     </div>
-                    <div class="col-12 col-md-6 col-lg-4">
+                    <div class="col-md-4">
                         <label for="meter_reading_date" class="form-label">Meter Reading Date <span class="text-danger">*</span></label>
-                        <input type="date" class="form-control" id="meter_reading_date" name="meter_reading_date" placeholder="Select date" required>
-                        <div class="form-text">Meter Reading Date</div>
+                        <input type="date" class="form-control @error('reading_meter_reading_date') is-invalid @enderror" id="meter_reading_date" name="reading_meter_reading_date" placeholder="Select date" value="{{ old('reading_meter_reading_date') }}" autocomplete="off" required>
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i>
+                        </small>
                     </div>
-                    <div class="col-12">
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-12">
                         <button type="button" class="btn btn-primary" id="loadMeterReadingsBtn">
                             <i class="bi bi-search me-2"></i>Load Data
                         </button>
@@ -79,11 +108,14 @@
 
             <form id="meterReadingSaveForm" method="POST" action="{{ route('admin.estate.update-meter-reading-of-other.store') }}" style="display:none;">
                 @csrf
-                <div class="table-responsive mt-4 rounded-3 overflow-hidden border">
-                    <table class="table table-striped table-hover align-middle mb-0" id="updateMeterReadingOtherTable">
+                <input type="hidden" name="reading_bill_month" id="reading_bill_month_hidden" value="">
+                <input type="hidden" name="reading_meter_reading_date" id="reading_meter_reading_date_hidden" value="">
+
+                <div class="table-responsive mt-4">
+                    <table class="table table-bordered table-hover" id="updateMeterReadingOtherTable">
                         <thead class="table-primary">
                             <tr>
-                                <th><input type="checkbox" class="form-check-input" id="select_all" aria-label="Select all"></th>
+                                <th><input type="checkbox" class="form-check-input" id="select_all"></th>
                                 <th>House No.</th>
                                 <th>Name</th>
                                 <th>Last Month Electric Reading Date</th>
@@ -98,13 +130,15 @@
                     </table>
                 </div>
 
-                <div class="d-flex flex-wrap gap-2 mt-4">
-                    <button type="submit" class="btn btn-success d-inline-flex align-items-center gap-2">
-                        <i class="bi bi-save"></i> Save
+                <div class="alert alert-danger mb-4">
+                    <small>*Required Fields: All marked fields are mandatory</small>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save me-2"></i>Save
                     </button>
-                    <a href="{{ route('admin.estate.possession-for-others') }}" class="btn btn-secondary d-inline-flex align-items-center gap-2">
-                        <i class="bi bi-x-lg"></i> Cancel
-                    </a>
+                    <a href="{{ route('admin.estate.possession-for-others') }}" class="btn btn-outline-primary">Cancel</a>
                 </div>
             </form>
 
@@ -118,12 +152,19 @@
 
 @push('styles')
 <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
-<style>.ts-dropdown { z-index: 1060 !important; }</style>
+<style>
+.ts-dropdown { z-index: 1060 !important; }
+</style>
 @endpush
 
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 <script>
+@if ($otherMeterReadingAlertMessage !== null)
+(function () {
+    try { alert(@json($otherMeterReadingAlertMessage)); } catch (e) {}
+})();
+@endif
 $(document).ready(function() {
     const listUrl = "{{ route('admin.estate.update-meter-reading-of-other.list') }}";
     const blocksUrl = "{{ route('admin.estate.update-meter-reading-of-other.blocks') }}";
@@ -134,6 +175,7 @@ $(document).ready(function() {
     const prefill = @json($prefill ?? null);
 
     let dataTable = null;
+    let lastInvalidReadingAlertAt = 0;
     window.otherMeterRowData = window.otherMeterRowData || {};
 
     var tsOpts = { allowEmptyOption: true, create: false, dropdownParent: 'body', maxOptions: null, hideSelected: false, onInitialize: function() { this.activeOption = null; } };
@@ -215,25 +257,34 @@ $(document).ready(function() {
         const billMonthVal = $('#bill_month').val();
         const { bill_month: billMonth, bill_year: billYear } = parseBillMonthInput(billMonthVal);
         if (!billMonth || !billYear) {
-            alert('Please select Bill Month.');
+            alert('Please select Meter Change Month.');
             return;
         }
         const today = new Date();
-        const maxMonth = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
+        const maxFromInput = $('#bill_month').attr('max');
+        const maxMonth = maxFromInput || (today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0'));
         if (billMonthVal > maxMonth) {
-            alert('Bill Month cannot be a future month. Please select current month or earlier.');
+            alert('Meter Change Month cannot be a future month. Please select current month or earlier.');
+            return;
+        }
+        const meterReadingDateValLoad = ($('#meter_reading_date').val() || '').trim();
+        if (!meterReadingDateValLoad) {
+            alert('Please select Meter Reading Date.');
+            $('#meter_reading_date').trigger('focus');
             return;
         }
         const params = {
             bill_month: billMonth,
             bill_year: billYear,
-            meter_reading_date: getSelVal(document.getElementById('meter_reading_date')) || '',
             campus_id: getSelVal(document.getElementById('estate_name')) || '',
             block_id: getSelVal(document.getElementById('building')) || '',
             unit_type_id: getSelVal(document.getElementById('unit_name')) || '',
             unit_sub_type_id: getSelVal(document.getElementById('unit_sub_type')) || ''
         };
-        // Load grid data by selected filters only (estate/unit/building/sub-type/date/month).
+        if (possessionPks && String(possessionPks).trim() !== '') {
+            params.possession_pks = String(possessionPks).trim();
+        }
+        // Load grid by meter-change month + estate filters (meter reading date is for Save, not list).
         $.get(listUrl, params, function(res) {
             if (!res.status || !res.data || res.data.length === 0) {
                 $('#meterReadingSaveForm').hide();
@@ -251,20 +302,22 @@ $(document).ready(function() {
             window.otherMeterRowData = window.otherMeterRowData || {};
             res.data.forEach(function(row, idx) {
                 const lastReading = typeof row.last_month_reading === 'number' ? row.last_month_reading : (parseInt(row.last_month_reading, 10) || null);
-                const currVal = (row.curr_month_reading !== null && row.curr_month_reading !== '' ? row.curr_month_reading : '');
+                // Same UX as permanent update-meter-reading: input starts blank; existing saved reading only on data-* for min validation.
+                const existingCurrStored = (row.curr_month_reading !== null && row.curr_month_reading !== undefined && row.curr_month_reading !== '')
+                    ? String(row.curr_month_reading) : '';
                 const rowKey = row.pk + '_' + (row.meter_slot || 1);
-                window.otherMeterRowData[rowKey] = { curr_month_elec_red: currVal };
-                const tr = '<tr data-last-reading="'+ (lastReading !== null ? lastReading : '') +'" data-existing-curr="'+ (currVal !== '' ? currVal : '') +'" data-pk="'+ row.pk +'" data-meter-slot="'+ (row.meter_slot || 1) +'">' +
-                    '<td><input type="checkbox" class="form-check-input row-check" name="readings['+idx+'][selected]" value="1" aria-label="Select row"></td>' +
+                window.otherMeterRowData[rowKey] = { curr_month_elec_red: '' };
+                const tr = '<tr data-last-reading="'+ (lastReading !== null ? lastReading : '') +'" data-existing-curr="'+ existingCurrStored.replace(/"/g, '&quot;') +'" data-pk="'+ row.pk +'" data-meter-slot="'+ (row.meter_slot || 1) +'">' +
+                    '<td><input type="checkbox" class="form-check-input row-check" name="readings['+idx+'][selected]" value="1"></td>' +
                     '<td>'+ (row.house_no || 'N/A') +'</td>' +
                     '<td>'+ (row.name || 'N/A') +'</td>' +
                     '<td>'+ (row.last_reading_date || 'N/A') +'</td>' +
                     '<td>'+ (row.meter_no || 'N/A') +'</td>' +
                     '<td>'+ (row.last_month_reading || 'N/A') +'</td>' +
-                    '<td><input type="number" class="form-control form-control-sm curr-reading" name="readings['+idx+'][curr_month_elec_red]" value="'+ String(currVal).replace(/"/g, '&quot;') +'" min="0" step="1" placeholder="Enter">' +
+                    '<td><input type="number" class="form-control form-control-sm curr-reading" name="readings['+idx+'][curr_month_elec_red]" value="" min="0" step="1" placeholder="Enter" inputmode="numeric">' +
                     '<input type="hidden" name="readings['+idx+'][pk]" value="'+row.pk+'">' +
                     '<input type="hidden" name="readings['+idx+'][meter_slot]" value="'+(row.meter_slot || 1)+'"></td>' +
-                    '<td class="unit-cell">'+ (row.unit || 'N/A') +'</td>' +
+                    '<td class="unit-cell"></td>' +
                     '</tr>';
                 tbody.append(tr);
             });
@@ -275,9 +328,18 @@ $(document).ready(function() {
     });
 
     $('#select_all').on('change', function() {
-        const checked = $(this).prop('checked');
-        $('.row-check').prop('checked', checked).trigger('change');
+        $('.row-check').prop('checked', $(this).prop('checked'));
     });
+
+    function getOtherRowMinAllowed($row) {
+        const lastVal = $row.data('last-reading');
+        const existingVal = $row.data('existing-curr');
+        const lastReading = (lastVal !== '' && lastVal !== undefined && !isNaN(parseFloat(lastVal))) ? parseFloat(lastVal) : null;
+        const existingCurr = (existingVal !== '' && existingVal !== undefined && !isNaN(parseFloat(existingVal))) ? parseFloat(existingVal) : null;
+        if (lastReading === null && existingCurr === null) return null;
+        if (existingCurr !== null && lastReading !== null) return Math.max(lastReading, existingCurr);
+        return existingCurr !== null ? existingCurr : lastReading;
+    }
 
     function syncOtherRowDataFromInputs($row) {
         var pk = $row.data('pk');
@@ -291,67 +353,111 @@ $(document).ready(function() {
         window.otherMeterRowData[key].curr_month_elec_red = $row.find('.curr-reading').val() || '';
     }
 
-    $(document).on('input change', '.curr-reading', function() {
+    $(document).on('input', '.curr-reading', function() {
         const $row = $(this).closest('tr');
         const lastVal = $row.data('last-reading');
-        const existingVal = $row.data('existing-curr');
-
         const lastReading = (lastVal !== '' && lastVal !== undefined && !isNaN(parseFloat(lastVal))) ? parseFloat(lastVal) : null;
-        const existingCurr = (existingVal !== '' && existingVal !== undefined && !isNaN(parseFloat(existingVal))) ? parseFloat(existingVal) : null;
 
         let currVal = $(this).val();
         let currReading = (currVal !== '' && currVal !== null && !isNaN(parseFloat(currVal))) ? parseFloat(currVal) : null;
 
-        // Block user from entering value less than last month / existing current.
-        let minAllowed = lastReading;
-        if (existingCurr !== null) {
-            minAllowed = (minAllowed !== null) ? Math.max(minAllowed, existingCurr) : existingCurr;
-        }
-        if (minAllowed !== null && currReading !== null && currReading < minAllowed) {
-            currReading = minAllowed;
-            currVal = String(minAllowed);
-            $(this).val(currVal);
-        }
-
         syncOtherRowDataFromInputs($row);
 
-        let unit = 'N/A';
+        let unit = '';
         if (lastReading !== null && currReading !== null && currReading >= lastReading) {
             unit = currReading - lastReading;
         }
         $row.find('.unit-cell').text(unit);
     });
 
-    // Require current reading only for selected rows (gives immediate feedback).
-    $(document).on('change', '.row-check', function() {
+    $(document).on('blur', '.curr-reading', function() {
         const $row = $(this).closest('tr');
-        const $input = $row.find('.curr-reading');
-        if ($(this).prop('checked')) {
-            $input.attr('required', 'required');
-        } else {
-            $input.removeAttr('required');
+        const currVal = $(this).val();
+        const currReading = (currVal !== '' && currVal !== null && !isNaN(parseFloat(currVal))) ? parseFloat(currVal) : null;
+        const minAllowed = getOtherRowMinAllowed($row);
+        if (minAllowed !== null && currReading !== null && currReading < minAllowed) {
+            lastInvalidReadingAlertAt = Date.now();
+            alert('Current Month Reading cannot be less than Last Month Meter Reading.');
         }
     });
 
     $('#meterReadingSaveForm').on('submit', function(e) {
+        const billMonthVal = $('#bill_month').val();
+        if (!billMonthVal) {
+            e.preventDefault();
+            alert('Please select Meter Change Month.');
+            $('#bill_month').trigger('focus');
+            return;
+        }
+        const meterReadingDateSubmit = ($('#meter_reading_date').val() || '').trim();
+        if (!meterReadingDateSubmit) {
+            e.preventDefault();
+            alert('Please select Meter Reading Date.');
+            $('#meter_reading_date').trigger('focus');
+            return;
+        }
+
         const selectedCount = $('.row-check:checked').length;
         if (selectedCount === 0) {
             e.preventDefault();
             alert('Please select at least one record by clicking the checkbox before saving.');
             return;
         }
-        // No DataTable pagination; submit normally.
+
+        let hasEmptyReading = false;
+        $('.row-check:checked').each(function() {
+            const $row = $(this).closest('tr');
+            const $input = $row.find('.curr-reading');
+            const currVal = $input.val();
+            if (currVal === null || String(currVal).trim() === '') {
+                hasEmptyReading = true;
+                $input.trigger('focus');
+                return false;
+            }
+        });
+        if (hasEmptyReading) {
+            e.preventDefault();
+            alert('Please fill Current Month Reading for all selected rows.');
+            return;
+        }
+
+        let hasInvalidReading = false;
+        $('.row-check:checked').each(function() {
+            const $row = $(this).closest('tr');
+            const $input = $row.find('.curr-reading');
+            const currReading = parseFloat(String($input.val()).trim(), 10);
+            const minAllowed = getOtherRowMinAllowed($row);
+            if (minAllowed !== null && !isNaN(currReading) && currReading < minAllowed) {
+                hasInvalidReading = true;
+                $input.trigger('focus');
+                return false;
+            }
+        });
+        if (hasInvalidReading) {
+            e.preventDefault();
+            const now = Date.now();
+            if ((now - lastInvalidReadingAlertAt) > 800) {
+                lastInvalidReadingAlertAt = now;
+                alert('Current Month Reading cannot be less than Last Month Meter Reading.');
+            }
+            return;
+        }
+
+        $('#reading_bill_month_hidden').val($('#bill_month').val() || '');
+        $('#reading_meter_reading_date_hidden').val(meterReadingDateSubmit);
     });
 
     // Prefill form when coming from Estate Possession for Other with possession_pks
+    @if (! $errors->any())
     if (prefill) {
         if (prefill.bill_month) {
-            $('#bill_month').val(prefill.bill_month);
+            $('#bill_month').val(prefill.bill_month).trigger('change');
         }
         if (tsEstate) tsEstate.setValue(String(prefill.estate_campus_master_pk || ''), true);
         else $('#estate_name').val(prefill.estate_campus_master_pk || '');
         $('#estate_name').trigger('change');
     }
+    @endif
 });
 </script>
 @endpush

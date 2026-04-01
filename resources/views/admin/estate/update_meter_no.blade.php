@@ -4,6 +4,18 @@
 
 @section('setup_content')
 <div class="container-fluid">
+    @if (session('success'))
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+    @if (session('error'))
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            {{ session('error') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
     <!-- Breadcrumb -->
     <nav aria-label="breadcrumb" class="mb-3">
         <ol class="breadcrumb">
@@ -33,7 +45,7 @@
                 <ul class="dropdown-menu dropdown-menu-end" id="updateMeterNoColumnToggleMenu"></ul>
             </div>
             <button type="button" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-2" id="btnUpdateMeterNoPrint" title="Print">
-                <i class="material-icons material-symbols-rounded">print</i>
+                <i class="bi bi-printer"></i>
                 <span class="d-none d-md-inline">Print</span>
             </button>
         </div>
