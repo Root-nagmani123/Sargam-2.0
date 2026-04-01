@@ -40,9 +40,10 @@
 
                     <div class="col-12 col-md-4 col-lg-3">
                         <label for="store_id" class="form-label small text-uppercase fw-semibold text-body-secondary mb-1">Store</label>
-                        <select id="store_id" name="store_id[]" class="form-select choices-select" data-placeholder="All Stores" multiple>
+                        <select id="store_id" name="store_id" class="form-select" data-placeholder="All Stores">
+                            <option value="">All Stores</option>
                             @foreach($stores as $store)
-                                <option value="{{ $store->id }}" @selected(in_array((int) $store->id, (array)($storeIds ?? []), true))>
+                                <option value="{{ $store->id }}" {{ ($storeId ?? null) == $store->id ? 'selected' : '' }}>
                                     {{ $store->store_name }}
                                 </option>
                             @endforeach
@@ -86,7 +87,7 @@
                     </span>
                     <span class="badge text-bg-primary fw-normal rounded-pill px-3 py-2">
                         <span class="material-symbols-rounded icon-16 align-text-bottom me-1">store</span>
-                        {{ $selectedStoreName ?: 'All Stores' }}
+                        {{ $selectedStoreName ?? 'All Stores' }}
                     </span>
                 </div>
             </div>

@@ -65,16 +65,14 @@
                         <span class="material-symbols-rounded me-1" style="font-size: 18px;">refresh</span>
                         Reset
                     </a>
-                    <div class="btn-group shadow-sm" role="group" aria-label="Print or download PDF">
-                    <button type="button" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center justify-content-center gap-1 px-3" onclick="printStockSummary()" title="Print report or choose Save as PDF in print dialog">
-                        <span class="material-symbols-rounded" style="font-size: 18px; line-height: 1;">print</span>
-                        <span>Print</span>
+                    <button type="button" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1" onclick="printStockSummary()" title="Print report or choose Save as PDF in print dialog">
+                        <span class="material-symbols-rounded me-1" style="font-size: 18px;">print</span>
+                        Print
                     </button>
-                    <button type="button" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center justify-content-center gap-1 px-3" title="Download PDF" data-stock-summary-pdf-url="{{ route('admin.mess.reports.stock-summary.pdf', request()->query()) }}" onclick="window.location.href=this.getAttribute('data-stock-summary-pdf-url')">
-                        <span class="material-symbols-rounded" style="font-size: 18px; line-height: 1;">picture_as_pdf</span>
-                        <span>PDF</span>
-                    </button>
-                    </div>
+                    <a href="{{ route('admin.mess.reports.stock-summary.pdf', request()->query()) }}" class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1" title="Download PDF">
+                        <span class="material-symbols-rounded me-1" style="font-size: 18px;">picture_as_pdf</span>
+                        PDF
+                    </a>
 
                     <a href="{{ route('admin.mess.reports.stock-summary.excel', request()->query()) }}" class="btn btn-success btn-sm d-inline-flex align-items-center gap-1" title="Export to Excel">
                         <span class="material-symbols-rounded me-1" style="font-size: 18px;">table_view</span>
@@ -117,25 +115,10 @@
 
 <script>
 function printStockSummary() {
-    // Sticky-header script inserts a cloned header-only table before the real table; both use .table-fit.
-    // We must print the scroll container's direct child data table (has tbody rows), not the clone.
-    const scroller = document.querySelector('.stock-summary-report .table-fit-single-view');
-    let table = scroller ? scroller.querySelector(':scope > table.table-fit') : null;
+    const table = document.querySelector('.stock-summary-report .table-responsive table');
     if (!table) {
-        var wrapScroller = document.querySelector('#stock-summary-table-wrap .table-fit-single-view');
-        table = wrapScroller ? wrapScroller.querySelector(':scope > table.table-fit') : null;
-    }
-    if (!table || !table.querySelector('tbody')) {
         window.print();
         return;
-    }
-
-    // Real table's thead is hidden when sticky header is active; show it on a clone for printing.
-    const tableForPrint = table.cloneNode(true);
-    const printThead = tableForPrint.querySelector('thead');
-    if (printThead) {
-        printThead.style.display = '';
-        printThead.removeAttribute('hidden');
     }
 
     const title     = 'Stock Summary Report';
@@ -156,19 +139,28 @@ function printStockSummary() {
   <style>
     body {
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      font-size: 14px;
+      font-size: 9px;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
+    /* LBSNAA watermark */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background: url("https://www.lbsnaa.gov.in/admin_assets/images/logo.png") center center no-repeat;
+      background-size: 240px 240px;
+      opacity: 0.06;
+      z-index: -1;
+    }
     .lbsnaa-header { border-bottom: 2px solid #004a93; padding-bottom:.75rem; margin-bottom:1rem; }
-    .brand-line-1 { font-size:1.05rem; text-transform:uppercase; letter-spacing:.06em; color:#004a93; }
-    .brand-line-2 { font-size:1.4rem; font-weight:700; text-transform:uppercase; color:#222; }
-    .brand-line-3 { font-size:1rem; color:#555; }
-    .report-meta { font-size:1.05rem; margin-bottom:.75rem; }
+    .brand-line-1 { font-size:.85rem; text-transform:uppercase; letter-spacing:.06em; color:#004a93; }
+    .brand-line-2 { font-size:1.1rem; font-weight:700; text-transform:uppercase; color:#222; }
+    .brand-line-3 { font-size:.8rem; color:#555; }
+    .report-meta { font-size:.8rem; margin-bottom:.75rem; }
     .report-meta span { display:inline-block; margin-right:1.5rem; }
-    .print-report-title { font-size: 1.3rem; font-weight: 600; }
-    table { width:100%; border-collapse:collapse; font-size: 14px; }
-    th, td { padding:6px 9px; border:1px solid #dee2e6; }
+    table { width:100%; border-collapse:collapse; font-size: 8px; }
+    th, td { padding:2px 4px; border:1px solid #dee2e6; }
     thead th { background:#f8f9fa; font-weight:600; }
     /* Allow wrapping so all columns stay on the page */
     .table,
@@ -207,7 +199,7 @@ function printStockSummary() {
     </div>
 
     <div class="mb-2">
-      <h5 class="mb-1 print-report-title">${title}</h5>
+      <h5 class="mb-1">${title}</h5>
       <div class="report-meta">
         <span><strong>Period:</strong> ${dateRange}</span>
         <span><strong>Store:</strong> ${storeName}</span>
@@ -216,7 +208,7 @@ function printStockSummary() {
     </div>
 
     <div class="table-responsive">
-      ${tableForPrint.outerHTML}
+      ${table.outerHTML}
     </div>
   </div>
 
@@ -277,10 +269,10 @@ document.addEventListener('DOMContentLoaded', function () {
             margin-bottom: 30px;
         }
         body { 
-            font-size: 14px; 
+            font-size: 12px; 
         }
         table { 
-            font-size: 14px;
+            font-size: 11px;
             page-break-inside: auto;
         }
         table tr {
@@ -291,7 +283,7 @@ document.addEventListener('DOMContentLoaded', function () {
             display: table-header-group;
         }
         th, td { 
-            padding: 10px 12px !important; 
+            padding: 6px !important; 
         }
         @page {
             margin: 1cm;
@@ -303,12 +295,11 @@ document.addEventListener('DOMContentLoaded', function () {
         margin-bottom: 10px;
         color: #000;
         font-weight: bold;
-        font-size: 1.5rem;
     }
     
     .report-header p {
         color: #333;
-        font-size: 1.125rem;
+        font-size: 14px;
     }
 
     /* Fixed table height with inner scroll */
@@ -320,35 +311,19 @@ document.addEventListener('DOMContentLoaded', function () {
         border-radius: .5rem;
     }
 
-    /* px + !important: admin layout / .table often shrink rem; align with print (14px body) & PDF (~12–14px) */
-    .stock-summary-report .stock-summary-table-root .table-fit,
-    .stock-summary-report .ssr-sticky-head .table-fit {
+    .stock-summary-report .table-fit {
         width: 100%;
         table-layout: fixed;
-        font-size: 14px !important;
+        font-size: 0.8rem;
     }
 
-    .stock-summary-report .stock-summary-table-root .table-fit th,
-    .stock-summary-report .stock-summary-table-root .table-fit td,
-    .stock-summary-report .ssr-sticky-head .table-fit th {
-        padding: 0.65rem 0.8rem;
+    .stock-summary-report .table-fit th,
+    .stock-summary-report .table-fit td {
+        padding: 0.4rem 0.5rem;
         white-space: normal;
         word-wrap: break-word;
         overflow-wrap: break-word;
         vertical-align: middle;
-        font-size: inherit;
-    }
-
-    .stock-summary-report .stock-summary-table-root .table-fit .ssr-item-name {
-        font-size: 15px !important;
-    }
-
-    .stock-summary-report .stock-summary-table-root .table-fit .ssr-totals-label {
-        font-size: 15px !important;
-    }
-
-    .stock-summary-report .stock-summary-table-meta {
-        font-size: 14px !important;
     }
 
     /* Robust sticky header (cloned THEAD) */

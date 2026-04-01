@@ -1197,9 +1197,6 @@
         }
     }
 
-    // Backward-compatible alias used throughout this file.
-    const initChoicesSingle = initTomSelect;
-
     // Destroy Tom Select instance
     function destroyTomSelect(element) {
         if (element && element.tomselect) {

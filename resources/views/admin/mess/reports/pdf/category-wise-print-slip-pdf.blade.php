@@ -1,256 +1,294 @@
+@php
+    $fromLabel = $fromDateFormatted ?? null;
+    $toLabel = $toDateFormatted ?? null;
+@endphp
 <!doctype html>
 <html lang="en">
 <head>
     <meta charset="utf-8">
     <title>Sale Voucher Report</title>
     <style>
-        @page {
-            size: A4 portrait;
-            margin: 12mm;
-        }
-
         body {
             font-family: DejaVu Sans, Arial, sans-serif;
-            font-size: 11pt;
-            margin: 0;
-            padding: 0;
+            font-size: 9px;
+            margin: 16px 18px;
             color: #222;
-            background: #fff;
         }
-
-        .print-page-wrap {
-            page-break-after: auto;
-        }
-
-        .print-page-break {
+        .page {
             page-break-after: always;
         }
-
-        .print-grand-total-block {
-            page-break-inside: avoid;
+        .page:last-child {
+            page-break-after: auto;
         }
-
-        .report-mess-title {
-            color: #000;
-            font-size: 14pt;
-            font-weight: bold;
-            margin: 0 0 4px 0;
+        .page-header {
+            border-bottom: 2px solid #004a93;
+            padding-bottom: 6px;
+            margin-bottom: 10px;
         }
-
-        .report-title-bar {
-            background-color: #004a93;
-            color: #fff;
-            padding: 8px 14px;
-            font-size: 11pt;
+        .page-header-top {
+            display: table;
+            width: 100%;
+        }
+        .page-header-col {
+            display: table-cell;
+            vertical-align: middle;
+        }
+        .page-header-col.logo {
+            width: 60px;
+            text-align: center;
+        }
+        .page-header-title {
+            text-align: center;
+        }
+        .page-header-title h1 {
+            font-size: 12px;
+            margin: 0;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+        }
+        .page-header-title h2 {
+            font-size: 10px;
+            margin: 2px 0 0;
+            text-transform: uppercase;
+            color: #004a93;
+        }
+        .page-header-sub {
+            font-size: 8px;
+            margin-top: 2px;
+            color: #555;
+        }
+        .meta-row {
+            font-size: 8px;
             margin-top: 6px;
         }
-
-        .report-header {
-            margin-bottom: 12px;
-            padding-bottom: 8px;
-            border-bottom: 2px solid #2c3e50;
+        .meta-row span {
+            display: inline-block;
+            margin-right: 14px;
         }
-
-        .lbsnaa-header-row {
-            display: table;
-            width: 100%;
-            border-bottom: 2px solid #004a93;
-            margin-bottom: 10px;
-            padding: 2px 0 8px;
-        }
-
-        .lbsnaa-brand-left {
-            display: table-cell;
-            width: auto;
-            vertical-align: middle;
-        }
-
-        .lbsnaa-logo-wrap {
-            display: table-cell;
-            width: 40px;
-            vertical-align: middle;
-            text-align: left;
-        }
-
-        .lbsnaa-header-logo {
-            width: 34px;
-            height: 34px;
-            object-fit: contain;
-        }
-
-        .lbsnaa-brand-lines {
-            display: table-cell;
-            vertical-align: middle;
-            text-align: left;
-            line-height: 1.25;
-            padding: 0 10px 0 0;
-        }
-
-        .lbsnaa-brand-right {
-            display: table-cell;
-            width: 200px;
-            text-align: right;
-            vertical-align: middle;
-        }
-
-        .lbsnaa-header-logo-right {
-            width: 165px;
-            height: auto;
-        }
-
-        .lbsnaa-brand-line-1 {
-            font-size: 8pt;
-            color: #004a93;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            font-weight: 600;
-        }
-
-        .lbsnaa-brand-line-2 {
-            font-size: 13pt;
-            color: #222;
-            font-weight: 700;
-            margin-top: 2px;
-        }
-
-        .lbsnaa-brand-line-3 {
-            font-size: 10pt;
-            color: #555;
-            margin-top: 2px;
-        }
-
-        .report-details-row {
-            display: table;
-            width: 100%;
-            padding: 8px 10px;
-            background: #f8f9fa;
-            border: 1px solid #dee2e6;
+        .buyer-header {
+            margin: 6px 0 4px;
+            padding: 4px 6px;
             border-radius: 3px;
-            margin-bottom: 10px;
-            box-sizing: border-box;
+            background: #f3f6fb;
+            border: 1px solid #cfd8ea;
+            font-size: 8px;
+            display: flex;
+            justify-content: space-between;
         }
-
-        .report-buyer-label {
-            display: table-cell;
+        .buyer-header strong {
             font-weight: 600;
-            width: 50%;
-            vertical-align: middle;
         }
-
-        .report-client-type {
-            display: table-cell;
-            font-weight: 600;
-            text-align: right;
-            vertical-align: middle;
-        }
-
-        .print-slip-section {
-            margin-bottom: 14px;
-        }
-
-        .table-responsive {
-            width: 100%;
-            overflow: visible;
-        }
-
-        .print-slip-table {
+        table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 10pt;
+            font-size: 16px;
             margin-bottom: 8px;
-            table-layout: fixed;
         }
-
-        .print-slip-table th,
-        .print-slip-table td {
-            padding: 6px 8px;
-            border: 1px solid #dee2e6;
-            vertical-align: middle;
-            white-space: normal;
-            word-break: break-word;
-            overflow-wrap: anywhere;
+        th, td {
+            padding: 2px 4px;
+            border: 1px solid #dde2ea;
         }
-
-        .print-slip-table thead th {
-            background: #2c3e50;
-            color: #fff;
+        thead th {
+            background: #e6ecf5;
             font-weight: 600;
-            border: 1px solid #1a252f;
         }
-
-        .print-slip-table .th-slip-no,
-        .print-slip-table .th-date {
-            text-align: center;
+        tbody tr:nth-child(even) td {
+            background: #fafbfc;
         }
-
-        .print-slip-table .th-qty,
-        .print-slip-table .th-price,
-        .print-slip-table .th-amount {
-            text-align: right;
-        }
-
-        .print-slip-table .th-buyer,
-        .print-slip-table .buyer-name-cell {
-            width: 22%;
-        }
-
-        .print-slip-table .text-center {
-            text-align: center;
-        }
-
-        .print-slip-table .text-end {
-            text-align: right;
-        }
-
-        .print-slip-table .total-row {
-            background: #e9ecef;
+        .text-center { text-align: center; }
+        .text-end { text-align: right; }
+        .total-row {
+            background-color: #e9ecef;
             font-weight: bold;
-            border-top: 2px solid #2c3e50;
         }
-
-        .print-slip-table .grand-total-row {
-            background: #d8e4ef;
+        .grand-total-row {
+            background-color: #d8e4ef;
             font-weight: bold;
-            border-top: 3px solid #004a93;
+            border-top: 2px solid #004a93;
         }
-
-        .cw-slip-empty {
-            padding: 12px;
-            border: 1px solid #ccc;
-            background: #f8f9fa;
-        }
-
-        .alert {
-            padding: 12px;
-            margin-bottom: 0;
-            border-radius: 4px;
-        }
-
-        .alert-info {
-            background: #cff4fc;
-            border: 1px solid #9eeaf9;
-            color: #055160;
-        }
-
-        .alert-warning {
-            background: #fff3cd;
-            border: 1px solid #ffc107;
-            color: #664d03;
+        .footer {
+            border-top: 1px solid #dde2ea;
+            font-size: 7px;
+            color: #666;
+            text-align: center;
+            padding-top: 3px;
+            margin-top: 4px;
         }
     </style>
 </head>
 <body>
-@include('admin.mess.reports.partials.category-wise-print-slip-body', [
-    'sectionsToShow' => $sectionsToShow,
-    'fromDateFormatted' => $fromDateFormatted ?? 'Start',
-    'toDateFormatted' => $toDateFormatted ?? 'End',
-    'otCourses' => $otCourses ?? collect(),
-    'grandTotal' => $grandTotal ?? 0,
-    'filtersApplied' => true,
-    'printPageBreakPerBuyer' => true,
-    'showBrandingHeader' => true,
-    'emblemSrc' => $emblemSrc ?? null,
-    'lbsnaaLogoSrc' => $lbsnaaLogoSrc ?? null,
-])
+@if($sectionsToShow->isEmpty())
+    <p>No selling vouchers found for the selected filters.</p>
+@else
+    @foreach($sectionsToShow as $groupedSections)
+        <div class="page">
+            <div class="page-header">
+                <div class="page-header-top">
+                   
+                    <div class="page-header-col page-header-title">
+                        <h1>OFFICER'S MESS LBSNAA MUSSOORIE</h1>
+                        <h2>Sale Voucher Report</h2>
+                        <div class="page-header-sub">Lal Bahadur Shastri National Academy of Administration</div>
+                    </div>
+                </div>
+                <div class="meta-row">
+                    @php
+                        $fromText = $fromLabel ?? 'Start';
+                        $toText = $toLabel ?? 'End';
+                    @endphp
+                    <span><strong>Period:</strong>
+                        @if($fromLabel || $toLabel)
+                            Between {{ $fromText }} To {{ $toText }}
+                        @else
+                            All Dates
+                        @endif
+                    </span>
+                    <span><strong>Generated on:</strong> {{ now()->format('d-m-Y H:i') }}</span>
+                </div>
+            </div>
+
+            @forelse($groupedSections as $groupKey => $sectionVouchers)
+                @php
+                    $first = $sectionVouchers->first();
+                    $buyerName = $first->client_name ?? ($first->clientTypeCategory->client_name ?? 'N/A');
+                    $clientTypeLabel = $first->clientTypeCategory
+                        ? ucfirst($first->clientTypeCategory->client_type)
+                        : ucfirst($first->client_type_slug ?? 'N/A');
+                    $slug = $first->client_type_slug ?? '';
+                    $typeSuffix = ($slug === 'employee') ? 'Employee' : (($slug === 'ot') ? 'OT' : ucfirst($slug));
+                    if (!$typeSuffix) $typeSuffix = 'N/A';
+                    $courseDisplay = null;
+                    if (in_array($slug, ['course', 'ot'], true) && isset($otCourses) && $otCourses->isNotEmpty()) {
+                        $selectedCourse = $otCourses->firstWhere('pk', $first->client_type_pk ?? null);
+                        if ($selectedCourse) {
+                            $courseDisplay = $selectedCourse->course_name;
+                        }
+                    }
+                @endphp
+
+                <div class="buyer-header">
+                    <span><strong>Buyer Name :</strong> {{ $buyerName }}- {{ $typeSuffix }}</span>
+                    <span><strong>Client Type :</strong> {{ $clientTypeLabel }}@if($courseDisplay) <strong>[{{ $courseDisplay }}]</strong>@endif</span>
+                </div>
+
+                <table style="font-size: 14px;">
+                    <thead>
+                    <tr>
+                        <th>Slip No.</th>
+                        <th style="width: 150px;">Buyer Name</th>
+                        <th>Remark</th>
+                        <th>Item Name</th>
+                        <th>Request Date</th>
+                        <th style="text-align: right;">Quantity</th>
+                        <th style="text-align: right;">Price</th>
+                        <th style="text-align: right;">Amount</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @php $sectionTotal = 0; @endphp
+                    @foreach($sectionVouchers as $voucher)
+                        @php
+                            $requestNo = $voucher->request_no ?? ('SV-' . str_pad($voucher->id ?? $voucher->pk ?? 0, 6, '0', STR_PAD_LEFT));
+                            $requestDate = $voucher->issue_date ? $voucher->issue_date->format('d-m-Y') : 'N/A';
+                            $rowCount = $voucher->items->count();
+                        @endphp
+                        @foreach($voucher->items as $itemIndex => $item)
+                            @php
+                                $issueQty = (float) ($item->quantity ?? 0);
+                                $returnQty = (float) ($item->return_quantity ?? 0);
+                                $netQty = max(0, $issueQty - $returnQty);
+                                $rate = (float) ($item->rate ?? 0);
+                                $itemAmount = $netQty * $rate;
+                                $sectionTotal += $itemAmount;
+                                $itemName = $item->item_name ?? ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? 'N/A');
+                                $itemIssueDate = $item->issue_date ?? null;
+                                $itemIssueDateFormatted = $itemIssueDate
+                                    ? ($itemIssueDate instanceof \Carbon\Carbon
+                                        ? $itemIssueDate->format('d-m-Y')
+                                        : \Carbon\Carbon::parse($itemIssueDate)->format('d-m-Y'))
+                                    : $requestDate;
+                            @endphp
+                            <tr>
+                                @if($itemIndex === 0)
+                                    <td class="text-center" rowspan="{{ $rowCount }}">{{ $requestNo }}</td>
+                                    <td rowspan="{{ $rowCount }}">{{ $buyerName }}</td>
+                                    <td rowspan="{{ $rowCount }}">{{ $voucher->remarks ?? '—' }}</td>
+                                @endif
+                                <td>{{ $itemName }}</td>
+                                <td class="text-center">{{ $itemIssueDateFormatted }}</td>
+                                <td class="text-end">{{ number_format($netQty, 2) }}</td>
+                                <td class="text-end">{{ number_format($rate, 2) }}</td>
+                                <td class="text-end">{{ number_format($itemAmount, 2) }}</td>
+                            </tr>
+                        @endforeach
+                    @endforeach
+                    <tr class="total-row">
+                        <td colspan="6"></td>
+                        <td class="text-end"><strong>TOTAL</strong></td>
+                        <td class="text-end"><strong>{{ number_format($sectionTotal, 2) }}</strong></td>
+                    </tr>
+                    </tbody>
+                </table>
+            @empty
+                <p>No selling vouchers found for the selected filters.</p>
+            @endforelse
+
+            <div class="footer">
+                <small>Officer's Mess LBSNAA Mussoorie &mdash; Sale Voucher Report</small>
+            </div>
+        </div>
+    @endforeach
+
+        <div class="page">
+            <div class="page-header">
+                <div class="page-header-top">
+                    <div class="page-header-col page-header-title">
+                        <h1>OFFICER'S MESS LBSNAA MUSSOORIE</h1>
+                        <h2>Sale Voucher Report</h2>
+                        <div class="page-header-sub">Grand total — all buyers</div>
+                    </div>
+                </div>
+                <div class="meta-row">
+                    @php
+                        $fromTextGt = $fromLabel ?? 'Start';
+                        $toTextGt = $toLabel ?? 'End';
+                    @endphp
+                    <span><strong>Period:</strong>
+                        @if($fromLabel || $toLabel)
+                            Between {{ $fromTextGt }} To {{ $toTextGt }}
+                        @else
+                            All Dates
+                        @endif
+                    </span>
+                    <span><strong>Generated on:</strong> {{ now()->format('d-m-Y H:i') }}</span>
+                </div>
+            </div>
+            <table style="font-size: 14px;">
+                <thead>
+                <tr>
+                    <th>Slip No.</th>
+                    <th style="width: 150px;">Buyer Name</th>
+                    <th>Remark</th>
+                    <th>Item Name</th>
+                    <th>Request Date</th>
+                    <th style="text-align: right;">Quantity</th>
+                    <th style="text-align: right;">Price</th>
+                    <th style="text-align: right;">Amount</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr class="grand-total-row">
+                    <td colspan="6"></td>
+                    <td class="text-end"><strong>GRAND TOTAL</strong></td>
+                    <td class="text-end"><strong>{{ number_format($grandTotal ?? 0, 2) }}</strong></td>
+                </tr>
+                </tbody>
+            </table>
+            <div class="footer">
+                <small>Officer's Mess LBSNAA Mussoorie &mdash; Sale Voucher Report</small>
+            </div>
+        </div>
+@endif
 </body>
 </html>
+

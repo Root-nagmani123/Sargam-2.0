@@ -36,33 +36,18 @@ class KitchenIssueController extends Controller
         $query = KitchenIssueMaster::with(['store', 'items.itemSubcategory', 'clientTypeCategory', 'course', 'employee', 'student'])
             ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER);
 
-        $storeFilters = array_values(array_filter(
-            array_map(static fn ($v) => (string) $v, (array) $request->input('store', [])),
-            static fn (string $v) => $v !== ''
-        ));
-        if ($storeFilters !== []) {
-            $query->where(function ($outer) use ($storeFilters) {
-                foreach ($storeFilters as $storeFilter) {
-                    if (str_starts_with((string) $storeFilter, 'sub_')) {
-                        $outer->orWhere(function ($q) use ($storeFilter) {
-                            $q->where('store_type', 'sub_store')
-                                ->where('store_id', (int) str_replace('sub_', '', $storeFilter));
-                        });
-                    } else {
-                        $outer->orWhere(function ($q) use ($storeFilter) {
-                            $q->where('store_type', 'store')
-                                ->where('store_id', (int) $storeFilter);
-                        });
-                    }
-                }
-            });
+        if ($request->filled('store')) {
+            $storeFilter = $request->store;
+            if (str_starts_with((string) $storeFilter, 'sub_')) {
+                $query->where('store_type', 'sub_store')->where('store_id', (int) str_replace('sub_', '', $storeFilter));
+            } else {
+                $query->where(function ($q) use ($storeFilter) {
+                    $q->where('store_type', 'store')->where('store_id', $storeFilter);
+                });
+            }
         }
-        $statusFilters = array_values(array_filter(
-            array_map(static fn ($v) => (string) $v, (array) $request->input('status', [])),
-            static fn (string $v) => $v !== ''
-        ));
-        if ($statusFilters !== []) {
-            $query->whereIn('status', $statusFilters);
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
         }
         if ($request->filled('payment_type')) {
             $query->where('payment_type', $request->payment_type);

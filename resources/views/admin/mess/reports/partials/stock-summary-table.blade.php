@@ -1,9 +1,9 @@
-<div class="card border-0 shadow-sm stock-summary-table-root">
+<div class="card border-0 shadow-sm">
     <div class="card-header bg-light d-flex justify-content-between align-items-center py-2 flex-wrap gap-2">
         <div class="d-flex align-items-center gap-2 flex-wrap">
-            <span class="fw-semibold text-dark fs-5">Stock Movement Summary</span>
+            <span class="fw-semibold text-dark">Stock Movement Summary</span>
         </div>
-        <span class="text-muted stock-summary-table-meta">
+        <span class="text-muted small">
             Total items: {{ isset($reportPage) ? $reportPage->total() : (isset($reportData) ? count($reportData) : 0) }}
         </span>
     </div>
@@ -51,7 +51,7 @@
                         <td class="text-center">
                             {{ $serialStart + $index }}
                         </td>
-                        <td class="fw-bold ssr-item-name">{{ $item['item_name'] }}</td>
+                        <td class="fw-bold" style="font-size: 1rem;">{{ $item['item_name'] }}</td>
                         <td class="text-end">{{ isset($item['unit']) && is_numeric($item['unit']) ? number_format((float)$item['unit'], 2) : ($item['unit'] ?? '—') }}</td>
                         <!-- Opening -->
                         <td class="text-end">{{ number_format($item['opening_qty'], 2) }}</td>
@@ -87,7 +87,7 @@
                     ($reportTotals['sale_amount'] ?? 0) != 0 ||
                     ($reportTotals['closing_amount'] ?? 0) != 0)
                     <tr class="table-primary fw-bold">
-                        <td colspan="3" class="text-end sticky-col sticky-col-total ssr-totals-label" style="letter-spacing: 0.02em;">
+                        <td colspan="3" class="text-end sticky-col sticky-col-total" style="font-size: 1rem; letter-spacing: 0.02em;">
                             Total
                         </td>
                         <td class="text-end">—</td>
@@ -109,7 +109,7 @@
     </div>
     @if(isset($reportPage) && $reportPage->hasPages())
         <div class="mt-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <div class="text-muted">
+            <div class="small text-muted">
                 Showing {{ $reportPage->firstItem() }} to {{ $reportPage->lastItem() }} of {{ $reportPage->total() }} items
             </div>
             <div>

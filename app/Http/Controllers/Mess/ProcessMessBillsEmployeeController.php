@@ -48,10 +48,8 @@ class ProcessMessBillsEmployeeController extends Controller
     {
         $dateFrom = $request->filled('date_from') ? $this->parseDate($request->date_from) : now()->startOfMonth()->format('Y-m-d');
         $dateTo = $request->filled('date_to') ? $this->parseDate($request->date_to) : now()->endOfMonth()->format('Y-m-d');
-        $selectedClientTypes = $this->normalizeClientTypeSlugs($request->input('client_type'));
-        $selectedClientTypePks = $this->normalizePositiveIntList($request->input('client_type_pk'));
-        $clientType = $selectedClientTypes[0] ?? null; // legacy view compatibility
-        $clientTypePk = $selectedClientTypePks[0] ?? null; // legacy view compatibility
+        $clientType = $request->filled('client_type') ? $request->client_type : null;
+        $clientTypePk = $request->filled('client_type_pk') ? $request->client_type_pk : null;
         $buyerNames = $this->normalizeBuyerNames($request->input('buyer_name'));
         $buyerName = $buyerNames[0] ?? null;
         $statusFilter = $request->filled('status') ? $request->status : null;
@@ -73,11 +71,11 @@ class ProcessMessBillsEmployeeController extends Controller
             ])
             ->whereIn('client_type_slug', self::ALLOWED_CLIENT_SLUGS);
 
-        if ($selectedClientTypes !== []) {
-            $dateRangeQuery->whereIn('client_type_slug', $selectedClientTypes);
+        if ($clientType) {
+            $dateRangeQuery->where('client_type_slug', $clientType);
         }
-        if ($selectedClientTypePks !== []) {
-            $dateRangeQuery->whereIn('client_type_pk', $selectedClientTypePks);
+        if ($clientTypePk) {
+            $dateRangeQuery->where('client_type_pk', $clientTypePk);
         }
         if ($dateFrom) {
             $dateRangeQuery->where(function ($q) use ($dateFrom) {
@@ -94,8 +92,8 @@ class ProcessMessBillsEmployeeController extends Controller
         $this->applyBuyerNameFilter($dateRangeQuery, $buyerNames);
 
         // Query 2: Regular Selling Voucher (kitchen_issue_master)
-        $kitchenClientTypes = $selectedClientTypes !== []
-            ? collect($selectedClientTypes)->map(fn ($slug) => $this->clientTypeSlugToKitchenId((string) $slug))->unique()->values()->all()
+        $kitchenClientTypes = $clientType
+            ? [$this->clientTypeSlugToKitchenId($clientType)]
             : self::ALLOWED_KITCHEN_CLIENT_TYPES;
 
         $kitchenIssueQuery = KitchenIssueMaster::query()
@@ -114,8 +112,8 @@ class ProcessMessBillsEmployeeController extends Controller
             ->whereIn('client_type', $kitchenClientTypes)
             ->whereIn('kitchen_issue_type', self::KITCHEN_MESS_SELLING_ISSUE_TYPES);
 
-        if ($selectedClientTypePks !== []) {
-            $kitchenIssueQuery->whereIn('client_type_pk', $selectedClientTypePks);
+        if ($clientTypePk) {
+            $kitchenIssueQuery->where('client_type_pk', $clientTypePk);
         }
 
         if ($dateFrom) {
@@ -262,12 +260,11 @@ class ProcessMessBillsEmployeeController extends Controller
             'effectiveDateFromYmd',
             'effectiveDateToYmd',
             'stats',
-            'selectedClientTypes',
             'clientType',
             'statusFilter',
-            'selectedClientTypePks',
             'clientTypePk',
             'buyerName',
+            'clientTypes',
             'clientTypeCategories',
             'faculties',
             'employees',
@@ -492,9 +489,7 @@ class ProcessMessBillsEmployeeController extends Controller
         $dateTo = $request->filled('date_to') ? $this->parseDate($request->date_to) : now()->endOfMonth()->format('Y-m-d');
         $search = $request->filled('search') ? trim((string) $request->search) : null;
         $search = ($search !== null && $search !== '') ? $search : null;
-        $clientTypes = $this->normalizeClientTypeSlugs($request->input('client_type'));
-        $clientType = $clientTypes[0] ?? null; // legacy compatibility in rest of method
-        $clientTypePks = $this->normalizePositiveIntList($request->input('client_type_pk'));
+        $clientType = $request->filled('client_type') ? $request->client_type : null;
         $buyerNames = $this->normalizeBuyerNames($request->input('buyer_name'));
         $buyerName = $buyerNames[0] ?? null;
         $statusFilter = $request->filled('status') ? $request->status : null;
@@ -515,10 +510,7 @@ class ProcessMessBillsEmployeeController extends Controller
                 'store_id',
                 DB::raw("'date_range' as source_type")
             ])
-            ->whereIn('client_type_slug', $clientTypes !== [] ? $clientTypes : self::ALLOWED_CLIENT_SLUGS);
-        if ($clientTypePks !== []) {
-            $dateRangeQuery->whereIn('client_type_pk', $clientTypePks);
-        }
+            ->whereIn('client_type_slug', $clientType ? [$clientType] : self::ALLOWED_CLIENT_SLUGS);
 
         $this->applyBuyerNameFilter($dateRangeQuery, $buyerNames);
         if ($dateFrom) {
@@ -532,8 +524,8 @@ class ProcessMessBillsEmployeeController extends Controller
             });
         }
 
-        $kitchenClientTypes = $clientTypes !== []
-            ? collect($clientTypes)->map(fn ($slug) => $this->clientTypeSlugToKitchenId((string) $slug))->unique()->values()->all()
+        $kitchenClientTypes = $clientType
+            ? [$this->clientTypeSlugToKitchenId($clientType)]
             : self::ALLOWED_KITCHEN_CLIENT_TYPES;
         $kitchenIssueQuery = KitchenIssueMaster::query()
             ->select([
@@ -551,9 +543,6 @@ class ProcessMessBillsEmployeeController extends Controller
             ])
             ->whereIn('client_type', $kitchenClientTypes)
             ->whereIn('kitchen_issue_type', self::KITCHEN_MESS_SELLING_ISSUE_TYPES);
-        if ($clientTypePks !== []) {
-            $kitchenIssueQuery->whereIn('client_type_pk', $clientTypePks);
-        }
 
         $this->applyBuyerNameFilter($kitchenIssueQuery, $buyerNames);
         if ($dateFrom) {
@@ -1085,21 +1074,19 @@ class ProcessMessBillsEmployeeController extends Controller
     {
         $dateFrom = $request->filled('date_from') ? $this->parseDate($request->date_from) : now()->startOfMonth()->format('Y-m-d');
         $dateTo = $request->filled('date_to') ? $this->parseDate($request->date_to) : now()->endOfMonth()->format('Y-m-d');
-        $clientTypes = $this->normalizeClientTypeSlugs($request->input('client_type'));
-        $clientTypePks = $this->normalizePositiveIntList($request->input('client_type_pk'));
-        $clientType = $clientTypes[0] ?? null; // legacy compatibility for existing branches
-        $clientTypePk = $clientTypePks[0] ?? null;
+        $clientType = $request->filled('client_type') ? $request->client_type : null;
+        $clientTypePk = $request->filled('client_type_pk') ? $request->client_type_pk : null;
         $buyerNames = $this->normalizeBuyerNames($request->input('buyer_name'));
         $buyerName = $buyerNames[0] ?? null;
 
         // Query 1: Selling Voucher with Date Range
-        $dateRangeSlugs = $clientTypes !== [] ? $clientTypes : self::ALLOWED_CLIENT_SLUGS;
+        $dateRangeSlugs = $clientType ? [$clientType] : self::ALLOWED_CLIENT_SLUGS;
         $dateRangeQuery = SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'items'])
             ->whereIn('client_type_slug', $dateRangeSlugs)
             ->where('status', '!=', 2); // Only unpaid bills
 
-        if ($clientTypePks !== []) {
-            $dateRangeQuery->whereIn('client_type_pk', $clientTypePks);
+        if ($clientTypePk) {
+            $dateRangeQuery->where('client_type_pk', $clientTypePk);
         }
         $this->applyBuyerNameFilter($dateRangeQuery, $buyerNames);
         if ($dateFrom) {
@@ -1114,16 +1101,16 @@ class ProcessMessBillsEmployeeController extends Controller
         }
 
         // Query 2: Regular Selling Voucher (Kitchen Issue)
-        $kitchenClientTypes = $clientTypes !== []
-            ? collect($clientTypes)->map(fn ($slug) => $this->clientTypeSlugToKitchenId((string) $slug))->unique()->values()->all()
+        $kitchenClientTypes = $clientType
+            ? [$this->clientTypeSlugToKitchenId($clientType)]
             : self::ALLOWED_KITCHEN_CLIENT_TYPES;
         $kitchenIssueQuery = KitchenIssueMaster::with(['store', 'clientTypeCategory', 'items'])
             ->whereIn('client_type', $kitchenClientTypes)
             ->whereIn('kitchen_issue_type', self::KITCHEN_MESS_SELLING_ISSUE_TYPES)
             ->where('status', '!=', 2); // Only unpaid bills
 
-        if ($clientTypePks !== []) {
-            $kitchenIssueQuery->whereIn('client_type_pk', $clientTypePks);
+        if ($clientTypePk) {
+            $kitchenIssueQuery->where('client_type_pk', $clientTypePk);
         }
         $this->applyBuyerNameFilter($kitchenIssueQuery, $buyerNames);
         if ($dateFrom) {
@@ -1850,27 +1837,6 @@ class ProcessMessBillsEmployeeController extends Controller
 
         $name = trim((string) ($value ?? ''));
         return $name !== '' ? [$name] : [];
-    }
-
-    private function normalizeClientTypeSlugs($value): array
-    {
-        $allowed = array_flip(self::ALLOWED_CLIENT_SLUGS);
-        return collect(is_array($value) ? $value : [$value])
-            ->map(fn ($slug) => trim((string) $slug))
-            ->filter(fn ($slug) => $slug !== '' && isset($allowed[$slug]))
-            ->unique()
-            ->values()
-            ->all();
-    }
-
-    private function normalizePositiveIntList($value): array
-    {
-        return collect(is_array($value) ? $value : [$value])
-            ->map(fn ($id) => (int) $id)
-            ->filter(fn ($id) => $id > 0)
-            ->unique()
-            ->values()
-            ->all();
     }
 
     private function applyBuyerNameFilter($query, array $buyerNames): void
