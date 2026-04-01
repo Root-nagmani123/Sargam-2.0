@@ -1156,8 +1156,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
     Route::post('issue-escalation-matrix', [IssueEscalationMatrixController::class, 'store'])->name('issue-escalation-matrix.store');
     Route::put('issue-escalation-matrix/{categoryId}', [IssueEscalationMatrixController::class, 'update'])->name('issue-escalation-matrix.update');
 });
-// Mess Management
-Route::prefix('admin/mess')->name('admin.mess.')->group(function () {
+// Mess Management (auth required — layout assumes logged-in user)
+Route::prefix('admin/mess')->name('admin.mess.')->middleware(['auth'])->group(function () {
     // Master Data
     Route::resource('events', \App\Http\Controllers\Mess\EventController::class)->only(['index', 'create', 'store']);
     Route::resource('inventories', \App\Http\Controllers\Mess\InventoryController::class)->only(['index', 'create', 'store']);
