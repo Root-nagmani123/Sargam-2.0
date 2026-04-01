@@ -1844,7 +1844,7 @@ class EmployeeIDCardApprovalController extends Controller
             if ($hasRejected) {
                 return redirect()->back()->with('error', 'This request has already been rejected.');
             }
-
+           
             DB::table('security_con_oth_id_apply_approval')
             ->where('security_parm_id_apply_pk', $row->emp_id_apply)
             ->where('status', 0)
@@ -1875,9 +1875,9 @@ class EmployeeIDCardApprovalController extends Controller
             // return redirect()->route('admin.security.employee_idcard_approval.approval3')
             //     ->with('success', 'Contractual ID Card request approved at Level 3. ID card is now fully approved.');
 
-            return redirect()->route('admin.security.employee_idcard_approval.approval3')
+                    return redirect()->route('admin.security.employee_idcard_approval.approval3')
                 ->with('success', 'Contractual ID Card request approved successfully at final level.');
-        }
+    }
 
         // Permanent regular ID Card request (emp_id_apply string, primary key on security_parm_id_apply)
         $row = SecurityParmIdApply::with('employee')->findOrFail($empIdApply);

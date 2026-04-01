@@ -141,7 +141,8 @@ class DuplicateIDCardRequestController extends Controller
                 ->first();
 
             if ($me && \Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'payroll')) {
-                $lockedIdCardType = ((int) ($me->payroll ?? 0) === 0) ? 'Permanent' : 'Contractual';
+                // Restrict only contractual users; permanent users can choose both types.
+                $lockedIdCardType = ((int) ($me->payroll ?? 0) === 0) ? null : 'Contractual';
             }
 
             if ($me && $me->department_master_pk) {
@@ -690,10 +691,10 @@ class DuplicateIDCardRequestController extends Controller
         // payroll=0 -> Permanent only, otherwise Contractual only.
         $authEmp = EmployeeMaster::where('pk', $employeePk)->orWhere('pk_old', $employeePk)->first();
         if ($authEmp && \Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'payroll')) {
-            $expectedType = ((int) ($authEmp->payroll ?? 0) === 0) ? 'Permanent' : 'Contractual';
-            if (($validated['id_card_type'] ?? null) !== $expectedType) {
+            $isContractual = (int) ($authEmp->payroll ?? 0) !== 0;
+            if ($isContractual && ($validated['id_card_type'] ?? null) !== 'Contractual') {
                 throw ValidationException::withMessages([
-                    'id_card_type' => "You can apply duplicate request only for {$expectedType} ID Card.",
+                    'id_card_type' => 'Contractual employees can apply duplicate request only for Contractual ID Card.',
                 ]);
             }
         }
