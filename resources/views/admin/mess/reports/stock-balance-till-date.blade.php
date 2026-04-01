@@ -4,6 +4,12 @@
 @php
     /** @var array<int> $storeIds */
     $storeIds = isset($storeIds) ? $storeIds : [];
+    $printLogoSrc = asset('images/lbsnaa_logo.jpg');
+    if (!is_file(public_path('images/lbsnaa_logo.jpg'))) {
+        $printLogoSrc = is_file(public_path('images/lbsnaa_logo.png'))
+            ? asset('images/lbsnaa_logo.png')
+            : 'https://www.lbsnaa.gov.in/admin_assets/images/logo.png';
+    }
 @endphp
 <div class="container-fluid stock-balance-report min-vh-100 d-flex flex-column">
     <x-breadcrum title="Stock Balance as of Till Date"></x-breadcrum>
@@ -83,6 +89,17 @@
                     </div>
                 </div>
             </form>
+            <div class="mt-3 pt-2 border-top border-body-secondary border-opacity-25 d-flex flex-wrap align-items-center gap-2">
+                <span class="small text-uppercase fw-semibold text-body-secondary">Current selection</span>
+                <span class="badge text-bg-primary fw-normal rounded-pill px-3 py-2">
+                    <span class="material-symbols-rounded icon-18 align-text-bottom me-1" aria-hidden="true">store</span>
+                    {{ $selectedStoreName ?: 'All Stores' }}
+                </span>
+                <span class="badge text-bg-body-secondary text-body-emphasis fw-normal rounded-pill px-3 py-2 border border-body-secondary border-opacity-50">
+                    <span class="material-symbols-rounded icon-18 align-text-bottom me-1" aria-hidden="true">event</span>
+                    Till: {{ date('d-F-Y', strtotime($tillDate)) }}
+                </span>
+            </div>
         </div>
     </div>
 
@@ -204,6 +221,12 @@
         border-bottom: 1px solid #edf1f5;
     }
 
+    .stock-balance-report .icon-18 {
+        font-size: 18px;
+        line-height: 1;
+        vertical-align: middle;
+    }
+
     @media print {
         .no-print {
             display: none !important;
@@ -303,8 +326,8 @@ function printStockBalance() {
                     <div class="brand-line-3">Lal Bahadur Shastri National Academy of Administration</div>
                   </div>
                 </div>
-                <div class="d-none d-print-block">
-                  <img src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png" alt="LBSNAA Logo" height="40">
+                <div>
+                  <img src="{{ $printLogoSrc }}" alt="LBSNAA Logo" height="40">
                 </div>
               </div>
               <div class="d-flex flex-wrap justify-content-between align-items-center report-meta">

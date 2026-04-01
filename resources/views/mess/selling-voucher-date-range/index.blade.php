@@ -34,21 +34,24 @@
     <hr class="my-4">
             <form method="GET" action="{{ route('admin.mess.selling-voucher-date-range.index') }}">
                 <div class="row g-3 align-items-end">
+                    @php
+                        $selectedStatuses = array_map('strval', (array) request('status', []));
+                        $selectedStores = array_map('strval', (array) request('store', []));
+                    @endphp
                     <div class="col-12 col-sm-6 col-lg-4 col-xl-2">
                         <label class="form-label small fw-semibold text-uppercase mb-1">Status</label>
-                        <select name="status" class="form-select">
-                            <option value="">All</option>
-                            <option value="0" {{ request('status') === '0' ? 'selected' : '' }}>Pending</option>
-                            <option value="1" {{ request('status') === '1' ? 'selected' : '' }}>Final</option>
-                            <option value="2" {{ request('status') === '2' ? 'selected' : '' }}>Approved</option>
+                        <select name="status[]" class="form-select choices-select" multiple data-placeholder="All Status">
+                            <option value="0" {{ in_array('0', $selectedStatuses, true) ? 'selected' : '' }}>Pending</option>
+                            <option value="1" {{ in_array('1', $selectedStatuses, true) ? 'selected' : '' }}>Final</option>
+                            <option value="2" {{ in_array('2', $selectedStatuses, true) ? 'selected' : '' }}>Approved</option>
+                            <option value="4" {{ in_array('4', $selectedStatuses, true) ? 'selected' : '' }}>Completed</option>
                         </select>
                     </div>
                     <div class="col-12 col-sm-6 col-lg-4 col-xl-2">
                         <label class="form-label small fw-semibold text-uppercase mb-1">Store</label>
-                        <select name="store" class="form-select ">
-                            <option value="">All</option>
+                        <select name="store[]" class="form-select choices-select" multiple data-placeholder="All Stores">
                             @foreach($stores as $store)
-                            <option value="{{ $store['id'] }}" {{ request('store') == $store['id'] ? 'selected' : '' }}>{{ $store['store_name'] }}</option>
+                            <option value="{{ $store['id'] }}" {{ in_array((string) $store['id'], $selectedStores, true) ? 'selected' : '' }}>{{ $store['store_name'] }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -272,7 +275,13 @@ document.addEventListener('DOMContentLoaded', function () {
 {{-- Choices.js JS --}}
 <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 <style>
-    .ts-dropdown { z-index: 2000; }
+    .ts-dropdown { z-index: 5000; }
+    .selling-voucher-filter .choices__list--dropdown {
+        z-index: 5001 !important;
+    }
+    .selling-voucher-filter input[type="date"] {
+        padding-right: 2.2rem;
+    }
     .ts-wrapper.choices { margin-bottom: 0; }
     .ts-wrapper.choices .choices__inner {
         min-height: calc(1.5em + 0.75rem + 2px);
@@ -349,6 +358,10 @@ document.addEventListener('DOMContentLoaded', function () {
     #editSellingVoucherModal input.edit-dr-qty,
     #editSellingVoucherModal input.edit-dr-rate {
         -moz-appearance: textfield;
+    }
+    #addReportModal input.dr-rate,
+    #editSellingVoucherModal input.edit-dr-rate {
+        min-width: 112px;
     }
 
     #addReportModal input.dr-qty::-webkit-outer-spin-button,
@@ -1467,7 +1480,8 @@ document.addEventListener('DOMContentLoaded', function () {
             choiceItems.forEach(function(item) {
                 if (item.classList.contains('choices__placeholder')) return;
                 var label = normalizeChoicesSearchText(item.textContent || '');
-                var show = !query || label === query;
+                var value = normalizeChoicesSearchText(item.getAttribute('data-value') || '');
+                var show = !query || label.indexOf(query) !== -1 || value.indexOf(query) !== -1;
                 item.style.display = show ? '' : 'none';
             });
         }
