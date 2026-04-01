@@ -3,6 +3,16 @@
 @section('setup_content')
 @php
     $canDeleteSellingVoucherDateRange = hasRole('Admin') || hasRole('Mess-Admin');
+    $selectedStatuses = collect((array) request()->input('status', []))
+        ->filter(fn ($value) => $value !== null && $value !== '')
+        ->map(fn ($value) => (string) $value)
+        ->values()
+        ->all();
+    $selectedStores = collect((array) request()->input('store', []))
+        ->filter(fn ($value) => $value !== null && $value !== '')
+        ->map(fn ($value) => (string) $value)
+        ->values()
+        ->all();
 @endphp
 <div class="container-fluid py-2 py-lg-3">
     <x-breadcrum title="Selling Voucher with Date Range"></x-breadcrum>
@@ -36,19 +46,19 @@
                 <div class="row g-3 align-items-end">
                     <div class="col-12 col-sm-6 col-lg-4 col-xl-2">
                         <label class="form-label small fw-semibold text-uppercase mb-1">Status</label>
-                        <select name="status" class="form-select">
-                            <option value="">All</option>
-                            <option value="0" {{ request('status') === '0' ? 'selected' : '' }}>Pending</option>
-                            <option value="1" {{ request('status') === '1' ? 'selected' : '' }}>Final</option>
-                            <option value="2" {{ request('status') === '2' ? 'selected' : '' }}>Approved</option>
+                        <select name="status[]" class="form-select voucher-filter-multiselect" multiple data-placeholder="All Statuses">
+                            <option value="" disabled>All</option>
+                            <option value="0" {{ in_array('0', $selectedStatuses, true) ? 'selected' : '' }}>Pending</option>
+                            <option value="1" {{ in_array('1', $selectedStatuses, true) ? 'selected' : '' }}>Final</option>
+                            <option value="2" {{ in_array('2', $selectedStatuses, true) ? 'selected' : '' }}>Approved</option>
                         </select>
                     </div>
                     <div class="col-12 col-sm-6 col-lg-4 col-xl-2">
                         <label class="form-label small fw-semibold text-uppercase mb-1">Store</label>
-                        <select name="store" class="form-select ">
-                            <option value="">All</option>
+                        <select name="store[]" class="form-select voucher-filter-multiselect" multiple data-placeholder="All Stores">
+                            <option value="" disabled>All</option>
                             @foreach($stores as $store)
-                            <option value="{{ $store['id'] }}" {{ request('store') == $store['id'] ? 'selected' : '' }}>{{ $store['store_name'] }}</option>
+                            <option value="{{ $store['id'] }}" {{ in_array((string) $store['id'], $selectedStores, true) ? 'selected' : '' }}>{{ $store['store_name'] }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -273,6 +283,20 @@ document.addEventListener('DOMContentLoaded', function () {
 <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 <style>
     .ts-dropdown { z-index: 2000; }
+    .selling-voucher-filter {
+        position: relative;
+        z-index: 30;
+        overflow: visible;
+    }
+    .selling-voucher-filter.dropdown-open {
+        z-index: 1065;
+    }
+    .selling-voucher-filter .card-body,
+    .selling-voucher-filter .row,
+    .selling-voucher-filter .col-12,
+    .selling-voucher-filter .ts-wrapper {
+        overflow: visible;
+    }
     .ts-wrapper.choices { margin-bottom: 0; }
     .ts-wrapper.choices .choices__inner {
         min-height: calc(1.5em + 0.75rem + 2px);
@@ -321,6 +345,23 @@ document.addEventListener('DOMContentLoaded', function () {
         flex-shrink: 0;
         min-height: 34px;
         width: 100% !important;
+    }
+    .selling-voucher-filter .ts-dropdown,
+    .selling-voucher-filter .ts-wrapper.choices .choices__list--dropdown,
+    .selling-voucher-filter .choices__list--dropdown.is-active {
+        z-index: 1066 !important;
+    }
+    .selling-voucher-filter .ts-wrapper.choices[data-type*="select-multiple"] .choices__inner {
+        min-height: calc(1.5em + 0.75rem + 2px);
+        padding: 0.25rem 0.5rem;
+    }
+    .selling-voucher-filter .choices__list--multiple .choices__item {
+        background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%) !important;
+        border: none !important;
+        border-radius: 0.375rem !important;
+        color: #fff !important;
+        font-size: 0.8rem !important;
+        margin-bottom: 0;
     }
     .voucher-icon-btn {
         width: 2rem;
@@ -1475,18 +1516,21 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!selectEl || typeof window.Choices === 'undefined') return null;
             if (selectEl.choicesInstance) return selectEl.choicesInstance;
             settings = settings || {};
+            var isMulti = !!selectEl.multiple;
 
             var choiceConfig = {
                 allowHTML: false,
                 itemSelectText: '',
                 shouldSort: false,
-                searchEnabled: true,
-                searchChoices: true,
-                searchFloor: 0,
+                searchEnabled: settings.searchEnabled !== false,
+                searchChoices: settings.searchChoices !== false,
+                searchFloor: typeof settings.searchFloor === 'number' ? settings.searchFloor : 0,
                 searchResultLimit: typeof settings.maxOptions === 'number' ? settings.maxOptions : -1,
                 placeholder: true,
-                placeholderValue: settings.placeholder || (selectEl.getAttribute('placeholder') || ''),
-                searchPlaceholderValue: ''
+                placeholderValue: settings.placeholder || (selectEl.getAttribute('data-placeholder') || selectEl.getAttribute('placeholder') || ''),
+                searchPlaceholderValue: '',
+                removeItemButton: isMulti,
+                closeDropdownOnSelect: typeof settings.closeDropdownOnSelect === 'boolean' ? settings.closeDropdownOnSelect : !isMulti
             };
 
             var choices = new window.Choices(selectEl, choiceConfig);
@@ -1498,11 +1542,35 @@ document.addEventListener('DOMContentLoaded', function () {
                 items: [],
                 wrapper: choices.containerOuter ? choices.containerOuter.element : null,
                 control_input: null,
-                getValue: function() { return this.selectEl ? (this.selectEl.value || '') : ''; },
+                getValue: function() {
+                    if (!this.selectEl) return isMulti ? [] : '';
+                    if (isMulti) {
+                        try {
+                            var values = this._choices.getValue(true);
+                            if (Array.isArray(values)) return values.map(String).filter(Boolean);
+                            return values ? [String(values)] : [];
+                        } catch (e) {
+                            return Array.from(this.selectEl.selectedOptions || []).map(function(option) {
+                                return option.value;
+                            }).filter(Boolean);
+                        }
+                    }
+                    return this.selectEl.value || '';
+                },
                 setValue: function(v) {
-                    var value = (v === null || typeof v === 'undefined') ? '' : String(v);
                     this._choices.removeActiveItems();
-                    if (value !== '') this._choices.setChoiceByValue(value);
+
+                    if (isMulti) {
+                        var values = Array.isArray(v) ? v : (v !== '' && v !== null && typeof v !== 'undefined' ? [v] : []);
+                        values.forEach(function(value) {
+                            if (value === '' || value === null || typeof value === 'undefined') return;
+                            try { this._choices.setChoiceByValue(String(value)); } catch (e) {}
+                        }, this);
+                    } else {
+                        var value = (v === null || typeof v === 'undefined') ? '' : String(v);
+                        if (value !== '') this._choices.setChoiceByValue(value);
+                    }
+
                     this.syncItems();
                 },
                 clear: function() {
@@ -1528,7 +1596,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 refreshOptions: function() {},
                 syncItems: function() {
                     var v = this.getValue();
-                    this.items = (v === '' || v === null || typeof v === 'undefined') ? [] : [String(v)];
+                    if (isMulti) {
+                        this.items = Array.isArray(v) ? v.map(String) : [];
+                    } else {
+                        this.items = (v === '' || v === null || typeof v === 'undefined') ? [] : [String(v)];
+                    }
                 }
             };
             api.control_input = api.wrapper ? api.wrapper.querySelector('input.choices__input--cloned') : null;
@@ -1990,23 +2062,27 @@ document.addEventListener('DOMContentLoaded', function () {
 
         document.addEventListener('DOMContentLoaded', function() {
             if (typeof Choices === 'undefined') return;
-            var filterStatus = document.querySelector('form[method="GET"] select[name="status"]');
-            var filterStore = document.querySelector('form[method="GET"] select[name="store"]');
+            var filterStatus = document.querySelector('form[method="GET"] select[name="status[]"]');
+            var filterStore = document.querySelector('form[method="GET"] select[name="store[]"]');
 
-            if (filterStatus) {
-                if (filterStatus.tomselect) filterStatus.tomselect.destroy();
-                createChoicesInstance(filterStatus, {
-                    allowEmptyOption: true,
-                    dropdownParent: 'body',
-                    placeholder: 'All Status',
-                    searchField: ['text'],
-                    controlInput: '<input>',
-                    highlight: false,
+            function setFilterDropdownState(instance, isOpen) {
+                if (!instance || !instance.selectEl || !instance.selectEl.closest) return;
+                var filterCard = instance.selectEl.closest('.selling-voucher-filter');
+                if (!filterCard) return;
+                filterCard.classList.toggle('dropdown-open', !!isOpen);
+            }
+
+            function createFilterChoicesConfig(placeholder) {
+                return {
+                    placeholder: placeholder,
+                    closeDropdownOnSelect: false,
                     onInitialize: function () {
                         this.activeOption = null;
                     },
                     onDropdownOpen: function (dropdown) {
                         var self = this;
+                        setFilterDropdownState(self, true);
+
                         function clearInputAndCursor() {
                             var input = self.control_input || (dropdown && dropdown.querySelector('input'));
                             if (typeof self.setTextboxValue === 'function') self.setTextboxValue('');
@@ -2019,88 +2095,33 @@ document.addEventListener('DOMContentLoaded', function () {
                                 input.scrollLeft = 0;
                             }
                         }
-                        // Har open par selection + search ko blank karo
-                        self.clear(true);
+
                         clearInputAndCursor();
-                        setTimeout(function () {
-                            self.clear(true);
-                            clearInputAndCursor();
-                        }, 0);
-                        setTimeout(function () {
-                            self.clear(true);
-                            clearInputAndCursor();
-                        }, 50);
-                        setTimeout(function () {
-                            self.clear(true);
-                            clearInputAndCursor();
-                        }, 100);
+                        setTimeout(clearInputAndCursor, 0);
+
                         if (dropdown) {
                             setTimeout(function () {
-                                var opts = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"]');
+                                var opts = dropdown.querySelectorAll('.option.active');
                                 opts.forEach(function (opt) {
                                     opt.classList.remove('active');
-                                    opt.classList.remove('selected');
-                                    opt.setAttribute('aria-selected', 'false');
                                 });
                             }, 0);
                         }
+                    },
+                    onDropdownClose: function () {
+                        setFilterDropdownState(this, false);
                     }
-                });
+                };
+            }
+
+            if (filterStatus) {
+                if (filterStatus.tomselect) filterStatus.tomselect.destroy();
+                createChoicesInstance(filterStatus, createFilterChoicesConfig('All Statuses'));
             }
 
             if (filterStore) {
                 if (filterStore.tomselect) filterStore.tomselect.destroy();
-                createChoicesInstance(filterStore, {
-                    allowEmptyOption: true,
-                    dropdownParent: 'body',
-                    placeholder: 'All Stores',
-                    searchField: ['text'],
-                    controlInput: '<input>',
-                    highlight: false,
-                    onInitialize: function () {
-                        this.activeOption = null;
-                    },
-                    onDropdownOpen: function (dropdown) {
-                        var self = this;
-                        function clearInputAndCursor() {
-                            var input = self.control_input || (dropdown && dropdown.querySelector('input'));
-                            if (typeof self.setTextboxValue === 'function') self.setTextboxValue('');
-                            if (typeof self.onSearchChange === 'function') self.onSearchChange('');
-                            if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
-                            if (input) {
-                                input.value = '';
-                                input.focus();
-                                try { input.setSelectionRange(0, 0); } catch (e) {}
-                                input.scrollLeft = 0;
-                            }
-                        }
-                        // Har open par selection + search ko blank karo
-                        self.clear(true);
-                        clearInputAndCursor();
-                        setTimeout(function () {
-                            self.clear(true);
-                            clearInputAndCursor();
-                        }, 0);
-                        setTimeout(function () {
-                            self.clear(true);
-                            clearInputAndCursor();
-                        }, 50);
-                        setTimeout(function () {
-                            self.clear(true);
-                            clearInputAndCursor();
-                        }, 100);
-                        if (dropdown) {
-                            setTimeout(function () {
-                                var opts = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"]');
-                                opts.forEach(function (opt) {
-                                    opt.classList.remove('active');
-                                    opt.classList.remove('selected');
-                                    opt.setAttribute('aria-selected', 'false');
-                                });
-                            }, 0);
-                        }
-                    }
-                });
+                createChoicesInstance(filterStore, createFilterChoicesConfig('All Stores'));
             }
         });
 

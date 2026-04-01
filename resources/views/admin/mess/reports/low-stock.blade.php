@@ -25,7 +25,7 @@
     <x-breadcrum title="Low Stock Report"></x-breadcrum>
 
     <!-- Filters -->
-    <div class="card mb-4 border-0 shadow rounded-4 no-print overflow-hidden">
+    <div class="card mb-4 border-0 shadow rounded-4 no-print">
         <div class="card-header bg-body-secondary border-0 py-3 px-3 px-md-4">
             <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
                 <div class="d-flex align-items-center gap-3">
@@ -60,7 +60,7 @@
 
                     <div class="col-12 col-md-4 col-lg-3">
                         <label for="store_id" class="form-label small text-uppercase fw-semibold text-body-secondary mb-1">Store</label>
-                        <select id="store_id" name="store_id" class="form-select" data-placeholder="All Stores">
+                        <select id="store_id" name="store_id" class="form-select choices-select" data-placeholder="All Stores">
                             <option value="">All Stores</option>
                             @foreach($stores as $store)
                                 <option value="{{ $store->id }}" {{ ($storeId ?? null) == $store->id ? 'selected' : '' }}>

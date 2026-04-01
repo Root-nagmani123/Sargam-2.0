@@ -6,42 +6,8 @@
     $itemsLabel = $selectedItemNamesLabel ?? 'All Items';
     $printedOn = now()->format('d/m/Y') . ' ' . now()->format('g:i:s A');
 
-    $emblemSrc = 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
-
-    $lbsnaaLogoSrc = 'https://www.lbsnaa.gov.in/admin_assets/images/logo.png';
-    foreach ([public_path('images/lbsnaa_logo.jpg'), public_path('images/lbsnaa_logo.png')] as $logoPath) {
-        if (is_file($logoPath) && is_readable($logoPath)) {
-            $raw = @file_get_contents($logoPath);
-            if ($raw !== false) {
-                $mime = str_ends_with(strtolower($logoPath), '.png') ? 'image/png' : 'image/jpeg';
-                $lbsnaaLogoSrc = 'data:' . $mime . ';base64,' . base64_encode($raw);
-                break;
-            }
-        }
-    }
-    if (str_starts_with($lbsnaaLogoSrc, 'http')) {
-        foreach ([
-            public_path('admin_assets/images/logos/logo.png'),
-            public_path('admin_assets/images/logos/logo.svg'),
-        ] as $localLogoPath) {
-            if (is_file($localLogoPath) && is_readable($localLogoPath)) {
-                $raw = @file_get_contents($localLogoPath);
-                if ($raw !== false) {
-                    $ext = strtolower(pathinfo($localLogoPath, PATHINFO_EXTENSION));
-                    $mime = match ($ext) {
-                        'svg' => 'image/svg+xml',
-                        'png' => 'image/png',
-                        'jpg', 'jpeg' => 'image/jpeg',
-                        default => null,
-                    };
-                    if ($mime) {
-                        $lbsnaaLogoSrc = 'data:' . $mime . ';base64,' . base64_encode($raw);
-                        break;
-                    }
-                }
-            }
-        }
-    }
+    $emblemSrc = $emblemSrc ?? 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
+    $lbsnaaLogoSrc = $lbsnaaLogoSrc ?? 'https://www.lbsnaa.gov.in/admin_assets/images/logo.png';
 
     $periodBar = 'From ' . ($fromLabel ?? '—') . ' To ' . ($toLabel ?? '—');
 @endphp

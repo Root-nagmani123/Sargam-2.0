@@ -2,18 +2,8 @@
     $tillLabel = $tillDate ? date('d-F-Y', strtotime($tillDate)) : '-';
     $storeLabel = $selectedStoreName ?? 'All Stores';
     $totalAmount = collect($reportData)->sum('amount');
-    $emblemSrc = 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
-
-    $logoDataUri = null;
-    $logoPath = public_path('admin_assets/images/logos/logo.png');
-    if (is_file($logoPath)) {
-        $extension = strtolower(pathinfo($logoPath, PATHINFO_EXTENSION));
-        $mime = $extension === 'png' ? 'image/png' : ($extension === 'webp' ? 'image/webp' : 'image/jpeg');
-        $raw = @file_get_contents($logoPath);
-        if ($raw !== false) {
-            $logoDataUri = 'data:' . $mime . ';base64,' . base64_encode($raw);
-        }
-    }
+    $emblemSrc = $emblemSrc ?? 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
+    $logoDataUri = $logoDataUri ?? null;
 @endphp
 <!doctype html>
 <html lang="en">
@@ -46,9 +36,10 @@
             text-align: center;
         }
         .logo-col-right {
-            width: 400px;
+            width: 120px;
+            max-width: 35%;
             text-align: right;
-            white-space: wrap;
+            vertical-align: middle;
         }
         .brand-logo {
             width: 32px;
@@ -84,11 +75,14 @@
             text-align: left;
         }
         .rhs-logo {
-            width: auto;
-            height: 30px;
-            max-width: 64px;
-            vertical-align: top;
-            margin-right: 4px;
+            width: 44px;
+            height: 44px;
+            max-width: 44px;
+            max-height: 44px;
+            object-fit: contain;
+            object-position: right center;
+            vertical-align: middle;
+            margin-right: 0;
         }
         .rhs-text-wrap {
             display: inline-block;

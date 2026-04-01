@@ -40,19 +40,29 @@
                     <div class="row g-3">
                         <div class="col-md-2 col-sm-6">
                             <label class="form-label small text-muted mb-1">Status</label>
-                            <select name="status" id="filter_status" class="form-select form-select-sm">
-                                <option value="">All</option>
-                                <option value="0" {{ request('status') === '0' ? 'selected' : '' }}>Pending</option>
-                                <option value="2" {{ request('status') == '2' ? 'selected' : '' }}>Approved</option>
-                                <option value="4" {{ request('status') == '4' ? 'selected' : '' }}>Completed</option>
+                            <select name="status[]" id="filter_status" class="form-select form-select-sm" multiple>
+                                @php
+                                    $selectedStatuses = request('status', []);
+                                    if (!is_array($selectedStatuses)) {
+                                        $selectedStatuses = $selectedStatuses !== null ? [$selectedStatuses] : [];
+                                    }
+                                @endphp
+                                <option value="0" {{ in_array('0', $selectedStatuses) || in_array(0, $selectedStatuses) ? 'selected' : '' }}>Pending</option>
+                                <option value="2" {{ in_array('2', $selectedStatuses) || in_array(2, $selectedStatuses) ? 'selected' : '' }}>Approved</option>
+                                <option value="4" {{ in_array('4', $selectedStatuses) || in_array(4, $selectedStatuses) ? 'selected' : '' }}>Completed</option>
                             </select>
                         </div>
                         <div class="col-md-2 col-sm-6">
                             <label class="form-label small text-muted mb-1">Store</label>
-                            <select name="store" id="filter_store" class="form-select form-select-sm">
-                                <option value="">All</option>
+                            <select name="store[]" id="filter_store" class="form-select form-select-sm" multiple>
+                                @php
+                                    $selectedStores = request('store', []);
+                                    if (!is_array($selectedStores)) {
+                                        $selectedStores = $selectedStores !== null ? [$selectedStores] : [];
+                                    }
+                                @endphp
                                 @foreach($stores as $store)
-                                    <option value="{{ $store['id'] }}" {{ request('store') == $store['id'] ? 'selected' : '' }}>{{ $store['store_name'] }}</option>
+                                    <option value="{{ $store['id'] }}" {{ in_array($store['id'], $selectedStores) ? 'selected' : '' }}>{{ $store['store_name'] }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -220,6 +230,39 @@
 
 {{-- Add Selling Voucher Modal (same UI/UX as Create Purchase Order) --}}
 <style>
+/* Filter dropdowns: Choices.js styling */
+#filter_status + .choices,
+#filter_store + .choices {
+    margin-bottom: 0;
+}
+#filter_status + .choices .choices__inner,
+#filter_store + .choices .choices__inner {
+    min-height: calc(1.5em + 0.5rem + 2px);
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    border: 1px solid var(--bs-border-color, #ced4da);
+    border-radius: var(--bs-border-radius-sm, 0.25rem);
+    background-color: var(--bs-body-bg, #fff);
+}
+#filter_status + .choices.is-open .choices__inner,
+#filter_status + .choices.is-focused .choices__inner,
+#filter_store + .choices.is-open .choices__inner,
+#filter_store + .choices.is-focused .choices__inner {
+    border-color: var(--bs-primary, #86b7fe);
+    box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb, 13, 110, 253), 0.25);
+}
+#filter_status + .choices .choices__list--dropdown,
+#filter_store + .choices .choices__list--dropdown {
+    z-index: 1050;
+    border: 1px solid var(--bs-border-color, #ced4da);
+    border-radius: var(--bs-border-radius-sm, 0.25rem);
+    font-size: 0.875rem;
+}
+#filter_status + .choices .choices__item,
+#filter_store + .choices .choices__item {
+    font-size: 0.875rem;
+}
+
 #addSellingVoucherModal .modal-dialog,
 #editSellingVoucherModal .modal-dialog,
 #viewSellingVoucherModal .modal-dialog,
@@ -899,6 +942,36 @@ document.addEventListener('DOMContentLoaded', function() {
             el.focus({ preventScroll: true });
         } catch (e) {
             try { el.focus(); } catch (e2) {}
+        }
+    }
+
+    // Initialize Choices.js on filter dropdowns for multiselect with search
+    if (typeof Choices !== 'undefined') {
+        var filterStatusEl = document.getElementById('filter_status');
+        var filterStoreEl = document.getElementById('filter_store');
+        
+        if (filterStatusEl) {
+            new Choices(filterStatusEl, {
+                removeItemButton: true,
+                searchEnabled: true,
+                searchPlaceholderValue: 'Search status...',
+                placeholder: true,
+                placeholderValue: 'Select status',
+                itemSelectText: '',
+                shouldSort: false
+            });
+        }
+        
+        if (filterStoreEl) {
+            new Choices(filterStoreEl, {
+                removeItemButton: true,
+                searchEnabled: true,
+                searchPlaceholderValue: 'Search store...',
+                placeholder: true,
+                placeholderValue: 'Select store',
+                itemSelectText: '',
+                shouldSort: false
+            });
         }
     }
 

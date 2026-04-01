@@ -270,9 +270,10 @@ class ReportController extends Controller
         // Convert report data to collection for convenient pagination & totals
         $reportCollection = collect($reportData);
 
-        // Simple server-side pagination (per-page can be tuned)
-        $perPage = 25;
-        $currentPage = LengthAwarePaginator::resolveCurrentPage();
+        // Simple server-side pagination (per-page can be tuned). print_all=1 returns full table for browser print.
+        $printAll = $request->boolean('print_all');
+        $perPage = $printAll ? max(1, $reportCollection->count()) : 25;
+        $currentPage = $printAll ? 1 : LengthAwarePaginator::resolveCurrentPage();
         $pageItems = $reportCollection
             ->slice(($currentPage - 1) * $perPage, $perPage)
             ->values();
@@ -409,6 +410,7 @@ class ReportController extends Controller
         }
 
         foreach ([
+            public_path('admin_assets/images/logos/logo.png'),
             public_path('admin_assets/images/logos/logo.svg'),
             public_path('admin_assets/images/logos/logo-icon.svg'),
         ] as $path) {
@@ -529,6 +531,8 @@ class ReportController extends Controller
             'toDate'          => $queryData['toDate'],
             'selectedVendors' => $queryData['selectedVendors'],
             'selectedStores'  => $queryData['selectedStores'],
+            'emblemSrc'       => $this->messPdfIndiaEmblemForDompdf(),
+            'lbsnaaLogoSrc'   => $this->messPdfLbsnaaLogoForDompdf(),
         ];
 
         $pdf = Pdf::loadView('admin.mess.reports.pdf.stock-purchase-details-pdf', $data)
@@ -577,6 +581,8 @@ class ReportController extends Controller
             'reportData' => $this->buildStockBalanceTillDateData($tillDate, $storeIds),
             'tillDate' => $tillDate,
             'selectedStoreName' => $this->resolveStoreNamesLabel($storeIds),
+            'emblemSrc' => $this->messPdfIndiaEmblemForDompdf(),
+            'logoDataUri' => $this->messPdfLbsnaaLogoForDompdf(),
         ];
 
         $pdf = Pdf::loadView('admin.mess.reports.pdf.stock-balance-till-date-pdf', $data)
@@ -672,6 +678,8 @@ class ReportController extends Controller
             'viewType' => $viewType,
             'selectedStoreName' => $this->resolveStoreNamesLabel($storeIds),
             'selectedItemNamesLabel' => $this->resolveItemSubcategoryNamesLabel($itemIds),
+            'emblemSrc' => $this->messPdfIndiaEmblemForDompdf(),
+            'lbsnaaLogoSrc' => $this->messPdfLbsnaaLogoForDompdf(),
         ];
 
         $pdf = Pdf::loadView('admin.mess.reports.pdf.purchase-sale-quantity-pdf', $data)
@@ -814,12 +822,14 @@ class ReportController extends Controller
             'toDateFormatted' => $toDateFormatted,
             'otCourses' => $report['otCourses'],
             'grandTotal' => (float) $report['grandTotal'],
+            'emblemSrc' => $this->messPdfIndiaEmblemForDompdf(),
+            'lbsnaaLogoSrc' => $this->messPdfLbsnaaLogoForDompdf(),
         ];
 
         $pdf = Pdf::loadView('admin.mess.reports.pdf.category-wise-print-slip-pdf', $data)
             ->setPaper('a4', 'portrait')
             ->setOptions([
-                'defaultFont' => 'Arial',
+                'defaultFont' => 'DejaVu Sans',
                 'isHtml5ParserEnabled' => true,
                 'isRemoteEnabled' => true,
                 'dpi' => 96,
@@ -863,6 +873,8 @@ class ReportController extends Controller
             'toDateFormatted' => $toDateFormatted,
             'otCourses' => $report['otCourses'],
             'grandTotal' => (float) $report['grandTotal'],
+            'emblemSrc' => $this->messPdfIndiaEmblemForDompdf(),
+            'lbsnaaLogoSrc' => $this->messPdfLbsnaaLogoForDompdf(),
         ]);
     }
 
@@ -2057,4 +2069,3 @@ class ReportController extends Controller
         return [$items, $reportData];
     }
 }
-

@@ -94,11 +94,19 @@
 
 <div class="card border-0 shadow-sm flex-grow-1 d-flex flex-column min-h-0">
     <div class="card-body d-flex flex-column flex-grow-1 min-h-0">
-        <!-- Report Heading (Print Only) -->
-        <div class="report-header text-center mb-4">
-            <h4 class="fw-bold text-uppercase mb-1">Stock Balance as of Till Date</h4>
-            <h5 class="text-primary mb-1">Store: {{ $selectedStoreName ?? 'All Stores' }}</h5>
-            <p class="mb-0 text-muted">As on: {{ date('d-M-Y', strtotime($tillDate)) }}</p>
+        <!-- Report Heading -->
+        <div class="report-header text-center mb-4 pb-3 border-bottom border-body-secondary border-opacity-25">
+            <h4 class="fw-bold text-uppercase mb-3 fs-5 text-body-emphasis">Stock Balance as of Till Date</h4>
+            <div class="d-flex flex-wrap justify-content-center gap-2 gap-md-3">
+                <span class="badge text-bg-body-secondary text-body-emphasis fw-normal rounded-pill px-3 py-2 border border-body-secondary border-opacity-50">
+                    <span class="material-symbols-rounded icon-16 align-text-bottom me-1">event</span>
+                    Till: {{ date('d-F-Y', strtotime($tillDate)) }}
+                </span>
+                <span class="badge text-bg-primary fw-normal rounded-pill px-3 py-2 stock-balance-store-badge">
+                    <span class="material-symbols-rounded icon-16 align-text-bottom me-1">store</span>
+                    {{ $selectedStoreName ?? 'All Stores' }}
+                </span>
+            </div>
         </div>
 
         <!-- Report Table -->
@@ -237,20 +245,21 @@
         }
     }
 
-    @media screen {
-        .report-header {
-            display: none;
-        }
+    .stock-balance-report .report-header {
+        display: block;
     }
 
-    .report-header h4 {
-        margin-bottom: 10px;
-        color: #000;
+    .stock-balance-report .report-header .badge {
+        max-width: 100%;
+        white-space: normal;
     }
 
-    .report-header h5 {
-        margin-bottom: 20px;
-        color: #af2910;
+    .stock-balance-report .icon-16 {
+        font-size: 16px;
+    }
+
+    .stock-balance-report .stock-balance-store-badge {
+        text-align: left;
     }
 
 </style>

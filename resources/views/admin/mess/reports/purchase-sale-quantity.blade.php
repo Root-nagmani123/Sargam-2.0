@@ -16,8 +16,18 @@
     }
 
     $messViewLabel = $viewType === 'item_wise' ? 'Item-wise' : ($viewType === 'subcategory_wise' ? 'Subcategory-wise' : 'Category-wise');
+    $purchaseSalePrintConfigJson = json_encode([
+        'emblemSrc' => $messEmblemSrc,
+        'lbsnaaLogoSrc' => $messLbsnaaLogoSrc,
+        'periodBar' => 'From ' . date('d-F-Y', strtotime($fromDate)) . ' To ' . date('d-F-Y', strtotime($toDate)),
+        'storeLabel' => $selectedStoreName ?? 'All Stores',
+        'itemsLabel' => $selectedItemNamesLabel ?? 'All Items',
+        'viewLabel' => $messViewLabel,
+    ], JSON_THROW_ON_ERROR);
 @endphp
 <div class="container-fluid purchase-sale-quantity-report py-3">
+    <div id="purchase-sale-print-config" class="d-none" hidden
+         data-config="{{ htmlspecialchars($purchaseSalePrintConfigJson, ENT_QUOTES, 'UTF-8') }}"></div>
     <x-breadcrum title="Item Report"></x-breadcrum>
 
     {{-- Filter card --}}
@@ -43,16 +53,16 @@
                         <input type="date" name="to_date" class="form-select" value="{{ $toDate }}">
                     </div>
                     <div class="col-12 col-sm-6 col-md-4 col-lg-2">
-                        <label class="form-label">View</label>
-                        <select name="view_type" id="viewType" class="form-select choices-select" data-placeholder="Select View Type">
+                        <label class="form-label" for="viewType">View</label>
+                        <select name="view_type" id="viewType" class="form-select purchase-sale-view-tomselect" data-placeholder="Select view type">
                             <option value="item_wise" {{ $viewType === 'item_wise' ? 'selected' : '' }}>Item-wise</option>
                             <option value="subcategory_wise" {{ $viewType === 'subcategory_wise' ? 'selected' : '' }}>Subcategory-wise</option>
                             <option value="category_wise" {{ $viewType === 'category_wise' ? 'selected' : '' }}>Category-wise</option>
                         </select>
                     </div>
-                    <div class="col-12 col-sm-6 col-md-4 col-lg-3" id="categoryIdWrap" style="display: {{ $viewType === 'category_wise' ? 'block' : 'none' }};">
-                        <label class="form-label">Category</label>
-                        <select name="category_id" id="categoryId" class="form-select choices-select" data-placeholder="All Categories">
+                    <div class="col-12 col-sm-6 col-md-4 col-lg-3{{ $viewType === 'category_wise' ? '' : ' d-none' }}" id="categoryIdWrap">
+                        <label class="form-label" for="categoryId">Category</label>
+                        <select name="category_id" id="categoryId" class="form-select purchase-sale-category-tomselect" data-placeholder="All categories">
                             <option value="">All Categories</option>
                             @foreach($categories as $cat)
                                 <option value="{{ $cat->id }}" {{ $categoryId == $cat->id ? 'selected' : '' }}>{{ $cat->category_name }}</option>
@@ -236,8 +246,7 @@
     </div>
 </div>
 
-{{-- Choices.js (enhanced dropdowns) + Tom Select (store multiselect) --}}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
+{{-- Tom Select: view, category, item & store filters --}}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" rel="stylesheet" />
 
@@ -245,17 +254,6 @@
     @media print {
         .no-print { display: none !important; }
         .report-header { display: block !important; }
-    }
-
-    .purchase-sale-quantity-report .choices__inner {
-        min-height: 31px;
-        padding: 0.25rem 0.5rem;
-        border-radius: var(--bs-border-radius, 0.375rem);
-        font-size: 0.875rem;
-    }
-
-    .purchase-sale-quantity-report .choices__list--single .choices__item {
-        padding: 2px 0;
     }
 
     .purchase-sale-quantity-report .card-footer .btn {
@@ -271,27 +269,62 @@
         border-top-left-radius: 0;
         border-bottom-left-radius: 0;
     }
+
+    .purchase-sale-quantity-report .purchase-sale-view-tomselect + .ts-wrapper,
+    .purchase-sale-quantity-report .purchase-sale-category-tomselect + .ts-wrapper {
+        min-width: 0;
+    }
+
+    .purchase-sale-quantity-report .purchase-sale-item-multiselect + .ts-wrapper {
+        min-width: 0;
+    }
 </style>
 
-<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    if (typeof window.TomSelect !== 'undefined') {
-        document.querySelectorAll('.purchase-sale-quantity-report select.purchase-sale-store-multiselect').forEach(function (el) {
-            if (el.dataset.tomselectInitialized === 'true') return;
-            var placeholder = el.getAttribute('data-placeholder') || 'Select';
-            new TomSelect(el, {
-                placeholder: placeholder,
-                maxItems: null,
-                maxOptions: 500,
-                plugins: ['remove_button', 'dropdown_input'],
-                sortField: { field: 'text', direction: 'asc' }
-            });
-            el.dataset.tomselectInitialized = 'true';
-        });
-    }
+    if (typeof window.TomSelect === 'undefined') return;
+
+    var tsDropdownToBody = { dropdownParent: 'body' };
+
+    document.querySelectorAll('.purchase-sale-quantity-report select.purchase-sale-view-tomselect').forEach(function (el) {
+        if (el.dataset.tomselectInitialized === 'true') return;
+        new TomSelect(el, Object.assign({
+            placeholder: el.getAttribute('data-placeholder') || 'Select view type',
+            maxItems: 1,
+            maxOptions: null,
+            plugins: ['dropdown_input'],
+            sortField: { field: 'text', direction: 'asc' }
+        }, tsDropdownToBody));
+        el.dataset.tomselectInitialized = 'true';
+    });
+
+    document.querySelectorAll('.purchase-sale-quantity-report select.purchase-sale-category-tomselect').forEach(function (el) {
+        if (el.dataset.tomselectInitialized === 'true') return;
+        new TomSelect(el, Object.assign({
+            placeholder: el.getAttribute('data-placeholder') || 'All categories',
+            maxItems: 1,
+            maxOptions: null,
+            plugins: ['dropdown_input'],
+            sortField: { field: 'text', direction: 'asc' },
+            allowEmptyOption: true
+        }, tsDropdownToBody));
+        el.dataset.tomselectInitialized = 'true';
+    });
+
+    document.querySelectorAll('.purchase-sale-quantity-report select.purchase-sale-store-multiselect').forEach(function (el) {
+        if (el.dataset.tomselectInitialized === 'true') return;
+        var placeholder = el.getAttribute('data-placeholder') || 'Select';
+        new TomSelect(el, Object.assign({
+            placeholder: placeholder,
+            maxItems: null,
+            maxOptions: 500,
+            plugins: ['remove_button', 'dropdown_input'],
+            sortField: { field: 'text', direction: 'asc' }
+        }, tsDropdownToBody));
+        el.dataset.tomselectInitialized = 'true';
+    });
 });
 </script>
 
@@ -315,7 +348,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function getSelectedCategoryIdForItemFilter() {
-        if (!categoryIdWrap || categoryIdWrap.style.display === 'none') return '';
+        if (!categoryIdWrap || categoryIdWrap.classList.contains('d-none')) return '';
         return categorySelect ? String(categorySelect.value || '') : '';
     }
 
@@ -370,7 +403,8 @@ document.addEventListener('DOMContentLoaded', function() {
             maxItems: null,
             maxOptions: 500,
             plugins: ['remove_button', 'dropdown_input'],
-            sortField: { field: 'text', direction: 'asc' }
+            sortField: { field: 'text', direction: 'asc' },
+            dropdownParent: 'body'
         });
     }
 
@@ -379,54 +413,41 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     if (viewType && categoryIdWrap) {
-        function toggleCategory() {
-            var isCategoryWise = viewType.value === 'category_wise';
-            categoryIdWrap.style.display = isCategoryWise ? 'block' : 'none';
-            if (!isCategoryWise && categorySelect && categorySelect.value) {
-                categorySelect.value = '';
-                categorySelect.dispatchEvent(new Event('change'));
+        function updateCategoryWrapVisibility() {
+            if (viewType.value === 'category_wise') {
+                categoryIdWrap.classList.remove('d-none');
+            } else {
+                categoryIdWrap.classList.add('d-none');
             }
         }
-        toggleCategory();
-        viewType.addEventListener('change', function () {
-            var isCategoryWise = viewType.value === 'category_wise';
-            toggleCategory();
-            if (isCategoryWise) {
-                if (categorySelect) {
-                    categorySelect.value = '';
-                    categorySelect.dispatchEvent(new Event('change'));
-                }
+
+        function clearCategoryValue() {
+            if (!categorySelect) return;
+            if (categorySelect.tomselect) {
+                categorySelect.tomselect.clear();
             } else {
-                if (categorySelect) categorySelect.value = '';
-                initOrRebuildItemTomSelect({ clear: true });
+                categorySelect.value = '';
             }
+        }
+
+        updateCategoryWrapVisibility();
+        if (viewType.value !== 'category_wise' && categorySelect) {
+            var hasCat = categorySelect.tomselect
+                ? categorySelect.tomselect.getValue()
+                : categorySelect.value;
+            if (hasCat) clearCategoryValue();
+        }
+
+        viewType.addEventListener('change', function () {
+            updateCategoryWrapVisibility();
+            clearCategoryValue();
+            initOrRebuildItemTomSelect({ clear: true });
         });
-    }
-
-    if (typeof window.Choices !== 'undefined') {
-        document
-            .querySelectorAll('.purchase-sale-quantity-report select.choices-select')
-            .forEach(function (el) {
-                if (el.dataset.choices === 'initialized') return;
-                el.dataset.choices = 'initialized';
-
-                var placeholder = el.getAttribute('data-placeholder') || 'Select';
-
-                new Choices(el, {
-                    searchEnabled: true,
-                    shouldSort: false,
-                    placeholder: true,
-                    placeholderValue: placeholder,
-                    itemSelectText: '',
-                    allowHTML: false,
-                    removeItemButton: false,
-                });
-            });
     }
 
     if (categorySelect) {
         categorySelect.addEventListener('change', function () {
-            if (!categoryIdWrap || categoryIdWrap.style.display === 'none') return;
+            if (!categoryIdWrap || categoryIdWrap.classList.contains('d-none')) return;
             initOrRebuildItemTomSelect({ clear: true });
         });
     }
@@ -444,12 +465,21 @@ function printPurchaseSaleQuantity() {
     }
 
     var viewType = cardBody.getAttribute('data-view-type') || 'item_wise';
-    var emblemSrc = @json($messEmblemSrc);
-    var lbsnaaLogoSrc = @json($messLbsnaaLogoSrc);
-    var periodBar = @json('From ' . date('d-F-Y', strtotime($fromDate)) . ' To ' . date('d-F-Y', strtotime($toDate)));
-    var storeLabel = @json($selectedStoreName ?? 'All Stores');
-    var itemsLabel = @json($selectedItemNamesLabel ?? 'All Items');
-    var viewLabel = @json($messViewLabel);
+    var cfgEl = document.getElementById('purchase-sale-print-config');
+    var printCfg = {};
+    try {
+        printCfg = cfgEl && cfgEl.getAttribute('data-config')
+            ? JSON.parse(cfgEl.getAttribute('data-config'))
+            : {};
+    } catch (e) {
+        printCfg = {};
+    }
+    var emblemSrc = printCfg.emblemSrc || '';
+    var lbsnaaLogoSrc = printCfg.lbsnaaLogoSrc || '';
+    var periodBar = printCfg.periodBar || '';
+    var storeLabel = printCfg.storeLabel || '';
+    var itemsLabel = printCfg.itemsLabel || '';
+    var viewLabel = printCfg.viewLabel || '';
     var printedOn = new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString();
 
     function escapeHtml(str) {
@@ -500,11 +530,14 @@ function printPurchaseSaleQuantity() {
 
     var docTitle = 'Item Report - OFFICER\'S MESS LBSNAA MUSSOORIE';
 
-    var printWindow = window.open('', '_blank');
+    var printWindow = window.open('about:blank', '_blank', 'width=1200,height=900');
     if (!printWindow) {
         window.print();
         return;
     }
+    try {
+        printWindow.opener = null;
+    } catch (ignore) {}
 
     printWindow.document.open();
     printWindow.document.write('<!doctype html>\n' +

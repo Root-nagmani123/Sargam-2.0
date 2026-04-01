@@ -5,31 +5,22 @@
     $vendorLine = $selectedVendors->isEmpty()
         ? 'All Vendors'
         : $selectedVendors->pluck('name')->implode(', ');
-    $vendorDetails = $selectedVendors->isEmpty()
-        ? 'All Vendors'
+    $vendorDetailRows = $selectedVendors->isEmpty()
+        ? collect()
         : $selectedVendors->map(function ($v) {
-            return trim(implode(' | ', array_filter([
-                'Name: ' . $v->name,
-                !empty($v->contact_person) ? 'Contact: ' . $v->contact_person : null,
-                !empty($v->phone) ? 'Phone: ' . $v->phone : null,
-                !empty($v->email) ? 'Email: ' . $v->email : null,
-                !empty($v->address) ? 'Address: ' . $v->address : null,
-            ])));
-        })->implode(' || ');
+            return [
+                'name' => $v->name ?? '—',
+                'contact_person' => $v->contact_person ?? '—',
+                'phone' => $v->phone ?? '—',
+                'email' => $v->email ?? '—',
+                'address' => $v->address ?? '—',
+            ];
+        });
     $storeDetails = $selectedStores->isEmpty()
         ? 'All Stores'
         : $selectedStores->pluck('store_name')->implode(', ');
-    $emblemSrc = 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
-    $lbsnaaLogoSrc = 'https://www.lbsnaa.gov.in/admin_assets/images/logo.png';
-
-    // DOMPDF often blocks remote images; use embedded local logo when available.
-    $localLogoPath = public_path('admin_assets/images/logos/logo.png');
-    if (is_file($localLogoPath) && is_readable($localLogoPath)) {
-        $localLogoSvg = @file_get_contents($localLogoPath);
-        if ($localLogoSvg !== false) {
-            $lbsnaaLogoSrc = 'data:image/svg+xml;base64,' . base64_encode($localLogoSvg);
-        }
-    }
+    $emblemSrc = $emblemSrc ?? 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
+    $lbsnaaLogoSrc = $lbsnaaLogoSrc ?? 'https://www.lbsnaa.gov.in/admin_assets/images/logo.png';
 @endphp
 <!doctype html>
 <html lang="en">
@@ -160,6 +151,24 @@
             margin-bottom: 4px;
             word-wrap: break-word;
         }
+        .vendor-detail-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 4px;
+            font-size: 8.5pt;
+        }
+        .vendor-detail-table th,
+        .vendor-detail-table td {
+            border: 1px solid #dee2e6;
+            padding: 3px 5px;
+            text-align: left;
+            vertical-align: top;
+            word-break: break-word;
+        }
+        .vendor-detail-table th {
+            background: #f1f3f5;
+            font-weight: 600;
+        }
 
         /* Data table only — scoped so DOMPDF doesn’t mix rules with header */
         table.stock-purchase-data {
@@ -256,7 +265,33 @@
         </div>
 
         <div class="report-meta-print">
-            <div class="meta-line"><strong>Vendor Details:</strong> {{ $vendorDetails }}</div>
+            @if($vendorDetailRows->isEmpty())
+                <div class="meta-line"><strong>Vendor Details:</strong> All Vendors</div>
+            @else
+                <div class="meta-line"><strong>Vendor Details:</strong></div>
+                <table class="vendor-detail-table">
+                    <thead>
+                        <tr>
+                            <th>Vendor</th>
+                            <th>Contact</th>
+                            <th>Phone</th>
+                            <th>Email</th>
+                            <th>Address</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($vendorDetailRows as $row)
+                            <tr>
+                                <td>{{ $row['name'] }}</td>
+                                <td>{{ $row['contact_person'] }}</td>
+                                <td>{{ $row['phone'] }}</td>
+                                <td>{{ $row['email'] }}</td>
+                                <td>{{ $row['address'] }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            @endif
             <div class="meta-line"><strong>Store:</strong> {{ $storeDetails }}</div>
             <div class="meta-line"><strong>Generated on:</strong> {{ now()->format('d-m-Y H:i') }}</div>
         </div>

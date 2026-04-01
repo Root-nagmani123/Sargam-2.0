@@ -48,11 +48,19 @@ class ProcessMessBillsEmployeeController extends Controller
     {
         $dateFrom = $request->filled('date_from') ? $this->parseDate($request->date_from) : now()->startOfMonth()->format('Y-m-d');
         $dateTo = $request->filled('date_to') ? $this->parseDate($request->date_to) : now()->endOfMonth()->format('Y-m-d');
-        $clientType = $request->filled('client_type') ? $request->client_type : null;
-        $clientTypePk = $request->filled('client_type_pk') ? $request->client_type_pk : null;
+        
+        // Handle multiselect for client_type (employee/ot/course/other)
+        $clientTypeRaw = $request->input('client_type');
+        $clientTypes = is_array($clientTypeRaw) ? $clientTypeRaw : ($clientTypeRaw ? [$clientTypeRaw] : []);
+        $clientType = $clientTypes[0] ?? null; // For backward compatibility
+        
+        // Handle multiselect for client_type_pk
+        $clientTypePkRaw = $request->input('client_type_pk');
+        $clientTypePks = is_array($clientTypePkRaw) ? $clientTypePkRaw : ($clientTypePkRaw ? [$clientTypePkRaw] : []);
+        $clientTypePk = $clientTypePks[0] ?? null; // For backward compatibility
+        
         $buyerNames = $this->normalizeBuyerNames($request->input('buyer_name'));
         $buyerName = $buyerNames[0] ?? null;
-        $statusFilter = $request->filled('status') ? $request->status : null;
         $statusFilter = $request->filled('status') ? $request->status : null;
 
         // Query 1: Selling Voucher with Date Range (sv_date_range_reports)
@@ -71,11 +79,11 @@ class ProcessMessBillsEmployeeController extends Controller
             ])
             ->whereIn('client_type_slug', self::ALLOWED_CLIENT_SLUGS);
 
-        if ($clientType) {
-            $dateRangeQuery->where('client_type_slug', $clientType);
+        if (!empty($clientTypes)) {
+            $dateRangeQuery->whereIn('client_type_slug', $clientTypes);
         }
-        if ($clientTypePk) {
-            $dateRangeQuery->where('client_type_pk', $clientTypePk);
+        if (!empty($clientTypePks)) {
+            $dateRangeQuery->whereIn('client_type_pk', $clientTypePks);
         }
         if ($dateFrom) {
             $dateRangeQuery->where(function ($q) use ($dateFrom) {
@@ -92,8 +100,8 @@ class ProcessMessBillsEmployeeController extends Controller
         $this->applyBuyerNameFilter($dateRangeQuery, $buyerNames);
 
         // Query 2: Regular Selling Voucher (kitchen_issue_master)
-        $kitchenClientTypes = $clientType
-            ? [$this->clientTypeSlugToKitchenId($clientType)]
+        $kitchenClientTypes = !empty($clientTypes)
+            ? array_map([$this, 'clientTypeSlugToKitchenId'], $clientTypes)
             : self::ALLOWED_KITCHEN_CLIENT_TYPES;
 
         $kitchenIssueQuery = KitchenIssueMaster::query()
@@ -112,8 +120,8 @@ class ProcessMessBillsEmployeeController extends Controller
             ->whereIn('client_type', $kitchenClientTypes)
             ->whereIn('kitchen_issue_type', self::KITCHEN_MESS_SELLING_ISSUE_TYPES);
 
-        if ($clientTypePk) {
-            $kitchenIssueQuery->where('client_type_pk', $clientTypePk);
+        if (!empty($clientTypePks)) {
+            $kitchenIssueQuery->whereIn('client_type_pk', $clientTypePks);
         }
 
         if ($dateFrom) {
@@ -261,9 +269,12 @@ class ProcessMessBillsEmployeeController extends Controller
             'effectiveDateToYmd',
             'stats',
             'clientType',
+            'clientTypes',
             'statusFilter',
             'clientTypePk',
+            'clientTypePks',
             'buyerName',
+            'buyerNames',
             'clientTypes',
             'clientTypeCategories',
             'faculties',

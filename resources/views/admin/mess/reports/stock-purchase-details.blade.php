@@ -4,8 +4,37 @@
 @php
     $selectedVendorIds = $selectedVendors->pluck('id')->map(fn ($id) => (int) $id)->all();
     $selectedStoreIds = $selectedStores->pluck('id')->map(fn ($id) => (int) $id)->all();
+    $stockPurchasePrintDateRange = 'Stock Purchase Details Report Between '
+        . date('d-F-Y', strtotime($fromDate))
+        . ' To '
+        . date('d-F-Y', strtotime($toDate));
+    $stockPurchasePrintVendorLine = $selectedVendors->isEmpty()
+        ? 'All Vendors'
+        : $selectedVendors->pluck('name')->implode(', ');
+    $stockPurchasePrintVendorDetailRows = $selectedVendors->isEmpty()
+        ? []
+        : $selectedVendors->map(function ($v) {
+            return [
+                'name' => $v->name ?? '—',
+                'contact_person' => $v->contact_person ?? '—',
+                'phone' => $v->phone ?? '—',
+                'email' => $v->email ?? '—',
+                'address' => $v->address ?? '—',
+            ];
+        })->values()->all();
+    $stockPurchasePrintStoreDetails = $selectedStores->isEmpty()
+        ? 'All Stores'
+        : $selectedStores->pluck('store_name')->implode(', ');
+    $stockPurchasePrintConfigJson = json_encode([
+        'dateRange' => $stockPurchasePrintDateRange,
+        'vendorLine' => $stockPurchasePrintVendorLine,
+        'vendorDetailRows' => $stockPurchasePrintVendorDetailRows,
+        'storeDetails' => $stockPurchasePrintStoreDetails,
+    ], JSON_THROW_ON_ERROR);
 @endphp
 <div class="container-fluid stock-purchase-report">
+    <div id="stock-purchase-print-config" class="d-none" hidden
+         data-config="{{ htmlspecialchars($stockPurchasePrintConfigJson, ENT_QUOTES, 'UTF-8') }}"></div>
     <x-breadcrum title="Stock Purchase Details Report"></x-breadcrum>
     <!-- Filters Section (Top - same pattern as other report pages) -->
 
@@ -220,24 +249,40 @@ function printStockPurchaseTable() {
     }
 
     var title = 'Stock Purchase Details';
-    var dateRange = 'Stock Purchase Details Report Between {{ date('d-F-Y', strtotime($fromDate)) }} To {{ date('d-F-Y', strtotime($toDate)) }}';
-    var vendorLine = {!! json_encode($selectedVendors->isEmpty() ? 'All Vendors' : $selectedVendors->pluck('name')->implode(', ')) !!};
-    var vendorDetails = {!! json_encode(
-        $selectedVendors->isEmpty()
-            ? 'All Vendors'
-            : $selectedVendors->map(function ($v) {
-                return trim(implode(' | ', array_filter([
-                    'Name: ' . $v->name,
-                    !empty($v->contact_person) ? 'Contact: ' . $v->contact_person : null,
-                    !empty($v->phone) ? 'Phone: ' . $v->phone : null,
-                    !empty($v->email) ? 'Email: ' . $v->email : null,
-                    !empty($v->address) ? 'Address: ' . $v->address : null,
-                ])));
-            })->implode(' || ')
-    ) !!};
-    var storeDetails = {!! json_encode($selectedStores->isEmpty() ? 'All Stores' : $selectedStores->pluck('store_name')->implode(', ')) !!};
+    var cfgEl = document.getElementById('stock-purchase-print-config');
+    var printCfg = {};
+    try {
+        printCfg = cfgEl && cfgEl.getAttribute('data-config')
+            ? JSON.parse(cfgEl.getAttribute('data-config'))
+            : {};
+    } catch (e) {
+        printCfg = {};
+    }
+    var dateRange = printCfg.dateRange || '';
+    var vendorLine = printCfg.vendorLine || '';
+    var vendorDetailRows = Array.isArray(printCfg.vendorDetailRows) ? printCfg.vendorDetailRows : [];
+    var storeDetails = printCfg.storeDetails || '';
     var emblemSrc = 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
     var lbsnaaLogoSrc = 'https://www.lbsnaa.gov.in/admin_assets/images/logo.png';
+
+    var vendorDetailsHtml = vendorDetailRows.length === 0
+        ? '<div class="meta-line"><strong>Vendor Details:</strong> All Vendors</div>'
+        : (
+            '<div class="meta-line"><strong>Vendor Details:</strong></div>' +
+            '<table class="vendor-detail-table">' +
+            '<thead><tr><th>Vendor</th><th>Contact</th><th>Phone</th><th>Email</th><th>Address</th></tr></thead>' +
+            '<tbody>' +
+            vendorDetailRows.map(function (row) {
+                return '<tr>' +
+                    '<td>' + (row.name || '—') + '</td>' +
+                    '<td>' + (row.contact_person || '—') + '</td>' +
+                    '<td>' + (row.phone || '—') + '</td>' +
+                    '<td>' + (row.email || '—') + '</td>' +
+                    '<td>' + (row.address || '—') + '</td>' +
+                '</tr>';
+            }).join('') +
+            '</tbody></table>'
+        );
 
     /* Match PDF: same class on cloned table for styling */
     table.classList.add('stock-purchase-data');
@@ -323,6 +368,24 @@ function printStockPurchaseTable() {
         .text-muted { color: #6c757d; font-weight: 600; }
         .report-meta-print { font-size: 9px; margin: 10px 0 12px; line-height: 1.4; }
         .report-meta-print .meta-line { margin-bottom: 4px; word-wrap: break-word; }
+        .vendor-detail-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 4px;
+            font-size: 8.5px;
+        }
+        .vendor-detail-table th,
+        .vendor-detail-table td {
+            border: 1px solid #dee2e6;
+            padding: 3px 5px;
+            text-align: left;
+            vertical-align: top;
+            word-break: break-word;
+        }
+        .vendor-detail-table th {
+            background: #f1f3f5;
+            font-weight: 600;
+        }
         table.stock-purchase-data {
             width: 100%;
             border-collapse: collapse;
@@ -402,7 +465,7 @@ function printStockPurchaseTable() {
     </div>
 
     <div class="report-meta-print">
-        <div class="meta-line"><strong>Vendor Details:</strong> ${vendorDetails}</div>
+        ${vendorDetailsHtml}
         <div class="meta-line"><strong>Store:</strong> ${storeDetails}</div>
         <div class="meta-line"><strong>Printed on:</strong> ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}</div>
     </div>

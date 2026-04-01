@@ -6,6 +6,8 @@
     $storeIds = $storeIds ?? [];
 @endphp
 <div class="container-fluid stock-summary-report">
+    <div id="stock-summary-print-meta" class="d-none" hidden
+         data-store-name="{{ e($selectedStoreName ?? ($storeType == 'main' ? 'Officer\'s Main Mess(Primary)' : 'All Sub Stores')) }}"></div>
     <x-breadcrum title="Stock Summary Report"></x-breadcrum>
     <!-- Filters Section (Hide on Print) -->
     <div class="card mb-4 border-0 shadow-sm no-print">
@@ -35,7 +37,7 @@
                             <option value="sub" @selected($storeType == 'sub')>Sub Store</option>
                         </select>
                     </div>
-                    <div class="col-md-3" id="main_store_div" style="display: {{ $storeType == 'main' ? 'block' : 'none' }};">
+                    <div class="col-md-3{{ $storeType == 'main' ? '' : ' d-none' }}" id="main_store_div">
                         <label class="form-label fw-semibold text-uppercase mb-1 text-muted">Main Store</label>
                         <select name="main_store_id[]" id="stock_summary_main_store" class="form-select form-select-sm stock-summary-store-multiselect" multiple data-placeholder="All Main Stores">
                             @foreach($stores as $store)
@@ -45,7 +47,7 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-md-3" id="sub_store_div" style="display: {{ $storeType == 'sub' ? 'block' : 'none' }};">
+                    <div class="col-md-3{{ $storeType == 'sub' ? '' : ' d-none' }}" id="sub_store_div">
                         <label class="form-label small fw-semibold text-uppercase mb-1 text-muted">Sub Store</label>
                         <select name="sub_store_id[]" id="stock_summary_sub_store" class="form-select form-select-sm stock-summary-store-multiselect" multiple data-placeholder="All Sub Stores">
                             @foreach($subStores as $subStore)
@@ -117,36 +119,40 @@
 
 <script>
 function printStockSummary() {
-    // Sticky-header script inserts a cloned header-only table before the real table; both use .table-fit.
-    // We must print the scroll container's direct child data table (has tbody rows), not the clone.
-    const scroller = document.querySelector('.stock-summary-report .table-fit-single-view');
-    let table = scroller ? scroller.querySelector(':scope > table.table-fit') : null;
-    if (!table) {
-        var wrapScroller = document.querySelector('#stock-summary-table-wrap .table-fit-single-view');
-        table = wrapScroller ? wrapScroller.querySelector(':scope > table.table-fit') : null;
-    }
-    if (!table || !table.querySelector('tbody')) {
-        window.print();
-        return;
-    }
+    var title = 'Stock Summary Report';
+    var dateRange = 'Stock Summary Report Between {{ date("d-F-Y", strtotime($fromDate)) }} To {{ date("d-F-Y", strtotime($toDate)) }}';
+    var metaEl = document.getElementById('stock-summary-print-meta');
+    var storeName = metaEl && metaEl.getAttribute('data-store-name') ? metaEl.getAttribute('data-store-name') : '';
 
-    // Real table's thead is hidden when sticky header is active; show it on a clone for printing.
-    const tableForPrint = table.cloneNode(true);
-    const printThead = tableForPrint.querySelector('thead');
-    if (printThead) {
-        printThead.style.display = '';
-        printThead.removeAttribute('hidden');
-    }
+    function openPrintWithTable(table) {
+        if (!table) {
+            alert('Unable to find table data for printing. Please try again.');
+            return;
+        }
+        var tbody = table.querySelector('tbody');
+        if (!tbody || tbody.querySelectorAll('tr').length === 0) {
+            alert('No data available to print. Please apply filters and ensure data is loaded.');
+            return;
+        }
 
-    const title     = 'Stock Summary Report';
-    const dateRange = 'Stock Summary Report Between {{ date('d-F-Y', strtotime($fromDate)) }} To {{ date('d-F-Y', strtotime($toDate)) }}';
-    const storeName = '{{ $selectedStoreName ?? ($storeType == 'main' ? "Officer\'s Main Mess(Primary)" : 'All Sub Stores') }}';
+        var tableForPrint = table.cloneNode(true);
+        var printThead = tableForPrint.querySelector('thead');
+        if (printThead) {
+            printThead.style.display = '';
+            printThead.removeAttribute('hidden');
+        }
 
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) { window.print(); return; }
+        var printWindow = window.open('about:blank', '_blank', 'width=1200,height=900');
+        if (!printWindow) {
+            window.print();
+            return;
+        }
+        try {
+            printWindow.opener = null;
+        } catch (ignore) {}
 
-    printWindow.document.open();
-    printWindow.document.write(`<!doctype html>
+        printWindow.document.open();
+        printWindow.document.write(`<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -154,64 +160,124 @@ function printStockSummary() {
   <title>${title} - OFFICER'S MESS LBSNAA MUSSOORIE</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
+    * { box-sizing: border-box; }
     body {
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      font-size: 14px;
+      font-size: 12px;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+      margin: 0;
+      padding: 1rem;
+    }
+    .lbsnaa-header { 
+      border-bottom: 2px solid #004a93; 
+      padding-bottom:.75rem; 
+      margin-bottom:1rem; 
+    }
+    .brand-line-1 { 
+      font-size:0.9rem; 
+      text-transform:uppercase; 
+      letter-spacing:.06em; 
+      color:#004a93; 
+      font-weight: 600;
+    }
+    .brand-line-2 { 
+      font-size:1.2rem; 
+      font-weight:700; 
+      text-transform:uppercase; 
+      color:#222; 
+    }
+    .brand-line-3 { 
+      font-size:0.9rem; 
+      color:#555; 
+    }
+    .report-meta { 
+      font-size:0.9rem; 
+      margin-bottom:.75rem; 
+      line-height: 1.6;
+    }
+    .report-meta span { 
+      display:inline-block; 
+      margin-right:1.5rem; 
+    }
+    .print-report-title { 
+      font-size: 1.1rem; 
+      font-weight: 600; 
+    }
+    table { 
+      width:100%; 
+      border-collapse:collapse; 
+      font-size: 10px;
+      margin-top: 0.5rem;
+    }
+    th, td { 
+      padding:5px 6px; 
+      border:1px solid #dee2e6; 
+      vertical-align: middle;
+    }
+    thead th { 
+      background:#f8f9fa !important; 
+      font-weight:600;
+      text-align: center;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
-    .lbsnaa-header { border-bottom: 2px solid #004a93; padding-bottom:.75rem; margin-bottom:1rem; }
-    .brand-line-1 { font-size:1.05rem; text-transform:uppercase; letter-spacing:.06em; color:#004a93; }
-    .brand-line-2 { font-size:1.4rem; font-weight:700; text-transform:uppercase; color:#222; }
-    .brand-line-3 { font-size:1rem; color:#555; }
-    .report-meta { font-size:1.05rem; margin-bottom:.75rem; }
-    .report-meta span { display:inline-block; margin-right:1.5rem; }
-    .print-report-title { font-size: 1.3rem; font-weight: 600; }
-    table { width:100%; border-collapse:collapse; font-size: 14px; }
-    th, td { padding:6px 9px; border:1px solid #dee2e6; }
-    thead th { background:#f8f9fa; font-weight:600; }
-    /* Allow wrapping so all columns stay on the page */
-    .table,
-    .table * {
-      white-space: normal !important;
+    tbody td {
+      background: #fff !important;
     }
-
-    /* Ensure full table prints, not scrollable area only */
+    .table-primary {
+      background: #cfe2ff !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    /* Ensure text alignment is preserved */
+    .text-end { text-align: right !important; }
+    .text-center { text-align: center !important; }
+    
+    /* Ensure all table content is visible */
     .table-responsive {
       overflow: visible !important;
+      max-height: none !important;
     }
-    thead { display:table-header-group; }
+    table { display: table !important; width: 100% !important; }
+    thead { display: table-header-group !important; }
+    tbody { display: table-row-group !important; }
+    tr { display: table-row !important; page-break-inside: avoid; }
+    th, td { display: table-cell !important; }
+    
     @page {
       size: A4 landscape;
       margin: 0.5in;
     }
     @media print {
-      body { margin:0; }
+      body { margin:0; padding: 0.5rem; }
+      thead { display: table-header-group !important; }
+      tr { page-break-inside: avoid; }
     }
   </style>
 </head>
 <body>
   <div class="container-fluid">
     <div class="row align-items-center lbsnaa-header">
-      <div class="col-auto d-none d-print-block">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg" alt="India Emblem" height="48">
+      <div class="col-auto">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg" alt="India Emblem" height="42">
       </div>
       <div class="col">
         <div class="brand-line-1">Government of India</div>
         <div class="brand-line-2">OFFICER'S MESS LBSNAA MUSSOORIE</div>
         <div class="brand-line-3">Lal Bahadur Shastri National Academy of Administration</div>
       </div>
-      <div class="col-auto d-none d-print-block">
-        <img src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png" alt="LBSNAA Logo" height="48">
+      <div class="col-auto">
+        <img src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png" alt="LBSNAA Logo" height="42" onerror="this.style.display='none'">
       </div>
     </div>
 
     <div class="mb-2">
       <h5 class="mb-1 print-report-title">${title}</h5>
       <div class="report-meta">
-        <span><strong>Period:</strong> ${dateRange}</span>
+        <span><strong>Period:</strong> ${dateRange}</span><br>
         <span><strong>Store:</strong> ${storeName}</span>
-        <span><strong>Printed on:</strong> ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}</span>
+        <span><strong>Printed:</strong> ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}</span>
       </div>
     </div>
 
@@ -221,11 +287,57 @@ function printStockSummary() {
   </div>
 
   <script>
-    window.addEventListener('load', function() { window.print(); });
+    window.addEventListener('load', function() { 
+      setTimeout(function() {
+        window.print(); 
+      }, 250);
+    });
   <\/script>
 </body>
 </html>`);
-    printWindow.document.close();
+        printWindow.document.close();
+    }
+
+    var url = new URL(window.location.href);
+    url.searchParams.set('ajax', '1');
+    url.searchParams.set('print_all', '1');
+
+    fetch(url.toString(), {
+        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' }
+    })
+        .then(function (r) { return r.text(); })
+        .then(function (html) {
+            var doc = new DOMParser().parseFromString(html, 'text/html');
+            var fetched = doc.querySelector('.table-fit-single-view > table.table-fit');
+            if (fetched) {
+                openPrintWithTable(fetched);
+                return;
+            }
+            var table = document.querySelector('#stock-summary-table-wrap table.table-fit')
+                || document.querySelector('#stock-summary-table-wrap table');
+            var scroller = document.querySelector('.stock-summary-report .table-fit-single-view');
+            if (!table && scroller) {
+                table = scroller.querySelector(':scope > table.table-fit');
+            }
+            if (!table) {
+                var wrapScroller = document.querySelector('#stock-summary-table-wrap .table-fit-single-view');
+                table = wrapScroller ? wrapScroller.querySelector(':scope > table.table-fit') : null;
+            }
+            openPrintWithTable(table);
+        })
+        .catch(function () {
+            var table = document.querySelector('#stock-summary-table-wrap table.table-fit')
+                || document.querySelector('#stock-summary-table-wrap table');
+            var scroller = document.querySelector('.stock-summary-report .table-fit-single-view');
+            if (!table && scroller) {
+                table = scroller.querySelector(':scope > table.table-fit');
+            }
+            if (!table) {
+                var wrapScroller = document.querySelector('#stock-summary-table-wrap .table-fit-single-view');
+                table = wrapScroller ? wrapScroller.querySelector(':scope > table.table-fit') : null;
+            }
+            openPrintWithTable(table);
+        });
 }
 
 // AJAX pagination: only reload the table section, not whole page
@@ -282,16 +394,29 @@ document.addEventListener('DOMContentLoaded', function () {
         table { 
             font-size: 14px;
             page-break-inside: auto;
+            width: 100% !important;
+        }
+        table thead {
+            display: table-header-group !important;
+        }
+        table tbody {
+            display: table-row-group !important;
         }
         table tr {
+            display: table-row !important;
             page-break-inside: avoid;
             page-break-after: auto;
         }
-        table thead {
-            display: table-header-group;
-        }
-        th, td { 
+        table th, table td {
+            display: table-cell !important;
             padding: 10px 12px !important; 
+        }
+        /* Override any overflow/height restrictions on print */
+        .table-fit-single-view,
+        .table-responsive {
+            overflow: visible !important;
+            height: auto !important;
+            max-height: none !important;
         }
         @page {
             margin: 1cm;
@@ -526,11 +651,11 @@ document.addEventListener('DOMContentLoaded', function () {
         if (storeTypeSelect) {
             storeTypeSelect.addEventListener('change', function () {
                 if (this.value === 'main') {
-                    if (mainStoreDiv) mainStoreDiv.style.display = 'block';
-                    if (subStoreDiv) subStoreDiv.style.display = 'none';
+                    if (mainStoreDiv) mainStoreDiv.classList.remove('d-none');
+                    if (subStoreDiv) subStoreDiv.classList.add('d-none');
                 } else {
-                    if (mainStoreDiv) mainStoreDiv.style.display = 'none';
-                    if (subStoreDiv) subStoreDiv.style.display = 'block';
+                    if (mainStoreDiv) mainStoreDiv.classList.add('d-none');
+                    if (subStoreDiv) subStoreDiv.classList.remove('d-none');
                 }
                 syncStoreMultiselects();
             });

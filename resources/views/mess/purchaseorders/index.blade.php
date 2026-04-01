@@ -38,7 +38,7 @@
                 @endif
 
                 {{-- Filters --}}
-                <form method="GET" action="{{ route('admin.mess.purchaseorders.index') }}" class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4 no-print" aria-label="Purchase order list filters">
+                <form method="GET" action="{{ route('admin.mess.purchaseorders.index') }}" class="card border-0 shadow-sm rounded-4 mb-4 no-print po-filter-card" aria-label="Purchase order list filters">
                     <div class="card-header bg-white border-bottom py-3 px-3 px-md-4 d-flex flex-wrap align-items-center justify-content-between gap-3">
                         <div class="d-flex align-items-start gap-3">
                             <span class="rounded-3 bg-primary bg-opacity-10 text-primary d-inline-flex align-items-center justify-content-center flex-shrink-0" style="width: 2.5rem; height: 2.5rem;" aria-hidden="true">
@@ -93,21 +93,31 @@
                                     <div class="row g-3 align-items-start">
                                         <div class="col-12 col-md-6">
                                             <label class="form-label fw-semibold small mb-1" for="poFilterVendor">Vendors</label>
-                                            <select name="vendor_id[]" id="poFilterVendor" multiple class="form-select form-select-sm js-filter-select po-filter-multi rounded-3 shadow-sm" aria-label="Filter by one or more vendors">
-                                                @foreach($vendors as $v)
-                                                    <option value="{{ $v->id }}" {{ in_array((int) $v->id, $filterVendorIds ?? [], true) ? 'selected' : '' }}>{{ $v->name }}</option>
-                                                @endforeach
-                                            </select>
-                                            <div class="form-text mt-1 mb-0">All vendors when none selected.</div>
+                                            <div class="input-group input-group-sm shadow-sm rounded-3 po-filter-multiselect-wrap">
+                                                <span class="input-group-text border-secondary-subtle" id="poFilterVendor-addon" aria-hidden="true">
+                                                    <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;">local_shipping</i>
+                                                </span>
+                                                <select name="vendor_id[]" id="poFilterVendor" multiple class="form-select form-select-sm rounded-0 border-secondary-subtle po-filter-ts-vendor" data-placeholder="All vendors" aria-label="Filter by one or more vendors" aria-describedby="poFilterVendor-addon">
+                                                    @foreach($vendors as $v)
+                                                        <option value="{{ $v->id }}" {{ in_array((int) $v->id, $filterVendorIds ?? [], true) ? 'selected' : '' }}>{{ $v->name }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                            <div class="form-text mt-1 mb-0">All vendors when none selected. Type to search.</div>
                                         </div>
                                         <div class="col-12 col-md-6">
                                             <label class="form-label fw-semibold small mb-1" for="poFilterStore">Stores</label>
-                                            <select name="store_id[]" id="poFilterStore" multiple class="form-select form-select-sm js-filter-select po-filter-multi rounded-3 shadow-sm" aria-label="Filter by one or more stores">
-                                                @foreach($stores as $s)
-                                                    <option value="{{ $s->id }}" {{ in_array((int) $s->id, $filterStoreIds ?? [], true) ? 'selected' : '' }}>{{ $s->store_name }}</option>
-                                                @endforeach
-                                            </select>
-                                            <div class="form-text mt-1 mb-0">All stores when none selected.</div>
+                                            <div class="input-group input-group-sm shadow-sm rounded-3 po-filter-multiselect-wrap">
+                                                <span class="input-group-text border-secondary-subtle" id="poFilterStore-addon" aria-hidden="true">
+                                                    <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;">storefront</i>
+                                                </span>
+                                                <select name="store_id[]" id="poFilterStore" multiple class="form-select form-select-sm rounded-0 border-secondary-subtle po-filter-ts-store" data-placeholder="All stores" aria-label="Filter by one or more stores" aria-describedby="poFilterStore-addon">
+                                                    @foreach($stores as $s)
+                                                        <option value="{{ $s->id }}" {{ in_array((int) $s->id, $filterStoreIds ?? [], true) ? 'selected' : '' }}>{{ $s->store_name }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                            <div class="form-text mt-1 mb-0">All stores when none selected. Type to search.</div>
                                         </div>
                                     </div>
                                 </div>
@@ -128,7 +138,7 @@
                                             <span>Print</span>
                                         </button>
                                     </div>
-                                    <p class="mb-0 small text-body-secondary text-center text-md-end ms-md-auto flex-shrink-0" style="max-width: 22rem;">Tip: hold <kbd class="px-2 py-1 bg-body-primary border rounded-2 small fw-normal">Ctrl</kbd> or <kbd class="px-2 py-1 bg-body-primary border rounded-2 small fw-normal">⌘</kbd> while clicking to pick multiple vendors or stores.</p>
+                                    <p class="mb-0 small text-body-secondary text-center text-md-end ms-md-auto flex-shrink-0" style="max-width: 28rem;">Tip: use the search field in each dropdown to find vendors or stores. Remove chips to clear a selection; leave both empty for all.</p>
                                 </div>
                             </div>
                         </div>
@@ -394,6 +404,8 @@
 {{-- Choices.js (Bootstrap-aligned styling below) --}}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
 <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" />
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 
 {{-- Create Purchase Order Modal --}}
 <style>
@@ -602,6 +614,31 @@
 }
 .po-filter-multi + .choices .choices__inner {
     min-height: 2.75rem;
+}
+.po-ux .po-filter-multiselect-wrap .input-group-text {
+    background-color: var(--bs-tertiary-bg, #e9ecef);
+    border-color: var(--bs-border-color);
+}
+.po-ux .po-filter-card {
+    overflow: visible;
+}
+.po-ux .po-filter-card .card-body,
+.po-ux .po-filter-card .card-header {
+    overflow: visible;
+}
+.po-ux .po-filter-multiselect-wrap {
+    overflow: visible;
+}
+.po-ux .po-filter-multiselect-wrap .ts-wrapper {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: 1%;
+}
+.po-ux .po-filter-multiselect-wrap .ts-control {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    min-height: calc(1.5em + 0.5rem + 2px);
+    font-size: 0.875rem;
 }
 .choices__list--multiple .choices__item {
         background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%) !important;
@@ -1082,143 +1119,306 @@
         items: []
     };
 
-    // Initialize Tom Select for a single element
-    function initTomSelect(element, options = {}) {
-        if (!element) return null;
-        if (element.tomselect) {
-            element.tomselect.destroy();
-        }
+    function safeFocus(el) {
+        if (!el || typeof el.focus !== 'function') return;
         try {
-            const defaultOptions = {
-                allowEmptyOption: true,
-                create: false,
-                dropdownParent: 'body',
-                maxOptions: null,
-                closeAfterSelect: true,
-                hideSelected: false,
-                highlight: false, // Disable auto-highlighting first item
-                // Searchable dropdown input (is par hi typing se filter hota hai)
-                controlInput: '<input>',
-                searchField: ['text'],
-                openOnFocus: true,
-                selectOnTab: false, // Changed to false to prevent accidental selection
-                render: {
-                    no_results: function(data, escape) {
-                        return '<div class="no-results">No results found for "' + escape(data.input) + '"</div>';
-                    }
-                },
-                onInitialize: function() {
-                    // Remove any active option on initialize
-                    this.activeOption = null;
-                },
-                onDropdownOpen: function(dropdown) {
-                    // Dropdown ke andar jo actual search input hai usko pakdo
-                    const searchInput = dropdown.querySelector('.ts-dropdown-content input') || this.control_input;
+            el.focus({ preventScroll: true });
+        } catch (e) {
+            try { el.focus(); } catch (e2) {}
+        }
+    }
 
-                    // Kis original <select> par ye dropdown laga hai
-                    const originalSelect = this.input || this.original_input || this.select;
-                    const modalEl = originalSelect && originalSelect.closest ? originalSelect.closest('.modal') : null;
-                    const modalBody = modalEl ? modalEl.querySelector('.modal-body') : null;
-                    const helper = window.MessModalDropdownStability;
-                    this._modalDropdownState = helper && modalEl ? helper.onOpen(modalEl) : null;
-                    if (!this._modalDropdownState && modalBody) this._modalDropdownState = { scrollTop: modalBody.scrollTop };
-                    // Filters (Vendor/Store) + Item Name dropdowns par selection clear rakhni hai
-                    const shouldClearOnOpen =
-                        originalSelect &&
-                        originalSelect.classList &&
-                        (originalSelect.classList.contains('js-filter-select') ||
-                         originalSelect.classList.contains('js-item-select'));
-                    if (shouldClearOnOpen) {
-                        this.clear(true);
-                    }
+    /** Pin Choices dropdown for line items inside modal tables (avoids clipping). */
+    function bindPoItemChoicesFixedDropdown(selectEl, choices, api) {
+        var modalBody = null;
+        var placeScheduled = false;
+        function getDropdownEl() {
+            return choices.dropdown && choices.dropdown.element;
+        }
+        function place() {
+            var dd = getDropdownEl();
+            var wrap = api.wrapper;
+            if (!dd || !wrap || !wrap.classList.contains('is-open')) return;
+            var inner = wrap.querySelector('.choices__inner');
+            if (!inner) return;
+            var r = inner.getBoundingClientRect();
+            var flipped = wrap.classList.contains('is-flipped');
+            var margin = 8;
+            var spaceBelow = window.innerHeight - r.bottom - margin * 2;
+            var spaceAbove = r.top - margin * 2;
+            dd.classList.add('po-item-choices-dropdown-fixed');
+            dd.style.setProperty('position', 'fixed', 'important');
+            dd.style.setProperty('left', Math.max(margin, Math.min(r.left, window.innerWidth - Math.max(r.width, 200) - margin)) + 'px', 'important');
+            dd.style.setProperty('width', Math.max(r.width, 220) + 'px', 'important');
+            dd.style.setProperty('max-height', Math.max(120, flipped ? spaceAbove : spaceBelow) + 'px', 'important');
+            dd.style.setProperty('z-index', '200000', 'important');
+            if (flipped) {
+                dd.style.setProperty('top', 'auto', 'important');
+                dd.style.setProperty('bottom', (window.innerHeight - r.top + 2) + 'px', 'important');
+            } else {
+                dd.style.setProperty('top', (r.bottom + 2) + 'px', 'important');
+                dd.style.setProperty('bottom', 'auto', 'important');
+            }
+        }
+        function onScrollOrResize() {
+            if (placeScheduled) return;
+            placeScheduled = true;
+            requestAnimationFrame(function() {
+                placeScheduled = false;
+                place();
+            });
+        }
+        function onShow() {
+            modalBody = selectEl.closest('.modal-body');
+            requestAnimationFrame(function() {
+                place();
+                requestAnimationFrame(place);
+            });
+            setTimeout(place, 0);
+            setTimeout(place, 80);
+            window.addEventListener('resize', onScrollOrResize, { passive: true });
+            document.addEventListener('scroll', onScrollOrResize, true);
+            if (modalBody) modalBody.addEventListener('scroll', onScrollOrResize, { passive: true });
+        }
+        function onHide() {
+            var dd = getDropdownEl();
+            if (dd) {
+                dd.classList.remove('po-item-choices-dropdown-fixed');
+                ['position', 'left', 'top', 'right', 'bottom', 'width', 'max-height', 'z-index'].forEach(function(p) {
+                    dd.style.removeProperty(p);
+                });
+            }
+            window.removeEventListener('resize', onScrollOrResize);
+            document.removeEventListener('scroll', onScrollOrResize, true);
+            if (modalBody) modalBody.removeEventListener('scroll', onScrollOrResize);
+            modalBody = null;
+        }
+        selectEl.addEventListener('showDropdown', onShow);
+        selectEl.addEventListener('hideDropdown', onHide);
+    }
 
-                    // Clear any previous search text so box is blank
-                    if (searchInput) {
-                        searchInput.value = '';
-                    }
-                    if (typeof this.setTextboxValue === 'function') {
-                        this.setTextboxValue('');
-                    }
-                    if (typeof this.onSearchChange === 'function') {
-                        this.onSearchChange('');
-                    }
-                    if (typeof this.refreshOptions === 'function') {
-                        this.refreshOptions(false);
-                    }
+    function createChoicesInstance(selectEl, settings) {
+        if (!selectEl || typeof window.Choices === 'undefined') return null;
+        if (selectEl.choicesInstance) return selectEl.choicesInstance;
+        settings = settings || {};
+        var isMulti = !!selectEl.multiple;
 
-                    // Cursor ko hamesha input ke starting me le jao
-                    if (searchInput) {
-                        setTimeout(() => {
-                            if (helper && modalEl) {
-                                helper.keepScroll(modalEl, this._modalDropdownState);
-                            } else if (modalBody && this._modalDropdownState && typeof this._modalDropdownState.scrollTop === 'number') {
-                                modalBody.scrollTop = this._modalDropdownState.scrollTop;
-                            }
-                            searchInput.focus();
-                            try {
-                                searchInput.setSelectionRange(0, 0);
-                            } catch (e) {}
-                            searchInput.scrollLeft = 0;
-                        }, 0);
+        var choiceConfig = {
+            allowHTML: false,
+            itemSelectText: '',
+            shouldSort: false,
+            searchEnabled: settings.searchEnabled !== false,
+            searchChoices: settings.searchChoices !== false,
+            searchFloor: typeof settings.searchFloor === 'number' ? settings.searchFloor : 0,
+            searchResultLimit: typeof settings.maxOptions === 'number' ? settings.maxOptions : -1,
+            placeholder: true,
+            placeholderValue: settings.placeholder || (selectEl.getAttribute('data-placeholder') || selectEl.getAttribute('placeholder') || ''),
+            searchPlaceholderValue: '',
+            removeItemButton: isMulti
+        };
+
+        var choices = new window.Choices(selectEl, choiceConfig);
+        var api = {
+            _choices: choices,
+            selectEl: selectEl,
+            input: selectEl,
+            settings: settings,
+            activeOption: null,
+            items: [],
+            wrapper: choices.containerOuter ? choices.containerOuter.element : null,
+            control_input: null,
+            getValue: function() {
+                if (!this.selectEl) return isMulti ? [] : '';
+                if (isMulti) {
+                    try {
+                        var v = this._choices.getValue(true);
+                        if (Array.isArray(v)) return v.map(String).filter(Boolean);
+                        return v ? [String(v)] : [];
+                    } catch (e) {
+                        return Array.from(this.selectEl.selectedOptions).map(function(o) { return o.value; }).filter(Boolean);
                     }
-                },
-                onDropdownClose: function() {
-                    const originalSelect = this.input || this.original_input || this.select;
-                    const modalEl = originalSelect && originalSelect.closest ? originalSelect.closest('.modal') : null;
-                    const modalBody = modalEl ? modalEl.querySelector('.modal-body') : null;
-                    const helper = window.MessModalDropdownStability;
-                    if (helper && modalEl) {
-                        helper.onClose(modalEl, this._modalDropdownState);
-                    } else if (modalBody && this._modalDropdownState && typeof this._modalDropdownState.scrollTop === 'number') {
-                        modalBody.scrollTop = this._modalDropdownState.scrollTop;
-                    }
-                    this._modalDropdownState = null;
-                },
-                onFocus: function() {
-                    // Position cursor at start when field is focused
-                    const input = this.control_input;
+                }
+                return this.selectEl.value || '';
+            },
+            setValue: function(v) {
+                this._choices.removeActiveItems();
+                if (isMulti) {
+                    var arr = Array.isArray(v) ? v : (v !== '' && v !== null && typeof v !== 'undefined' ? [v] : []);
+                    arr.forEach(function(x) {
+                        if (x === '' || x === null || typeof x === 'undefined') return;
+                        try { this._choices.setChoiceByValue(String(x)); } catch (e) {}
+                    }, this);
+                } else {
+                    var value = (v === null || typeof v === 'undefined') ? '' : String(v);
+                    if (value !== '') this._choices.setChoiceByValue(value);
+                }
+                this.syncItems();
+            },
+            clear: function() {
+                this._choices.removeActiveItems();
+                this.syncItems();
+            },
+            addOption: function(opt) {
+                if (!opt) return;
+                var val = (opt.value === null || typeof opt.value === 'undefined') ? '' : String(opt.value);
+                this._choices.setChoices([{ value: val, label: opt.text || val, selected: false, disabled: false }], 'value', 'label', false);
+            },
+            destroy: function() {
+                if (this._choices) this._choices.destroy();
+                if (this.selectEl) {
+                    this.selectEl.choicesInstance = null;
+                    this.selectEl.tomselect = null;
+                }
+            },
+            setTextboxValue: function(v) {
+                if (this.control_input) this.control_input.value = v || '';
+            },
+            onSearchChange: function() {},
+            refreshOptions: function() {},
+            syncItems: function() {
+                var v = this.getValue();
+                if (isMulti) {
+                    this.items = Array.isArray(v) ? v.map(String) : [];
+                } else {
+                    this.items = (v === '' || v === null || typeof v === 'undefined') ? [] : [String(v)];
+                }
+            }
+        };
+        api.control_input = api.wrapper ? api.wrapper.querySelector('input.choices__input--cloned') : null;
+        if (api.wrapper && api.wrapper.classList) api.wrapper.classList.add('ts-wrapper');
+        if (choices.dropdown && choices.dropdown.element && choices.dropdown.element.classList) {
+            choices.dropdown.element.classList.add('ts-dropdown');
+        }
+        api.syncItems();
+
+        selectEl.addEventListener('change', function() { api.syncItems(); });
+        selectEl.addEventListener('showDropdown', function() {
+            if (typeof settings.onDropdownOpen === 'function') {
+                settings.onDropdownOpen.call(api, choices.dropdown ? choices.dropdown.element : null);
+            }
+        });
+        selectEl.addEventListener('hideDropdown', function() {
+            if (typeof settings.onDropdownClose === 'function') {
+                settings.onDropdownClose.call(api, choices.dropdown ? choices.dropdown.element : null);
+            }
+        });
+        if (typeof settings.onInitialize === 'function') settings.onInitialize.call(api);
+
+        if (selectEl.classList.contains('po-item-select')) {
+            bindPoItemChoicesFixedDropdown(selectEl, choices, api);
+        }
+
+        selectEl.choicesInstance = api;
+        selectEl.tomselect = api;
+        return api;
+    }
+
+    function createBlankSearchConfig(extra) {
+        return Object.assign({
+            allowEmptyOption: true,
+            dropdownParent: 'body',
+            searchField: ['text'],
+            controlInput: '<input>',
+            highlight: false,
+            onInitialize: function() {
+                this.activeOption = null;
+            },
+            onDropdownOpen: function(dropdown) {
+                var self = this;
+                var modalEl = self.input && self.input.closest ? self.input.closest('.modal') : null;
+                var modalBody = modalEl ? modalEl.querySelector('.modal-body') : null;
+                var helper = window.MessModalDropdownStability;
+                self._modalDropdownState = helper && modalEl ? helper.onOpen(modalEl) : null;
+                if (!self._modalDropdownState && modalBody) self._modalDropdownState = { scrollTop: modalBody.scrollTop };
+                function clearInputAndCursor() {
+                    var input = (dropdown && dropdown.querySelector('input.choices__input--cloned')) ||
+                        (dropdown && dropdown.querySelector('input')) ||
+                        self.control_input;
+                    if (typeof self.setTextboxValue === 'function') self.setTextboxValue('');
+                    if (typeof self.onSearchChange === 'function') self.onSearchChange('');
+                    if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
                     if (input) {
-                        setTimeout(() => {
-                            input.setSelectionRange(0, 0);
-                            input.scrollLeft = 0;
-                        }, 0);
+                        input.style.display = 'block';
+                        input.style.visibility = 'visible';
+                        input.style.opacity = '1';
+                        input.value = '';
+                        safeFocus(input);
+                        try { input.setSelectionRange(0, 0); } catch (e) {}
+                        input.scrollLeft = 0;
                     }
-                },
-                onType: function(str) {
-                    // Keep default keyboard highlight behavior for arrow navigation
-                    void str;
-                },
-                ...options
-            };
-            return new TomSelect(element, defaultOptions);
-        } catch (error) {
-            console.error('Tom Select initialization failed:', error);
-            return null;
-        }
+                    if (helper && modalEl) {
+                        helper.keepScroll(modalEl, self._modalDropdownState);
+                    } else if (modalBody && self._modalDropdownState && typeof self._modalDropdownState.scrollTop === 'number') {
+                        modalBody.scrollTop = self._modalDropdownState.scrollTop;
+                    }
+                }
+                if (self.settings && self.settings.clearOnOpen) {
+                    self.clear(true);
+                }
+                clearInputAndCursor();
+                setTimeout(clearInputAndCursor, 0);
+                setTimeout(clearInputAndCursor, 50);
+                setTimeout(clearInputAndCursor, 100);
+                if (dropdown) {
+                    setTimeout(function() {
+                        var opts = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"], .choices__item--selectable[aria-selected="true"]');
+                        opts.forEach(function(opt) {
+                            opt.classList.remove('active');
+                            opt.classList.remove('selected');
+                            opt.setAttribute('aria-selected', 'false');
+                        });
+                    }, 0);
+                }
+            },
+            onDropdownClose: function() {
+                var self = this;
+                var modalEl = self.input && self.input.closest ? self.input.closest('.modal') : null;
+                var modalBody = modalEl ? modalEl.querySelector('.modal-body') : null;
+                var helper = window.MessModalDropdownStability;
+                if (helper && modalEl) {
+                    helper.onClose(modalEl, self._modalDropdownState);
+                } else if (modalBody && self._modalDropdownState && typeof self._modalDropdownState.scrollTop === 'number') {
+                    modalBody.scrollTop = self._modalDropdownState.scrollTop;
+                }
+                self._modalDropdownState = null;
+            }
+        }, extra || {});
     }
 
-    // Destroy Tom Select instance
-    function destroyTomSelect(element) {
-        if (element && element.tomselect) {
-            element.tomselect.destroy();
+    function initChoicesSingle(selectEl, opts) {
+        opts = opts || {};
+        if (!selectEl || typeof window.Choices === 'undefined') return null;
+        if (selectEl.tomselect) {
+            try { selectEl.tomselect.destroy(); } catch (e) {}
         }
+        var base = createBlankSearchConfig({
+            placeholder: opts.placeholder || 'Select',
+            maxOptions: opts.maxOptions,
+            clearOnOpen: opts.clearOnOpen === true
+        });
+        return createChoicesInstance(selectEl, Object.assign(base, opts));
     }
 
-    // Initialize filter dropdowns
+    // List filters: Tom Select multiselect + search (matches Item Report / store multiselect pattern)
     function initFilterDropdowns() {
-        var filterVendor = document.querySelector('form[method="GET"] select[name="vendor_id[]"]');
-        var filterStore = document.querySelector('form[method="GET"] select[name="store_id[]"]');
-        if (filterVendor) {
-            choicesInstances.filter.vendor = initChoicesSingle(filterVendor, {
-                placeholder: 'All vendors',
-                clearOnOpen: false
-            });
+        var filterVendor = document.getElementById('poFilterVendor');
+        var filterStore = document.getElementById('poFilterStore');
+        if (typeof window.TomSelect === 'undefined') return;
+        var tsOpts = {
+            dropdownParent: 'body',
+            maxItems: null,
+            maxOptions: 500,
+            plugins: ['remove_button', 'dropdown_input'],
+            sortField: { field: 'text', direction: 'asc' },
+            closeAfterSelect: false
+        };
+        if (filterVendor && !filterVendor.tomselect) {
+            var phV = filterVendor.getAttribute('data-placeholder') || 'All vendors';
+            choicesInstances.filter.vendor = new TomSelect(filterVendor, Object.assign({}, tsOpts, { placeholder: phV }));
         }
-        if (filterStore) {
-            choicesInstances.filter.store = initChoicesSingle(filterStore, {
-                placeholder: 'All stores',
-                clearOnOpen: false
-            });
+        if (filterStore && !filterStore.tomselect) {
+            var phS = filterStore.getAttribute('data-placeholder') || 'All stores';
+            choicesInstances.filter.store = new TomSelect(filterStore, Object.assign({}, tsOpts, { placeholder: phS }));
         }
     }
 
@@ -2358,7 +2558,6 @@
 
     // Initialize Choices on page load
     document.addEventListener('DOMContentLoaded', function() {
-        initPoModalChoicesOpenClass();
         // Initialize filter dropdowns only (always visible)
         initFilterDropdowns();
         
