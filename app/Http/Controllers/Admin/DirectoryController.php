@@ -16,9 +16,9 @@ class DirectoryController extends Controller
     {
         $search = trim((string) $request->input('search', ''));
         $sort = (string) $request->input('sort', 'name_asc');
-        $perPage = (int) $request->input('per_page', 50);
+        $perPage = (int) $request->input('per_page', 10);
         if (!in_array($perPage, [25, 50, 100], true)) {
-            $perPage = 50;
+            $perPage = 10;
         }
         $export = (string) $request->input('export', '');
         $sortMap = [
@@ -70,11 +70,9 @@ class DirectoryController extends Controller
             return $this->streamEmployeesExport($employeesQuery->cursor(), $export);
         }
 
-        $employees = $employeesQuery
-            ->paginate($perPage)
-            ->withQueryString();
+        $employees = $employeesQuery->get();
 
-        return view('admin.directory.lbsnaa', compact('employees', 'search', 'sort', 'perPage'));
+        return view('admin.directory.lbsnaa', compact('employees'));
     }
 
     public function ot(Request $request)
@@ -89,9 +87,9 @@ class DirectoryController extends Controller
         $selectedCourseId = (int) $request->input('course_id', 0);
         $search = trim((string) $request->input('search', ''));
         $sort = (string) $request->input('sort', 'name_asc');
-        $perPage = (int) $request->input('per_page', 50);
+        $perPage = (int) $request->input('per_page', 10);
         if (!in_array($perPage, [25, 50, 100], true)) {
-            $perPage = 50;
+            $perPage = 10;
         }
         $export = (string) $request->input('export', '');
         $sortMap = [

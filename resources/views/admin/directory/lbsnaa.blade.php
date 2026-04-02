@@ -8,49 +8,48 @@
 
     <div class="card border-0 shadow-sm">
         <div class="card-body">
-            <form method="GET" action="{{ route('admin.directory.lbsnaa') }}" class="mb-3">
-                <div class="border rounded-3 p-3 bg-white">
-                    <div class="row g-2 align-items-end lbsnaa-toolbar-row">
-                        <div class="col-12 col-lg-6">
-                            <label for="lbsnaaSearchInput" class="form-label mb-1 fw-semibold">Search</label>
-                            <input
-                                id="lbsnaaSearchInput"
-                                type="text"
-                                name="search"
-                                value="{{ $search ?? '' }}"
-                                class="form-control"
-                                placeholder="Name, email, mobile, designation"
-                                autocomplete="off"
-                            >
-                        </div>
-                        <div class="col-6 col-lg-2 d-grid">
-                            <button type="submit" class="btn btn-primary">Apply</button>
-                        </div>
-                        <div class="col-6 col-lg-1 d-grid">
-                            <a href="{{ route('admin.directory.lbsnaa') }}" class="btn btn-outline-secondary">Reset</a>
-                        </div>
-                        <div class="col-6 col-lg-1 d-grid">
-                            <button type="submit" name="export" value="csv" class="btn btn-outline-success btn-sm">CSV</button>
-                        </div>
-                        <div class="col-6 col-lg-1 d-grid">
-                            <button type="submit" name="export" value="excel" class="btn btn-outline-success btn-sm">Excel</button>
-                        </div>
+            <div class="border rounded-3 p-3 bg-white mb-3">
+                <div class="row g-2 align-items-end">
+                    <div class="col-12 col-md-6 col-lg-4">
+                        <label for="quickSearch" class="form-label mb-1 fw-semibold">Quick Search</label>
+                        <input
+                            id="quickSearch"
+                            type="text"
+                            class="form-control"
+                            placeholder="Search name, email, mobile, designation..."
+                            autocomplete="off"
+                        >
+                    </div>
+                    <div class="col-6 col-md-3 col-lg-2">
+                        <button type="button" id="clearSearch" class="btn btn-outline-secondary w-100">
+                            <i class="ti ti-refresh"></i> Clear
+                        </button>
+                    </div>
+                    <div class="col-auto ms-auto">
+                        <form method="GET" action="{{ route('admin.directory.lbsnaa') }}" class="d-inline">
+                            <button type="submit" name="export" value="csv" class="btn btn-outline-success btn-sm">
+                                <i class="ti ti-file-spreadsheet"></i> CSV
+                            </button>
+                            <button type="submit" name="export" value="excel" class="btn btn-outline-success btn-sm ms-1">
+                                <i class="ti ti-file-excel"></i> Excel
+                            </button>
+                        </form>
                     </div>
                 </div>
-            </form>
-            <div class="table-responsive lbsnaa-directory-scroll">
-                <table class="table align-middle datatable" id="lbsnaaDirectoryTable" data-export="false" data-responsive="false">
+            </div>
+            <div class="table-responsive lbsnaa-table-wrapper">
+                <table class="table align-middle" id="lbsnaaDirectoryTable">
                     <thead>
                         <tr>
                             <th>S.No.</th>
                             <th>Name</th>
-                            <th>Designation Name</th>
-                            <th>Section Name</th>
+                            <th>Designation</th>
+                            <th>Section</th>
                             <th>Address</th>
-                            <th>Office Extension</th>
-                            <th>Mobile No.</th>
-                            <th>Residence No.</th>
-                            <th>Email ID</th>
+                            <th>Office Ext.</th>
+                            <th>Mobile</th>
+                            <th>Residence</th>
+                            <th>Email</th>
                             <th>Photo</th>
                         </tr>
                     </thead>
@@ -61,7 +60,7 @@
                                 $email = $employee->officalemail ?: $employee->email;
                             @endphp
                             <tr>
-                                <td>{{ ($employees->firstItem() ?? 0) + $index }}</td>
+                                <td>{{ $index + 1 }}</td>
                                 <td>{{ $name ?: '-' }}</td>
                                 <td>{{ $employee->designation_name ?: '-' }}</td>
                                 <td>{{ $employee->department_name ?: '-' }}</td>
@@ -88,22 +87,6 @@
 
 @push('styles')
 <style>
-    .lbsnaa-toolbar-row .btn {
-        white-space: nowrap;
-    }
-    @media (min-width: 992px) {
-        .lbsnaa-toolbar-row {
-            flex-wrap: nowrap;
-        }
-        .lbsnaa-toolbar-row > [class*="col-lg-"] {
-            min-width: 0;
-        }
-    }
-    @media (max-width: 991.98px) {
-        .lbsnaa-toolbar-row .btn {
-            width: 100%;
-        }
-    }
     #lbsnaaDirectoryTable thead th {
         background: #2f7fc0;
         color: #fff;
@@ -114,6 +97,7 @@
     #lbsnaaDirectoryTable tbody td {
         font-size: 12px;
         vertical-align: middle;
+        white-space: nowrap;
     }
     .directory-photo {
         width: 56px;
@@ -121,30 +105,102 @@
         object-fit: cover;
         border-radius: 6px;
     }
+    div.dataTables_wrapper div.dataTables_length select {
+        width: auto;
+        display: inline-block;
+    }
+    
+    /* Responsive scroll for small screens */
     @media (max-width: 768px) {
-        .lbsnaa-directory-scroll,
-        .lbsnaa-directory-scroll.table-responsive {
-            max-height: 65vh;
+        .lbsnaa-table-wrapper {
+            max-height: 70vh;
+            overflow-x: auto !important;
             overflow-y: auto !important;
-            overflow-x: hidden !important;
             -webkit-overflow-scrolling: touch;
         }
+        
         #lbsnaaDirectoryTable {
-            table-layout: fixed !important;
-            width: 100% !important;
-            margin-bottom: 0 !important;
+            min-width: 1200px;
+            margin-bottom: 0;
         }
+        
         #lbsnaaDirectoryTable thead th,
         #lbsnaaDirectoryTable tbody td {
-            white-space: normal !important;
-            word-break: break-word !important;
-            overflow-wrap: anywhere !important;
-            hyphens: auto;
             font-size: 11px;
-            padding: 0.45rem;
+            padding: 0.5rem;
+        }
+        
+        .directory-photo {
+            width: 48px;
+            height: 48px;
+        }
+    }
+    
+    @media (max-width: 576px) {
+        #lbsnaaDirectoryTable thead th,
+        #lbsnaaDirectoryTable tbody td {
+            font-size: 10px;
+            padding: 0.4rem;
+        }
+        
+        .directory-photo {
+            width: 40px;
+            height: 40px;
         }
     }
 </style>
+@endpush
+
+@push('scripts')
+<script>
+$(document).ready(function() {
+    var table = $('#lbsnaaDirectoryTable').DataTable({
+        responsive: false,
+        scrollX: true,
+        scrollCollapse: true,
+        pageLength: 10,
+        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
+        order: [[1, 'asc']], // Sort by Name
+        language: {
+            search: "Search:",
+            lengthMenu: "Show _MENU_ entries",
+            info: "Showing _START_ to _END_ of _TOTAL_ entries",
+            infoEmpty: "Showing 0 to 0 of 0 entries",
+            infoFiltered: "(filtered from _MAX_ total entries)",
+            paginate: {
+                first: "First",
+                last: "Last",
+                next: "Next",
+                previous: "Previous"
+            }
+        },
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rtip',
+        columnDefs: [
+            {
+                targets: 0, // S.No. column
+                orderable: true,
+                searchable: false
+            },
+            {
+                targets: 9, // Photo column
+                orderable: false,
+                searchable: false
+            }
+        ]
+    });
+
+    // Quick search functionality
+    $('#quickSearch').on('keyup', function() {
+        table.search(this.value).draw();
+    });
+
+    // Clear search button
+    $('#clearSearch').on('click', function() {
+        $('#quickSearch').val('');
+        table.search('').draw();
+    });
+});
+</script>
 @endpush
 
 @endsection
