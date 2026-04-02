@@ -609,6 +609,9 @@ class ReportController extends Controller
      */
     public function stockPurchaseDetailsPdf(Request $request)
     {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(120);
+
         $queryData = $this->buildStockPurchaseDetailsQuery($request, forExport: true);
 
         $data = [
