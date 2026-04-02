@@ -88,10 +88,10 @@
                         </small>
                     </div>
                     <div class="col-md-4">
-                        <label for="meter_reading_date" class="form-label">Meter Reading Date <span class="text-danger">*</span></label>
-                        <input type="date" class="form-control" id="meter_reading_date" name="meter_reading_date" placeholder="Select date" value="{{ old('reading_current_date', $meterReadingDateDefault) }}" required>
+                        <label for="meter_reading_date" class="form-label">Meter Reading Date</label>
+                        <input type="date" class="form-control" id="meter_reading_date" name="meter_reading_date" placeholder="Select date" value="{{ old('reading_current_date', $meterReadingDateDefault) }}">
                         <small class="text-muted">
-                            <i class="bi bi-info-circle"></i>
+                            <i class="bi bi-info-circle"></i> Optional for Load Data; required when you click Save.
                         </small>
                     </div>
                 </div>
@@ -328,12 +328,6 @@ $(document).ready(function() {
             $('#bill_month').trigger('focus');
             return;
         }
-        const meterReadingDateValLoad = ($('#meter_reading_date').val() || '').trim();
-        if (!meterReadingDateValLoad) {
-            alert('Please select Meter Reading Date.');
-            $('#meter_reading_date').trigger('focus');
-            return;
-        }
         const params = {
             bill_month: billMonth,
             bill_year: billYear,
@@ -416,7 +410,7 @@ $(document).ready(function() {
         const meterReadingDateSubmit = ($('#meter_reading_date').val() || '').trim();
         if (!meterReadingDateSubmit) {
             e.preventDefault();
-            alert('Please select Meter Reading Date.');
+            alert('Meter reading date is mandatory. Please select Meter Reading Date before saving.');
             $('#meter_reading_date').trigger('focus');
             return;
         }
