@@ -1,7 +1,40 @@
 @extends('admin.layouts.master')
 @section('title', 'Stock Purchase Details Report')
 @section('setup_content')
+@php
+    $selectedVendorIds = $selectedVendors->pluck('id')->map(fn ($id) => (int) $id)->all();
+    $selectedStoreIds = $selectedStores->pluck('id')->map(fn ($id) => (int) $id)->all();
+    $stockPurchasePrintDateRange = 'Stock Purchase Details Report Between '
+        . date('d-F-Y', strtotime($fromDate))
+        . ' To '
+        . date('d-F-Y', strtotime($toDate));
+    $stockPurchasePrintVendorLine = $selectedVendors->isEmpty()
+        ? 'All Vendors'
+        : $selectedVendors->pluck('name')->implode(', ');
+    $stockPurchasePrintVendorDetailRows = $selectedVendors->isEmpty()
+        ? []
+        : $selectedVendors->map(function ($v) {
+            return [
+                'name' => $v->name ?? '—',
+                'contact_person' => $v->contact_person ?? '—',
+                'phone' => $v->phone ?? '—',
+                'email' => $v->email ?? '—',
+                'address' => $v->address ?? '—',
+            ];
+        })->values()->all();
+    $stockPurchasePrintStoreDetails = $selectedStores->isEmpty()
+        ? 'All Stores'
+        : $selectedStores->pluck('store_name')->implode(', ');
+    $stockPurchasePrintConfigJson = json_encode([
+        'dateRange' => $stockPurchasePrintDateRange,
+        'vendorLine' => $stockPurchasePrintVendorLine,
+        'vendorDetailRows' => $stockPurchasePrintVendorDetailRows,
+        'storeDetails' => $stockPurchasePrintStoreDetails,
+    ], JSON_THROW_ON_ERROR);
+@endphp
 <div class="container-fluid stock-purchase-report">
+    <div id="stock-purchase-print-config" class="d-none" hidden
+         data-config="{{ htmlspecialchars($stockPurchasePrintConfigJson, ENT_QUOTES, 'UTF-8') }}"></div>
     <x-breadcrum title="Stock Purchase Details Report"></x-breadcrum>
     <!-- Filters Section (Top - same pattern as other report pages) -->
 
@@ -25,19 +58,17 @@
                     </div>
                     <div class="col-md-3">
                         <label class="form-label small fw-semibold">Select Vendor Name</label>
-                        <select name="vendor_id" class="form-select form-select-sm rounded-1 choices-select" data-placeholder="All Vendors">
-                            <option value="">All Vendors</option>
+                        <select name="vendor_id[]" class="form-select form-select-sm rounded-1 choices-select" multiple data-placeholder="All Vendors">
                             @foreach($vendors as $vendor)
-                                <option value="{{ $vendor->id }}" {{ request('vendor_id') == $vendor->id ? 'selected' : '' }}>{{ $vendor->name }}</option>
+                                <option value="{{ $vendor->id }}" @selected(in_array((int) $vendor->id, $selectedVendorIds, true))>{{ $vendor->name }}</option>
                             @endforeach
                         </select>
                     </div>
                     <div class="col-md-3">
                         <label class="form-label small fw-semibold">Select Store Name</label>
-                        <select name="store_id" class="form-select form-select-sm rounded-1 choices-select" data-placeholder="All Stores">
-                            <option value="">All Stores</option>
+                        <select name="store_id[]" class="form-select form-select-sm rounded-1 choices-select" multiple data-placeholder="All Stores">
                             @foreach($stores as $store)
-                                <option value="{{ $store->id }}" {{ request('store_id') == $store->id ? 'selected' : '' }}>{{ $store->store_name }}</option>
+                                <option value="{{ $store->id }}" @selected(in_array((int) $store->id, $selectedStoreIds, true))>{{ $store->store_name }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -85,7 +116,11 @@
                         </div>
                         <div class="report-vendor-name fw-semibold mb-0 mt-2 text-center">
                             <span class="text-muted">Vendor:</span>
-                            <span class="ms-1">{{ $selectedVendor ? $selectedVendor->name : 'All Vendors' }}</span>
+                            <span class="ms-1">{{ $selectedVendors->isEmpty() ? 'All Vendors' : $selectedVendors->pluck('name')->implode(', ') }}</span>
+                        </div>
+                        <div class="report-store-name fw-semibold mb-0 mt-1 text-center small">
+                            <span class="text-muted">Store:</span>
+                            <span class="ms-1">{{ $selectedStores->isEmpty() ? 'All Stores' : $selectedStores->pluck('store_name')->implode(', ') }}</span>
                         </div>
                     </div>
 
@@ -185,9 +220,9 @@
 
                     new TomSelect(el, {
                         placeholder: placeholder,
-                        allowEmptyOption: true,
+                        maxItems: null,
                         maxOptions: 500,
-                        plugins: ['dropdown_input'],
+                        plugins: ['remove_button', 'dropdown_input'],
                         sortField: {
                             field: 'text',
                             direction: 'asc'
@@ -200,11 +235,12 @@
     </script>
 <script>
 function printStockPurchaseTable() {
-    var table = document.querySelector('.stock-purchase-report .report-content table');
-    if (!table) {
+    var tableEl = document.querySelector('.stock-purchase-report .report-content table');
+    if (!tableEl) {
         window.print();
         return;
     }
+    var table = tableEl.cloneNode(true);
 
     var printWindow = window.open('', '_blank');
     if (!printWindow) {
@@ -213,18 +249,44 @@ function printStockPurchaseTable() {
     }
 
     var title = 'Stock Purchase Details';
-    var dateRange = 'Stock Purchase Details Report Between {{ date('d-F-Y', strtotime($fromDate)) }} To {{ date('d-F-Y', strtotime($toDate)) }}';
-    var vendorDetails = {!! json_encode(
-        $selectedVendor
-            ? trim(implode(' | ', array_filter([
-                'Name: ' . $selectedVendor->name,
-                !empty($selectedVendor->contact_person) ? 'Contact: ' . $selectedVendor->contact_person : null,
-                !empty($selectedVendor->phone) ? 'Phone: ' . $selectedVendor->phone : null,
-                !empty($selectedVendor->email) ? 'Email: ' . $selectedVendor->email : null,
-                !empty($selectedVendor->address) ? 'Address: ' . $selectedVendor->address : null,
-            ])))
-            : 'All Vendors'
-    ) !!};
+    var cfgEl = document.getElementById('stock-purchase-print-config');
+    var printCfg = {};
+    try {
+        printCfg = cfgEl && cfgEl.getAttribute('data-config')
+            ? JSON.parse(cfgEl.getAttribute('data-config'))
+            : {};
+    } catch (e) {
+        printCfg = {};
+    }
+    var dateRange = printCfg.dateRange || '';
+    var vendorLine = printCfg.vendorLine || '';
+    var vendorDetailRows = Array.isArray(printCfg.vendorDetailRows) ? printCfg.vendorDetailRows : [];
+    var storeDetails = printCfg.storeDetails || '';
+    var emblemSrc = 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
+    var lbsnaaLogoSrc = 'https://www.lbsnaa.gov.in/admin_assets/images/logo.png';
+
+    var vendorDetailsHtml = vendorDetailRows.length === 0
+        ? '<div class="meta-line"><strong>Vendor Details:</strong> All Vendors</div>'
+        : (
+            '<div class="meta-line"><strong>Vendor Details:</strong></div>' +
+            '<table class="vendor-detail-table">' +
+            '<thead><tr><th>Vendor</th><th>Contact</th><th>Phone</th><th>Email</th><th>Address</th></tr></thead>' +
+            '<tbody>' +
+            vendorDetailRows.map(function (row) {
+                return '<tr>' +
+                    '<td>' + (row.name || '—') + '</td>' +
+                    '<td>' + (row.contact_person || '—') + '</td>' +
+                    '<td>' + (row.phone || '—') + '</td>' +
+                    '<td>' + (row.email || '—') + '</td>' +
+                    '<td>' + (row.address || '—') + '</td>' +
+                '</tr>';
+            }).join('') +
+            '</tbody></table>'
+        );
+
+    /* Match PDF: same class on cloned table for styling */
+    table.classList.add('stock-purchase-data');
+    table.classList.remove('table', 'text-nowrap', 'align-middle', 'mb-0', 'stock-purchase-table');
 
     printWindow.document.open();
     printWindow.document.write(`<!doctype html>
@@ -233,96 +295,201 @@ function printStockPurchaseTable() {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>${title} - OFFICER'S MESS LBSNAA MUSSOORIE</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
     <style>
         body {
             font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
             font-size: 11px;
+            margin: 0;
+            padding: 12px 16px;
+            color: #222;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
-        .lbsnaa-header {
-            border-bottom: 2px solid #004a93;
-            padding-bottom: .75rem;
-            margin-bottom: 1rem;
+        .lbsnaa-header-wrap {
+            border-bottom: 3px solid #003366;
+            margin-bottom: 14px;
+            padding: 6px 0 12px;
         }
-        .lbsnaa-header .brand-line-1 {
-            font-size: 0.85rem;
+        .branding-table { width: 100%; border-collapse: collapse; margin: 0; }
+        .branding-table td { border: 0; padding: 0; vertical-align: middle; }
+        .branding-left-cell { width: 62%; vertical-align: middle; }
+        .branding-left-cell .header-img-left { float: left; margin: 2px 12px 6px 0; }
+        .branding-left-cell .branding-text-block { overflow: hidden; line-height: 1.28; padding-top: 1px; }
+        .branding-left-clear { clear: both; height: 0; line-height: 0; font-size: 0; }
+        .branding-right-cell { width: 38%; vertical-align: middle; text-align: right; }
+        .branding-right-cluster { display: inline-block; text-align: left; vertical-align: middle; max-width: 100%; }
+        .branding-right-cluster .header-img-right-seal { float: left; margin: 0 10px 0 0; }
+        .branding-right-cluster .branding-bilingual { overflow: hidden; max-width: 175px; line-height: 1.22; }
+        .branding-right-clear { clear: both; height: 0; line-height: 0; font-size: 0; }
+        .lbsnaa-brand-line-1 {
+            font-size: 9px;
+            color: #1d70b8;
             text-transform: uppercase;
-            letter-spacing: 0.06em;
-            color: #004a93;
-        }
-        .lbsnaa-header .brand-line-2 {
-            font-size: 1.1rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            color: #222;
-        }
-        .lbsnaa-header .brand-line-3 {
-            font-size: 0.8rem;
-            color: #555;
-        }
-        .report-meta {
-            font-size: 0.8rem;
-            margin-bottom: .75rem;
-        }
-        .report-meta span {
-            display: inline-block;
-            margin-right: 1.5rem;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        thead th {
-            background: #f8f9fa;
+            letter-spacing: 0.07em;
             font-weight: 600;
         }
-        th, td {
-            padding: 4px 6px;
+        .lbsnaa-brand-line-2 {
+            font-size: 14px;
+            color: #000000;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-top: 4px;
+            letter-spacing: 0.02em;
+        }
+        .lbsnaa-brand-line-3 {
+            font-size: 10px;
+            color: #505a5f;
+            margin-top: 4px;
+            font-weight: normal;
+        }
+        .header-img-left { width: 46px; height: 46px; object-fit: contain; display: block; }
+        .header-img-right-seal { width: 48px; height: 48px; object-fit: contain; display: block; }
+        .branding-hindi { font-size: 9px; color: #7b2d26; font-weight: 600; }
+        .branding-en-side { font-size: 8px; color: #7b2d26; margin-top: 4px; font-weight: normal; }
+        .report-header-block {
+            text-align: center;
+            margin-bottom: 14px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .report-title-center {
+            font-size: 15px;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin: 0 0 8px;
+            color: #212529;
+        }
+        .report-date-bar {
+            background: #003366;
+            color: #fff;
+            padding: 8px 12px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 10px;
+            display: inline-block;
+        }
+        .report-vendor-name, .report-store-name {
+            font-size: 10px;
+            font-weight: 600;
+            margin-top: 8px;
+            color: #212529;
+        }
+        .report-store-name { font-size: 9px; margin-top: 4px; }
+        .text-muted { color: #6c757d; font-weight: 600; }
+        .report-meta-print { font-size: 9px; margin: 10px 0 12px; line-height: 1.4; }
+        .report-meta-print .meta-line { margin-bottom: 4px; word-wrap: break-word; }
+        .vendor-detail-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 4px;
+            font-size: 8.5px;
+        }
+        .vendor-detail-table th,
+        .vendor-detail-table td {
             border: 1px solid #dee2e6;
+            padding: 3px 5px;
+            text-align: left;
+            vertical-align: top;
+            word-break: break-word;
         }
-        /* Allow wrapping so wide content doesn't get cut off */
-        .table.text-nowrap,
-        .text-nowrap {
-            white-space: normal !important;
+        .vendor-detail-table th {
+            background: #f1f3f5;
+            font-weight: 600;
         }
-        /* Repeat header on each printed page */
+        table.stock-purchase-data {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 9px;
+            margin-bottom: 10px;
+        }
+        table.stock-purchase-data th,
+        table.stock-purchase-data td {
+            padding: 5px 8px;
+            border: 1px solid #dee2e6;
+            vertical-align: middle;
+            white-space: normal;
+        }
+        table.stock-purchase-data thead th {
+            background: #d3d6d9;
+            font-weight: 600;
+            text-align: left;
+        }
+        table.stock-purchase-data thead th.text-end { text-align: right; }
+        table.stock-purchase-data .text-center { text-align: center; }
+        table.stock-purchase-data .text-end { text-align: right; }
+        table.stock-purchase-data .bill-header-row td,
+        table.stock-purchase-data td.bill-header {
+            background: #5a6268;
+            color: #fff;
+            font-weight: 700;
+            border-color: #5a6268;
+        }
+        table.stock-purchase-data .bill-total-row td {
+            font-weight: 700;
+            background: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+        }
+        table.stock-purchase-data .grand-total-row td {
+            background: #004a93;
+            color: #fff;
+            font-weight: 700;
+            border-color: #004a93;
+        }
         thead { display: table-header-group; }
         tfoot { display: table-footer-group; }
         @media print {
-            body { margin: 0.5in; }
+            body { margin: 0.5in; padding: 0; }
         }
     </style>
 </head>
 <body>
-    <div class="container-fluid">
-        <div class="row align-items-center lbsnaa-header">
-            <div class="col-auto d-none d-print-block">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg" alt="India Emblem" height="48">
-            </div>
-            <div class="col">
-                <div class="brand-line-1">Government of India</div>
-                <div class="brand-line-2">OFFICER'S MESS LBSNAA MUSSOORIE</div>
-                <div class="brand-line-3">Lal Bahadur Shastri National Academy of Administration</div>
-            </div>
-            <div class="col-auto d-none d-print-block">
-                <img src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png" alt="LBSNAA Logo" height="48">
-            </div>
-        </div>
+    <div class="lbsnaa-header-wrap">
+        <table class="branding-table">
+            <tr>
+                <td class="branding-left-cell">
+                    <img src="${emblemSrc}" alt="Emblem of India" class="header-img-left">
+                    <div class="branding-text-block">
+                        <div class="lbsnaa-brand-line-1">Government of India</div>
+                        <div class="lbsnaa-brand-line-2">OFFICER'S MESS LBSNAA MUSSOORIE</div>
+                        <div class="lbsnaa-brand-line-3">Lal Bahadur Shastri National Academy of Administration</div>
+                    </div>
+                    <div class="branding-left-clear"></div>
+                </td>
+                <td class="branding-right-cell">
+                    <div class="branding-right-cluster">
+                        <img src="${lbsnaaLogoSrc}" alt="LBSNAA" class="header-img-right-seal">
+                        <div class="branding-bilingual">
+                            <div class="branding-hindi" lang="hi">लाल बहादुर शास्त्री राष्ट्रीय प्रशासन अकादमी</div>
+                            <div class="branding-en-side" lang="en">Lal Bahadur Shastri National Academy of Administration</div>
+                        </div>
+                        <div class="branding-right-clear"></div>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
 
-        <div class="mb-2">
-            <h5 class="mb-1">${title}</h5>
-            <div class="report-meta">
-                <span><strong>Period:</strong> ${dateRange}</span>
-                <span><strong>Vendor Details:</strong> ${vendorDetails}</span>
-                <span><strong>Printed on:</strong> ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}</span>
-            </div>
+    <div class="report-header-block">
+        <h1 class="report-title-center">${title}</h1>
+        <div class="report-date-bar">${dateRange}</div>
+        <div class="report-vendor-name">
+            <span class="text-muted">Vendor:</span>
+            <span>${vendorLine}</span>
         </div>
+        <div class="report-store-name">
+            <span class="text-muted">Store:</span>
+            <span>${storeDetails}</span>
+        </div>
+    </div>
 
-        <div class="table-responsive">
-            ${table.outerHTML}
-        </div>
+    <div class="report-meta-print">
+        ${vendorDetailsHtml}
+        <div class="meta-line"><strong>Store:</strong> ${storeDetails}</div>
+        <div class="meta-line"><strong>Printed on:</strong> ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}</div>
+    </div>
+
+    <div class="table-responsive">
+        ${table.outerHTML}
     </div>
 
     <script>

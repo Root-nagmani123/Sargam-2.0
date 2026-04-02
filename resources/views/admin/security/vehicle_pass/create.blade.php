@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Generate New Vehicle Card Pass - Sargam')
-@section('setup_content')
+@section('content')
 <div class="container-fluid vehicle-pass-create-page">
     <x-breadcrum title="Generate New Vehicle Card Pass"></x-breadcrum>
 

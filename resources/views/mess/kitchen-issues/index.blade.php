@@ -40,19 +40,29 @@
                     <div class="row g-3">
                         <div class="col-md-2 col-sm-6">
                             <label class="form-label small text-muted mb-1">Status</label>
-                            <select name="status" id="filter_status" class="form-select form-select-sm">
-                                <option value="">All</option>
-                                <option value="0" {{ request('status') === '0' ? 'selected' : '' }}>Pending</option>
-                                <option value="2" {{ request('status') == '2' ? 'selected' : '' }}>Approved</option>
-                                <option value="4" {{ request('status') == '4' ? 'selected' : '' }}>Completed</option>
+                            <select name="status[]" id="filter_status" class="form-select form-select-sm" multiple>
+                                @php
+                                    $selectedStatuses = request('status', []);
+                                    if (!is_array($selectedStatuses)) {
+                                        $selectedStatuses = $selectedStatuses !== null ? [$selectedStatuses] : [];
+                                    }
+                                @endphp
+                                <option value="0" {{ in_array('0', $selectedStatuses) || in_array(0, $selectedStatuses) ? 'selected' : '' }}>Pending</option>
+                                <option value="2" {{ in_array('2', $selectedStatuses) || in_array(2, $selectedStatuses) ? 'selected' : '' }}>Approved</option>
+                                <option value="4" {{ in_array('4', $selectedStatuses) || in_array(4, $selectedStatuses) ? 'selected' : '' }}>Completed</option>
                             </select>
                         </div>
                         <div class="col-md-2 col-sm-6">
                             <label class="form-label small text-muted mb-1">Store</label>
-                            <select name="store" id="filter_store" class="form-select form-select-sm">
-                                <option value="">All</option>
+                            <select name="store[]" id="filter_store" class="form-select form-select-sm" multiple>
+                                @php
+                                    $selectedStores = request('store', []);
+                                    if (!is_array($selectedStores)) {
+                                        $selectedStores = $selectedStores !== null ? [$selectedStores] : [];
+                                    }
+                                @endphp
                                 @foreach($stores as $store)
-                                    <option value="{{ $store['id'] }}" {{ request('store') == $store['id'] ? 'selected' : '' }}>{{ $store['store_name'] }}</option>
+                                    <option value="{{ $store['id'] }}" {{ in_array($store['id'], $selectedStores) ? 'selected' : '' }}>{{ $store['store_name'] }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -211,6 +221,7 @@
         'infoLabel' => 'selling vouchers',
         'searchDelay' => 0
     ])
+    @include('mess.partials.modal-dropdown-stability')
 </div>
 
 {{-- Choices.js (Bootstrap-aligned styling below) --}}
@@ -219,10 +230,59 @@
 
 {{-- Add Selling Voucher Modal (same UI/UX as Create Purchase Order) --}}
 <style>
-#addSellingVoucherModal .modal-dialog { max-height: calc(100vh - 2rem); margin: 1rem auto; }
-#addSellingVoucherModal .modal-content { max-height: calc(100vh - 2rem); display: flex; flex-direction: column; }
-#addSellingVoucherModal .modal-body { overflow-y: auto; max-height: calc(100vh - 10rem); position: relative; z-index: 2; }
-#editSellingVoucherModal .modal-body { overflow-y: auto; max-height: calc(100vh - 10rem); position: relative; z-index: 2; }
+/* Filter dropdowns: Choices.js styling */
+#filter_status + .choices,
+#filter_store + .choices {
+    margin-bottom: 0;
+}
+#filter_status + .choices .choices__inner,
+#filter_store + .choices .choices__inner {
+    min-height: calc(1.5em + 0.5rem + 2px);
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    border: 1px solid var(--bs-border-color, #ced4da);
+    border-radius: var(--bs-border-radius-sm, 0.25rem);
+    background-color: var(--bs-body-bg, #fff);
+}
+#filter_status + .choices.is-open .choices__inner,
+#filter_status + .choices.is-focused .choices__inner,
+#filter_store + .choices.is-open .choices__inner,
+#filter_store + .choices.is-focused .choices__inner {
+    border-color: var(--bs-primary, #86b7fe);
+    box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb, 13, 110, 253), 0.25);
+}
+#filter_status + .choices .choices__list--dropdown,
+#filter_store + .choices .choices__list--dropdown {
+    z-index: 1050;
+    border: 1px solid var(--bs-border-color, #ced4da);
+    border-radius: var(--bs-border-radius-sm, 0.25rem);
+    font-size: 0.875rem;
+}
+#filter_status + .choices .choices__item,
+#filter_store + .choices .choices__item {
+    font-size: 0.875rem;
+}
+
+#addSellingVoucherModal .modal-dialog,
+#editSellingVoucherModal .modal-dialog,
+#viewSellingVoucherModal .modal-dialog,
+#returnItemModal .modal-dialog {
+    width: calc(100vw - 1rem);
+    max-width: min(var(--bs-modal-width), calc(100vw - 1rem));
+}
+@media (min-width: 576px) {
+    #addSellingVoucherModal .modal-dialog,
+    #editSellingVoucherModal .modal-dialog,
+    #viewSellingVoucherModal .modal-dialog,
+    #returnItemModal .modal-dialog {
+        width: calc(100vw - 2rem);
+        max-width: min(var(--bs-modal-width), calc(100vw - 2rem));
+    }
+}
+#addSellingVoucherModal .modal-dialog { max-height: calc(100dvh - 2rem); margin: 1rem auto; }
+#addSellingVoucherModal .modal-content { max-height: calc(100dvh - 2rem); display: flex; flex-direction: column; }
+#addSellingVoucherModal .modal-body { overflow-y: auto; max-height: calc(100dvh - 10rem); position: relative; z-index: 2; }
+#editSellingVoucherModal .modal-body { overflow-y: auto; max-height: calc(100dvh - 10rem); position: relative; z-index: 2; }
 #addSellingVoucherModal:not(.sv-choices-dropdown-open) .modal-body,
 #editSellingVoucherModal:not(.sv-choices-dropdown-open) .modal-body {
     overflow-x: auto;
@@ -233,21 +293,22 @@
     position: relative;
     z-index: 1;
 }
-/* While any Choices list is open: undo overflow clipping (JS adds .sv-choices-dropdown-open) */
+/* While dropdown is open keep modal width/scroll stable on small screens */
 #addSellingVoucherModal.sv-choices-dropdown-open .modal-dialog,
 #editSellingVoucherModal.sv-choices-dropdown-open .modal-dialog {
-    overflow: visible !important;
+    overflow-x: hidden !important;
 }
 #addSellingVoucherModal.sv-choices-dropdown-open .modal-content,
 #addSellingVoucherModal.sv-choices-dropdown-open .modal-body,
 #editSellingVoucherModal.sv-choices-dropdown-open .modal-content,
 #editSellingVoucherModal.sv-choices-dropdown-open .modal-body {
-    overflow: visible !important;
+    overflow-x: hidden !important;
 }
 /* Item Details: do not use .table-responsive here — overflow-x:auto makes overflow-y compute to auto and clips Choices */
 #addSellingVoucherModal .sv-item-details-table-wrap,
 #editSellingVoucherModal .sv-item-details-table-wrap {
-    overflow: visible;
+    overflow-x: auto;
+    overflow-y: hidden;
     width: 100%;
 }
 #addSellingVoucherModal .sv-item-details-table-wrap .table,
@@ -255,9 +316,20 @@
     min-width: 920px;
     margin-bottom: 0;
 }
+@media (max-width: 991.98px) {
+    #addSellingVoucherModal .sv-item-details-table-wrap,
+    #editSellingVoucherModal .sv-item-details-table-wrap {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    #addSellingVoucherModal .sv-item-details-table-wrap .table,
+    #editSellingVoucherModal .sv-item-details-table-wrap .table {
+        min-width: 980px;
+    }
+}
 #addSellingVoucherModal.sv-choices-dropdown-open .card:has(#modalItemsBody) .card-body,
 #editSellingVoucherModal.sv-choices-dropdown-open .card:has(#editModalItemsBody) .card-body {
-    overflow: visible !important;
+    overflow-x: hidden !important;
 }
 #addSellingVoucherModal.sv-choices-dropdown-open #modalItemsBody .choices,
 #editSellingVoucherModal.sv-choices-dropdown-open #editModalItemsBody .choices {
@@ -276,7 +348,7 @@
 }
 #addSellingVoucherModal.sv-choices-dropdown-open .card:has(#modalItemsBody),
 #editSellingVoucherModal.sv-choices-dropdown-open .card:has(#editModalItemsBody) {
-    overflow: visible !important;
+    overflow-x: hidden !important;
 }
 /* Choices default --choices-z-index is 1; raise for modals + item table row stacking */
 #addSellingVoucherModal .choices,
@@ -320,10 +392,33 @@
     width: 100% !important;
     min-width: 100% !important;
 }
+/* Niche open: search upar | Uper (flipped) open: search niche */
+.ts-wrapper.choices .choices__list--dropdown.is-active {
+    display: flex;
+    flex-direction: column;
+}
+.ts-wrapper.choices.is-flipped .choices__list--dropdown.is-active { flex-direction: column-reverse; }
+.ts-wrapper.choices .choices__list--dropdown.is-active .choices__list {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+.ts-wrapper.choices[data-type*="select-one"] .choices__list--dropdown .choices__input--cloned,
+.ts-wrapper.choices[data-type*="select-one"] .choices__list--dropdown .choices__input {
+    border-top: none !important;
+    border-bottom: 1px solid #ced4da !important;
+    margin-bottom: 0 !important;
+}
+.ts-wrapper.choices.is-flipped[data-type*="select-one"] .choices__list--dropdown .choices__input--cloned,
+.ts-wrapper.choices.is-flipped[data-type*="select-one"] .choices__list--dropdown .choices__input {
+    border-bottom: none !important;
+    border-top: 1px solid #ced4da !important;
+    margin-bottom: 0 !important;
+}
 .ts-wrapper.choices .choices__list--dropdown .choices__input--cloned {
     display: block !important;
     position: relative !important;
     opacity: 1 !important;
+    flex-shrink: 0;
     min-height: 34px;
     width: 100% !important;
 }
@@ -341,7 +436,7 @@
 }
 </style>
 <div class="modal fade" id="addSellingVoucherModal" tabindex="-1" aria-labelledby="addSellingVoucherModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-lg-down modal-dialog-centered">
         <div class="modal-content">
             <form action="{{ route('admin.mess.material-management.store') }}" method="POST" id="sellingVoucherModalForm" enctype="multipart/form-data">
                 @csrf
@@ -534,11 +629,11 @@
 
 {{-- Edit Selling Voucher Modal (body z-index / overflow: shared rules with Add modal above) --}}
 <style>
-#editSellingVoucherModal .modal-dialog { max-height: calc(100vh - 2rem); margin: 1rem auto; }
-#editSellingVoucherModal .modal-content { max-height: calc(100vh - 2rem); display: flex; flex-direction: column; }
+#editSellingVoucherModal .modal-dialog { max-height: calc(100dvh - 2rem); margin: 1rem auto; }
+#editSellingVoucherModal .modal-content { max-height: calc(100dvh - 2rem); display: flex; flex-direction: column; }
 </style>
 <div class="modal fade" id="editSellingVoucherModal" tabindex="-1" aria-labelledby="editSellingVoucherModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-lg-down modal-dialog-centered">
         <div class="modal-content">
             <form id="editSellingVoucherForm" method="POST" action="" enctype="multipart/form-data">
                 @csrf
@@ -690,12 +785,12 @@
 
 {{-- View Selling Voucher Modal - ensure all text is visible (high contrast) --}}
 <style>
-#viewSellingVoucherModal .modal-dialog { max-height: calc(100vh - 2rem); margin: 1rem auto; }
-#viewSellingVoucherModal .modal-content { max-height: calc(100vh - 2rem); display: flex; flex-direction: column; background: #fff; color: #212529; }
+#viewSellingVoucherModal .modal-dialog { max-height: calc(100dvh - 2rem); margin: 1rem auto; }
+#viewSellingVoucherModal .modal-content { max-height: calc(100dvh - 2rem); display: flex; flex-direction: column; background: #fff; color: #212529; }
 #viewSellingVoucherModal .modal-header { background: #f8f9fa !important; color: #212529 !important; }
 #viewSellingVoucherModal .modal-header * { color: #212529 !important; }
 #viewSellingVoucherModal .modal-title { color: #212529 !important; }
-#viewSellingVoucherModal .modal-body { overflow-y: auto; max-height: calc(100vh - 10rem); background: #fff; color: #212529 !important; }
+#viewSellingVoucherModal .modal-body { overflow-y: auto; max-height: calc(100dvh - 10rem); background: #fff; color: #212529 !important; }
 #viewSellingVoucherModal .modal-body *, #viewSellingVoucherModal .modal-body p, #viewSellingVoucherModal .modal-body span { color: inherit; }
 #viewSellingVoucherModal .card { background: #fff; color: #212529; }
 #viewSellingVoucherModal .card-header { background: #fff !important; color: #212529 !important; border-color: #dee2e6; }
@@ -715,7 +810,7 @@
 #viewSellingVoucherModal .modal-footer { background: #fff; border-color: #dee2e6; }
 </style>
 <div class="modal fade" id="viewSellingVoucherModal" tabindex="-1" aria-labelledby="viewSellingVoucherModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-lg-down modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header border-bottom bg-light">
                 <h5 class="modal-title fw-semibold" id="viewSellingVoucherModalLabel" style="color: #212529;">View Selling Voucher</h5>
@@ -791,7 +886,7 @@
 
 {{-- Return Item Modal (Transfer To) --}}
 <div class="modal fade" id="returnItemModal" tabindex="-1" aria-labelledby="returnItemModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable modal-dialog-centered">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable modal-fullscreen-lg-down modal-dialog-centered">
         <div class="modal-content">
             <form id="returnItemForm" method="POST" action="">
                 @csrf
@@ -841,6 +936,83 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('Selling Voucher script loaded');
     console.log('Bootstrap available:', typeof bootstrap !== 'undefined');
 
+    function safeFocus(el) {
+        if (!el || typeof el.focus !== 'function') return;
+        try {
+            el.focus({ preventScroll: true });
+        } catch (e) {
+            try { el.focus(); } catch (e2) {}
+        }
+    }
+
+    // Initialize Choices.js on filter dropdowns for multiselect with search
+    if (typeof Choices !== 'undefined') {
+        var filterStatusEl = document.getElementById('filter_status');
+        var filterStoreEl = document.getElementById('filter_store');
+        
+        if (filterStatusEl) {
+            new Choices(filterStatusEl, {
+                removeItemButton: true,
+                searchEnabled: true,
+                searchPlaceholderValue: 'Search status...',
+                placeholder: true,
+                placeholderValue: 'Select status',
+                itemSelectText: '',
+                shouldSort: false
+            });
+        }
+        
+        if (filterStoreEl) {
+            new Choices(filterStoreEl, {
+                removeItemButton: true,
+                searchEnabled: true,
+                searchPlaceholderValue: 'Search store...',
+                placeholder: true,
+                placeholderValue: 'Select store',
+                itemSelectText: '',
+                shouldSort: false
+            });
+        }
+    }
+
+    // Keep modal scroll stable; don't toggle overflow classes on dropdown open/close.
+    function installModalScrollGuard(modalId) {
+        var modal = document.getElementById(modalId);
+        if (!modal) return;
+
+        var last = { winTop: 0, bodyTop: 0, has: false };
+        function capture() {
+            var body = modal.querySelector('.modal-body');
+            last.winTop = (typeof window !== 'undefined') ? (window.scrollY || window.pageYOffset || 0) : 0;
+            last.bodyTop = body ? body.scrollTop : 0;
+            last.has = true;
+        }
+        function restoreSoon() {
+            if (!last.has) return;
+            var body = modal.querySelector('.modal-body');
+            function restoreOnce() {
+                try { window.scrollTo(0, last.winTop); } catch (e) {}
+                if (body) body.scrollTop = last.bodyTop;
+            }
+            requestAnimationFrame(restoreOnce);
+            setTimeout(restoreOnce, 0);
+            setTimeout(restoreOnce, 50);
+            setTimeout(restoreOnce, 150);
+        }
+
+        modal.addEventListener('pointerdown', function() {
+            capture();
+            restoreSoon();
+        }, true);
+        modal.addEventListener('focusin', function() {
+            capture();
+            restoreSoon();
+        }, true);
+    }
+
+    installModalScrollGuard('addSellingVoucherModal');
+    installModalScrollGuard('editSellingVoucherModal');
+
     /** Sync modal class when a Choices root (.choices) opens/closes only — not on every list item highlight (avoids huge MutationObserver churn). */
     function initSellingVoucherModalChoicesOpenSync() {
         ['addSellingVoucherModal', 'editSellingVoucherModal'].forEach(function(modalId) {
@@ -866,7 +1038,8 @@ document.addEventListener('DOMContentLoaded', function() {
             sync();
         });
     }
-    initSellingVoucherModalChoicesOpenSync();
+    // Disabled to prevent modal jump on dropdown open/close caused by overflow toggles.
+    // initSellingVoucherModalChoicesOpenSync();
 
     /**
      * Item rows: Choices list is position:absolute inside nested overflow/table contexts.
@@ -1013,6 +1186,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 settings.onDropdownOpen.call(api, choices.dropdown ? choices.dropdown.element : null);
             }
         });
+        selectEl.addEventListener('hideDropdown', function() {
+            if (typeof settings.onDropdownClose === 'function') {
+                settings.onDropdownClose.call(api, choices.dropdown ? choices.dropdown.element : null);
+            }
+        });
         if (typeof settings.onInitialize === 'function') settings.onInitialize.call(api);
 
         if (selectEl.classList.contains('sv-item-select')) {
@@ -1036,6 +1214,11 @@ document.addEventListener('DOMContentLoaded', function() {
             },
             onDropdownOpen: function (dropdown) {
                 var self = this;
+                var modalEl = self.input && self.input.closest ? self.input.closest('.modal') : null;
+                var modalBody = modalEl ? modalEl.querySelector('.modal-body') : null;
+                var helper = window.MessModalDropdownStability;
+                self._modalDropdownState = helper && modalEl ? helper.onOpen(modalEl) : null;
+                if (!self._modalDropdownState && modalBody) self._modalDropdownState = { scrollTop: modalBody.scrollTop };
                 function clearInputAndCursor() {
                     var input = (dropdown && dropdown.querySelector('input.choices__input--cloned')) ||
                         (dropdown && dropdown.querySelector('input')) ||
@@ -1048,9 +1231,14 @@ document.addEventListener('DOMContentLoaded', function() {
                         input.style.visibility = 'visible';
                         input.style.opacity = '1';
                         input.value = '';
-                        input.focus();
+                        safeFocus(input);
                         try { input.setSelectionRange(0, 0); } catch (e) {}
                         input.scrollLeft = 0;
+                    }
+                    if (helper && modalEl) {
+                        helper.keepScroll(modalEl, self._modalDropdownState);
+                    } else if (modalBody && self._modalDropdownState && typeof self._modalDropdownState.scrollTop === 'number') {
+                        modalBody.scrollTop = self._modalDropdownState.scrollTop;
                     }
                 }
                 if (self.settings && self.settings.clearOnOpen) {
@@ -1070,6 +1258,18 @@ document.addEventListener('DOMContentLoaded', function() {
                         });
                     }, 0);
                 }
+            },
+            onDropdownClose: function () {
+                var self = this;
+                var modalEl = self.input && self.input.closest ? self.input.closest('.modal') : null;
+                var modalBody = modalEl ? modalEl.querySelector('.modal-body') : null;
+                var helper = window.MessModalDropdownStability;
+                if (helper && modalEl) {
+                    helper.onClose(modalEl, self._modalDropdownState);
+                } else if (modalBody && self._modalDropdownState && typeof self._modalDropdownState.scrollTop === 'number') {
+                    modalBody.scrollTop = self._modalDropdownState.scrollTop;
+                }
+                self._modalDropdownState = null;
             }
         }, extra || {});
     }
@@ -1086,6 +1286,11 @@ document.addEventListener('DOMContentLoaded', function() {
         return Object.assign(createItemSelectConfig(), {
             onDropdownOpen: function (dropdown) {
                 var self = this;
+                var modalEl = self.input && self.input.closest ? self.input.closest('.modal') : null;
+                var modalBody = modalEl ? modalEl.querySelector('.modal-body') : null;
+                var helper = window.MessModalDropdownStability;
+                self._modalDropdownState = helper && modalEl ? helper.onOpen(modalEl) : null;
+                if (!self._modalDropdownState && modalBody) self._modalDropdownState = { scrollTop: modalBody.scrollTop };
                 function clearInputAndCursor() {
                     var input = (dropdown && dropdown.querySelector('input.choices__input--cloned')) ||
                         (dropdown && dropdown.querySelector('input')) ||
@@ -1095,9 +1300,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
                     if (input) {
                         input.value = '';
-                        input.focus();
+                        safeFocus(input);
                         try { input.setSelectionRange(0, 0); } catch (e) {}
                         input.scrollLeft = 0;
+                    }
+                    if (helper && modalEl) {
+                        helper.keepScroll(modalEl, self._modalDropdownState);
+                    } else if (modalBody && self._modalDropdownState && typeof self._modalDropdownState.scrollTop === 'number') {
+                        modalBody.scrollTop = self._modalDropdownState.scrollTop;
                     }
                 }
                 self.clear(true);
@@ -1250,7 +1460,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
                             if (input) {
                                 input.value = '';
-                                input.focus();
+                                safeFocus(input);
                                 try { input.setSelectionRange(0, 0); } catch (e) {}
                                 input.scrollLeft = 0;
                             }
@@ -1309,7 +1519,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
                             if (input) {
                                 input.value = '';
-                                input.focus();
+                                safeFocus(input);
                                 try { input.setSelectionRange(0, 0); } catch (e) {}
                                 input.scrollLeft = 0;
                             }

@@ -20,9 +20,14 @@
             </tr>
         </thead>
         <tbody>
+            @php
+                $serialStart = (is_object($requests) && method_exists($requests, 'firstItem'))
+                    ? ((int) ($requests->firstItem() ?? 1))
+                    : 1;
+            @endphp
             @forelse($requests as $index => $req)
                 <tr>
-                    <td class="text-center fw-medium">{{ $requests->firstItem() + $index }}</td>
+                    <td class="text-center fw-medium">{{ $serialStart + $index }}</td>
                     
                     <td>{{ $req->name ?? '--' }}</td>
                     <td>{{ $req->designation ?? '--' }}</td>
@@ -110,6 +115,17 @@
                                 @endphp
                                 <span class="badge {{ $statusBadgeClass }}">{{ $statusLabel }}</span>
                                 <small class="text-muted">No further actions available</small>
+                                @if($approvalStage === 2 && $statusLabel === 'Approved')
+                                    <form action="{{ route('admin.security.employee_idcard_approval.markGenerated', $encryptedId) }}" method="POST" class="d-inline mt-1 archive-check-form">
+                                        @csrf
+                                        <div class="form-check form-check-inline m-0">
+                                            <input class="form-check-input archive-check-input" type="checkbox" id="archive-check-{{ md5((string) $encryptedId . '-' . (string) $index) }}">
+                                            <label class="form-check-label small text-muted" for="archive-check-{{ md5((string) $encryptedId . '-' . (string) $index) }}">
+                                               card print
+                                            </label>
+                                        </div>
+                                    </form>
+                                @endif
                             @elseif(isset($req->is_view_only) && $req->is_view_only)
                                 @if($approvalStage === 2 && in_array(($req->employee_type ?? ''), ['Permanent Employee', 'Contractual Employee']))
                                     <span class="badge bg-warning">Pending from Final Approval</span>
@@ -160,3 +176,55 @@
         </tbody>
     </table>
 </div>
+
+@once
+    @push('scripts')
+        <script>
+            document.addEventListener('change', function (event) {
+                if (!event.target.classList.contains('archive-check-input')) {
+                    return;
+                }
+
+                const checkbox = event.target;
+                if (!checkbox.checked) {
+                    return;
+                }
+
+                const form = checkbox.closest('form.archive-check-form');
+                if (!form) {
+                    checkbox.checked = false;
+                    return;
+                }
+
+                const confirmed = (typeof Swal !== 'undefined')
+                    ? null
+                    : window.confirm('Are you sure? This approved record will be moved to archive.');
+
+                if (confirmed === false) {
+                    checkbox.checked = false;
+                    return;
+                }
+
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        title: 'card print?',
+                        text: 'This approved record will be removed from this list.',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Yes, move',
+                        cancelButtonText: 'Cancel'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            form.submit();
+                        } else {
+                            checkbox.checked = false;
+                        }
+                    });
+                    return;
+                }
+
+                form.submit();
+            });
+        </script>
+    @endpush
+@endonce

@@ -22,8 +22,8 @@
                             @auth
                             <!-- Profile Management Link -->
                             <li class="sidebar-item">
-                                <a class="sidebar-link {{ request()->routeIs('member.profile.edit') ? 'active' : '' }}"
-                                    href="{{ route('member.profile.edit', auth()->user()->user_id) }}">
+                                    <a class="sidebar-link {{ request()->routeIs('member.profile.edit') ? 'active' : '' }}"
+                                    href="{{ Auth::check() ? route('member.profile.edit', Auth::user()->user_id) : '#' }}">
                                     <span class="hide-menu small small-sm-normal text-nowrap">Edit Profile</span>
                                 </a>
                             </li>
@@ -145,6 +145,82 @@
                                             </li>
                                         @endif
                                     @endforeach
+                                </ul>
+
+
+
+                                <ul class="sidebar-menu" id="sidebarnav">
+                                <li class="sidebar-item" style="background: #4077ad;
+                                border-radius: 30px 0px 0px 30px;
+                                width: 100%;
+                                box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+                                min-width: 250px;">
+                                    <a class="sidebar-link d-flex justify-content-between align-items-center"
+                                        data-bs-toggle="collapse" href="#securityRequestsCollapse" role="button"
+                                        aria-expanded="false" aria-controls="securityRequestsCollapse">
+                                        <span class="hide-menu fw-bold small small-sm-normal text-nowrap">Security Requests Links</span>
+                                        <i class="material-icons menu-icon material-symbols-rounded"
+                                            style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
+                                    </a>
+                                </li>
+                                <ul class="collapse list-unstyled ps-3" id="securityRequestsCollapse">
+                                 <li class="sidebar-item">
+                                    <a class="sidebar-link" href="{{ route('admin.employee_idcard.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">ID Card List</span>
+                                    </a>
+                                </li>
+                                
+                                     <li class="sidebar-item">
+                                        <a class="sidebar-link" href="{{ route('admin.duplicate_idcard.index') }}">
+                                            <span class="hide-menu small small-sm-normal text-nowrap">Request Duplicate ID Card</span>
+                                        </a>
+                                    </li>
+                                  <li class="sidebar-item">
+                                        <a class="sidebar-link" href="{{ route('admin.security.vehicle_pass.index') }}">
+                                            <span class="hide-menu small small-sm-normal text-nowrap">Vehicle Pass Request</span>
+                                        </a>
+                                    </li>
+
+                                    <li class="sidebar-item">
+                                        <a class="sidebar-link" href="{{ route('admin.family_idcard.index') }}">
+                                            <span class="hide-menu small small-sm-normal text-nowrap">Request Family ID Card</span>
+                                        </a>
+                                    </li>
+                                    
+                                </ul>
+
+                                 <ul class="sidebar-menu" id="sidebarnav">
+                                <li class="sidebar-item" style="background: #4077ad;
+                                border-radius: 30px 0px 0px 30px;
+                                width: 100%;
+                                box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+                                min-width: 250px;">
+                                    <a class="sidebar-link d-flex justify-content-between align-items-center"
+                                        data-bs-toggle="collapse" href="#centcomCollapse" role="button"
+                                        aria-expanded="false" aria-controls="centcomCollapse">
+                                        <span class="hide-menu fw-bold small small-sm-normal text-nowrap">Centcom Links</span>
+                                        <i class="material-icons menu-icon material-symbols-rounded"
+                                            style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
+                                    </a>
+                                </li>
+                                <ul class="collapse list-unstyled ps-3" id="centcomCollapse">
+                               
+                                     <li class="sidebar-item mb-2">
+                                <a class="sidebar-link d-flex align-items-center rounded-pill px-3 py-2 text-decoration-none" href="{{ route('admin.issue-management.index') }}">
+                                    <span class="hide-menu small small-sm-normal text-nowrap">All Issues</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-item mb-2">
+                                <a class="sidebar-link d-flex align-items-center rounded-pill px-3 py-2 text-decoration-none" href="{{ route('admin.issue-management.centcom') }}">
+                                    <span class="hide-menu small small-sm-normal text-nowrap">CENTCOM -  Assigned Complaints</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-item mb-2">
+                                <a class="sidebar-link d-flex align-items-center rounded-pill px-3 py-2 text-decoration-none" href="{{ route('admin.issue-management.create') }}">
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Log New Issue</span>
+                                </a>
+                            </li>
+                                    
                                 </ul>
                     </div>
                 </div>

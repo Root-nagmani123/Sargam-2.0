@@ -543,21 +543,22 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/reject/{id}', 'reject')->name('reject');
     });
 
-    // Employee ID Card Approval Routes (Approval I & II)
-    Route::prefix('security/employee-idcard-approval')->name('admin.security.employee_idcard_approval.')->controller(\App\Http\Controllers\Admin\Security\EmployeeIDCardApprovalController::class)->group(function () {
-        Route::get('/approval1', 'approval1')->name('approval1');
-        Route::get('/approval2', 'approval2')->name('approval2');
-        Route::get('/approval3', 'approval3')->name('approval3');
-        Route::get('/all', 'all')->name('all');
-        Route::get('/show/{id}', 'show')->name('show');
-        Route::get('/export', 'export')->name('export');
-        Route::post('/approve1/{id}', 'approve1')->name('approve1');
-        Route::post('/approve2/{id}', 'approve2')->name('approve2');
-        Route::post('/approve3/{id}', 'approve3')->name('approve3');
-        Route::post('/reject1/{id}', 'reject1')->name('reject1');
-        Route::post('/reject2/{id}', 'reject2')->name('reject2');
-        Route::post('/reject3/{id}', 'reject3')->name('reject3');
-    });
+// Employee ID Card Approval Routes (Approval I & II)
+Route::prefix('security/employee-idcard-approval')->name('admin.security.employee_idcard_approval.')->controller(\App\Http\Controllers\Admin\Security\EmployeeIDCardApprovalController::class)->group(function () {
+    Route::get('/approval1', 'approval1')->name('approval1');
+    Route::get('/approval2', 'approval2')->name('approval2');
+    Route::get('/approval3', 'approval3')->name('approval3');
+    Route::get('/all', 'all')->name('all');
+    Route::get('/show/{id}', 'show')->name('show');
+    Route::get('/export', 'export')->name('export');
+    Route::post('/approve1/{id}', 'approve1')->name('approve1');
+    Route::post('/approve2/{id}', 'approve2')->name('approve2');
+    Route::post('/approve3/{id}', 'approve3')->name('approve3');
+    Route::post('/reject1/{id}', 'reject1')->name('reject1');
+    Route::post('/reject2/{id}', 'reject2')->name('reject2');
+    Route::post('/reject3/{id}', 'reject3')->name('reject3');
+    Route::post('/mark-generated/{id}', 'markGenerated')->name('markGenerated');
+});
 
     // ID Card - Card Type Master (sec_id_cardno_master)
     Route::prefix('security/idcard-card-type')->name('admin.security.idcard_card_type.')->controller(\App\Http\Controllers\Admin\Security\CardTypeMasterController::class)->group(function () {
@@ -1255,6 +1256,7 @@ Route::prefix('admin/mess')->name('admin.mess.')->middleware(['auth'])->group(fu
         Route::get('category-wise-print-slip/buyers', [\App\Http\Controllers\Mess\ReportController::class, 'getBuyerNamesForReportFilters'])->name('category-wise-print-slip.buyers');
         Route::get('category-wise-print-slip/export', [\App\Http\Controllers\Mess\ReportController::class, 'categoryWisePrintSlipExcel'])->name('category-wise-print-slip.excel');
         Route::get('category-wise-print-slip/export-pdf', [\App\Http\Controllers\Mess\ReportController::class, 'categoryWisePrintSlipPdf'])->name('category-wise-print-slip.pdf');
+        Route::get('category-wise-print-slip/print', [\App\Http\Controllers\Mess\ReportController::class, 'categoryWisePrintSlipPrint'])->name('category-wise-print-slip.print');
         Route::get('stock-balance-till-date', [\App\Http\Controllers\Mess\ReportController::class, 'stockBalanceTillDate'])->name('stock-balance-till-date');
         Route::get('stock-balance-till-date/export', [\App\Http\Controllers\Mess\ReportController::class, 'stockBalanceTillDateExcel'])->name('stock-balance-till-date.excel');
         Route::get('stock-balance-till-date/export-pdf', [\App\Http\Controllers\Mess\ReportController::class, 'stockBalanceTillDatePdf'])->name('stock-balance-till-date.pdf');
@@ -1505,5 +1507,4 @@ Route::middleware(['auth'])->prefix('admin/estate')->name('admin.estate.')->grou
         Route::get('migration-report/filter-options', [EstateController::class, 'getEstateMigrationReportFilterOptions'])->name('migration-report.filter-options');
     });
 });
-Route::get('/view-logs', [App\Http\Controllers\LogController::class, 'index'])
-    ->middleware('auth');
+Route::get('/view-logs', [App\Http\Controllers\LogController::class, 'index']);

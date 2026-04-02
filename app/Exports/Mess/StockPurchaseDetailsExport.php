@@ -15,23 +15,28 @@ class StockPurchaseDetailsExport implements FromView, WithStyles, WithEvents, Wi
     protected $purchaseOrders;
     protected $fromDate;
     protected $toDate;
-    protected $selectedVendor;
+    /** @var \Illuminate\Support\Collection<int, \App\Models\Mess\Vendor> */
+    protected $selectedVendors;
+    /** @var \Illuminate\Support\Collection<int, \App\Models\Mess\Store> */
+    protected $selectedStores;
 
-    public function __construct($purchaseOrders, $fromDate, $toDate, $selectedVendor)
+    public function __construct($purchaseOrders, $fromDate, $toDate, $selectedVendors, $selectedStores)
     {
-        $this->purchaseOrders = $purchaseOrders;
-        $this->fromDate       = $fromDate;
-        $this->toDate         = $toDate;
-        $this->selectedVendor = $selectedVendor;
+        $this->purchaseOrders  = $purchaseOrders;
+        $this->fromDate        = $fromDate;
+        $this->toDate          = $toDate;
+        $this->selectedVendors = $selectedVendors;
+        $this->selectedStores  = $selectedStores;
     }
 
     public function view(): View
     {
         return view('admin.mess.reports.excel.stock-purchase-details-excel', [
-            'purchaseOrders' => $this->purchaseOrders,
-            'fromDate'       => $this->fromDate,
-            'toDate'         => $this->toDate,
-            'selectedVendor' => $this->selectedVendor,
+            'purchaseOrders'  => $this->purchaseOrders,
+            'fromDate'        => $this->fromDate,
+            'toDate'          => $this->toDate,
+            'selectedVendors' => $this->selectedVendors,
+            'selectedStores'  => $this->selectedStores,
         ]);
     }
 
@@ -43,19 +48,20 @@ class StockPurchaseDetailsExport implements FromView, WithStyles, WithEvents, Wi
 
     public function styles(Worksheet $sheet)
     {
-        // Merge header cells (rows 1–4 contain header text from the view)
+        // Merge header cells (rows 1–5 contain header text from the view)
         $sheet->mergeCells('A1:H1');
         $sheet->mergeCells('A2:H2');
         $sheet->mergeCells('A3:H3');
         $sheet->mergeCells('A4:H4');
+        $sheet->mergeCells('A5:H5');
 
-        $sheet->getStyle('A1:A4')->getAlignment()->setHorizontal('center');
+        $sheet->getStyle('A1:A5')->getAlignment()->setHorizontal('center');
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
         $sheet->getStyle('A2')->getFont()->setBold(true)->setSize(12);
-        $sheet->getStyle('A3:A4')->getFont()->setSize(10);
+        $sheet->getStyle('A3:A5')->getFont()->setSize(10);
 
-        // Table header (row 6 in the view)
-        $headerRange = 'A6:H6';
+        // Table header (row 7 in the view)
+        $headerRange = 'A7:H7';
         $sheet->getStyle($headerRange)->getFont()->setBold(true);
         $sheet->getStyle($headerRange)->getAlignment()->setHorizontal('center');
         $sheet->getStyle($headerRange)->getFill()
@@ -64,7 +70,7 @@ class StockPurchaseDetailsExport implements FromView, WithStyles, WithEvents, Wi
 
         // Borders for the table
         $lastRow    = $sheet->getHighestRow();
-        $tableRange = "A6:H{$lastRow}";
+        $tableRange = "A7:H{$lastRow}";
         $sheet->getStyle($tableRange)->getBorders()->getAllBorders()
             ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN)
             ->getColor()->setARGB('FFDEE2E6');
@@ -80,7 +86,7 @@ class StockPurchaseDetailsExport implements FromView, WithStyles, WithEvents, Wi
         $sheet->getColumnDimension('H')->setWidth(14);
 
         // Right-align numeric columns
-        $sheet->getStyle("D6:H{$lastRow}")
+        $sheet->getStyle("D7:H{$lastRow}")
             ->getAlignment()->setHorizontal('right');
 
         return [
@@ -96,7 +102,7 @@ class StockPurchaseDetailsExport implements FromView, WithStyles, WithEvents, Wi
                 $lastRow = $sheet->getHighestRow();
 
                 // Freeze header region
-                $sheet->freezePane('A7');
+                $sheet->freezePane('A8');
 
                 // Landscape + print area (optional)
                 $sheet->getPageSetup()

@@ -9,26 +9,13 @@
                     style="height: 100%; overflow: hidden scroll;">
                     <div class="simplebar-content" style="padding: 20px 0px 20px 24px">
                         <ul class="sidebar-menu list-unstyled mb-0" id="sidebarnav">
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('admin.employee_idcard.index') }}">
-                                    <span class="hide-menu small small-sm-normal text-nowrap">ID Card List</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item">
+                           
+                            {{--<li class="sidebar-item">
                                 <a class="sidebar-link" href="{{ route('admin.employee_idcard.create') }}">
                                     <span class="hide-menu small small-sm-normal text-nowrap">Request New ID Card</span>
                                 </a>
-                            </li>
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('admin.duplicate_idcard.index') }}">
-                                    <span class="hide-menu small small-sm-normal text-nowrap">Request Duplicate ID Card</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('admin.family_idcard.index') }}">
-                                    <span class="hide-menu small small-sm-normal text-nowrap">Request Family ID Card</span>
-                                </a>
-                            </li>
+                            </li>--}}
+                           
                            
                             
                             
@@ -39,11 +26,7 @@
                                     </a>
                                 </li>
                             @endif
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('admin.security.vehicle_pass.index') }}">
-                                    <span class="hide-menu small small-sm-normal text-nowrap">Vehicle Pass Request</span>
-                                </a>
-                            </li>
+                          
                             {{-- <li class="sidebar-item">
                                 <a class="sidebar-link" href="{{ route('admin.security.duplicate_vehicle_pass.index') }}">
                                     <span class="hide-menu small small-sm-normal text-nowrap">Duplicate Vehicle Pass Request</span>
@@ -61,7 +44,7 @@
                             <li class="sidebar-item">
                                 <a class="sidebar-link {{ request()->routeIs('admin.security.employee_idcard_approval.approval1') ? 'active' : '' }}"
                                    href="{{ route('admin.security.employee_idcard_approval.approval1') }}">
-                                    <span class="hide-menu small small-sm-normal text-nowrap">Approval I</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Id Card Approval</span>
                                 </a>
                             </li>
                             @endif
@@ -69,7 +52,7 @@
                                 <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.security.employee_idcard_approval.approval2') ? 'active' : '' }}"
                                        href="{{ route('admin.security.employee_idcard_approval.approval2') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Approval II</span>
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Id Card Approval</span>
                                     </a>
                                 </li>
                             @endif
@@ -77,7 +60,7 @@
                                 <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.security.employee_idcard_approval.approval3') ? 'active' : '' }}"
                                        href="{{ route('admin.security.employee_idcard_approval.approval3') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Approval III</span>
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Id Card Approval</span>
                                     </a>
                                 </li>
                                 <li class="sidebar-item">

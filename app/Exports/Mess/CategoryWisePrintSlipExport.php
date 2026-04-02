@@ -24,8 +24,6 @@ class CategoryWisePrintSlipExport implements FromCollection, WithStyles, WithEve
 
     protected ?string $toDate;
 
-    protected ?string $courseMasterPk;
-
     /** @var \Illuminate\Support\Collection|null */
     protected $otCourses;
 
@@ -35,14 +33,12 @@ class CategoryWisePrintSlipExport implements FromCollection, WithStyles, WithEve
         $allBuyersSections,
         ?string $fromDate = null,
         ?string $toDate = null,
-        ?string $courseMasterPk = null,
         $otCourses = null,
         float $grandTotal = 0.0
     ) {
         $this->allBuyersSections = $allBuyersSections;
         $this->fromDate = $fromDate;
         $this->toDate = $toDate;
-        $this->courseMasterPk = $courseMasterPk;
         $this->otCourses = $otCourses ?? collect();
         $this->grandTotal = $grandTotal;
     }
@@ -65,8 +61,8 @@ class CategoryWisePrintSlipExport implements FromCollection, WithStyles, WithEve
                 }
 
                 $courseDisplay = null;
-                if ($slug === 'course' && $this->courseMasterPk && $this->otCourses->isNotEmpty()) {
-                    $selectedCourse = $this->otCourses->firstWhere('pk', $this->courseMasterPk);
+                if (in_array($slug, ['course', 'ot'], true) && $this->otCourses->isNotEmpty()) {
+                    $selectedCourse = $this->otCourses->firstWhere('pk', $first->client_type_pk ?? null);
                     if ($selectedCourse) {
                         $courseDisplay = $selectedCourse->course_name;
                     }
