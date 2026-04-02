@@ -788,7 +788,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return String(text || '').replace(/\s+/g, ' ').trim().toLowerCase();
     }
 
-    function applyExactChoicesSearchFilter(instance, rawQuery) {
+    function applyPartialMatchChoicesSearchFilter(instance, rawQuery) {
         if (!instance || !instance.dropdown || !instance.dropdown.element) return;
         var dropdownEl = instance.dropdown.element;
         var query = normalizeChoicesSearchText(rawQuery);
@@ -799,7 +799,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (item.classList.contains('choices__placeholder')) return;
             var label = normalizeChoicesSearchText(item.textContent || '');
             var value = normalizeChoicesSearchText(item.getAttribute('data-value') || '');
-            var show = !query || label === query || value === query;
+            var show = !query || label.indexOf(query) !== -1 || value.indexOf(query) !== -1;
             item.style.display = show ? '' : 'none';
         });
     }
@@ -851,7 +851,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         var instance = new Choices(el, {
             searchEnabled: shouldSearch,
-            // Disable built-in fuzzy filter; we apply our own exact filter below.
+            // Disable built-in filter; we apply substring match below (typing shows partial matches).
             searchChoices: false,
             removeItemButton: isMultiple,
             itemSelectText: '',
@@ -867,19 +867,18 @@ document.addEventListener('DOMContentLoaded', function() {
         if (instance.dropdown && instance.dropdown.element && instance.dropdown.element.classList) {
             instance.dropdown.element.classList.add('ts-dropdown');
         }
-        function applyExactAfterRender() {
+        function applySearchFilterAfterRender() {
             var typed = (instance.input && instance.input.element) ? (instance.input.element.value || '') : '';
-            // Wait one frame so Choices can finish rendering its current search results.
             requestAnimationFrame(function () {
-                applyExactChoicesSearchFilter(instance, typed);
+                applyPartialMatchChoicesSearchFilter(instance, typed);
             });
         }
-        el.addEventListener('showDropdown', applyExactAfterRender);
+        el.addEventListener('showDropdown', applySearchFilterAfterRender);
         if (instance.input && instance.input.element) {
             instance.input.element.addEventListener('input', function() {
-                applyExactAfterRender();
+                applySearchFilterAfterRender();
             });
-            instance.input.element.addEventListener('keyup', applyExactAfterRender);
+            instance.input.element.addEventListener('keyup', applySearchFilterAfterRender);
         }
 
         el.dataset.choicesInitialized = 'true';
