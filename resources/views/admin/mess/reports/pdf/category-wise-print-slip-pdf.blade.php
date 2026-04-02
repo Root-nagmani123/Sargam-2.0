@@ -6,7 +6,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>Category Wise Sale Voucher Report</title>
+    <title>Sale Voucher Report</title>
     <style>
         body {
             font-family: DejaVu Sans, Arial, sans-serif;
@@ -81,7 +81,7 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 8px;
+            font-size: 16px;
             margin-bottom: 8px;
         }
         th, td {
@@ -100,6 +100,11 @@
         .total-row {
             background-color: #e9ecef;
             font-weight: bold;
+        }
+        .grand-total-row {
+            background-color: #d8e4ef;
+            font-weight: bold;
+            border-top: 2px solid #004a93;
         }
         .footer {
             border-top: 1px solid #dde2ea;
@@ -122,7 +127,7 @@
                    
                     <div class="page-header-col page-header-title">
                         <h1>OFFICER'S MESS LBSNAA MUSSOORIE</h1>
-                        <h2>Category-wise Sale Voucher Report</h2>
+                        <h2>Sale Voucher Report</h2>
                         <div class="page-header-sub">Lal Bahadur Shastri National Academy of Administration</div>
                     </div>
                 </div>
@@ -152,24 +157,31 @@
                     $slug = $first->client_type_slug ?? '';
                     $typeSuffix = ($slug === 'employee') ? 'Employee' : (($slug === 'ot') ? 'OT' : ucfirst($slug));
                     if (!$typeSuffix) $typeSuffix = 'N/A';
+                    $courseDisplay = null;
+                    if ($slug === 'course' && !empty($courseMasterPk) && isset($otCourses) && $otCourses->isNotEmpty()) {
+                        $selectedCourse = $otCourses->firstWhere('pk', $courseMasterPk);
+                        if ($selectedCourse) {
+                            $courseDisplay = $selectedCourse->course_name;
+                        }
+                    }
                 @endphp
 
                 <div class="buyer-header">
-                    <span><strong>Buyer:</strong> {{ $buyerName }} - {{ $typeSuffix }}</span>
-                    <span><strong>Client Type:</strong> {{ $clientTypeLabel }}</span>
+                    <span><strong>Buyer Name :</strong> {{ $buyerName }}- {{ $typeSuffix }}</span>
+                    <span><strong>Client Type :</strong> {{ $clientTypeLabel }}@if($courseDisplay) <strong>[{{ $courseDisplay }}]</strong>@endif</span>
                 </div>
 
-                <table>
+                <table style="font-size: 14px;">
                     <thead>
                     <tr>
-                        <th class="text-center">Slip No.</th>
-                        <th>Buyer Name</th>
+                        <th>Slip No.</th>
+                        <th style="width: 150px;">Buyer Name</th>
                         <th>Remark</th>
                         <th>Item Name</th>
-                        <th class="text-center">Request Date</th>
-                        <th class="text-end">Quantity</th>
-                        <th class="text-end">Price</th>
-                        <th class="text-end">Amount</th>
+                        <th>Request Date</th>
+                        <th style="text-align: right;">Quantity</th>
+                        <th style="text-align: right;">Price</th>
+                        <th style="text-align: right;">Amount</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -189,6 +201,12 @@
                                 $itemAmount = $netQty * $rate;
                                 $sectionTotal += $itemAmount;
                                 $itemName = $item->item_name ?? ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? 'N/A');
+                                $itemIssueDate = $item->issue_date ?? null;
+                                $itemIssueDateFormatted = $itemIssueDate
+                                    ? ($itemIssueDate instanceof \Carbon\Carbon
+                                        ? $itemIssueDate->format('d-m-Y')
+                                        : \Carbon\Carbon::parse($itemIssueDate)->format('d-m-Y'))
+                                    : $requestDate;
                             @endphp
                             <tr>
                                 @if($itemIndex === 0)
@@ -197,7 +215,7 @@
                                     <td rowspan="{{ $rowCount }}">{{ $voucher->remarks ?? '—' }}</td>
                                 @endif
                                 <td>{{ $itemName }}</td>
-                                <td class="text-center">{{ $requestDate }}</td>
+                                <td class="text-center">{{ $itemIssueDateFormatted }}</td>
                                 <td class="text-end">{{ number_format($netQty, 2) }}</td>
                                 <td class="text-end">{{ number_format($rate, 2) }}</td>
                                 <td class="text-end">{{ number_format($itemAmount, 2) }}</td>
@@ -216,10 +234,60 @@
             @endforelse
 
             <div class="footer">
-                <small>Officer's Mess LBSNAA Mussoorie &mdash; Category-wise Sale Voucher Report</small>
+                <small>Officer's Mess LBSNAA Mussoorie &mdash; Sale Voucher Report</small>
             </div>
         </div>
     @endforeach
+
+        <div class="page">
+            <div class="page-header">
+                <div class="page-header-top">
+                    <div class="page-header-col page-header-title">
+                        <h1>OFFICER'S MESS LBSNAA MUSSOORIE</h1>
+                        <h2>Sale Voucher Report</h2>
+                        <div class="page-header-sub">Grand total — all buyers</div>
+                    </div>
+                </div>
+                <div class="meta-row">
+                    @php
+                        $fromTextGt = $fromLabel ?? 'Start';
+                        $toTextGt = $toLabel ?? 'End';
+                    @endphp
+                    <span><strong>Period:</strong>
+                        @if($fromLabel || $toLabel)
+                            Between {{ $fromTextGt }} To {{ $toTextGt }}
+                        @else
+                            All Dates
+                        @endif
+                    </span>
+                    <span><strong>Generated on:</strong> {{ now()->format('d-m-Y H:i') }}</span>
+                </div>
+            </div>
+            <table style="font-size: 14px;">
+                <thead>
+                <tr>
+                    <th>Slip No.</th>
+                    <th style="width: 150px;">Buyer Name</th>
+                    <th>Remark</th>
+                    <th>Item Name</th>
+                    <th>Request Date</th>
+                    <th style="text-align: right;">Quantity</th>
+                    <th style="text-align: right;">Price</th>
+                    <th style="text-align: right;">Amount</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr class="grand-total-row">
+                    <td colspan="6"></td>
+                    <td class="text-end"><strong>GRAND TOTAL</strong></td>
+                    <td class="text-end"><strong>{{ number_format($grandTotal ?? 0, 2) }}</strong></td>
+                </tr>
+                </tbody>
+            </table>
+            <div class="footer">
+                <small>Officer's Mess LBSNAA Mussoorie &mdash; Sale Voucher Report</small>
+            </div>
+        </div>
 @endif
 </body>
 </html>

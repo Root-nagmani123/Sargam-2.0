@@ -2,142 +2,131 @@
 
 namespace App\Exports\Mess;
 
+use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithStyles;
-use Maatwebsite\Excel\Concerns\WithEvents;
-use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Concerns\WithCustomStartCell;
+use Maatwebsite\Excel\Concerns\WithEvents;
+use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
-use Carbon\Carbon;
 
-class CategoryWisePrintSlipExport implements FromCollection, WithHeadings, WithStyles, WithEvents, WithTitle, WithCustomStartCell
+/**
+ * Mirrors the on-screen / PDF category-wise print slip: same buyer grouping, columns, dates, and totals.
+ */
+class CategoryWisePrintSlipExport implements FromCollection, WithStyles, WithEvents, WithTitle, WithCustomStartCell
 {
     /** @var \Illuminate\Support\Collection */
-    protected $vouchers;
+    protected $allBuyersSections;
+
     protected ?string $fromDate;
+
     protected ?string $toDate;
 
-    public function __construct($vouchers, ?string $fromDate = null, ?string $toDate = null)
-    {
-        $this->vouchers = $vouchers;
+    protected ?string $courseMasterPk;
+
+    /** @var \Illuminate\Support\Collection|null */
+    protected $otCourses;
+
+    protected float $grandTotal;
+
+    public function __construct(
+        $allBuyersSections,
+        ?string $fromDate = null,
+        ?string $toDate = null,
+        ?string $courseMasterPk = null,
+        $otCourses = null,
+        float $grandTotal = 0.0
+    ) {
+        $this->allBuyersSections = $allBuyersSections;
         $this->fromDate = $fromDate;
-        $this->toDate   = $toDate;
+        $this->toDate = $toDate;
+        $this->courseMasterPk = $courseMasterPk;
+        $this->otCourses = $otCourses ?? collect();
+        $this->grandTotal = $grandTotal;
     }
 
     public function collection(): Collection
     {
         $rows = [];
-        $serialNo = 0;
-        $grandTotal = 0.0;
 
-        // Keep grouping aligned with the UI report sections.
-        $groupedVouchers = $this->vouchers->groupBy(function ($voucher) {
-            return ($voucher->client_type_pk ?? '') . '-' . ($voucher->client_type_slug ?? '');
-        });
-
-        foreach ($groupedVouchers as $sectionVouchers) {
-            $sectionTotal = 0.0;
-
-            foreach ($sectionVouchers as $voucher) {
-                $requestNo = $voucher->request_no ?? ('SV-' . str_pad($voucher->id ?? $voucher->pk, 6, '0', STR_PAD_LEFT));
-                $issueDate = $voucher->issue_date ? (is_object($voucher->issue_date) ? $voucher->issue_date->format('d/m/Y') : $voucher->issue_date) : 'N/A';
-                $buyerName = $voucher->client_name ?? ($voucher->clientTypeCategory->client_name ?? 'N/A');
-                $clientType = $voucher->clientTypeCategory
-                    ? ucfirst($voucher->clientTypeCategory->client_type ?? '')
-                    : ucfirst($voucher->client_type_slug ?? 'N/A');
-                $remarks = $voucher->remarks ?? '';
-
-                $items = $voucher->items ?? collect();
-                foreach ($items as $item) {
-                    $serialNo++;
-                    $itemName = $item->item_name ?? ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? 'N/A');
-                    $issueQty = (float) ($item->quantity ?? 0);
-                    $returnQty = (float) ($item->return_quantity ?? 0);
-                    $netQty = max(0, $issueQty - $returnQty);
-                    $rate = (float) ($item->rate ?? 0);
-                    $amount = $netQty * $rate;
-
-                    $sectionTotal += $amount;
-                    $grandTotal += $amount;
-
-                    $rows[] = [
-                        $serialNo,
-                        $buyerName,
-                        $remarks,
-                        $clientType,
-                        $requestNo,
-                        $issueDate,
-                        $itemName,
-                        number_format($netQty, 2),
-                        $item->unit ?? '—',
-                        number_format($rate, 2),
-                        number_format($amount, 2),
-                    ];
+        foreach ($this->allBuyersSections as $groupedSections) {
+            foreach ($groupedSections as $sectionVouchers) {
+                $first = $sectionVouchers->first();
+                $buyerName = $first->client_name ?? ($first->clientTypeCategory->client_name ?? 'N/A');
+                $clientTypeLabel = $first->clientTypeCategory
+                    ? ucfirst($first->clientTypeCategory->client_type)
+                    : ucfirst($first->client_type_slug ?? 'N/A');
+                $slug = $first->client_type_slug ?? '';
+                $typeSuffix = ($slug === 'employee') ? 'Employee' : (($slug === 'ot') ? 'OT' : ucfirst($slug));
+                if (! $typeSuffix) {
+                    $typeSuffix = 'N/A';
                 }
+
+                $courseDisplay = null;
+                if ($slug === 'course' && $this->courseMasterPk && $this->otCourses->isNotEmpty()) {
+                    $selectedCourse = $this->otCourses->firstWhere('pk', $this->courseMasterPk);
+                    if ($selectedCourse) {
+                        $courseDisplay = $selectedCourse->course_name;
+                    }
+                }
+                $clientTypeHeader = $clientTypeLabel . ($courseDisplay ? ' [' . $courseDisplay . ']' : '');
+
+                $rows[] = ['BUYER NAME : ' . $buyerName . '- ' . $typeSuffix, '', '', '', '', '', '', ''];
+                $rows[] = ['CLIENT TYPE : ' . $clientTypeHeader, '', '', '', '', '', '', ''];
+                $rows[] = ['Slip No.', 'Buyer Name', 'Remark', 'Item Name', 'Request Date', 'Quantity', 'Price', 'Amount'];
+
+                $sectionTotal = 0.0;
+
+                foreach ($sectionVouchers as $voucher) {
+                    $requestNo = $voucher->request_no ?? ('SV-' . str_pad($voucher->id ?? $voucher->pk ?? 0, 6, '0', STR_PAD_LEFT));
+                    $requestDate = $voucher->issue_date ? $voucher->issue_date->format('d-m-Y') : 'N/A';
+                    $rowCount = $voucher->items->count();
+
+                    foreach ($voucher->items as $itemIndex => $item) {
+                        $issueQty = (float) ($item->quantity ?? 0);
+                        $returnQty = (float) ($item->return_quantity ?? 0);
+                        $netQty = max(0, $issueQty - $returnQty);
+                        $rate = (float) ($item->rate ?? 0);
+                        $itemAmount = $netQty * $rate;
+                        $sectionTotal += $itemAmount;
+
+                        $itemName = $item->item_name ?? ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? 'N/A');
+                        $itemIssueDate = $item->issue_date ?? null;
+                        $itemIssueDateFormatted = $itemIssueDate
+                            ? ($itemIssueDate instanceof \Carbon\Carbon
+                                ? $itemIssueDate->format('d-m-Y')
+                                : Carbon::parse($itemIssueDate)->format('d-m-Y'))
+                            : $requestDate;
+
+                        $row = ['', '', '', '', '', '', '', ''];
+                        if ($itemIndex === 0) {
+                            $row[0] = $requestNo;
+                            $row[1] = $buyerName;
+                            $row[2] = $voucher->remarks ?? '—';
+                        }
+                        $row[3] = $itemName;
+                        $row[4] = $itemIssueDateFormatted;
+                        $row[5] = number_format($netQty, 2);
+                        $row[6] = number_format($rate, 2);
+                        $row[7] = number_format($itemAmount, 2);
+                        $rows[] = $row;
+                    }
+                }
+
+                $rows[] = ['', '', '', '', '', '', 'TOTAL', number_format($sectionTotal, 2)];
             }
-
-            // Section total row (mirrors TOTAL row shown in UI).
-            $rows[] = [
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
-                'TOTAL',
-                '',
-                '',
-                '',
-                number_format($sectionTotal, 2),
-            ];
         }
 
-        if ($grandTotal > 0) {
-            // Final report grand total row.
-            $rows[] = [
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
-                'GRAND TOTAL',
-                '',
-                '',
-                '',
-                number_format($grandTotal, 2),
-            ];
-        }
+        $rows[] = ['', '', '', '', '', '', 'GRAND TOTAL', number_format($this->grandTotal, 2)];
 
         return collect($rows);
     }
 
-    public function headings(): array
-    {
-        return [
-            'S. No.',
-            'Buyer Name',
-            'Remark',
-            'Client Type',
-            'Request No.',
-            'Issue Date',
-            'Item Name',
-            'Quantity',
-            'Unit',
-            'Rate',
-            'Amount',
-        ];
-    }
-
-    /**
-     * Start data (headings) from row 6, leaving rows 1–4 for LBSNAA header.
-     */
     public function startCell(): string
     {
-        return 'A6';
+        return 'A5';
     }
 
     public function title(): string
@@ -147,45 +136,50 @@ class CategoryWisePrintSlipExport implements FromCollection, WithHeadings, WithS
 
     public function styles(Worksheet $sheet)
     {
-        // Merge header cells (rows 1–4 contain header text we set in AfterSheet)
-        $sheet->mergeCells('A1:K1');
-        $sheet->mergeCells('A2:K2');
-        $sheet->mergeCells('A3:K3');
-        $sheet->mergeCells('A4:K4');
+        $sheet->mergeCells('A1:H1');
+        $sheet->mergeCells('A2:H2');
+        $sheet->mergeCells('A3:H3');
+        $sheet->mergeCells('A4:H4');
 
         $sheet->getStyle('A1:A4')->getAlignment()->setHorizontal('center');
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
         $sheet->getStyle('A2')->getFont()->setBold(true)->setSize(12);
         $sheet->getStyle('A3:A4')->getFont()->setSize(10);
 
-        // Table header (row 6 in the sheet)
-        $headerRange = 'A6:K6';
-        $sheet->getStyle($headerRange)->getFont()->setBold(true);
-        $sheet->getStyle($headerRange)->getAlignment()->setHorizontal('center');
-
-        // Borders for the table
-        $lastRow    = $sheet->getHighestRow();
-        $tableRange = "A6:K{$lastRow}";
+        $lastRow = $sheet->getHighestRow();
+        $tableRange = "A5:H{$lastRow}";
         $sheet->getStyle($tableRange)->getBorders()->getAllBorders()
             ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN)
             ->getColor()->setARGB('FFDEE2E6');
 
-        // Column widths
-        $sheet->getColumnDimension('A')->setWidth(8);  // S. No.
-        $sheet->getColumnDimension('B')->setWidth(26); // Buyer Name
-        $sheet->getColumnDimension('C')->setWidth(24); // Remark
-        $sheet->getColumnDimension('D')->setWidth(18); // Client Type
-        $sheet->getColumnDimension('E')->setWidth(18); // Request No.
-        $sheet->getColumnDimension('F')->setWidth(14); // Issue Date
-        $sheet->getColumnDimension('G')->setWidth(28); // Item Name
-        $sheet->getColumnDimension('H')->setWidth(10); // Quantity
-        $sheet->getColumnDimension('I')->setWidth(10); // Unit
-        $sheet->getColumnDimension('J')->setWidth(12); // Rate
-        $sheet->getColumnDimension('K')->setWidth(14); // Amount
+        $sheet->getColumnDimension('A')->setWidth(14);
+        $sheet->getColumnDimension('B')->setWidth(22);
+        $sheet->getColumnDimension('C')->setWidth(20);
+        $sheet->getColumnDimension('D')->setWidth(26);
+        $sheet->getColumnDimension('E')->setWidth(14);
+        $sheet->getColumnDimension('F')->setWidth(12);
+        $sheet->getColumnDimension('G')->setWidth(12);
+        $sheet->getColumnDimension('H')->setWidth(14);
 
-        // Right-align numeric columns (H to K)
-        $sheet->getStyle("H6:K{$lastRow}")
-            ->getAlignment()->setHorizontal('right');
+        $sheet->getStyle("F5:H{$lastRow}")->getAlignment()->setHorizontal('right');
+        $sheet->getStyle("A5:A{$lastRow}")->getAlignment()->setHorizontal('center');
+        $sheet->getStyle("E5:E{$lastRow}")->getAlignment()->setHorizontal('center');
+
+        for ($row = 5; $row <= $lastRow; $row++) {
+            $a = (string) $sheet->getCell("A{$row}")->getValue();
+            if (str_starts_with($a, 'Slip No.')) {
+                $sheet->getStyle("A{$row}:H{$row}")->getFont()->setBold(true);
+            }
+            $g = (string) $sheet->getCell("G{$row}")->getValue();
+            if ($g === 'TOTAL' || $g === 'GRAND TOTAL') {
+                $sheet->getStyle("A{$row}:H{$row}")->getFont()->setBold(true);
+                $sheet->getStyle("A{$row}:H{$row}")
+                    ->getFill()
+                    ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                    ->getStartColor()
+                    ->setARGB($g === 'GRAND TOTAL' ? 'FFE2E8F0' : 'FFF3F4F6');
+            }
+        }
 
         return [
             1 => ['alignment' => ['horizontal' => 'center']],
@@ -207,32 +201,23 @@ class CategoryWisePrintSlipExport implements FromCollection, WithHeadings, WithS
 
                 $sheet->setCellValue('A1', "OFFICER'S MESS LBSNAA MUSSOORIE");
                 $sheet->setCellValue('A2', 'Sale Voucher Report');
-                $sheet->setCellValue('A3', "Sale Voucher Report Between {$from} To {$to}");
-                $sheet->setCellValue('A4', 'Buyer-wise selling voucher details');
+                $sheet->setCellValue('A3', "Between {$from} To {$to}");
+                $sheet->setCellValue('A4', '');
 
-                // Freeze header region (after header + column titles)
-                $sheet->freezePane('A7');
-
-                // Optional: fit to page
                 $lastRow = $sheet->getHighestRow();
-                $sheet->getPageSetup()
-                    ->setOrientation(
-                        \PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::ORIENTATION_LANDSCAPE
-                    )
-                    ->setPrintArea("A1:K{$lastRow}");
-
-                // Emphasize section totals and grand total rows.
-                for ($row = 7; $row <= $lastRow; $row++) {
-                    $label = (string) $sheet->getCell("G{$row}")->getValue();
-                    if (in_array($label, ['TOTAL', 'GRAND TOTAL'], true)) {
-                        $sheet->getStyle("A{$row}:K{$row}")->getFont()->setBold(true);
-                        $sheet->getStyle("A{$row}:K{$row}")
-                            ->getFill()
-                            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
-                            ->getStartColor()
-                            ->setARGB('FFF3F4F6');
+                for ($row = 5; $row <= $lastRow; $row++) {
+                    $a = (string) $sheet->getCell("A{$row}")->getValue();
+                    if (str_starts_with($a, 'BUYER NAME :') || str_starts_with($a, 'CLIENT TYPE :')) {
+                        $sheet->mergeCells("A{$row}:H{$row}");
+                        $sheet->getStyle("A{$row}")->getAlignment()->setHorizontal('left');
+                        $sheet->getStyle("A{$row}")->getFont()->setBold(true);
                     }
                 }
+
+                $sheet->freezePane('A5');
+                $sheet->getPageSetup()
+                    ->setOrientation(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::ORIENTATION_LANDSCAPE)
+                    ->setPrintArea("A1:H{$lastRow}");
             },
         ];
     }

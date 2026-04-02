@@ -6,7 +6,7 @@
 
 <div class="container-fluid">
     <x-breadcrum title="Direct Notice" />
-    <div class="card" style="border-left: 4px solid #004a93;">
+    <div class="card">
         <div class="card-header">
             <div class="row">
                 <div class="col-6">
@@ -14,11 +14,11 @@
                 </div>
             </div>
             <hr>
-            <div class="row">
-                <div class="col-2">
-                    <label for="programme" class="form-label">Course Name :</label>
-                    <div class="mb-3">
-                        <select name="course_master_pk" id="programme" class="form-select select2" required>
+            <div class="row g-3 align-items-end">
+                <div class="col-12 col-md-6 col-xl-3">
+                    <label for="programme" class="form-label fw-semibold mb-1">Course Name :</label>
+                    <div class="mb-0">
+                        <select name="course_master_pk" id="programme" class="form-select js-choice" required>
                             <option value="">Select Course</option>
                             @foreach($courseMasters as $course)
                             <option value="{{ $course['pk'] }}">{{ $course['course_name'] }}</option>
@@ -27,45 +27,45 @@
                         <!-- <small class="form-text text-muted">Select Course</small> -->
                     </div>
                 </div>
-                <div class="col-2">
-                    <label for="from_date" class="form-label">From Date :</label>
-                    <div class="mb-3">
+                <div class="col-12 col-md-6 col-xl-3">
+                    <label for="from_date" class="form-label fw-semibold mb-1">From Date :</label>
+                    <div class="mb-0">
                         <input type="date" class="form-control" id="from_date" name="from_date" placeholder="From Date">
                         <!-- <small class="form-text text-muted">Select From Date</small> -->
                     </div>
                 </div>
 
-                <div class="col-2">
-                    <label for="to_date" class="form-label">To Date :</label>
-                    <div class="mb-3">
+                <div class="col-12 col-md-6 col-xl-3">
+                    <label for="to_date" class="form-label fw-semibold mb-1">To Date :</label>
+                    <div class="mb-0">
                         <input type="date" class="form-control" id="to_date" name="to_date" placeholder="To Date">
                         <!-- <small class="form-text text-muted">Select To Date</small> -->
                     </div>
                 </div>
-                <div class="col-3">
-                    <label class="form-label">Attendance Type :</label>
-                    <div class="mb-3">
-                        <div class="form-check form-check-inline" style="vertical-align: middle;">
+                <div class="col-12 col-md-6 col-xl-3">
+                    <label class="form-label fw-semibold mb-1 d-block">Attendance Type :</label>
+                    <div class="d-flex flex-wrap gap-3 mb-0 pt-1">
+                        <div class="form-check form-check-inline m-0">
                             <input class="form-check-input" type="radio" name="attendance_type" id="full_day"
                                 value="full_day" checked>
                             <label class="form-check-label" for="full_day">Full Day</label>
                         </div>
-                        <div class="form-check form-check-inline" style="vertical-align: middle;">
+                        <div class="form-check form-check-inline m-0">
                             <input class="form-check-input" type="radio" name="attendance_type" id="manual"
                                 value="manual">
                             <label class="form-check-label" for="manual">Manual</label>
                         </div>
-                        <div class="form-check form-check-inline" style="vertical-align: middle;">
+                        <div class="form-check form-check-inline m-0">
                             <input class="form-check-input" type="radio" name="attendance_type" id="normal"
                                 value="normal">
                             <label class="form-check-label" for="normal">Normal</label>
                         </div>
                     </div>
                 </div>
-                <div class="col-3" id="normal_session_container" style="display: none;">
-                    <label for="session" class="form-label">Normal Session :</label>
-                    <div class="mb-3">
-                        <select name="session" id="session" class="form-select select2">
+                <div class="col-12 col-md-6 col-xl-3" id="normal_session_container" style="display: none;">
+                    <label for="session" class="form-label fw-semibold mb-1">Normal Session :</label>
+                    <div class="mb-0">
+                        <select name="session" id="session" class="form-select js-choice">
                             <option value="">Select Session</option>
                             @foreach($sessions as $session)
                             <option value="{{ $session['pk'] }}">{{ $session['shift_name'] }}</option>
@@ -75,10 +75,10 @@
                     </div>
                 </div>
 
-                <div class="col-3" id="manual_session_container" style="display: none;">
-                    <label for="manual_session" class="form-label">Manual Session:</label>
-                    <div class="mb-3">
-                        <select name="manual_session" id="manual_session" class="form-select select2">
+                <div class="col-12 col-md-6 col-xl-3" id="manual_session_container" style="display: none;">
+                    <label for="manual_session" class="form-label fw-semibold mb-1">Manual Session:</label>
+                    <div class="mb-0">
+                        <select name="manual_session" id="manual_session" class="form-select js-choice">
                             <option value="">Select Session</option>
                             @foreach($maunalSessions as $maunalSession)
                             <option value="{{ $maunalSession['class_session'] }}">
@@ -120,4 +120,34 @@
 </div>
 
 
+@endsection
+
+@section('scripts')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+<script>
+    (function() {
+        function initChoicesDropdowns() {
+            var selects = document.querySelectorAll('.js-choice');
+            selects.forEach(function(select) {
+                if (select.dataset.choicesInitialized === '1') return;
+                select.dataset.choicesInitialized = '1';
+
+                new Choices(select, {
+                    searchEnabled: true,
+                    searchChoices: true,
+                    shouldSort: false,
+                    allowHTML: false,
+                    itemSelectText: ''
+                });
+            });
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initChoicesDropdowns);
+        } else {
+            initChoicesDropdowns();
+        }
+    })();
+</script>
 @endsection

@@ -89,119 +89,134 @@
                 </div>
             </div>
             <div class="table-responsive selling-voucher-table-wrap">
-                <table class="table table-hover align-middle mb-0 voucher-table w-100" id="sellingVoucherDateRangeTable">
-                    <thead>
+                <table class="table table-sm align-middle mb-0 w-100" id="sellingVoucherDateRangeTable">
+                    <thead class="position-sticky top-0" style="z-index: 1;">
                         <tr>
-                            <th>S. No.</th>
-                            <th>Item Name</th>
-                            <th>Item Quantity</th>
-                            <th>Return Quantity</th>
-                            <th>Transfer From Store</th>
-                            <th>Client Type</th>
-                            <th>Client Name</th>
-                            <th>Name</th>
-                            <th>Payment Type</th>
-                            <th>Request Date</th>
-                            <th>Status</th>
-                            <th>Return Item</th>
-                            <th>Action</th>
+                            <th scope="col" class="ps-3 text-center">#</th>
+                            <th scope="col">Item Name</th>
+                            <th scope="col" class="text-end">Qty</th>
+                            <th scope="col" class="text-end">Return Qty</th>
+                            <th scope="col">Store</th>
+                            <th scope="col">Client Type</th>
+                            <th scope="col">Client Name</th>
+                            <th scope="col">Name</th>
+                            <th scope="col">Payment</th>
+                            <th scope="col">Request Date</th>
+                            <th scope="col" class="text-center">Status</th>
+                            <th scope="col">Return</th>
+                            <th scope="col" class="text-end pe-3">Action</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody class="border-top-0 small">
                         @php $serial = 1; @endphp
                         @forelse($reports as $report)
                         @forelse($report->items as $item)
                         <tr>
-                            <td>{{ $serial++ }}</td>
-                            <td>{{ $item->item_name ?: ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? '—') }}</td>
-                            <td>{{ $item->quantity }}</td>
-                            <td>{{ $item->return_quantity ?? 0 }}</td>
-                            <td>{{ $report->resolved_store_name }}</td>
+                            <td class="ps-3 text-center text-body-secondary">{{ $serial++ }}</td>
+                            <td class="cell-item-name fw-semibold text-wrap text-break">{{ $item->item_name ?: ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? '—') }}</td>
+                            <td class="text-end font-monospace">{{ $item->quantity }}</td>
+                            <td class="text-end font-monospace">{{ $item->return_quantity ?? 0 }}</td>
+                            <td class="text-wrap text-break" title="{{ $report->resolved_store_name }}">{{ $report->resolved_store_name }}</td>
                             <td>{{ $report->clientTypeCategory ? ucfirst($report->clientTypeCategory->client_type ?? '') : ($report->client_type_slug ? ucfirst($report->client_type_slug) : '—') }}</td>
-                            <td>{{ $report->display_client_name }}</td>
-                            <td>{{ $report->client_name ?? '—' }}</td>
-                            <td>{{ $report->payment_type == 1 ? 'Credit' : ($report->payment_type == 0 ? 'Cash' : ($report->payment_type == 2 ? 'UPI' : '—')) }}</td>
-                            <td>{{ $report->date_from ? $report->date_from->format('d/m/Y') : '—' }}</td>
+                            <td class="text-wrap text-break">{{ $report->display_client_name }}</td>
+                            <td class="text-wrap text-break">{{ $report->client_name ?? '—' }}</td>
                             <td>
+                                <span class="badge text-bg-light border border-light-subtle fw-semibold">
+                                    {{ $report->payment_type == 1 ? 'Credit' : ($report->payment_type == 0 ? 'Cash' : ($report->payment_type == 2 ? 'UPI' : '—')) }}
+                                </span>
+                            </td>
+                            <td class="text-body-secondary">{{ $report->date_from ? $report->date_from->format('d/m/Y') : '—' }}</td>
+                            <td class="text-center">
                                 @if($report->status == 0)<span class="badge rounded-1 text-bg-warning">Pending</span>
                                 @elseif($report->status == 2)<span class="badge rounded-1 text-bg-success">Approved</span>
                                 @elseif($report->status == 4)<span class="badge rounded-1 text-bg-primary">Completed</span>
                                 @else<span class="badge rounded-1 text-bg-secondary">Final</span>@endif
                             </td>
                             <td>
-                                @if(($item->return_quantity ?? 0) > 0)
-                                <span class="badge rounded-1 text-bg-info">Returned</span>
-                                @endif
-                                @if($loop->first)
-                                <button type="button" class="btn btn-sm btn-outline-secondary ms-1 btn-return-report d-inline-flex align-items-center gap-1" data-report-id="{{ $report->id }}" title="Return">
-                                    <i class="material-symbols-rounded" style="font-size: 1rem;">assignment_return</i>
-                                    <span>Return</span>
-                                </button>
-                                @endif
+                                <div class="d-flex flex-wrap align-items-center gap-1">
+                                    @if(($item->return_quantity ?? 0) > 0)
+                                    <span class="badge rounded-1 text-bg-info">Returned</span>
+                                    @endif
+                                    @if($loop->first)
+                                    <button type="button" class="btn btn-sm btn-outline-secondary btn-return-report d-inline-flex align-items-center gap-1 rounded-2 px-2" data-report-id="{{ $report->id }}" title="Return">
+                                        <i class="material-symbols-rounded" style="font-size: 1rem;">assignment_return</i>
+                                        <span>Return</span>
+                                    </button>
+                                    @endif
+                                </div>
                             </td>
-                            <td>
+                            <td class="text-end pe-3">
                                 @if($loop->first)
-                                <div class="d-inline-flex align-items-center gap-1">
-                                    <button type="button" class="btn btn-sm btn-outline-primary btn-view-report voucher-icon-btn" data-report-id="{{ $report->id }}" title="View">
+                                <div class="d-inline-flex flex-wrap align-items-center justify-content-end gap-1">
+                                    <button type="button" class="btn btn-sm btn-outline-primary btn-view-report voucher-icon-btn rounded-2" data-report-id="{{ $report->id }}" title="View">
                                         <i class="material-symbols-rounded">visibility</i>
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-outline-warning btn-edit-report voucher-icon-btn" data-report-id="{{ $report->id }}" title="{{ $report->status == \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED ? 'Edit is disabled for approved voucher' : 'Edit' }}" @if($report->status == \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED) disabled @endif>
+                                    <button type="button" class="btn btn-sm btn-outline-warning btn-edit-report voucher-icon-btn rounded-2" data-report-id="{{ $report->id }}" title="{{ $report->status == \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED ? 'Edit is disabled for approved voucher' : 'Edit' }}" @if($report->status == \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED) disabled @endif>
                                         <i class="material-symbols-rounded">edit</i>
                                     </button>
-                                </div>
-                                @if($canDeleteSellingVoucherDateRange)
+                                    @if($canDeleteSellingVoucherDateRange)
                                     <form action="{{ route('admin.mess.selling-voucher-date-range.destroy', $report->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this report?');">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-outline-danger voucher-icon-btn" title="Delete"><i class="material-symbols-rounded">delete</i></button>
+                                        <button type="submit" class="btn btn-sm btn-outline-danger voucher-icon-btn rounded-2" title="Delete"><i class="material-symbols-rounded">delete</i></button>
                                     </form>
-                                @endif
+                                    @endif
+                                </div>
                                 @endif
                             </td>
                         </tr>
                         @empty
                         <tr>
-                            <td>{{ $serial++ }}</td>
-                            <td>—</td>
-                            <td>—</td>
-                            <td>—</td>
-                            <td>{{ $report->resolved_store_name }}</td>
+                            <td class="ps-3 text-center text-body-secondary">{{ $serial++ }}</td>
+                            <td class="cell-item-name text-body-secondary text-wrap text-break">—</td>
+                            <td class="text-end font-monospace text-body-secondary">—</td>
+                            <td class="text-end font-monospace text-body-secondary">—</td>
+                            <td class="text-wrap text-break" title="{{ $report->resolved_store_name }}">{{ $report->resolved_store_name }}</td>
                             <td>{{ $report->clientTypeCategory ? ucfirst($report->clientTypeCategory->client_type ?? '') : ($report->client_type_slug ? ucfirst($report->client_type_slug) : '—') }}</td>
-                            <td>{{ $report->display_client_name }}</td>
-                            <td>{{ $report->client_name ?? '—' }}</td>
-                            <td>{{ $report->payment_type == 1 ? 'Credit' : ($report->payment_type == 0 ? 'Cash' : ($report->payment_type == 2 ? 'UPI' : '—')) }}</td>
-                            <td>{{ $report->date_from ? $report->date_from->format('d/m/Y') : '—' }}</td>
+                            <td class="text-wrap text-break">{{ $report->display_client_name }}</td>
+                            <td class="text-wrap text-break">{{ $report->client_name ?? '—' }}</td>
                             <td>
+                                <span class="badge text-bg-light border border-light-subtle fw-semibold">
+                                    {{ $report->payment_type == 1 ? 'Credit' : ($report->payment_type == 0 ? 'Cash' : ($report->payment_type == 2 ? 'UPI' : '—')) }}
+                                </span>
+                            </td>
+                            <td class="text-body-secondary">{{ $report->date_from ? $report->date_from->format('d/m/Y') : '—' }}</td>
+                            <td class="text-center">
                                 @if($report->status == 0)<span class="badge rounded-1 text-bg-warning">Pending</span>
                                 @elseif($report->status == 2)<span class="badge rounded-1 text-bg-success">Approved</span>
                                 @else<span class="badge rounded-1 text-bg-secondary">Final</span>@endif
                             </td>
                             <td>
-                                <button type="button" class="btn btn-sm btn-outline-secondary btn-return-report d-inline-flex align-items-center gap-1" data-report-id="{{ $report->id }}" title="Return">
+                                <button type="button" class="btn btn-sm btn-outline-secondary btn-return-report d-inline-flex align-items-center gap-1 rounded-2 px-2" data-report-id="{{ $report->id }}" title="Return">
                                     <i class="material-symbols-rounded" style="font-size: 1rem;">assignment_return</i>
                                     <span>Return</span>
                                 </button>
                             </td>
-                            <td>
-                                <div class="d-inline-flex align-items-center gap-1">
-                                    <button type="button" class="btn btn-sm btn-outline-primary btn-view-report voucher-icon-btn" data-report-id="{{ $report->id }}" title="View"><i class="material-symbols-rounded">visibility</i></button>
-                                    <button type="button" class="btn btn-sm btn-outline-warning btn-edit-report voucher-icon-btn" data-report-id="{{ $report->id }}" title="{{ $report->status == \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED ? 'Edit is disabled for approved voucher' : 'Edit' }}" @if($report->status == \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED) disabled @endif><i class="material-symbols-rounded">edit</i></button>
-                                </div>
-                                @if($canDeleteSellingVoucherDateRange)
+                            <td class="text-end pe-3">
+                                <div class="d-inline-flex flex-wrap align-items-center justify-content-end gap-1">
+                                    <button type="button" class="btn btn-sm btn-outline-primary btn-view-report voucher-icon-btn rounded-3" data-report-id="{{ $report->id }}" title="View"><i class="material-symbols-rounded">visibility</i></button>
+                                    <button type="button" class="btn btn-sm btn-outline-warning btn-edit-report voucher-icon-btn rounded-3" data-report-id="{{ $report->id }}" title="{{ $report->status == \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED ? 'Edit is disabled for approved voucher' : 'Edit' }}" @if($report->status == \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED) disabled @endif><i class="material-symbols-rounded">edit</i></button>
+                                    @if($canDeleteSellingVoucherDateRange)
                                     <form action="{{ route('admin.mess.selling-voucher-date-range.destroy', $report->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this report?');">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-outline-danger voucher-icon-btn" title="Delete"><i class="material-symbols-rounded">delete</i></button>
+                                        <button type="submit" class="btn btn-sm btn-outline-danger voucher-icon-btn rounded-3" title="Delete"><i class="material-symbols-rounded">delete</i></button>
                                     </form>
-                                @endif
+                                    @endif
+                                </div>
                             </td>
                         </tr>
                         @endforelse
                         @empty
                         <tr>
-                            <td class="text-center py-5 text-secondary" colspan="13">
-                                <i class="material-symbols-rounded align-middle me-1">inbox</i>
-                                <span class="align-middle">No reports found.</span>
+                            <td class="text-center py-5 text-body-secondary border-0" colspan="13">
+                                <div class="d-flex flex-column align-items-center gap-2 py-3">
+                                    <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-body-tertiary text-secondary p-3">
+                                        <i class="material-symbols-rounded" style="font-size: 2rem;">inbox</i>
+                                    </span>
+                                    <span class="fs-6 fw-medium text-body">No reports found</span>
+                                    <span class="small text-body-secondary">Try adjusting filters or add a new voucher.</span>
+                                </div>
                             </td>
                         </tr>
                         @endforelse
@@ -336,6 +351,12 @@ document.addEventListener('DOMContentLoaded', function () {
         white-space: nowrap;
     }
 
+    .voucher-table tbody td.cell-item-name {
+        white-space: normal;
+        max-width: 18rem;
+        vertical-align: middle;
+    }
+
     .voucher-icon-btn {
         width: 2rem;
         height: 2rem;
@@ -400,6 +421,126 @@ document.addEventListener('DOMContentLoaded', function () {
         background: #fff;
     }
 
+    /* Item Name (Choices): footer/stacking + overflow — same pattern as kitchen selling voucher */
+    #addReportModal .modal-body,
+    #editReportModal .modal-body {
+        position: relative;
+        z-index: 2;
+    }
+    #addReportModal .modal-footer,
+    #editReportModal .modal-footer {
+        z-index: 1;
+    }
+    /* Keep modal scroll stable; don't toggle overflow on dropdown open */
+    #addReportModal .modal-body,
+    #editReportModal .modal-body {
+        /* Important: don't let the modal-body become wider than the viewport.
+           The items table handles its own horizontal scroll. */
+        overflow-x: hidden;
+    }
+    #addReportModal .dr-item-details-table-wrap,
+    #editReportModal .dr-item-details-table-wrap {
+        /* Show all item columns in one view */
+        overflow-x: hidden;
+        overflow-y: visible;
+        width: 100%;
+    }
+    #addReportModal .dr-item-details-table-wrap .table,
+    #editReportModal .dr-item-details-table-wrap .table {
+        min-width: 0;
+        width: 100%;
+        table-layout: fixed;
+        margin-bottom: 0;
+    }
+    #addReportItemsTable th,
+    #addReportItemsTable td,
+    #editReportItemsTable th,
+    #editReportItemsTable td {
+        white-space: normal;
+        padding: .35rem .4rem;
+        word-break: break-word;
+    }
+    /* Column widths tuned so all td are visible in one go */
+    #addReportItemsTable th:nth-child(1), #editReportItemsTable th:nth-child(1) { width: 28%; }
+    #addReportItemsTable th:nth-child(2), #editReportItemsTable th:nth-child(2) { width: 8%; }
+    #addReportItemsTable th:nth-child(3), #editReportItemsTable th:nth-child(3) { width: 11%; }
+    #addReportItemsTable th:nth-child(4), #editReportItemsTable th:nth-child(4) { width: 11%; }
+    #addReportItemsTable th:nth-child(5), #editReportItemsTable th:nth-child(5) { width: 10%; }
+    #addReportItemsTable th:nth-child(6), #editReportItemsTable th:nth-child(6) { width: 14%; }
+    #addReportItemsTable th:nth-child(7), #editReportItemsTable th:nth-child(7) { width: 9%; }
+    #addReportItemsTable th:nth-child(8), #editReportItemsTable th:nth-child(8) { width: 11%; }
+    #addReportItemsTable th:nth-child(9), #editReportItemsTable th:nth-child(9) { width: 5%; }
+    /* Item dropdowns use fixed-position panel; no need to relax container overflow */
+    #addReportModal .card:has(#addModalItemsBody) .card-body,
+    #editReportModal .card:has(#editModalItemsBody) .card-body {
+        position: relative;
+        z-index: 2;
+    }
+    #addReportModal .card:has(#addModalItemsBody) .card-footer,
+    #editReportModal .card:has(#editModalItemsBody) .card-footer {
+        position: relative;
+        z-index: 1;
+    }
+    #addReportModal .choices,
+    #editReportModal .choices {
+        --choices-z-index: 6100;
+    }
+    #addModalItemsBody tr:has(.choices.is-open),
+    #editModalItemsBody tr:has(.choices.is-open) {
+        position: relative;
+        z-index: 50;
+    }
+    #addReportModal .ts-dropdown,
+    #addReportModal .ts-wrapper.choices .choices__list--dropdown,
+    #addReportModal .choices__list--dropdown.is-active,
+    #editReportModal .ts-dropdown,
+    #editReportModal .ts-wrapper.choices .choices__list--dropdown,
+    #editReportModal .choices__list--dropdown.is-active {
+        z-index: 6100 !important;
+    }
+    /* Limit dropdown panel size for large lists (e.g. Academy Staff) */
+    #addReportModal .ts-wrapper.choices .choices__list--dropdown,
+    #addReportModal .choices__list--dropdown.is-active,
+    #editReportModal .ts-wrapper.choices .choices__list--dropdown,
+    #editReportModal .choices__list--dropdown.is-active {
+        width: 100% !important;
+        min-width: 100% !important;
+        max-height: min(320px, 45vh) !important;
+        overflow: hidden !important;
+    }
+    #addReportModal .ts-wrapper.choices .choices__list--dropdown .choices__list,
+    #addReportModal .choices__list--dropdown.is-active .choices__list,
+    #editReportModal .ts-wrapper.choices .choices__list--dropdown .choices__list,
+    #editReportModal .choices__list--dropdown.is-active .choices__list {
+        max-height: min(280px, 40vh) !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+    }
+    /* Ensure the Choices container itself fills the column */
+    #addReportModal .ts-wrapper.choices,
+    #editReportModal .ts-wrapper.choices {
+        width: 100% !important;
+    }
+    /* Keep dropdown width aligned to its input (avoid full-modal width) */
+    #addReportModal .ts-wrapper.choices[data-type*="select-one"] .choices__list--dropdown,
+    #editReportModal .ts-wrapper.choices[data-type*="select-one"] .choices__list--dropdown {
+        width: 100% !important;
+        min-width: 100% !important;
+        max-width: 100% !important;
+        left: 0 !important;
+        right: auto !important;
+        box-sizing: border-box;
+    }
+    #addModalItemsBody .choices__list--dropdown.dr-item-choices-dropdown-fixed,
+    #editModalItemsBody .choices__list--dropdown.dr-item-choices-dropdown-fixed {
+        box-sizing: border-box;
+    }
+    /* (Reserved) */
+    #addModalItemsBody .choices__list--dropdown.dr-item-choices-dropdown-fixed .choices__list,
+    #editModalItemsBody .choices__list--dropdown.dr-item-choices-dropdown-fixed .choices__list {
+        max-height: min(280px, 42vh) !important;
+    }
+
     #addReportModal .modal-body,
     #viewReportModal .modal-body,
     #editReportModal .modal-body,
@@ -428,6 +569,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
     .selling-voucher-card #sellingVoucherDateRangeTable_wrapper .dataTables_scrollBody {
         overflow-x: auto !important;
+    }
+
+    /* Table: show full cell values (no forced single-line truncation) */
+    #sellingVoucherDateRangeTable th,
+    #sellingVoucherDateRangeTable td {
+        white-space: normal !important;
+        vertical-align: middle;
     }
 
     /* Keep DataTable search box pinned and not floating while scrolling */
@@ -490,7 +638,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                         @endforeach
                                     </div>
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-md-6">
                                     <label class="form-label voucher-label">Payment Type <span class="text-danger">*</span></label>
                                     <select name="payment_type" class="form-select " required>
                                         <option value="1" {{ old('payment_type', '1') == '1' ? 'selected' : '' }}>Credit</option>
@@ -499,7 +647,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                     </select>
                                     <small class="form-text text-muted" id="drPaymentTypeHint">Cash / UPI / Credit</small>
                                 </div>
-                                <div class="col-md-4" id="drClientNameWrap" style="display:none;">
+                                <div class="col-md-6" id="drClientNameWrap" style="display:none;">
                                     <label class="form-label voucher-label">Client Name <span class="text-danger">*</span></label>
                                     <select name="client_type_pk" class="form-select " id="drClientNameSelect">
                                         <option value="">Select Client Name</option>
@@ -522,7 +670,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                         @endforeach
                                     </select>
                                 </div>
-                                <div class="col-md-4" id="drNameFieldWrap" style="display:none;">
+                                <div class="col-md-6" id="drNameFieldWrap" style="display:none;">
                                     <label class="form-label voucher-label">Name <span class="text-danger">*</span></label>
                                     <input type="text" name="client_name" id="drClientNameInput" class="form-control " value="{{ old('client_name') }}" placeholder="Client / section / role name" required>
                                     <datalist id="drCourseBuyerNames"></datalist>
@@ -555,7 +703,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                         @endforeach
                                     </select>
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-md-6">
                                     <label class="form-label voucher-label">Transfer From Store <span class="text-danger">*</span></label>
                                     <select name="inve_store_master_pk" class="form-select " required>
                                         <option value="">Select Store</option>
@@ -564,7 +712,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                         @endforeach
                                     </select>
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-md-6">
                                     <label class="form-label voucher-label">Remarks / Reference Number / Order By</label>
                                     <input type="text" name="remarks" class="form-control " value="{{ old('remarks') }}" placeholder="Remarks / Reference Number / Order By (optional)">
                                 </div>
@@ -584,19 +732,19 @@ document.addEventListener('DOMContentLoaded', function () {
                             </button>
                         </div>
                         <div class="card-body p-0">
-                            <div class="table-responsive">
+                            <div class="dr-item-details-table-wrap">
                                 <table class="table table-bordered table-sm table-hover align-middle mb-0" id="addReportItemsTable">
                                     <thead class="voucher-brand-head">
                                         <tr>
-                                            <th style="min-width: 260px;">Item Name <span class="text-white">*</span></th>
-                                            <th style="min-width: 80px;">Unit</th>
-                                            <th style="min-width: 110px;">Available Qty</th>
-                                            <th style="min-width: 110px;">Issue Qty <span class="text-white">*</span></th>
-                                            <th style="min-width: 110px;">Left Qty</th>
-                                            <th style="min-width: 130px;">Issue Date</th>
-                                            <th style="min-width: 110px;">Rate <span class="text-white">*</span></th>
-                                            <th style="min-width: 130px;">Total Amount</th>
-                                            <th style="min-width: 50px;"></th>
+                                            <th>Item Name <span class="text-white">*</span></th>
+                                            <th>Unit</th>
+                                            <th>Available Qty</th>
+                                            <th>Issue Qty <span class="text-white">*</span></th>
+                                            <th>Left Qty</th>
+                                            <th>Issue Date</th>
+                                            <th>Rate <span class="text-white">*</span></th>
+                                            <th>Total Amount</th>
+                                            <th></th>
                                         </tr>
                                     </thead>
                                     <tbody id="addModalItemsBody">
@@ -1048,19 +1196,19 @@ document.addEventListener('DOMContentLoaded', function () {
                             </button>
                         </div>
                         <div class="card-body p-0">
-                            <div class="table-responsive">
-                                <table class="table table-bordered table-sm table-hover align-middle mb-0">
+                            <div class="dr-item-details-table-wrap">
+                                <table class="table table-bordered table-sm table-hover align-middle mb-0" id="editReportItemsTable">
                                     <thead class="voucher-brand-head">
                                         <tr>
-                                            <th style="min-width: 180px;">Item Name <span class="text-white">*</span></th>
-                                            <th style="min-width: 80px;">Unit</th>
-                                            <th style="min-width: 100px;">Available Qty</th>
-                                            <th style="min-width: 90px;">Issue Qty <span class="text-white">*</span></th>
-                                            <th style="min-width: 90px;">Left Qty</th>
-                                            <th style="min-width: 120px;">Issue Date</th>
-                                            <th style="min-width: 100px;">Rate <span class="text-white">*</span></th>
-                                            <th style="min-width: 110px;">Total Amount</th>
-                                            <th style="width: 50px;"></th>
+                                            <th>Item Name <span class="text-white">*</span></th>
+                                            <th>Unit</th>
+                                            <th>Available Qty</th>
+                                            <th>Issue Qty <span class="text-white">*</span></th>
+                                            <th>Left Qty</th>
+                                            <th>Issue Date</th>
+                                            <th>Rate <span class="text-white">*</span></th>
+                                            <th>Total Amount</th>
+                                            <th></th>
                                         </tr>
                                     </thead>
                                     <tbody id="editModalItemsBody"></tbody>
@@ -1096,6 +1244,154 @@ document.addEventListener('DOMContentLoaded', function () {
         let editRowIndex = 0;
         let currentStoreId = null;
         let editCurrentStoreId = null;
+
+        function safeFocus(el) {
+            if (!el || typeof el.focus !== 'function') return;
+            try {
+                el.focus({ preventScroll: true });
+            } catch (e) {
+                try { el.focus(); } catch (e2) {}
+            }
+        }
+
+        // Prevent "jump to top" while clicking/focusing inside scrollable modals.
+        // This guards against scroll resets caused by focus management, overflow toggles, and dropdown portals.
+        function installModalScrollGuard(modalId) {
+            var modal = document.getElementById(modalId);
+            if (!modal) return;
+
+            var last = { winTop: 0, bodyTop: 0, has: false };
+            function capture() {
+                var body = modal.querySelector('.modal-body');
+                last.winTop = (typeof window !== 'undefined') ? (window.scrollY || window.pageYOffset || 0) : 0;
+                last.bodyTop = body ? body.scrollTop : 0;
+                last.has = true;
+            }
+            function restoreSoon() {
+                if (!last.has) return;
+                var body = modal.querySelector('.modal-body');
+                function restoreOnce() {
+                    try { window.scrollTo(0, last.winTop); } catch (e) {}
+                    if (body) body.scrollTop = last.bodyTop;
+                }
+                requestAnimationFrame(restoreOnce);
+                setTimeout(restoreOnce, 0);
+                setTimeout(restoreOnce, 50);
+                setTimeout(restoreOnce, 150);
+            }
+
+            modal.addEventListener('pointerdown', function() {
+                capture();
+                // Some scroll resets happen *after* the click (focus trap / dropdown open / overflow changes).
+                restoreSoon();
+            }, true);
+            modal.addEventListener('focusin', function() {
+                capture();
+                restoreSoon();
+            }, true);
+        }
+
+        // We intentionally do NOT toggle modal overflow classes on dropdown open.
+        // That pattern was causing the modal-body to jump to the top.
+
+        /**
+         * Item rows: Choices list is position:absolute inside nested overflow/table contexts.
+         * Pin the panel to the viewport so it is not clipped by modal/table/card.
+         */
+        function bindDrItemChoicesFixedDropdown(selectEl, choices, api) {
+            var modalBody = null;
+            var placeScheduled = false;
+            function getDropdownEl() {
+                return choices.dropdown && choices.dropdown.element;
+            }
+            function getModalRect() {
+                var modal = selectEl.closest ? selectEl.closest('.modal') : null;
+                var dialog = modal ? modal.querySelector('.modal-dialog') : null;
+                return dialog ? dialog.getBoundingClientRect() : null;
+            }
+            function place() {
+                var dd = getDropdownEl();
+                var wrap = api.wrapper;
+                if (!dd || !wrap || !wrap.classList.contains('is-open')) return;
+                var inner = wrap.querySelector('.choices__inner');
+                if (!inner) return;
+                var r = inner.getBoundingClientRect();
+                var selectRect = selectEl.getBoundingClientRect ? selectEl.getBoundingClientRect() : null;
+                var mr = getModalRect();
+                var flipped = wrap.classList.contains('is-flipped');
+                var margin = 8;
+                var spaceBelow = window.innerHeight - r.bottom - margin * 2;
+                var spaceAbove = r.top - margin * 2;
+                // Use the actual select width (stable) instead of wrapper/table influenced width.
+                var baseWidth = (selectRect && selectRect.width) ? selectRect.width : r.width;
+                var width = Math.max(180, baseWidth);
+                if (mr) {
+                    width = Math.min(width, Math.max(180, mr.width - margin * 2));
+                }
+                var leftMin = mr ? (mr.left + margin) : margin;
+                var leftMax = mr ? (mr.right - width - margin) : (window.innerWidth - width - margin);
+                var leftBase = (selectRect && typeof selectRect.left === 'number') ? selectRect.left : r.left;
+                var left = Math.max(leftMin, Math.min(leftBase, leftMax));
+                dd.classList.add('dr-item-choices-dropdown-fixed');
+                dd.style.setProperty('position', 'fixed', 'important');
+                dd.style.setProperty('left', left + 'px', 'important');
+                dd.style.setProperty('width', width + 'px', 'important');
+                dd.style.setProperty('min-width', width + 'px', 'important');
+                dd.style.setProperty('max-width', width + 'px', 'important');
+                dd.style.setProperty('max-height', Math.max(120, flipped ? spaceAbove : spaceBelow) + 'px', 'important');
+                dd.style.setProperty('z-index', '200000', 'important');
+                if (flipped) {
+                    dd.style.setProperty('top', 'auto', 'important');
+                    dd.style.setProperty('bottom', (window.innerHeight - r.top + 2) + 'px', 'important');
+                } else {
+                    dd.style.setProperty('top', (r.bottom + 2) + 'px', 'important');
+                    dd.style.setProperty('bottom', 'auto', 'important');
+                }
+            }
+            function onScrollOrResize() {
+                if (placeScheduled) return;
+                placeScheduled = true;
+                requestAnimationFrame(function() {
+                    placeScheduled = false;
+                    place();
+                });
+            }
+            function onShow() {
+                modalBody = selectEl.closest('.modal-body');
+                requestAnimationFrame(function() {
+                    place();
+                    requestAnimationFrame(place);
+                });
+                setTimeout(place, 0);
+                setTimeout(place, 80);
+                window.addEventListener('resize', onScrollOrResize, { passive: true });
+                document.addEventListener('scroll', onScrollOrResize, true);
+                if (modalBody) modalBody.addEventListener('scroll', onScrollOrResize, { passive: true });
+            }
+            function onHide() {
+                var dd = getDropdownEl();
+                if (dd) {
+                    dd.classList.remove('dr-item-choices-dropdown-fixed');
+                    ['position', 'left', 'top', 'right', 'bottom', 'width', 'min-width', 'max-width', 'max-height', 'z-index'].forEach(function(p) {
+                        dd.style.removeProperty(p);
+                    });
+                }
+                window.removeEventListener('resize', onScrollOrResize);
+                document.removeEventListener('scroll', onScrollOrResize, true);
+                if (modalBody) modalBody.removeEventListener('scroll', onScrollOrResize);
+                modalBody = null;
+            }
+            selectEl.addEventListener('showDropdown', onShow);
+            selectEl.addEventListener('hideDropdown', onHide);
+        }
+
+        // Note: we only pin ITEM selects dropdowns to viewport (see bindDrItemChoicesFixedDropdown).
+        // For normal selects (store/payment/name), we keep default positioning so width stays aligned.
+
+        document.addEventListener('DOMContentLoaded', function() {
+            installModalScrollGuard('addReportModal');
+            installModalScrollGuard('editReportModal');
+        });
 
         // Native Choices.js instance helper (keeps legacy alias for existing logic).
         function createChoicesInstance(selectEl, settings) {
@@ -1172,6 +1468,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             });
             if (typeof settings.onInitialize === 'function') settings.onInitialize.call(api);
+
+            if (selectEl.classList.contains('dr-item-select') || selectEl.classList.contains('edit-dr-item-select')) {
+                bindDrItemChoicesFixedDropdown(selectEl, choices, api);
+            }
 
             selectEl.choicesInstance = api;
             selectEl.tomselect = api; // legacy alias until full cleanup
@@ -1314,6 +1614,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 onDropdownOpen: function (dropdown) {
                     var self = this;
                     function clearInputAndCursor() {
+                        var prevWinTop = (typeof window !== 'undefined') ? (window.scrollY || window.pageYOffset || 0) : 0;
                         // Choices dropdown me visible cloned input ko priority do.
                         var input = (dropdown && dropdown.querySelector('input.choices__input--cloned')) ||
                                     (dropdown && dropdown.querySelector('input')) ||
@@ -1327,9 +1628,16 @@ document.addEventListener('DOMContentLoaded', function () {
                             input.style.visibility = 'visible';
                             input.style.opacity = '1';
                             input.value = '';
-                            input.focus();
+                        safeFocus(input);
                             try { input.setSelectionRange(0, 0); } catch (e) {}
                             input.scrollLeft = 0;
+                        }
+                        // Some browsers still scroll on focus; restore window position.
+                        if (typeof window !== 'undefined') {
+                            requestAnimationFrame(function() {
+                                try { window.scrollTo(0, prevWinTop); } catch (e) {}
+                            });
+                            setTimeout(function() { try { window.scrollTo(0, prevWinTop); } catch (e) {} }, 0);
                         }
                     }
                     // Agar clearOnOpen true hai to har open par selection bhi hatao
@@ -1396,7 +1704,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     clearOnOpen: true
                 }));
             }
-            var nameSelectIds = ['drOtCourseSelect', 'drCourseSelect', 'drFacultySelect', 'drAcademyStaffSeditelect', 'drMessStaffSelect', 'drOtStudentSelect', 'drCourseNameSelect'];
+            var nameSelectIds = ['drOtCourseSelect', 'drCourseSelect', 'drFacultySelect', 'drAcademyStaffSelect', 'drMessStaffSelect', 'drOtStudentSelect', 'drCourseNameSelect'];
             nameSelectIds.forEach(function(id) {
                 var sel = document.getElementById(id);
                 if (!sel || sel.tomselect) return;
@@ -1431,6 +1739,12 @@ document.addEventListener('DOMContentLoaded', function () {
             var selectEl = e.target && e.target.closest ? e.target.closest('#addModalItemsBody .dr-item-select, #editModalItemsBody .edit-dr-item-select') : null;
             if (!selectEl || selectEl.tomselect || typeof Choices === 'undefined') return;
 
+            // Keep modal scroll position stable while we initialize and open the dropdown.
+            var modalBody = selectEl.closest ? selectEl.closest('.modal') : null;
+            modalBody = modalBody ? modalBody.querySelector('.modal-body') : null;
+            var prevTop = modalBody ? modalBody.scrollTop : 0;
+            var prevWinTop = (typeof window !== 'undefined') ? (window.scrollY || window.pageYOffset || 0) : 0;
+
             e.preventDefault();
             var inst = ensureChoicesInitializedForItemSelect(selectEl);
             setTimeout(function() {
@@ -1441,8 +1755,19 @@ document.addEventListener('DOMContentLoaded', function () {
                 var input = wrapper ? wrapper.querySelector('.choices__list--dropdown .choices__input--cloned') : null;
                 if (input) {
                     input.style.display = 'block';
-                    input.focus();
+                    safeFocus(input);
                 }
+
+                if (modalBody) {
+                    requestAnimationFrame(function() {
+                        modalBody.scrollTop = prevTop;
+                    });
+                    setTimeout(function() { modalBody.scrollTop = prevTop; }, 0);
+                }
+                requestAnimationFrame(function() {
+                    try { window.scrollTo(0, prevWinTop); } catch (e) {}
+                });
+                setTimeout(function() { try { window.scrollTo(0, prevWinTop); } catch (e) {} }, 0);
             }, 0);
         }, true);
         function initEditModalTomSelects() {
@@ -3526,8 +3851,17 @@ document.addEventListener('DOMContentLoaded', function () {
         // Reset add modal when closed (so next open starts fresh)
         const addReportModal = document.getElementById('addReportModal');
         if (addReportModal) {
+            // Reset ASAP when user closes via X/Cancel/backdrop.
+            // (hidden.bs.modal is sometimes late; do both for a reliable "refreshed" feel.)
+            addReportModal.addEventListener('hide.bs.modal', function() {
+                resetAddReportForm();
+                var body = addReportModal.querySelector('.modal-body');
+                if (body) body.scrollTop = 0;
+            });
             addReportModal.addEventListener('hidden.bs.modal', function() {
                 resetAddReportForm();
+                var body = addReportModal.querySelector('.modal-body');
+                if (body) body.scrollTop = 0;
             });
 
             addReportModal.addEventListener('show.bs.modal', function() {
@@ -3566,6 +3900,49 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
                 updateAddGrandTotal();
             });
+        }
+
+        // After AJAX save (add/edit), refresh the listing DataTable so new rows show immediately.
+        // This fetches the current page HTML and swaps DataTable rows (preserves search/paging).
+        var isRefreshingSellingVoucherDateRangeTable = false;
+        function refreshSellingVoucherDateRangeTable() {
+            if (isRefreshingSellingVoucherDateRangeTable) return;
+            if (typeof window.jQuery === 'undefined' || !window.jQuery.fn.DataTable) return;
+
+            var $ = window.jQuery;
+            var $table = $('#sellingVoucherDateRangeTable');
+            if (!$table.length || !$.fn.DataTable.isDataTable($table)) return;
+
+            var dt = $table.DataTable();
+            var expectedCols = $table.find('thead tr:first th').length;
+            var url = window.location.pathname + window.location.search;
+
+            isRefreshingSellingVoucherDateRangeTable = true;
+
+            fetch(url, { headers: { 'Accept': 'text/html' } })
+                .then(function(r) { return r.text(); })
+                .then(function(html) {
+                    var doc = new DOMParser().parseFromString(html, 'text/html');
+                    var newTbody = doc.querySelector('#sellingVoucherDateRangeTable tbody');
+                    if (!newTbody) return;
+
+                    var newRowData = [];
+                    newTbody.querySelectorAll('tr').forEach(function(tr) {
+                        var cells = Array.from(tr.querySelectorAll('td,th'));
+                        if (expectedCols && cells.length !== expectedCols) return; // skip colspan/empty rows
+                        newRowData.push(cells.map(function(td) { return td.innerHTML; }));
+                    });
+
+                    dt.clear();
+                    if (newRowData.length) dt.rows.add(newRowData);
+                    dt.draw(false);
+                })
+                .catch(function(err) {
+                    console.error('Failed to refresh selling voucher date-range table', err);
+                })
+                .finally(function() {
+                    isRefreshingSellingVoucherDateRangeTable = false;
+                });
         }
 
         // Prevent double submit on Add form (stops double entry on Save Selling Voucher) + AJAX submit
@@ -3630,6 +4007,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         if (res.ok && data && data.success) {
                             // Reset form for next entry but keep modal open
                             resetAddReportForm();
+                        refreshSellingVoucherDateRangeTable();
 
                             if (window.toastr && data.message) {
                                 toastr.success(data.message);

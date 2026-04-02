@@ -36,8 +36,8 @@
                         <input type="date" name="to_date" class="form-control" value="{{ request('to_date') }}">
                     </div>
                     <div class="col-12 col-md-3 col-lg-2">
-                        <label class="form-label fw-semibold small text-uppercase text-muted mb-1">Employee / OT / Course</label>
-                        <select name="client_type_slug" id="clientTypeSlug" class="form-select">
+                        <label for="clientTypeSlug" class="form-label fw-semibold small text-uppercase text-muted mb-1">Employee / OT / Course</label>
+                        <select name="client_type_slug" id="clientTypeSlug" class="form-select w-100">
                             <option value="">All Client Types</option>
                             @foreach($clientTypes as $key => $label)
                                 <option value="{{ $key }}" {{ request('client_type_slug') == $key ? 'selected' : '' }}>
@@ -47,8 +47,8 @@
                         </select>
                     </div>
                     <div class="col-12 col-md-3 col-lg-3">
-                        <label class="form-label fw-semibold small text-uppercase text-muted mb-1">Client Type</label>
-                        <select id="clientTypePk" class="form-select" name="{{ in_array(request('client_type_slug'), ['ot', 'course']) ? 'course_master_pk' : 'client_type_pk' }}">
+                        <label for="clientTypePk" class="form-label fw-semibold small text-uppercase text-muted mb-1">Client Type</label>
+                        <select id="clientTypePk" class="form-select w-100" name="{{ in_array(request('client_type_slug'), ['ot', 'course']) ? 'course_master_pk' : 'client_type_pk' }}">
                             <option value="">All</option>
                             @if(request('client_type_slug') === 'employee' && isset($clientTypeCategories['employee']))
                                 @foreach($clientTypeCategories['employee'] as $category)
@@ -70,8 +70,8 @@
                         </select>
                     </div>
                     <div class="col-12 col-md-3 col-lg-3">
-                        <label class="form-label fw-semibold small text-uppercase text-muted mb-1">Buyer Name (Selling Voucher)</label>
-                        <select name="buyer_name" id="clientTypePkBuyer" class="form-select">
+                        <label for="clientTypePkBuyer" class="form-label fw-semibold small text-uppercase text-muted mb-1">Buyer Name (Selling Voucher)</label>
+                        <select name="buyer_name" id="clientTypePkBuyer" class="form-select w-100">
                             <option value="">All Buyers</option>
                             @if(request('client_type_slug') === 'employee' && request('client_type_pk'))
                                 @php
@@ -266,6 +266,20 @@
     @endforelse
     </div>
     @endforeach
+
+    <div class="print-grand-total-block mt-2">
+        <div class="table-responsive">
+            <table class="table text-nowrap table-sm mb-0 print-slip-table align-middle print-grand-total-table">
+                <tbody>
+                    <tr class="grand-total-row">
+                        <td colspan="6"></td>
+                        <td class="text-end"><strong>GRAND TOTAL</strong></td>
+                        <td class="text-end"><strong>{{ number_format($grandTotal ?? 0, 2) }}</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
     @endif
 
     <!-- Pagination removed: all data loaded in a single view -->
@@ -308,6 +322,7 @@
     .print-slip-table .th-qty, .print-slip-table .th-price, .print-slip-table .th-amount { text-align: right; }
     .print-slip-table tbody td { padding: 6px 8px; vertical-align: middle; }
     .print-slip-table .total-row { background-color: #f0f0f0; font-weight: bold; }
+    .print-slip-table .grand-total-row { background-color: #e2e8f0; font-weight: bold; border-top: 2px solid #004a93; }
 
     .pagination-custom {
         background-color: #f5f5f5;
@@ -388,6 +403,11 @@
             font-weight: bold;
             border-top: 2px solid #2c3e50;
         }
+        .print-slip-table .grand-total-row {
+            background: #d8e4ef !important;
+            font-weight: bold;
+            border-top: 3px solid #004a93;
+        }
     }
 </style>
 
@@ -418,6 +438,8 @@ function printCategoryWiseSlip() {
     if (!printWindow) { window.print(); return; }
 
     let sectionsHtml = '';
+    const grandTotalTable = document.querySelector('.print-grand-total-table');
+
     tables.forEach(function(tbl, index) {
         sectionsHtml += `
       <div class="print-page mb-3">
@@ -452,6 +474,37 @@ function printCategoryWiseSlip() {
         </div>
       </div>`;
     });
+
+    if (grandTotalTable) {
+        sectionsHtml += `
+      <div class="print-page mb-3">
+        <div class="row align-items-center lbsnaa-header">
+          <div class="col-auto d-none d-print-block">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg" alt="India Emblem" height="48">
+          </div>
+          <div class="col">
+            <div class="brand-line-1">Government of India</div>
+            <div class="brand-line-2">OFFICER'S MESS LBSNAA MUSSOORIE</div>
+            <div class="brand-line-3">Lal Bahadur Shastri National Academy of Administration</div>
+          </div>
+          <div class="col-auto d-none d-print-block">
+            <img src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png" alt="LBSNAA Logo" height="48">
+          </div>
+        </div>
+        <div class="mb-2">
+          <h5 class="mb-1">${title} &mdash; Summary</h5>
+          <div class="report-meta">
+            <span><strong>Period:</strong> ${dateRange}</span>
+          </div>
+        </div>
+        <div class="table-responsive">
+          ${grandTotalTable.outerHTML}
+        </div>
+        <div class="print-footer text-center mt-2 pt-1">
+          <small>OFFICER'S MESS LBSNAA MUSSOORIE</small>
+        </div>
+      </div>`;
+    }
 
     printWindow.document.open();
     printWindow.document.write(`<!doctype html>

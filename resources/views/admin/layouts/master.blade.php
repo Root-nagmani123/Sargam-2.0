@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="light">
+<html lang="en" dir="ltr" data-bs-theme="light" data-color-theme="Blue_Theme" data-layout="vertical">
 
 <head>
     <!-- Set initial theme from localStorage before paint (avoids flash) -->
@@ -548,39 +548,22 @@
 
                     <!-- Setup Tab -->
                     <div class="tab-pane fade {{ ($activeNavTab ?? '#home') === '#tab-setup' ? 'show active' : '' }}" id="tab-setup" role="tabpanel">
-                        @hasSection('setup_content')
-                            @yield('setup_content')
-                        @else
-                            {{-- Fallback to main content so tab is not blank on pages that don't define setup_content --}}
-                            @yield('content')
-                        @endif
+                        @yield('setup_content')
                     </div>
 
                     <!-- Communications Tab -->
                     <div class="tab-pane fade {{ ($activeNavTab ?? '#home') === '#tab-communications' ? 'show active' : '' }}" id="tab-communications" role="tabpanel">
-                        @hasSection('communications_content')
-                            @yield('communications_content')
-                        @else
-                            @yield('content')
-                        @endif
+                        @yield('communications_content')
                     </div>
 
                     <!-- Academics Tab -->
                     <div class="tab-pane fade {{ ($activeNavTab ?? '#home') === '#tab-academics' ? 'show active' : '' }}" id="tab-academics" role="tabpanel">
-                        @hasSection('academics_content')
-                            @yield('academics_content')
-                        @else
-                            @yield('content')
-                        @endif
+                        @yield('academics_content')
                     </div>
 
                     <!-- Material Management Tab -->
                     <div class="tab-pane fade {{ ($activeNavTab ?? '#home') === '#tab-material-management' ? 'show active' : '' }}" id="tab-material-management" role="tabpanel">
-                        @hasSection('material_management_content')
-                            @yield('material_management_content')
-                        @else
-                            @yield('content')
-                        @endif
+                        @yield('material_management_content')
                     </div>
                 </div>
                 </main>
@@ -617,13 +600,19 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 <script>
-    window.addEventListener('load', function () {
-        const loader = document.getElementById('sargamLoader');
-        if (loader) {
+    (function () {
+        function hideSargamLoader() {
+            var loader = document.getElementById('sargamLoader');
+            if (!loader || loader.classList.contains('hidden')) return;
             loader.classList.add('hidden');
             setTimeout(function () { loader.style.display = 'none'; }, 500);
         }
-    });
+        window.addEventListener('load', hideSargamLoader);
+        document.addEventListener('DOMContentLoaded', function () {
+            setTimeout(hideSargamLoader, 300);
+        });
+        setTimeout(hideSargamLoader, 12000);
+    })();
 </script>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
