@@ -1,9 +1,10 @@
 @php
     $fromLabel = $fromDate ? date('d-F-Y', strtotime($fromDate)) : null;
     $toLabel = $toDate ? date('d-F-Y', strtotime($toDate)) : null;
-    $viewLabel = $viewType === 'item_wise' ? 'Item-wise' : ($viewType === 'subcategory_wise' ? 'Subcategory-wise' : 'Category-wise');
-    $storeLabel = $selectedStoreName ?? 'All Stores';
-    $itemsLabel = $selectedItemNamesLabel ?? 'All Items';
+    $viewLabel = $combinedViewLabel ?? 'Item-wise';
+    $viewTypeSections = $viewTypeSections ?? [];
+    $storeLabel = (isset($selectedStoreName) && $selectedStoreName !== '') ? $selectedStoreName : 'All Stores';
+    $itemsLabel = (isset($selectedItemNamesLabel) && $selectedItemNamesLabel !== '') ? $selectedItemNamesLabel : 'All Items';
     $printedOn = now()->format('d/m/Y') . ' ' . now()->format('g:i:s A');
 
     $emblemSrc = $emblemSrc ?? 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
@@ -183,6 +184,16 @@
             color: #003366;
         }
 
+        .view-section-heading {
+            margin-top: 10px;
+            margin-bottom: 6px;
+            font-weight: 700;
+            font-size: 10pt;
+            color: #003366;
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 4px;
+        }
+
         .no-data {
             font-size: 9pt;
             margin: 10px 0;
@@ -235,48 +246,14 @@
     <div class="meta-line"><strong>Generated on:</strong> {{ $printedOn }}</div>
 </div>
 
-@if($viewType === 'item_wise')
-    @if(empty($reportData))
-        <p class="no-data">No data found for the selected date range.</p>
-    @else
-        <table class="purchase-sale-data">
-            <thead>
-            <tr>
-                <th style="width: 34px;" class="text-center">S. No.</th>
-                <th>Item Name</th>
-                <th style="width: 48px;">Unit</th>
-                <th class="text-end">Total Purchase Qty</th>
-                <th class="text-end">Avg Purchase Price</th>
-                <th class="text-end">Total Sale Qty</th>
-                <th class="text-end">Avg Sale Price</th>
-            </tr>
-            </thead>
-            <tbody>
-            @foreach($reportData as $index => $row)
-                <tr>
-                    <td class="text-center">{{ $index + 1 }}</td>
-                    <td>{{ $row['item_name'] }}</td>
-                    <td>{{ $row['unit'] }}</td>
-                    <td class="text-end">{{ number_format($row['purchase_qty'], 2) }}</td>
-                    <td class="text-end">
-                        {{ $row['avg_purchase_price'] !== null ? '₹' . number_format($row['avg_purchase_price'], 2) : '—' }}
-                    </td>
-                    <td class="text-end">{{ number_format($row['sale_qty'], 2) }}</td>
-                    <td class="text-end">
-                        {{ $row['avg_sale_price'] !== null ? '₹' . number_format($row['avg_sale_price'], 2) : '—' }}
-                    </td>
-                </tr>
-            @endforeach
-            </tbody>
-        </table>
+@forelse($viewTypeSections as $section)
+    @if(count($viewTypeSections) > 1)
+        <div class="view-section-heading">{{ $section['viewLabel'] }}</div>
     @endif
-@else
-    @php $groupedData = $groupedData ?? []; @endphp
-    @if(empty($groupedData))
-        <p class="no-data">No data found for the selected filters.</p>
-    @else
-        @foreach($groupedData as $group)
-            <div class="group-title">{{ $group['category_name'] }}</div>
+    @if($section['viewType'] === 'item_wise')
+        @if(empty($section['reportData']))
+            <p class="no-data">No data found for the selected date range.</p>
+        @else
             <table class="purchase-sale-data">
                 <thead>
                 <tr>
@@ -290,26 +267,67 @@
                 </tr>
                 </thead>
                 <tbody>
-                @foreach($group['items'] as $idx => $row)
+                @foreach($section['reportData'] as $index => $row)
                     <tr>
-                        <td class="text-center">{{ $idx + 1 }}</td>
+                        <td class="text-center">{{ $index + 1 }}</td>
                         <td>{{ $row['item_name'] }}</td>
                         <td>{{ $row['unit'] }}</td>
                         <td class="text-end">{{ number_format($row['purchase_qty'], 2) }}</td>
                         <td class="text-end">
-                            {{ isset($row['avg_purchase_price']) && $row['avg_purchase_price'] !== null ? '₹' . number_format($row['avg_purchase_price'], 2) : '—' }}
+                            {{ $row['avg_purchase_price'] !== null ? '₹' . number_format($row['avg_purchase_price'], 2) : '—' }}
                         </td>
                         <td class="text-end">{{ number_format($row['sale_qty'], 2) }}</td>
                         <td class="text-end">
-                            {{ isset($row['avg_sale_price']) && $row['avg_sale_price'] !== null ? '₹' . number_format($row['avg_sale_price'], 2) : '—' }}
+                            {{ $row['avg_sale_price'] !== null ? '₹' . number_format($row['avg_sale_price'], 2) : '—' }}
                         </td>
                     </tr>
                 @endforeach
                 </tbody>
             </table>
-        @endforeach
+        @endif
+    @else
+        @php $groupedData = $section['groupedData'] ?? []; @endphp
+        @if(empty($groupedData))
+            <p class="no-data">No data found for the selected filters.</p>
+        @else
+            @foreach($groupedData as $group)
+                <div class="group-title">{{ $group['category_name'] }}</div>
+                <table class="purchase-sale-data">
+                    <thead>
+                    <tr>
+                        <th style="width: 34px;" class="text-center">S. No.</th>
+                        <th>Item Name</th>
+                        <th style="width: 48px;">Unit</th>
+                        <th class="text-end">Total Purchase Qty</th>
+                        <th class="text-end">Avg Purchase Price</th>
+                        <th class="text-end">Total Sale Qty</th>
+                        <th class="text-end">Avg Sale Price</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @foreach($group['items'] as $idx => $row)
+                        <tr>
+                            <td class="text-center">{{ $idx + 1 }}</td>
+                            <td>{{ $row['item_name'] }}</td>
+                            <td>{{ $row['unit'] }}</td>
+                            <td class="text-end">{{ number_format($row['purchase_qty'], 2) }}</td>
+                            <td class="text-end">
+                                {{ isset($row['avg_purchase_price']) && $row['avg_purchase_price'] !== null ? '₹' . number_format($row['avg_purchase_price'], 2) : '—' }}
+                            </td>
+                            <td class="text-end">{{ number_format($row['sale_qty'], 2) }}</td>
+                            <td class="text-end">
+                                {{ isset($row['avg_sale_price']) && $row['avg_sale_price'] !== null ? '₹' . number_format($row['avg_sale_price'], 2) : '—' }}
+                            </td>
+                        </tr>
+                    @endforeach
+                    </tbody>
+                </table>
+            @endforeach
+        @endif
     @endif
-@endif
+@empty
+    <p class="no-data">No data found for the selected filters.</p>
+@endforelse
 
 <div class="footer">
     <small>Officer's Mess LBSNAA Mussoorie — Item Report (Purchase / Sale Quantity)</small>

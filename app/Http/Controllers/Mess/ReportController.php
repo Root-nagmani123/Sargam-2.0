@@ -127,6 +127,92 @@ class ReportController extends Controller
         )));
     }
 
+    private const PURCHASE_SALE_VIEW_TYPES_ORDER = ['item_wise', 'subcategory_wise', 'category_wise'];
+
+    /**
+     * @return array<int, string>
+     */
+    private function normalizedPurchaseSaleViewTypes(Request $request): array
+    {
+        $valid = self::PURCHASE_SALE_VIEW_TYPES_ORDER;
+        $raw = $request->input('view_type');
+        if ($raw === null || $raw === '' || $raw === []) {
+            return ['item_wise'];
+        }
+        $list = is_array($raw) ? $raw : [$raw];
+        $out = [];
+        foreach ($list as $v) {
+            if (is_string($v) && in_array($v, $valid, true)) {
+                $out[] = $v;
+            }
+        }
+        $out = array_values(array_unique($out));
+        if ($out === []) {
+            return ['item_wise'];
+        }
+        $order = array_flip($valid);
+        usort($out, static fn ($a, $b) => ($order[$a] ?? 99) <=> ($order[$b] ?? 99));
+
+        return $out;
+    }
+
+    private function purchaseSaleViewTypeLabel(string $viewType): string
+    {
+        return match ($viewType) {
+            'subcategory_wise' => 'Subcategory-wise',
+            'category_wise' => 'Category-wise',
+            default => 'Item-wise',
+        };
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection  $items
+     * @return array<int, array{category_name: string, items: array<int, array>}>|null
+     */
+    private function buildPurchaseSaleGroupedDataForView(string $viewType, array $reportData, $items): ?array
+    {
+        if ($viewType === 'item_wise') {
+            return null;
+        }
+        if ($viewType === 'subcategory_wise') {
+            return collect($reportData)
+                ->groupBy(function ($r) {
+                    return $r['category_name'] ?? 'Uncategorized';
+                })
+                ->map(function ($rows, $catName) {
+                    return ['category_name' => $catName, 'items' => $rows->values()->all()];
+                })
+                ->values()
+                ->all();
+        }
+        if ($items->isEmpty()) {
+            return [];
+        }
+        $catName = $items->first()->category ? $items->first()->category->category_name : 'Category';
+
+        return [['category_name' => $catName, 'items' => $reportData]];
+    }
+
+    /**
+     * @param  array<int, string>  $viewTypes
+     * @return array<int, array{viewType: string, viewLabel: string, reportData: array<int, array>, groupedData: array|null}>
+     */
+    private function buildPurchaseSaleQuantityViewSections(array $viewTypes, string $fromDate, string $toDate, $categoryId, array $itemIds, array $storeIds): array
+    {
+        $sections = [];
+        foreach ($viewTypes as $viewType) {
+            [$items, $reportData] = $this->buildPurchaseSaleQuantityData($fromDate, $toDate, $viewType, $categoryId, $itemIds, $storeIds);
+            $sections[] = [
+                'viewType' => $viewType,
+                'viewLabel' => $this->purchaseSaleViewTypeLabel($viewType),
+                'reportData' => $reportData,
+                'groupedData' => $this->buildPurchaseSaleGroupedDataForView($viewType, $reportData, $items),
+            ];
+        }
+
+        return $sections;
+    }
+
     /**
      * @return array<int, string>
      */
@@ -607,24 +693,26 @@ class ReportController extends Controller
     {
         $fromDate = $request->filled('from_date') ? $request->from_date : now()->startOfMonth()->format('Y-m-d');
         $toDate = $request->filled('to_date') ? $request->to_date : now()->format('Y-m-d');
-        $viewType = $request->filled('view_type') ? $request->view_type : 'item_wise';
-        if (!in_array($viewType, ['item_wise', 'subcategory_wise', 'category_wise'], true)) {
-            $viewType = 'item_wise';
-        }
         $categoryId = $request->filled('category_id') ? $request->category_id : null;
         $itemIds = $this->normalizedIdList($request, 'item_id');
         $storeIds = $this->normalizedIdList($request, 'store_id');
 
-        [$items, $reportData] = $this->buildPurchaseSaleQuantityData($fromDate, $toDate, $viewType, $categoryId, $itemIds, $storeIds);
+        $viewTypes = $this->normalizedPurchaseSaleViewTypes($request);
+        $viewSections = [];
+        foreach ($viewTypes as $viewType) {
+            [, $reportData] = $this->buildPurchaseSaleQuantityData($fromDate, $toDate, $viewType, $categoryId, $itemIds, $storeIds);
+            $viewSections[] = ['viewType' => $viewType, 'reportData' => $reportData];
+        }
+        $combinedViewLabel = implode(', ', array_map(fn ($v) => $this->purchaseSaleViewTypeLabel($v), $viewTypes));
         $selectedStoreName = $this->resolveStoreNamesLabel($storeIds);
 
         $fileName = 'purchase-sale-quantity-' . $fromDate . '-to-' . $toDate . '-' . now()->format('Y-m-d_His') . '.xlsx';
         return Excel::download(
             new PurchaseSaleQuantityExport(
-                $reportData,
+                $viewSections,
                 $fromDate,
                 $toDate,
-                $viewType,
+                $combinedViewLabel,
                 $selectedStoreName,
                 $this->resolveItemSubcategoryNamesLabel($itemIds)
             ),
@@ -639,43 +727,19 @@ class ReportController extends Controller
     {
         $fromDate = $request->filled('from_date') ? $request->from_date : now()->startOfMonth()->format('Y-m-d');
         $toDate   = $request->filled('to_date') ? $request->to_date : now()->format('Y-m-d');
-        $viewType = $request->filled('view_type') ? $request->view_type : 'item_wise';
-        if (!in_array($viewType, ['item_wise', 'subcategory_wise', 'category_wise'], true)) {
-            $viewType = 'item_wise';
-        }
         $categoryId = $request->filled('category_id') ? $request->category_id : null;
         $itemIds    = $this->normalizedIdList($request, 'item_id');
         $storeIds   = $this->normalizedIdList($request, 'store_id');
 
-        [$items, $reportData] = $this->buildPurchaseSaleQuantityData($fromDate, $toDate, $viewType, $categoryId, $itemIds, $storeIds);
-
-        if ($viewType === 'item_wise') {
-            $groupedData = null;
-        } elseif ($viewType === 'subcategory_wise') {
-            $groupedData = collect($reportData)
-                ->groupBy(function ($r) {
-                    return $r['category_name'] ?? 'Uncategorized';
-                })
-                ->map(function ($rows, $catName) {
-                    return ['category_name' => $catName, 'items' => $rows->values()->all()];
-                })
-                ->values()
-                ->all();
-        } else {
-            if ($items->isEmpty()) {
-                $groupedData = [];
-            } else {
-                $catName = $items->first()->category ? $items->first()->category->category_name : 'Category';
-                $groupedData = [['category_name' => $catName, 'items' => $reportData]];
-            }
-        }
+        $viewTypes = $this->normalizedPurchaseSaleViewTypes($request);
+        $viewTypeSections = $this->buildPurchaseSaleQuantityViewSections($viewTypes, $fromDate, $toDate, $categoryId, $itemIds, $storeIds);
+        $combinedViewLabel = implode(', ', array_column($viewTypeSections, 'viewLabel'));
 
         $data = [
-            'reportData' => $reportData,
-            'groupedData' => $groupedData,
+            'viewTypeSections' => $viewTypeSections,
+            'combinedViewLabel' => $combinedViewLabel,
             'fromDate' => $fromDate,
             'toDate' => $toDate,
-            'viewType' => $viewType,
             'selectedStoreName' => $this->resolveStoreNamesLabel($storeIds),
             'selectedItemNamesLabel' => $this->resolveItemSubcategoryNamesLabel($itemIds),
             'emblemSrc' => $this->messPdfIndiaEmblemForDompdf(),
@@ -1683,7 +1747,9 @@ class ReportController extends Controller
             return null;
         }
 
-        return Store::whereIn('id', $storeIds)->orderBy('store_name')->pluck('store_name')->implode(', ');
+        $label = Store::whereIn('id', $storeIds)->orderBy('store_name')->pluck('store_name')->implode(', ');
+
+        return $label !== '' ? $label : null;
     }
 
     /**
@@ -1697,27 +1763,44 @@ class ReportController extends Controller
             return null;
         }
 
-        return ItemSubcategory::whereIn('id', $itemIds)
+        $label = ItemSubcategory::whereIn('id', $itemIds)
             ->orderBy('name')
             ->get()
             ->map(function (ItemSubcategory $i) {
                 return $i->item_name ?? $i->subcategory_name ?? $i->name ?? '—';
             })
             ->implode(', ');
+
+        return $label !== '' ? $label : null;
     }
 
     /**
      * Get items where remaining_quantity <= alert_quantity (for login alert).
-     * Uses same calculation as Stock Balance till date. Default: till_date = today, store_id = null.
+     * Uses same calculation as Stock Balance till date. Default: till_date = today, no store filter.
      *
+     * @param  int|array<int>|null  $storeFilter  Single id, list of ids, or null / empty for all stores
      * @return array<int, array{item_name: string, unit: string, remaining_quantity: float, alert_quantity: float}>
      */
-    public static function getLowStockAlertItems(?string $tillDate = null, $storeId = null): array
+    public static function getLowStockAlertItems(?string $tillDate = null, $storeFilter = null): array
     {
         if (!Schema::hasColumn('mess_item_subcategories', 'alert_quantity')) {
             return [];
         }
         $tillDate = $tillDate ?? now()->format('Y-m-d');
+
+        $storeIds = null;
+        if ($storeFilter !== null) {
+            if (is_array($storeFilter)) {
+                $storeIds = array_values(array_unique(array_filter(array_map('intval', $storeFilter), fn ($id) => $id > 0)));
+                if ($storeIds === []) {
+                    $storeIds = null;
+                }
+            } else {
+                $id = (int) $storeFilter;
+                $storeIds = $id > 0 ? [$id] : null;
+            }
+        }
+
         $items = ItemSubcategory::where('status', 'active')
             ->whereNotNull('alert_quantity')
             ->orderBy('name')
@@ -1725,10 +1808,10 @@ class ReportController extends Controller
         $out = [];
         foreach ($items as $item) {
             $totalPurchased = PurchaseOrderItem::where('item_subcategory_id', $item->id)
-                ->whereHas('purchaseOrder', function ($q) use ($tillDate, $storeId) {
+                ->whereHas('purchaseOrder', function ($q) use ($tillDate, $storeIds) {
                     $q->where('status', 'approved')->whereDate('po_date', '<=', $tillDate);
-                    if ($storeId) {
-                        $q->where('store_id', $storeId);
+                    if ($storeIds !== null) {
+                        $q->whereIn('store_id', $storeIds);
                     }
                 })
                 ->sum('quantity');
@@ -1738,7 +1821,7 @@ class ReportController extends Controller
                 ->where('kim.kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
                 ->where('kim.store_type', 'store')
                 ->whereDate('kim.issue_date', '<=', $tillDate)
-                ->when($storeId, fn ($q) => $q->where('kim.store_id', $storeId))
+                ->when($storeIds !== null, fn ($q) => $q->whereIn('kim.store_id', $storeIds))
                 ->selectRaw('SUM(kii.quantity - COALESCE(kii.return_quantity, 0)) as net')
                 ->value('net') ?? 0;
             $totalIssuedSv = \DB::table('sv_date_range_report_items as svi')
@@ -1746,7 +1829,7 @@ class ReportController extends Controller
                 ->where('svi.item_subcategory_id', $item->id)
                 ->where('svr.store_type', 'store')
                 ->whereDate('svr.issue_date', '<=', $tillDate)
-                ->when($storeId, fn ($q) => $q->where('svr.store_id', $storeId))
+                ->when($storeIds !== null, fn ($q) => $q->whereIn('svr.store_id', $storeIds))
                 ->selectRaw('SUM(svi.quantity - COALESCE(svi.return_quantity, 0)) as net')
                 ->value('net') ?? 0;
             $remainingQty = $totalPurchased - ($totalIssuedKi + $totalIssuedSv);
@@ -1777,22 +1860,24 @@ class ReportController extends Controller
             ? $request->till_date
             : now()->format('Y-m-d');
 
-        $storeId = $request->filled('store_id') ? $request->store_id : null;
+        $selectedStoreIds = $this->normalizedIdList($request, 'store_id');
+        $storeFilter = $selectedStoreIds === [] ? null : $selectedStoreIds;
 
-        $items = self::getLowStockAlertItems($tillDate, $storeId);
+        $items = self::getLowStockAlertItems($tillDate, $storeFilter);
         $stores = Store::where('status', 'active')->get();
 
-        $selectedStoreName = null;
-        if ($storeId) {
-            $selectedStore = Store::find($storeId);
-            $selectedStoreName = $selectedStore ? $selectedStore->store_name : null;
-        }
+        $selectedStoreName = $selectedStoreIds === []
+            ? null
+            : Store::whereIn('id', $selectedStoreIds)
+                ->orderBy('store_name')
+                ->pluck('store_name')
+                ->implode(', ');
 
         return view('admin.mess.reports.low-stock', compact(
             'items',
             'stores',
             'tillDate',
-            'storeId',
+            'selectedStoreIds',
             'selectedStoreName'
         ));
     }
@@ -1806,14 +1891,16 @@ class ReportController extends Controller
             ? $request->till_date
             : now()->format('Y-m-d');
 
-        $storeId = $request->filled('store_id') ? $request->store_id : null;
-        $items = self::getLowStockAlertItems($tillDate, $storeId);
+        $selectedStoreIds = $this->normalizedIdList($request, 'store_id');
+        $storeFilter = $selectedStoreIds === [] ? null : $selectedStoreIds;
+        $items = self::getLowStockAlertItems($tillDate, $storeFilter);
 
-        $selectedStoreName = null;
-        if ($storeId) {
-            $selectedStore = Store::find($storeId);
-            $selectedStoreName = $selectedStore ? $selectedStore->store_name : null;
-        }
+        $selectedStoreName = $selectedStoreIds === []
+            ? null
+            : Store::whereIn('id', $selectedStoreIds)
+                ->orderBy('store_name')
+                ->pluck('store_name')
+                ->implode(', ');
 
         $data = [
             'items' => $items,
@@ -1923,36 +2010,12 @@ class ReportController extends Controller
     {
         $fromDate = $request->filled('from_date') ? $request->from_date : now()->startOfMonth()->format('Y-m-d');
         $toDate = $request->filled('to_date') ? $request->to_date : now()->format('Y-m-d');
-        $viewType = $request->filled('view_type') ? $request->view_type : 'item_wise';
-        if (!in_array($viewType, ['item_wise', 'subcategory_wise', 'category_wise'], true)) {
-            $viewType = 'item_wise';
-        }
         $categoryId = $request->filled('category_id') ? $request->category_id : null;
         $itemIds = $this->normalizedIdList($request, 'item_id');
         $storeIds = $this->normalizedIdList($request, 'store_id');
 
-        [$items, $reportData] = $this->buildPurchaseSaleQuantityData($fromDate, $toDate, $viewType, $categoryId, $itemIds, $storeIds);
-
-        if ($viewType === 'item_wise') {
-            $groupedData = null;
-        } elseif ($viewType === 'subcategory_wise') {
-            $groupedData = collect($reportData)
-                ->groupBy(function ($r) {
-                    return $r['category_name'] ?? 'Uncategorized';
-                })
-                ->map(function ($rows, $catName) {
-                    return ['category_name' => $catName, 'items' => $rows->values()->all()];
-                })
-                ->values()
-                ->all();
-        } else {
-            if ($items->isEmpty()) {
-                $groupedData = [];
-            } else {
-                $catName = $items->first()->category ? $items->first()->category->category_name : 'Category';
-                $groupedData = [['category_name' => $catName, 'items' => $reportData]];
-            }
-        }
+        $viewTypes = $this->normalizedPurchaseSaleViewTypes($request);
+        $viewTypeSections = $this->buildPurchaseSaleQuantityViewSections($viewTypes, $fromDate, $toDate, $categoryId, $itemIds, $storeIds);
 
         $categories = ItemCategory::active()->orderBy('category_name')->get();
 
@@ -1963,11 +2026,10 @@ class ReportController extends Controller
         $selectedItemNamesLabel = $this->resolveItemSubcategoryNamesLabel($itemIds);
 
         return view('admin.mess.reports.purchase-sale-quantity', compact(
-            'reportData',
-            'groupedData',
+            'viewTypes',
+            'viewTypeSections',
             'fromDate',
             'toDate',
-            'viewType',
             'categoryId',
             'itemIds',
             'categories',

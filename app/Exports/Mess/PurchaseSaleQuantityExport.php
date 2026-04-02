@@ -12,26 +12,37 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class PurchaseSaleQuantityExport implements FromCollection, WithCustomStartCell, WithHeadings, WithEvents
 {
-    protected array $reportData;
+    /**
+     * @var array<int, array{viewType: string, reportData: array<int, array>}>
+     */
+    protected array $viewSections;
+
     protected string $fromDate;
+
     protected string $toDate;
-    protected string $viewType;
+
+    protected string $combinedViewLabel;
+
     protected ?string $selectedStoreName;
+
     protected ?string $selectedItemNamesLabel;
 
+    /**
+     * @param  array<int, array{viewType: string, reportData: array<int, array>}>  $viewSections
+     */
     public function __construct(
-        array $reportData,
+        array $viewSections,
         string $fromDate,
         string $toDate,
-        string $viewType,
+        string $combinedViewLabel,
         ?string $selectedStoreName = null,
         ?string $selectedItemNamesLabel = null
     ) {
-        $this->reportData             = $reportData;
-        $this->fromDate               = $fromDate;
-        $this->toDate                 = $toDate;
-        $this->viewType               = $viewType;
-        $this->selectedStoreName      = $selectedStoreName;
+        $this->viewSections = $viewSections;
+        $this->fromDate = $fromDate;
+        $this->toDate = $toDate;
+        $this->combinedViewLabel = $combinedViewLabel;
+        $this->selectedStoreName = $selectedStoreName;
         $this->selectedItemNamesLabel = $selectedItemNamesLabel;
     }
 
@@ -46,18 +57,35 @@ class PurchaseSaleQuantityExport implements FromCollection, WithCustomStartCell,
     public function collection(): Collection
     {
         $rows = [];
-        foreach ($this->reportData as $index => $row) {
-            $rows[] = [
-                $index + 1,
-                $row['category_name'] ?? '—',
-                $row['item_name'] ?? '—',
-                $row['unit'] ?? '—',
-                number_format($row['purchase_qty'] ?? 0, 2),
-                $row['avg_purchase_price'] !== null ? number_format($row['avg_purchase_price'], 2) : '—',
-                number_format($row['sale_qty'] ?? 0, 2),
-                $row['avg_sale_price'] !== null ? number_format($row['avg_sale_price'], 2) : '—',
-            ];
+        $sectionIndex = 0;
+        $multiView = count($this->viewSections) > 1;
+        foreach ($this->viewSections as $section) {
+            $viewLabel = match ($section['viewType']) {
+                'subcategory_wise' => 'Subcategory-wise',
+                'category_wise' => 'Category-wise',
+                default => 'Item-wise',
+            };
+            if ($multiView) {
+                if ($sectionIndex > 0) {
+                    $rows[] = ['', '', '', '', '', '', '', ''];
+                }
+                $rows[] = ['', '— '.$viewLabel.' —', '', '', '', '', '', ''];
+            }
+            foreach ($section['reportData'] as $index => $row) {
+                $rows[] = [
+                    $index + 1,
+                    $row['category_name'] ?? '—',
+                    $row['item_name'] ?? '—',
+                    $row['unit'] ?? '—',
+                    number_format($row['purchase_qty'] ?? 0, 2),
+                    $row['avg_purchase_price'] !== null ? number_format($row['avg_purchase_price'], 2) : '—',
+                    number_format($row['sale_qty'] ?? 0, 2),
+                    $row['avg_sale_price'] !== null ? number_format($row['avg_sale_price'], 2) : '—',
+                ];
+            }
+            $sectionIndex++;
         }
+
         return collect($rows);
     }
 
@@ -92,7 +120,7 @@ class PurchaseSaleQuantityExport implements FromCollection, WithCustomStartCell,
                 $sheet->mergeCells('A3:H3');
 
                 $formattedFrom = \Carbon\Carbon::parse($this->fromDate)->format('d-F-Y');
-                $formattedTo   = \Carbon\Carbon::parse($this->toDate)->format('d-F-Y');
+                $formattedTo = \Carbon\Carbon::parse($this->toDate)->format('d-F-Y');
 
                 // Row 1: Mess name
                 $sheet->setCellValue('A1', "OFFICER'S MESS LBSNAA MUSSOORIE");
@@ -101,11 +129,6 @@ class PurchaseSaleQuantityExport implements FromCollection, WithCustomStartCell,
                 $sheet->setCellValue('A2', 'Item Report - Purchase/Sale Quantity');
 
                 // Row 3: Date range + view type
-                $viewLabel = match ($this->viewType) {
-                    'subcategory_wise' => 'Subcategory-wise',
-                    'category_wise'    => 'Category-wise',
-                    default            => 'Item-wise',
-                };
                 $storeLabel = ($this->selectedStoreName !== null && $this->selectedStoreName !== '')
                     ? $this->selectedStoreName
                     : 'All Stores';
@@ -114,7 +137,7 @@ class PurchaseSaleQuantityExport implements FromCollection, WithCustomStartCell,
                     : 'All Items';
                 $sheet->setCellValue(
                     'A3',
-                    "From {$formattedFrom} To {$formattedTo} | View: {$viewLabel} | Store: {$storeLabel} | Items: {$itemsLabel}"
+                    "From {$formattedFrom} To {$formattedTo} | View: {$this->combinedViewLabel} | Store: {$storeLabel} | Items: {$itemsLabel}"
                 );
 
                 // Basic styling for header
@@ -124,8 +147,8 @@ class PurchaseSaleQuantityExport implements FromCollection, WithCustomStartCell,
                 $sheet->getStyle('A3')->getFont()->setSize(10);
 
                 // Column headings are on row 5 (WithCustomStartCell); data from row 6.
-                $lastRow    = $sheet->getHighestRow();
-                $headerRow  = 5;
+                $lastRow = $sheet->getHighestRow();
+                $headerRow = 5;
                 $tableRange = "A{$headerRow}:H{$lastRow}";
 
                 // Borders for the table.
@@ -153,8 +176,16 @@ class PurchaseSaleQuantityExport implements FromCollection, WithCustomStartCell,
                 $sheet->getStyle("E{$headerRow}:H{$lastRow}")
                     ->getAlignment()->setHorizontal('right');
 
+                // Section title rows: bold category column when it looks like a section marker
+                for ($r = $headerRow + 1; $r <= $lastRow; $r++) {
+                    $bVal = (string) $sheet->getCell("B{$r}")->getValue();
+                    if (str_starts_with($bVal, '— ') && str_ends_with($bVal, ' —')) {
+                        $sheet->getStyle("A{$r}:H{$r}")->getFont()->setBold(true);
+                    }
+                }
+
                 // Freeze pane below header + column titles.
-                $sheet->freezePane("A" . ($headerRow + 1));
+                $sheet->freezePane('A'.($headerRow + 1));
 
                 // Repeat header rows on every printed page.
                 $sheet->getPageSetup()

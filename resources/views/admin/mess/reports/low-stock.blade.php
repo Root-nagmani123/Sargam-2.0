@@ -60,10 +60,15 @@
 
                     <div class="col-12 col-md-4 col-lg-3">
                         <label for="store_id" class="form-label small text-uppercase fw-semibold text-body-secondary mb-1">Store</label>
-                        <select id="store_id" name="store_id" class="form-select choices-select" data-placeholder="All Stores">
-                            <option value="">All Stores</option>
+                        <select
+                            id="store_id"
+                            name="store_id[]"
+                            class="form-select choices-select low-stock-store-multiselect"
+                            multiple
+                            data-placeholder="All Stores"
+                        >
                             @foreach($stores as $store)
-                                <option value="{{ $store->id }}" {{ ($storeId ?? null) == $store->id ? 'selected' : '' }}>
+                                <option value="{{ $store->id }}" @selected(in_array((int) $store->id, $selectedStoreIds ?? [], true))>
                                     {{ $store->store_name }}
                                 </option>
                             @endforeach
@@ -227,6 +232,10 @@
     .low-stock-report .icon-20 { font-size: 20px; }
     .low-stock-report .icon-24 { font-size: 24px; }
     .low-stock-report .icon-48 { font-size: 48px; }
+
+    .low-stock-report .low-stock-store-multiselect + .ts-wrapper {
+        min-height: 38px;
+    }
 
     @media print {
         .no-print {
@@ -497,20 +506,25 @@
         document
             .querySelectorAll('.low-stock-report select.choices-select')
             .forEach(function (el) {
-                if (el.tomselect) return;
+                if (el.dataset.tomselectInitialized === 'true') return;
 
                 var placeholder = el.getAttribute('data-placeholder') || 'Select';
+                var isMultiple = el.hasAttribute('multiple');
 
                 new TomSelect(el, {
                     create: false,
-                    allowEmptyOption: true,
+                    allowEmptyOption: !isMultiple,
                     placeholder: placeholder,
-                    plugins: ['dropdown_input'],
+                    maxItems: isMultiple ? null : 1,
+                    maxOptions: 500,
+                    plugins: isMultiple ? ['remove_button', 'dropdown_input'] : ['dropdown_input'],
                     sortField: {
                         field: 'text',
                         direction: 'asc'
                     }
                 });
+
+                el.dataset.tomselectInitialized = 'true';
             });
     });
 </script>

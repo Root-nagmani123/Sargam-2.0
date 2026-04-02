@@ -7,6 +7,7 @@
         $activeNavTab = '#home';
     } elseif (
         request()->routeIs('admin.employee_idcard.*') || request()->routeIs('admin.issue-management*') ||
+        request()->routeIs('admin.mess.*') ||
         request()->routeIs('member.*') || request()->routeIs('faculty.*') || request()->routeIs('programme.*') ||
         request()->routeIs('admin.roles.*') || request()->routeIs('admin.users.*') ||
         str_starts_with($path, 'setup/') || str_starts_with($path, 'admin/setup') ||
@@ -1461,6 +1462,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <script>
     // Server-computed active tab (from PHP) - used for route-based tab highlighting
     window.SARGAM_ACTIVE_NAV_TAB = '{{ $activeNavTab }}';
+    window.SARGAM_DASHBOARD_URL = @json(route('admin.dashboard'));
 </script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -1581,7 +1583,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 e.preventDefault();
                 return; // Skip tabs without proper href
             }
-            
+
+            // From Setup (or any non-Home main tab), "Home" must load the dashboard route
+            // so the main content area is not an empty/stale #home pane.
+            // Note: some setup-only pages (e.g. admin.mess.*) used to leave $activeNavTab as #home;
+            // also detect "effective" setup when #tab-setup has content but #home does not.
+            if (target === '#home' && window.SARGAM_DASHBOARD_URL) {
+                const routeTab = window.SARGAM_ACTIVE_NAV_TAB || '#home';
+                const setupPane = document.querySelector('#mainNavbarContent #tab-setup.tab-pane');
+                const homePane = document.querySelector('#mainNavbarContent #home.tab-pane');
+                const setupHasContent = !!(setupPane && setupPane.children.length > 0);
+                const homeHasContent = !!(homePane && homePane.children.length > 0);
+                const effectiveSetup = routeTab !== '#home' || (setupHasContent && !homeHasContent);
+                if (effectiveSetup) {
+                    e.preventDefault();
+                    window.location.href = window.SARGAM_DASHBOARD_URL;
+                    return;
+                }
+            }
+
             e.preventDefault();
             showPane(target);
             history.replaceState(null, '', target);

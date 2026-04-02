@@ -6,6 +6,8 @@
     $storeIds = isset($storeIds) ? $storeIds : [];
     /** @var array<int> $itemIds */
     $itemIds = isset($itemIds) ? $itemIds : [];
+    /** @var array<int, string> $viewTypes */
+    $viewTypes = isset($viewTypes) ? $viewTypes : ['item_wise'];
 
     $messEmblemSrc = 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
     // Print opens about:blank; remote URLs often fail. Raster: data URI on <img>. SVG: must be inlined in HTML — <img src="data:image/svg+xml;base64,…"> often stays blank when the SVG embeds raster (xlink:data PNG), which is how admin logo.svg is built.
@@ -48,14 +50,14 @@
         }
     }
 
-    $messViewLabel = $viewType === 'item_wise' ? 'Item-wise' : ($viewType === 'subcategory_wise' ? 'Subcategory-wise' : 'Category-wise');
-    // Keep data-config small: long base64 logo URIs in an attribute get truncated and break JSON.parse.
-    $purchaseSalePrintConfigJson = json_encode([
+    $messViewLabelMap = ['item_wise' => 'Item-wise', 'subcategory_wise' => 'Subcategory-wise', 'category_wise' => 'Category-wise'];
+    $messViewLabel = collect($viewTypes)->map(fn ($v) => $messViewLabelMap[$v] ?? $v)->implode(', ');
+    $purchaseSalePrintConfig = [
         'periodBar' => 'From ' . date('d-F-Y', strtotime($fromDate)) . ' To ' . date('d-F-Y', strtotime($toDate)),
-        'storeLabel' => $selectedStoreName ?? 'All Stores',
-        'itemsLabel' => $selectedItemNamesLabel ?? 'All Items',
+        'storeLabel' => ($selectedStoreName !== null && $selectedStoreName !== '') ? $selectedStoreName : 'All Stores',
+        'itemsLabel' => ($selectedItemNamesLabel !== null && $selectedItemNamesLabel !== '') ? $selectedItemNamesLabel : 'All Items',
         'viewLabel' => $messViewLabel,
-    ], JSON_THROW_ON_ERROR);
+    ];
 
     $purchaseSalePrintImages = [
         'emblemSrc' => $messEmblemSrc,
@@ -64,9 +66,8 @@
     ];
 @endphp
 <div class="container-fluid purchase-sale-quantity-report py-3">
-    <div id="purchase-sale-print-config" class="d-none" hidden
-         data-config="{{ htmlspecialchars($purchaseSalePrintConfigJson, ENT_QUOTES, 'UTF-8') }}"></div>
     <script>
+        window.__purchaseSalePrintConfig = @json($purchaseSalePrintConfig);
         window.__purchaseSalePrintImages = @json($purchaseSalePrintImages);
     </script>
     <x-breadcrum title="Item Report"></x-breadcrum>
@@ -95,13 +96,13 @@
                     </div>
                     <div class="col-12 col-sm-6 col-md-4 col-lg-2">
                         <label class="form-label" for="viewType">View</label>
-                        <select name="view_type" id="viewType" class="form-select purchase-sale-view-tomselect" data-placeholder="Select view type">
-                            <option value="item_wise" {{ $viewType === 'item_wise' ? 'selected' : '' }}>Item-wise</option>
-                            <option value="subcategory_wise" {{ $viewType === 'subcategory_wise' ? 'selected' : '' }}>Subcategory-wise</option>
-                            <option value="category_wise" {{ $viewType === 'category_wise' ? 'selected' : '' }}>Category-wise</option>
+                        <select name="view_type[]" id="viewType" class="form-select purchase-sale-view-tomselect" multiple data-placeholder="Select view type(s)">
+                            <option value="item_wise" @selected(in_array('item_wise', $viewTypes, true))>Item-wise</option>
+                            <option value="subcategory_wise" @selected(in_array('subcategory_wise', $viewTypes, true))>Subcategory-wise</option>
+                            <option value="category_wise" @selected(in_array('category_wise', $viewTypes, true))>Category-wise</option>
                         </select>
                     </div>
-                    <div class="col-12 col-sm-6 col-md-4 col-lg-3{{ $viewType === 'category_wise' ? '' : ' d-none' }}" id="categoryIdWrap">
+                    <div class="col-12 col-sm-6 col-md-4 col-lg-3{{ in_array('category_wise', $viewTypes, true) ? '' : ' d-none' }}" id="categoryIdWrap">
                         <label class="form-label" for="categoryId">Category</label>
                         <select name="category_id" id="categoryId" class="form-select purchase-sale-category-tomselect" data-placeholder="All categories">
                             <option value="">All Categories</option>
@@ -190,99 +191,120 @@
                 From {{ date('d-M-Y', strtotime($fromDate)) }} to {{ date('d-M-Y', strtotime($toDate)) }}
             </p>
             <p class="mb-0 text-body-secondary small">
-                Store: {{ $selectedStoreName ?? 'All Stores' }}
+                View: {{ $messViewLabel }}
             </p>
             <p class="mb-0 text-body-secondary small">
-                Items: {{ $selectedItemNamesLabel ?? 'All Items' }}
+                Store: {{ ($selectedStoreName !== null && $selectedStoreName !== '') ? $selectedStoreName : 'All Stores' }}
+            </p>
+            <p class="mb-0 text-body-secondary small">
+                Items: {{ ($selectedItemNamesLabel !== null && $selectedItemNamesLabel !== '') ? $selectedItemNamesLabel : 'All Items' }}
             </p>
         </div>
-        <div id="purchaseSaleReportCardBody" class="card-body p-0" data-view-type="{{ $viewType }}">
-            @if($viewType === 'item_wise')
-                <div class="table-responsive">
-                    <table class="table align-middle mb-0">
-                        <thead>
-                            <tr>
-                                <th class="border-0 bg-body-secondary py-3">S. No.</th>
-                                <th class="border-0 bg-body-secondary py-3">Item Name</th>
-                                <th class="border-0 bg-body-secondary py-3">Unit</th>
-                                <th class="text-end border-0 bg-body-secondary py-3">Total Purchase Qty</th>
-                                <th class="text-end border-0 bg-body-secondary py-3">Avg Purchase Price</th>
-                                <th class="text-end border-0 bg-body-secondary py-3">Total Sale Qty</th>
-                                <th class="text-end border-0 bg-body-secondary py-3">Avg Sale Price</th>
-                            </tr>
-                        </thead>
-                        <tbody class="table-group-divider">
-                            @forelse($reportData as $index => $row)
-                                <tr>
-                                    <td class="text-center">{{ $index + 1 }}</td>
-                                    <td>{{ $row['item_name'] }}</td>
-                                    <td>{{ $row['unit'] }}</td>
-                                    <td class="text-end">{{ number_format($row['purchase_qty'], 2) }}</td>
-                                    <td class="text-end">{{ $row['avg_purchase_price'] !== null ? '₹' . number_format($row['avg_purchase_price'], 2) : '—' }}</td>
-                                    <td class="text-end">{{ number_format($row['sale_qty'], 2) }}</td>
-                                    <td class="text-end">{{ $row['avg_sale_price'] !== null ? '₹' . number_format($row['avg_sale_price'], 2) : '—' }}</td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="7" class="text-center text-body-secondary py-5">
-                                        <span class="material-symbols-rounded text-muted d-block mb-2" style="font-size: 2.5rem;">inbox</span>
-                                        No data found for the selected date range
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-            @else
-                @php $groupedData = $groupedData ?? []; @endphp
-                @forelse($groupedData as $group)
-                    <div class="purchase-sale-group-block mb-0 border-bottom border-secondary border-opacity-25">
-                        <div class="px-4 pt-3 pb-2">
-                            <h6 class="text-primary fw-semibold mb-0 d-flex align-items-center gap-2">
-                                <span class="material-symbols-rounded" style="font-size: 1.25rem;">category</span>
-                                {{ $group['category_name'] }}
+        <div id="purchaseSaleReportCardBody" class="card-body p-0" data-view-types='@json($viewTypes)'>
+            @php $viewTypeSections = $viewTypeSections ?? []; $multiView = count($viewTypeSections) > 1; @endphp
+            @forelse($viewTypeSections as $section)
+                <div class="purchase-sale-view-section border-bottom border-secondary border-opacity-25" data-view-type="{{ $section['viewType'] }}">
+                    @if($multiView)
+                        <div class="px-4 pt-3 pb-1">
+                            <h6 class="purchase-sale-section-heading text-primary fw-semibold mb-0 d-flex align-items-center gap-2">
+                                <span class="material-symbols-rounded" style="font-size: 1.25rem;">layers</span>
+                                {{ $section['viewLabel'] }}
                             </h6>
                         </div>
+                    @endif
+                    @if($section['viewType'] === 'item_wise')
                         <div class="table-responsive">
-                            <table class="table table-hover table-striped align-middle mb-0">
-                                <thead class="table-primary">
+                            <table class="table align-middle mb-0">
+                                <thead>
                                     <tr>
-                                        <th class="border-0 py-3" style="width: 60px;">S. No.</th>
-                                        <th class="border-0 py-3">Item Name</th>
-                                        <th class="border-0 py-3">Unit</th>
-                                        <th class="text-end border-0 py-3">Total Purchase Qty</th>
-                                        <th class="text-end border-0 py-3">Avg Purchase Price</th>
-                                        <th class="text-end border-0 py-3">Total Sale Qty</th>
-                                        <th class="text-end border-0 py-3">Avg Sale Price</th>
+                                        <th class="border-0 bg-body-secondary py-3">S. No.</th>
+                                        <th class="border-0 bg-body-secondary py-3">Item Name</th>
+                                        <th class="border-0 bg-body-secondary py-3">Unit</th>
+                                        <th class="text-end border-0 bg-body-secondary py-3">Total Purchase Qty</th>
+                                        <th class="text-end border-0 bg-body-secondary py-3">Avg Purchase Price</th>
+                                        <th class="text-end border-0 bg-body-secondary py-3">Total Sale Qty</th>
+                                        <th class="text-end border-0 bg-body-secondary py-3">Avg Sale Price</th>
                                     </tr>
                                 </thead>
                                 <tbody class="table-group-divider">
-                                    @foreach($group['items'] as $idx => $row)
+                                    @forelse($section['reportData'] as $index => $row)
                                         <tr>
-                                            <td class="text-center">{{ $idx + 1 }}</td>
+                                            <td class="text-center">{{ $index + 1 }}</td>
                                             <td>{{ $row['item_name'] }}</td>
                                             <td>{{ $row['unit'] }}</td>
                                             <td class="text-end">{{ number_format($row['purchase_qty'], 2) }}</td>
-                                            <td class="text-end">
-                                                {{ isset($row['avg_purchase_price']) && $row['avg_purchase_price'] !== null ? '₹' . number_format($row['avg_purchase_price'], 2) : '—' }}
-                                            </td>
+                                            <td class="text-end">{{ $row['avg_purchase_price'] !== null ? '₹' . number_format($row['avg_purchase_price'], 2) : '—' }}</td>
                                             <td class="text-end">{{ number_format($row['sale_qty'], 2) }}</td>
-                                            <td class="text-end">
-                                                {{ isset($row['avg_sale_price']) && $row['avg_sale_price'] !== null ? '₹' . number_format($row['avg_sale_price'], 2) : '—' }}
+                                            <td class="text-end">{{ $row['avg_sale_price'] !== null ? '₹' . number_format($row['avg_sale_price'], 2) : '—' }}</td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="7" class="text-center text-body-secondary py-5">
+                                                <span class="material-symbols-rounded text-muted d-block mb-2" style="font-size: 2.5rem;">inbox</span>
+                                                No data found for the selected date range
                                             </td>
                                         </tr>
-                                    @endforeach
+                                    @endforelse
                                 </tbody>
                             </table>
                         </div>
-                    </div>
-                @empty
-                    <div class="alert alert-info fade show rounded-0 border-0 mb-0 d-flex align-items-center gap-2" role="alert">
-                        <span class="material-symbols-rounded">info</span>
-                        <span>No data found for the selected filters.</span>
-                    </div>
-                @endforelse
-            @endif
+                    @else
+                        @php $groupedData = $section['groupedData'] ?? []; @endphp
+                        @forelse($groupedData as $group)
+                            <div class="purchase-sale-group-block mb-0 border-bottom border-secondary border-opacity-25">
+                                <div class="px-4 pt-3 pb-2">
+                                    <h6 class="text-primary fw-semibold mb-0 d-flex align-items-center gap-2">
+                                        <span class="material-symbols-rounded" style="font-size: 1.25rem;">category</span>
+                                        {{ $group['category_name'] }}
+                                    </h6>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-hover table-striped align-middle mb-0">
+                                        <thead class="table-primary">
+                                            <tr>
+                                                <th class="border-0 py-3" style="width: 60px;">S. No.</th>
+                                                <th class="border-0 py-3">Item Name</th>
+                                                <th class="border-0 py-3">Unit</th>
+                                                <th class="text-end border-0 py-3">Total Purchase Qty</th>
+                                                <th class="text-end border-0 py-3">Avg Purchase Price</th>
+                                                <th class="text-end border-0 py-3">Total Sale Qty</th>
+                                                <th class="text-end border-0 py-3">Avg Sale Price</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="table-group-divider">
+                                            @foreach($group['items'] as $idx => $row)
+                                                <tr>
+                                                    <td class="text-center">{{ $idx + 1 }}</td>
+                                                    <td>{{ $row['item_name'] }}</td>
+                                                    <td>{{ $row['unit'] }}</td>
+                                                    <td class="text-end">{{ number_format($row['purchase_qty'], 2) }}</td>
+                                                    <td class="text-end">
+                                                        {{ isset($row['avg_purchase_price']) && $row['avg_purchase_price'] !== null ? '₹' . number_format($row['avg_purchase_price'], 2) : '—' }}
+                                                    </td>
+                                                    <td class="text-end">{{ number_format($row['sale_qty'], 2) }}</td>
+                                                    <td class="text-end">
+                                                        {{ isset($row['avg_sale_price']) && $row['avg_sale_price'] !== null ? '₹' . number_format($row['avg_sale_price'], 2) : '—' }}
+                                                    </td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        @empty
+                            <div class="alert alert-info fade show rounded-0 border-0 mb-0 d-flex align-items-center gap-2" role="alert">
+                                <span class="material-symbols-rounded">info</span>
+                                <span>No data found for the selected filters.</span>
+                            </div>
+                        @endforelse
+                    @endif
+                </div>
+            @empty
+                <div class="alert alert-info fade show rounded-0 border-0 mb-0 d-flex align-items-center gap-2" role="alert">
+                    <span class="material-symbols-rounded">info</span>
+                    <span>No data found for the selected filters.</span>
+                </div>
+            @endforelse
         </div>
     </div>
 </div>
@@ -332,10 +354,10 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.purchase-sale-quantity-report select.purchase-sale-view-tomselect').forEach(function (el) {
         if (el.dataset.tomselectInitialized === 'true') return;
         new TomSelect(el, Object.assign({
-            placeholder: el.getAttribute('data-placeholder') || 'Select view type',
-            maxItems: 1,
+            placeholder: el.getAttribute('data-placeholder') || 'Select view type(s)',
+            maxItems: null,
             maxOptions: null,
-            plugins: ['dropdown_input'],
+            plugins: ['remove_button', 'dropdown_input'],
             sortField: { field: 'text', direction: 'asc' }
         }, tsDropdownToBody));
         el.dataset.tomselectInitialized = 'true';
@@ -454,8 +476,17 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     if (viewType && categoryIdWrap) {
+        function getSelectedViewTypes() {
+            if (viewType.tomselect) {
+                var v = viewType.tomselect.getValue();
+                return Array.isArray(v) ? v : (v ? [String(v)] : []);
+            }
+            return Array.from(viewType.selectedOptions || []).map(function (o) { return o.value; });
+        }
+
         function updateCategoryWrapVisibility() {
-            if (viewType.value === 'category_wise') {
+            var types = getSelectedViewTypes();
+            if (types.indexOf('category_wise') !== -1) {
                 categoryIdWrap.classList.remove('d-none');
             } else {
                 categoryIdWrap.classList.add('d-none');
@@ -472,7 +503,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         updateCategoryWrapVisibility();
-        if (viewType.value !== 'category_wise' && categorySelect) {
+        if (getSelectedViewTypes().indexOf('category_wise') === -1 && categorySelect) {
             var hasCat = categorySelect.tomselect
                 ? categorySelect.tomselect.getValue()
                 : categorySelect.value;
@@ -481,7 +512,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
         viewType.addEventListener('change', function () {
             updateCategoryWrapVisibility();
-            clearCategoryValue();
+            if (getSelectedViewTypes().indexOf('category_wise') === -1) {
+                clearCategoryValue();
+            }
             initOrRebuildItemTomSelect({ clear: true });
         });
     }
@@ -505,23 +538,27 @@ function printPurchaseSaleQuantity() {
         return;
     }
 
-    var viewType = cardBody.getAttribute('data-view-type') || 'item_wise';
-    var cfgEl = document.getElementById('purchase-sale-print-config');
-    var printCfg = {};
+    var viewTypesRaw = cardBody.getAttribute('data-view-types') || '["item_wise"]';
+    var viewTypes = [];
     try {
-        printCfg = cfgEl && cfgEl.getAttribute('data-config')
-            ? JSON.parse(cfgEl.getAttribute('data-config'))
-            : {};
+        viewTypes = JSON.parse(viewTypesRaw);
     } catch (e) {
-        printCfg = {};
+        viewTypes = ['item_wise'];
     }
+    if (!Array.isArray(viewTypes)) {
+        viewTypes = ['item_wise'];
+    }
+    var multiView = viewTypes.length > 1;
+    var printCfg = (typeof window.__purchaseSalePrintConfig === 'object' && window.__purchaseSalePrintConfig)
+        ? window.__purchaseSalePrintConfig
+        : {};
     var printImages = (typeof window.__purchaseSalePrintImages === 'object' && window.__purchaseSalePrintImages) ? window.__purchaseSalePrintImages : {};
     var emblemSrc = printImages.emblemSrc || '';
     var lbsnaaLogoSrc = printImages.lbsnaaLogoSrc || '';
     var lbsnaaLogoSvgInline = printImages.lbsnaaLogoSvgInline || '';
     var periodBar = printCfg.periodBar || '';
-    var storeLabel = printCfg.storeLabel || '';
-    var itemsLabel = printCfg.itemsLabel || '';
+    var storeLabel = printCfg.storeLabel || 'All Stores';
+    var itemsLabel = printCfg.itemsLabel || 'All Items';
     var viewLabel = printCfg.viewLabel || '';
     var printedOn = new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString();
 
@@ -548,24 +585,33 @@ function printPurchaseSaleQuantity() {
     }
 
     var tablesHtml = '';
-    if (viewType === 'item_wise') {
-        var single = cardBody.querySelector('.table-responsive table');
-        if (single) {
-            tablesHtml = tableToPrintFragment(single);
+    cardBody.querySelectorAll('.purchase-sale-view-section').forEach(function (sec) {
+        var vt = sec.getAttribute('data-view-type') || 'item_wise';
+        if (multiView) {
+            var secTitle = sec.querySelector('h6.purchase-sale-section-heading');
+            if (secTitle) {
+                tablesHtml += '<div class="group-title">' + escapeHtml(secTitle.textContent.trim()) + '</div>';
+            }
         }
-    } else {
-        cardBody.querySelectorAll('.purchase-sale-group-block').forEach(function (block) {
-            var titleEl = block.querySelector('h6');
-            var titleText = titleEl ? titleEl.textContent.trim() : '';
-            var tbl = block.querySelector('table');
-            if (titleText) {
-                tablesHtml += '<div class="group-title">' + escapeHtml(titleText) + '</div>';
+        if (vt === 'item_wise') {
+            var single = sec.querySelector('.table-responsive table');
+            if (single) {
+                tablesHtml += tableToPrintFragment(single);
             }
-            if (tbl) {
-                tablesHtml += tableToPrintFragment(tbl);
-            }
-        });
-    }
+        } else {
+            sec.querySelectorAll('.purchase-sale-group-block').forEach(function (block) {
+                var titleEl = block.querySelector('h6');
+                var titleText = titleEl ? titleEl.textContent.trim() : '';
+                var tbl = block.querySelector('table');
+                if (titleText) {
+                    tablesHtml += '<div class="group-title">' + escapeHtml(titleText) + '</div>';
+                }
+                if (tbl) {
+                    tablesHtml += tableToPrintFragment(tbl);
+                }
+            });
+        }
+    });
 
     if (!tablesHtml.trim()) {
         tablesHtml = '<p class="no-data">No data found for the selected filters.</p>';
