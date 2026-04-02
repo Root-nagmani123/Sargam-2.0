@@ -543,21 +543,22 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/reject/{id}', 'reject')->name('reject');
     });
 
-    // Employee ID Card Approval Routes (Approval I & II)
-    Route::prefix('security/employee-idcard-approval')->name('admin.security.employee_idcard_approval.')->controller(\App\Http\Controllers\Admin\Security\EmployeeIDCardApprovalController::class)->group(function () {
-        Route::get('/approval1', 'approval1')->name('approval1');
-        Route::get('/approval2', 'approval2')->name('approval2');
-        Route::get('/approval3', 'approval3')->name('approval3');
-        Route::get('/all', 'all')->name('all');
-        Route::get('/show/{id}', 'show')->name('show');
-        Route::get('/export', 'export')->name('export');
-        Route::post('/approve1/{id}', 'approve1')->name('approve1');
-        Route::post('/approve2/{id}', 'approve2')->name('approve2');
-        Route::post('/approve3/{id}', 'approve3')->name('approve3');
-        Route::post('/reject1/{id}', 'reject1')->name('reject1');
-        Route::post('/reject2/{id}', 'reject2')->name('reject2');
-        Route::post('/reject3/{id}', 'reject3')->name('reject3');
-    });
+// Employee ID Card Approval Routes (Approval I & II)
+Route::prefix('security/employee-idcard-approval')->name('admin.security.employee_idcard_approval.')->controller(\App\Http\Controllers\Admin\Security\EmployeeIDCardApprovalController::class)->group(function () {
+    Route::get('/approval1', 'approval1')->name('approval1');
+    Route::get('/approval2', 'approval2')->name('approval2');
+    Route::get('/approval3', 'approval3')->name('approval3');
+    Route::get('/all', 'all')->name('all');
+    Route::get('/show/{id}', 'show')->name('show');
+    Route::get('/export', 'export')->name('export');
+    Route::post('/approve1/{id}', 'approve1')->name('approve1');
+    Route::post('/approve2/{id}', 'approve2')->name('approve2');
+    Route::post('/approve3/{id}', 'approve3')->name('approve3');
+    Route::post('/reject1/{id}', 'reject1')->name('reject1');
+    Route::post('/reject2/{id}', 'reject2')->name('reject2');
+    Route::post('/reject3/{id}', 'reject3')->name('reject3');
+    Route::post('/mark-generated/{id}', 'markGenerated')->name('markGenerated');
+});
 
     // ID Card - Card Type Master (sec_id_cardno_master)
     Route::prefix('security/idcard-card-type')->name('admin.security.idcard_card_type.')->controller(\App\Http\Controllers\Admin\Security\CardTypeMasterController::class)->group(function () {
@@ -1156,8 +1157,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
     Route::post('issue-escalation-matrix', [IssueEscalationMatrixController::class, 'store'])->name('issue-escalation-matrix.store');
     Route::put('issue-escalation-matrix/{categoryId}', [IssueEscalationMatrixController::class, 'update'])->name('issue-escalation-matrix.update');
 });
-// Mess Management
-Route::prefix('admin/mess')->name('admin.mess.')->group(function () {
+// Mess Management (auth required — layout assumes logged-in user)
+Route::prefix('admin/mess')->name('admin.mess.')->middleware(['auth'])->group(function () {
     // Master Data
     Route::resource('events', \App\Http\Controllers\Mess\EventController::class)->only(['index', 'create', 'store']);
     Route::resource('inventories', \App\Http\Controllers\Mess\InventoryController::class)->only(['index', 'create', 'store']);
@@ -1506,5 +1507,4 @@ Route::middleware(['auth'])->prefix('admin/estate')->name('admin.estate.')->grou
         Route::get('migration-report/filter-options', [EstateController::class, 'getEstateMigrationReportFilterOptions'])->name('migration-report.filter-options');
     });
 });
-Route::get('/view-logs', [App\Http\Controllers\LogController::class, 'index'])
-    ->middleware('auth');
+Route::get('/view-logs', [App\Http\Controllers\LogController::class, 'index']);

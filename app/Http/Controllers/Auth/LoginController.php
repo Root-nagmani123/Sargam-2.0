@@ -78,7 +78,7 @@ class LoginController extends Controller
     try {
 
         /* ================= LOCAL ================= */
-        if (in_array($serverHost, ['localhost', '127.0.0.1', 'dev.local', '98.70.99.215'])) {
+        if (in_array($serverHost, ['localhost', '127.0.0.1', 'dev.local', '98.70.99.215', '74.225.234.234'])) {
 
             $user = User::where('user_name', $username)->first();
             if (!$user) {
