@@ -4,12 +4,13 @@ namespace App\Exports\Mess;
 
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
-use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithCustomStartCell;
 use Maatwebsite\Excel\Concerns\WithEvents;
+use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class PurchaseSaleQuantityExport implements FromCollection, WithHeadings, WithEvents
+class PurchaseSaleQuantityExport implements FromCollection, WithCustomStartCell, WithHeadings, WithEvents
 {
     protected array $reportData;
     protected string $fromDate;
@@ -32,6 +33,14 @@ class PurchaseSaleQuantityExport implements FromCollection, WithHeadings, WithEv
         $this->viewType               = $viewType;
         $this->selectedStoreName      = $selectedStoreName;
         $this->selectedItemNamesLabel = $selectedItemNamesLabel;
+    }
+
+    /**
+     * Headings + data start at row 5; rows 1–4 are filled in AfterSheet (avoids insertNewRowBefore, which breaks PhpSpreadsheet cellmap).
+     */
+    public function startCell(): string
+    {
+        return 'A5';
     }
 
     public function collection(): Collection
@@ -77,10 +86,7 @@ class PurchaseSaleQuantityExport implements FromCollection, WithHeadings, WithEv
                 /** @var Worksheet $sheet */
                 $sheet = $event->sheet->getDelegate();
 
-                // Insert 4 rows at the top for the header + spacer.
-                $sheet->insertNewRowBefore(1, 4);
-
-                // Merge header cells across all 8 columns (A–H).
+                // Merge LBSNAA banner rows (rows 1–3); data/headings already begin at row 5 via startCell().
                 $sheet->mergeCells('A1:H1');
                 $sheet->mergeCells('A2:H2');
                 $sheet->mergeCells('A3:H3');
@@ -117,7 +123,7 @@ class PurchaseSaleQuantityExport implements FromCollection, WithHeadings, WithEv
                 $sheet->getStyle('A2')->getFont()->setBold(true)->setSize(12);
                 $sheet->getStyle('A3')->getFont()->setSize(10);
 
-                // Table header is now on row 5 (because we inserted 4 rows).
+                // Column headings are on row 5 (WithCustomStartCell); data from row 6.
                 $lastRow    = $sheet->getHighestRow();
                 $headerRow  = 5;
                 $tableRange = "A{$headerRow}:H{$lastRow}";

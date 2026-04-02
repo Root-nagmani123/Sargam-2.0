@@ -8,26 +8,67 @@
     $itemIds = isset($itemIds) ? $itemIds : [];
 
     $messEmblemSrc = 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
-    $messLbsnaaLogoSrc = asset('images/lbsnaa_logo.jpg');
-    if (! is_file(public_path('images/lbsnaa_logo.jpg'))) {
-        $messLbsnaaLogoSrc = is_file(public_path('images/lbsnaa_logo.png'))
-            ? asset('images/lbsnaa_logo.png')
-            : 'https://www.lbsnaa.gov.in/admin_assets/images/logo.png';
+    // Print opens about:blank; remote URLs often fail. Raster: data URI on <img>. SVG: must be inlined in HTML — <img src="data:image/svg+xml;base64,…"> often stays blank when the SVG embeds raster (xlink:data PNG), which is how admin logo.svg is built.
+    $messLbsnaaLogoSrc = 'https://www.lbsnaa.gov.in/admin_assets/images/logo.png';
+    $messLbsnaaLogoSvgInline = null;
+    foreach ([public_path('images/lbsnaa_logo.jpg'), public_path('images/lbsnaa_logo.png')] as $logoPath) {
+        if (is_file($logoPath) && is_readable($logoPath)) {
+            $raw = @file_get_contents($logoPath);
+            if ($raw !== false) {
+                $mime = str_ends_with(strtolower($logoPath), '.png') ? 'image/png' : 'image/jpeg';
+                $messLbsnaaLogoSrc = 'data:'.$mime.';base64,'.base64_encode($raw);
+                break;
+            }
+        }
+    }
+    if (str_starts_with($messLbsnaaLogoSrc, 'http')) {
+        foreach ([
+            public_path('admin_assets/images/logos/logo.png'),
+            public_path('admin_assets/images/logos/logo.svg'),
+        ] as $localLogoPath) {
+            if (! is_file($localLogoPath) || ! is_readable($localLogoPath)) {
+                continue;
+            }
+            $raw = @file_get_contents($localLogoPath);
+            if ($raw === false) {
+                continue;
+            }
+            $ext = strtolower(pathinfo($localLogoPath, PATHINFO_EXTENSION));
+            if ($ext === 'svg') {
+                $messLbsnaaLogoSvgInline = $raw;
+                $messLbsnaaLogoSrc = '';
+
+                break;
+            }
+            if ($ext === 'png') {
+                $messLbsnaaLogoSrc = 'data:image/png;base64,'.base64_encode($raw);
+
+                break;
+            }
+        }
     }
 
     $messViewLabel = $viewType === 'item_wise' ? 'Item-wise' : ($viewType === 'subcategory_wise' ? 'Subcategory-wise' : 'Category-wise');
+    // Keep data-config small: long base64 logo URIs in an attribute get truncated and break JSON.parse.
     $purchaseSalePrintConfigJson = json_encode([
-        'emblemSrc' => $messEmblemSrc,
-        'lbsnaaLogoSrc' => $messLbsnaaLogoSrc,
         'periodBar' => 'From ' . date('d-F-Y', strtotime($fromDate)) . ' To ' . date('d-F-Y', strtotime($toDate)),
         'storeLabel' => $selectedStoreName ?? 'All Stores',
         'itemsLabel' => $selectedItemNamesLabel ?? 'All Items',
         'viewLabel' => $messViewLabel,
     ], JSON_THROW_ON_ERROR);
+
+    $purchaseSalePrintImages = [
+        'emblemSrc' => $messEmblemSrc,
+        'lbsnaaLogoSrc' => $messLbsnaaLogoSrc,
+        'lbsnaaLogoSvgInline' => $messLbsnaaLogoSvgInline,
+    ];
 @endphp
 <div class="container-fluid purchase-sale-quantity-report py-3">
     <div id="purchase-sale-print-config" class="d-none" hidden
          data-config="{{ htmlspecialchars($purchaseSalePrintConfigJson, ENT_QUOTES, 'UTF-8') }}"></div>
+    <script>
+        window.__purchaseSalePrintImages = @json($purchaseSalePrintImages);
+    </script>
     <x-breadcrum title="Item Report"></x-breadcrum>
 
     {{-- Filter card --}}
@@ -474,8 +515,10 @@ function printPurchaseSaleQuantity() {
     } catch (e) {
         printCfg = {};
     }
-    var emblemSrc = printCfg.emblemSrc || '';
-    var lbsnaaLogoSrc = printCfg.lbsnaaLogoSrc || '';
+    var printImages = (typeof window.__purchaseSalePrintImages === 'object' && window.__purchaseSalePrintImages) ? window.__purchaseSalePrintImages : {};
+    var emblemSrc = printImages.emblemSrc || '';
+    var lbsnaaLogoSrc = printImages.lbsnaaLogoSrc || '';
+    var lbsnaaLogoSvgInline = printImages.lbsnaaLogoSvgInline || '';
     var periodBar = printCfg.periodBar || '';
     var storeLabel = printCfg.storeLabel || '';
     var itemsLabel = printCfg.itemsLabel || '';
@@ -526,6 +569,15 @@ function printPurchaseSaleQuantity() {
 
     if (!tablesHtml.trim()) {
         tablesHtml = '<p class="no-data">No data found for the selected filters.</p>';
+    }
+
+    var lbsnaaLogoCell = '';
+    if (lbsnaaLogoSvgInline) {
+        lbsnaaLogoCell = '<td class="branding-logo-svg-td"><div class="lbsnaa-inline-svg-wrap">' + lbsnaaLogoSvgInline + '</div></td>';
+    } else if (lbsnaaLogoSrc) {
+        lbsnaaLogoCell = '<td style="width:48px;"><img src="' + escapeHtml(lbsnaaLogoSrc) + '" alt="LBSNAA" class="header-img-right-seal"></td>';
+    } else {
+        lbsnaaLogoCell = '<td style="width:48px;"></td>';
     }
 
     var docTitle = 'Item Report - OFFICER\'S MESS LBSNAA MUSSOORIE';
@@ -592,6 +644,9 @@ function printPurchaseSaleQuantity() {
 '    }\n' +
 '    .header-img-left { width: 40px; height: 40px; object-fit: contain; display: block; }\n' +
 '    .header-img-right-seal { width: 44px; height: 44px; object-fit: contain; display: block; }\n' +
+'    .branding-logo-svg-td { width: 140px; vertical-align: middle; }\n' +
+'    .lbsnaa-inline-svg-wrap { line-height: 0; }\n' +
+'    .lbsnaa-inline-svg-wrap svg { width: 130px; max-width: 100%; height: auto; max-height: 44px; display: block; }\n' +
 '    .branding-right-text { text-align: left; padding-left: 8px; line-height: 1.2; }\n' +
 '    .branding-hindi { font-size: 8pt; color: #7b2d26; font-weight: 600; }\n' +
 '    .branding-en-side { font-size: 7pt; color: #7b2d26; margin-top: 2px; }\n' +
@@ -671,7 +726,7 @@ function printPurchaseSaleQuantity() {
 '      <td class="branding-logo-right">\n' +
 '        <table class="branding-right-inner">\n' +
 '          <tr>\n' +
-'            <td style="width:48px;"><img src="' + escapeHtml(lbsnaaLogoSrc) + '" alt="LBSNAA" class="header-img-right-seal"></td>\n' +
+'            ' + lbsnaaLogoCell + '\n' +
 '            <td class="branding-right-text">\n' +
 '              <div class="branding-hindi">लाल बहादुर शास्त्री राष्ट्रीय प्रशासन अकादमी</div>\n' +
 '              <div class="branding-en-side">Lal Bahadur Shastri National Academy of Administration</div>\n' +
@@ -696,10 +751,10 @@ tablesHtml +
 '<div class="footer">\n' +
 '  <small>Officer\'s Mess LBSNAA Mussoorie — Item Report (Purchase / Sale Quantity)</small>\n' +
 '</div>\n' +
-'<script>window.addEventListener("load", function () { window.print(); });<\\/script>\n' +
+'<script>(function(){function runPrint(){window.print();}function afterImages(){var imgs=document.querySelectorAll("img");var n=imgs.length;if(!n){setTimeout(runPrint,100);return;}var left=n;function one(){if(--left<=0)setTimeout(runPrint,150);}for(var i=0;i<imgs.length;i++){var img=imgs[i];if(img.complete){one();}else{img.addEventListener("load",one);img.addEventListener("error",one);}}}window.addEventListener("load",afterImages);})();<\\/script>\n' +
 '</body>\n' +
 '</html>');
-    printWindow.document.close();
+    printWindow.document.close()
 }
 </script>
 @endsection

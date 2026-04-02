@@ -120,10 +120,6 @@
             page-break-inside: auto;
         }
 
-        table.data-table thead {
-            display: table-header-group;
-        }
-
         table.data-table th,
         table.data-table td {
             padding: 3px 4px;

@@ -2,21 +2,37 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>Sale Voucher Report</title>
+    <title>Sale Voucher Report - OFFICER'S MESS LBSNAA MUSSOORIE</title>
     <style>
         @page {
             size: A4 portrait;
             margin: 12mm;
         }
 
+        /* Match standalone print view (category-wise-print-slip-print) for PDF output */
         body {
             font-family: DejaVu Sans, Arial, sans-serif;
-            font-size: 11pt;
+            font-size: 12px;
             margin: 0;
-            padding: 0;
+            padding: 12px;
             color: #222;
             background: #fff;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
+
+        .cw-slip-pdf-inner {
+            max-width: 100%;
+        }
+
+        /* Partial uses Bootstrap class names; PDF has no Bootstrap CSS */
+        .mb-1 { margin-bottom: 4px; }
+        .mb-2 { margin-bottom: 8px; }
+        .mb-4 { margin-bottom: 14px; }
+        .mt-2 { margin-top: 8px; }
+        .text-center { text-align: center; }
+        .text-muted { color: #6c757d; }
+        .align-middle { vertical-align: middle; }
 
         .print-page-wrap {
             page-break-after: auto;
@@ -27,79 +43,38 @@
         }
 
         .print-grand-total-block {
+            display: block;
+            margin-top: 12px;
             page-break-inside: avoid;
-        }
-
-        .report-mess-title {
-            color: #000;
-            font-size: 14pt;
-            font-weight: bold;
-            margin: 0 0 4px 0;
-        }
-
-        .report-title-bar {
-            background-color: #004a93;
-            color: #fff;
-            padding: 8px 14px;
-            font-size: 11pt;
-            margin-top: 6px;
         }
 
         .report-header {
             margin-bottom: 12px;
             padding-bottom: 8px;
             border-bottom: 2px solid #2c3e50;
+            text-align: center;
         }
 
-        .lbsnaa-header-row {
-            display: table;
-            width: 100%;
-            border-bottom: 2px solid #004a93;
-            margin-bottom: 10px;
-            padding: 2px 0 8px;
+        .report-mess-title {
+            color: #1a1a1a;
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            margin: 0 0 4px 0;
         }
 
-        .lbsnaa-brand-left {
-            display: table-cell;
-            width: auto;
-            vertical-align: middle;
-        }
-
-        .lbsnaa-logo-wrap {
-            display: table-cell;
-            width: 40px;
-            vertical-align: middle;
-            text-align: left;
-        }
-
-        .lbsnaa-header-logo {
-            width: 34px;
-            height: 34px;
-            object-fit: contain;
-        }
-
-        .lbsnaa-brand-lines {
-            display: table-cell;
-            vertical-align: middle;
-            text-align: left;
-            line-height: 1.25;
-            padding: 0 10px 0 0;
-        }
-
-        .lbsnaa-brand-right {
-            display: table-cell;
-            width: 200px;
-            text-align: right;
-            vertical-align: middle;
-        }
-
-        .lbsnaa-header-logo-right {
-            width: 165px;
-            height: auto;
+        .report-title-bar {
+            background-color: #2c3e50;
+            color: #fff;
+            padding: 8px 14px;
+            font-size: 13px;
+            margin-top: 6px;
+            border-radius: 2px;
+            letter-spacing: 0.3px;
         }
 
         .lbsnaa-brand-line-1 {
-            font-size: 8pt;
+            font-size: 11.5px;
             color: #004a93;
             text-transform: uppercase;
             letter-spacing: 0.05em;
@@ -107,45 +82,38 @@
         }
 
         .lbsnaa-brand-line-2 {
-            font-size: 13pt;
+            font-size: 17px;
             color: #222;
             font-weight: 700;
             margin-top: 2px;
         }
 
         .lbsnaa-brand-line-3 {
-            font-size: 10pt;
+            font-size: 13.5px;
             color: #555;
             margin-top: 2px;
         }
 
-        .report-details-row {
-            display: table;
-            width: 100%;
-            padding: 8px 10px;
-            background: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 3px;
-            margin-bottom: 10px;
-            box-sizing: border-box;
+        .lbsnaa-header-logo {
+            width: 34px;
+            height: 34px;
+            object-fit: contain;
+            display: block;
         }
 
-        .report-buyer-label {
-            display: table-cell;
-            font-weight: 600;
-            width: 50%;
-            vertical-align: middle;
-        }
-
-        .report-client-type {
-            display: table-cell;
-            font-weight: 600;
-            text-align: right;
-            vertical-align: middle;
+        .lbsnaa-header-logo-right {
+            width: 96px;
+            max-width: 100%;
+            max-height: 44px;
+            height: auto;
+            object-fit: contain;
+            display: block;
+            margin-left: auto;
         }
 
         .print-slip-section {
             margin-bottom: 14px;
+            page-break-inside: avoid;
         }
 
         .table-responsive {
@@ -156,7 +124,7 @@
         .print-slip-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 10pt;
+            font-size: 12px;
             margin-bottom: 8px;
             table-layout: fixed;
         }
@@ -176,6 +144,7 @@
             color: #fff;
             font-weight: 600;
             border: 1px solid #1a252f;
+            padding: 8px 6px;
         }
 
         .print-slip-table .th-slip-no,
@@ -237,9 +206,36 @@
             border: 1px solid #ffc107;
             color: #664d03;
         }
+
+        /* Dompdf-safe header: same visual as print flex row (emblem | left text | right logo) */
+        .lbsnaa-branding-table {
+            width: 100%;
+            border-collapse: collapse;
+            border-bottom: 2px solid #004a93;
+            margin-bottom: 10px;
+            padding: 2px 0 8px;
+        }
+        .lbsnaa-branding-table td {
+            border: 0;
+            vertical-align: middle;
+        }
+        .lbsnaa-branding-table td.lbsnaa-branding-emblem {
+            width: 40px;
+            padding-right: 12px;
+        }
+        .lbsnaa-branding-table td.lbsnaa-branding-lines {
+            text-align: left;
+            line-height: 1.25;
+            padding: 0 12px 0 0;
+        }
+        .lbsnaa-branding-table td.lbsnaa-branding-logo {
+            width: 104px;
+            text-align: right;
+        }
     </style>
 </head>
-<body>
+<body class="cw-slip-pdf-body">
+<div class="cw-slip-pdf-inner container-fluid">
 @include('admin.mess.reports.partials.category-wise-print-slip-body', [
     'sectionsToShow' => $sectionsToShow,
     'fromDateFormatted' => $fromDateFormatted ?? 'Start',
@@ -251,6 +247,8 @@
     'showBrandingHeader' => true,
     'emblemSrc' => $emblemSrc ?? 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png',
     'lbsnaaLogoSrc' => $lbsnaaLogoSrc ?? 'https://www.lbsnaa.gov.in/admin_assets/images/logo.png',
+    'dompdfSafeTables' => true,
 ])
+</div>
 </body>
 </html>

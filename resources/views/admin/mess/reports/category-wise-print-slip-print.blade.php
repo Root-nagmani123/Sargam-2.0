@@ -80,14 +80,20 @@
         }
 
         .lbsnaa-brand-right {
-            width: 200px;
+            width: 110px;
+            flex: 0 0 110px;
             display: flex;
             justify-content: flex-end;
+            align-items: center;
+            height: 44px;
+            vertical-align: middle;
         }
 
         .lbsnaa-header-logo-right {
-            width: 168px;
+            width: 96px;
+            max-height: 50px;
             height: auto;
+            object-fit: contain;
         }
 
         .lbsnaa-brand-line-1 {
@@ -202,7 +208,8 @@
             }
 
             .lbsnaa-header-logo-right {
-                width: 170px;
+                width: 96px;
+                max-height: 44px;
             }
 
             .report-mess-title {

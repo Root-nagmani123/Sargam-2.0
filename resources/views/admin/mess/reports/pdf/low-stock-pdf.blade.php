@@ -181,9 +181,6 @@
             font-size: 9pt;
             margin-bottom: 10px;
         }
-        table.low-stock-data thead {
-            display: table-header-group;
-        }
         table.low-stock-data th,
         table.low-stock-data td {
             padding: 5px 8px;

@@ -54,17 +54,11 @@
             padding: 0 12px;
             line-height: 1.25;
         }
-        .branding-logo-right {
-            width: 220px;
-        }
-        .branding-right-inner {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        .branding-right-inner td {
-            border: 0;
+        /* Single flat row for Dompdf — nested <table> inside <td> often triggers "Frame not found in cellmap". */
+        .branding-seal-cell {
+            width: 52px;
             vertical-align: middle;
-            padding: 0;
+            padding: 0 4px 0 0;
         }
         .lbsnaa-brand-line-1 {
             font-size: 8pt;
@@ -154,9 +148,6 @@
             font-size: 8pt;
             margin-bottom: 8px;
         }
-        table.purchase-sale-data thead {
-            display: table-header-group;
-        }
         table.purchase-sale-data th,
         table.purchase-sale-data td {
             padding: 4px 6px;
@@ -221,18 +212,12 @@
                 <div class="lbsnaa-brand-line-2">OFFICER'S MESS LBSNAA MUSSOORIE</div>
                 <div class="lbsnaa-brand-line-3">Lal Bahadur Shastri National Academy of Administration</div>
             </td>
-            <td class="branding-logo-right">
-                <table class="branding-right-inner">
-                    <tr>
-                        <td style="width: 48px;">
-                            <img src="{{ $lbsnaaLogoSrc }}" alt="LBSNAA" class="header-img-right-seal">
-                        </td>
-                        <td class="branding-right-text">
-                            <div class="branding-hindi">लाल बहादुर शास्त्री राष्ट्रीय प्रशासन अकादमी</div>
-                            <div class="branding-en-side">Lal Bahadur Shastri National Academy of Administration</div>
-                        </td>
-                    </tr>
-                </table>
+            <td class="branding-seal-cell">
+                <img src="{{ $lbsnaaLogoSrc }}" alt="LBSNAA" class="header-img-right-seal">
+            </td>
+            <td class="branding-right-text">
+                <div class="branding-hindi">लाल बहादुर शास्त्री राष्ट्रीय प्रशासन अकादमी</div>
+                <div class="branding-en-side">Lal Bahadur Shastri National Academy of Administration</div>
             </td>
         </tr>
     </table>
