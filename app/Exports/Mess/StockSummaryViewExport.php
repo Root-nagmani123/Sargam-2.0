@@ -15,17 +15,15 @@ class StockSummaryViewExport implements FromView, WithStyles, WithEvents, WithTi
     protected array $reportData;
     protected string $fromDate;
     protected string $toDate;
-    protected ?int $storeId;
     protected string $storeType;
     protected ?string $selectedStoreName;
 
-    public function __construct(array $reportData, string $fromDate, string $toDate, ?int $storeId, string $storeType, ?string $selectedStoreName)
+    public function __construct(array $reportData, string $fromDate, string $toDate, string $storeType, ?string $selectedStoreName)
     {
-        $this->reportData       = $reportData;
-        $this->fromDate         = $fromDate;
-        $this->toDate           = $toDate;
-        $this->storeId          = $storeId;
-        $this->storeType        = $storeType;
+        $this->reportData        = $reportData;
+        $this->fromDate          = $fromDate;
+        $this->toDate            = $toDate;
+        $this->storeType         = $storeType;
         $this->selectedStoreName = $selectedStoreName;
     }
 
@@ -35,7 +33,6 @@ class StockSummaryViewExport implements FromView, WithStyles, WithEvents, WithTi
             'reportData'        => $this->reportData,
             'fromDate'          => $this->fromDate,
             'toDate'            => $this->toDate,
-            'storeId'           => $this->storeId,
             'storeType'         => $this->storeType,
             'selectedStoreName' => $this->selectedStoreName,
         ]);

@@ -20,6 +20,9 @@ class PurchaseOrderController extends Controller
 {
     public function index(Request $request)
     {
+        $vendorIds = $this->normalizeFilterIdList($request->input('vendor_id'));
+        $storeIds = $this->normalizeFilterIdList($request->input('store_id'));
+
         $query = PurchaseOrder::with(['vendor', 'store', 'creator', 'approver', 'items']);
 
         if ($request->filled('date_from')) {
@@ -28,11 +31,11 @@ class PurchaseOrderController extends Controller
         if ($request->filled('date_to')) {
             $query->whereDate('po_date', '<=', $request->date_to);
         }
-        if ($request->filled('vendor_id')) {
-            $query->where('vendor_id', $request->vendor_id);
+        if ($vendorIds !== []) {
+            $query->whereIn('vendor_id', $vendorIds);
         }
-        if ($request->filled('store_id')) {
-            $query->where('store_id', $request->store_id);
+        if ($storeIds !== []) {
+            $query->whereIn('store_id', $storeIds);
         }
 
         $purchaseOrders = $query->latest('po_date')->get();
@@ -51,12 +54,12 @@ class PurchaseOrderController extends Controller
 
         $filterDateFrom = $request->get('date_from', '');
         $filterDateTo = $request->get('date_to', '');
-        $filterVendorId = $request->get('vendor_id', '');
-        $filterStoreId = $request->get('store_id', '');
+        $filterVendorIds = $vendorIds;
+        $filterStoreIds = $storeIds;
 
         return view('mess.purchaseorders.index', compact(
             'purchaseOrders', 'vendors', 'stores', 'itemSubcategories', 'po_number', 'paymentModes',
-            'filterDateFrom', 'filterDateTo', 'filterVendorId', 'filterStoreId'
+            'filterDateFrom', 'filterDateTo', 'filterVendorIds', 'filterStoreIds'
         ));
     }
 
@@ -78,6 +81,7 @@ class PurchaseOrderController extends Controller
     public function store(Request $request)
     {
         try {
+            $this->normalizePurchaseOrderItemsInRequest($request);
             $request->validate([
                 'po_number' => 'required|unique:mess_purchase_orders,po_number',
                 'vendor_id' => 'required|exists:mess_vendors,id',
@@ -145,11 +149,12 @@ class PurchaseOrderController extends Controller
                     $unitPrice = (float) $item['unit_price'];
                     $taxPercent = isset($item['tax_percent']) ? (float) $item['tax_percent'] : 0;
                     $lineTotal = round($qty * $unitPrice * (1 + $taxPercent / 100), 2);
-                    $sub = ItemSubcategory::find($item['item_subcategory_id']);
+                    $itemSubcategoryId = $this->coerceItemSubcategoryId($item['item_subcategory_id'] ?? null);
+                    $sub = ItemSubcategory::find($itemSubcategoryId);
                     PurchaseOrderItem::create([
                         'purchase_order_id' => $purchaseOrder->id,
                         'inventory_id' => null,
-                        'item_subcategory_id' => $item['item_subcategory_id'],
+                        'item_subcategory_id' => $itemSubcategoryId,
                         'quantity' => $qty,
                         'unit' => $item['unit'] ?? ($sub ? ($sub->unit_measurement ?? null) : null),
                         'unit_price' => $unitPrice,
@@ -244,6 +249,7 @@ class PurchaseOrderController extends Controller
     public function update(Request $request, $id)
     {
         $purchaseOrder = PurchaseOrder::findOrFail($id);
+        $this->normalizePurchaseOrderItemsInRequest($request);
         $request->validate([
             'vendor_id' => 'required|exists:mess_vendors,id',
             'store_id' => 'nullable|exists:mess_stores,id',
@@ -308,11 +314,12 @@ class PurchaseOrderController extends Controller
                 $unitPrice = (float) $item['unit_price'];
                 $taxPercent = isset($item['tax_percent']) ? (float) $item['tax_percent'] : 0;
                 $lineTotal = round($qty * $unitPrice * (1 + $taxPercent / 100), 2);
-                $sub = ItemSubcategory::find($item['item_subcategory_id']);
+                $itemSubcategoryId = $this->coerceItemSubcategoryId($item['item_subcategory_id'] ?? null);
+                $sub = ItemSubcategory::find($itemSubcategoryId);
                 PurchaseOrderItem::create([
                     'purchase_order_id' => $purchaseOrder->id,
                     'inventory_id' => null,
-                    'item_subcategory_id' => $item['item_subcategory_id'],
+                    'item_subcategory_id' => $itemSubcategoryId,
                     'quantity' => $qty,
                     'unit' => $item['unit'] ?? ($sub ? ($sub->unit_measurement ?? null) : null),
                     'unit_price' => $unitPrice,
@@ -369,6 +376,99 @@ class PurchaseOrderController extends Controller
             ]);
 
         return response()->json($items);
+    }
+
+    /**
+     * Multi-select item fields submit item_subcategory_id as an array; expand to one row per id
+     * so validation and persistence always see a scalar (avoids "Array to string conversion").
+     */
+    protected function normalizePurchaseOrderItemsInRequest(Request $request): void
+    {
+        $items = $request->input('items');
+        if (! is_array($items)) {
+            return;
+        }
+
+        $normalized = [];
+        foreach ($items as $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+
+            $rawId = $item['item_subcategory_id'] ?? null;
+            if (is_array($rawId)) {
+                $ids = array_values(array_filter($rawId, static function ($v) {
+                    return $v !== '' && $v !== null;
+                }));
+                foreach ($ids as $subId) {
+                    $row = $item;
+                    $row['item_subcategory_id'] = $subId;
+                    $normalized[] = $row;
+                }
+            } else {
+                if (is_string($rawId) && str_contains($rawId, ',')) {
+                    $ids = array_values(array_filter(array_map('trim', explode(',', $rawId)), static function ($v) {
+                        return $v !== '';
+                    }));
+                    foreach ($ids as $subId) {
+                        $row = $item;
+                        $row['item_subcategory_id'] = $subId;
+                        $normalized[] = $row;
+                    }
+                    continue;
+                }
+                $normalized[] = $item;
+            }
+        }
+
+        $request->merge(['items' => $normalized]);
+    }
+
+    /**
+     * GET filter fields may be scalar or array (multi-select). Returns unique positive int IDs.
+     *
+     * @param  mixed  $value
+     * @return list<int>
+     */
+    protected function normalizeFilterIdList($value): array
+    {
+        if ($value === null || $value === '' || $value === []) {
+            return [];
+        }
+
+        if (! is_array($value)) {
+            $value = [$value];
+        }
+
+        $seen = [];
+        foreach ($value as $v) {
+            if ($v === '' || $v === null || is_array($v)) {
+                continue;
+            }
+            $id = (int) $v;
+            if ($id > 0) {
+                $seen[$id] = true;
+            }
+        }
+
+        return array_map('intval', array_keys($seen));
+    }
+
+    protected function coerceItemSubcategoryId($rawId): ?int
+    {
+        if (is_array($rawId)) {
+            $rawId = $rawId[0] ?? null;
+        }
+
+        if (is_string($rawId) && str_contains($rawId, ',')) {
+            $rawId = trim(explode(',', $rawId)[0] ?? '');
+        }
+
+        if ($rawId === '' || $rawId === null) {
+            return null;
+        }
+
+        return (int) $rawId;
     }
 
     /**

@@ -116,38 +116,50 @@
                     </div>
                     <div class="col-md-3">
                         <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">person</i>Employee / OT / Course</label>
-                        <select name="client_type" id="filterClientTypeSlug" class="form-select choices-select" data-placeholder="All client types">
-                            <option value="">All Client Types</option>
+                        @php
+                            $selectedClientTypes = request('client_type', []);
+                            if (!is_array($selectedClientTypes)) {
+                                $selectedClientTypes = $selectedClientTypes !== null ? [$selectedClientTypes] : [];
+                            }
+                        @endphp
+                        <select name="client_type[]" id="filterClientTypeSlug" class="form-select choices-select" multiple data-placeholder="All client types">
                             @foreach($clientTypes ?? [] as $key => $label)
-                                <option value="{{ $key }}" {{ ($clientType ?? request('client_type')) === $key ? 'selected' : '' }}>{{ $label }}</option>
+                                <option value="{{ $key }}" {{ in_array($key, $selectedClientTypes) ? 'selected' : '' }}>{{ $label }}</option>
                             @endforeach
                         </select>
                     </div>
                     <div class="col-md-3">
                         <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">category</i>Client Type</label>
-                        <select name="client_type_pk" id="filterClientTypePk" class="form-select choices-select" data-placeholder="All">
-                            <option value="">All</option>
+                        @php
+                            $selectedClientTypePks = request('client_type_pk', []);
+                            if (!is_array($selectedClientTypePks)) {
+                                $selectedClientTypePks = $selectedClientTypePks !== null ? [$selectedClientTypePks] : [];
+                            }
+                        @endphp
+                        <select name="client_type_pk[]" id="filterClientTypePk" class="form-select choices-select" multiple data-placeholder="All">
                         </select>
                     </div>
-                        <div class="col-md-3">
+                    @php
+                        $selectedBuyerNames = (array) ($buyerName ?? request('buyer_name', []));
+                    @endphp
+                    <div class="col-md-3">
                         <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">badge</i>Buyer Name</label>
-                        <select name="buyer_name" id="filterBuyerName" class="form-select shadow-sm border-0 choices-select">
-                            <option value="">All Buyers</option>
+                        <select name="buyer_name[]" id="filterBuyerName" class="form-select shadow-sm border-0 choices-select" multiple data-placeholder="All Buyers">
                             @if(($clientType ?? request('client_type')) === 'ot' && isset($otBuyerNames) && $otBuyerNames->isNotEmpty())
                                 @foreach($otBuyerNames as $buyer)
-                                    <option value="{{ $buyer }}" {{ ($buyerName ?? request('buyer_name')) === $buyer ? 'selected' : '' }}>{{ $buyer }}</option>
+                                    <option value="{{ $buyer }}" {{ in_array($buyer, $selectedBuyerNames, true) ? 'selected' : '' }}>{{ $buyer }}</option>
                                 @endforeach
                             @elseif(($clientType ?? request('client_type')) === 'course' && isset($courseBuyerNames) && $courseBuyerNames->isNotEmpty())
                                 @foreach($courseBuyerNames as $buyer)
-                                    <option value="{{ $buyer }}" {{ ($buyerName ?? request('buyer_name')) === $buyer ? 'selected' : '' }}>{{ $buyer }}</option>
+                                    <option value="{{ $buyer }}" {{ in_array($buyer, $selectedBuyerNames, true) ? 'selected' : '' }}>{{ $buyer }}</option>
                                 @endforeach
                             @elseif(($clientType ?? request('client_type')) === 'other' && isset($otherBuyerNames) && $otherBuyerNames->isNotEmpty())
                                 @foreach($otherBuyerNames as $buyer)
-                                    <option value="{{ $buyer }}" {{ ($buyerName ?? request('buyer_name')) === $buyer ? 'selected' : '' }}>{{ $buyer }}</option>
+                                    <option value="{{ $buyer }}" {{ in_array($buyer, $selectedBuyerNames, true) ? 'selected' : '' }}>{{ $buyer }}</option>
                                 @endforeach
                             @elseif(($clientType ?? request('client_type')) === 'section' && isset($sectionBuyerNames) && $sectionBuyerNames->isNotEmpty())
                                 @foreach($sectionBuyerNames as $buyer)
-                                    <option value="{{ $buyer }}" {{ ($buyerName ?? request('buyer_name')) === $buyer ? 'selected' : '' }}>{{ $buyer }}</option>
+                                    <option value="{{ $buyer }}" {{ in_array($buyer, $selectedBuyerNames, true) ? 'selected' : '' }}>{{ $buyer }}</option>
                                 @endforeach
                             @endif
                         </select>
@@ -185,9 +197,15 @@
             <form method="GET" action="{{ route('admin.mess.process-mess-bills-employee.index') }}" id="filterForm" class="no-print">
                 <input type="hidden" name="date_from" value="{{ $effectiveDateFrom ?? request('date_from') }}">
                 <input type="hidden" name="date_to" value="{{ $effectiveDateTo ?? request('date_to') }}">
-                <input type="hidden" name="client_type" value="{{ $clientType ?? request('client_type') }}">
-                <input type="hidden" name="client_type_pk" value="{{ $clientTypePk ?? request('client_type_pk') }}">
-                <input type="hidden" name="buyer_name" value="{{ $buyerName ?? request('buyer_name') }}">
+                @foreach((array) request('client_type', []) as $selectedClientType)
+                    <input type="hidden" name="client_type[]" value="{{ $selectedClientType }}">
+                @endforeach
+                @foreach((array) request('client_type_pk', []) as $selectedClientTypePk)
+                    <input type="hidden" name="client_type_pk[]" value="{{ $selectedClientTypePk }}">
+                @endforeach
+                @foreach((array) ($buyerName ?? request('buyer_name', [])) as $selectedBuyerName)
+                    <input type="hidden" name="buyer_name[]" value="{{ $selectedBuyerName }}">
+                @endforeach
                 <input type="hidden" name="status" value="{{ $statusFilter ?? request('status') }}">
                 <div class="d-flex flex-wrap justify-content-end align-items-right mb-3 gap-2">
                     <div class="d-flex align-items-center gap-2">
@@ -542,7 +560,7 @@
 }
 </style>
 <div class="modal fade" id="addProcessMessBillsModal" tabindex="-1" aria-labelledby="addProcessMessBillsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered modal-fullscreen-md-down">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-md-down">
         <div class="modal-content border-0 shadow-lg rounded-3">
             <div class="modal-header bg-light border-0 py-3">
                 <h5 class="modal-title fw-semibold d-flex align-items-center gap-2" id="addProcessMessBillsModalLabel">
@@ -569,8 +587,7 @@
                         </div>
                         <div class="col-md-3">
                             <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1rem;">person</i>Employee / OT / Course</label>
-                            <select name="modal_client_type" id="modal_client_type" class="form-select shadow-sm border-0 choices-select" data-placeholder="All Client Types">
-                                <option value="">All Client Types</option>
+                            <select name="modal_client_type[]" id="modal_client_type" class="form-select shadow-sm border-0 choices-select" multiple data-placeholder="Select Client Types">
                                 @foreach($clientTypes ?? [] as $key => $label)
                                     <option value="{{ $key }}">{{ $label }}</option>
                                 @endforeach
@@ -578,25 +595,26 @@
                         </div>
                         <div class="col-md-3">
                             <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1rem;">category</i>Client Type</label>
-                            <select name="modal_client_type_pk" id="modal_client_type_pk" class="form-select choices-select" data-placeholder="All">
-                                <option value="">All</option>
+                            <select name="modal_client_type_pk[]" id="modal_client_type_pk" class="form-select choices-select" multiple data-placeholder="Select Client Types">
                             </select>
                         </div>
+                        @php
+                            $selectedModalBuyerNames = (array) ($buyerName ?? request('buyer_name', []));
+                        @endphp
                         <div class="col-md-3">
                         <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">badge</i>Buyer Name</label>
-                        <select name="modal_buyer_name" id="modal_buyer_name" class="form-select choices-select">
-                            <option value="">All Buyers</option>
+                        <select name="modal_buyer_name[]" id="modal_buyer_name" class="form-select choices-select" multiple data-placeholder="Select Buyers">
                             @if(($clientType ?? request('client_type')) === 'course' && isset($courseBuyerNames) && $courseBuyerNames->isNotEmpty())
                                 @foreach($courseBuyerNames as $buyer)
-                                    <option value="{{ $buyer }}" {{ ($buyerName ?? request('buyer_name')) === $buyer ? 'selected' : '' }}>{{ $buyer }}</option>
+                                    <option value="{{ $buyer }}" {{ in_array($buyer, $selectedModalBuyerNames, true) ? 'selected' : '' }}>{{ $buyer }}</option>
                                 @endforeach
                             @elseif(($clientType ?? request('client_type')) === 'other' && isset($otherBuyerNames) && $otherBuyerNames->isNotEmpty())
                                 @foreach($otherBuyerNames as $buyer)
-                                    <option value="{{ $buyer }}" {{ ($buyerName ?? request('buyer_name')) === $buyer ? 'selected' : '' }}>{{ $buyer }}</option>
+                                    <option value="{{ $buyer }}" {{ in_array($buyer, $selectedModalBuyerNames, true) ? 'selected' : '' }}>{{ $buyer }}</option>
                                 @endforeach
                             @elseif(($clientType ?? request('client_type')) === 'section' && isset($sectionBuyerNames) && $sectionBuyerNames->isNotEmpty())
                                 @foreach($sectionBuyerNames as $buyer)
-                                    <option value="{{ $buyer }}" {{ ($buyerName ?? request('buyer_name')) === $buyer ? 'selected' : '' }}>{{ $buyer }}</option>
+                                    <option value="{{ $buyer }}" {{ in_array($buyer, $selectedModalBuyerNames, true) ? 'selected' : '' }}>{{ $buyer }}</option>
                                 @endforeach
                             @endif
                         </select>
@@ -714,9 +732,78 @@
     .choices__list--dropdown {
         z-index: 2000;
     }
+    .ts-wrapper.choices {
+        position: relative;
+    }
+    .ts-wrapper.choices .choices__list--dropdown {
+        position: absolute !important;
+        top: 100%;
+        left: 0;
+        right: 0;
+    }
+    .ts-wrapper.choices.is-flipped .choices__list--dropdown {
+        top: auto;
+        bottom: 100%;
+    }
+    .ts-wrapper.choices[data-type*="select-one"] .choices__input {
+        display: block !important;
+        width: 100% !important;
+        min-width: 100% !important;
+    }
+    /* Niche open: search upar | Uper (flipped) open: search niche */
+    .ts-wrapper.choices .choices__list--dropdown.is-active {
+        display: flex;
+        flex-direction: column;
+    }
+    .ts-wrapper.choices.is-flipped .choices__list--dropdown.is-active {
+        flex-direction: column-reverse;
+    }
+    .ts-wrapper.choices .choices__list--dropdown.is-active .choices__list {
+        flex: 1 1 auto;
+        min-height: 0;
+    }
+    .ts-wrapper.choices[data-type*="select-one"] .choices__list--dropdown .choices__input--cloned,
+    .ts-wrapper.choices[data-type*="select-one"] .choices__list--dropdown .choices__input {
+        border-top: none !important;
+        border-bottom: 1px solid #ced4da !important;
+        margin-bottom: 0 !important;
+    }
+    .ts-wrapper.choices.is-flipped[data-type*="select-one"] .choices__list--dropdown .choices__input--cloned,
+    .ts-wrapper.choices.is-flipped[data-type*="select-one"] .choices__list--dropdown .choices__input {
+        border-bottom: none !important;
+        border-top: 1px solid #ced4da !important;
+    }
+    .ts-wrapper.choices .choices__list--dropdown .choices__input--cloned {
+        display: block !important;
+        position: relative !important;
+        opacity: 1 !important;
+        flex-shrink: 0;
+        min-height: 34px;
+        width: 100% !important;
+    }
 </style>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    function normalizeChoicesSearchText(text) {
+        return String(text || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    }
+
+    function applyPartialMatchChoicesSearchFilter(instance, rawQuery) {
+        if (!instance || !instance.dropdown || !instance.dropdown.element) return;
+        var dropdownEl = instance.dropdown.element;
+        var query = normalizeChoicesSearchText(rawQuery);
+        var choiceItems = dropdownEl.querySelectorAll('.choices__item--choice');
+        if (!choiceItems || !choiceItems.length) return;
+
+        choiceItems.forEach(function(item) {
+            if (item.classList.contains('choices__placeholder')) return;
+            var label = normalizeChoicesSearchText(item.textContent || '');
+            var value = normalizeChoicesSearchText(item.getAttribute('data-value') || '');
+            var show = !query || label.indexOf(query) !== -1 || value.indexOf(query) !== -1;
+            item.style.display = show ? '' : 'none';
+        });
+    }
+
     if (typeof flatpickr !== 'undefined') {
         var dateFromInput = document.getElementById('date_from');
         var dateToInput = document.getElementById('date_to');
@@ -758,16 +845,41 @@ document.addEventListener('DOMContentLoaded', function() {
         if (el.dataset.choicesInitialized === 'true') return;
 
         var placeholder = el.getAttribute('data-placeholder') || 'Select';
-        var shouldSearch = (el.options && el.options.length > 10);
+        // Keep search enabled for all Choices dropdowns.
+        var shouldSearch = el.getAttribute('data-search') !== 'false';
+        var isMultiple = !!el.multiple;
 
         var instance = new Choices(el, {
             searchEnabled: shouldSearch,
-            removeItemButton: false,
+            // Disable built-in filter; we apply substring match below (typing shows partial matches).
+            searchChoices: false,
+            removeItemButton: isMultiple,
             itemSelectText: '',
             shouldSort: false,
+            position: 'bottom',
             placeholderValue: placeholder,
-            allowHTML: false
+            allowHTML: false,
+            closeDropdownOnSelect: !isMultiple
         });
+        if (instance.containerOuter && instance.containerOuter.element && instance.containerOuter.element.classList) {
+            instance.containerOuter.element.classList.add('ts-wrapper');
+        }
+        if (instance.dropdown && instance.dropdown.element && instance.dropdown.element.classList) {
+            instance.dropdown.element.classList.add('ts-dropdown');
+        }
+        function applySearchFilterAfterRender() {
+            var typed = (instance.input && instance.input.element) ? (instance.input.element.value || '') : '';
+            requestAnimationFrame(function () {
+                applyPartialMatchChoicesSearchFilter(instance, typed);
+            });
+        }
+        el.addEventListener('showDropdown', applySearchFilterAfterRender);
+        if (instance.input && instance.input.element) {
+            instance.input.element.addEventListener('input', function() {
+                applySearchFilterAfterRender();
+            });
+            instance.input.element.addEventListener('keyup', applySearchFilterAfterRender);
+        }
 
         el.dataset.choicesInitialized = 'true';
         el.choicesInstance = instance;
@@ -810,6 +922,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 var el = document.getElementById(id);
                 initChoicesElement(el);
             });
+            
+            // After Choices.js initialization, populate the modal dropdowns
+            setTimeout(function() {
+                if (typeof fillModalClientTypePk === 'function') {
+                    fillModalClientTypePk();
+                }
+            }, 50);
         });
     }
 
@@ -853,11 +972,17 @@ document.addEventListener('DOMContentLoaded', function() {
         var dateTo = (dt && dt.value) ? toYmd(dt.value) : '';
         var clientType = (ct && ct.value) ? ct.value : '';
         var clientTypePk = (ctp && ctp.value) ? ctp.value : '';
-        var buyerName = (bn && bn.value) ? bn.value.trim() : '';
+        var buyerNames = bn
+            ? Array.from(bn.selectedOptions || []).map(function (o) { return String(o.value || '').trim(); }).filter(Boolean)
+            : [];
         var url = '{{ route("admin.mess.process-mess-bills-employee.modal-data") }}?date_from=' + encodeURIComponent(dateFrom) + '&date_to=' + encodeURIComponent(dateTo);
         if (clientType) url += '&client_type=' + encodeURIComponent(clientType);
         if (clientTypePk) url += '&client_type_pk=' + encodeURIComponent(clientTypePk);
-        if (buyerName) url += '&buyer_name=' + encodeURIComponent(buyerName);
+        if (buyerNames.length) {
+            buyerNames.forEach(function (name) {
+                url += '&buyer_name[]=' + encodeURIComponent(name);
+            });
+        }
         fetch(url)
             .then(function(r) { return r.json(); })
             .then(function(data) {
@@ -879,7 +1004,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 .filter(function (name) { return !!name; })
                         ));
 
-                        buyerSelect.innerHTML = '<option value=\"\">All Buyers</option>';
+                        buyerSelect.innerHTML = '';
 
                         buyers.forEach(function (name) {
                             var opt = document.createElement('option');
@@ -1032,10 +1157,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         var bn = document.getElementById('modal_buyer_name');
         if (bn) {
-            bn.innerHTML = '<option value=\"\">All Buyers</option>';
+            bn.innerHTML = '';
             if (bn.choicesInstance) {
                 bn.choicesInstance.clearStore();
-                bn.choicesInstance.setChoices([{ value: '', label: 'All Buyers', selected: true }], 'value', 'label', true);
+                bn.choicesInstance.setChoices([], 'value', 'label', true);
             }
         }
         var mp = document.getElementById('modal_mode_of_payment');
@@ -1141,36 +1266,58 @@ document.addEventListener('DOMContentLoaded', function() {
         var modalPkToClientGroupKey = {};
 
         function fillModalClientTypePk() {
-            var slug = modalClientType.value;
-            modalClientTypePk.innerHTML = '<option value=\"\">All</option>';
+            // Get selected slugs (now multiselect)
+            var selectedSlugs = [];
+            if (modalClientType.choicesInstance) {
+                selectedSlugs = modalClientType.choicesInstance.getValue(true);
+            } else {
+                selectedSlugs = Array.from(modalClientType.selectedOptions).map(function(opt) { return opt.value; });
+            }
+            
+            modalClientTypePk.innerHTML = '';
 
             var choicesPk = modalClientTypePk.choicesInstance || null;
             if (choicesPk) {
                 choicesPk.clearStore();
-                choicesPk.setChoices([{ value: '', label: 'All', selected: true }], 'value', 'label', true);
+                choicesPk.setChoices([], 'value', 'label', true);
             }
 
             modalPkToClientGroupKey = {};
 
-            if ((slug === 'ot' || slug === 'course') && otCourseOptions.length) {
-                otCourseOptions.forEach(function (o) {
-                    var opt = document.createElement('option');
-                    opt.value = o.value;
-                    opt.textContent = o.text;
-                    modalClientTypePk.appendChild(opt);
-                });
-            } else if (slug && clientTypeOptions[slug]) {
-                clientTypeOptions[slug].forEach(function (o) {
-                    var opt = document.createElement('option');
-                    opt.value = o.value;
-                    opt.textContent = o.text;
-                    if (o.dataClientName) {
-                        opt.dataset.clientName = o.dataClientName;
-                        modalPkToClientGroupKey[String(o.value)] = String(o.dataClientName);
-                    }
-                    modalClientTypePk.appendChild(opt);
-                });
-            }
+            // Collect options from all selected slugs
+            var allOptions = [];
+            selectedSlugs.forEach(function(slug) {
+                if ((slug === 'ot' || slug === 'course') && otCourseOptions.length) {
+                    allOptions = allOptions.concat(otCourseOptions);
+                } else if (slug && clientTypeOptions[slug]) {
+                    clientTypeOptions[slug].forEach(function (o) {
+                        allOptions.push(o);
+                        if (o.dataClientName) {
+                            modalPkToClientGroupKey[String(o.value)] = String(o.dataClientName);
+                        }
+                    });
+                }
+            });
+            
+            // Remove duplicates based on value
+            var uniqueOptions = [];
+            var seenValues = {};
+            allOptions.forEach(function(o) {
+                if (!seenValues[o.value]) {
+                    seenValues[o.value] = true;
+                    uniqueOptions.push(o);
+                }
+            });
+            
+            uniqueOptions.forEach(function (o) {
+                var opt = document.createElement('option');
+                opt.value = o.value;
+                opt.textContent = o.text;
+                if (o.dataClientName) {
+                    opt.dataset.clientName = o.dataClientName;
+                }
+                modalClientTypePk.appendChild(opt);
+            });
 
             if (choicesPk) {
                 var newChoices = Array.from(modalClientTypePk.options).map(function (o) {
@@ -1183,14 +1330,28 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         function fillModalBuyerNames() {
-            var slug = modalClientType.value;
-            var selectedPk = modalClientTypePk.value;
-            modalBuyerName.innerHTML = '<option value=\"\">All Buyers</option>';
+            // Get selected slugs (now multiselect)
+            var selectedSlugs = [];
+            if (modalClientType.choicesInstance) {
+                selectedSlugs = modalClientType.choicesInstance.getValue(true);
+            } else {
+                selectedSlugs = Array.from(modalClientType.selectedOptions).map(function(opt) { return opt.value; });
+            }
+            
+            // Get selected pks (now multiselect)
+            var selectedPks = [];
+            if (modalClientTypePk.choicesInstance) {
+                selectedPks = modalClientTypePk.choicesInstance.getValue(true);
+            } else {
+                selectedPks = Array.from(modalClientTypePk.selectedOptions).map(function(opt) { return opt.value; });
+            }
+            
+            modalBuyerName.innerHTML = '';
 
             var choicesBuyer = modalBuyerName.choicesInstance || null;
             if (choicesBuyer) {
                 choicesBuyer.clearStore();
-                choicesBuyer.setChoices([{ value: '', label: 'All Buyers', selected: true }], 'value', 'label', true);
+                choicesBuyer.setChoices([], 'value', 'label', true);
             }
 
             function syncChoicesBuyer() {
@@ -1228,6 +1389,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (range.to) qs.set('to_date', range.to);
 
                 // Add PK if selected (course/ot => course_master_pk, others => client_type_pk)
+                var selectedPk = selectedPks[0] || '';
                 if (selectedPk) {
                     if (slugToLoad === 'course' || slugToLoad === 'ot') {
                         qs.set('course_master_pk', selectedPk);
@@ -1250,6 +1412,48 @@ document.addEventListener('DOMContentLoaded', function() {
                         syncChoicesBuyer();
                     });
             }
+
+            // When multiple slugs are selected, load buyers from all of them
+            if (selectedSlugs.length > 1 || selectedSlugs.length === 0) {
+                // Multiple client types or none selected: load buyers from all selected types
+                var allBuyers = [];
+                
+                selectedSlugs.forEach(function(slug) {
+                    if (slug === 'employee') {
+                        // Add all employee buyers
+                        allBuyers = allBuyers.concat(employeeNames['academy staff'] || [])
+                            .concat(employeeNames['faculty'] || [])
+                            .concat(employeeNames['mess staff'] || []);
+                    } else if (slug === 'ot') {
+                        allBuyers = allBuyers.concat((otBuyerNames || []).map(function (name) { return { value: name, text: name }; }));
+                    } else if (slug === 'course') {
+                        allBuyers = allBuyers.concat((courseBuyerNames || []).map(function (name) { return { value: name, text: name }; }));
+                    } else if (slug === 'other') {
+                        allBuyers = allBuyers.concat((otherBuyerNames || []).map(function (name) { return { value: name, text: name }; }));
+                    } else if (slug === 'section') {
+                        allBuyers = allBuyers.concat((sectionBuyerNames || []).map(function (name) { return { value: name, text: name }; }));
+                    }
+                });
+                
+                // De-duplicate
+                var map = new Map();
+                allBuyers.forEach(function (o) {
+                    var key = String(o.value || '').trim().toLowerCase();
+                    if (!key) return;
+                    if (!map.has(key)) map.set(key, { value: o.value, text: o.text });
+                });
+                var unique = Array.from(map.values()).sort(function (a, b) {
+                    return String(a.text || '').localeCompare(String(b.text || ''), undefined, { sensitivity: 'base' });
+                });
+                
+                addBuyerOptions(unique);
+                syncChoicesBuyer();
+                return;
+            }
+            
+            // Single slug selected: use existing logic
+            var slug = selectedSlugs[0];
+            var selectedPk = selectedPks[0] || '';
 
             if (slug === 'employee') {
                 var selectedOpt = modalClientTypePk.options[modalClientTypePk.selectedIndex];
@@ -1281,7 +1485,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         syncChoicesBuyer();
                     })
                     .catch(function () {
-                        // ignore error; All Buyers hi rahe
+                        // ignore error; no buyer options
                         syncChoicesBuyer();
                     });
             } else if (slug === 'ot' && !selectedPk) {
@@ -1400,8 +1604,7 @@ document.addEventListener('DOMContentLoaded', function() {
         modalClientType.addEventListener('change', fillModalClientTypePk);
         modalClientTypePk.addEventListener('change', fillModalBuyerNames);
 
-        // Initial fill
-        fillModalClientTypePk();
+        // Note: Initial fill is now called when modal is shown (after Choices.js init)
     })();
 
     // --- Main "Process Mess Bills" filters – Employee / OT / Course + Client Type + Buyer Name ---
@@ -1412,8 +1615,8 @@ document.addEventListener('DOMContentLoaded', function() {
         var studentsByCourseUrl = "{{ url('/admin/mess/selling-voucher-date-range/students-by-course') }}";
         var buyersForReportUrl = "{{ route('admin.mess.reports.category-wise-print-slip.buyers') }}";
         var courseBuyersByCourseUrl = "{{ url('/admin/mess/reports/category-wise-print-slip/course-buyers') }}";
-        var preservedClientTypePk = {!! json_encode($clientTypePk ?? request('client_type_pk', '')) !!};
-        var preservedBuyerName = {!! json_encode($buyerName ?? request('buyer_name', '')) !!};
+        var preservedClientTypePk = {!! json_encode((array) ($clientTypePks ?? request('client_type_pk', []))) !!};
+        var preservedBuyerName = {!! json_encode((array) ($buyerNames ?? request('buyer_name', []))) !!};
 
         if (!clientTypeSlug || !clientTypePk || !buyerSelect) {
             return;
@@ -1535,11 +1738,25 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         function fillBuyerSelect(preserve) {
-            var slug = clientTypeSlug.value;
-            var selectedPk = clientTypePk.value;
-            var currentBuyer = preserve ? preservedBuyerName : '';
+            // Get selected slugs (now multiselect)
+            var selectedSlugs = [];
+            if (clientTypeSlug.choicesInstance) {
+                selectedSlugs = clientTypeSlug.choicesInstance.getValue(true);
+            } else {
+                selectedSlugs = Array.from(clientTypeSlug.selectedOptions).map(function(opt) { return opt.value; });
+            }
+            
+            // Get selected pks (now multiselect)
+            var selectedPks = [];
+            if (clientTypePk.choicesInstance) {
+                selectedPks = clientTypePk.choicesInstance.getValue(true);
+            } else {
+                selectedPks = Array.from(clientTypePk.selectedOptions).map(function(opt) { return opt.value; });
+            }
+            
+            var currentBuyer = preserve ? preservedBuyerName : [];
             console.log('=== fillBuyerSelect START ===');
-            console.log('slug:', slug, 'selectedPk:', selectedPk, 'preserve:', preserve);
+            console.log('selectedSlugs:', selectedSlugs, 'selectedPks:', selectedPks, 'preserve:', preserve);
             console.log('buyerSelect.choicesInstance exists?', !!buyerSelect.choicesInstance);
             
             // If Choices.js exists, destroy it first to rebuild clean
@@ -1555,7 +1772,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             // Clear existing options
-            buyerSelect.innerHTML = '<option value="">All Buyers</option>';
+            buyerSelect.innerHTML = '';
 
             function addOptions(list) {
                 console.log('addOptions called with', list ? list.length : 0, 'items');
@@ -1566,9 +1783,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     buyerSelect.appendChild(opt);
                     console.log('Added option:', o.text);
                 });
-                if (currentBuyer) {
-                    buyerSelect.value = currentBuyer;
-                    console.log('Set current buyer to:', currentBuyer);
+                if (Array.isArray(currentBuyer) && currentBuyer.length) {
+                    Array.from(buyerSelect.options).forEach(function (option) {
+                        option.selected = currentBuyer.indexOf(option.value) !== -1;
+                    });
+                    console.log('Set current buyers to:', currentBuyer);
                 }
             }
 
@@ -1623,7 +1842,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                         if (typeof window.Choices !== 'undefined') {
                             initChoicesElement(buyerSelect);
-                            if (currentBuyer && buyerSelect.choicesInstance) {
+                            if (Array.isArray(currentBuyer) && currentBuyer.length && buyerSelect.choicesInstance) {
                                 buyerSelect.choicesInstance.setChoiceByValue(currentBuyer);
                             }
                         }
@@ -1636,6 +1855,59 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     });
             }
+
+            // When multiple slugs are selected, load buyers from all of them
+            if (selectedSlugs.length > 1 || selectedSlugs.length === 0) {
+                // Multiple client types or none selected: load buyers from report endpoint for all selected types
+                var allBuyers = [];
+                var promises = [];
+                
+                selectedSlugs.forEach(function(slug) {
+                    if (slug === 'employee') {
+                        // Add all employee buyers
+                        allBuyers = allBuyers.concat(employeeNames['academy staff'] || [])
+                            .concat(employeeNames['faculty'] || [])
+                            .concat(employeeNames['mess staff'] || []);
+                    } else if (slug === 'ot') {
+                        allBuyers = allBuyers.concat((otBuyerNames || []).map(function (name) { return { value: name, text: name }; }));
+                    } else if (slug === 'course') {
+                        allBuyers = allBuyers.concat((courseBuyerNames || []).map(function (name) { return { value: name, text: name }; }));
+                    } else if (slug === 'other') {
+                        allBuyers = allBuyers.concat((otherBuyerNames || []).map(function (name) { return { value: name, text: name }; }));
+                    } else if (slug === 'section') {
+                        allBuyers = allBuyers.concat((sectionBuyerNames || []).map(function (name) { return { value: name, text: name }; }));
+                    }
+                });
+                
+                // De-duplicate
+                var map = new Map();
+                allBuyers.forEach(function (o) {
+                    var key = String(o.value || '').trim().toLowerCase();
+                    if (!key) return;
+                    if (!map.has(key)) map.set(key, { value: o.value, text: o.text });
+                });
+                var unique = Array.from(map.values()).sort(function (a, b) {
+                    return String(a.text || '').localeCompare(String(b.text || ''), undefined, { sensitivity: 'base' });
+                });
+                
+                addOptions(unique);
+                
+                if (typeof window.Choices !== 'undefined') {
+                    initChoicesElement(buyerSelect);
+                    if (Array.isArray(currentBuyer) && currentBuyer.length && buyerSelect.choicesInstance) {
+                        try {
+                            buyerSelect.choicesInstance.setChoiceByValue(currentBuyer);
+                        } catch (e) {
+                            console.error('Error setting buyer values:', e);
+                        }
+                    }
+                }
+                return;
+            }
+            
+            // Single slug selected: use existing logic
+            var slug = selectedSlugs[0];
+            var selectedPk = selectedPks[0] || '';
 
             if (slug === 'employee' && selectedPk) {
                 var selectedOpt = clientTypePk.options[clientTypePk.selectedIndex];
@@ -1682,7 +1954,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         // Re-initialize Choices.js after async data load
                         if (typeof window.Choices !== 'undefined') {
                             initChoicesElement(buyerSelect);
-                            if (currentBuyer) {
+                            if (Array.isArray(currentBuyer) && currentBuyer.length) {
                                 buyerSelect.choicesInstance.setChoiceByValue(currentBuyer);
                             }
                         }
@@ -1708,7 +1980,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 function initBuyerChoicesAfterAsync() {
                     if (typeof window.Choices !== 'undefined') {
                         initChoicesElement(buyerSelect);
-                        if (currentBuyer && buyerSelect.choicesInstance) {
+                        if (Array.isArray(currentBuyer) && currentBuyer.length && buyerSelect.choicesInstance) {
                             try { buyerSelect.choicesInstance.setChoiceByValue(currentBuyer); } catch (e) {}
                         }
                     }
@@ -1870,17 +2142,19 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         clientTypeSlug.addEventListener('change', function () {
-            preservedClientTypePk = ''; // reset when main type changes
-            preservedBuyerName = ''; // reset when main type changes
+            preservedClientTypePk = []; // reset when main type changes
+            preservedBuyerName = []; // reset when main type changes
             fillClientTypePk(false);
         });
         clientTypePk.addEventListener('change', function () {
-            preservedBuyerName = '';
+            preservedBuyerName = [];
             fillBuyerSelect(false);
         });
 
-        // Initial populate on page load
-        fillClientTypePk(true);
+        // Initial populate on page load - delay to ensure Choices.js is initialized
+        setTimeout(function() {
+            fillClientTypePk(true);
+        }, 100);
     })();
 
     document.getElementById('modalSelectAll').addEventListener('change', function() {

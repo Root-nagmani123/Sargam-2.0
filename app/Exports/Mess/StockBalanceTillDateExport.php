@@ -4,12 +4,13 @@ namespace App\Exports\Mess;
 
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
-use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithCustomStartCell;
 use Maatwebsite\Excel\Concerns\WithEvents;
+use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class StockBalanceTillDateExport implements FromCollection, WithHeadings, WithEvents
+class StockBalanceTillDateExport implements FromCollection, WithCustomStartCell, WithHeadings, WithEvents
 {
     protected array $reportData;
     protected string $tillDate;
@@ -20,6 +21,12 @@ class StockBalanceTillDateExport implements FromCollection, WithHeadings, WithEv
         $this->reportData = $reportData;
         $this->tillDate   = $tillDate;
         $this->storeName  = $storeName;
+    }
+
+    /** Rows 1–3: LBSNAA banner in AfterSheet; headings at row 5 (no insertNewRowBefore — PhpSpreadsheet cellmap bug). */
+    public function startCell(): string
+    {
+        return 'A5';
     }
 
     public function collection(): Collection
@@ -63,10 +70,7 @@ class StockBalanceTillDateExport implements FromCollection, WithHeadings, WithEv
                 /** @var Worksheet $sheet */
                 $sheet = $event->sheet->getDelegate();
 
-                // Insert 4 rows at the top for the header + spacer.
-                $sheet->insertNewRowBefore(1, 4);
-
-                // Merge header cells across all 7 columns (A–G).
+                // Merge LBSNAA banner rows; headings/data start at row 5 via startCell().
                 $sheet->mergeCells('A1:G1');
                 $sheet->mergeCells('A2:G2');
                 $sheet->mergeCells('A3:G3');
@@ -92,7 +96,7 @@ class StockBalanceTillDateExport implements FromCollection, WithHeadings, WithEv
                 $sheet->getStyle('A2')->getFont()->setBold(true)->setSize(12);
                 $sheet->getStyle('A3')->getFont()->setSize(10);
 
-                // Table header is now on row 5 (because we inserted 4 rows).
+                // Column headings on row 5; data from row 6.
                 $lastRow    = $sheet->getHighestRow();
                 $headerRow  = 5;
                 $tableRange = "A{$headerRow}:G{$lastRow}";

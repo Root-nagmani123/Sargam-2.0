@@ -1,5 +1,5 @@
 <table>
-    {{-- LBSNAA-style header (rows 1–4) --}}
+    {{-- LBSNAA-style header (rows 1–5) --}}
     <tr>
         <td colspan="8" style="text-align:center; font-weight:700;">
             OFFICER'S MESS LBSNAA MUSSOORIE
@@ -21,16 +21,28 @@
     <tr>
         <td colspan="8" style="text-align:center;">
             Vendor Details:
-            @if($selectedVendor)
-                {{ trim(implode(' | ', array_filter([
-                    'Name: ' . $selectedVendor->name,
-                    !empty($selectedVendor->contact_person) ? 'Contact: ' . $selectedVendor->contact_person : null,
-                    !empty($selectedVendor->phone) ? 'Phone: ' . $selectedVendor->phone : null,
-                    !empty($selectedVendor->email) ? 'Email: ' . $selectedVendor->email : null,
-                    !empty($selectedVendor->address) ? 'Address: ' . $selectedVendor->address : null,
-                ]))) }}
-            @else
+            @if($selectedVendors->isEmpty())
                 All Vendors
+            @else
+                @foreach($selectedVendors as $selectedVendor)
+                    {{ trim(implode(' | ', array_filter([
+                        'Name: ' . $selectedVendor->name,
+                        !empty($selectedVendor->contact_person) ? 'Contact: ' . $selectedVendor->contact_person : null,
+                        !empty($selectedVendor->phone) ? 'Phone: ' . $selectedVendor->phone : null,
+                        !empty($selectedVendor->email) ? 'Email: ' . $selectedVendor->email : null,
+                        !empty($selectedVendor->address) ? 'Address: ' . $selectedVendor->address : null,
+                    ]))) }}@if(!$loop->last) — @endif
+                @endforeach
+            @endif
+        </td>
+    </tr>
+    <tr>
+        <td colspan="8" style="text-align:center;">
+            Store:
+            @if($selectedStores->isEmpty())
+                All Stores
+            @else
+                {{ $selectedStores->pluck('store_name')->implode(', ') }}
             @endif
         </td>
     </tr>
@@ -38,7 +50,7 @@
     {{-- Blank row --}}
     <tr><td colspan="8"></td></tr>
 
-    {{-- Column headers (row 6) --}}
+    {{-- Column headers (row 7) --}}
     <tr>
         <th>Item</th>
         <th>Item Code</th>
