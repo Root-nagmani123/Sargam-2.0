@@ -25,9 +25,13 @@
     $stockPurchasePrintStoreDetails = $selectedStores->isEmpty()
         ? 'All Stores'
         : $selectedStores->pluck('store_name')->implode(', ');
+    $stockPurchasePrintVendorHeaderLabel = $selectedVendors->isEmpty() || $selectedVendors->count() === 1
+        ? 'Vendor:'
+        : 'Filtered vendors:';
     $stockPurchasePrintConfigJson = json_encode([
         'dateRange' => $stockPurchasePrintDateRange,
         'vendorLine' => $stockPurchasePrintVendorLine,
+        'vendorHeaderLabel' => $stockPurchasePrintVendorHeaderLabel,
         'vendorDetailRows' => $stockPurchasePrintVendorDetailRows,
         'storeDetails' => $stockPurchasePrintStoreDetails,
     ], JSON_THROW_ON_ERROR);
@@ -115,7 +119,7 @@
                             Stock Purchase Details Report Between {{ date('d-F-Y', strtotime($fromDate)) }} To {{ date('d-F-Y', strtotime($toDate)) }}
                         </div>
                         <div class="report-vendor-name fw-semibold mb-0 mt-2 text-center">
-                            <span class="text-muted">Vendor:</span>
+                            <span class="text-muted">{{ $stockPurchasePrintVendorHeaderLabel }}</span>
                             <span class="ms-1">{{ $selectedVendors->isEmpty() ? 'All Vendors' : $selectedVendors->pluck('name')->implode(', ') }}</span>
                         </div>
                         <div class="report-store-name fw-semibold mb-0 mt-1 text-center small">
@@ -141,43 +145,58 @@
                             </thead>
                             <tbody>
                                 @php $grandTotalAmount = 0; @endphp
-                                @forelse($purchaseOrders as $order)
-                                    @php
-                                        $storeName = $order->store ? $order->store->store_name : 'N/A';
-                                        $billLabel = $storeName . '(Primary) Bill No. ' . ($order->po_number ?? $order->id) . ' (' . $order->po_date->format('d-m-Y') . ')';
-                                        $billSubtotal = 0;
-                                        $billTaxTotal = 0;
-                                    @endphp
-                                    <tr class="bill-header-row">
-                                        <td colspan="8" class="bill-header bg-dark text-white small fw-semibold">{{ $billLabel }}</td>
+                                @forelse($purchaseOrdersByVendor as $vendorGroup)
+                                    <tr class="vendor-section-header-row">
+                                        <td colspan="8" class="vendor-section-header small fw-semibold">
+                                            VENDOR : {{ $vendorGroup['vendor_name'] }}
+                                        </td>
                                     </tr>
-                                    @foreach($order->items as $item)
+                                    @php $vendorSectionTotal = 0; @endphp
+                                    @foreach($vendorGroup['orders'] as $order)
                                         @php
-                                            $qty = $item->quantity ?? 0;
-                                            $rate = $item->unit_price ?? 0;
-                                            $taxPercent = $item->tax_percent ?? 0;
-                                            $subtotal = $qty * $rate;
-                                            $taxAmount = round($subtotal * ($taxPercent / 100), 2);
-                                            $total = $subtotal + $taxAmount;
-                                            $billSubtotal += $subtotal;
-                                            $billTaxTotal += $taxAmount;
-                                            $grandTotalAmount += $total;
+                                            $storeName = $order->store ? $order->store->store_name : 'N/A';
+                                            $billLabel = $storeName . '(Primary) Bill No. ' . ($order->po_number ?? $order->id) . ' (' . $order->po_date->format('d-m-Y') . ')';
+                                            $billSubtotal = 0;
+                                            $billTaxTotal = 0;
                                         @endphp
-                                        <tr>
-                                            <td>{{ $item->itemSubcategory->item_name ?? $item->itemSubcategory->subcategory_name ?? $item->itemSubcategory->name ?? 'N/A' }}</td>
-                                            <td>{{ $item->itemSubcategory->item_code ?? '—' }}</td>
-                                            <td class="text-end">{{ $item->unit ?? '—' }}</td>
-                                            <td class="text-end">{{ number_format($qty, 2) }}</td>
-                                            <td class="text-end">₹{{ number_format($rate, 1) }}</td>
-                                            <td class="text-end">{{ number_format($taxPercent, 2) }}%</td>
-                                            <td class="text-end">₹{{ number_format($taxAmount, 2) }}</td>
-                                            <td class="text-end">₹{{ number_format($total, 2) }}</td>
+                                        <tr class="bill-header-row">
+                                            <td colspan="8" class="bill-header bg-dark text-white small fw-semibold">{{ $billLabel }}</td>
+                                        </tr>
+                                        @foreach($order->items as $item)
+                                            @php
+                                                $qty = $item->quantity ?? 0;
+                                                $rate = $item->unit_price ?? 0;
+                                                $taxPercent = $item->tax_percent ?? 0;
+                                                $subtotal = $qty * $rate;
+                                                $taxAmount = round($subtotal * ($taxPercent / 100), 2);
+                                                $total = $subtotal + $taxAmount;
+                                                $billSubtotal += $subtotal;
+                                                $billTaxTotal += $taxAmount;
+                                                $grandTotalAmount += $total;
+                                            @endphp
+                                            <tr>
+                                                <td>{{ $item->itemSubcategory->item_name ?? $item->itemSubcategory->subcategory_name ?? $item->itemSubcategory->name ?? 'N/A' }}</td>
+                                                <td>{{ $item->itemSubcategory->item_code ?? '—' }}</td>
+                                                <td class="text-end">{{ $item->unit ?? '—' }}</td>
+                                                <td class="text-end">{{ number_format($qty, 2) }}</td>
+                                                <td class="text-end">₹{{ number_format($rate, 1) }}</td>
+                                                <td class="text-end">{{ number_format($taxPercent, 2) }}%</td>
+                                                <td class="text-end">₹{{ number_format($taxAmount, 2) }}</td>
+                                                <td class="text-end">₹{{ number_format($total, 2) }}</td>
+                                            </tr>
+                                        @endforeach
+                                        @php
+                                            $billTotal = $billSubtotal + $billTaxTotal;
+                                            $vendorSectionTotal += $billTotal;
+                                        @endphp
+                                        <tr class="bill-total-row bg-light fw-semibold">
+                                            <td colspan="7" class="text-end fw-bold">Bill Total:</td>
+                                            <td class="text-end fw-bold">₹{{ number_format($billTotal, 2) }}</td>
                                         </tr>
                                     @endforeach
-                                    @php $billTotal = $billSubtotal + $billTaxTotal; @endphp
-                                    <tr class="bill-total-row bg-light fw-semibold">
-                                        <td colspan="7" class="text-end fw-bold">Bill Total:</td>
-                                        <td class="text-end fw-bold">₹{{ number_format($billTotal, 2) }}</td>
+                                    <tr class="vendor-total-row fw-semibold">
+                                        <td colspan="7" class="text-end">Vendor Total ({{ $vendorGroup['vendor_name'] }}):</td>
+                                        <td class="text-end">₹{{ number_format($vendorSectionTotal, 2) }}</td>
                                     </tr>
                                 @empty
                                     <tr>
@@ -196,12 +215,6 @@
                 </div>
             </div>
 
-            <!-- Pagination below report (for print: show "Page X of Y" on each logical page via CSS if needed) -->
-            @if($purchaseOrders->hasPages())
-                <div class="mt-3 no-print d-flex justify-content-center">
-                    {{ $purchaseOrders->links('vendor.pagination.custom') }}
-                </div>
-            @endif
     </div>
 
     {{-- Tom Select for vendor & store dropdowns (shared with other mess screens) --}}
@@ -260,6 +273,7 @@ function printStockPurchaseTable() {
     }
     var dateRange = printCfg.dateRange || '';
     var vendorLine = printCfg.vendorLine || '';
+    var vendorHeaderLabel = printCfg.vendorHeaderLabel || 'Vendor:';
     var vendorDetailRows = Array.isArray(printCfg.vendorDetailRows) ? printCfg.vendorDetailRows : [];
     var storeDetails = printCfg.storeDetails || '';
     var emblemSrc = 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
@@ -417,12 +431,25 @@ function printStockPurchaseTable() {
         table.stock-purchase-data thead th.text-end { text-align: right; }
         table.stock-purchase-data .text-center { text-align: center; }
         table.stock-purchase-data .text-end { text-align: right; }
+        table.stock-purchase-data .vendor-section-header-row td,
+        table.stock-purchase-data td.vendor-section-header {
+            background: #e9ecef;
+            color: #212529;
+            font-weight: 700;
+            font-size: 9.5px;
+            border-color: #adb5bd;
+        }
         table.stock-purchase-data .bill-header-row td,
         table.stock-purchase-data td.bill-header {
             background: #5a6268;
             color: #fff;
             font-weight: 700;
             border-color: #5a6268;
+        }
+        table.stock-purchase-data .vendor-total-row td {
+            font-weight: 700;
+            background: #dee2e6;
+            border-top: 1px solid #adb5bd;
         }
         table.stock-purchase-data .bill-total-row td {
             font-weight: 700;
@@ -473,7 +500,7 @@ function printStockPurchaseTable() {
         <h1 class="report-title-center">${title}</h1>
         <div class="report-date-bar">${dateRange}</div>
         <div class="report-vendor-name">
-            <span class="text-muted">Vendor:</span>
+            <span class="text-muted">${vendorHeaderLabel}</span>
             <span>${vendorLine}</span>
         </div>
         <div class="report-store-name">
@@ -533,6 +560,14 @@ function printStockPurchaseTable() {
 }
 
 .stock-purchase-report .stock-purchase-table { font-size: 0.9rem; }
+.stock-purchase-report .vendor-section-header-row .vendor-section-header {
+    background-color: #f1f3f5;
+    color: #212529;
+    font-weight: 700;
+    padding: 0.5rem 0.75rem;
+    border-top: 2px solid #adb5bd;
+}
+.stock-purchase-report .vendor-total-row td { background-color: #e9ecef; padding: 0.4rem 0.75rem; border-top: 1px solid #ced4da; }
 .stock-purchase-report .bill-header-row .bill-header { background-color: #5a6268; color: #fff; font-weight: bold; padding: 0.5rem 0.75rem; }
 .stock-purchase-report .bill-total-row { background-color: #fff; }
 .stock-purchase-report .bill-total-row td { padding: 0.35rem 0.75rem; border-top: 1px solid #dee2e6; }
@@ -576,6 +611,8 @@ function printStockPurchaseTable() {
     .stock-purchase-table td, .stock-purchase-table th { border: 1px solid #333 !important; }
     .stock-purchase-thead th { background: #d3d6d9 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .stock-purchase-report .bill-header-row .bill-header { background: #5a6268 !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .stock-purchase-report .vendor-section-header { background: #e9ecef !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .stock-purchase-report .vendor-total-row td { background: #dee2e6 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 </style>
 @endsection
