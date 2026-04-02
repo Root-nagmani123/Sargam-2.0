@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Request For Family Id Card - Sargam | Lal Bahadur Shastri')
-@section('setup_content')
+@section('content')
 <div class="container-fluid family-idcard-index-page family-idcard-print-area">
     {{-- Print-only header: LBSNAA theme + logo, visible only when printing --}}
     <div class="print-only-header family-idcard-print-header family-idcard-print-header-lbsnaa">
@@ -123,8 +123,8 @@
                     </li>
                 </ul>
             </div>
-            <a href="{{ route('admin.family_idcard.create') }}" class="btn btn-success  d-flex align-items-center gap-1" title="Add">
-                <i class="material-icons material-symbols-rounded" style="font-size:20px;">add</i>
+            <a href="{{ route('admin.family_idcard.create') }}" class="btn btn-success" title="Add">
+                New Family ID Card
             </a>
             <button type="button" class="btn btn-primary family-idcard-print-btn d-flex align-items-center gap-2 px-3" title="Print" onclick="window.print();" aria-label="Print list">
                 <i class="material-icons material-symbols-rounded" style="font-size:20px;">print</i>

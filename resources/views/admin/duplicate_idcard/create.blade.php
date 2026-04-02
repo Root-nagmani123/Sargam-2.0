@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Request For Duplicate ID Card - Sargam')
-@section('setup_content')
+@section('content')
 <div class="container-fluid">
     <x-breadcrum title="{{ isset($edit_id) ? 'Edit Duplicate ID Card Request' : 'Request For Duplicate ID Card' }}"></x-breadcrum>
 
@@ -19,14 +19,21 @@
                 @endif
 
                 <div class="row g-3 align-items-start">
+                    @php
+                        $lockedType = $lockedIdCardType ?? null;
+                        $selectedType = old('id_card_type', $data['id_card_type'] ?? ($lockedType ?: ''));
+                    @endphp
                     <div class="col-md-4">
                         <label class="form-label">ID Card Type <span class="text-danger">*</span></label>
                         <select name="id_card_type" id="id_card_type" class="form-select" {{ isset($edit_id) ? 'disabled' : 'required' }}>
-                            <option value="">--Select--</option>
-                            <option value="Permanent" {{ old('id_card_type', $data['id_card_type'] ?? '')==='Permanent' ? 'selected':'' }}>Permanent</option>
-                            <option value="Contractual" {{ old('id_card_type', $data['id_card_type'] ?? '')==='Contractual' ? 'selected':'' }}>Contractual</option>
+                            <option value="" disabled>--Select--</option>
+                            <option value="Permanent" {{ $selectedType==='Permanent' ? 'selected':'' }} @if($lockedType === 'Contractual') disabled @endif>Permanent</option>
+                            <option value="Contractual" {{ $selectedType==='Contractual' ? 'selected':'' }} @if($lockedType === 'Permanent') disabled @endif>Contractual</option>
                             {{--<option value="Family" {{ old('id_card_type', $data['id_card_type'] ?? '')==='Family' ? 'selected':'' }}>Family</option> --}}
                         </select>
+                        @if($lockedType)
+                            <small class="text-muted d-block mt-1">Allowed type: <strong>{{ $lockedType }}</strong></small>
+                        @endif
                         @error('id_card_type')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
 
@@ -301,12 +308,21 @@
         if (!btnFetch || !cardInput || !typeSelect) {
             return;
         }
+        if (btnFetch.dataset.prefetchBound === '1') {
+            return;
+        }
+        btnFetch.dataset.prefetchBound = '1';
+
+        let isFetching = false;
 
         function showToast(message, isError) {
             alert(message);
         }
 
         function fetchByCardNumber() {
+            if (isFetching) {
+                return;
+            }
             const cardNo = cardInput.value.trim();
             const type = typeSelect.value || 'Permanent';
             if (!cardNo) {
@@ -314,12 +330,14 @@
                 cardInput.focus();
                 return;
             }
+            isFetching = true;
             btnFetch.disabled = true;
             fetch("{{ route('admin.duplicate_idcard.lookup') }}?id_card_number=" + encodeURIComponent(cardNo) + "&id_card_type=" + encodeURIComponent(type), {
                 headers: { 'Accept': 'application/json' }
             })
                 .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
                 .then(function (result) {
+                    isFetching = false;
                     btnFetch.disabled = false;
                     if (!result.ok || !result.data || !result.data.success) {
                         const msg = (result.data && result.data.message) ? result.data.message : 'Could not fetch ID card details.';
@@ -344,6 +362,7 @@
                     showToast('ID card details fetched successfully. Please select duplicate reason and upload required document.', false);
                 })
                 .catch(function () {
+                    isFetching = false;
                     btnFetch.disabled = false;
                     showToast('Error while fetching ID card details. Please try again.', true);
                 });
@@ -354,13 +373,7 @@
             fetchByCardNumber();
         });
 
-        // New behaviour: auto-fetch as soon as user finishes entering a valid ID.
-        // Trigger on blur; also on Enter key in the input.
-        cardInput.addEventListener('blur', function () {
-            if (cardInput.value.trim()) {
-                fetchByCardNumber();
-            }
-        });
+        // Trigger on Enter key in the input.
         cardInput.addEventListener('keydown', function (e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
