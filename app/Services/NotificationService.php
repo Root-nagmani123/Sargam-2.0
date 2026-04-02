@@ -508,7 +508,18 @@ class NotificationService
             }
         }
 
-       
+        // Mess low stock: reference_pk holds mess_stores.id so the report opens filtered to that store.
+        if ($type === 'mess_stock' && $moduleName === 'lowstock') {
+            $storeId = (int) ($notification->reference_pk ?? 0);
+            $base = route('admin.mess.reports.low-stock');
+            if ($storeId > 0) {
+                return $base . '?' . http_build_query([
+                    'store_id' => $storeId,
+                    'till_date' => now()->format('Y-m-d'),
+                ]);
+            }
+        }
+
         // Try to find route mapping by type and module
         if (isset($config[$type]) && is_array($config[$type])) {
             // Check for exact module name match

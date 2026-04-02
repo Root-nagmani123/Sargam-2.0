@@ -19,13 +19,15 @@
                                 </a>
                             </li>
 
+                            @auth
                             <!-- Profile Management Link -->
                             <li class="sidebar-item">
-                                    <a class="sidebar-link {{ request()->routeIs('member.profile.edit') ? 'active' : '' }}"
-                                    href="{{ route('member.profile.edit', Auth::user()->user_id) }}">
+                                <a class="sidebar-link {{ request()->routeIs('member.profile.edit') ? 'active' : '' }}"
+                                    href="{{ route('member.profile.edit', auth()->user()->user_id) }}">
                                     <span class="hide-menu small small-sm-normal text-nowrap">Edit Profile</span>
                                 </a>
                             </li>
+                            @endauth
 
                             @if(hasRole('Admin') || hasRole('Training-Induction'))
                             <!-- Participant / Dashboard Statistics -->
