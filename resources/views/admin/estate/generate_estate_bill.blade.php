@@ -35,44 +35,62 @@
             </h2>
         </div>
         <div class="card-body p-4">
-            <form method="get" action="{{ route('admin.estate.generate-estate-bill') }}" class="row g-3 g-md-4 align-items-center">
-                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
-                    <label for="bill_month" class="form-label fw-medium">Bill Month <span class="text-danger">*</span></label>
-                    <input type="month" class="form-control" id="bill_month" name="bill_month" value="{{ old('bill_month', $billMonth) }}" max="{{ date('Y-m') }}" required aria-describedby="bill_month_help">
-                    <div id="bill_month_help" class="form-text small">Select the month for billing</div>
-                </div>
-                @if(hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'))
-                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
-                    <label for="unit_sub_type_pk" class="form-label fw-medium">Unit Sub Type </label>
-                    <select class="form-select" id="unit_sub_type_pk" name="unit_sub_type_pk" aria-label="Select Unit Sub Type" aria-describedby="unit_sub_type_help">
-                        <option value="">— Select Unit Sub Type —</option>
-                        @foreach($unitSubTypes as $ust)
-                            <option value="{{ $ust->pk }}" {{ (string)$unitSubTypePk === (string)$ust->pk ? 'selected' : '' }}>{{ $ust->unit_sub_type }}</option>
-                        @endforeach
-                    </select>
-                    <div id="unit_sub_type_help" class="form-text small">Filter by unit category</div>
-                </div>
-                @endif
-                <div class="col-12 col-sm-6 col-md-4 col-lg-4 d-flex align-items-center gap-3">
-                    <div class="form-check form-check-inline mb-0 mt-2">
-                        <input class="form-check-input" type="checkbox" id="check_all" name="check_all" aria-describedby="check_all_help">
-                        <label class="form-check-label" for="check_all">Check All</label>
+            <form method="get" action="{{ route('admin.estate.generate-estate-bill') }}">
+                @php
+                    $showUnitSubTypeFilter = hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin');
+                @endphp
+                {{-- Same structure in every column: label row → control row (equal height inputs) → help row, so Check All + Show line up with Bill / Unit / Search --}}
+                <div class="row g-3 g-md-4 align-items-start">
+                    <div class="col-12 col-sm-6 {{ $showUnitSubTypeFilter ? 'col-lg-3' : 'col-lg-4' }}">
+                        <label for="bill_month" class="form-label fw-medium mb-1">Bill Month <span class="text-danger">*</span></label>
+                        <input type="month" class="form-control" id="bill_month" name="bill_month" value="{{ old('bill_month', $billMonth) }}" max="{{ date('Y-m') }}" required aria-describedby="bill_month_help">
+                        <div id="bill_month_help" class="form-text small mb-0">Select the month for billing</div>
                     </div>
-                    <span id="check_all_help" class="visually-hidden">Select or clear all bill checkboxes</span>
-                    <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-2">
-                        <i class="material-symbols-rounded" style="font-size: 1.1rem;">visibility</i>
-                        Show
-                    </button>
-                </div>
-                <div class="col-12 col-md-auto ms-md-auto d-flex gap-2 flex-wrap justify-content-sm-start">
-                    <button type="button" id="btn_print_selected" class="btn btn-outline-success btn-sm d-inline-flex align-items-center gap-1" title="Print selected bills in a single tab">
-                        <i class="material-symbols-rounded" style="font-size: 1rem;">print</i>
-                        Print Selected
-                    </button>
-                    @if(hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'))
-                    <button type="button" id="btn_notify_selected" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1">Notify Selected</button>
+                    @if($showUnitSubTypeFilter)
+                    <div class="col-12 col-sm-6 col-lg-3">
+                        <label for="unit_sub_type_pk" class="form-label fw-medium mb-1">Unit Sub Type</label>
+                        <div class="estate-bill-unit-sub-ts">
+                            <select class="form-select" id="unit_sub_type_pk" name="unit_sub_type_pk" aria-label="Select Unit Sub Type" aria-describedby="unit_sub_type_help">
+                                <option value="">Select Unit Sub Type</option>
+                                @foreach($unitSubTypes as $ust)
+                                    <option value="{{ $ust->pk }}" {{ (string)$unitSubTypePk === (string)$ust->pk ? 'selected' : '' }}>{{ $ust->unit_sub_type }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div id="unit_sub_type_help" class="form-text small mb-0">Filter by unit category</div>
+                    </div>
                     @endif
-                    <!-- <button type="button" id="btn_save_as_draft" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1">Save As Draft</button> -->
+                    <div class="col-12 col-sm-6 {{ $showUnitSubTypeFilter ? 'col-lg-3' : 'col-lg-4' }}">
+                        <label for="search" class="form-label fw-medium mb-1">Search</label>
+                        <input type="search" class="form-control" id="search" name="search" value="{{ old('search', $search ?? '') }}" placeholder="House, bill no., name…" autocomplete="off" aria-describedby="search_help" title="Also: month/year, designation, employee type, unit e.g. Type-(12)">
+                        <div id="search_help" class="form-text small mb-0 text-muted">Bill, house, name, designation, type.</div>
+                    </div>
+                    <div class="col-12 col-sm-6 {{ $showUnitSubTypeFilter ? 'col-lg-3' : 'col-lg-4' }}">
+                        <div class="form-label fw-medium mb-1 text-body invisible user-select-none" aria-hidden="true">Unit Sub Type</div>
+                        <div class="d-flex flex-nowrap align-items-center gap-3 estate-bill-filter-actions-controls">
+                            <div class="form-check mb-0">
+                                <input class="form-check-input" type="checkbox" id="check_all" name="check_all" aria-describedby="check_all_help">
+                                <label class="form-check-label text-nowrap" for="check_all">Check All</label>
+                            </div>
+                            <span id="check_all_help" class="visually-hidden">Select or clear all bill checkboxes</span>
+                            <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-2 flex-shrink-0 text-nowrap">
+                                <i class="material-symbols-rounded" style="font-size: 1.1rem;">visibility</i>
+                                Show
+                            </button>
+                        </div>
+                        <div class="form-text small mb-0 invisible user-select-none" aria-hidden="true">Filter by unit category</div>
+                    </div>
+                </div>
+                <div class="row g-3 mt-2 pt-3 border-top align-items-center">
+                    <div class="col-12 d-flex gap-2 flex-wrap justify-content-sm-end align-items-center">
+                        <button type="button" id="btn_print_selected" class="btn btn-outline-success btn-sm d-inline-flex align-items-center gap-1" title="Print selected bills in a single tab">
+                            <i class="material-symbols-rounded" style="font-size: 1rem;">print</i>
+                            Print Selected
+                        </button>
+                        @if($showUnitSubTypeFilter)
+                        <button type="button" id="btn_notify_selected" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1">Notify Selected</button>
+                        @endif
+                    </div>
                 </div>
             </form>
         </div>
@@ -104,7 +122,7 @@
                             <label class="form-check-label text-muted small" for="bill_{{ $bill->pk }}">Select this bill</label>
                         </div>
                         <a href="{{ route('admin.estate.reports.bill-report-print') }}?bill_no={{ $bill->bill_no }}&month={{ $bill->bill_month }}&year={{ $bill->bill_year }}" target="_blank" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1" title="Print this bill">
-                            <i class="material-symbols-rounded"w>print</i>
+                            <i class="material-symbols-rounded">print</i>
                             Print
                         </a>
                     </div>
@@ -192,7 +210,29 @@
 
 @push('styles')
 <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
-<style>.ts-dropdown { z-index: 1060 !important; }</style>
+<style>
+    .ts-dropdown { z-index: 1060 !important; }
+    /*
+     * Tom Select ships with Bootstrap-default padding (0.375rem); Sargam admin theme uses
+     * .form-control padding 10px 16px and font-size 0.875rem — match so Unit Sub Type aligns with Bill Month / Search.
+     */
+    .estate-bill-unit-sub-ts .ts-wrapper.single {
+        min-height: calc(0.875rem * 1.5 + 20px + 2 * var(--bs-border-width, 1px));
+    }
+    .estate-bill-unit-sub-ts .ts-wrapper.single .ts-control:not(.rtl) {
+        padding-top: 10px !important;
+        padding-bottom: 10px !important;
+        padding-left: 16px !important;
+        padding-right: 38px !important;
+        font-size: 0.875rem !important;
+        line-height: 1.5 !important;
+        border-radius: 8px !important;
+        min-height: calc(0.875rem * 1.5 + 20px + 2 * var(--bs-border-width, 1px));
+    }
+    .estate-bill-filter-actions-controls {
+        min-height: calc(0.875rem * 1.5 + 20px + 2 * var(--bs-border-width, 1px));
+    }
+</style>
 @endpush
 
 @push('scripts')

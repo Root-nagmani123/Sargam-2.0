@@ -226,7 +226,6 @@
                             </div>
                         </div>
                         <div id="allotNoHouses" class="alert alert-warning alert-dismissible fade show small mt-3 d-none" role="alert">No vacant houses available. Select Estate, Unit Type, Building, and Unit Sub Type first.<button type="button" class="btn-close btn-close-sm" data-bs-dismiss="alert" aria-label="Close"></button></div>
-                        <div id="allotFormError" class="alert alert-danger alert-dismissible fade show mt-3 d-none" role="alert"></div>
                     </div>
                 </div>
                 <div class="modal-footer border-0 bg-body-secondary bg-opacity-50 py-3 px-4 gap-2">
@@ -707,7 +706,6 @@ if (cardBody && wrapper) cardBody.insertBefore(alert, wrapper);
         var allotForm = document.getElementById('formAllotNewRequest');
         var allotLoading = document.getElementById('allotModalLoading');
         var allotContent = document.getElementById('allotModalContent');
-        var allotFormError = document.getElementById('allotFormError');
         var allotCampuses = [];
         var allotUnitTypesByCampus = {};
         var allotEligibilityTypePk = null;
@@ -803,7 +801,6 @@ if (cardBody && wrapper) cardBody.insertBefore(alert, wrapper);
             allotForm.action = '{{ route("admin.estate.new-request.allot", ["id" => "__ID__"]) }}'.replace('__ID__', id);
             allotLoading.classList.remove('d-none');
             allotContent.classList.add('d-none');
-            allotFormError.classList.add('d-none');
             resetAllotDropdowns();
             allotModal.show();
             fetch(detailsUrl, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
@@ -812,8 +809,6 @@ if (cardBody && wrapper) cardBody.insertBefore(alert, wrapper);
                     allotLoading.classList.add('d-none');
                     allotContent.classList.remove('d-none');
                     if (data.error) {
-                        allotFormError.textContent = data.error || 'Failed to load details';
-                        allotFormError.classList.remove('d-none');
                         return;
                     }
                     var emp = data.employee || {};
@@ -836,8 +831,6 @@ if (cardBody && wrapper) cardBody.insertBefore(alert, wrapper);
                 .catch(function() {
                     allotLoading.classList.add('d-none');
                     allotContent.classList.remove('d-none');
-                    allotFormError.textContent = 'Network error. Please try again.';
-                    allotFormError.classList.remove('d-none');
                 });
         });
 
@@ -861,12 +854,9 @@ if (cardBody && wrapper) cardBody.insertBefore(alert, wrapper);
                 e.preventDefault();
                 var submitBtn = document.getElementById('btnSubmitAllot');
                 if (!isAllotFormValid()) {
-                    allotFormError.textContent = 'Please select Estate Name, Unit Type, Building Name, Unit Sub Type, and House No. All fields are required to allot.';
-                    allotFormError.classList.remove('d-none');
                     return;
                 }
                 if (submitBtn) { submitBtn.disabled = true; submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Submitting...'; }
-                allotFormError.classList.add('d-none');
                 var formData = new FormData(allotForm);
                 fetch(allotForm.action, {
                     method: 'POST',
@@ -885,13 +875,8 @@ if (cardBody && wrapper) cardBody.insertBefore(alert, wrapper);
                         var cardBody = allotForm.closest('.container-fluid').querySelector('.card-body');
                         var wrapper = cardBody && cardBody.querySelector('.estate-hac-approved-table-wrapper');
                         if (cardBody && wrapper) cardBody.insertBefore(alert, wrapper);
-                    } else {
-                        allotFormError.textContent = (result.data && result.data.message) || 'Something went wrong.';
-                        allotFormError.classList.remove('d-none');
                     }
                 }).catch(function() {
-                    allotFormError.textContent = 'Network error. Please try again.';
-                    allotFormError.classList.remove('d-none');
                 }).finally(function() {
                     if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="bi bi-house-add me-1"></i> Allot'; }
                 });

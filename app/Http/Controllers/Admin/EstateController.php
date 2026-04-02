@@ -502,6 +502,73 @@ class EstateController extends Controller
     }
 
     /**
+     * Resolve eligibility_type_pk (unit sub type) from employee payroll → estate_eligibility_mapping,
+     * with the same fallback as getRequestForEstateEmployeeDetails.
+     */
+    private function resolveEstateEligibilityTypePkForEmployeeMasterPk(int $pk): int
+    {
+        $pk = (int) $pk;
+        if ($pk <= 0) {
+            return 0;
+        }
+
+        $hasPkOld = Schema::hasColumn('employee_master', 'pk_old');
+        $salaryGradeCol = Schema::hasColumn('payroll_salary_master', 'salary_grade_pk')
+            ? 'salary_grade_pk'
+            : 'salary_grade_master_pk';
+
+        $employee = DB::table('employee_master as e')
+            ->where(function ($q) use ($pk, $hasPkOld) {
+                $q->where('e.pk', $pk);
+                if ($hasPkOld) {
+                    $q->orWhere('e.pk_old', $pk);
+                }
+            })
+            ->first(['e.pk', 'e.pk_old']);
+
+        if (! $employee) {
+            return 0;
+        }
+
+        $empPkCandidates = [(int) ($employee->pk ?? 0)];
+        if ($hasPkOld && ! empty($employee->pk_old)) {
+            $empPkCandidates[] = (int) $employee->pk_old;
+        }
+        $empPkCandidates = array_values(array_unique(array_filter($empPkCandidates)));
+
+        $salaryQuery = DB::table('payroll_salary_master as p')
+            ->join('salary_grade_master as s', "p.$salaryGradeCol", '=', 's.pk')
+            ->select("p.$salaryGradeCol as salary_grade_pk");
+
+        if (count($empPkCandidates) === 1) {
+            $salaryQuery->where('p.employee_master_pk', $empPkCandidates[0]);
+        } elseif (! empty($empPkCandidates)) {
+            $salaryQuery->whereIn('p.employee_master_pk', $empPkCandidates);
+        }
+
+        $salary = $salaryQuery->orderByDesc('p.pk')->first();
+
+        $eligPk = $salary && ! empty($salary->salary_grade_pk)
+            ? (int) DB::table('estate_eligibility_mapping')
+                ->where('salary_grade_master_pk', (int) $salary->salary_grade_pk)
+                ->orderBy('pk')
+                ->value('estate_unit_sub_type_master_pk')
+            : 0;
+
+        if ($eligPk === 0 && Schema::hasColumn('estate_home_request_details', 'employee_pk')) {
+            $existingReq = DB::table('estate_home_request_details')
+                ->whereIn('employee_pk', $empPkCandidates)
+                ->orderByDesc('pk')
+                ->first();
+            if ($existingReq && ! empty($existingReq->eligibility_type_pk)) {
+                $eligPk = (int) $existingReq->eligibility_type_pk;
+            }
+        }
+
+        return $eligPk > 0 ? $eligPk : 0;
+    }
+
+    /**
      * Store or update Request For Estate (estate_home_request_details).
      */
     public function storeRequestForEstate(Request $request)
@@ -643,6 +710,14 @@ class EstateController extends Controller
             $data['employee_pk'] = !empty($selfEmployeeIds) ? (int) reset($selfEmployeeIds) : 0;
         } else {
             $data['employee_pk'] = (int) ($request->input('employee_pk', 0));
+        }
+
+        // Non–Estate/Admin/Super Admin users cannot choose eligibility; force payroll-derived value when available.
+        if ($user && ! $isEstateAuthority && (int) ($data['employee_pk'] ?? 0) > 0) {
+            $resolvedElig = $this->resolveEstateEligibilityTypePkForEmployeeMasterPk((int) $data['employee_pk']);
+            if ($resolvedElig > 0) {
+                $data['eligibility_type_pk'] = $resolvedElig;
+            }
         }
 
         // Prevent duplicate active occupation per employee.
@@ -7929,6 +8004,130 @@ class EstateController extends Controller
     }
 
     /**
+     * One branch of estate bill search: any column may match this token (OR).
+     *
+     * @param  \Illuminate\Database\Query\Builder  $q
+     */
+    private function appendGenerateEstateBillSearchOrConditions($q, string $likeToken, string $pkCastLike, string $driver): void
+    {
+        $q->where('emrd.bill_no', 'like', $likeToken)
+            ->orWhereRaw($pkCastLike, [$likeToken])
+            ->orWhere('emrd.house_no', 'like', $likeToken)
+            ->orWhere('ehm.house_no', 'like', $likeToken)
+            ->orWhere('ehrd.emp_name', 'like', $likeToken)
+            ->orWhere('ehrd.emp_designation', 'like', $likeToken)
+            ->orWhere('ehrd.employee_id', 'like', $likeToken)
+            ->orWhere('emrd.bill_month', 'like', $likeToken)
+            ->orWhere('emrd.bill_year', 'like', $likeToken)
+            ->orWhere('eust.unit_sub_type', 'like', $likeToken)
+            ->orWhere('etm_gen_bill.category_type_name', 'like', $likeToken);
+
+        if (Schema::hasColumn('estate_home_request_details', 'remarks')) {
+            $q->orWhere('ehrd.remarks', 'like', $likeToken);
+        }
+        if (Schema::hasColumn('employee_master', 'emp_id')) {
+            $q->orWhere('em_gen_bill.emp_id', 'like', $likeToken);
+        }
+        if (Schema::hasColumn('employee_master', 'employee_id')) {
+            $q->orWhere('em_gen_bill.employee_id', 'like', $likeToken);
+        }
+        if (Schema::hasColumn('employee_master', 'first_name')) {
+            if ($driver === 'sqlite') {
+                $q->orWhere('em_gen_bill.first_name', 'like', $likeToken);
+                if (Schema::hasColumn('employee_master', 'middle_name')) {
+                    $q->orWhere('em_gen_bill.middle_name', 'like', $likeToken);
+                }
+                if (Schema::hasColumn('employee_master', 'last_name')) {
+                    $q->orWhere('em_gen_bill.last_name', 'like', $likeToken);
+                }
+            } else {
+                $nameParts = ['COALESCE(em_gen_bill.first_name,\'\')'];
+                if (Schema::hasColumn('employee_master', 'middle_name')) {
+                    $nameParts[] = 'COALESCE(em_gen_bill.middle_name,\'\')';
+                }
+                if (Schema::hasColumn('employee_master', 'last_name')) {
+                    $nameParts[] = 'COALESCE(em_gen_bill.last_name,\'\')';
+                }
+                $nameExpr = 'TRIM(CONCAT_WS(\' \', ' . implode(', ', $nameParts) . '))';
+                $q->orWhereRaw("{$nameExpr} LIKE ?", [$likeToken]);
+            }
+        }
+
+        $q->orWhereRaw(
+            "CONCAT(COALESCE(eust.unit_sub_type,''), '-(', COALESCE(emrd.house_no,''), ')') LIKE ?",
+            [$likeToken]
+        )
+            ->orWhereRaw(
+                "CONCAT(COALESCE(eust.unit_sub_type,''), '-(', COALESCE(ehm.house_no,''), ')') LIKE ?",
+                [$likeToken]
+            )
+            ->orWhereRaw(
+                "CONCAT(COALESCE(emrd.bill_month,''), ' ', COALESCE(emrd.bill_year,'')) LIKE ?",
+                [$likeToken]
+            );
+    }
+
+    /**
+     * Search on Generate Estate Bill: joins employee for type/ids; multi-word = every word must match somewhere (AND),
+     * so "ADESH KUMAR" still finds "ADESH SINGH KUMAR" (substring "ADESH KUMAR" would not).
+     *
+     * @param  \Illuminate\Database\Query\Builder  $query
+     */
+    private function applyGenerateEstateBillSearchFilter($query, string $search): void
+    {
+        $normalized = preg_replace('/\s+/u', ' ', trim($search));
+        if ($normalized === '') {
+            return;
+        }
+
+        $query->leftJoin('employee_master as em_gen_bill', function ($join) {
+            if (Schema::hasColumn('employee_master', 'pk_old')) {
+                $join->whereRaw('(ehrd.employee_pk = em_gen_bill.pk OR ehrd.employee_pk = em_gen_bill.pk_old)');
+            } else {
+                $join->on('ehrd.employee_pk', '=', 'em_gen_bill.pk');
+            }
+        })
+            ->leftJoin('employee_type_master as etm_gen_bill', 'em_gen_bill.emp_type', '=', 'etm_gen_bill.pk');
+
+        $driver = DB::connection()->getDriverName();
+        $pkCastLike = match ($driver) {
+            'pgsql' => 'CAST(emrd.pk AS TEXT) LIKE ?',
+            'sqlite' => 'CAST(emrd.pk AS TEXT) LIKE ?',
+            default => 'CAST(emrd.pk AS CHAR) LIKE ?',
+        };
+
+        $monthNameForYm = null;
+        $ymY = null;
+        if (preg_match('/^(\d{4})-(\d{1,2})$/', $normalized, $ymMatch)) {
+            $ymY = $ymMatch[1];
+            $ymM = (int) $ymMatch[2];
+            if ($ymM >= 1 && $ymM <= 12) {
+                $monthNameForYm = date('F', mktime(0, 0, 0, $ymM, 1));
+            }
+        }
+
+        $tokens = array_values(array_filter(explode(' ', $normalized), fn ($t) => $t !== ''));
+
+        $query->where(function ($outer) use ($tokens, $ymY, $monthNameForYm, $pkCastLike, $driver) {
+            $outer->where(function ($andGroup) use ($tokens, $pkCastLike, $driver) {
+                foreach ($tokens as $token) {
+                    $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $token);
+                    $likeToken = '%' . $escaped . '%';
+                    $andGroup->where(function ($q) use ($likeToken, $pkCastLike, $driver) {
+                        $this->appendGenerateEstateBillSearchOrConditions($q, $likeToken, $pkCastLike, $driver);
+                    });
+                }
+            });
+            if ($monthNameForYm !== null && $ymY !== null) {
+                $outer->orWhere(function ($q2) use ($ymY, $monthNameForYm) {
+                    $q2->where('emrd.bill_year', $ymY)
+                        ->where('emrd.bill_month', $monthNameForYm);
+                });
+            }
+        });
+    }
+
+    /**
      * Generate Estate Bill / Estate Bill Summary - filters and list of bill cards.
      */
     public function generateEstateBill(Request $request)
@@ -7943,6 +8142,7 @@ class EstateController extends Controller
             $billMonth = $currentYm;
         }
         $unitSubTypePk = $request->get('unit_sub_type_pk');
+        $search = trim((string) $request->get('search', ''));
         $bills = collect();
 
         $hasUnitTypeOnSubType = \Illuminate\Support\Facades\Schema::hasColumn('estate_unit_sub_type_master', 'estate_unit_type_master_pk');
@@ -7991,6 +8191,11 @@ class EstateController extends Controller
                 ->leftJoin('estate_house_master as ehm', 'epd.estate_house_master_pk', '=', 'ehm.pk')
                 ->leftJoin('estate_unit_sub_type_master as eust', 'ehm.estate_unit_sub_type_master_pk', '=', 'eust.pk')
                 ->select($selectCols);
+
+            if ($search !== '') {
+                $this->applyGenerateEstateBillSearchFilter($query, $search);
+            }
+
             $this->applyEstateGenerateBillMonthFilter($query, $year, $month);
 
             // RBAC: Non-admin/estate/super-admin/training/IST users should only see/generate their own bills.
@@ -8091,7 +8296,7 @@ class EstateController extends Controller
             }
         }
 
-        return view('admin.estate.generate_estate_bill', compact('unitSubTypes', 'bills', 'billMonth', 'unitSubTypePk'));
+        return view('admin.estate.generate_estate_bill', compact('unitSubTypes', 'bills', 'billMonth', 'unitSubTypePk', 'search'));
     }
 
     /**
@@ -10061,6 +10266,17 @@ class EstateController extends Controller
             ]);
         }
 
+        $epdSelect = [
+            'epd.pk as possession_pk',
+            'ehm.house_no',
+            'ehrd.emp_name',
+            'ehrd.emp_designation as employee_type',
+            'epd.electric_meter_reading as epd_electric_meter_reading',
+        ];
+        if (Schema::hasColumn('estate_possession_details', 'electric_meter_reading_2')) {
+            $epdSelect[] = 'epd.electric_meter_reading_2 as epd_electric_meter_reading_2';
+        }
+
         $pending = DB::table('estate_possession_details as epd')
             ->join('estate_house_master as ehm', 'epd.estate_house_master_pk', '=', 'ehm.pk')
             ->join('estate_home_request_details as ehrd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
@@ -10070,13 +10286,10 @@ class EstateController extends Controller
             })
             ->whereNotNull('epd.estate_house_master_pk')
             ->where('epd.return_home_status', 0)
+            // Align with Possession Details listing: only completed possessions (not placeholder 1900-01-01 rows).
+            ->where('epd.possession_date', '>', '1900-01-01')
             ->whereNull('emrd.pk')
-            ->select([
-                'epd.pk as possession_pk',
-                'ehm.house_no',
-                'ehrd.emp_name',
-                'ehrd.emp_designation as employee_type',
-            ])
+            ->select($epdSelect)
             ->orderBy('ehm.house_no')
             ->get();
 
@@ -10084,6 +10297,30 @@ class EstateController extends Controller
 
         $monthOrderSql = "FIELD(emrd.bill_month, 'January','February','March','April','May','June','July','August','September','October','November','December')";
         $currentMonthOrder = (int) array_search($billMonthStr, ['January','February','March','April','May','June','July','August','September','October','November','December'], true) + 1;
+
+        $hasEmrdReading2 = Schema::hasColumn('estate_month_reading_details', 'curr_month_elec_red2');
+        $hasEpdReading2 = Schema::hasColumn('estate_possession_details', 'electric_meter_reading_2');
+        $formatDualMeterReading = static function ($primary, $secondary, bool $hasSecondaryCol): string {
+            $seg = static function ($v) {
+                return ($v !== null && trim((string) $v) !== '') ? (string) $v : '—';
+            };
+            $secRaw = $hasSecondaryCol ? ($secondary ?? null) : null;
+            $secStr = $secRaw !== null ? trim((string) $secRaw) : '';
+            $hasSecondaryEntered = $hasSecondaryCol
+                && $secStr !== ''
+                && ! (is_numeric($secStr) && (int) $secStr === 0);
+
+            if ($hasSecondaryEntered) {
+                return $seg($primary) . '/' . $seg($secondary);
+            }
+
+            $p = $primary;
+            if ($p !== null && trim((string) $p) !== '') {
+                return (string) $p;
+            }
+
+            return 'N/A';
+        };
 
         $lastReadings = [];
         if (!empty($possessionIds)) {
@@ -10104,26 +10341,41 @@ class EstateController extends Controller
                 $pk = $row->estate_possession_details_pk;
                 if (!isset($lastReadings[$pk])) {
                     $lastReadings[$pk] = [
-                        'reading' => $row->curr_month_elec_red ?? $row->curr_month_elec_red2 ?? 'N/A',
+                        'reading' => $formatDualMeterReading(
+                            $row->curr_month_elec_red ?? null,
+                            $hasEmrdReading2 ? ($row->curr_month_elec_red2 ?? null) : null,
+                            $hasEmrdReading2
+                        ),
                         'date' => $row->to_date ? \Carbon\Carbon::parse($row->to_date)->format('d/m/Y') : 'N/A',
                     ];
                 }
             }
         }
 
+        // Due date for capturing this bill month (period end), not an actual submitted reading date.
         $expectedReadingDate = \Carbon\Carbon::createFromDate($year, $month, 1)->endOfMonth()->format('d/m/Y');
 
         $rows = [];
         $sno = 1;
         foreach ($pending as $row) {
-            $last = $lastReadings[$row->possession_pk] ?? ['reading' => 'N/A', 'date' => 'N/A'];
+            $fromEmrd = $lastReadings[$row->possession_pk] ?? null;
+            if ($fromEmrd !== null) {
+                $lastReadingDisplay = $fromEmrd['reading'];
+            } else {
+                // Match Possession Details screen: when no prior monthly row, use on-file possession readings.
+                $lastReadingDisplay = $formatDualMeterReading(
+                    $row->epd_electric_meter_reading ?? null,
+                    $hasEpdReading2 ? ($row->epd_electric_meter_reading_2 ?? null) : null,
+                    $hasEpdReading2
+                );
+            }
             $rows[] = [
                 'sno' => $sno++,
                 'employee_type' => $row->employee_type ?? 'N/A',
                 'name' => $row->emp_name ?? 'N/A',
                 'house_no' => $row->house_no ?? 'N/A',
                 'meter_reading_date' => $expectedReadingDate,
-                'last_meter_reading' => is_numeric($last['reading']) ? (string) $last['reading'] : $last['reading'],
+                'last_meter_reading' => $lastReadingDisplay,
             ];
         }
 

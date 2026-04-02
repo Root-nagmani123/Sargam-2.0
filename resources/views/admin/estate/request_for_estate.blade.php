@@ -277,6 +277,7 @@
 @push('scripts')
     <script>
         window.requestEstateSelfEmployeePk = @json($selfEmployeePk ?? null);
+        window.requestEstateCanChooseEligibilityOnAdd = @json(hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'));
     </script>
     {!! $dataTable->scripts() !!}
     <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
@@ -361,6 +362,16 @@
                 $sel.prop('disabled', false).attr('name', 'eligibility_type_pk');
                 $hidden.removeAttr('name');
             }
+            var eligNative = document.getElementById('modal_eligibility_type_pk');
+            if (eligNative && eligNative.tomselect) {
+                try {
+                    if (eligibilityLocked) {
+                        eligNative.tomselect.disable();
+                    } else {
+                        eligNative.tomselect.enable();
+                    }
+                } catch (e) {}
+            }
         }
 
         function ensureEligibilityOptionAndSetVal(pk, label, force) {
@@ -390,7 +401,7 @@
             $('#modal_doj_pay_scale').val(data.doj_pay_scale || '');
             $('#modal_doj_academic').val(data.doj_academic || '');
             $('#modal_doj_service').val(data.doj_service || '');
-            ensureEligibilityOptionAndSetVal(data.eligibility_type_pk, data.eligibility_type_name, false);
+            ensureEligibilityOptionAndSetVal(data.eligibility_type_pk, data.eligibility_type_name, eligibilityLocked);
         }
 
         function clearEmployeeDerivedFields() {
@@ -408,7 +419,7 @@
             $('#modal_req_date').val(new Date().toISOString().slice(0, 10));
             $('#modal_status_wrap').addClass('d-none');
             $('#modal_status').removeAttr('required');
-            setEligibilityLock(false);
+            setEligibilityLock(!window.requestEstateCanChooseEligibilityOnAdd);
             clearEmployeeDerivedFields();
             $('#addEditRequestEstateFormErrors').addClass('d-none').find('#addEditRequestEstateFormErrorsText').empty();
             $('#formAddEditRequestEstate').find('.field-error').empty().end().find('.is-invalid').removeClass('is-invalid');
