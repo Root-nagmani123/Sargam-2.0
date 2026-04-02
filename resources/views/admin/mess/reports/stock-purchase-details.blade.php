@@ -306,36 +306,46 @@ function printStockPurchaseTable() {
             print-color-adjust: exact;
         }
         .lbsnaa-header-wrap {
-            border-bottom: 2px solid #004a93;
-            margin-bottom: 12px;
-            padding: 2px 0 8px;
+            border-bottom: 3px solid #003366;
+            margin-bottom: 14px;
+            padding: 6px 0 12px;
         }
         .branding-table { width: 100%; border-collapse: collapse; margin: 0; }
         .branding-table td { border: 0; padding: 0; vertical-align: middle; }
-        .branding-logo-left { width: 42px; }
-        .branding-text { text-align: left; padding: 0 10px 0 2px; line-height: 1.25; }
-        .branding-logo-right { width: 200px; text-align: right; }
+        .branding-left-cell { width: 62%; vertical-align: middle; }
+        .branding-left-cell .header-img-left { float: left; margin: 2px 12px 6px 0; }
+        .branding-left-cell .branding-text-block { overflow: hidden; line-height: 1.28; padding-top: 1px; }
+        .branding-left-clear { clear: both; height: 0; line-height: 0; font-size: 0; }
+        .branding-right-cell { width: 38%; vertical-align: middle; text-align: right; }
+        .branding-right-cluster { display: inline-block; text-align: left; vertical-align: middle; max-width: 100%; }
+        .branding-right-cluster .header-img-right-seal { float: left; margin: 0 10px 0 0; }
+        .branding-right-cluster .branding-bilingual { overflow: hidden; max-width: 175px; line-height: 1.22; }
+        .branding-right-clear { clear: both; height: 0; line-height: 0; font-size: 0; }
         .lbsnaa-brand-line-1 {
             font-size: 9px;
-            color: #004a93;
+            color: #1d70b8;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.07em;
             font-weight: 600;
         }
         .lbsnaa-brand-line-2 {
-            font-size: 13px;
-            color: #222;
+            font-size: 14px;
+            color: #000000;
             font-weight: 700;
             text-transform: uppercase;
-            margin-top: 2px;
+            margin-top: 4px;
+            letter-spacing: 0.02em;
         }
         .lbsnaa-brand-line-3 {
             font-size: 10px;
-            color: #555;
-            margin-top: 2px;
+            color: #505a5f;
+            margin-top: 4px;
+            font-weight: normal;
         }
-        .header-img-left { width: 34px; height: 34px; }
-        .header-img-right { width: 165px; height: auto; }
+        .header-img-left { width: 46px; height: 46px; object-fit: contain; display: block; }
+        .header-img-right-seal { width: 48px; height: 48px; object-fit: contain; display: block; }
+        .branding-hindi { font-size: 9px; color: #7b2d26; font-weight: 600; }
+        .branding-en-side { font-size: 8px; color: #7b2d26; margin-top: 4px; font-weight: normal; }
         .report-header-block {
             text-align: center;
             margin-bottom: 14px;
@@ -350,7 +360,7 @@ function printStockPurchaseTable() {
             color: #212529;
         }
         .report-date-bar {
-            background: #004a93;
+            background: #003366;
             color: #fff;
             padding: 8px 12px;
             text-align: center;
@@ -436,16 +446,24 @@ function printStockPurchaseTable() {
     <div class="lbsnaa-header-wrap">
         <table class="branding-table">
             <tr>
-                <td class="branding-logo-left">
+                <td class="branding-left-cell">
                     <img src="${emblemSrc}" alt="Emblem of India" class="header-img-left">
+                    <div class="branding-text-block">
+                        <div class="lbsnaa-brand-line-1">Government of India</div>
+                        <div class="lbsnaa-brand-line-2">OFFICER'S MESS LBSNAA MUSSOORIE</div>
+                        <div class="lbsnaa-brand-line-3">Lal Bahadur Shastri National Academy of Administration</div>
+                    </div>
+                    <div class="branding-left-clear"></div>
                 </td>
-                <td class="branding-text">
-                    <div class="lbsnaa-brand-line-1">Government of India</div>
-                    <div class="lbsnaa-brand-line-2">OFFICER'S MESS LBSNAA MUSSOORIE</div>
-                    <div class="lbsnaa-brand-line-3">Lal Bahadur Shastri National Academy of Administration</div>
-                </td>
-                <td class="branding-logo-right">
-                    <img src="${lbsnaaLogoSrc}" alt="LBSNAA Logo" class="header-img-right">
+                <td class="branding-right-cell">
+                    <div class="branding-right-cluster">
+                        <img src="${lbsnaaLogoSrc}" alt="LBSNAA" class="header-img-right-seal">
+                        <div class="branding-bilingual">
+                            <div class="branding-hindi" lang="hi">लाल बहादुर शास्त्री राष्ट्रीय प्रशासन अकादमी</div>
+                            <div class="branding-en-side" lang="en">Lal Bahadur Shastri National Academy of Administration</div>
+                        </div>
+                        <div class="branding-right-clear"></div>
+                    </div>
                 </td>
             </tr>
         </table>

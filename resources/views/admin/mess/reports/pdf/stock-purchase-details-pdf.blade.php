@@ -26,7 +26,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>Stock Purchase Details Report</title>
+    <title>Stock Purchase Details - OFFICER'S MESS LBSNAA MUSSOORIE</title>
     <style>
         @page {
             size: A4 portrait;
@@ -40,6 +40,13 @@
             color: #222;
             background: #fff;
         }
+        /* Match print popup: repeat header rows on each PDF page */
+        thead {
+            display: table-header-group;
+        }
+        tfoot {
+            display: table-footer-group;
+        }
         .page {
             page-break-after: always;
         }
@@ -47,11 +54,14 @@
             page-break-after: auto;
         }
 
-        /* Branding header — same layout as category-wise PDF / print (PNG emblem for DOMPDF) */
+        /*
+         * Letterhead: left block (emblem + titles) | right block (seal + Hindi/English) hugging the right margin.
+         * Float + clearfix — avoids nested tables in cells (Dompdf cellmap issues).
+         */
         .lbsnaa-header-wrap {
-            border-bottom: 2px solid #004a93;
-            margin-bottom: 12px;
-            padding: 2px 0 8px;
+            border-bottom: 3px solid #003366;
+            margin-bottom: 14px;
+            padding: 6px 0 12px;
         }
         .branding-table {
             width: 100%;
@@ -63,44 +73,94 @@
             padding: 0;
             vertical-align: middle;
         }
-        .branding-logo-left {
-            width: 42px;
+        .branding-left-cell {
+            width: 62%;
+            vertical-align: middle;
         }
-        .branding-text {
-            text-align: left;
-            padding: 0 10px 0 2px;
-            line-height: 1.25;
+        .branding-left-cell .header-img-left {
+            float: left;
+            margin: 2px 12px 6px 0;
         }
-        .branding-logo-right {
-            width: 200px;
+        .branding-left-cell .branding-text-block {
+            overflow: hidden;
+            line-height: 1.28;
+            padding-top: 1px;
+        }
+        .branding-left-clear {
+            clear: both;
+            height: 0;
+            line-height: 0;
+            font-size: 0;
+        }
+        .branding-right-cell {
+            width: 38%;
+            vertical-align: middle;
             text-align: right;
         }
+        .branding-right-cluster {
+            display: inline-block;
+            text-align: left;
+            vertical-align: middle;
+            max-width: 100%;
+        }
+        .branding-right-cluster .header-img-right-seal {
+            float: left;
+            margin: 0 10px 0 0;
+        }
+        .branding-right-cluster .branding-bilingual {
+            overflow: hidden;
+            max-width: 175px;
+            line-height: 1.22;
+        }
+        .branding-right-clear {
+            clear: both;
+            height: 0;
+            line-height: 0;
+            font-size: 0;
+        }
         .lbsnaa-brand-line-1 {
-            font-size: 8pt;
-            color: #004a93;
+            font-size: 8.5pt;
+            color: #1d70b8;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.07em;
             font-weight: 600;
         }
         .lbsnaa-brand-line-2 {
             font-size: 13pt;
-            color: #222;
+            color: #000000;
             font-weight: 700;
             text-transform: uppercase;
-            margin-top: 2px;
+            margin-top: 4px;
+            letter-spacing: 0.02em;
         }
         .lbsnaa-brand-line-3 {
-            font-size: 10pt;
-            color: #555;
-            margin-top: 2px;
+            font-size: 9pt;
+            color: #505a5f;
+            margin-top: 4px;
+            font-weight: normal;
         }
         .header-img-left {
-            width: 34px;
-            height: 34px;
+            width: 46px;
+            height: 46px;
+            object-fit: contain;
+            display: block;
         }
-        .header-img-right {
-            width: 165px;
-            height: auto;
+        .header-img-right-seal {
+            width: 48px;
+            height: 48px;
+            object-fit: contain;
+            display: block;
+        }
+        .branding-hindi {
+            font-size: 8.5pt;
+            color: #7b2d26;
+            font-weight: 600;
+        }
+        .branding-en-side {
+            font-size: 7.5pt;
+            color: #7b2d26;
+            margin-top: 4px;
+            font-weight: normal;
         }
 
         /* Report title block — matches on-screen report card */
@@ -118,7 +178,7 @@
             color: #212529;
         }
         .report-date-bar {
-            background: #004a93;
+            background: #003366;
             color: #fff;
             padding: 8px 12px;
             text-align: center;
@@ -182,6 +242,7 @@
             padding: 5px 8px;
             border: 1px solid #dee2e6;
             vertical-align: middle;
+            white-space: normal;
         }
         table.stock-purchase-data thead th {
             background: #d3d6d9;
@@ -217,35 +278,35 @@
             border-color: #004a93;
         }
 
-        .footer {
-            border-top: 1px solid #dee2e6;
-            font-size: 8pt;
-            color: #666;
-            text-align: center;
-            padding-top: 6px;
-            margin-top: 8px;
+        .table-responsive {
+            width: 100%;
         }
     </style>
 </head>
 <body>
-@if($purchaseOrders->isEmpty())
-    <p>No purchase details found for the selected filters.</p>
-@else
     @php $grandTotalAmount = 0; @endphp
     <div class="page">
         <div class="lbsnaa-header-wrap">
             <table class="branding-table">
                 <tr>
-                    <td class="branding-logo-left">
+                    <td class="branding-left-cell">
                         <img src="{{ $emblemSrc }}" alt="Emblem of India" class="header-img-left">
+                        <div class="branding-text-block">
+                            <div class="lbsnaa-brand-line-1">Government of India</div>
+                            <div class="lbsnaa-brand-line-2">OFFICER'S MESS LBSNAA MUSSOORIE</div>
+                            <div class="lbsnaa-brand-line-3">Lal Bahadur Shastri National Academy of Administration</div>
+                        </div>
+                        <div class="branding-left-clear"></div>
                     </td>
-                    <td class="branding-text">
-                        <div class="lbsnaa-brand-line-1">Government of India</div>
-                        <div class="lbsnaa-brand-line-2">OFFICER'S MESS LBSNAA MUSSOORIE</div>
-                        <div class="lbsnaa-brand-line-3">Lal Bahadur Shastri National Academy of Administration</div>
-                    </td>
-                    <td class="branding-logo-right">
-                        <img src="{{ $lbsnaaLogoSrc }}" alt="LBSNAA Logo" class="header-img-right">
+                    <td class="branding-right-cell">
+                        <div class="branding-right-cluster">
+                            <img src="{{ $lbsnaaLogoSrc }}" alt="LBSNAA" class="header-img-right-seal">
+                            <div class="branding-bilingual">
+                                <div class="branding-hindi" lang="hi">लाल बहादुर शास्त्री राष्ट्रीय प्रशासन अकादमी</div>
+                                <div class="branding-en-side" lang="en">Lal Bahadur Shastri National Academy of Administration</div>
+                            </div>
+                            <div class="branding-right-clear"></div>
+                        </div>
                     </td>
                 </tr>
             </table>
@@ -293,9 +354,10 @@
                 </table>
             @endif
             <div class="meta-line"><strong>Store:</strong> {{ $storeDetails }}</div>
-            <div class="meta-line"><strong>Generated on:</strong> {{ now()->format('d-m-Y H:i') }}</div>
+            <div class="meta-line"><strong>Printed on:</strong> {{ now()->format('d-m-Y H:i') }}</div>
         </div>
 
+        <div class="table-responsive">
         <table class="stock-purchase-data">
             <thead>
             <tr>
@@ -351,28 +413,24 @@
                 @endforeach
                 @php $billTotal = $billSubtotal + $billTaxTotal; @endphp
                 <tr class="bill-total-row">
-                    <td colspan="7" class="text-end"><strong>Bill Total:</strong></td>
-                    <td class="text-end"><strong>₹{{ number_format($billTotal, 2) }}</strong></td>
+                    <td colspan="7" class="text-end">Bill Total:</td>
+                    <td class="text-end">₹{{ number_format($billTotal, 2) }}</td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="8" class="text-center">No purchase details found</td>
+                    <td colspan="8" class="text-center text-muted">No purchase details found</td>
                 </tr>
             @endforelse
 
             @if($grandTotalAmount > 0)
                 <tr class="grand-total-row">
                     <td colspan="7" class="text-end">Grand Total:</td>
-                    <td class="text-end"><strong>₹{{ number_format($grandTotalAmount, 2) }}</strong></td>
+                    <td class="text-end">₹{{ number_format($grandTotalAmount, 2) }}</td>
                 </tr>
             @endif
             </tbody>
         </table>
-
-        <div class="footer">
-            <small>Officer's Mess LBSNAA Mussoorie — Stock Purchase Details Report</small>
         </div>
     </div>
-@endif
 </body>
 </html>
