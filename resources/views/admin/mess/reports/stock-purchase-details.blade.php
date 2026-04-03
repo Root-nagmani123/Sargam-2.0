@@ -25,9 +25,13 @@
     $stockPurchasePrintStoreDetails = $selectedStores->isEmpty()
         ? 'All Stores'
         : $selectedStores->pluck('store_name')->implode(', ');
+    $stockPurchasePrintVendorHeaderLabel = $selectedVendors->isEmpty() || $selectedVendors->count() === 1
+        ? 'Vendor:'
+        : 'Filtered vendors:';
     $stockPurchasePrintConfigJson = json_encode([
         'dateRange' => $stockPurchasePrintDateRange,
         'vendorLine' => $stockPurchasePrintVendorLine,
+        'vendorHeaderLabel' => $stockPurchasePrintVendorHeaderLabel,
         'vendorDetailRows' => $stockPurchasePrintVendorDetailRows,
         'storeDetails' => $stockPurchasePrintStoreDetails,
     ], JSON_THROW_ON_ERROR);
@@ -114,9 +118,9 @@
                         <div class="d-inline-block px-3 py-2 mb-2 rounded-pill text-white fw-semibold small mess-report-date-pill">
                             Stock Purchase Details Report Between {{ date('d-F-Y', strtotime($fromDate)) }} To {{ date('d-F-Y', strtotime($toDate)) }}
                         </div>
-                        <div class="fw-semibold mb-0 mt-3 small">
-                            <span class="text-secondary">Vendor:</span>
-                            <span class="ms-1 text-body">{{ $selectedVendors->isEmpty() ? 'All Vendors' : $selectedVendors->pluck('name')->implode(', ') }}</span>
+                        <div class="report-vendor-name fw-semibold mb-0 mt-2 text-center">
+                            <span class="text-muted">{{ $stockPurchasePrintVendorHeaderLabel }}</span>
+                            <span class="ms-1">{{ $selectedVendors->isEmpty() ? 'All Vendors' : $selectedVendors->pluck('name')->implode(', ') }}</span>
                         </div>
                         <div class="fw-semibold mb-0 mt-2 small">
                             <span class="text-secondary">Store:</span>
@@ -141,43 +145,58 @@
                             </thead>
                             <tbody>
                                 @php $grandTotalAmount = 0; @endphp
-                                @forelse($purchaseOrders as $order)
-                                    @php
-                                        $storeName = $order->store ? $order->store->store_name : 'N/A';
-                                        $billLabel = $storeName . '(Primary) Bill No. ' . ($order->po_number ?? $order->id) . ' (' . $order->po_date->format('d-m-Y') . ')';
-                                        $billSubtotal = 0;
-                                        $billTaxTotal = 0;
-                                    @endphp
-                                    <tr class="bill-header-row">
-                                        <td colspan="8" class="bill-header bg-dark text-white small fw-semibold">{{ $billLabel }}</td>
+                                @forelse($purchaseOrdersByVendor as $vendorGroup)
+                                    <tr class="vendor-section-header-row">
+                                        <td colspan="8" class="vendor-section-header small fw-semibold">
+                                            VENDOR : {{ $vendorGroup['vendor_name'] }}
+                                        </td>
                                     </tr>
-                                    @foreach($order->items as $item)
+                                    @php $vendorSectionTotal = 0; @endphp
+                                    @foreach($vendorGroup['orders'] as $order)
                                         @php
-                                            $qty = $item->quantity ?? 0;
-                                            $rate = $item->unit_price ?? 0;
-                                            $taxPercent = $item->tax_percent ?? 0;
-                                            $subtotal = $qty * $rate;
-                                            $taxAmount = round($subtotal * ($taxPercent / 100), 2);
-                                            $total = $subtotal + $taxAmount;
-                                            $billSubtotal += $subtotal;
-                                            $billTaxTotal += $taxAmount;
-                                            $grandTotalAmount += $total;
+                                            $storeName = $order->store ? $order->store->store_name : 'N/A';
+                                            $billLabel = $storeName . '(Primary) Bill No. ' . ($order->po_number ?? $order->id) . ' (' . $order->po_date->format('d-m-Y') . ')';
+                                            $billSubtotal = 0;
+                                            $billTaxTotal = 0;
                                         @endphp
-                                        <tr>
-                                            <td>{{ $item->itemSubcategory->item_name ?? $item->itemSubcategory->subcategory_name ?? $item->itemSubcategory->name ?? 'N/A' }}</td>
-                                            <td>{{ $item->itemSubcategory->item_code ?? '—' }}</td>
-                                            <td class="text-end">{{ $item->unit ?? '—' }}</td>
-                                            <td class="text-end">{{ number_format($qty, 2) }}</td>
-                                            <td class="text-end">₹{{ number_format($rate, 1) }}</td>
-                                            <td class="text-end">{{ number_format($taxPercent, 2) }}%</td>
-                                            <td class="text-end">₹{{ number_format($taxAmount, 2) }}</td>
-                                            <td class="text-end">₹{{ number_format($total, 2) }}</td>
+                                        <tr class="bill-header-row">
+                                            <td colspan="8" class="bill-header bg-dark text-white small fw-semibold">{{ $billLabel }}</td>
+                                        </tr>
+                                        @foreach($order->items as $item)
+                                            @php
+                                                $qty = $item->quantity ?? 0;
+                                                $rate = $item->unit_price ?? 0;
+                                                $taxPercent = $item->tax_percent ?? 0;
+                                                $subtotal = $qty * $rate;
+                                                $taxAmount = round($subtotal * ($taxPercent / 100), 2);
+                                                $total = $subtotal + $taxAmount;
+                                                $billSubtotal += $subtotal;
+                                                $billTaxTotal += $taxAmount;
+                                                $grandTotalAmount += $total;
+                                            @endphp
+                                            <tr>
+                                                <td>{{ $item->itemSubcategory->item_name ?? $item->itemSubcategory->subcategory_name ?? $item->itemSubcategory->name ?? 'N/A' }}</td>
+                                                <td>{{ $item->itemSubcategory->item_code ?? '—' }}</td>
+                                                <td class="text-end">{{ $item->unit ?? '—' }}</td>
+                                                <td class="text-end">{{ number_format($qty, 2) }}</td>
+                                                <td class="text-end">₹{{ number_format($rate, 1) }}</td>
+                                                <td class="text-end">{{ number_format($taxPercent, 2) }}%</td>
+                                                <td class="text-end">₹{{ number_format($taxAmount, 2) }}</td>
+                                                <td class="text-end">₹{{ number_format($total, 2) }}</td>
+                                            </tr>
+                                        @endforeach
+                                        @php
+                                            $billTotal = $billSubtotal + $billTaxTotal;
+                                            $vendorSectionTotal += $billTotal;
+                                        @endphp
+                                        <tr class="bill-total-row bg-light fw-semibold">
+                                            <td colspan="7" class="text-end fw-bold">Bill Total:</td>
+                                            <td class="text-end fw-bold">₹{{ number_format($billTotal, 2) }}</td>
                                         </tr>
                                     @endforeach
-                                    @php $billTotal = $billSubtotal + $billTaxTotal; @endphp
-                                    <tr class="bill-total-row bg-light fw-semibold">
-                                        <td colspan="7" class="text-end fw-bold">Bill Total:</td>
-                                        <td class="text-end fw-bold">₹{{ number_format($billTotal, 2) }}</td>
+                                    <tr class="vendor-total-row fw-semibold">
+                                        <td colspan="7" class="text-end">Vendor Total ({{ $vendorGroup['vendor_name'] }}):</td>
+                                        <td class="text-end">₹{{ number_format($vendorSectionTotal, 2) }}</td>
                                     </tr>
                                 @empty
                                     <tr>
@@ -201,12 +220,6 @@
                 </div>
             </div>
 
-            <!-- Pagination below report (for print: show "Page X of Y" on each logical page via CSS if needed) -->
-            @if($purchaseOrders->hasPages())
-                <div class="mt-3 no-print d-flex justify-content-center">
-                    {{ $purchaseOrders->links('vendor.pagination.custom') }}
-                </div>
-            @endif
     </div>
 
     {{-- Tom Select for vendor & store dropdowns (shared with other mess screens) --}}
@@ -265,6 +278,7 @@ function printStockPurchaseTable() {
     }
     var dateRange = printCfg.dateRange || '';
     var vendorLine = printCfg.vendorLine || '';
+    var vendorHeaderLabel = printCfg.vendorHeaderLabel || 'Vendor:';
     var vendorDetailRows = Array.isArray(printCfg.vendorDetailRows) ? printCfg.vendorDetailRows : [];
     var storeDetails = printCfg.storeDetails || '';
     var emblemSrc = 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
@@ -345,15 +359,100 @@ function printStockPurchaseTable() {
             margin-top: 0.35rem;
             font-size: 0.8rem;
         }
-        .mess-hindi { color: #7b2d26; font-weight: 600; font-size: 0.78rem; }
-        .mess-en-side { color: #7b2d26; margin-top: 0.35rem; font-size: 0.72rem; }
-        table.stock-purchase-data thead th { font-weight: 600; }
+        .header-img-left { width: 46px; height: 46px; object-fit: contain; display: block; }
+        .header-img-right-seal { width: 48px; height: 48px; object-fit: contain; display: block; }
+        .branding-hindi { font-size: 9px; color: #7b2d26; font-weight: 600; }
+        .branding-en-side { font-size: 8px; color: #7b2d26; margin-top: 4px; font-weight: normal; }
+        .report-header-block {
+            text-align: center;
+            margin-bottom: 14px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .report-title-center {
+            font-size: 15px;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin: 0 0 8px;
+            color: #212529;
+        }
+        .report-date-bar {
+            background: #003366;
+            color: #fff;
+            padding: 8px 12px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 10px;
+            display: inline-block;
+        }
+        .report-vendor-name, .report-store-name {
+            font-size: 10px;
+            font-weight: 600;
+            margin-top: 8px;
+            color: #212529;
+        }
+        .report-store-name { font-size: 9px; margin-top: 4px; }
+        .text-muted { color: #6c757d; font-weight: 600; }
+        .report-meta-print { font-size: 9px; margin: 10px 0 12px; line-height: 1.4; }
+        .report-meta-print .meta-line { margin-bottom: 4px; word-wrap: break-word; }
+        .vendor-detail-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 4px;
+            font-size: 8.5px;
+        }
+        .vendor-detail-table th,
+        .vendor-detail-table td {
+            border: 1px solid #dee2e6;
+            padding: 3px 5px;
+            text-align: left;
+            vertical-align: top;
+            word-break: break-word;
+        }
+        .vendor-detail-table th {
+            background: #f1f3f5;
+            font-weight: 600;
+        }
+        table.stock-purchase-data {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 9px;
+            margin-bottom: 10px;
+        }
+        table.stock-purchase-data th,
+        table.stock-purchase-data td {
+            padding: 5px 8px;
+            border: 1px solid #dee2e6;
+            vertical-align: middle;
+            white-space: normal;
+        }
+        table.stock-purchase-data thead th {
+            background: #d3d6d9;
+            font-weight: 600;
+            text-align: left;
+        }
+        table.stock-purchase-data thead th.text-end { text-align: right; }
+        table.stock-purchase-data .text-center { text-align: center; }
+        table.stock-purchase-data .text-end { text-align: right; }
+        table.stock-purchase-data .vendor-section-header-row td,
+        table.stock-purchase-data td.vendor-section-header {
+            background: #e9ecef;
+            color: #212529;
+            font-weight: 700;
+            font-size: 9.5px;
+            border-color: #adb5bd;
+        }
         table.stock-purchase-data .bill-header-row td,
         table.stock-purchase-data td.bill-header {
-            background-color: #5a6268 !important;
-            color: #fff !important;
-            border-color: #5a6268 !important;
-            font-weight: 600;
+            background: #5a6268;
+            color: #fff;
+            font-weight: 700;
+            border-color: #5a6268;
+        }
+        table.stock-purchase-data .vendor-total-row td {
+            font-weight: 700;
+            background: #dee2e6;
+            border-top: 1px solid #adb5bd;
         }
         table.stock-purchase-data .bill-total-row td {
             background-color: #f8f9fa !important;
@@ -394,6 +493,28 @@ function printStockPurchaseTable() {
                     <img src="${lbsnaaLogoSrc}" alt="LBSNAA" class="flex-shrink-0 rounded" height="48" style="object-fit:contain;">
                 </div>
             </div>
+                    <div class="branding-left-clear"></div>
+                </td>
+                <td class="branding-right-cell">
+                    <div class="branding-right-cluster">
+                        <img src="${lbsnaaLogoSrc}" alt="LBSNAA" class="header-img-right-seal">
+                        <div class="branding-bilingual">
+                            <div class="branding-hindi" lang="hi">लाल बहादुर शास्त्री राष्ट्रीय प्रशासन अकादमी</div>
+                            <div class="branding-en-side" lang="en">Lal Bahadur Shastri National Academy of Administration</div>
+                        </div>
+                        <div class="branding-right-clear"></div>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="report-header-block">
+        <h1 class="report-title-center">${title}</h1>
+        <div class="report-date-bar">${dateRange}</div>
+        <div class="report-vendor-name">
+            <span class="text-muted">${vendorHeaderLabel}</span>
+            <span>${vendorLine}</span>
         </div>
     </header>
 
@@ -486,6 +607,14 @@ function printStockPurchaseTable() {
 .mess-title-tracking { letter-spacing: 0.04em; }
 .mess-report-date-pill { background-color: #003366 !important; }
 .stock-purchase-report .stock-purchase-table { font-size: 0.9rem; }
+.stock-purchase-report .vendor-section-header-row .vendor-section-header {
+    background-color: #f1f3f5;
+    color: #212529;
+    font-weight: 700;
+    padding: 0.5rem 0.75rem;
+    border-top: 2px solid #adb5bd;
+}
+.stock-purchase-report .vendor-total-row td { background-color: #e9ecef; padding: 0.4rem 0.75rem; border-top: 1px solid #ced4da; }
 .stock-purchase-report .bill-header-row .bill-header { background-color: #5a6268; color: #fff; font-weight: bold; padding: 0.5rem 0.75rem; }
 .stock-purchase-report .bill-total-row { background-color: #fff; }
 .stock-purchase-report .bill-total-row td { padding: 0.35rem 0.75rem; border-top: 1px solid #dee2e6; }
@@ -534,6 +663,8 @@ function printStockPurchaseTable() {
     .stock-purchase-thead th { background: #d3d6d9 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; position: static !important; box-shadow: none !important; }
     .stock-purchase-report .stock-purchase-table-wrapper { max-height: none !important; overflow: visible !important; }
     .stock-purchase-report .bill-header-row .bill-header { background: #5a6268 !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .stock-purchase-report .vendor-section-header { background: #e9ecef !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .stock-purchase-report .vendor-total-row td { background: #dee2e6 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 </style>
 @endsection

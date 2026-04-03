@@ -12,7 +12,8 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class StockPurchaseDetailsExport implements FromView, WithStyles, WithEvents, WithTitle
 {
-    protected $purchaseOrders;
+    /** @var \Illuminate\Support\Collection<int, array{vendor_id: int, vendor_name: string, vendor: mixed, orders: mixed}> */
+    protected $purchaseOrdersByVendor;
     protected $fromDate;
     protected $toDate;
     /** @var \Illuminate\Support\Collection<int, \App\Models\Mess\Vendor> */
@@ -20,9 +21,9 @@ class StockPurchaseDetailsExport implements FromView, WithStyles, WithEvents, Wi
     /** @var \Illuminate\Support\Collection<int, \App\Models\Mess\Store> */
     protected $selectedStores;
 
-    public function __construct($purchaseOrders, $fromDate, $toDate, $selectedVendors, $selectedStores)
+    public function __construct($purchaseOrdersByVendor, $fromDate, $toDate, $selectedVendors, $selectedStores)
     {
-        $this->purchaseOrders  = $purchaseOrders;
+        $this->purchaseOrdersByVendor = $purchaseOrdersByVendor;
         $this->fromDate        = $fromDate;
         $this->toDate          = $toDate;
         $this->selectedVendors = $selectedVendors;
@@ -32,7 +33,7 @@ class StockPurchaseDetailsExport implements FromView, WithStyles, WithEvents, Wi
     public function view(): View
     {
         return view('admin.mess.reports.excel.stock-purchase-details-excel', [
-            'purchaseOrders'  => $this->purchaseOrders,
+            'purchaseOrdersByVendor' => $this->purchaseOrdersByVendor,
             'fromDate'        => $this->fromDate,
             'toDate'          => $this->toDate,
             'selectedVendors' => $this->selectedVendors,

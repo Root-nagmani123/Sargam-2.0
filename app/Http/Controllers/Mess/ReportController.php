@@ -90,20 +90,20 @@ class ReportController extends Controller
      */
     public function stockPurchaseDetails(Request $request)
     {
-        $queryData = $this->buildStockPurchaseDetailsQuery($request, forExport: false);
+        $queryData = $this->buildStockPurchaseDetailsQuery($request);
 
         $stores = Store::where('status', 'active')->get();
         $vendors = Vendor::all();
 
         return view('admin.mess.reports.stock-purchase-details', [
-            'purchaseOrders'  => $queryData['purchaseOrders'],
-            'grandTotal'      => $queryData['grandTotal'],
-            'stores'          => $stores,
-            'vendors'         => $vendors,
-            'selectedVendors' => $queryData['selectedVendors'],
-            'selectedStores'  => $queryData['selectedStores'],
-            'fromDate'        => $queryData['fromDate'],
-            'toDate'          => $queryData['toDate'],
+            'purchaseOrdersByVendor' => $queryData['purchaseOrdersByVendor'],
+            'grandTotal'             => $queryData['grandTotal'],
+            'stores'                 => $stores,
+            'vendors'                => $vendors,
+            'selectedVendors'        => $queryData['selectedVendors'],
+            'selectedStores'         => $queryData['selectedStores'],
+            'fromDate'               => $queryData['fromDate'],
+            'toDate'                 => $queryData['toDate'],
         ]);
     }
 
@@ -266,7 +266,7 @@ class ReportController extends Controller
      * Build base query and shared data for Stock Purchase Details (view, Excel, PDF).
      *
      * @return array{
-     *     purchaseOrders: \Illuminate\Contracts\Pagination\LengthAwarePaginator|\Illuminate\Support\Collection,
+     *     purchaseOrdersByVendor: \Illuminate\Support\Collection<int, array{vendor_id: int, vendor_name: string, vendor: ?\App\Models\Mess\Vendor, orders: \Illuminate\Support\Collection<int, \App\Models\Mess\PurchaseOrder>}>,
      *     grandTotal: float|int,
      *     fromDate: string,
      *     toDate: string,
@@ -274,7 +274,7 @@ class ReportController extends Controller
      *     selectedStores: \Illuminate\Support\Collection<int, \App\Models\Mess\Store>
      * }
      */
-    private function buildStockPurchaseDetailsQuery(Request $request, bool $forExport = false): array
+    private function buildStockPurchaseDetailsQuery(Request $request): array
     {
         // Use request dates when provided, otherwise default to today (so default filter applies on first load)
         $fromDate = $request->filled('from_date') ? $request->from_date : now()->format('Y-m-d');
@@ -302,10 +302,28 @@ class ReportController extends Controller
             ->selectRaw('SUM(quantity * unit_price) as total')
             ->value('total') ?? 0;
 
-        // For screen we paginate, for export (Excel/PDF) we take full collection
-        $purchaseOrders = $forExport
-            ? $baseQuery->get()
-            : $baseQuery->paginate(5)->withQueryString();
+        // Same as Sale Voucher report: load full result set, grouped by vendor in the view
+        $purchaseOrders = $baseQuery->get();
+
+        $purchaseOrdersByVendor = $purchaseOrders
+            ->groupBy(static fn ($po) => (int) ($po->vendor_id ?? 0))
+            ->map(static function ($vendorOrders, $vendorId) {
+                $first = $vendorOrders->first();
+                $vendorName = optional($first->vendor)->name ?? 'N/A';
+
+                return [
+                    'vendor_id'    => $vendorId,
+                    'vendor_name'  => $vendorName,
+                    'vendor'       => $first->vendor,
+                    'orders'       => $vendorOrders->sortBy(static fn ($o) => sprintf(
+                        '%s-%09d',
+                        $o->po_date?->format('Y-m-d') ?? '1970-01-01',
+                        $o->id
+                    ))->values(),
+                ];
+            })
+            ->sortBy('vendor_name')
+            ->values();
 
         $selectedVendors = $vendorIds === []
             ? collect()
@@ -316,12 +334,12 @@ class ReportController extends Controller
             : Store::whereIn('id', $storeIds)->orderBy('store_name')->get();
 
         return [
-            'purchaseOrders'  => $purchaseOrders,
-            'grandTotal'      => $grandTotal,
-            'fromDate'        => $fromDate,
-            'toDate'          => $toDate,
-            'selectedVendors' => $selectedVendors,
-            'selectedStores'  => $selectedStores,
+            'purchaseOrdersByVendor' => $purchaseOrdersByVendor,
+            'grandTotal'             => $grandTotal,
+            'fromDate'               => $fromDate,
+            'toDate'                 => $toDate,
+            'selectedVendors'        => $selectedVendors,
+            'selectedStores'         => $selectedStores,
         ];
     }
 
@@ -588,13 +606,13 @@ class ReportController extends Controller
      */
     public function stockPurchaseDetailsExcel(Request $request)
     {
-        $queryData = $this->buildStockPurchaseDetailsQuery($request, forExport: true);
+        $queryData = $this->buildStockPurchaseDetailsQuery($request);
 
         $fileName = 'stock-purchase-details-' . $queryData['fromDate'] . '-to-' . $queryData['toDate'] . '-' . now()->format('Y-m-d_His') . '.xlsx';
 
         return Excel::download(
             new StockPurchaseDetailsExport(
-                $queryData['purchaseOrders'],
+                $queryData['purchaseOrdersByVendor'],
                 $queryData['fromDate'],
                 $queryData['toDate'],
                 $queryData['selectedVendors'],
@@ -612,16 +630,16 @@ class ReportController extends Controller
         @ini_set('memory_limit', '512M');
         @set_time_limit(120);
 
-        $queryData = $this->buildStockPurchaseDetailsQuery($request, forExport: true);
+        $queryData = $this->buildStockPurchaseDetailsQuery($request);
 
         $data = [
-            'purchaseOrders'  => $queryData['purchaseOrders'],
-            'fromDate'        => $queryData['fromDate'],
-            'toDate'          => $queryData['toDate'],
-            'selectedVendors' => $queryData['selectedVendors'],
-            'selectedStores'  => $queryData['selectedStores'],
-            'emblemSrc'       => $this->messPdfIndiaEmblemForDompdf(),
-            'lbsnaaLogoSrc'   => $this->messPdfLbsnaaLogoForDompdf(),
+            'purchaseOrdersByVendor' => $queryData['purchaseOrdersByVendor'],
+            'fromDate'               => $queryData['fromDate'],
+            'toDate'                 => $queryData['toDate'],
+            'selectedVendors'        => $queryData['selectedVendors'],
+            'selectedStores'         => $queryData['selectedStores'],
+            'emblemSrc'              => $this->messPdfIndiaEmblemForDompdf(),
+            'lbsnaaLogoSrc'          => $this->messPdfLbsnaaLogoForDompdf(),
         ];
 
         $pdf = Pdf::loadView('admin.mess.reports.pdf.stock-purchase-details-pdf', $data)

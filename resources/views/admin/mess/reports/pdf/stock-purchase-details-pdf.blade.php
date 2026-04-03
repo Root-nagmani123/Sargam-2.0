@@ -5,6 +5,9 @@
     $vendorLine = $selectedVendors->isEmpty()
         ? 'All Vendors'
         : $selectedVendors->pluck('name')->implode(', ');
+    $vendorHeaderLabel = $selectedVendors->isEmpty() || $selectedVendors->count() === 1
+        ? 'Vendor:'
+        : 'Filtered vendors:';
     $vendorDetailRows = $selectedVendors->isEmpty()
         ? collect()
         : $selectedVendors->map(function ($v) {
@@ -173,18 +176,37 @@
         .table-light th {
             background: #e9ecef !important;
             font-weight: 600;
+            text-align: left;
         }
-        .align-middle td,
-        .align-middle th { vertical-align: middle; }
-
-        table.stock-purchase-data thead th { font-weight: 600; }
-        table.stock-purchase-data .text-center { text-align: center; }
+        table.stock-purchase-data thead th.text-end {
+            text-align: right;
+        }
+        table.stock-purchase-data .text-center {
+            text-align: center;
+        }
+        table.stock-purchase-data .text-end {
+            text-align: right;
+        }
+        table.stock-purchase-data .vendor-section-header-row td,
+        table.stock-purchase-data td.vendor-section-header {
+            background: #e9ecef;
+            color: #212529;
+            font-weight: 700;
+            font-size: 8.5pt;
+            border-color: #adb5bd;
+        }
         table.stock-purchase-data .bill-header-row td,
         table.stock-purchase-data td.bill-header {
-            background: #5a6268 !important;
-            color: #fff !important;
-            border-color: #5a6268 !important;
-            font-weight: 600;
+            background: #5a6268;
+            color: #fff;
+            font-weight: 700;
+            font-size: 8.5pt;
+            border-color: #5a6268;
+        }
+        table.stock-purchase-data .vendor-total-row td {
+            font-weight: 700;
+            background: #dee2e6;
+            border-top: 1px solid #adb5bd;
         }
         table.stock-purchase-data .bill-total-row td {
             background: #f8f9fa !important;
@@ -230,132 +252,138 @@
             </table>
         </header>
 
-        <section class="card border-0 shadow-sm mb-3 bg-white">
-            <div class="card-body text-center pb-3 border-bottom">
-                <h1 class="h5 mess-title-tracking text-dark">Stock Purchase Details</h1>
-                <div><span class="mess-date-pill">{{ $dateRange }}</span></div>
-                <p class="fw-semibold small mb-0 mt-3"><span class="text-secondary">Vendor:</span> <span class="text-dark">{{ $vendorLine }}</span></p>
-                <p class="fw-semibold small mb-0 mt-2"><span class="text-secondary">Store:</span> <span class="text-dark">{{ $storeDetails }}</span></p>
+        <div class="report-header-block">
+            <h1 class="report-title-center">Stock Purchase Details</h1>
+            <div class="report-date-bar">{{ $dateRange }}</div>
+            <div class="report-vendor-name">
+                <span class="text-muted">{{ $vendorHeaderLabel }}</span>
+                <span>{{ $vendorLine }}</span>
             </div>
-        </section>
-
-        <section class="card shadow-sm mb-3 bg-white">
-            <div class="card-header">Report context</div>
-            <div class="card-body small">
-                @if($vendorDetailRows->isEmpty())
-                    <p class="small mb-0"><span class="text-secondary fw-semibold">Vendor details:</span> All Vendors</p>
-                @else
-                    <p class="small fw-semibold text-secondary mb-2">Vendor details</p>
-                    <div class="table-responsive">
-                        <table class="table table-sm table-bordered align-middle mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Vendor</th>
-                                    <th>Contact</th>
-                                    <th>Phone</th>
-                                    <th>Email</th>
-                                    <th>Address</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($vendorDetailRows as $row)
-                                    <tr>
-                                        <td>{{ $row['name'] }}</td>
-                                        <td>{{ $row['contact_person'] }}</td>
-                                        <td>{{ $row['phone'] }}</td>
-                                        <td>{{ $row['email'] }}</td>
-                                        <td>{{ $row['address'] }}</td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                @endif
-                <hr class="my-3 opacity-25">
-                <p class="mb-1"><span class="text-secondary fw-semibold">Store:</span> {{ $storeDetails }}</p>
-                <p class="mb-0"><span class="text-secondary fw-semibold">Printed on:</span> {{ now()->format('d-m-Y H:i') }}</p>
+            <div class="report-store-name">
+                <span class="text-muted">Store:</span>
+                <span>{{ $storeDetails }}</span>
             </div>
-        </section>
+        </div>
 
-        <section class="card shadow-sm bg-white">
-            <div class="card-header">Purchase line items</div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-sm table-bordered align-middle mb-0 stock-purchase-data">
-                        <thead class="table-light">
+        <div class="report-meta-print">
+            @if($vendorDetailRows->isEmpty())
+                <div class="meta-line"><strong>Vendor Details:</strong> All Vendors</div>
+            @else
+                <div class="meta-line"><strong>Vendor Details:</strong></div>
+                <table class="vendor-detail-table">
+                    <thead>
+                        <tr>
+                            <th>Vendor</th>
+                            <th>Contact</th>
+                            <th>Phone</th>
+                            <th>Email</th>
+                            <th>Address</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($vendorDetailRows as $row)
                             <tr>
-                                <th>Item</th>
-                                <th>Item Code</th>
-                                <th class="text-end">Unit</th>
-                                <th class="text-end">Quantity</th>
-                                <th class="text-end">Rate</th>
-                                <th class="text-end">Tax %</th>
-                                <th class="text-end">Tax Amount</th>
-                                <th class="text-end">Total</th>
+                                <td>{{ $row['name'] }}</td>
+                                <td>{{ $row['contact_person'] }}</td>
+                                <td>{{ $row['phone'] }}</td>
+                                <td>{{ $row['email'] }}</td>
+                                <td>{{ $row['address'] }}</td>
                             </tr>
-                        </thead>
-                        <tbody>
-                        @forelse($purchaseOrders as $order)
-                            @php
-                                $storeName = $order->store ? $order->store->store_name : 'N/A';
-                                $billLabel = $storeName . '(Primary) Bill No. ' . ($order->po_number ?? $order->id) . ' (' . ($order->po_date ? $order->po_date->format('d-m-Y') : 'N/A') . ')';
-                                $billSubtotal = 0;
-                                $billTaxTotal = 0;
-                            @endphp
-                            <tr class="bill-header-row">
-                                <td colspan="8" class="bill-header bg-dark text-white small fw-semibold">{{ $billLabel }}</td>
-                            </tr>
-                            @foreach($order->items as $item)
-                                @php
-                                    $qty = $item->quantity ?? 0;
-                                    $rate = $item->unit_price ?? 0;
-                                    $taxPercent = $item->tax_percent ?? 0;
-                                    $subtotal = $qty * $rate;
-                                    $taxAmount = round($subtotal * ($taxPercent / 100), 2);
-                                    $total = $subtotal + $taxAmount;
-                                    $billSubtotal += $subtotal;
-                                    $billTaxTotal += $taxAmount;
-                                    $grandTotalAmount += $total;
-                                    $itemName = $item->itemSubcategory->item_name
-                                        ?? $item->itemSubcategory->subcategory_name
-                                        ?? $item->itemSubcategory->name
-                                        ?? 'N/A';
-                                    $itemCode = $item->itemSubcategory->item_code ?? '—';
-                                    $unit = $item->unit ?? '—';
-                                @endphp
-                                <tr>
-                                    <td>{{ $itemName }}</td>
-                                    <td>{{ $itemCode }}</td>
-                                    <td class="text-end">{{ $unit }}</td>
-                                    <td class="text-end">{{ number_format($qty, 2) }}</td>
-                                    <td class="text-end">₹{{ number_format($rate, 1) }}</td>
-                                    <td class="text-end">{{ number_format($taxPercent, 2) }}%</td>
-                                    <td class="text-end">₹{{ number_format($taxAmount, 2) }}</td>
-                                    <td class="text-end">₹{{ number_format($total, 2) }}</td>
-                                </tr>
-                            @endforeach
-                            @php $billTotal = $billSubtotal + $billTaxTotal; @endphp
-                            <tr class="bill-total-row bg-light fw-semibold">
-                                <td colspan="7" class="text-end fw-bold">Bill Total:</td>
-                                <td class="text-end fw-bold">₹{{ number_format($billTotal, 2) }}</td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="8" class="text-center text-body-secondary py-5">No purchase details found</td>
-                            </tr>
-                        @endforelse
+                        @endforeach
+                    </tbody>
+                </table>
+            @endif
+            <div class="meta-line"><strong>Store:</strong> {{ $storeDetails }}</div>
+            <div class="meta-line"><strong>Printed on:</strong> {{ now()->format('d-m-Y H:i') }}</div>
+        </div>
 
-                        @if($grandTotalAmount > 0)
-                            <tr class="grand-total-row bg-primary fw-bold">
-                                <td colspan="7" class="text-end text-white">Grand Total:</td>
-                                <td class="text-end text-white">₹{{ number_format($grandTotalAmount, 2) }}</td>
-                            </tr>
-                        @endif
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
+        <div class="table-responsive">
+        <table class="stock-purchase-data">
+            <thead>
+            <tr>
+                <th>Item</th>
+                <th>Item Code</th>
+                <th class="text-end">Unit</th>
+                <th class="text-end">Quantity</th>
+                <th class="text-end">Rate</th>
+                <th class="text-end">Tax %</th>
+                <th class="text-end">Tax Amount</th>
+                <th class="text-end">Total</th>
+            </tr>
+            </thead>
+            <tbody>
+            @forelse($purchaseOrdersByVendor as $vendorGroup)
+                <tr class="vendor-section-header-row">
+                    <td colspan="8" class="vendor-section-header">VENDOR : {{ $vendorGroup['vendor_name'] }}</td>
+                </tr>
+                @php $vendorSectionTotal = 0; @endphp
+                @foreach($vendorGroup['orders'] as $order)
+                    @php
+                        $storeName = $order->store ? $order->store->store_name : 'N/A';
+                        $billLabel = $storeName . '(Primary) Bill No. ' . ($order->po_number ?? $order->id) . ' (' . ($order->po_date ? $order->po_date->format('d-m-Y') : 'N/A') . ')';
+                        $billSubtotal = 0;
+                        $billTaxTotal = 0;
+                    @endphp
+                    <tr class="bill-header-row">
+                        <td colspan="8" class="bill-header">{{ $billLabel }}</td>
+                    </tr>
+                    @foreach($order->items as $item)
+                        @php
+                            $qty = $item->quantity ?? 0;
+                            $rate = $item->unit_price ?? 0;
+                            $taxPercent = $item->tax_percent ?? 0;
+                            $subtotal = $qty * $rate;
+                            $taxAmount = round($subtotal * ($taxPercent / 100), 2);
+                            $total = $subtotal + $taxAmount;
+                            $billSubtotal += $subtotal;
+                            $billTaxTotal += $taxAmount;
+                            $grandTotalAmount += $total;
+                            $itemName = $item->itemSubcategory->item_name
+                                ?? $item->itemSubcategory->subcategory_name
+                                ?? $item->itemSubcategory->name
+                                ?? 'N/A';
+                            $itemCode = $item->itemSubcategory->item_code ?? '—';
+                            $unit = $item->unit ?? '—';
+                        @endphp
+                        <tr>
+                            <td>{{ $itemName }}</td>
+                            <td>{{ $itemCode }}</td>
+                            <td class="text-end">{{ $unit }}</td>
+                            <td class="text-end">{{ number_format($qty, 2) }}</td>
+                            <td class="text-end">₹{{ number_format($rate, 1) }}</td>
+                            <td class="text-end">{{ number_format($taxPercent, 2) }}%</td>
+                            <td class="text-end">₹{{ number_format($taxAmount, 2) }}</td>
+                            <td class="text-end">₹{{ number_format($total, 2) }}</td>
+                        </tr>
+                    @endforeach
+                    @php
+                        $billTotal = $billSubtotal + $billTaxTotal;
+                        $vendorSectionTotal += $billTotal;
+                    @endphp
+                    <tr class="bill-total-row">
+                        <td colspan="7" class="text-end">Bill Total:</td>
+                        <td class="text-end">₹{{ number_format($billTotal, 2) }}</td>
+                    </tr>
+                @endforeach
+                <tr class="vendor-total-row">
+                    <td colspan="7" class="text-end">Vendor Total ({{ $vendorGroup['vendor_name'] }}):</td>
+                    <td class="text-end">₹{{ number_format($vendorSectionTotal, 2) }}</td>
+                </tr>
+            @empty
+                <tr>
+                    <td colspan="8" class="text-center text-muted">No purchase details found</td>
+                </tr>
+            @endforelse
+
+            @if($grandTotalAmount > 0)
+                <tr class="grand-total-row">
+                    <td colspan="7" class="text-end">Grand Total:</td>
+                    <td class="text-end">₹{{ number_format($grandTotalAmount, 2) }}</td>
+                </tr>
+            @endif
+            </tbody>
+        </table>
+        </div>
     </div>
 </body>
 </html>
