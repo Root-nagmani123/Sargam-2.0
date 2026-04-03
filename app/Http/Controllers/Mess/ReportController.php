@@ -728,6 +728,9 @@ class ReportController extends Controller
      */
     public function purchaseSaleQuantityPdf(Request $request)
     {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(120);
+
         $fromDate = $request->filled('from_date') ? $request->from_date : now()->startOfMonth()->format('Y-m-d');
         $toDate   = $request->filled('to_date') ? $request->to_date : now()->format('Y-m-d');
         $categoryId = $request->filled('category_id') ? $request->category_id : null;

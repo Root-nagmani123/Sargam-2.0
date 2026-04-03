@@ -945,36 +945,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Initialize Choices.js on filter dropdowns for multiselect with search
-    if (typeof Choices !== 'undefined') {
-        var filterStatusEl = document.getElementById('filter_status');
-        var filterStoreEl = document.getElementById('filter_store');
-        
-        if (filterStatusEl) {
-            new Choices(filterStatusEl, {
-                removeItemButton: true,
-                searchEnabled: true,
-                searchPlaceholderValue: 'Search status...',
-                placeholder: true,
-                placeholderValue: 'Select status',
-                itemSelectText: '',
-                shouldSort: false
-            });
-        }
-        
-        if (filterStoreEl) {
-            new Choices(filterStoreEl, {
-                removeItemButton: true,
-                searchEnabled: true,
-                searchPlaceholderValue: 'Search store...',
-                placeholder: true,
-                placeholderValue: 'Select store',
-                itemSelectText: '',
-                shouldSort: false
-            });
-        }
-    }
-
     // Keep modal scroll stable; don't toggle overflow classes on dropdown open/close.
     function installModalScrollGuard(modalId) {
         var modal = document.getElementById(modalId);
@@ -1113,6 +1083,59 @@ document.addEventListener('DOMContentLoaded', function() {
         selectEl.addEventListener('hideDropdown', onHide);
     }
 
+    /**
+     * Selling voucher dropdowns: type-to-search using whole words only.
+     * Each space-separated token must match a label word from the start (prefix while typing),
+     * so e.g. "rice" matches "Basmati Rice" but not "price".
+     */
+    function svNormalizeSearchQuery(q) {
+        return String(q || '').trim().replace(/\s{2,}/g, ' ');
+    }
+
+    function svLabelMatchesExactWordTokens(label, query) {
+        var q = svNormalizeSearchQuery(query).toLowerCase();
+        if (!q) return true;
+        var labelStr = String(label || '');
+        var words = labelStr.toLowerCase().match(/[\u0900-\u0FFF\w]+/g);
+        if (!words || !words.length) {
+            return labelStr.toLowerCase().indexOf(q) >= 0;
+        }
+        var tokens = q.split(/\s+/).filter(Boolean);
+        return tokens.every(function(tok) {
+            return words.some(function(w) {
+                return w === tok || w.indexOf(tok) === 0;
+            });
+        });
+    }
+
+    function patchChoicesSearcherExactWordTokens(choicesInstance) {
+        try {
+            var searcher = choicesInstance._searcher;
+            var store = choicesInstance._store;
+            if (!searcher || !store || searcher._svExactWordPatched) return;
+            searcher._svExactWordPatched = true;
+            var origSearch = searcher.search.bind(searcher);
+            searcher.search = function(needle) {
+                var nv = svNormalizeSearchQuery(needle);
+                if (!nv.length) return origSearch(needle);
+                var list = store.searchableChoices;
+                if (!list || !list.length) return origSearch(needle);
+                var out = [];
+                for (var i = 0; i < list.length; i++) {
+                    var item = list[i];
+                    if (item.placeholder) continue;
+                    var lab = item.label != null ? String(item.label) : '';
+                    if (svLabelMatchesExactWordTokens(lab, nv)) {
+                        out.push({ item: item, score: 0, rank: out.length + 1 });
+                    }
+                }
+                return out;
+            };
+        } catch (e) {
+            console.warn('patchChoicesSearcherExactWordTokens', e);
+        }
+    }
+
     function createChoicesInstance(selectEl, settings) {
         if (!selectEl || typeof window.Choices === 'undefined') return null;
         if (selectEl.choicesInstance) return selectEl.choicesInstance;
@@ -1128,10 +1151,21 @@ document.addEventListener('DOMContentLoaded', function() {
             searchResultLimit: typeof settings.maxOptions === 'number' ? settings.maxOptions : -1,
             placeholder: true,
             placeholderValue: settings.placeholder || (selectEl.getAttribute('placeholder') || ''),
-            searchPlaceholderValue: ''
+            searchPlaceholderValue: typeof settings.searchPlaceholderValue === 'string' ? settings.searchPlaceholderValue : ''
         };
 
+        if (settings.removeItemButton === true) {
+            choiceConfig.removeItemButton = true;
+        }
+
+        if (Array.isArray(settings.searchFields)) {
+            choiceConfig.searchFields = settings.searchFields;
+        }
+
         var choices = new window.Choices(selectEl, choiceConfig);
+        if (settings.exactWordTokenSearch === true) {
+            patchChoicesSearcherExactWordTokens(choices);
+        }
         var api = {
             _choices: choices,
             selectEl: selectEl,
@@ -1209,6 +1243,9 @@ document.addEventListener('DOMContentLoaded', function() {
             searchField: ['text'],
             controlInput: '<input>',
             highlight: false,
+            exactWordTokenSearch: true,
+            searchFields: ['label'],
+            searchPlaceholderValue: 'Type to search...',
             onInitialize: function () {
                 this.activeOption = null;
             },
@@ -1431,15 +1468,18 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Filter dropdowns (Choices.js)
+    // Filter dropdowns (Choices.js): same exact word-token search as selling voucher modals
     if (typeof Choices !== 'undefined') {
-        var filterStatus = document.querySelector('form[method="GET"] select[name="status"]');
-        var filterStore = document.querySelector('form[method="GET"] select[name="store"]');
+        var filterStatus = document.getElementById('filter_status');
+        var filterStore = document.getElementById('filter_store');
 
         if (filterStatus) {
             try {
                 if (filterStatus.tomselect) {
                     filterStatus.tomselect.destroy();
+                }
+                if (filterStatus.choicesInstance) {
+                    try { filterStatus.choicesInstance.destroy(); } catch (e) {}
                 }
                 createChoicesInstance(filterStatus, {
                     allowEmptyOption: true,
@@ -1448,6 +1488,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     searchField: ['text'],
                     controlInput: '<input>',
                     highlight: false,
+                    removeItemButton: true,
+                    exactWordTokenSearch: true,
+                    searchFields: ['label'],
+                    searchPlaceholderValue: 'Search status...',
                     onInitialize: function () {
                         this.activeOption = null;
                     },
@@ -1500,6 +1544,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (filterStore.tomselect) {
                     filterStore.tomselect.destroy();
                 }
+                if (filterStore.choicesInstance) {
+                    try { filterStore.choicesInstance.destroy(); } catch (e) {}
+                }
                 createChoicesInstance(filterStore, {
                     allowEmptyOption: true,
                     dropdownParent: 'body',
@@ -1507,6 +1554,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     searchField: ['text'],
                     controlInput: '<input>',
                     highlight: false,
+                    removeItemButton: true,
+                    exactWordTokenSearch: true,
+                    searchFields: ['label'],
+                    searchPlaceholderValue: 'Search store...',
                     onInitialize: function () {
                         this.activeOption = null;
                     },
@@ -2216,6 +2267,38 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    function appendEditModalItemRow() {
+        const tbody = document.getElementById('editModalItemsBody');
+        if (!tbody) return;
+        tbody.insertAdjacentHTML('beforeend', getEditRowHtml(editRowIndex, null));
+        editRowIndex++;
+        const newRow = tbody.querySelector('.sv-item-row:last-child');
+        const newSelect = newRow ? newRow.querySelector('.sv-item-select') : null;
+        if (newSelect && typeof Choices !== 'undefined') {
+            if (newSelect.tomselect) {
+                try { newSelect.tomselect.destroy(); } catch (e) {}
+            }
+            createChoicesInstance(newSelect, createEditModalItemSelectConfig());
+        }
+        updateEditRemoveButtons();
+        refreshEditAllAvailable();
+        updateEditGrandTotal();
+    }
+
+    /** Enter appends item row everywhere in modal except Choices dropdowns, buttons/links, and submit controls. */
+    function svEnterShouldAppendItemRow(modalEl, activeEl) {
+        if (!modalEl || !activeEl || !modalEl.contains(activeEl)) return false;
+        if (activeEl.tagName === 'TEXTAREA') return false;
+        if (activeEl.closest('button, a')) return false;
+        if (activeEl.closest('.choices')) return false;
+        if (activeEl.matches && activeEl.matches('select')) return false;
+        if (activeEl.tagName === 'INPUT') {
+            var it = (activeEl.type || '').toLowerCase();
+            if (it === 'submit' || it === 'button' || it === 'reset' || it === 'image') return false;
+        }
+        return true;
+    }
+
     const modalAddItemBtn = document.getElementById('modalAddItemRow');
     if (modalAddItemBtn) {
         modalAddItemBtn.addEventListener('click', function() {
@@ -2276,7 +2359,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const row = e.target.closest('.sv-item-row');
             if (!row) return;
             refreshAllAvailable();
-    const addSvModal = document.getElementById('addSellingVoucherModal');
             calcRow(row);
             updateGrandTotal();
         }
@@ -2284,32 +2366,14 @@ document.addEventListener('DOMContentLoaded', function() {
         addSvModal.addEventListener('change', onAddModalQtyOrRateInput);
     }
 
-    // Enter key inside Item Details table triggers Add Item (and prevents form submit)
-    const svItemsTable = document.getElementById('svItemsTable');
-    if (addSvModal && svItemsTable) {
+    // Enter (outside Choices + buttons): append item row anywhere in Add modal; prevents accidental form submit
+    if (addSvModal) {
         addSvModal.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' && svItemsTable.contains(document.activeElement)) {
-                const activeEl = document.activeElement;
-                const isRateField = activeEl && activeEl.classList && activeEl.classList.contains('sv-rate');
-
-                const activeRow = activeEl.closest('.sv-item-row');
-                const tbody = document.getElementById('modalItemsBody');
-                const lastRow = tbody ? tbody.querySelector('.sv-item-row:last-child') : null;
-
-                // Sirf last row ki Rate field par Enter => append
-                if (isRateField && activeRow && lastRow && activeRow === lastRow) {
-                    const addBtn = document.getElementById('modalAddItemRow');
-                    if (addBtn) {
-                        e.preventDefault();
-                        addBtn.click();
-                    }
-                    return;
-                }
-
-                // Baaki sab inputs par Enter => append/submit na ho
-                e.preventDefault();
-                if (activeEl.blur) activeEl.blur();
-            }
+            if (e.key !== 'Enter') return;
+            var activeEl = document.activeElement;
+            if (!svEnterShouldAppendItemRow(addSvModal, activeEl)) return;
+            e.preventDefault();
+            appendModalItemRow();
         });
     }
 
@@ -3305,22 +3369,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const editModalAddItemRow = document.getElementById('editModalAddItemRow');
     if (editModalAddItemRow) {
         editModalAddItemRow.addEventListener('click', function() {
-            const tbody = document.getElementById('editModalItemsBody');
-            if (tbody) {
-                tbody.insertAdjacentHTML('beforeend', getEditRowHtml(editRowIndex, null));
-                editRowIndex++;
-                const newRow = tbody.querySelector('.sv-item-row:last-child');
-                const newSelect = newRow ? newRow.querySelector('.sv-item-select') : null;
-                if (newSelect && typeof Choices !== 'undefined') {
-                    if (newSelect.tomselect) {
-                        try { newSelect.tomselect.destroy(); } catch (e) {}
-                    }
-                    createChoicesInstance(newSelect, createEditModalItemSelectConfig());
-                }
-                updateEditRemoveButtons();
-                refreshEditAllAvailable();
-                updateEditGrandTotal();
-            }
+            appendEditModalItemRow();
         });
     }
 
@@ -3412,33 +3461,16 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Edit modal: Enter sirf last-row Rate field par press hoga => new row append
-    const editFormEl = document.getElementById('editSellingVoucherForm');
-    if (editFormEl && editModalItemsBody) {
-        editFormEl.addEventListener('keydown', function(e) {
+    // Enter (outside Choices + buttons): append item row anywhere in Edit modal
+    const editSvModalEl = document.getElementById('editSellingVoucherModal');
+    if (editSvModalEl) {
+        editSvModalEl.addEventListener('keydown', function(e) {
             if (e.key !== 'Enter') return;
-            const activeEl = document.activeElement;
-            if (!activeEl) return;
-            if (!editModalItemsBody.contains(activeEl)) return;
-
-            const row = activeEl.closest('.sv-item-row');
-            if (!row) return;
-            const lastRow = editModalItemsBody.querySelector('.sv-item-row:last-child');
-            if (!lastRow) return;
-
-            const isRateField = activeEl.classList && activeEl.classList.contains('sv-rate');
-            if (isRateField && row === lastRow) {
-                const addBtn = document.getElementById('editModalAddItemRow');
-                if (addBtn) {
-                    e.preventDefault();
-                    addBtn.click();
-                }
-            } else {
-                // Other fields me Enter => append/submit na ho
-                e.preventDefault();
-                if (activeEl.blur) activeEl.blur();
-            }
-        }, true);
+            var activeEl = document.activeElement;
+            if (!svEnterShouldAppendItemRow(editSvModalEl, activeEl)) return;
+            e.preventDefault();
+            appendEditModalItemRow();
+        });
     }
 
     // Store selection change in EDIT modal
