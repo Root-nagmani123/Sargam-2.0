@@ -219,7 +219,8 @@
         'ordering' => false,
         'actionColumnIndex' => 12,
         'infoLabel' => 'selling vouchers',
-        'searchDelay' => 0
+        'searchDelay' => 0,
+        'searchSmart' => false,
     ])
     @include('mess.partials.modal-dropdown-stability')
 </div>
@@ -1101,11 +1102,14 @@ document.addEventListener('DOMContentLoaded', function() {
             return labelStr.toLowerCase().indexOf(q) >= 0;
         }
         var tokens = q.split(/\s+/).filter(Boolean);
-        return tokens.every(function(tok) {
+        var allMatch = tokens.every(function(tok) {
             return words.some(function(w) {
                 return w === tok || w.indexOf(tok) === 0;
             });
         });
+        if (allMatch) return true;
+        // Fallback: substring match so short queries and labels without word boundaries still filter
+        return labelStr.toLowerCase().indexOf(q) >= 0;
     }
 
     function patchChoicesSearcherExactWordTokens(choicesInstance) {
@@ -1855,6 +1859,13 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         var grandTotalEl = document.getElementById('modalGrandTotal');
         if (grandTotalEl) grandTotalEl.textContent = '₹0.00';
+
+        // Modal stays open after AJAX save; Choices was destroyed above — re-init so Client Type / dropdowns match defaults.
+        if (modalEl.classList.contains('show')) {
+            window.setTimeout(function () {
+                initAddModalTomSelects();
+            }, 0);
+        }
     }
 
     // After AJAX save (add/edit), refresh the listing DataTable so new rows show immediately.
@@ -1987,16 +1998,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
-    // Debug: Check if buttons exist
-    const viewButtons = document.querySelectorAll('.btn-view-sv');
-    const editButtons = document.querySelectorAll('.btn-edit-sv');
-    const returnButtons = document.querySelectorAll('.btn-return-sv');
-    console.log('Found buttons:', {
-        view: viewButtons.length,
-        edit: editButtons.length,
-        return: returnButtons.length
-    });
     
     let itemSubcategories = @json($itemSubcategories);
     let filteredItems = itemSubcategories;
@@ -3628,8 +3629,14 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(function() { win.print(); win.close(); }, 350);
     });
 
-    console.log('✅ All event listeners attached successfully');
-    console.log('Script initialization complete');
+    document.addEventListener('shown.bs.tab', function (e) {
+        var t = e.target;
+        if (!t || !t.getAttribute || t.getAttribute('href') !== '#tab-setup') return;
+        var wrap = document.querySelector('#sellingVouchersTable_wrapper');
+        if (!wrap || wrap.offsetParent === null) return;
+        var inp = wrap.querySelector('.dataTables_filter input[type="search"]');
+        if (inp) window.setTimeout(function () { inp.focus(); }, 120);
+    });
 });
 </script>
 @endsection

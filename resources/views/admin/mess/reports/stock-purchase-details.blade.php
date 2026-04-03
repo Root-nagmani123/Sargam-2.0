@@ -465,6 +465,19 @@ function printStockPurchaseTable() {
     width: 100%;
     overflow-x: auto;
 }
+@media screen {
+    .stock-purchase-report .stock-purchase-table-wrapper {
+        max-height: min(72vh, 760px);
+        overflow: auto !important;
+    }
+    .stock-purchase-report .stock-purchase-table-wrapper .stock-purchase-thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: #e9ecef !important;
+        box-shadow: 0 1px 0 #ced4da;
+    }
+}
 .stock-purchase-report .table-responsive table {
     width: 100%;
     height: auto;
@@ -518,7 +531,8 @@ function printStockPurchaseTable() {
     .stock-purchase-table { font-size: 11pt !important; border-collapse: collapse !important; }
     .stock-purchase-table th, .stock-purchase-table td { font-size: 11pt !important; }
     .stock-purchase-table td, .stock-purchase-table th { border: 1px solid #333 !important; }
-    .stock-purchase-thead th { background: #d3d6d9 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .stock-purchase-thead th { background: #d3d6d9 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; position: static !important; box-shadow: none !important; }
+    .stock-purchase-report .stock-purchase-table-wrapper { max-height: none !important; overflow: visible !important; }
     .stock-purchase-report .bill-header-row .bill-header { background: #5a6268 !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 </style>

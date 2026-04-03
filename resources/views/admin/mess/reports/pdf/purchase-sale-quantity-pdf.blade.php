@@ -1,6 +1,11 @@
 @php
-    $fromLabel = $fromDate ? date('d-F-Y', strtotime($fromDate)) : null;
-    $toLabel = $toDate ? date('d-F-Y', strtotime($toDate)) : null;
+    try {
+        $fromLabel = $fromDate ? \Carbon\Carbon::parse($fromDate)->format('d-m-Y') : null;
+        $toLabel = $toDate ? \Carbon\Carbon::parse($toDate)->format('d-m-Y') : null;
+    } catch (\Throwable $e) {
+        $fromLabel = $fromDate ? (string) $fromDate : null;
+        $toLabel = $toDate ? (string) $toDate : null;
+    }
     $viewLabel = $combinedViewLabel ?? 'Item-wise';
     $viewTypeSections = $viewTypeSections ?? [];
     $storeLabel = (isset($selectedStoreName) && $selectedStoreName !== '') ? $selectedStoreName : 'All Stores';

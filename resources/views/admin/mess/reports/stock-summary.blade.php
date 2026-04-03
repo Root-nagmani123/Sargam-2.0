@@ -712,6 +712,7 @@ document.addEventListener('DOMContentLoaded', function () {
     .stock-summary-report .ssr-table .ssr-item-name {
         font-size: 0.8125rem !important;
         color: #0f172a;
+        text-align: left !important;
     }
 
     .stock-summary-report .ssr-amt {
@@ -940,6 +941,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
     document.addEventListener('DOMContentLoaded', function () {
         window.initStockSummaryStickyHeader();
+    });
+    document.addEventListener('shown.bs.tab', function () {
+        window.setTimeout(function () {
+            if (typeof window.initStockSummaryStickyHeader === 'function') {
+                window.initStockSummaryStickyHeader();
+            }
+        }, 150);
     });
 </script>
 

@@ -70,10 +70,11 @@
             @forelse($groupedSections as $groupKey => $sectionVouchers)
                 @php
                     $first = $sectionVouchers->first();
-                    $buyerName = $first->client_name ?? ($first->clientTypeCategory->client_name ?? 'N/A');
+                    $buyerName = $first->client_name ?? ($first->clientTypeCategory?->client_name ?? 'N/A');
                     $clientTypeLabel = $first->clientTypeCategory
                         ? ucfirst($first->clientTypeCategory->client_type)
                         : ucfirst($first->client_type_slug ?? 'N/A');
+                    $clientSectionName = $first->clientTypeCategory?->client_name ?? null;
                     $slug = $first->client_type_slug ?? '';
                     $typeSuffix = ($slug === 'employee') ? 'Employee' : (($slug === 'ot') ? 'OT' : ucfirst($slug));
                     if (!$typeSuffix) {
@@ -88,18 +89,35 @@
                     }
                 @endphp
                 <div class="print-slip-section print-slip-page mb-4">
-                    <table class="report-details-table mb-2" style="width:100%;border-collapse:collapse;margin-bottom:10px;border:1px solid #dee2e6;border-radius:3px;">
+                    {{-- Buyer + client category: side-by-side on wide layout; stacks in narrow/PDF --}}
+                    <table class="report-details-table report-buyer-client-banner mb-2" style="width:100%;border-collapse:collapse;margin-bottom:10px;border:1px solid #dee2e6;border-radius:3px;">
                         <tr>
-                            <td style="width:50%;padding:8px 10px;background:#f8f9fa;vertical-align:middle;font-weight:600;border:0;">
-                                BUYER NAME : {{ $buyerName }}- {{ $typeSuffix }}
-                            </td>
-                            <td style="width:50%;padding:8px 10px;background:#f8f9fa;vertical-align:middle;font-weight:600;text-align:right;border:0;">
-                                CLIENT TYPE : <strong>
-                                    {{ $clientTypeLabel }}
-                                    @if($courseDisplay)
-                                        [{{ $courseDisplay }}]
-                                    @endif
-                                </strong>
+                            <td colspan="2" style="padding:0;background:#f8f9fa;border:0;vertical-align:top;">
+                                <table style="width:100%;border-collapse:collapse;border:0;">
+                                    <tr>
+                                        <td class="report-banner-client" style="width:52%;padding:10px 12px;border:0;border-right:1px solid #dee2e6;vertical-align:top;">
+                                            <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.06em;color:#6c757d;font-weight:700;margin-bottom:6px;">Client type &amp; nearest category</div>
+                                            <div style="font-weight:700;color:#1a1a1a;line-height:1.35;font-size:0.95rem;">
+                                                @if($clientSectionName)
+                                                    {{ $clientSectionName }}
+                                                    <span style="font-weight:600;color:#495057;">({{ $clientTypeLabel }})</span>
+                                                @else
+                                                    {{ $clientTypeLabel }}
+                                                    @if($typeSuffix !== 'N/A' && strcasecmp($typeSuffix, $clientTypeLabel) !== 0)
+                                                        <span style="font-weight:600;color:#495057;"> — {{ $typeSuffix }}</span>
+                                                    @endif
+                                                @endif
+                                                @if($courseDisplay)
+                                                    <div style="margin-top:6px;font-weight:600;font-size:0.9rem;">Course: {{ $courseDisplay }}</div>
+                                                @endif
+                                            </div>
+                                        </td>
+                                        <td class="report-banner-buyer" style="width:48%;padding:10px 12px;border:0;vertical-align:top;text-align:right;">
+                                            <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.06em;color:#6c757d;font-weight:700;margin-bottom:6px;">Buyer name</div>
+                                            <div style="font-weight:700;font-size:1.05rem;color:#004a93;line-height:1.3;">{{ $buyerName }}</div>
+                                        </td>
+                                    </tr>
+                                </table>
                             </td>
                         </tr>
                     </table>
@@ -108,13 +126,12 @@
                             <thead>
                                 <tr>
                                     <th class="th-slip-no">Slip No.</th>
-                                    <th class="th-buyer">Buyer Name</th>
-                                    <th class="th-remark">Remark</th>
                                     <th class="th-item">Item Name</th>
                                     <th class="th-date">Request Date</th>
                                     <th class="th-qty">Quantity</th>
                                     <th class="th-price">Price</th>
                                     <th class="th-amount">Amount</th>
+                                    <th class="th-remark">Remark</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -128,14 +145,8 @@
                                     @if($voucher->items->isEmpty())
                                         <tr>
                                             <td class="text-center">{{ $requestNo }}</td>
-                                            <td class="buyer-name-cell">{{ $buyerName }}</td>
+                                            <td colspan="5" class="text-center text-muted">No line items</td>
                                             <td>{{ $voucher->remarks ?? '—' }}</td>
-                                            @if($dompdfSafeTables)
-                                                <td></td><td></td><td></td><td></td>
-                                                <td class="text-center text-muted">No line items</td>
-                                            @else
-                                                <td colspan="5" class="text-center text-muted">No line items</td>
-                                            @endif
                                         </tr>
                                     @else
                                         @foreach($voucher->items as $itemIndex => $item)
@@ -157,24 +168,24 @@
                                             <tr>
                                                 @if($dompdfSafeTables)
                                                     <td class="text-center align-middle">{{ $requestNo }}</td>
-                                                    <td class="align-middle buyer-name-cell">{{ $buyerName }}</td>
-                                                    <td class="align-middle">{{ $voucher->remarks ?? '—' }}</td>
                                                     <td>{{ $itemName }}</td>
                                                     <td class="text-center">{{ $itemIssueDateFormatted }}</td>
                                                     <td class="text-end">{{ number_format($netQty, 2) }}</td>
                                                     <td class="text-end">{{ number_format($rate, 2) }}</td>
                                                     <td class="text-end">{{ number_format($itemAmount, 2) }}</td>
+                                                    <td class="align-middle">{{ $voucher->remarks ?? '—' }}</td>
                                                 @else
                                                     @if($itemIndex === 0)
                                                         <td class="text-center align-middle" rowspan="{{ $rowCount }}">{{ $requestNo }}</td>
-                                                        <td class="align-middle buyer-name-cell" rowspan="{{ $rowCount }}">{{ $buyerName }}</td>
-                                                        <td class="align-middle" rowspan="{{ $rowCount }}">{{ $voucher->remarks ?? '—' }}</td>
                                                     @endif
                                                     <td>{{ $itemName }}</td>
                                                     <td class="text-center">{{ $itemIssueDateFormatted }}</td>
                                                     <td class="text-end">{{ number_format($netQty, 2) }}</td>
                                                     <td class="text-end">{{ number_format($rate, 2) }}</td>
                                                     <td class="text-end">{{ number_format($itemAmount, 2) }}</td>
+                                                    @if($itemIndex === 0)
+                                                        <td class="align-middle" rowspan="{{ $rowCount }}">{{ $voucher->remarks ?? '—' }}</td>
+                                                    @endif
                                                 @endif
                                             </tr>
                                         @endforeach
@@ -182,13 +193,15 @@
                                 @endforeach
                                 <tr class="total-row">
                                     @if($dompdfSafeTables)
-                                        <td></td><td></td><td></td><td></td><td></td><td></td>
+                                        <td></td><td></td><td></td><td></td>
                                         <td class="text-end"><strong>TOTAL</strong></td>
                                         <td class="text-end"><strong>{{ number_format($sectionTotal, 2) }}</strong></td>
+                                        <td></td>
                                     @else
-                                        <td colspan="6"></td>
+                                        <td colspan="4"></td>
                                         <td class="text-end"><strong>TOTAL</strong></td>
                                         <td class="text-end"><strong>{{ number_format($sectionTotal, 2) }}</strong></td>
+                                        <td></td>
                                     @endif
                                 </tr>
                             </tbody>
@@ -207,13 +220,15 @@
                 <tbody>
                     <tr class="grand-total-row">
                         @if($dompdfSafeTables)
-                            <td></td><td></td><td></td><td></td><td></td><td></td>
+                            <td></td><td></td><td></td><td></td>
                             <td class="text-end"><strong>GRAND TOTAL</strong></td>
                             <td class="text-end"><strong>{{ number_format($grandTotal ?? 0, 2) }}</strong></td>
+                            <td></td>
                         @else
-                            <td colspan="6"></td>
+                            <td colspan="4"></td>
                             <td class="text-end"><strong>GRAND TOTAL</strong></td>
                             <td class="text-end"><strong>{{ number_format($grandTotal ?? 0, 2) }}</strong></td>
+                            <td></td>
                         @endif
                     </tr>
                 </tbody>

@@ -52,8 +52,15 @@
 
     $messViewLabelMap = ['item_wise' => 'Item-wise', 'subcategory_wise' => 'Subcategory-wise', 'category_wise' => 'Category-wise'];
     $messViewLabel = collect($viewTypes)->map(fn ($v) => $messViewLabelMap[$v] ?? $v)->implode(', ');
+    try {
+        $purchaseSalePeriodFromLabel = \Carbon\Carbon::parse($fromDate)->format('d-m-Y');
+        $purchaseSalePeriodToLabel = \Carbon\Carbon::parse($toDate)->format('d-m-Y');
+    } catch (\Throwable $e) {
+        $purchaseSalePeriodFromLabel = (string) $fromDate;
+        $purchaseSalePeriodToLabel = (string) $toDate;
+    }
     $purchaseSalePrintConfig = [
-        'periodBar' => 'From ' . date('d-F-Y', strtotime($fromDate)) . ' To ' . date('d-F-Y', strtotime($toDate)),
+        'periodBar' => 'From ' . $purchaseSalePeriodFromLabel . ' To ' . $purchaseSalePeriodToLabel,
         'storeLabel' => ($selectedStoreName !== null && $selectedStoreName !== '') ? $selectedStoreName : 'All Stores',
         'itemsLabel' => ($selectedItemNamesLabel !== null && $selectedItemNamesLabel !== '') ? $selectedItemNamesLabel : 'All Items',
         'viewLabel' => $messViewLabel,
@@ -188,7 +195,7 @@
         <div class="card-header bg-primary bg-opacity-10 border-0 py-3 text-center report-header">
             <h4 class="fw-bold mb-1 text-primary">Item Report</h4>
             <p class="mb-0 text-body-secondary small">
-                From {{ date('d-M-Y', strtotime($fromDate)) }} to {{ date('d-M-Y', strtotime($toDate)) }}
+                From {{ $purchaseSalePeriodFromLabel }} to {{ $purchaseSalePeriodToLabel }}
             </p>
             <p class="mb-0 text-body-secondary small">
                 View: {{ $messViewLabel }}

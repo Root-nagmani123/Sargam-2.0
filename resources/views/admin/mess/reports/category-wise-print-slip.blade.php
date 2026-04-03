@@ -135,11 +135,12 @@
                         <span class="material-symbols-rounded me-1" style="font-size: 18px;">print</span>
                         Print
                     </button>
-                    <a href="{{ route('admin.mess.reports.category-wise-print-slip.excel', request()->query()) }}" class="btn btn-success d-inline-flex align-items-center" title="Export to Excel">
+                    @php $cwExportQs = request()->query(); $cwExportQuery = $cwExportQs ? '?' . http_build_query($cwExportQs) : ''; @endphp
+                    <a href="{{ route('admin.mess.reports.category-wise-print-slip.excel') }}{{ $cwExportQuery }}" class="btn btn-success d-inline-flex align-items-center" title="Export to Excel">
                         <span class="material-symbols-rounded me-1" style="font-size: 18px;">table_view</span>
                         Export Excel
                     </a>
-                    <a href="{{ route('admin.mess.reports.category-wise-print-slip.pdf', request()->query()) }}" class="btn btn-danger d-inline-flex align-items-center" title="Download PDF">
+                    <a href="{{ route('admin.mess.reports.category-wise-print-slip.pdf') }}{{ $cwExportQuery }}" class="btn btn-danger d-inline-flex align-items-center" title="Download PDF">
                         <span class="material-symbols-rounded me-1" style="font-size: 18px;">picture_as_pdf</span>
                         Download PDF
                     </a>
@@ -196,6 +197,21 @@
     .report-buyer-label { font-weight: 500; }
     .report-client-type { font-weight: 500; }
 
+    /* Buyer banner: category left, buyer right; stack on small screens */
+    @media screen and (max-width: 767.98px) {
+        .report-buyer-client-banner .report-banner-client,
+        .report-buyer-client-banner .report-banner-buyer {
+            display: block;
+            width: 100% !important;
+            border-right: none !important;
+            box-sizing: border-box;
+        }
+        .report-buyer-client-banner .report-banner-buyer {
+            text-align: left !important;
+            border-top: 1px solid #dee2e6 !important;
+        }
+    }
+
     /* Table – light blue header like reference image */
 
     .print-slip-table {
@@ -203,8 +219,26 @@
         table-layout: fixed;
         width: 100%;
     }
-    .table-responsive {
-        overflow-x: visible !important;
+    /* Scroll long tables on screen; keep column headers visible */
+    @media screen {
+        .print-slip-section .table-responsive {
+            max-height: min(65vh, 640px);
+            overflow: auto !important;
+        }
+        .print-slip-section .print-slip-table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+        .print-grand-total-block .table-responsive {
+            overflow-x: auto !important;
+        }
+        .print-grand-total-block .print-slip-table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            background: #e8f4fc !important;
+        }
     }
     .print-slip-table thead th {
         border-color: #8eb8d0 !important;
@@ -217,7 +251,8 @@
         word-break: break-word;
         overflow-wrap: anywhere;
     }
-    .print-slip-table .th-buyer, .print-slip-table .buyer-name-cell { width: 22%; }
+    .print-slip-table .th-item { width: 22%; }
+    .print-slip-table .th-remark { width: 14%; }
     .print-slip-table .th-slip-no, .print-slip-table .th-date { text-align: center; }
     .print-slip-table .th-qty, .print-slip-table .th-price, .print-slip-table .th-amount { text-align: right; }
     .print-slip-table tbody td { padding: 6px 8px; vertical-align: middle; }
@@ -281,6 +316,16 @@
         .print-slip-section {
             page-break-inside: avoid;
             margin-bottom: 14px;
+        }
+        .print-slip-section .table-responsive,
+        .print-grand-total-block .table-responsive {
+            max-height: none !important;
+            overflow: visible !important;
+        }
+        .print-slip-section .print-slip-table thead th,
+        .print-grand-total-block .print-slip-table thead th {
+            position: static !important;
+            box-shadow: none !important;
         }
         .print-grand-total-block {
             display: block !important;
@@ -403,7 +448,9 @@ document.addEventListener('DOMContentLoaded', function() {
             maxItems: null,
             placeholder: sel.getAttribute('data-placeholder') || 'Select',
             plugins: ['remove_button', 'dropdown_input'],
-            sortField: { field: 'text', direction: 'asc' }
+            sortField: { field: 'text', direction: 'asc' },
+            dropdownParent: document.body,
+            hideSelected: false
         });
         if (typeof onChange === 'function') inst.on('change', onChange);
         return inst;

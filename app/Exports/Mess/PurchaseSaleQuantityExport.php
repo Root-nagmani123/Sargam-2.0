@@ -119,8 +119,8 @@ class PurchaseSaleQuantityExport implements FromCollection, WithCustomStartCell,
                 $sheet->mergeCells('A2:H2');
                 $sheet->mergeCells('A3:H3');
 
-                $formattedFrom = \Carbon\Carbon::parse($this->fromDate)->format('d-F-Y');
-                $formattedTo = \Carbon\Carbon::parse($this->toDate)->format('d-F-Y');
+                $formattedFrom = \Carbon\Carbon::parse($this->fromDate)->format('d-m-Y');
+                $formattedTo = \Carbon\Carbon::parse($this->toDate)->format('d-m-Y');
 
                 // Row 1: Mess name
                 $sheet->setCellValue('A1', "OFFICER'S MESS LBSNAA MUSSOORIE");
