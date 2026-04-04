@@ -5884,6 +5884,53 @@ class EstateController extends Controller
                 'last_reading_date' => $lastReadingDate,
             ];
             $pushed = false;
+
+            // One list row for houses with two meters (same stacked UI as Update Meter Reading of Other).
+            if ($hasMeterOne && $hasMeterTwo) {
+                $curr1 = $row->curr_month_elec_red;
+                $baselineMin1 = $curr1 !== null
+                    ? (int) $curr1
+                    : $this->effectiveLastMonthElecBaselineForMeterSlot(
+                        $row->last_month_elec_red,
+                        $row->epd_electric_meter_reading,
+                        $row->epd_electric_meter_reading_2,
+                        1
+                    );
+                $displayElectric1 = $curr1 !== null ? (string) (int) $curr1 : 'N/A';
+                $newNo1 = $row->emrd_meter_one !== null && $row->emrd_meter_one !== '' ? (string) $row->emrd_meter_one : (string) $meterOne;
+
+                $curr2 = $row->curr_month_elec_red2;
+                $baselineMin2 = $curr2 !== null
+                    ? (int) $curr2
+                    : $this->effectiveLastMonthElecBaselineForMeterSlot(
+                        $row->last_month_elec_red2,
+                        $row->epd_electric_meter_reading,
+                        $row->epd_electric_meter_reading_2,
+                        2
+                    );
+                $displayElectric2 = $curr2 !== null ? (string) (int) $curr2 : 'N/A';
+                $newNo2 = $row->emrd_meter_two !== null && $row->emrd_meter_two !== '' ? (string) $row->emrd_meter_two : (string) $meterTwo;
+
+                $rows->push(array_merge($base, [
+                    'dual_meter' => true,
+                    'm1' => [
+                        'meter_slot' => 1,
+                        'old_meter_no' => (string) $meterOne,
+                        'electric_meter_reading' => $displayElectric1,
+                        'baseline_min_reading' => $baselineMin1,
+                        'new_meter_no' => $newNo1,
+                    ],
+                    'm2' => [
+                        'meter_slot' => 2,
+                        'old_meter_no' => (string) $meterTwo,
+                        'electric_meter_reading' => $displayElectric2,
+                        'baseline_min_reading' => $baselineMin2,
+                        'new_meter_no' => $newNo2,
+                    ],
+                ]));
+                continue;
+            }
+
             // Meter 1 — Electric column shows saved curr_month_elec_red; New Meter Reading stays blank until user enters.
             // baseline_min_reading aligns client min validation with server (curr when set, else last/possession).
             if ($hasMeterOne) {
