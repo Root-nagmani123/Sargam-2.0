@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Employee ID Card List')
-@section('setup_content')
+@section('content')
 <div class="container-fluid idcard-index-page">
     <!-- Breadcrumb + Search (reference: Setup > User Management, search icon right) -->
     <x-breadcrum title="Employee ID Card List"></x-breadcrum>

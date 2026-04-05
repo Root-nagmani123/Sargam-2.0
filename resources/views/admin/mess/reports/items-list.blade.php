@@ -35,7 +35,7 @@
             </div>
         </form>
 
-        <div class="table-responsive">
+        <div class="table-responsive mess-items-report-scroll">
             <table class="table table-hover table-sm">
                 <thead class="table-light">
                     <tr>
@@ -147,9 +147,24 @@
 </div>
 
 <style>
+@media screen {
+    .mess-items-report-scroll {
+        max-height: min(70vh, 720px);
+        overflow: auto;
+    }
+    .mess-items-report-scroll thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: var(--bs-table-bg, #fff);
+        box-shadow: 0 1px 0 var(--bs-border-color, #dee2e6);
+    }
+}
 @media print {
     .card-header, .btn, form, nav { display: none !important; }
     .table { font-size: 12px; }
+    .mess-items-report-scroll { max-height: none !important; overflow: visible !important; }
+    .mess-items-report-scroll thead th { position: static !important; box-shadow: none !important; }
 }
 </style>
 @endsection

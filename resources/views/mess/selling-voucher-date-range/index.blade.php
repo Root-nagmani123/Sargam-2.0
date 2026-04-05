@@ -1986,6 +1986,40 @@ $selectedStores = collect((array) request()->input('store', []))
         else select.value = v;
     }
 
+    /** After Choices.js init on Edit Date-Range modal, apply API values to instances (store, payment, client, course, staff name). */
+    function syncEditDrChoicesFromVoucher(v, slug) {
+        slug = String(slug || 'employee').toLowerCase();
+        var paySel = document.querySelector('#editReportModal select.edit-payment-type');
+        if (paySel && paySel.tomselect) {
+            try { paySel.tomselect.setValue(String(v.payment_type ?? 1)); } catch (e) {}
+        }
+        var storeSel = document.querySelector('#editReportModal select.edit-store-id');
+        var sid = v.store_id || v.inve_store_master_pk || '';
+        if (storeSel && storeSel.tomselect && sid !== '') {
+            try { storeSel.tomselect.setValue(String(sid)); } catch (e) {}
+        }
+        var ecs = document.getElementById('editDrClientNameSelect');
+        if (ecs && ecs.tomselect && slug !== 'ot' && slug !== 'course' && v.client_type_pk != null && String(v.client_type_pk) !== '') {
+            try { ecs.tomselect.setValue(String(v.client_type_pk)); } catch (e) {}
+        }
+        var eot = document.getElementById('editDrOtCourseSelect');
+        if (eot && eot.tomselect && slug === 'ot' && v.client_type_pk != null && String(v.client_type_pk) !== '') {
+            try { eot.tomselect.setValue(String(v.client_type_pk)); } catch (e) {}
+        }
+        var edc = document.getElementById('editDrCourseSelect');
+        if (edc && edc.tomselect && slug === 'course' && v.client_type_pk != null && String(v.client_type_pk) !== '') {
+            try { edc.tomselect.setValue(String(v.client_type_pk)); } catch (e) {}
+        }
+        var cn = String(v.client_name || '').trim();
+        if (cn) {
+            ['editDrFacultySelect', 'editDrAcademyStaffSelect', 'editDrMessStaffSelect'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (!el || !el.tomselect) return;
+                try { el.tomselect.setValue(cn); } catch (e) {}
+            });
+        }
+    }
+
     function getSelectSelectedOption(select) {
         if (!select) return null;
         const val = getSelectValue(select);
@@ -3411,7 +3445,9 @@ $selectedStores = collect((array) request()->input('store', []))
         const showMessStaff = isEmployee && isMessStaff;
         const showAny = showFaculty || showAcademyStaff || showMessStaff;
         if (isOt) {
-            nameInput.style.display = 'none';
+            nameInput.style.display = 'block';
+            nameInput.readOnly = true;
+            nameInput.placeholder = 'Buyer name (OT)';
             nameInput.removeAttribute('required');
             nameInput.removeAttribute('list');
             [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) {
@@ -3422,6 +3458,11 @@ $selectedStores = collect((array) request()->input('store', []))
                     sel.removeAttribute('required');
                 }
             });
+            var editOtStu2 = document.getElementById('editDrOtStudentSelect');
+            if (editOtStu2) {
+                setSelectVisible(editOtStu2, false);
+                editOtStu2.removeAttribute('required');
+            }
             if (editDrCourseSelect) {
                 setSelectVisible(editDrCourseSelect, false);
                 if (editDrCourseSelect.tomselect) editDrCourseSelect.tomselect.clear();
@@ -4304,10 +4345,11 @@ $selectedStores = collect((array) request()->input('store', []))
                     alert(data && data.error ? data.error : 'Failed to load report for edit.');
                     return;
                 }
+                destroyEditModalTomSelects();
                 const v = data.voucher;
                 document.getElementById('editReportModalLabel').textContent = 'Edit Selling Voucher #' +
                     (v.id || reportId);
-                document.querySelector('.edit-store-id').value = v.store_id || '';
+                document.querySelector('.edit-store-id').value = v.store_id || v.inve_store_master_pk || '';
                 document.querySelector('.edit-remarks').value = v.remarks || '';
                 const editRefNumEl = document.querySelector('.edit-reference-number');
                 if (editRefNumEl) editRefNumEl.value = v.reference_number || '';
@@ -4389,9 +4431,16 @@ $selectedStores = collect((array) request()->input('store', []))
                         editCourseNameSelect.value = '';
                     }
                     if (editNameInp) {
-                        editNameInp.style.display = 'none';
+                        editNameInp.style.display = 'block';
+                        editNameInp.readOnly = true;
+                        editNameInp.placeholder = 'Buyer name (OT)';
                         editNameInp.value = v.client_name || '';
                         editNameInp.removeAttribute('required');
+                    }
+                    var editOtStu = document.getElementById('editDrOtStudentSelect');
+                    if (editOtStu) {
+                        setSelectVisible(editOtStu, false);
+                        editOtStu.removeAttribute('required');
                     }
                 } else if (isCourse) {
                     if (editClientSelect) {
@@ -4460,7 +4509,8 @@ $selectedStores = collect((array) request()->input('store', []))
                 updateEditDrNameField();
                 // Ensure TomSelect instances exist for the final state (and preserve selected values)
                 initEditModalTomSelects();
-                editCurrentStoreId = v.store_id || '';
+                syncEditDrChoicesFromVoucher(v, slug);
+                editCurrentStoreId = v.store_id || v.inve_store_master_pk || '';
                 const items = data.items || [];
                 const openEditModalWithItems = function() {
                     buildEditItemsTable(items);

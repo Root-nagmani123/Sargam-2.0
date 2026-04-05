@@ -90,20 +90,20 @@ class ReportController extends Controller
      */
     public function stockPurchaseDetails(Request $request)
     {
-        $queryData = $this->buildStockPurchaseDetailsQuery($request, forExport: false);
+        $queryData = $this->buildStockPurchaseDetailsQuery($request);
 
         $stores = Store::where('status', 'active')->get();
         $vendors = Vendor::all();
 
         return view('admin.mess.reports.stock-purchase-details', [
-            'purchaseOrders'  => $queryData['purchaseOrders'],
-            'grandTotal'      => $queryData['grandTotal'],
-            'stores'          => $stores,
-            'vendors'         => $vendors,
-            'selectedVendors' => $queryData['selectedVendors'],
-            'selectedStores'  => $queryData['selectedStores'],
-            'fromDate'        => $queryData['fromDate'],
-            'toDate'          => $queryData['toDate'],
+            'purchaseOrdersByVendor' => $queryData['purchaseOrdersByVendor'],
+            'grandTotal'             => $queryData['grandTotal'],
+            'stores'                 => $stores,
+            'vendors'                => $vendors,
+            'selectedVendors'        => $queryData['selectedVendors'],
+            'selectedStores'         => $queryData['selectedStores'],
+            'fromDate'               => $queryData['fromDate'],
+            'toDate'                 => $queryData['toDate'],
         ]);
     }
 
@@ -266,7 +266,7 @@ class ReportController extends Controller
      * Build base query and shared data for Stock Purchase Details (view, Excel, PDF).
      *
      * @return array{
-     *     purchaseOrders: \Illuminate\Contracts\Pagination\LengthAwarePaginator|\Illuminate\Support\Collection,
+     *     purchaseOrdersByVendor: \Illuminate\Support\Collection<int, array{vendor_id: int, vendor_name: string, vendor: ?\App\Models\Mess\Vendor, orders: \Illuminate\Support\Collection<int, \App\Models\Mess\PurchaseOrder>}>,
      *     grandTotal: float|int,
      *     fromDate: string,
      *     toDate: string,
@@ -274,7 +274,7 @@ class ReportController extends Controller
      *     selectedStores: \Illuminate\Support\Collection<int, \App\Models\Mess\Store>
      * }
      */
-    private function buildStockPurchaseDetailsQuery(Request $request, bool $forExport = false): array
+    private function buildStockPurchaseDetailsQuery(Request $request): array
     {
         // Use request dates when provided, otherwise default to today (so default filter applies on first load)
         $fromDate = $request->filled('from_date') ? $request->from_date : now()->format('Y-m-d');
@@ -302,10 +302,28 @@ class ReportController extends Controller
             ->selectRaw('SUM(quantity * unit_price) as total')
             ->value('total') ?? 0;
 
-        // For screen we paginate, for export (Excel/PDF) we take full collection
-        $purchaseOrders = $forExport
-            ? $baseQuery->get()
-            : $baseQuery->paginate(5)->withQueryString();
+        // Same as Sale Voucher report: load full result set, grouped by vendor in the view
+        $purchaseOrders = $baseQuery->get();
+
+        $purchaseOrdersByVendor = $purchaseOrders
+            ->groupBy(static fn ($po) => (int) ($po->vendor_id ?? 0))
+            ->map(static function ($vendorOrders, $vendorId) {
+                $first = $vendorOrders->first();
+                $vendorName = optional($first->vendor)->name ?? 'N/A';
+
+                return [
+                    'vendor_id'    => $vendorId,
+                    'vendor_name'  => $vendorName,
+                    'vendor'       => $first->vendor,
+                    'orders'       => $vendorOrders->sortBy(static fn ($o) => sprintf(
+                        '%s-%09d',
+                        $o->po_date?->format('Y-m-d') ?? '1970-01-01',
+                        $o->id
+                    ))->values(),
+                ];
+            })
+            ->sortBy('vendor_name')
+            ->values();
 
         $selectedVendors = $vendorIds === []
             ? collect()
@@ -316,12 +334,12 @@ class ReportController extends Controller
             : Store::whereIn('id', $storeIds)->orderBy('store_name')->get();
 
         return [
-            'purchaseOrders'  => $purchaseOrders,
-            'grandTotal'      => $grandTotal,
-            'fromDate'        => $fromDate,
-            'toDate'          => $toDate,
-            'selectedVendors' => $selectedVendors,
-            'selectedStores'  => $selectedStores,
+            'purchaseOrdersByVendor' => $purchaseOrdersByVendor,
+            'grandTotal'             => $grandTotal,
+            'fromDate'               => $fromDate,
+            'toDate'                 => $toDate,
+            'selectedVendors'        => $selectedVendors,
+            'selectedStores'         => $selectedStores,
         ];
     }
 
@@ -588,13 +606,13 @@ class ReportController extends Controller
      */
     public function stockPurchaseDetailsExcel(Request $request)
     {
-        $queryData = $this->buildStockPurchaseDetailsQuery($request, forExport: true);
+        $queryData = $this->buildStockPurchaseDetailsQuery($request);
 
         $fileName = 'stock-purchase-details-' . $queryData['fromDate'] . '-to-' . $queryData['toDate'] . '-' . now()->format('Y-m-d_His') . '.xlsx';
 
         return Excel::download(
             new StockPurchaseDetailsExport(
-                $queryData['purchaseOrders'],
+                $queryData['purchaseOrdersByVendor'],
                 $queryData['fromDate'],
                 $queryData['toDate'],
                 $queryData['selectedVendors'],
@@ -612,16 +630,16 @@ class ReportController extends Controller
         @ini_set('memory_limit', '512M');
         @set_time_limit(120);
 
-        $queryData = $this->buildStockPurchaseDetailsQuery($request, forExport: true);
+        $queryData = $this->buildStockPurchaseDetailsQuery($request);
 
         $data = [
-            'purchaseOrders'  => $queryData['purchaseOrders'],
-            'fromDate'        => $queryData['fromDate'],
-            'toDate'          => $queryData['toDate'],
-            'selectedVendors' => $queryData['selectedVendors'],
-            'selectedStores'  => $queryData['selectedStores'],
-            'emblemSrc'       => $this->messPdfIndiaEmblemForDompdf(),
-            'lbsnaaLogoSrc'   => $this->messPdfLbsnaaLogoForDompdf(),
+            'purchaseOrdersByVendor' => $queryData['purchaseOrdersByVendor'],
+            'fromDate'               => $queryData['fromDate'],
+            'toDate'                 => $queryData['toDate'],
+            'selectedVendors'        => $queryData['selectedVendors'],
+            'selectedStores'         => $queryData['selectedStores'],
+            'emblemSrc'              => $this->messPdfIndiaEmblemForDompdf(),
+            'lbsnaaLogoSrc'          => $this->messPdfLbsnaaLogoForDompdf(),
         ];
 
         $pdf = Pdf::loadView('admin.mess.reports.pdf.stock-purchase-details-pdf', $data)
@@ -728,6 +746,9 @@ class ReportController extends Controller
      */
     public function purchaseSaleQuantityPdf(Request $request)
     {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(120);
+
         $fromDate = $request->filled('from_date') ? $request->from_date : now()->startOfMonth()->format('Y-m-d');
         $toDate   = $request->filled('to_date') ? $request->to_date : now()->format('Y-m-d');
         $categoryId = $request->filled('category_id') ? $request->category_id : null;
@@ -899,6 +920,8 @@ class ReportController extends Controller
                 'defaultFont' => 'DejaVu Sans',
                 'isHtml5ParserEnabled' => true,
                 'isRemoteEnabled' => true,
+                'isPhpEnabled' => false,
+                'chroot' => realpath(public_path()) ?: public_path(),
                 'dpi' => 96,
             ]);
 
@@ -943,6 +966,56 @@ class ReportController extends Controller
             'emblemSrc' => $this->messPdfIndiaEmblemForDompdf(),
             'lbsnaaLogoSrc' => $this->messPdfLbsnaaLogoForDompdf(),
         ]);
+    }
+
+    /**
+     * Value-weighted average unit price from approved purchase lines up to and including a date (main stores).
+     * Matches valuation used for Stock Balance as of Till Date so closing qty × rate aligns across reports.
+     *
+     * @param  array<int>  $storeIds  Empty: all stores; non-empty: filter purchase orders by store.
+     */
+    private function weightedPurchaseUnitRateForItemUpToDate(int $itemSubcategoryId, string $untilDate, array $storeIds = []): ?float
+    {
+        $query = PurchaseOrderItem::where('item_subcategory_id', $itemSubcategoryId)
+            ->whereHas('purchaseOrder', function ($q) use ($untilDate, $storeIds) {
+                $q->where('status', 'approved')
+                    ->whereDate('po_date', '<=', $untilDate);
+                if ($storeIds !== []) {
+                    $q->whereIn('store_id', $storeIds);
+                }
+            });
+        $row = $query->selectRaw('COALESCE(SUM(quantity), 0) as qty_sum, COALESCE(SUM(quantity * unit_price), 0) as val_sum')
+            ->first();
+        $qty = (float) ($row->qty_sum ?? 0);
+        if ($qty <= 0) {
+            return null;
+        }
+
+        return round(((float) ($row->val_sum ?? 0)) / $qty, 6);
+    }
+
+    /**
+     * Value-weighted average unit price from store allocations up to and including a date (sub-stores).
+     *
+     * @param  array<int>  $subStoreIds  Empty: all sub-stores; non-empty: filter.
+     */
+    private function weightedAllocationUnitRateForItemUpToDate(int $itemSubcategoryId, string $untilDate, array $subStoreIds = []): ?float
+    {
+        $q = DB::table('mess_store_allocation_items as sai')
+            ->join('mess_store_allocations as sa', 'sai.store_allocation_id', '=', 'sa.id')
+            ->where('sai.item_subcategory_id', $itemSubcategoryId)
+            ->whereDate('sa.allocation_date', '<=', $untilDate);
+        if ($subStoreIds !== []) {
+            $q->whereIn('sa.sub_store_id', $subStoreIds);
+        }
+        $row = $q->selectRaw('COALESCE(SUM(sai.quantity), 0) as qty_sum, COALESCE(SUM(sai.quantity * COALESCE(sai.unit_price, 0)), 0) as val_sum')
+            ->first();
+        $qty = (float) ($row->qty_sum ?? 0);
+        if ($qty <= 0) {
+            return null;
+        }
+
+        return round(((float) ($row->val_sum ?? 0)) / $qty, 6);
     }
 
     /**
@@ -1062,12 +1135,13 @@ class ReportController extends Controller
             $kimStoreType = $storeType == 'main' ? 'store' : 'sub_store';
             $salesKi = \DB::table('kitchen_issue_items as kii')
                 ->join('kitchen_issue_master as kim', 'kii.kitchen_issue_master_pk', '=', 'kim.pk')
+                ->join('mess_item_subcategories as mis_ki', 'mis_ki.id', '=', 'kii.item_subcategory_id')
                 ->where('kii.item_subcategory_id', $item->id)
                 ->where('kim.kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
                 ->where('kim.store_type', $kimStoreType)
                 ->whereBetween('kim.issue_date', [$fromDate, $toDate])
                 ->when($storeIds !== [], fn ($q) => $q->whereIn('kim.store_id', $storeIds))
-                ->selectRaw('SUM(kii.quantity - COALESCE(kii.return_quantity, 0)) as total_qty, SUM((kii.quantity - COALESCE(kii.return_quantity, 0)) * kii.rate) as total_amount')
+                ->selectRaw('SUM(kii.quantity - COALESCE(kii.return_quantity, 0)) as total_qty, SUM((kii.quantity - COALESCE(kii.return_quantity, 0)) * COALESCE(kii.rate, mis_ki.standard_cost, 0)) as total_amount')
                 ->first();
             $saleQtyKi = (float) ($salesKi->total_qty ?? 0);
             $saleAmountKi = (float) ($salesKi->total_amount ?? 0);
@@ -1075,11 +1149,12 @@ class ReportController extends Controller
             // Sales from Selling Voucher with Date Range
             $salesSv = \DB::table('sv_date_range_report_items as svi')
                 ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
+                ->join('mess_item_subcategories as mis_sv', 'mis_sv.id', '=', 'svi.item_subcategory_id')
                 ->where('svi.item_subcategory_id', $item->id)
                 ->where('svr.store_type', $kimStoreType)
                 ->whereBetween('svr.issue_date', [$fromDate, $toDate])
                 ->when($storeIds !== [], fn ($q) => $q->whereIn('svr.store_id', $storeIds))
-                ->selectRaw('SUM(svi.quantity - COALESCE(svi.return_quantity, 0)) as total_qty, SUM((svi.quantity - COALESCE(svi.return_quantity, 0)) * svi.rate) as total_amount')
+                ->selectRaw('SUM(svi.quantity - COALESCE(svi.return_quantity, 0)) as total_qty, SUM((svi.quantity - COALESCE(svi.return_quantity, 0)) * COALESCE(svi.rate, mis_sv.standard_cost, 0)) as total_amount')
                 ->first();
             $saleQtySv = (float) ($salesSv->total_qty ?? 0);
             $saleAmountSv = (float) ($salesSv->total_amount ?? 0);
@@ -1089,6 +1164,10 @@ class ReportController extends Controller
             $itemData['sale_rate'] = $itemData['sale_qty'] > 0 ? $itemData['sale_amount'] / $itemData['sale_qty'] : $itemData['sale_rate'];
 
             $itemData['closing_qty'] = $itemData['opening_qty'] + $itemData['purchase_qty'] - $itemData['sale_qty'];
+            $closingValRate = $storeType === 'main'
+                ? $this->weightedPurchaseUnitRateForItemUpToDate($item->id, $toDate, $storeIds)
+                : $this->weightedAllocationUnitRateForItemUpToDate($item->id, $toDate, $storeIds);
+            $itemData['closing_rate'] = $closingValRate ?? ($item->standard_cost ?? 0);
             $itemData['closing_amount'] = $itemData['closing_qty'] * $itemData['closing_rate'];
 
             if ($itemData['opening_qty'] != 0 || $itemData['purchase_qty'] != 0 || $itemData['sale_qty'] != 0) {
@@ -1704,17 +1783,8 @@ class ReportController extends Controller
                 continue;
             }
 
-            $avgRate = PurchaseOrderItem::where('item_subcategory_id', $item->id)
-                ->whereHas('purchaseOrder', function ($q) use ($tillDate, $storeIds) {
-                    $q->where('status', 'approved')
-                        ->whereDate('po_date', '<=', $tillDate);
-                    if ($storeIds !== []) {
-                        $q->whereIn('store_id', $storeIds);
-                    }
-                })
-                ->avg('unit_price');
-
-            $rate = $avgRate ?? $item->standard_cost ?? 0;
+            $rateWeighted = $this->weightedPurchaseUnitRateForItemUpToDate($item->id, $tillDate, $storeIds);
+            $rate = $rateWeighted ?? (float) ($item->standard_cost ?? 0);
             $reportData[] = [
                 'item_code' => $item->item_code ?? $item->subcategory_code ?? '-',
                 'item_name' => $item->item_name ?? $item->subcategory_name ?? $item->name,
@@ -2085,6 +2155,7 @@ class ReportController extends Controller
 
             $saleKiQuery = \DB::table('kitchen_issue_items as kii')
                 ->join('kitchen_issue_master as kim', 'kii.kitchen_issue_master_pk', '=', 'kim.pk')
+                ->join('mess_item_subcategories as mis_ki', 'mis_ki.id', '=', 'kii.item_subcategory_id')
                 ->where('kii.item_subcategory_id', $item->id)
                 ->where('kim.kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
                 ->where('kim.store_type', 'store')
@@ -2094,13 +2165,14 @@ class ReportController extends Controller
                 $saleKiQuery->whereIn('kim.store_id', $storeIds);
             }
             $saleKi = $saleKiQuery
-                ->selectRaw('COALESCE(SUM(kii.quantity - COALESCE(kii.return_quantity, 0)), 0) as net_qty, COALESCE(SUM((kii.quantity - COALESCE(kii.return_quantity, 0)) * COALESCE(kii.rate, 0)), 0) as net_amount')
+                ->selectRaw('COALESCE(SUM(kii.quantity - COALESCE(kii.return_quantity, 0)), 0) as net_qty, COALESCE(SUM((kii.quantity - COALESCE(kii.return_quantity, 0)) * COALESCE(kii.rate, mis_ki.standard_cost, 0)), 0) as net_amount')
                 ->first();
             $saleQtyKi = (float) ($saleKi->net_qty ?? 0);
             $saleAmountKi = (float) ($saleKi->net_amount ?? 0);
 
             $saleSvQuery = \DB::table('sv_date_range_report_items as svi')
                 ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
+                ->join('mess_item_subcategories as mis_sv', 'mis_sv.id', '=', 'svi.item_subcategory_id')
                 ->where('svi.item_subcategory_id', $item->id)
                 ->where('svr.store_type', 'store')
                 ->whereDate('svr.issue_date', '>=', $fromDate)
@@ -2109,7 +2181,7 @@ class ReportController extends Controller
                 $saleSvQuery->whereIn('svr.store_id', $storeIds);
             }
             $saleSv = $saleSvQuery
-                ->selectRaw('COALESCE(SUM(svi.quantity - COALESCE(svi.return_quantity, 0)), 0) as net_qty, COALESCE(SUM((svi.quantity - COALESCE(svi.return_quantity, 0)) * COALESCE(svi.rate, 0)), 0) as net_amount')
+                ->selectRaw('COALESCE(SUM(svi.quantity - COALESCE(svi.return_quantity, 0)), 0) as net_qty, COALESCE(SUM((svi.quantity - COALESCE(svi.return_quantity, 0)) * COALESCE(svi.rate, mis_sv.standard_cost, 0)), 0) as net_amount')
                 ->first();
             $saleQtySv = (float) ($saleSv->net_qty ?? 0);
             $saleAmountSv = (float) ($saleSv->net_amount ?? 0);
