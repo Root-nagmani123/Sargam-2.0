@@ -22,7 +22,7 @@
                     </div>
                     <div class="col-6 text-end">
                         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addMatrixModal">
-                            <iconify-icon icon="ep:circle-plus-filled"></iconify-icon> Add Mapping
+                            <i class="bi bi-plus-circle-fill" aria-hidden="true"></i> Add Mapping
                         </button>
                     </div>
                 </div>
@@ -41,8 +41,8 @@
                 @endif
 
                 <div class="table-responsive">
-                    <table class="table table-bordered">
-                        <thead class="table-light">
+                    <table class="table">
+                        <thead>
                             <tr>
                                 <th width="5%">#</th>
                                 <th width="20%">Complaint Category</th>

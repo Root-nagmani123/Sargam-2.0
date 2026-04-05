@@ -21,7 +21,7 @@
                     </div>
                     <div class="col-6 text-end">
                         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addPriorityModal">
-                            <iconify-icon icon="ep:circle-plus-filled"></iconify-icon> Add Priority
+                            <i class="bi bi-plus-circle-fill" aria-hidden="true"></i> Add Priority
                         </button>
                     </div>
                 </div>

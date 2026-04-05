@@ -15,7 +15,7 @@
                             <!-- ---------------------------------- -->
                             <!-- Academic -->
                             <!-- ---------------------------------- -->
-@include('components.profile')
+                            @include('components.profile')
                             <!-- Main Container with Improved Layout -->
 
                             @if (hasRole('Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST'))
@@ -51,7 +51,8 @@
                                     <a class="sidebar-link d-flex justify-content-between align-items-center"
                                         data-bs-toggle="collapse" href="#coursemasterCollapse" role="button"
                                         aria-expanded="false" aria-controls="coursemasterCollapse">
-                                        <span class="hide-menu fw-bold small small-sm-normal text-nowrap">Course Master & Mapping</span>
+                                        <span class="hide-menu fw-bold small small-sm-normal text-nowrap">Course Master
+                                            & Mapping</span>
                                         <i class="material-icons menu-icon material-symbols-rounded"
                                             style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
                                     </a>
@@ -59,21 +60,24 @@
                                 <ul class="collapse list-unstyled ps-3" id="coursemasterCollapse">
                                     <li class="sidebar-item"><a class="sidebar-link"
                                             href="{{ route('programme.index') }}">
-                                            <span class="hide-menu small small-sm-normal text-nowrap">Course Master</span>
+                                            <span class="hide-menu small small-sm-normal text-nowrap">Course
+                                                Master</span>
                                         </a></li>
                                     <li class="sidebar-item"><a class="sidebar-link"
                                             href="{{ route('master.course.group.type.index') }}">
-                                            <span class="hide-menu small small-sm-normal text-nowrap">Course Group Type</span>
+                                            <span class="hide-menu small small-sm-normal text-nowrap">Course Group
+                                                Type</span>
                                         </a></li>
                                     <li class="sidebar-item"><a class="sidebar-link"
                                             href="{{ route('group.mapping.index') }}">
-                                            <span class="hide-menu small small-sm-normal text-nowrap">Course Group Mapping</span>
+                                            <span class="hide-menu small small-sm-normal text-nowrap">Course Group
+                                                Mapping</span>
                                         </a></li>
                                 </ul>
 
 
 
-                                @if (!hasRole('Training-MCTP') && ! hasRole('IST'))
+                                @if (!hasRole('Training-MCTP') && !hasRole('IST'))
                                     <li class="sidebar-item"
                                         style="background: #4077ad;
                             border-radius: 30px 0px 0px 30px;
@@ -83,7 +87,8 @@
                                         <a class="sidebar-link d-flex justify-content-between align-items-center"
                                             data-bs-toggle="collapse" href="#exemptionmasterCollapse" role="button"
                                             aria-expanded="false" aria-controls="exemptionmasterCollapse">
-                                            <span class="hide-menu fw-bold small small-sm-normal text-nowrap">Exemption</span>
+                                            <span
+                                                class="hide-menu fw-bold small small-sm-normal text-nowrap">Exemption</span>
                                             <i class="material-icons menu-icon material-symbols-rounded"
                                                 style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
                                         </a>
@@ -92,23 +97,30 @@
                                     <ul class="collapse list-unstyled ps-3" id="exemptionmasterCollapse">
                                         <li class="sidebar-item"><a class="sidebar-link"
                                                 href="{{ route('student.medical.exemption.index') }}">
-                                                <span class="hide-menu small small-sm-normal text-nowrap">Student Medical Exemption (Doctor)</span>
+                                                <span class="hide-menu small small-sm-normal text-nowrap">Student
+                                                    Medical Exemption (Doctor)</span>
                                             </a></li>
                                         @if (hasRole('Training-MCTP') || hasRole('IST'))
                                             <li class="sidebar-item"><a class="sidebar-link"
                                                     href="{{ route('mdo-escrot-exemption.index') }}">
-                                                    <span class="hide-menu small small-sm-normal text-nowrap">Escort/Moderator Duty</span>
+                                                    <span
+                                                        class="hide-menu small small-sm-normal text-nowrap">Escort/Moderator
+                                                        Duty</span>
                                                 </a></li>
                                         @endif
                                         <li class="sidebar-item"><a class="sidebar-link"
                                                 href="{{ route('mdo-escrot-exemption.index') }}">
-                                                <span class="hide-menu small small-sm-normal text-nowrap">Escort/Moderator Duty</span>
+                                                <span
+                                                    class="hide-menu small small-sm-normal text-nowrap">Escort/Moderator
+                                                    Duty</span>
                                             </a></li>
                                         <li class="sidebar-item">
                                             <a class="sidebar-link d-flex justify-content-between align-items-center"
                                                 data-bs-toggle="collapse" href="#exemptionCollapse" role="button"
                                                 aria-expanded="false" aria-controls="exemptionCollapse">
-                                                <span class="hide-menu fw-bold small small-sm-normal text-nowrap">Exemption Master</span>
+                                                <span
+                                                    class="hide-menu fw-bold small small-sm-normal text-nowrap">Exemption
+                                                    Master</span>
                                                 <i class="material-icons menu-icon material-symbols-rounded"
                                                     style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
                                             </a>
@@ -116,15 +128,18 @@
                                         <ul class="collapse list-unstyled ps-3" id="exemptionCollapse">
                                             <li class="sidebar-item"><a class="sidebar-link"
                                                     href="{{ route('master.exemption.category.master.index') }}">
-                                                    <span class="hide-menu small small-sm-normal text-nowrap">Exemption Category</span>
+                                                    <span class="hide-menu small small-sm-normal text-nowrap">Exemption
+                                                        Category</span>
                                                 </a></li>
                                             <li class="sidebar-item"><a class="sidebar-link"
                                                     href="{{ route('master.exemption.medical.speciality.index') }}">
-                                                    <span class="hide-menu small small-sm-normal text-nowrap">Exemption Medical Speciality</span>
+                                                    <span class="hide-menu small small-sm-normal text-nowrap">Exemption
+                                                        Medical Speciality</span>
                                                 </a></li>
                                             <li class="sidebar-item"><a class="sidebar-link"
                                                     href="{{ route('master.mdo_duty_type.index') }}">
-                                                    <span class="hide-menu small small-sm-normal text-nowrap">Duty Type</span>
+                                                    <span class="hide-menu small small-sm-normal text-nowrap">Duty
+                                                        Type</span>
                                                 </a></li>
                                         </ul>
                                     </ul>
@@ -137,7 +152,8 @@
                                         <a class="sidebar-link d-flex justify-content-between align-items-center"
                                             data-bs-toggle="collapse" href="#memoCollapse" role="button"
                                             aria-expanded="false" aria-controls="memoCollapse">
-                                            <span class="hide-menu fw-bold small small-sm-normal text-nowrap">Memo Master & Mapping</span>
+                                            <span class="hide-menu fw-bold small small-sm-normal text-nowrap">Memo
+                                                Master & Mapping</span>
                                             <i class="material-icons menu-icon material-symbols-rounded"
                                                 style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
                                         </a>
@@ -145,19 +161,23 @@
                                     <ul class="collapse list-unstyled ps-3" id="memoCollapse">
                                         <li class="sidebar-item"><a class="sidebar-link"
                                                 href="{{ route('master.memo.type.master.index') }}">
-                                                <span class="hide-menu small small-sm-normal text-nowrap">Memo Type Master</span>
+                                                <span class="hide-menu small small-sm-normal text-nowrap">Memo Type
+                                                    Master</span>
                                             </a></li>
                                         <li class="sidebar-item"><a class="sidebar-link"
                                                 href="{{ route('master.memo.conclusion.master.index') }}">
-                                                <span class="hide-menu small small-sm-normal text-nowrap">Memo Conclusion Master</span>
+                                                <span class="hide-menu small small-sm-normal text-nowrap">Memo
+                                                    Conclusion Master</span>
                                             </a></li>
                                         <li class="sidebar-item"><a class="sidebar-link"
                                                 href="{{ route('course.memo.decision.index') }}">
-                                                <span class="hide-menu small small-sm-normal text-nowrap">Memo Course Mapping</span>
+                                                <span class="hide-menu small small-sm-normal text-nowrap">Memo Course
+                                                    Mapping</span>
                                             </a></li>
                                         <li class="sidebar-item"><a class="sidebar-link"
                                                 href="{{ route('master.discipline.index') }}">
-                                                <span class="hide-menu small small-sm-normal text-nowrap">Discipline Master</span>
+                                                <span class="hide-menu small small-sm-normal text-nowrap">Discipline
+                                                    Master</span>
                                             </a></li>
 
                                         {{-- <li class="sidebar-item"><a class="sidebar-link"
@@ -175,7 +195,8 @@
                                     <a class="sidebar-link d-flex justify-content-between align-items-center"
                                         data-bs-toggle="collapse" href="#reportCollapse" role="button"
                                         aria-expanded="false" aria-controls="reportCollapse">
-                                        <span class="hide-menu fw-bold small small-sm-normal text-nowrap">Session Feedback Report</span>
+                                        <span class="hide-menu fw-bold small small-sm-normal text-nowrap">Session
+                                            Feedback Report</span>
                                         <i class="material-icons menu-icon material-symbols-rounded"
                                             style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
                                     </a>
@@ -183,20 +204,39 @@
                                 <ul class="collapse list-unstyled ps-3" id="reportCollapse">
                                     <li class="sidebar-item"><a class="sidebar-link"
                                             href="{{ route('admin.feedback.feedback_details') }}">
-                                            <span class="hide-menu small small-sm-normal text-nowrap">Faculty Feedback with Comments All Details</span>
+                                            <span class="hide-menu small small-sm-normal text-nowrap">Faculty Feedback
+                                                with Comments All Details</span>
                                         </a></li>
                                     <li class="sidebar-item"><a class="sidebar-link"
                                             href="{{ route('admin.feedback.faculty_view') }}">
-                                            <span class="hide-menu small small-sm-normal text-nowrap">Average Rating - Course / Topic wise</span>
+                                            <span class="hide-menu small small-sm-normal text-nowrap">Average Rating -
+                                                Course / Topic wise</span>
                                         </a></li>
                                     <li class="sidebar-item"><a class="sidebar-link"
                                             href="{{ route('feedback.average') }}">
-                                            <span class="hide-menu small small-sm-normal text-nowrap">Faculty Feedback Average</span>
+                                            <span class="hide-menu small small-sm-normal text-nowrap">Faculty Feedback
+                                                Average</span>
                                         </a></li>
                                     <li class="sidebar-item"><a class="sidebar-link"
                                             href="{{ route('admin.feedback.database') }}">
-                                            <span class="hide-menu small small-sm-normal text-nowrap">Faculty Feedback Database</span>
+                                            <span class="hide-menu small small-sm-normal text-nowrap">Faculty Feedback
+                                                Database</span>
                                         </a></li>
+
+                                    <li class="sidebar-item">
+                                        <a class="sidebar-link"
+                                            href="{{ route('admin.feedback.pending.students') }}">
+                                            <span class="hide-menu small small-sm-normal text-nowrap">Pending Feedback
+                                                Details (Course Wise)</span>
+                                        </a>
+                                    </li>
+                                    <li class="sidebar-item">
+                                        <a class="sidebar-link" href="{{ route('admin.feedback.pending.summary') }}">
+                                            <span class="hide-menu small small-sm-normal text-nowrap">Pending Feedback
+                                                Summary (Student Count Wise)</span>
+                                        </a>
+                                    </li>
+
                                     {{-- <li class="sidebar-item">
                                         <a class="sidebar-link" href="{{ route('admin.feedback.pending') }}">
                                             <span class="hide-menu">Pending Feedback</span>
@@ -261,80 +301,80 @@
                                         <span class="hide-menu">OT - Memo / Notice</span>
                                     </a></li>
                                 <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{route('admin.feedback.feedback_details')}}">
+                                        href="{{ route('admin.feedback.feedback_details') }}">
                                         <span class="hide-menu">My Feedback.</span>
                                     </a></li>
-                            </ul>
-                            @endif
-                            <!-- faculty menu end -->
-                            <!-- medical exemption for OTs -->
-                            @if(hasRole('Doctor'))
+                        </ul>
+                        @endif
+                        <!-- faculty menu end -->
+                        <!-- medical exemption for OTs -->
+                        @if (hasRole('Doctor'))
                             <li class="sidebar-item"><a class="sidebar-link"
                                     href="{{ route('medical.exception.faculty.view') }}">
                                     <span class="hide-menu">OT - Medical Exemption</span>
                                 </a></li>
-                            @endif
+                        @endif
 
-                            <!-- OTs menu start -->
-                            @if (hasRole('Student-OT') || hasRole('Admin'))
-                                <li class="sidebar-item"
-                                    style="background: #4077ad;
+                        <!-- OTs menu start -->
+                        @if (hasRole('Student-OT') || hasRole('Admin'))
+                            <li class="sidebar-item"
+                                style="background: #4077ad;
                                 border-radius: 30px 0px 0px 30px;
                                 width: 100%;
                                 box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
                                 min-width: 250px;">
-                                    <a class="sidebar-link d-flex justify-content-between align-items-center"
-                                        data-bs-toggle="collapse" href="#otCollapse" role="button"
-                                        aria-expanded="false" aria-controls="otCollapse">
-                                        <span class="hide-menu fw-bold">OT View</span>
-                                        <i class="material-icons menu-icon material-symbols-rounded"
-                                            style="font-size: 24px;">keyboard_arrow_down</i>
-                                    </a>
-                                </li>
-                                <ul class="collapse list-unstyled ps-3" id="otCollapse">
-                                    <li class="sidebar-item"><a class="sidebar-link"
-                                            href="{{ route('calendar.index') }}">
-                                            <span class="hide-menu">My Time Table</span>
-                                        </a></li>
-                                    <li class="sidebar-item"><a class="sidebar-link"
-                                            href="{{ route('attendance.user_attendance.index') }}">
-                                            <span class="hide-menu">My Attendance</span>
-                                        </a></li>
-                                    <li class="sidebar-item"><a class="sidebar-link"
-                                            href="{{ route('ot.mdo.escrot.exemption.view') }}">
-                                            <span class="hide-menu">Session Moderator/Escort Duty</span>
-                                        </a></li>
-                                    <li class="sidebar-item"><a class="sidebar-link"
-                                            href="{{ route('medical.exception.ot.view') }}">
-                                            <span class="hide-menu">Medical Exemption</span>
-                                        </a></li>
-                                    <li class="sidebar-item"><a class="sidebar-link"
-                                            href="{{ route('memo.discipline.index') }}">
-                                            <span class="hide-menu">Displine Memo Action</span>
-                                        </a></li>
-                                    <li class="sidebar-item"><a class="sidebar-link"
-                                            href="{{ route('memo.notice.management.user') }}">
-                                            <span class="hide-menu">Memo/Notice action</span>
-                                        </a></li>
-                                    <li class="sidebar-item"><a class="sidebar-link"
-                                            href="{{ route('ot.notice.memo.view') }}">
-                                            <span class="hide-menu">Memo / Notice History</span>
-                                        </a></li>
+                                <a class="sidebar-link d-flex justify-content-between align-items-center"
+                                    data-bs-toggle="collapse" href="#otCollapse" role="button"
+                                    aria-expanded="false" aria-controls="otCollapse">
+                                    <span class="hide-menu fw-bold">OT View</span>
+                                    <i class="material-icons menu-icon material-symbols-rounded"
+                                        style="font-size: 24px;">keyboard_arrow_down</i>
+                                </a>
+                            </li>
+                            <ul class="collapse list-unstyled ps-3" id="otCollapse">
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('calendar.index') }}">
+                                        <span class="hide-menu">My Time Table</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('attendance.user_attendance.index') }}">
+                                        <span class="hide-menu">My Attendance</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('ot.mdo.escrot.exemption.view') }}">
+                                        <span class="hide-menu">Session Moderator/Escort Duty</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('medical.exception.ot.view') }}">
+                                        <span class="hide-menu">Medical Exemption</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('memo.discipline.index') }}">
+                                        <span class="hide-menu">Displine Memo Action</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('memo.notice.management.user') }}">
+                                        <span class="hide-menu">Memo/Notice action</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('ot.notice.memo.view') }}">
+                                        <span class="hide-menu">Memo / Notice History</span>
+                                    </a></li>
 
-                                    <li class="sidebar-item"><a class="sidebar-link"
-                                            href="{{ route('feedback.get.studentFeedback') }}">
-                                            <span class="hide-menu">Session Feedback</span>
-                                        </a></li>
-                                    <li class="sidebar-item"><a class="sidebar-link"
-                                            href="{{ route('peer.user_groups') }}">
-                                            <span class="hide-menu">Peer Evaluation</span>
-                                        </a></li>
-                                        <li class="sidebar-item"><a class="sidebar-link"
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('feedback.get.studentFeedback') }}">
+                                        <span class="hide-menu">Session Feedback</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('peer.user_groups') }}">
+                                        <span class="hide-menu">Peer Evaluation</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('admin.course-repository.user.index') }}">
-                                <span class="hide-menu">Course Repository - User</span>
-                                </a></li>
-                                </ul>
-                            @endif
+                                        <span class="hide-menu">Course Repository - User</span>
+                                    </a></li>
+                            </ul>
+                        @endif
                         </ul>
                     </div>
                 </div>

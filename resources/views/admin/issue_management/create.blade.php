@@ -2,8 +2,8 @@
 
 @section('title', 'Log New Issue - Sargam | Lal Bahadur')
 
-@section('setup_content')
-<div class="container-fluid py-4">
+@section('content')
+<div class="container-fluid py-4 issue-log-choices">
     <x-breadcrum title="Log New Issue" />
    @if(session('success'))
     <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -38,7 +38,7 @@
                     <div class="row g-3 g-md-4">
                         <div class="col-md-6">
                             <label class="form-label fw-semibold text-body-secondary">Complaint Category <span class="text-danger">*</span></label>
-                            <select name="issue_category_id" id="issue_category" class="form-select" required>
+                            <select name="issue_category_id" id="issue_category" class="form-select choices-select" required>
                                 <option value="">— Select category —</option>
                                 @foreach($categories as $category)
                                     <option value="{{ $category->pk }}" {{ old('issue_category_id') == $category->pk ? 'selected' : '' }}>{{ $category->issue_category }}</option>
@@ -50,7 +50,7 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold text-body-secondary">Complaint Sub-Category <span class="text-danger">*</span></label>
-                            <select name="issue_sub_category_id" id="sub_categories" class="form-select" required>
+                            <select name="issue_sub_category_id" id="sub_categories" class="form-select choices-select" required>
                                 <option value="">— Select sub-category —</option>
                             </select>
                             @error('issue_sub_category_id')
@@ -62,7 +62,7 @@
                     <div class="row g-3 g-md-4 mt-0">
                         <div class="col-md-6">
                             <label class="form-label fw-semibold text-body-secondary">Priority <span class="text-danger">*</span></label>
-                            <select name="issue_priority_id" id="issue_priority" class="form-select" required>
+                            <select name="issue_priority_id" id="issue_priority" class="form-select choices-select" required>
                                 <option value="">— Select priority —</option>
                                 @foreach($priorities as $priority)
                                     <option value="{{ $priority->pk }}" {{ old('issue_priority_id') == $priority->pk ? 'selected' : '' }}>{{ $priority->priority }}</option>
@@ -79,7 +79,7 @@
                     <div class="row g-3 g-md-4">
                         <div class="col-md-6">
                             <label class="form-label fw-semibold text-body-secondary">Complainant <span class="text-danger">*</span></label>
-                            <select name="created_by" id="complainant" class="form-select" required>
+                            <select name="created_by" id="complainant" class="form-select choices-select" required>
                                 <option value="">Search complainant by name...</option>
                                 @if(isset($employees))
                                     @foreach($employees as $employee)
@@ -101,7 +101,7 @@
                     <div class="row g-3 g-md-4 mt-0">
                         <div class="col-md-6">
                             <label class="form-label fw-semibold text-body-secondary">Nodal Employee (Level 1) <span class="text-danger">*</span></label>
-                            <select name="nodal_employee_id" id="nodal_employee" class="form-select" required>
+                            <select name="nodal_employee_id" id="nodal_employee" class="form-select choices-select" required>
                                 <option value="">— Select category first —</option>
                             </select>
                             <div class="form-text text-muted">Auto-selected from escalation matrix.</div>
@@ -159,7 +159,7 @@
                         <div class="row g-3 g-md-4">
                             <div class="col-md-4">
                                 <label class="form-label fw-semibold text-body-secondary">Building / Hostel <span class="text-danger">*</span></label>
-                                <select name="building_master_pk" id="building_select" class="form-select">
+                                <select name="building_master_pk" id="building_select" class="form-select choices-select">
                                     <option value="">— Select —</option>
                                     @foreach($buildings as $building)
                                         <option value="{{ $building->pk }}">{{ $building->building_name }}</option>
@@ -168,13 +168,13 @@
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label fw-semibold text-body-secondary">Floor</label>
-                                <select id="floor_select" class="form-select" name="floor_id">
+                                <select id="floor_select" class="form-select choices-select" name="floor_id">
                                     <option value="">— Select floor —</option>
                                 </select>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label fw-semibold text-body-secondary">Room / House no.</label>
-                                <select name="room_name" id="room_select" class="form-select">
+                                <select name="room_name" id="room_select" class="form-select choices-select">
                                     <option value="">— Select room —</option>
                                 </select>
                             </div>
@@ -206,33 +206,100 @@
 </div>
 @endsection
 
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/styles/choices.min.css"/>
+<style>
+    /* Let dropdowns escape card overflow */
+    .issue-log-choices .card.overflow-hidden { overflow: visible; }
+    /* Choices.js aligned with Bootstrap 5 form-select / focus ring */
+    .issue-log-choices .choices { margin-bottom: 0; font-size: 1rem; max-width: 100%; }
+    .issue-log-choices .choices .choices__inner {
+        display: inline-block;
+        width: 100%; min-height: calc(1.5em + 0.75rem + 2px);
+        padding: 0.375rem 2.25rem 0.375rem 0.75rem;
+        font-size: 1rem; font-weight: 400; line-height: 1.5;
+        color: var(--bs-body-color);
+        background-color: var(--bs-body-bg);
+        border: 1px solid var(--bs-border-color);
+        border-radius: var(--bs-border-radius);
+    }
+    .issue-log-choices .choices.is-focused .choices__inner,
+    .issue-log-choices .choices.is-open .choices__inner {
+        border-color: var(--bs-primary);
+        box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
+    }
+    .issue-log-choices .choices[data-type*="select-one"] .choices__inner { padding-bottom: 0.375rem; }
+    .issue-log-choices .choices__list--single { padding: 0; }
+    .issue-log-choices .choices__list--single .choices__item { padding: 0; }
+    .issue-log-choices .choices[data-type*="select-one"] .choices__input {
+        padding: 0.375rem 0.75rem; background-color: var(--bs-body-bg);
+    }
+    .issue-log-choices .choices__list--dropdown .choices__item,
+    .issue-log-choices .choices__list[aria-expanded] .choices__item { padding: 0.375rem 0.75rem; }
+    .issue-log-choices .choices__list--dropdown .choices__item--selectable.is-highlighted,
+    .issue-log-choices .choices__list[aria-expanded] .choices__item--selectable.is-highlighted {
+        background-color: var(--bs-primary-bg-subtle);
+        color: var(--bs-primary);
+    }
+    .issue-log-choices .choices__list--dropdown,
+    .issue-log-choices .choices__list[aria-expanded] {
+        border-color: var(--bs-border-color);
+        border-radius: var(--bs-border-radius);
+        box-shadow: var(--bs-box-shadow);
+        z-index: 1060;
+    }
+</style>
+@endpush
+
 @section('scripts')
 @include('components.jquery-3-6')
+<script src="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/scripts/choices.min.js"></script>
 <script>
 $(document).ready(function() {
-    // Reusable Select2 with search and focus-on-open for all dropdowns
-    function initSelect2($el, placeholder) {
-        if (!$el.length || !$.fn.select2) return;
-        if ($el.data('select2')) $el.select2('destroy');
-        $el.select2({
-            placeholder: placeholder || '— Search / Select —',
-            allowClear: true,
-            width: '100%'
-        });
-        $el.off('select2:open').on('select2:open', function() {
-            setTimeout(function() { $('.select2-container--open .select2-search__field').focus(); }, 0);
+    var complainantMobileMap = {};
+
+    function rebuildComplainantMobileMap() {
+        complainantMobileMap = {};
+        $('#complainant option').each(function() {
+            var v = $(this).val();
+            if (v) complainantMobileMap[v] = $(this).attr('data-mobile');
         });
     }
 
-    // Apply searchable Select2 to all dropdowns
-    initSelect2($('#issue_category'), '— Select category —');
-    initSelect2($('#sub_categories'), '— Select sub-category —');
-    initSelect2($('#issue_priority'), '— Select priority —');
-    initSelect2($('#complainant'), 'Search complainant by name...');
-    initSelect2($('#nodal_employee'), '— Select category first —');
-    initSelect2($('#building_select'), '— Select —');
-    initSelect2($('#floor_select'), '— Select floor —');
-    initSelect2($('#room_select'), '— Select room —');
+    function destroyIssueChoices($el) {
+        var el = $el && $el[0];
+        if (!el) return;
+        if (el._issueChoices) {
+            try { el._issueChoices.destroy(); } catch (e) {}
+            el._issueChoices = null;
+        }
+    }
+
+    function initIssueChoices($el, placeholder) {
+        var el = $el && $el[0];
+        if (!el || typeof window.Choices === 'undefined') return;
+        destroyIssueChoices($el);
+        el._issueChoices = new Choices(el, {
+            searchEnabled: true,
+            shouldSort: false,
+            allowHTML: false,
+            itemSelectText: '',
+            placeholder: true,
+            placeholderValue: placeholder || '— Search / Select —',
+            searchPlaceholderValue: 'Search…',
+            position: 'bottom'
+        });
+    }
+
+    rebuildComplainantMobileMap();
+    initIssueChoices($('#issue_category'), '— Select category —');
+    initIssueChoices($('#sub_categories'), '— Select sub-category —');
+    initIssueChoices($('#issue_priority'), '— Select priority —');
+    initIssueChoices($('#complainant'), 'Search complainant by name...');
+    initIssueChoices($('#nodal_employee'), '— Select category first —');
+    initIssueChoices($('#building_select'), '— Select —');
+    initIssueChoices($('#floor_select'), '— Select floor —');
+    initIssueChoices($('#room_select'), '— Select room —');
 
     // Character counter for description (max 1000)
     function updateCharCount() {
@@ -247,8 +314,9 @@ $(document).ready(function() {
         var categoryId = $(this).val();
         
         // Reset nodal employee dropdown when category changes
+        destroyIssueChoices($('#nodal_employee'));
         $('#nodal_employee').html('<option value="">- Select -</option>');
-        initSelect2($('#nodal_employee'), '— Select category first —');
+        initIssueChoices($('#nodal_employee'), '— Select category first —');
         
         if(categoryId) {
             // Load sub-categories
@@ -256,11 +324,12 @@ $(document).ready(function() {
                 url: '/admin/issue-management/sub-categories/' + categoryId,
                 type: 'GET',
                 success: function(data) {
+                    destroyIssueChoices($('#sub_categories'));
                     $('#sub_categories').html('<option value="">— Select sub-category —</option>');
                     $.each(data, function(key, value) {
                         $('#sub_categories').append('<option value="'+ value.pk +'">'+ value.issue_sub_category +'</option>');
                     });
-                    initSelect2($('#sub_categories'), '— Select sub-category —');
+                    initIssueChoices($('#sub_categories'), '— Select sub-category —');
                 }
             });
             
@@ -270,6 +339,7 @@ $(document).ready(function() {
                 type: 'GET',
                 success: function(response) {
                     if(response.success && response.level1 && response.level1.length > 0) {
+                        destroyIssueChoices($('#nodal_employee'));
                         $('#nodal_employee').html('<option value="">- Select -</option>');
                         var autoSelect = response.level1_auto_select;
                         $.each(response.level1, function(key, employee) {
@@ -277,7 +347,7 @@ $(document).ready(function() {
                             var selected = (autoSelect && employee.employee_pk == autoSelect) ? 'selected' : '';
                             $('#nodal_employee').append('<option value="'+ employee.employee_pk +'" '+ selected +'>'+ fullName +'</option>');
                         });
-                        initSelect2($('#nodal_employee'), '— Select —');
+                        initIssueChoices($('#nodal_employee'), '— Select —');
                         // Level 2 & 3 - display only
                         if(response.level2) {
                             $('#level2_display').text(response.level2.employee_name + ' (' + response.level2.days_notify + ' days)');
@@ -291,23 +361,27 @@ $(document).ready(function() {
                         }
                         $('#escalation_levels_display').removeClass('d-none');
                     } else {
+                        destroyIssueChoices($('#nodal_employee'));
                         $('#nodal_employee').html('<option value="">No Level 1 employees - configure Escalation Matrix</option>');
-                        initSelect2($('#nodal_employee'), '— Select —');
+                        initIssueChoices($('#nodal_employee'), '— Select —');
                         $('#escalation_levels_display').addClass('d-none');
                     }
                 },
                 error: function() {
                     console.log('Error loading nodal employees');
+                    destroyIssueChoices($('#nodal_employee'));
                     $('#nodal_employee').html('<option value="">Error loading employees</option>');
-                    initSelect2($('#nodal_employee'), '— Select —');
+                    initIssueChoices($('#nodal_employee'), '— Select —');
                     $('#escalation_levels_display').addClass('d-none');
                 }
             });
         } else {
+            destroyIssueChoices($('#sub_categories'));
+            destroyIssueChoices($('#nodal_employee'));
             $('#sub_categories').html('<option value="">— Select sub-category —</option>');
             $('#nodal_employee').html('<option value="">— Select category first —</option>');
-            initSelect2($('#sub_categories'), '— Select sub-category —');
-            initSelect2($('#nodal_employee'), '— Select category first —');
+            initIssueChoices($('#sub_categories'), '— Select sub-category —');
+            initIssueChoices($('#nodal_employee'), '— Select category first —');
             $('#escalation_levels_display').addClass('d-none');
         }
     });
@@ -328,14 +402,14 @@ $(document).ready(function() {
     // Auto-fill mobile number when complainant is selected
     $('#complainant').change(function() {
         var selected = $(this).val();
-        var mobile = $(this).find('option:selected').data('mobile');
+        var mobile = complainantMobileMap[selected];
         var normalized = getNormalizedMobile(mobile);
         $('#mobile_number').val(!selected ? '' : (normalized ? normalized : 'Mobile number is not available'));
     });
 
     // Auto-fill mobile on page load if complainant is pre-selected (logged-in user)
     if ($('#complainant').val()) {
-        var mobile = $('#complainant').find('option:selected').data('mobile');
+        var mobile = complainantMobileMap[$('#complainant').val()];
         var normalized = getNormalizedMobile(mobile);
         $('#mobile_number').val(normalized ? normalized : 'Mobile number is not available');
     }
@@ -346,12 +420,15 @@ $(document).ready(function() {
         $('#building_section').addClass('d-none');
         
         // Reset building details
+        destroyIssueChoices($('#building_select'));
+        destroyIssueChoices($('#floor_select'));
+        destroyIssueChoices($('#room_select'));
         $('#building_select').html('<option value="">— Select —</option>');
         $('#floor_select').html('<option value="">— Select floor —</option>');
         $('#room_select').html('<option value="">— Select room —</option>');
-        initSelect2($('#building_select'), '— Select —');
-        initSelect2($('#floor_select'), '— Select floor —');
-        initSelect2($('#room_select'), '— Select room —');
+        initIssueChoices($('#building_select'), '— Select —');
+        initIssueChoices($('#floor_select'), '— Select floor —');
+        initIssueChoices($('#room_select'), '— Select room —');
         
         if(type == 'H' || type == 'R' || type == 'O') {
             $('#building_section').removeClass('d-none');
@@ -363,11 +440,12 @@ $(document).ready(function() {
                 data: { type: type },
                 success: function(response) {
                     if(response.status) {
+                        destroyIssueChoices($('#building_select'));
                         $('#building_select').html('<option value="">— Select —</option>');
                         $.each(response.data, function(key, value) {
                             $('#building_select').append('<option value="'+ value.pk +'">'+ value.building_name +'</option>');
                         });
-                        initSelect2($('#building_select'), '— Select —');
+                        initIssueChoices($('#building_select'), '— Select —');
                     }
                 },
                 error: function() {
@@ -389,6 +467,7 @@ $(document).ready(function() {
                 data: { building_id: buildingId, type: locationType },
                 success: function(response) {
                     if(response.status) {
+                        destroyIssueChoices($('#floor_select'));
                         $('#floor_select').html('<option value="">— Select floor —</option>');
                         $.each(response.data, function(key, value) {
                             // Use ?? so 0 is preserved (|| would treat 0 as falsy and show undefined)
@@ -396,7 +475,7 @@ $(document).ready(function() {
                             var floorName = value.floor_name ?? value.floor ?? value.unit_sub_type ?? '';
                             $('#floor_select').append('<option value="'+ floorId +'">'+ floorName +'</option>');
                         });
-                        initSelect2($('#floor_select'), '— Select floor —');
+                        initIssueChoices($('#floor_select'), '— Select floor —');
                     }
                 },
                 error: function() {
@@ -404,10 +483,12 @@ $(document).ready(function() {
                 }
             });
         } else {
+            destroyIssueChoices($('#floor_select'));
+            destroyIssueChoices($('#room_select'));
             $('#floor_select').html('<option value="">— Select floor —</option>');
             $('#room_select').html('<option value="">— Select room —</option>');
-            initSelect2($('#floor_select'), '— Select floor —');
-            initSelect2($('#room_select'), '— Select room —');
+            initIssueChoices($('#floor_select'), '— Select floor —');
+            initIssueChoices($('#room_select'), '— Select room —');
         }
     });
 
@@ -424,6 +505,7 @@ $(document).ready(function() {
                 data: { building_id: buildingId, floor_id: floorId, type: locationType },
                 success: function(response) {
                     if(response.status) {
+                        destroyIssueChoices($('#room_select'));
                         $('#room_select').html('<option value="">— Select room —</option>');
                         $.each(response.data, function(key, value) {
                             // Use ?? so 0 is preserved (|| would treat 0 as falsy and show undefined)
@@ -431,7 +513,7 @@ $(document).ready(function() {
                             var roomName = value.room_name ?? value.house_no ?? value.floor ?? '';
                             $('#room_select').append('<option value="'+ roomName +'">'+ roomName +'</option>');
                         });
-                        initSelect2($('#room_select'), '— Select room —');
+                        initIssueChoices($('#room_select'), '— Select room —');
                     }
                 },
                 error: function() {
@@ -439,8 +521,9 @@ $(document).ready(function() {
                 }
             });
         } else {
+            destroyIssueChoices($('#room_select'));
             $('#room_select').html('<option value="">— Select room —</option>');
-            initSelect2($('#room_select'), '— Select room —');
+            initIssueChoices($('#room_select'), '— Select room —');
         }
     });
 
@@ -496,11 +579,12 @@ $(document).ready(function() {
                     url: '/admin/issue-management/sub-categories/' + oldCategory,
                     type: 'GET',
                     success: function(data) {
+                        destroyIssueChoices($('#sub_categories'));
                         $('#sub_categories').html('<option value="">— Select sub-category —</option>');
                         $.each(data, function(k, v) {
                             $('#sub_categories').append(new Option(v.issue_sub_category, v.pk, v.pk == oldSubCategory, v.pk == oldSubCategory));
                         });
-                        initSelect2($('#sub_categories'), '— Select sub-category —');
+                        initIssueChoices($('#sub_categories'), '— Select sub-category —');
                         var selText = $('#sub_categories option:selected').text();
                         if (selText) $('#sub_category_name').val(selText);
                     }
@@ -514,13 +598,14 @@ $(document).ready(function() {
                     type: 'GET',
                     success: function(res) {
                         if (res.success && res.level1) {
+                            destroyIssueChoices($('#nodal_employee'));
                             $('#nodal_employee').html('<option value="">- Select -</option>');
                             $.each(res.level1, function(k, emp) {
                                 var pk = emp.employee_pk;
                                 var name = emp.employee_name || ((emp.first_name || '') + ' ' + (emp.middle_name ? emp.middle_name + ' ' : '') + (emp.last_name || ''));
                                 $('#nodal_employee').append(new Option(name, pk, pk == oldNodal, pk == oldNodal));
                             });
-                            initSelect2($('#nodal_employee'), '— Select —');
+                            initIssueChoices($('#nodal_employee'), '— Select —');
                         }
                     }
                 });
@@ -537,11 +622,12 @@ $(document).ready(function() {
                 data: { type: oldLocation },
                 success: function(response) {
                     if (response.status && response.data) {
+                        destroyIssueChoices($('#building_select'));
                         $('#building_select').html('<option value="">— Select —</option>');
                         $.each(response.data, function(k, v) {
                             $('#building_select').append(new Option(v.building_name, v.pk, v.pk == oldBuilding, v.pk == oldBuilding));
                         });
-                        initSelect2($('#building_select'), '— Select —');
+                        initIssueChoices($('#building_select'), '— Select —');
                     }
                 }
             });

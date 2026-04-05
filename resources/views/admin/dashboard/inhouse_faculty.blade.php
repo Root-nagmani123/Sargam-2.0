@@ -465,12 +465,12 @@
                 <span class="material-symbols-rounded card-header-icon">badge</span>
                 <span>Inhouse Faculty</span>
             </div>
-            <span class="badge text-bg-light text-primary-emphasis rounded-pill fw-semibold">Directory</span>
+            <span class="badge text-bg-light text-primary rounded-1 fw-semibold">Directory</span>
         </div>
         <div class="card-body p-3 p-md-4">
             <div class="datatables">
-                <div class="table-responsive border border-light-subtle">
-                    <table class="table table-hover table-striped align-middle text-nowrap mb-0" id="inhouse">
+                <div class="table-responsive">
+                    <table class="table align-middle text-nowrap mb-0" id="inhouse">
                         <thead>
                             <tr>
                                 <th scope="col">Sl. No.</th>
@@ -481,7 +481,9 @@
                                 <th scope="col">Current Sector</th>
                                 <th scope="col">Session Count</th>
                                 <th scope="col">Feedback Average</th>
+                                @if((hasRole('Admin')))
                                 <th scope="col">Action</th>
+                                @endif
                             </tr>
                         </thead>
                         <tbody>
@@ -489,7 +491,7 @@
                             <tr>
                                 <td class="text-body-secondary fw-medium">{{ $index + 1 }}</td>
                                 <td>
-                                    <span class="badge rounded-pill badge-inhouse bg-success-subtle text-success border border-success-subtle">Inhouse</span>
+                                    <span class="badge rounded-1 badge-inhouse bg-success-subtle text-success border border-success-subtle">Inhouse</span>
                                 </td>
                                 <td>
                                     <span class="faculty-name">{{ $faculty->full_name }}</span>
@@ -507,11 +509,11 @@
                                 <td class="fw-medium">{{ $faculty->mobile_no ?? 'N/A' }}</td>
                                 <td>
                                     @if($faculty->faculty_sector == 1)
-                                        <span class="badge rounded-pill badge-sector-gov border border-primary-subtle">Government</span>
+                                        <span class="badge rounded-1 badge-sector-gov border border-primary-subtle">Government</span>
                                     @elseif($faculty->faculty_sector == 2)
-                                        <span class="badge rounded-pill badge-sector-private border border-warning-subtle">Private</span>
+                                        <span class="badge rounded-1 badge-sector-private border border-warning-subtle">Private</span>
                                     @else
-                                        <span class="badge rounded-pill badge-sector-other border border-secondary-subtle">Other</span>
+                                        <span class="badge rounded-1 badge-sector-other border border-secondary-subtle">Other</span>
                                     @endif
                                 </td>
                                 <td>
@@ -551,13 +553,15 @@
                                         <span class="text-muted small">No feedback yet</span>
                                     @endif
                                 </td>
-                                <td>
-                                    <a href="{{ route('feedback.average', ['faculty_name' => $faculty->full_name]) }}"
-                                       class="btn btn-view-feedback btn-sm">
-                                        <span class="material-symbols-rounded">visibility</span>
-                                        View Feedback
-                                    </a>
-                                </td>
+                                @if((hasRole('Admin')))
+                                    <td>
+                                        <a href="{{ route('feedback.average', ['faculty_name' => $faculty->full_name]) }}"
+                                           class="btn btn-view-feedback btn-sm">
+                                            <span class="material-symbols-rounded">visibility</span>
+                                            View Feedback
+                                        </a>
+                                    </td>
+                                @endIf
                             </tr>
                             @empty
                             <tr>

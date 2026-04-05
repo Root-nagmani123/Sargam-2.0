@@ -12,7 +12,7 @@
 </style>
 @endsection
 
-@section('setup_content')
+@section('content')
 <div class="container-fluid">
     <x-breadcrum title="CENTCOM - Issues Assigned To You" />
     <div class="datatables">
@@ -24,7 +24,7 @@
                     </div>
                     <div class="col-6 text-end">
                         <a href="{{ route('admin.issue-management.create') }}" class="btn btn-primary">
-                            <iconify-icon icon="ep:circle-plus-filled"></iconify-icon> Log New Issue
+                            <i class="bi bi-plus-circle-fill" aria-hidden="true"></i> Log New Issue
                         </a>
                     </div>
                 </div>

@@ -2,221 +2,281 @@
     $fromLabel = $fromDate ? date('d-F-Y', strtotime($fromDate)) : null;
     $toLabel = $toDate ? date('d-F-Y', strtotime($toDate)) : null;
     $storeLabel = $selectedStoreName ?? ($storeType === 'main' ? "Officer's Main Mess(Primary)" : 'All Sub Stores');
+    $fromText = $fromLabel ?? 'Start';
+    $toText = $toLabel ?? 'End';
+    $dateRangeLine = 'Stock Summary Report Between ' . $fromText . ' To ' . $toText;
+    $printedOn = now()->format('d/m/Y') . ' ' . now()->format('g:i:s A');
+    $emblemSrc = $emblemSrc ?? 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
+    $lbsnaaLogoSrc = $lbsnaaLogoSrc ?? 'https://www.lbsnaa.gov.in/admin_assets/images/logo.png';
 @endphp
 <!doctype html>
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>Stock Summary Report</title>
+    <title>Stock Summary Report - OFFICER'S MESS LBSNAA MUSSOORIE</title>
     <style>
         @page {
             size: A4 landscape;
-            margin: 15mm 10mm;
+            margin: 5mm 6mm;
         }
-        
-        @media print {
-            body {
-                margin: 0;
-                padding: 0;
-            }
+
+        html, body {
+            width: 100%;
+            max-width: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: visible;
         }
-        
+
         body {
             font-family: DejaVu Sans, Arial, sans-serif;
-            font-size: 9px;
-            margin: 16px 18px;
+            font-size: 11px;
             color: #222;
-            max-width: 297mm;
             background: white;
+            position: relative;
         }
-        .page-header {
-            border-bottom: 2px solid #004a93;
-            padding-bottom: 6px;
-            margin-bottom: 10px;
-            page-break-after: avoid;
-        }
-        .page-header-top {
-            display: table;
+
+        /* Avoid position:fixed watermarks in Dompdf — they often clip/shift the canvas */
+        .pdf-page-wrap {
             width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+            position: relative;
         }
-        .page-header-col {
-            display: table-cell;
-            vertical-align: middle;
-        }
-        .page-header-title {
-            text-align: center;
-        }
-        .page-header-title h1 {
-            font-size: 12px;
-            margin: 0;
-            text-transform: uppercase;
-            letter-spacing: .04em;
-        }
-        .page-header-title h2 {
-            font-size: 10px;
-            margin: 2px 0 0;
-            text-transform: uppercase;
-            color: #004a93;
-        }
-        .page-header-sub {
-            font-size: 8px;
-            margin-top: 2px;
-            color: #555;
-        }
-        .meta-row {
-            font-size: 8px;
-            margin-top: 6px;
-        }
-        .meta-row span {
-            display: inline-block;
-            margin-right: 14px;
-        }
-        table {
+
+        .lbsnaa-header-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 7.5px;
-            margin-top: 6px;
-            page-break-inside: auto;
+            border-bottom: 2px solid #004a93;
+            padding-bottom: 0;
+            margin-bottom: 12px;
         }
-        tr {
-            page-break-inside: avoid;
-            page-break-after: auto;
+
+        .lbsnaa-header-table td {
+            vertical-align: middle;
+            padding: 4px 8px 10px 0;
+            border: none;
         }
-        thead {
-            display: table-header-group;
+
+        .hdr-logo {
+            width: 48px;
+            text-align: center;
         }
-        tfoot {
-            display: table-footer-group;
+
+        .hdr-logo img {
+            height: 40px;
+            width: auto;
+            display: block;
+            margin: 0 auto;
         }
-        th, td {
-            padding: 2px 3px;
-            border: 1px solid #dde2ea;
-        }
-        thead th {
-            background: #e6ecf5;
+
+        .brand-line-1 {
+            font-size: 10.5pt;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #004a93;
             font-weight: 600;
         }
+
+        .brand-line-2 {
+            font-size: 13pt;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #222;
+            margin-top: 2px;
+        }
+
+        .brand-line-3 {
+            font-size: 10pt;
+            color: #555;
+            margin-top: 2px;
+        }
+
+        .print-report-title {
+            font-size: 12.5pt;
+            font-weight: 700;
+            margin: 0 0 6px 0;
+        }
+
+        .report-meta {
+            font-size: 10.5pt;
+            margin-bottom: 10px;
+        }
+
+        .report-meta span {
+            display: inline-block;
+            margin-right: 12px;
+            margin-bottom: 2px;
+            max-width: 100%;
+        }
+
+        table.data-table {
+            width: 100%;
+            max-width: 100%;
+            table-layout: fixed;
+            border-collapse: collapse;
+            font-size: 9px;
+            margin-top: 4px;
+            page-break-inside: auto;
+        }
+
+        table.data-table th,
+        table.data-table td {
+            padding: 3px 4px;
+            border: 1px solid #dee2e6;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            vertical-align: middle;
+        }
+
+        table.data-table td:nth-child(2) {
+            word-break: break-word;
+        }
+
+        table.data-table thead th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+
         .text-center { text-align: center; }
         .text-end { text-align: right; }
-        .totals-row {
-            background-color: #e9ecef;
+        .totals-row td {
+            background-color: #e9ecef !important;
             font-weight: bold;
         }
-        tbody tr:nth-child(even) td {
+
+        table.data-table tbody tr:nth-child(even) td {
             background: #fafbfc;
         }
+
+        .no-data {
+            font-size: 12px;
+            margin-top: 8px;
+        }
+
         .footer {
-            border-top: 1px solid #dde2ea;
-            font-size: 7px;
+            border-top: 1px solid #dee2e6;
+            font-size: 10px;
             color: #666;
             text-align: center;
-            padding-top: 3px;
-            margin-top: 4px;
+            padding-top: 6px;
+            margin-top: 10px;
         }
     </style>
 </head>
 <body>
-<div class="page-header">
-    <div class="page-header-top">
-        <div class="page-header-col page-header-title">
-            <h1>OFFICER'S MESS LBSNAA MUSSOORIE</h1>
-            <h2>Stock Summary Report</h2>
-            <div class="page-header-sub">Lal Bahadur Shastri National Academy of Administration</div>
-        </div>
-    </div>
-    <div class="meta-row">
-        @php
-            $fromText = $fromLabel ?? 'Start';
-            $toText = $toLabel ?? 'End';
-        @endphp
-        <span>
-            <strong>Period:</strong>
-            Between {{ $fromText }} To {{ $toText }}
-        </span>
-        <span>
-            <strong>Store:</strong>
-            {{ $storeLabel }}
-        </span>
-        <span>
-            <strong>Generated on:</strong> {{ now()->format('d-m-Y H:i') }}
-        </span>
-    </div>
+<div class="pdf-page-wrap">
+
+<table class="lbsnaa-header-table">
+    <tr>
+        <td class="hdr-logo">
+            <img src="{{ $emblemSrc }}" alt="">
+        </td>
+        <td>
+            <div class="brand-line-1">Government of India</div>
+            <div class="brand-line-2">OFFICER'S MESS LBSNAA MUSSOORIE</div>
+            <div class="brand-line-3">Lal Bahadur Shastri National Academy of Administration</div>
+        </td>
+        <td class="hdr-logo">
+            <img src="{{ $lbsnaaLogoSrc }}" alt="">
+        </td>
+    </tr>
+</table>
+
+<div class="print-report-title">Stock Summary Report</div>
+<div class="report-meta">
+    <span><strong>Period:</strong> {{ $dateRangeLine }}</span>
+    <span><strong>Store:</strong> {{ $storeLabel }}</span>
+    <span><strong>Printed on:</strong> {{ $printedOn }}</span>
 </div>
 
 @if(empty($reportData))
-    <p>No stock movement found for the selected period.</p>
+    <p class="no-data">No stock movement found for the selected period.</p>
 @else
     @php
+        $rows = is_array($reportData) ? $reportData : $reportData->all();
         $totals = [
-            'opening_amount' => collect($reportData)->sum('opening_amount'),
-            'purchase_amount' => collect($reportData)->sum('purchase_amount'),
-            'sale_amount' => collect($reportData)->sum('sale_amount'),
-            'closing_amount' => collect($reportData)->sum('closing_amount'),
+            'opening_amount' => (float) collect($rows)->sum(fn ($r) => (float) ($r['opening_amount'] ?? 0)),
+            'purchase_amount' => (float) collect($rows)->sum(fn ($r) => (float) ($r['purchase_amount'] ?? 0)),
+            'sale_amount' => (float) collect($rows)->sum(fn ($r) => (float) ($r['sale_amount'] ?? 0)),
+            'closing_amount' => (float) collect($rows)->sum(fn ($r) => (float) ($r['closing_amount'] ?? 0)),
         ];
     @endphp
 
-    <table>
+    <table class="data-table">
+        <colgroup>
+            <col style="width: 3%;">
+            <col style="width: 14%;">
+            <col style="width: 6%;">
+            <col style="width: 5%;">
+            <col style="width: 5.9%;">
+            <col style="width: 5.9%;">
+            <col style="width: 6.2%;">
+            <col style="width: 5.9%;">
+            <col style="width: 5.9%;">
+            <col style="width: 6.2%;">
+            <col style="width: 5.9%;">
+            <col style="width: 5.9%;">
+            <col style="width: 6.2%;">
+            <col style="width: 5.9%;">
+            <col style="width: 5.9%;">
+            <col style="width: 6.2%;">
+        </colgroup>
         <thead>
         <tr>
-            <th rowspan="2" class="text-center" style="width: 28px;">Sr.</th>
-            <th rowspan="2" class="text-center" style="min-width: 120px;">Item Name</th>
-            <th rowspan="2" class="text-center" style="min-width: 80px;">Item Code</th>
-            <th rowspan="2" class="text-center" style="min-width: 50px;">Unit</th>
-            <th colspan="3" class="text-center">Opening</th>
-            <th colspan="3" class="text-center">Purchase</th>
-            <th colspan="3" class="text-center">Sale</th>
-            <th colspan="3" class="text-center">Closing</th>
-        </tr>
-        <tr>
-            <th class="text-center">Qty</th>
-            <th class="text-center">Rate</th>
-            <th class="text-center">Amount</th>
-            <th class="text-center">Qty</th>
-            <th class="text-center">Rate</th>
-            <th class="text-center">Amount</th>
-            <th class="text-center">Qty</th>
-            <th class="text-center">Rate</th>
-            <th class="text-center">Amount</th>
-            <th class="text-center">Qty</th>
-            <th class="text-center">Rate</th>
-            <th class="text-center">Amount</th>
+            <th class="text-center">Sr.</th>
+            <th class="text-center">Item</th>
+            <th class="text-center">Code</th>
+            <th class="text-center">Unit</th>
+            <th class="text-center">Op. Qty</th>
+            <th class="text-center">Op. Rate</th>
+            <th class="text-center">Op. Amt</th>
+            <th class="text-center">Pur. Qty</th>
+            <th class="text-center">Pur. Rate</th>
+            <th class="text-center">Pur. Amt</th>
+            <th class="text-center">Sale Qty</th>
+            <th class="text-center">Sale Rate</th>
+            <th class="text-center">Sale Amt</th>
+            <th class="text-center">Cl. Qty</th>
+            <th class="text-center">Cl. Rate</th>
+            <th class="text-center">Cl. Amt</th>
         </tr>
         </thead>
         <tbody>
-        @foreach($reportData as $index => $item)
+        @foreach($rows as $index => $item)
             <tr>
                 <td class="text-center">{{ $index + 1 }}</td>
-                <td>{{ $item['item_name'] }}</td>
-                <td>{{ $item['item_code'] ?? '—' }}</td>
-                <td>{{ $item['unit'] ?? '—' }}</td>
-                <td class="text-end">{{ number_format($item['opening_qty'], 2) }}</td>
-                <td class="text-end">{{ number_format($item['opening_rate'], 2) }}</td>
-                <td class="text-end">{{ number_format($item['opening_amount'], 2) }}</td>
-                <td class="text-end">{{ number_format($item['purchase_qty'], 2) }}</td>
-                <td class="text-end">{{ number_format($item['purchase_rate'], 2) }}</td>
-                <td class="text-end">{{ number_format($item['purchase_amount'], 2) }}</td>
-                <td class="text-end">{{ number_format($item['sale_qty'], 2) }}</td>
-                <td class="text-end">{{ number_format($item['sale_rate'], 2) }}</td>
-                <td class="text-end">{{ number_format($item['sale_amount'], 2) }}</td>
-                <td class="text-end">{{ number_format($item['closing_qty'], 2) }}</td>
-                <td class="text-end">{{ number_format($item['closing_rate'], 2) }}</td>
-                <td class="text-end">{{ number_format($item['closing_amount'], 2) }}</td>
+                <td>{{ $item['item_name'] ?? '' }}</td>
+                <td class="text-center">{{ $item['item_code'] ?? '-' }}</td>
+                <td class="text-center">{{ $item['unit'] ?? '-' }}</td>
+                <td class="text-end">{{ number_format((float) ($item['opening_qty'] ?? 0), 2) }}</td>
+                <td class="text-end">&#8377;{{ number_format((float) ($item['opening_rate'] ?? 0), 2) }}</td>
+                <td class="text-end">&#8377;{{ number_format((float) ($item['opening_amount'] ?? 0), 2) }}</td>
+                <td class="text-end">{{ number_format((float) ($item['purchase_qty'] ?? 0), 2) }}</td>
+                <td class="text-end">&#8377;{{ number_format((float) ($item['purchase_rate'] ?? 0), 2) }}</td>
+                <td class="text-end">&#8377;{{ number_format((float) ($item['purchase_amount'] ?? 0), 2) }}</td>
+                <td class="text-end">{{ number_format((float) ($item['sale_qty'] ?? 0), 2) }}</td>
+                <td class="text-end">&#8377;{{ number_format((float) ($item['sale_rate'] ?? 0), 2) }}</td>
+                <td class="text-end">&#8377;{{ number_format((float) ($item['sale_amount'] ?? 0), 2) }}</td>
+                <td class="text-end">{{ number_format((float) ($item['closing_qty'] ?? 0), 2) }}</td>
+                <td class="text-end">&#8377;{{ number_format((float) ($item['closing_rate'] ?? 0), 2) }}</td>
+                <td class="text-end">&#8377;{{ number_format((float) ($item['closing_amount'] ?? 0), 2) }}</td>
             </tr>
         @endforeach
         <tr class="totals-row">
             <td colspan="4" class="text-end"><strong>Total</strong></td>
-            <td class="text-end">—</td>
-            <td class="text-end">—</td>
-            <td class="text-end"><strong>{{ number_format($totals['opening_amount'], 2) }}</strong></td>
-            <td class="text-end">—</td>
-            <td class="text-end">—</td>
-            <td class="text-end"><strong>{{ number_format($totals['purchase_amount'], 2) }}</strong></td>
-            <td class="text-end">—</td>
-            <td class="text-end">—</td>
-            <td class="text-end"><strong>{{ number_format($totals['sale_amount'], 2) }}</strong></td>
-            <td class="text-end">—</td>
-            <td class="text-end">—</td>
-            <td class="text-end"><strong>{{ number_format($totals['closing_amount'], 2) }}</strong></td>
+            <td class="text-end">-</td>
+            <td class="text-end">-</td>
+            <td class="text-end"><strong>&#8377;{{ number_format($totals['opening_amount'], 2) }}</strong></td>
+            <td class="text-end">-</td>
+            <td class="text-end">-</td>
+            <td class="text-end"><strong>&#8377;{{ number_format($totals['purchase_amount'], 2) }}</strong></td>
+            <td class="text-end">-</td>
+            <td class="text-end">-</td>
+            <td class="text-end"><strong>&#8377;{{ number_format($totals['sale_amount'], 2) }}</strong></td>
+            <td class="text-end">-</td>
+            <td class="text-end">-</td>
+            <td class="text-end"><strong>&#8377;{{ number_format($totals['closing_amount'], 2) }}</strong></td>
         </tr>
         </tbody>
     </table>
@@ -225,6 +285,7 @@
 <div class="footer">
     <small>Officer's Mess LBSNAA Mussoorie &mdash; Stock Summary Report</small>
 </div>
+
+</div>
 </body>
 </html>
-

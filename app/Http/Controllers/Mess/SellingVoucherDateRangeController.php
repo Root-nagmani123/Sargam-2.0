@@ -33,17 +33,50 @@ class SellingVoucherDateRangeController extends Controller
     {
         $query = SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'course', 'items.itemSubcategory']);
 
-        if ($request->filled('store')) {
-            $storeParam = $request->store;
-            if (str_starts_with((string) $storeParam, 'sub_')) {
-                $subStoreId = (int) str_replace('sub_', '', $storeParam);
-                $query->where('store_id', $subStoreId)->where('store_type', 'sub_store');
-            } else {
-                $query->where('store_id', (int) $storeParam)->where('store_type', 'store');
-            }
+        $storeFilters = collect((array) $request->input('store', []))
+            ->filter(fn ($value) => $value !== null && $value !== '')
+            ->map(fn ($value) => (string) $value)
+            ->values();
+
+        if ($storeFilters->isNotEmpty()) {
+            $storeIds = $storeFilters
+                ->reject(fn ($value) => str_starts_with($value, 'sub_'))
+                ->map(fn ($value) => (int) $value)
+                ->filter(fn ($value) => $value > 0)
+                ->values();
+
+            $subStoreIds = $storeFilters
+                ->filter(fn ($value) => str_starts_with($value, 'sub_'))
+                ->map(fn ($value) => (int) str_replace('sub_', '', $value))
+                ->filter(fn ($value) => $value > 0)
+                ->values();
+
+            $query->where(function ($storeQuery) use ($storeIds, $subStoreIds) {
+                if ($storeIds->isNotEmpty()) {
+                    $storeQuery->where(function ($nestedQuery) use ($storeIds) {
+                        $nestedQuery->where('store_type', 'store')
+                            ->whereIn('store_id', $storeIds->all());
+                    });
+                }
+
+                if ($subStoreIds->isNotEmpty()) {
+                    $method = $storeIds->isNotEmpty() ? 'orWhere' : 'where';
+
+                    $storeQuery->{$method}(function ($nestedQuery) use ($subStoreIds) {
+                        $nestedQuery->where('store_type', 'sub_store')
+                            ->whereIn('store_id', $subStoreIds->all());
+                    });
+                }
+            });
         }
-        if ($request->filled('status') && $request->status !== '') {
-            $query->where('status', $request->status);
+
+        $statusFilters = collect((array) $request->input('status', []))
+            ->filter(fn ($value) => $value !== null && $value !== '')
+            ->map(fn ($value) => (string) $value)
+            ->values();
+
+        if ($statusFilters->isNotEmpty()) {
+            $query->whereIn('status', $statusFilters->all());
         }
         if ($request->filled('start_date') && $request->filled('end_date')) {
             // Filter strictly by Request Date (date_from) falling within the selected range

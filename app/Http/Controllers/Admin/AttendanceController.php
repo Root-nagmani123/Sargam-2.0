@@ -11,6 +11,8 @@ use Carbon\Carbon;
 use App\DataTables\StudentAttendanceListDataTable;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\AttendanceDataExport;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 
 class AttendanceController extends Controller
 {
@@ -90,7 +92,7 @@ class AttendanceController extends Controller
                     if (!empty($coordinatorCourseIds)) {
                         $courseMasters = CourseMaster::whereIn('course_master.pk', $coordinatorCourseIds)
                             ->where('course_master.active_inactive', 1)
-                            ->select('course_master.course_name', 'course_master.pk')
+                            ->select('course_master.course_name', 'course_master.couse_short_name', 'course_master.pk')
                             ->orderBy('course_master.course_name')
                             ->get()
                             ->toArray();
@@ -112,8 +114,8 @@ class AttendanceController extends Controller
                     // Get active courses that have attendance records for this user
                     $courseMasters = CourseMaster::whereIn('course_master.pk', $attendanceCourseIds)
                         ->where('course_master.active_inactive', 1)
-                        ->select('course_master.course_name', 'course_master.pk')
-                        ->orderBy('course_master.course_name')
+                        ->select('course_master.couse_short_name', 'course_master.course_name', 'course_master.pk')
+                        ->orderBy('course_master.couse_short_name')
                         ->get()
                         ->toArray();
                 } else {
@@ -128,7 +130,7 @@ class AttendanceController extends Controller
                         $courseMasterPK = CalendarEvent::active()->select('course_master_pk')->groupBy('course_master_pk')->get()->toArray();
                     }
                     $courseMasters = CourseMaster::whereIn('course_master.pk', $courseMasterPK)
-                                ->select('course_master.course_name', 'course_master.pk');
+                                ->select('course_master.couse_short_name', 'course_master.course_name', 'course_master.pk');
 
                             if (hasRole('Student-OT')) {
                                 $courseMasters = $courseMasters->join(
@@ -141,7 +143,7 @@ class AttendanceController extends Controller
                             }
                             $courseMasters->where('course_master.active_inactive', 1);
 
-                            $courseMasters = $courseMasters->orderBy('course_master.course_name')->get()->toArray();
+                            $courseMasters = $courseMasters->orderBy('course_master.couse_short_name')->get()->toArray();
                 }
             }
 
@@ -165,14 +167,20 @@ $segments = explode('/', trim($backUrl, '/')); // Split by '/'
             $fromDate = $request->from_date ? date('Y-m-d', strtotime($request->from_date)) : null;
             $toDate = $request->to_date ? date('Y-m-d', strtotime($request->to_date)) : null;
 
-            $query = CourseGroupTimetableMapping::with([
-                'group',
-                'course:pk,course_name',
-                'timetable',
-                'timetable.classSession:pk,shift_name,start_time,end_time',
-                'timetable.venue:venue_id,venue_name',
-                'timetable.faculty:pk,full_name',
-            ]);
+            // Join course_master so short/full names are always on the row for DataTables (eager loads alone are unreliable here).
+            $query = CourseGroupTimetableMapping::query()
+                ->leftJoin('course_master', 'course_master.pk', '=', 'course_group_timetable_mapping.Programme_pk')
+                ->select(
+                    'course_group_timetable_mapping.*',
+                    'course_master.couse_short_name as attendance_course_short_name',
+                    'course_master.course_name as attendance_course_full_name'
+                )
+                ->with([
+                    'group',
+                    'timetable',
+                    'timetable.classSession:pk,shift_name,start_time,end_time',
+                    'timetable.venue:venue_id,venue_name',
+                ]);
 
             $query->whereHas('timetable', function ($q) use ($fromDate, $toDate, $request) {
 
@@ -227,7 +235,12 @@ $segments = explode('/', trim($backUrl, '/')); // Split by '/'
 
             return DataTables::of($query)
                 ->addIndexColumn()
-                ->addColumn('programme_name', fn($row) => optional($row->course)->course_name ?? 'N/A')
+                ->addColumn('programme_name', function ($row) {
+                    return $this->formatAttendanceCourseCell(
+                        $row->attendance_course_short_name ?? null,
+                        $row->attendance_course_full_name ?? null
+                    );
+                })
                 ->addColumn('mannual_starttime', function ($row) {
                     $startDate = optional($row->timetable)->START_DATE;
                     $endDate   = optional($row->timetable)->END_DATE;
@@ -250,9 +263,42 @@ $segments = explode('/', trim($backUrl, '/')); // Split by '/'
                     return $row->group->group_name ?? 'NO GROUP';
                 })
 
-                ->addColumn('subject_topic', fn($row) => optional($row->timetable)->subject_topic ?? 'N/A')
-                ->addColumn('faculty_name', fn($row) => optional($row->timetable)->faculty->full_name ?? 'N/A')
+                ->addColumn('subject_topic', function ($row) {
+                    $topic = optional($row->timetable)->subject_topic;
+                    if ($topic === null || $topic === '') {
+                        return 'N/A';
+                    }
+                    $plain = trim(preg_replace('/\s+/u', ' ', strip_tags((string) $topic)));
+
+                    return Str::words($plain, 50, '…');
+                })
+                ->addColumn('faculty_name', function ($row) {
+                    return $this->resolveTimetableFacultyNames($row->timetable);
+                })
                 ->addColumn('actions', function ($row) use ($currentPath) {
+                    // Mark Attendance button turns green only when all students are saved (status != 0)
+                    static $markedCache = [];
+                    $cacheKey = ($row->group_pk ?? '') . '|' . ($row->Programme_pk ?? '') . '|' . ($row->timetable_pk ?? '');
+
+                    if (!array_key_exists($cacheKey, $markedCache)) {
+                        // Mark as "saved" only when ALL students in this group+course
+                        // have a saved attendance row (status != 0) for this timetable.
+                        $expectedCount = StudentCourseGroupMap::where(
+                            'group_type_master_course_master_map_pk',
+                            $row->group_pk
+                        )->count();
+
+                        $markedCount = CourseStudentAttendance::where([
+                            'course_master_pk' => $row->Programme_pk,
+                            'group_type_master_course_master_map_pk' => $row->group_pk,
+                            'timetable_pk' => $row->timetable_pk,
+                        ])->where('status', '!=', 0)->count();
+
+                        $markedCache[$cacheKey] = $expectedCount > 0 && $markedCount === $expectedCount;
+                    }
+
+                    $isMarked = (bool) ($markedCache[$cacheKey] ?? false);
+                    $markBtnClass = $isMarked ? 'btn btn-success btn-sm' : 'btn btn-primary btn-sm';
 
         // if ($currentPath === 'user_attendance') {
              if (hasRole('Student-OT')) {
@@ -270,7 +316,7 @@ $segments = explode('/', trim($backUrl, '/')); // Split by '/'
                 'group_pk' => $row->group_pk,
                 'course_pk' => $row->Programme_pk,
                 'timetable_pk' => $row->timetable_pk
-            ]) . '" class="btn btn-primary btn-sm 1">Show Attendance</a>';
+            ]) . '" class="' . $markBtnClass . '">Show Attendance</a>';
         }else if($currentPath === 'send_notice'){
             return '<a href="' . route('attendance.send_notice', [
             'group_pk' => $row->group_pk,
@@ -282,27 +328,27 @@ $segments = explode('/', trim($backUrl, '/')); // Split by '/'
             'group_pk' => $row->group_pk,
             'course_pk' => $row->Programme_pk,
             'timetable_pk' => $row->timetable_pk
-        ]) . '" class="btn btn-primary btn-sm">Mark Attendance</a>';
+        ]) . '" class="' . $markBtnClass . '">Mark Attendance</a>';
         }
         else{
             return '<a href="' . route('attendance.mark', [
             'group_pk' => $row->group_pk,
             'course_pk' => $row->Programme_pk,
             'timetable_pk' => $row->timetable_pk
-        ]) . '" class="btn btn-primary btn-sm">Mark Attendance</a>';
+        ]) . '" class="' . $markBtnClass . '">Mark Attendance</a>';
         }
 
         // Admin Page
        
     })
 
-    ->rawColumns(['actions'])
+    ->rawColumns(['actions', 'programme_name'])
     ->make(true);
 
             // return view('admin.attendance.partial.attendance', compact('attendanceData'));
 
         } catch (\Exception $e) {
-            \Log::error('Error fetching attendance data: ' . $e->getMessage());
+            Log::error('Error fetching attendance data: ' . $e->getMessage());
             return response()->json([
                 'status' => 'error',
                 'message' => $e->getMessage(),
@@ -331,14 +377,26 @@ $currentPath = $segments[1] ?? null;
                 ->first();
 
             $dataTable = new StudentAttendanceListDataTable($group_pk, $course_pk, $timetable_pk);
+
+            // Disable "Mark Attendance" when ALL students are already saved (status != 0)
+            $expectedCount = StudentCourseGroupMap::where('group_type_master_course_master_map_pk', $group_pk)->count();
+            $markedCount = CourseStudentAttendance::where([
+                'course_master_pk' => $course_pk,
+                'group_type_master_course_master_map_pk' => $group_pk,
+                'timetable_pk' => $timetable_pk,
+            ])->where('status', '!=', 0)->count();
+
+            $allMarked = $expectedCount > 0 && $markedCount === $expectedCount;
+
             return $dataTable->render('admin.attendance.mark-attendance', [
                 'group_pk' => $group_pk,
                 'course_pk' => $course_pk,
                 'courseGroup' => $courseGroup,
                 'currentPath' => $currentPath,
+                'allMarked' => $allMarked,
             ]);
         } catch (\Exception $e) {
-            \Log::error('Error fetching attendance data: ' . $e->getMessage());
+            Log::error('Error fetching attendance data: ' . $e->getMessage());
             return redirect()->back()->with('error', 'An error occurred while fetching attendance data: ' . $e->getMessage());
         }
     }
@@ -401,7 +459,7 @@ $currentPath = $segments[1] ?? null;
                 $filename
             );
         } catch (\Exception $e) {
-            \Log::error('Error exporting attendance data: ' . $e->getMessage());
+            Log::error('Error exporting attendance data: ' . $e->getMessage());
             return redirect()->back()->with('error', 'An error occurred while exporting attendance data: ' . $e->getMessage());
         }
     }
@@ -440,9 +498,9 @@ $currentPath = $segments[1] ?? null;
 
                 }
             }
-            return redirect()->back()->with('success', 'Attendance saved successfully.');
+            return redirect()->route('attendance.index')->with('success', 'Attendance saved successfully.');
         } catch (\Exception $exception) {
-            \Log::error('Error saving attendance: ' . $exception->getMessage());
+            Log::error('Error saving attendance: ' . $exception->getMessage());
             return redirect()->back()->with('error', 'An error occurred while saving attendance: ' . $exception->getMessage());
         }
     }
@@ -811,7 +869,7 @@ $currentPath = $segments[1] ?? null;
             ));
 
         } catch (\Exception $e) {
-            \Log::error('Error fetching OT student attendance: ' . $e->getMessage());
+            Log::error('Error fetching OT student attendance: ' . $e->getMessage());
             return redirect()->back()->with('error', 'An error occurred while fetching attendance data: ' . $e->getMessage());
         }
     }
@@ -1181,7 +1239,7 @@ $currentPath = $segments[1] ?? null;
 
             return $this->getOTAttendanceData($request, $group_pk, $course_pk, $timetable_pk, $student_pk);
         } catch (\Exception $e) {
-            \Log::error('Error fetching OT attendance data: ' . $e->getMessage());
+            Log::error('Error fetching OT attendance data: ' . $e->getMessage());
             return response()->json([
                 'status' => 'error',
                 'message' => $e->getMessage(),
@@ -1314,5 +1372,81 @@ $currentPath = $segments[1] ?? null;
         } catch (\Exception $e) {
             return false;
         }
+    }
+
+    /**
+     * Course cell: always show course short name (`couse_short_name`), and use full name for hover tooltip.
+     */
+    private function formatAttendanceCourseCell(?string $shortRaw, ?string $fullRaw): string
+    {
+        $short = is_string($shortRaw) ? trim($shortRaw) : (is_numeric($shortRaw) ? trim((string) $shortRaw) : '');
+        $full = is_string($fullRaw) ? trim($fullRaw) : (is_numeric($fullRaw) ? trim((string) $fullRaw) : '');
+        if ($full === '' && $short === '') {
+            return 'N/A';
+        }
+        // Display: always course short name (or fallback to full if short is empty)
+        $display = $short !== '' ? $short : $full;
+        // Hover/title: always full course name (or fallback to display)
+        $title = $full !== '' ? $full : $display;
+
+        return '<span class="attendance-course-cell text-body" data-tooltip="' . e($title) . '">' . e($display) . '</span>';
+    }
+
+    /**
+     * timetable.faculty_master / internal_faculty are often JSON arrays of faculty PKs — not a single FK.
+     */
+    private function resolveTimetableFacultyNames(?CalendarEvent $timetable): string
+    {
+        if (!$timetable) {
+            return 'N/A';
+        }
+
+        static $cache = [];
+
+        $ids = [];
+        foreach (['faculty_master', 'internal_faculty'] as $column) {
+            $raw = $timetable->{$column} ?? null;
+            if ($raw === null || $raw === '') {
+                continue;
+            }
+            if (is_array($raw)) {
+                $decoded = $raw;
+            } else {
+                $decoded = json_decode((string) $raw, true);
+            }
+
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                foreach ($decoded as $id) {
+                    if ($id === null || $id === '') {
+                        continue;
+                    }
+                    if (is_numeric($id)) {
+                        $ids[] = (int) $id;
+                    }
+                }
+            } elseif (is_numeric($raw)) {
+                $ids[] = (int) $raw;
+            }
+        }
+
+        $ids = array_values(array_unique(array_filter($ids)));
+        if (!empty($ids)) {
+            sort($ids);
+            $cacheKey = implode(',', $ids);
+            if (!array_key_exists($cacheKey, $cache)) {
+                $names = FacultyMaster::whereIn('pk', $ids)
+                    ->pluck('full_name')
+                    ->filter(static fn ($n) => $n !== null && trim((string) $n) !== '')
+                    ->values();
+                $cache[$cacheKey] = $names->isNotEmpty() ? $names->implode(', ') : null;
+            }
+            if ($cache[$cacheKey] !== null) {
+                return $cache[$cacheKey];
+            }
+        }
+
+        $legacy = $timetable->faculty?->full_name;
+
+        return ($legacy !== null && trim((string) $legacy) !== '') ? $legacy : 'N/A';
     }
 }

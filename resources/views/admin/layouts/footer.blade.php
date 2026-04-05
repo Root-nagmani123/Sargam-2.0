@@ -45,73 +45,6 @@
   <script src="{{asset('admin_assets/js/theme/app.init.js')}}"></script>
   <script src="{{asset('admin_assets/js/theme/theme.js')}}"></script>
   <script src="{{asset('admin_assets/js/theme/app.min.js')}}"></script>
-  <!-- Ensure light mode persists after theme scripts -->
-  <script>
-    // Force light mode after theme scripts initialize
-    (function() {
-      'use strict';
-      
-      function forceLightMode() {
-        document.documentElement.setAttribute('data-bs-theme', 'light');
-        document.documentElement.style.colorScheme = 'light';
-        if (document.body) {
-          document.body.style.colorScheme = 'light';
-          if (document.body.getAttribute('data-bs-theme') && 
-              document.body.getAttribute('data-bs-theme') !== 'light') {
-            document.body.setAttribute('data-bs-theme', 'light');
-          }
-        }
-        
-        // Force all Bootstrap CSS variables to light mode
-        const root = document.documentElement;
-        root.style.setProperty('--bs-body-bg', '#fff', 'important');
-        root.style.setProperty('--bs-body-color', '#212529', 'important');
-        root.style.setProperty('color-scheme', 'light', 'important');
-      }
-      
-      // Run immediately
-      forceLightMode();
-      
-      // Run on DOMContentLoaded
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', forceLightMode);
-      } else {
-        forceLightMode();
-      }
-      
-      // Override any theme changes with aggressive observer
-      const observer = new MutationObserver(function(mutations) {
-        let needsFix = false;
-        mutations.forEach(function(mutation) {
-          if (mutation.attributeName === 'data-bs-theme') {
-            const htmlTheme = document.documentElement.getAttribute('data-bs-theme');
-            const bodyTheme = document.body ? document.body.getAttribute('data-bs-theme') : null;
-            if (htmlTheme !== 'light' || (bodyTheme && bodyTheme !== 'light')) {
-              needsFix = true;
-            }
-          }
-        });
-        if (needsFix) {
-          forceLightMode();
-        }
-      });
-      
-      observer.observe(document.documentElement, {
-        attributes: true,
-        attributeFilter: ['data-bs-theme']
-      });
-      
-      if (document.body) {
-        observer.observe(document.body, {
-          attributes: true,
-          attributeFilter: ['data-bs-theme']
-        });
-      }
-      
-      // Periodic check as ultimate fallback
-      setInterval(forceLightMode, 500);
-    })();
-  </script>
   <script src="{{asset('admin_assets/js/theme/sidebarmenu.js')}}"></script>
 
   <!-- solar icons -->
@@ -131,13 +64,13 @@
   <script src="{{asset('admin_assets/libs/jquery-steps/build/jquery.steps.min.js')}}"></script>
   <script src="{{asset('admin_assets/libs/jquery-validation/dist/jquery.validate.min.js')}}"></script>
   <script src="{{asset('admin_assets/libs/select2/dist/js/select2.full.min.js')}}"></script>
+  <!-- jQuery DataTables -->
+  <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
+  <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+  <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
   <script src="{{asset('js/dropdown-search.js')}}"></script>
   <script src="{{asset('admin_assets/js/forms/form-wizard.js')}}"></script>
-  <script src="https://bootstrapdemos.adminmart.com/matdash/dist/assets/libs/datatables.net/js/jquery.dataTables.min.js"></script>
-  <!-- DataTables Responsive plugin -->
-  <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
-  <!-- Optional: Responsive CSS (can be moved to <head> if desired) -->
-  <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css" />
   <script>
     // Global DataTables defaults: disable auto column width to reduce header jitter
     (function() {
@@ -150,12 +83,112 @@
       }
     })();
   </script>
+  <script>
+    // Auto-initialize DataTables for any table using the `.datatable` class
+    (function() {
+      function parseBool(value, defaultValue) {
+        if (typeof value !== 'string' || value.trim() === '') return defaultValue;
+        const normalized = value.trim().toLowerCase();
+        if (['true', '1', 'yes', 'on'].includes(normalized)) return true;
+        if (['false', '0', 'no', 'off'].includes(normalized)) return false;
+        return defaultValue;
+      }
+
+      function parseIntSafe(value, defaultValue) {
+        const n = parseInt(value, 10);
+        return Number.isFinite(n) ? n : defaultValue;
+      }
+
+      function parseOrder(value, fallback) {
+        if (!value || typeof value !== 'string') return fallback;
+        try {
+          const parsed = JSON.parse(value);
+          if (Array.isArray(parsed) && parsed.length) return parsed;
+        } catch (e) {}
+        return fallback;
+      }
+
+      function initAutoDataTables() {
+        try {
+          if (!(window.jQuery && $.fn && $.fn.dataTable)) return;
+
+          $('table.datatable').each(function() {
+            if ($.fn.dataTable.isDataTable(this)) return;
+
+            const $table = $(this);
+            const showExport = parseBool($table.attr('data-export'), true);
+            const pageLength = parseIntSafe($table.attr('data-page-length'), 10);
+            const enablePaging = parseBool($table.attr('data-paging'), true);
+            const enableSearching = parseBool($table.attr('data-searching'), true);
+            const enableOrdering = parseBool($table.attr('data-ordering'), true);
+            const enableInfo = parseBool($table.attr('data-info'), true);
+            const order = parseOrder($table.attr('data-order'), [[0, 'asc']]);
+            const rawLengthStyle = ($table.attr('data-length-style') || 'pill').toLowerCase();
+            const allowedLengthStyles = ['pill', 'underline', 'minimal', 'boxed'];
+            const lengthStyle = allowedLengthStyles.includes(rawLengthStyle) ? rawLengthStyle : 'pill';
+
+            const hasButtons = !!($.fn.dataTable && $.fn.dataTable.Buttons);
+            const tableOptions = {
+              responsive: true,
+              autoWidth: false,
+              pageLength: pageLength,
+              lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
+              order: order,
+              paging: enablePaging,
+              searching: enableSearching,
+              ordering: enableOrdering,
+              info: enableInfo,
+              language: {
+                search: 'Search:',
+                searchPlaceholder: 'Type to filter...'
+              },
+              initComplete: function() {
+                try {
+                  $(this.api().table().container()).addClass('dt-length-style-' + lengthStyle);
+                } catch (e) {}
+              }
+            };
+
+            if (hasButtons && showExport) {
+              tableOptions.dom = "<'row mb-3'<'col-md-8 d-flex align-items-center gap-2 flex-wrap'Bl><'col-md-4'f>>" +
+                                 "<'row'<'col-12'tr>>" +
+                                 "<'row mt-3'<'col-md-5'i><'col-md-7'p>>";
+              tableOptions.buttons = [
+                { extend: 'copyHtml5', className: 'btn btn-outline-primary btn-sm' },
+                { extend: 'csvHtml5', className: 'btn btn-outline-primary btn-sm' },
+                { extend: 'excelHtml5', className: 'btn btn-outline-primary btn-sm' },
+                { extend: 'pdfHtml5', className: 'btn btn-outline-primary btn-sm' },
+                { extend: 'print', className: 'btn btn-outline-primary btn-sm' }
+              ];
+            } else {
+              tableOptions.dom = "<'row mb-3'<'col-md-6'l><'col-md-6'f>>" +
+                                 "<'row'<'col-12'tr>>" +
+                                 "<'row mt-3'<'col-md-5'i><'col-md-7'p>>";
+            }
+
+            $table.DataTable(tableOptions);
+          });
+        } catch (e) {
+          console.warn('Auto DataTable initialization failed:', e);
+        }
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initAutoDataTables);
+      } else {
+        initAutoDataTables();
+      }
+
+      // Re-run when Bootstrap tabs are shown (for lazily rendered content)
+      document.addEventListener('shown.bs.tab', function() {
+        initAutoDataTables();
+      });
+    })();
+  </script>
   <script src="{{asset('admin_assets/js/datatable/datatable-basic.init.js')}}"></script>
   <script src="{{asset('admin_assets/js/forms/repeater-init.js')}}"></script>
   <script src="{{asset('admin_assets/libs/fullcalendar/index.global.min.js')}}"></script>
-  <!-- <script src="{{asset('admin_assets/js/pages/calendar.init.js')}}"></script> -->
   <script src="{{asset('admin_assets/libs/fullcalendar/index.global.min.js')}}"></script>
-  <!-- <script src="{{asset('admin_assets/js/apps/contact.js')}}"></script> -->
   <script src="{{asset('admin_assets/js/plugins/toastr-init.js')}}"></script>
   <script src="{{asset('admin_assets/js/routes.js')}}"></script>
   <!-- SweetAlert2 must be loaded before custom.js (status-toggle confirmation uses Swal.fire) -->
@@ -169,8 +202,12 @@
   <script src="{{ asset('admin_assets/js/dual-listbox.js') }}"></script>
   <script src="{{ asset('admin_assets/js/validations.js') }}"></script>
   <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap5.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
   <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
-  <script srx="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
   <script src="https://bootstrapdemos.adminmart.com/matdash/dist/assets/js/datatable/datatable-advanced.init.js"></script>
 
 

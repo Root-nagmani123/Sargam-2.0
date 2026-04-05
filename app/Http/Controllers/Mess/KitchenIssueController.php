@@ -38,16 +38,33 @@ class KitchenIssueController extends Controller
 
         if ($request->filled('store')) {
             $storeFilter = $request->store;
-            if (str_starts_with((string) $storeFilter, 'sub_')) {
-                $query->where('store_type', 'sub_store')->where('store_id', (int) str_replace('sub_', '', $storeFilter));
-            } else {
-                $query->where(function ($q) use ($storeFilter) {
-                    $q->where('store_type', 'store')->where('store_id', $storeFilter);
-                });
-            }
+            // Handle both single value and array of values
+            $storeFilters = is_array($storeFilter) ? $storeFilter : [$storeFilter];
+            
+            $query->where(function ($q) use ($storeFilters) {
+                foreach ($storeFilters as $filter) {
+                    if (str_starts_with((string) $filter, 'sub_')) {
+                        $q->orWhere(function ($subQ) use ($filter) {
+                            $subQ->where('store_type', 'sub_store')
+                                 ->where('store_id', (int) str_replace('sub_', '', $filter));
+                        });
+                    } else {
+                        $q->orWhere(function ($subQ) use ($filter) {
+                            $subQ->where('store_type', 'store')
+                                 ->where('store_id', $filter);
+                        });
+                    }
+                }
+            });
         }
         if ($request->filled('status')) {
-            $query->where('status', $request->status);
+            $statusFilter = $request->status;
+            // Handle both single value and array of values
+            if (is_array($statusFilter)) {
+                $query->whereIn('status', $statusFilter);
+            } else {
+                $query->where('status', $statusFilter);
+            }
         }
         if ($request->filled('payment_type')) {
             $query->where('payment_type', $request->payment_type);

@@ -106,7 +106,10 @@ class IdCardSecurityMapper
         $dto->id_status = $row->id_status;
         $dto->status = $row->status_label;
         $approvals = $row->approvals->sortBy('pk');
-        $a1 = $approvals->where('status', 1)->first();
+        // In some flows, level-1 is stored via recommend_status=1 even when status is not 1.
+        $a1 = $approvals->first(function ($a) {
+            return (int) ($a->status ?? 0) === 1 || (int) ($a->recommend_status ?? 0) === 1;
+        });
         $a2 = $approvals->where('status', 2)->first();
         $rej = $approvals->where('status', 3)->last();
         $dto->approved_by_a1 = $a1 ? $a1->approval_emp_pk : null;
@@ -307,6 +310,7 @@ class IdCardSecurityMapper
         }
         // Contractual table: department_approval_emp_pk = Approval Authority (employee pk)
         $dto->approval_authority = isset($row->department_approval_emp_pk) ? (int) $row->department_approval_emp_pk : null;
+        $dto->depart_approval_status = isset($row->depart_approval_status) ? (int) $row->depart_approval_status : null;
         $dto->vendor_organization_name = $row->vender_name ?? null;
         $dto->fir_receipt = null;
         $dto->payment_receipt = null;

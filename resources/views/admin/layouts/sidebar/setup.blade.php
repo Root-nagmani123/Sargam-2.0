@@ -1,4 +1,18 @@
 <aside class="side-mini-panel with-vertical sidebar-google-style">
+    @php
+        $isContractualEmployee = false;
+        $authUser = \Illuminate\Support\Facades\Auth::user();
+        if ($authUser && \Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'payroll')) {
+            $userId = $authUser->user_id ?? $authUser->pk ?? null;
+            if ($userId) {
+                $emp = \Illuminate\Support\Facades\DB::table('employee_master')
+                    ->where('pk', $userId)
+                    ->orWhere('pk_old', $userId)
+                    ->first(['payroll']);
+                $isContractualEmployee = $emp && (int) ($emp->payroll ?? 0) !== 0;
+            }
+        }
+    @endphp
     <div class="vh-100 d-flex flex-column overflow-hidden">
         <!-- ---------------------------------- -->
         <!-- Start Vertical Layout Sidebar -->
@@ -98,7 +112,7 @@
                                             </li>
 
                                             @endif
-                                            @if(! hasRole('Student-OT'))
+                                            @if(! hasRole('Student-OT') && !$isContractualEmployee)
                                             <li class="mini-nav-item {{ request()->is('security*') ? 'selected' : '' }}" id="mini-9">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center">
@@ -184,7 +198,9 @@
 
                     <!-- Security Management (Vehicle & Visitor Pass) -->
                     <!-- ---------------------------------- -->
-                    <x-menu.setup_security_management />
+                    @if(!$isContractualEmployee)
+                        <x-menu.setup_security_management />
+                    @endif
 
                     <!-- Estate Management -->
                     <!-- ---------------------------------- -->

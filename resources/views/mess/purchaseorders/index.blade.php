@@ -4,124 +4,204 @@
 @php
     $canDeletePurchaseOrder = hasRole('Admin') || hasRole('Mess-Admin');
 @endphp
-<div class="container-fluid py-3 py-md-4">
-    <x-breadcrum title="Purchase Orders"></x-breadcrum>
+<div class="container-fluid py-3 py-md-4 po-ux">
+    <div class="no-print">
+        <x-breadcrum title="Purchase Orders"></x-breadcrum>
+    </div>
     <div class="datatables">
-        <div class="card shadow-sm border-0 rounded-4">
-            <div class="card-header bg-white border-0 pb-0">
-                <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2 no-print">
-                    <div>
-                        <h4 class="mb-1 fw-semibold">Purchase Orders</h4>
-                        <p class="mb-0 text-muted small">View, filter and manage mess purchase orders.</p>
+        <div class="card shadow-sm border-0 rounded-4 overflow-hidden">
+            <div class="card-header bg-body-tertiary border-0 py-3 px-3 px-md-4">
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 no-print">
+                    <div class="d-flex align-items-start gap-3">
+                        <div class="rounded-3 bg-primary bg-opacity-10 text-primary d-none d-sm-flex align-items-center justify-content-center flex-shrink-0" style="width: 2.75rem; height: 2.75rem;">
+                            <i class="material-icons material-symbol-rounded" style="font-size: 1.35rem;" aria-hidden="true">receipt_long</i>
+                        </div>
+                        <div>
+                            <h4 class="mb-1 fw-semibold text-body">Purchase Orders</h4>
+                            <p class="mb-0 text-body-secondary small">Filter the list, open a row to view, or create a new purchase order.</p>
+                        </div>
                     </div>
-                    <button type="button" class="btn btn-primary btn-sm px-3 d-inline-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#createPurchaseOrderModal">
-                        <i class="material-icons material-symbol-rounded" style="font-size: 1.1rem;">add</i>
+                    <button type="button" class="btn btn-primary px-3 py-2 rounded-3 d-inline-flex align-items-center gap-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#createPurchaseOrderModal">
+                        <i class="material-icons material-symbol-rounded" style="font-size: 1.1rem;" aria-hidden="true">add</i>
                         <span class="d-none d-sm-inline">Create Purchase Order</span>
                         <span class="d-inline d-sm-none">New</span>
                     </button>
                 </div>
             </div>
-            <div class="card-body">
+            <div class="card-body p-3 p-md-4">
                 @if(session('success'))
-                    <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        {{ session('success') }}
+                    <div class="alert alert-success alert-dismissible fade show shadow-sm border-0 rounded-3 d-flex align-items-start gap-2" role="alert">
+                        <i class="material-icons material-symbol-rounded flex-shrink-0" style="font-size: 1.25rem;" aria-hidden="true">check_circle</i>
+                        <div class="flex-grow-1">{{ session('success') }}</div>
                         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
                 @endif
 
                 {{-- Filters --}}
-                <form method="GET" action="{{ route('admin.mess.purchaseorders.index') }}" class="mb-4 p-3 p-md-4 border rounded-3 bg-body-tertiary no-print">
-                    <div class="row g-3 g-md-4 align-items-end mb-3">
-                        <div class="col-12 col-sm-6 col-md-3">
-                            <label class="form-label small mb-1">Date From</label>
-                            <input type="date" name="date_from" class="form-control" value="{{ $filterDateFrom }}">
+                <form method="GET" action="{{ route('admin.mess.purchaseorders.index') }}" class="card border-0 shadow-sm rounded-4 mb-4 no-print po-filter-card" aria-label="Purchase order list filters">
+                    <div class="card-header bg-white border-bottom py-3 px-3 px-md-4 d-flex flex-wrap align-items-center justify-content-between gap-3">
+                        <div class="d-flex align-items-start gap-3">
+                            <span class="rounded-3 bg-primary bg-opacity-10 text-primary d-inline-flex align-items-center justify-content-center flex-shrink-0" style="width: 2.5rem; height: 2.5rem;" aria-hidden="true">
+                                <i class="material-icons material-symbol-rounded" style="font-size: 1.25rem;">tune</i>
+                            </span>
+                            <div>
+                                <h6 class="mb-0 fw-semibold text-body">Refine results</h6>
+                                <p class="mb-0 small text-body-secondary">Set a period, then narrow by vendor and store. Multi-select is supported.</p>
+                            </div>
                         </div>
-                        <div class="col-12 col-sm-6 col-md-3">
-                            <label class="form-label small mb-1">Date To</label>
-                            <input type="date" name="date_to" class="form-control" value="{{ $filterDateTo }}">
-                        </div>
-                        <div class="col-12 col-sm-6 col-md-3">
-                            <label class="form-label small mb-1">Vendor</label>
-                            <select name="vendor_id" class="form-select form-select-sm js-filter-select">
-                                <option value="">All Vendors</option>
-                                @foreach($vendors as $v)
-                                    <option value="{{ $v->id }}" {{ (string)$filterVendorId === (string)$v->id ? 'selected' : '' }}>{{ $v->name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-12 col-sm-6 col-md-3">
-                            <label class="form-label small mb-1">Store</label>
-                            <select name="store_id" class="form-select form-select-sm js-filter-select">
-                                <option value="">All Stores</option>
-                                @foreach($stores as $s)
-                                    <option value="{{ $s->id }}" {{ (string)$filterStoreId === (string)$s->id ? 'selected' : '' }}>{{ $s->store_name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-12 d-flex flex-wrap gap-2 mt-3">
-                            <button type="submit" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1">
-                                <i class="material-symbols-rounded" style="font-size: 1rem;">filter_list</i>
-                                <span>Apply</span>
-                            </button>
-                            <a href="{{ route('admin.mess.purchaseorders.index') }}" class="btn btn-outline-secondary btn-sm">
-                                Clear
-                            </a>
-                            <button type="button" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1" onclick="window.print()" title="Print list or Save as PDF">
-                                <i class="material-icons material-symbol-rounded" style="font-size: 1rem;">print</i>
-                                <span>Print</span>
-                            </button>
+                    </div>
+                    <div class="card-body p-3 p-md-4 bg-body-secondary bg-opacity-10">
+                        <div class="row g-4 align-items-stretch">
+                            <div class="col-12 col-lg-5 col-xl-4">
+                                <div class="h-100 rounded-4 border bg-body p-3 p-md-4 shadow-sm">
+                                    <div class="d-flex align-items-center gap-2 mb-3">
+                                        <span class="badge rounded-pill text-bg-light border fw-semibold text-uppercase" style="font-size: 0.65rem; letter-spacing: 0.06em;">Period</span>
+                                        <span class="small text-body-secondary">Order date range</span>
+                                    </div>
+                                    <div class="row g-3">
+                                        <div class="col-sm-6">
+                                            <label class="form-label fw-semibold small mb-1" for="poFilterDateFrom">From</label>
+                                            <div class="rounded-3 overflow-hidden shadow-sm">
+                                                <div class="input-group">
+                                                    <span class="input-group-text px-3" id="poFilterDateFrom-addon">
+                                                        <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;" aria-hidden="true">event</i>
+                                                    </span>
+                                                    <input type="date" name="date_from" id="poFilterDateFrom" class="form-control form-control-sm border-secondary-subtle" value="{{ $filterDateFrom }}" aria-describedby="poFilterDateFrom-addon">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <label class="form-label fw-semibold small mb-1" for="poFilterDateTo">To</label>
+                                            <div class="rounded-3 overflow-hidden shadow-sm">
+                                                <div class="input-group">
+                                                    <span class="input-group-text text-body-secondary px-3" id="poFilterDateTo-addon">
+                                                        <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;" aria-hidden="true">event</i>
+                                                    </span>
+                                                    <input type="date" name="date_to" id="poFilterDateTo" class="form-control form-control-sm border-secondary-subtle" value="{{ $filterDateTo }}" aria-describedby="poFilterDateTo-addon">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-lg-7 col-xl-8">
+                                <div class="h-100 rounded-4 border border-light-subtle bg-body p-3 p-md-4 shadow-sm">
+                                    <div class="d-flex align-items-center gap-2 mb-3">
+                                        <span class="badge rounded-pill text-bg-light border text-body-secondary fw-semibold text-uppercase" style="font-size: 0.65rem; letter-spacing: 0.06em;">Scope</span>
+                                        <span class="small text-body-secondary">Vendors and stores <span class="d-none d-sm-inline">(leave blank for all)</span></span>
+                                    </div>
+                                    <div class="row g-3 align-items-start">
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label fw-semibold small mb-1" for="poFilterVendor">Vendors</label>
+                                            <div class="input-group input-group-sm shadow-sm rounded-3 po-filter-multiselect-wrap">
+                                                <span class="input-group-text border-secondary-subtle" id="poFilterVendor-addon" aria-hidden="true">
+                                                    <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;">local_shipping</i>
+                                                </span>
+                                                <select name="vendor_id[]" id="poFilterVendor" multiple class="form-select form-select-sm rounded-0 border-secondary-subtle po-filter-ts-vendor" data-placeholder="All vendors" aria-label="Filter by one or more vendors" aria-describedby="poFilterVendor-addon">
+                                                    @foreach($vendors as $v)
+                                                        <option value="{{ $v->id }}" {{ in_array((int) $v->id, $filterVendorIds ?? [], true) ? 'selected' : '' }}>{{ $v->name }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                            <div class="form-text mt-1 mb-0">All vendors when none selected. Type to search.</div>
+                                        </div>
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label fw-semibold small mb-1" for="poFilterStore">Stores</label>
+                                            <div class="input-group input-group-sm shadow-sm rounded-3 po-filter-multiselect-wrap">
+                                                <span class="input-group-text border-secondary-subtle" id="poFilterStore-addon" aria-hidden="true">
+                                                    <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;">storefront</i>
+                                                </span>
+                                                <select name="store_id[]" id="poFilterStore" multiple class="form-select form-select-sm rounded-0 border-secondary-subtle po-filter-ts-store" data-placeholder="All stores" aria-label="Filter by one or more stores" aria-describedby="poFilterStore-addon">
+                                                    @foreach($stores as $s)
+                                                        <option value="{{ $s->id }}" {{ in_array((int) $s->id, $filterStoreIds ?? [], true) ? 'selected' : '' }}>{{ $s->store_name }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                            <div class="form-text mt-1 mb-0">All stores when none selected. Type to search.</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="d-flex flex-column flex-md-row flex-wrap align-items-stretch align-items-md-center justify-content-between gap-3 pt-3 mt-2 border-top border-light-subtle">
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <button type="submit" class="btn btn-primary rounded-3 d-inline-flex align-items-center justify-content-center gap-2 px-3 py-2 shadow-sm">
+                                            <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;" aria-hidden="true">filter_alt</i>
+                                            <span>Apply filters</span>
+                                        </button>
+                                        <a href="{{ route('admin.mess.purchaseorders.index') }}" class="btn btn-outline-secondary rounded-3 d-inline-flex align-items-center justify-content-center gap-2 py-2">
+                                            <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;" aria-hidden="true">restart_alt</i>
+                                            <span>Clear</span>
+                                        </a>
+                                        <button type="button" class="btn btn-outline-primary rounded-3 d-inline-flex align-items-center justify-content-center gap-2 py-2" onclick="window.print()" title="Print list or Save as PDF">
+                                            <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;" aria-hidden="true">print</i>
+                                            <span>Print</span>
+                                        </button>
+                                    </div>
+                                    <p class="mb-0 small text-body-secondary text-center text-md-end ms-md-auto flex-shrink-0" style="max-width: 28rem;">Tip: use the search field in each dropdown to find vendors or stores. Remove chips to clear a selection; leave both empty for all.</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </form>
 
-                {{-- Print header: standard format (shown only when printing) --}}
+                {{-- Printable area: isolation in @media print shows only header + table (LBSNAA branding + list) --}}
+                <div class="po-print-area">
+                {{-- Print header: LBSNAA / Sargam branding (shown only when printing) --}}
                 <div class="print-only report-header text-center mb-3" style="display: none;">
-                    <div class="logo-container mb-2" style="display: flex; justify-content: center; align-items: center; gap: 15px;">
-                        <img src="{{ asset('images/lbsnaa_logo.jpg') }}" alt="LBSNAA Logo" style="height: 60px; width: auto;">
+                    <div class="logo-container mb-2 d-flex justify-content-center align-items-center gap-3 flex-wrap">
+                        <img src="{{ asset('images/ashoka.webp') }}" alt="" class="po-print-emblem" width="52" height="52" style="height: 52px; width: auto; object-fit: contain;">
+                        <img src="{{ asset('admin_assets/images/logos/logo.svg') }}" alt="Lal Bahadur Shastri National Academy of Administration" class="po-print-wordmark" style="height: 44px; width: auto;">
                     </div>
                     <h3 class="report-mess-title mb-1">OFFICER'S MESS LBSNAA MUSSOORIE</h3>
+                    <p class="small text-muted mb-2 mb-md-3">Sargam 2.0</p>
                     <div class="report-title-bar">Purchase Orders</div>
                     <div class="report-print-date small text-muted mt-1">Printed on {{ now()->format('d-m-Y, h:i A') }}</div>
                 </div>
 
                 <div class="table-responsive">
-                    <table id="purchaseOrdersTable" class="table table-hover align-middle mb-0 w-100">
+                    <table id="purchaseOrdersTable" class="table align-middle mb-0 w-100">
                         <thead>
-                            <tr>
-                                <th>S.No</th>
-                                <th>Order Number</th>
-                                <th>Vendor Name</th>
-                                <th>Store Name</th>
-                                <th>Status</th>
-                                <th>Action</th>
+                            <tr class="small text-body-secondary text-uppercase">
+                                <th scope="col" class="fw-semibold border-0 py-3 ps-3">#</th>
+                                <th scope="col" class="fw-semibold border-0 py-3">Order No.</th>
+                                <th scope="col" class="fw-semibold border-0 py-3">Vendor</th>
+                                <th scope="col" class="fw-semibold border-0 py-3">Store</th>
+                                <th scope="col" class="fw-semibold border-0 py-3">Status</th>
+                                <th scope="col" class="fw-semibold border-0 py-3 pe-3 text-end d-print-none">Actions</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody class="small">
                         @foreach($purchaseOrders as $po)
+                            @php
+                                $statusBadgeClass = $po->status === 'approved' ? 'text-bg-success'
+                                    : ($po->status === 'rejected' ? 'text-bg-danger'
+                                    : ($po->status === 'completed' ? 'text-bg-primary' : 'text-bg-warning'));
+                            @endphp
                             <tr>
-                                <td>{{ $loop->iteration }}</td>
-                                <td>{{ $po->po_number }}</td>
+                                <td class="ps-3 text-body-secondary">{{ $loop->iteration }}</td>
+                                <td class="fw-semibold text-body">{{ $po->po_number }}</td>
                                 <td>{{ $po->vendor->name ?? 'N/A' }}</td>
                                 <td>{{ $po->store->store_name ?? 'N/A' }}</td>
                                 <td>
-                                    <span class="badge rounded-pill bg-{{ $po->status == 'approved' ? 'success' : ($po->status == 'rejected' ? 'danger' : ($po->status == 'completed' ? 'primary' : 'warning')) }}">
+                                    <span class="badge rounded-pill {{ $statusBadgeClass }}">
                                         {{ ucfirst($po->status) }}
                                     </span>
                                 </td>
-                                <td>
-                                    <div class="d-inline-flex align-items-center gap-2">
-                                    <button type="button" class="btn  btn-outline-primary btn-view-po bg-transparent border-0 p-0" data-po-id="{{ $po->id }}" title="View">
-                                        <i class="material-icons material-symbol-rounded">visibility</i>
+                                <td class="d-print-none text-end pe-3">
+                                    <div class="d-inline-flex align-items-center justify-content-end gap-1">
+                                    <button type="button" class="btn btn-sm btn-light border btn-view-po rounded-3" data-po-id="{{ $po->id }}" title="View">
+                                        <i class="material-icons material-symbol-rounded align-middle" style="font-size: 1.125rem;">visibility</i>
                                     </button>
-                                    <button type="button" class="btn  btn-outline-primary btn-edit-po bg-transparent border-0 p-0" data-po-id="{{ $po->id }}" title="Edit">
-                                        <i class="material-icons material-symbol-rounded">edit</i>
+                                    <button type="button" class="btn btn-sm btn-light border btn-edit-po rounded-3" data-po-id="{{ $po->id }}" title="Edit">
+                                        <i class="material-icons material-symbol-rounded align-middle" style="font-size: 1.125rem;">edit</i>
                                     </button>
                                     @if($canDeletePurchaseOrder)
                                         <form action="{{ route('admin.mess.purchaseorders.destroy', $po->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this purchase order?');">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="btn  btn-outline-danger" title="Delete">
-                                                <i class="material-icons material-symbol-rounded">delete</i>
+                                            <button type="submit" class="btn btn-sm btn-outline-danger border rounded-3" title="Delete">
+                                                <i class="material-icons material-symbol-rounded align-middle" style="font-size: 1.125rem;">delete</i>
                                             </button>
                                         </form>
                                     @endif
@@ -132,12 +212,17 @@
                         </tbody>
                     </table>
                 </div>
+                </div>{{-- /.po-print-area --}}
             </div>
         </div>
     </div>
 </div>
 
 <style>
+    .po-ux .letter-spacing-1 { letter-spacing: 0.04em; }
+    @media (max-width: 575.98px) {
+        .po-ux .datatables .table thead th { font-size: 0.7rem; }
+    }
     /* Print header – standard level (matches category-wise-print-slip) */
     .report-mess-title {
         color: #1a1a1a;
@@ -155,16 +240,66 @@
     .report-print-date { color: #6c757d; }
 
     @media print {
+        html, body {
+            background: #fff !important;
+            height: auto !important;
+        }
+        body { margin: 0 !important; padding: 0 !important; position: relative !important; }
+
+        /* Remove app chrome from layout flow (visibility:hidden still reserves space) */
+        .sargam-loader,
+        #sargamLoader,
+        .topbar,
+        header.topbar,
+        .left-sidebar,
+        .side-mini-panel,
+        aside.side-mini-panel,
+        #sidebarTabContent,
+        .navbar,
+        #mainNavbarContent > .tab-pane:not(.show.active) {
+            display: none !important;
+        }
+
+        .page-wrapper,
+        .body-wrapper,
+        #main-content,
+        .tab-content {
+            margin: 0 !important;
+            padding: 0 !important;
+            border: none !important;
+            box-shadow: none !important;
+        }
+
         .no-print { display: none !important; }
+
+        /* Only show the purchase-order list region; hide everything else */
+        body * {
+            visibility: hidden;
+        }
+        .po-print-area,
+        .po-print-area * {
+            visibility: visible !important;
+        }
+        .po-print-area {
+            position: absolute;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100%;
+            max-width: 100%;
+            padding: 0 12px;
+            box-sizing: border-box;
+        }
+
         .print-only { display: block !important; }
-        .dataTables_length, .dataTables_filter, .dataTables_info, .dataTables_paginate { display: none !important; }
-        /* Hide layout header and sidebar so only report content prints */
-        .topbar, header.topbar, .left-sidebar, .side-mini-panel, #sidebarTabContent, .navbar { display: none !important; }
-        body { margin: 0; padding: 15px; }
-        body * { visibility: visible; }
+        .dataTables_length,
+        .dataTables_filter,
+        .dataTables_info,
+        .dataTables_paginate { display: none !important; }
+
         .report-header { margin-top: 0; border-bottom: 2px solid #004a93; padding-bottom: 12px; margin-bottom: 20px; }
         .logo-container { margin-bottom: 12px; }
-        .logo-container img { height: 60px !important; width: auto !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .logo-container .po-print-emblem { height: 52px !important; width: auto !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .logo-container .po-print-wordmark { height: 44px !important; width: auto !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         .report-mess-title { font-size: 18px; font-weight: 700; color: #1a1a1a; margin-bottom: 8px; }
         .report-title-bar { font-size: 14px; -webkit-print-color-adjust: exact; print-color-adjust: exact; display: inline-block; background-color: #004a93 !important; }
         .report-print-date { font-size: 11px; color: #6c757d; margin-top: 8px; }
@@ -208,6 +343,10 @@
         .bg-danger { background-color: #dc3545 !important; color: #fff !important; }
         .bg-warning { background-color: #ffc107 !important; color: #212529 !important; }
         .bg-primary { background-color: #004a93 !important; color: #fff !important; }
+        .text-bg-success { background-color: #28a745 !important; color: #fff !important; }
+        .text-bg-danger { background-color: #dc3545 !important; color: #fff !important; }
+        .text-bg-warning { background-color: #ffc107 !important; color: #212529 !important; }
+        .text-bg-primary { background-color: #004a93 !important; color: #fff !important; }
         
         /* Hide unnecessary elements */
         .card { box-shadow: none; border: none; }
@@ -228,34 +367,85 @@
     'actionColumnIndex' => 5,
     'infoLabel' => 'purchase orders'
 ])
+@include('mess.partials.modal-dropdown-stability')
 
-{{-- Tom Select CSS --}}
-<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+@push('scripts')
+<script>
+(function() {
+    var poListPrintRestore = null;
+    window.addEventListener('beforeprint', function() {
+        if (typeof window.jQuery === 'undefined' || !window.jQuery.fn.DataTable) return;
+        var $t = window.jQuery('#purchaseOrdersTable');
+        if (!$t.length || !window.jQuery.fn.DataTable.isDataTable($t)) return;
+        var dt = $t.DataTable();
+        var info = dt.page.info();
+        poListPrintRestore = { length: info.length, page: info.page };
+        dt.page.len(-1).draw(false);
+    });
+    window.addEventListener('afterprint', function() {
+        if (!poListPrintRestore) return;
+        if (typeof window.jQuery === 'undefined' || !window.jQuery.fn.DataTable) {
+            poListPrintRestore = null;
+            return;
+        }
+        var $t = window.jQuery('#purchaseOrdersTable');
+        if (!$t.length || !window.jQuery.fn.DataTable.isDataTable($t)) {
+            poListPrintRestore = null;
+            return;
+        }
+        var dt = $t.DataTable();
+        dt.page.len(poListPrintRestore.length).page(poListPrintRestore.page).draw(false);
+        poListPrintRestore = null;
+    });
+})();
+</script>
+@endpush
 
-{{-- Tom Select JS --}}
+{{-- Choices.js (Bootstrap-aligned styling below) --}}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" />
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 
 {{-- Create Purchase Order Modal --}}
 <style>
+/* Create PO: use nearly full viewport — one scroll area (header/footer fixed via modal-dialog-scrollable) */
 #createPurchaseOrderModal .modal-dialog {
-    max-height: calc(100vh - 2rem);
+    max-height: calc(100dvh - 2rem);
     margin: 1rem auto;
 }
 #createPurchaseOrderModal .modal-content {
-    max-height: calc(100vh - 2rem);
+    max-height: calc(100dvh - 2rem);
     display: flex;
     flex-direction: column;
 }
 #createPurchaseOrderModal .modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
     overflow-y: auto;
-    max-height: calc(100vh - 10rem);
+    max-height: calc(100dvh - 10rem);
 }
-#editPurchaseOrderModal .modal-dialog { max-height: calc(100vh - 2rem); margin: 1rem auto; }
-#editPurchaseOrderModal .modal-content { max-height: calc(100vh - 2rem); display: flex; flex-direction: column; }
-#editPurchaseOrderModal .modal-body { overflow-y: auto; max-height: calc(100vh - 10rem); }
-#viewPurchaseOrderModal .modal-dialog { max-height: calc(100vh - 2rem); margin: 1rem auto; }
-#viewPurchaseOrderModal .modal-content { max-height: calc(100vh - 2rem); display: flex; flex-direction: column; }
-#viewPurchaseOrderModal .modal-body { overflow-y: auto; max-height: calc(100vh - 10rem); }
+#editPurchaseOrderModal .modal-dialog { max-height: calc(100dvh - 2rem); margin: 1rem auto; }
+#editPurchaseOrderModal .modal-content { max-height: calc(100dvh - 2rem); display: flex; flex-direction: column; }
+#editPurchaseOrderModal .modal-body { overflow-y: auto; max-height: calc(100dvh - 10rem); }
+#viewPurchaseOrderModal .modal-dialog { max-height: calc(100dvh - 2rem); margin: 1rem auto; }
+#viewPurchaseOrderModal .modal-content { max-height: calc(100dvh - 2rem); display: flex; flex-direction: column; }
+#viewPurchaseOrderModal .modal-body { overflow-y: auto; max-height: calc(100dvh - 10rem); }
+
+#createPurchaseOrderModal .modal-dialog,
+#editPurchaseOrderModal .modal-dialog,
+#viewPurchaseOrderModal .modal-dialog {
+    width: calc(100vw - 1rem);
+    max-width: min(var(--bs-modal-width), calc(100vw - 1rem));
+}
+@media (min-width: 576px) {
+    #createPurchaseOrderModal .modal-dialog,
+    #editPurchaseOrderModal .modal-dialog,
+    #viewPurchaseOrderModal .modal-dialog {
+        width: calc(100vw - 2rem);
+        max-width: min(var(--bs-modal-width), calc(100vw - 2rem));
+    }
+}
 
 /* Tom Select Dropdown Fix - Ensure dropdowns appear above everything */
 .ts-dropdown {
@@ -275,27 +465,19 @@
     contain: layout style paint;
 }
 
-/* Fix for table responsive container clipping dropdowns */
-.table-responsive {
-    overflow: visible !important;
-}
-
-/* Ensure modal allows dropdowns to overflow */
-.modal-body .table-responsive {
+/* Keep table scroll stable inside modals (Tom Select uses dropdownParent: body) */
+#createPurchaseOrderModal .modal-body .table-responsive,
+#editPurchaseOrderModal .modal-body .table-responsive {
     overflow-x: auto;
-    overflow-y: visible !important;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
 }
 
-/* Fix table body overflow in modals */
-.modal .card-body {
-    overflow: visible !important;
+#createPurchaseOrderModal .card-body,
+#editPurchaseOrderModal .card-body {
+    overflow: hidden;
 }
 
-/* Specific fix for item details table */
-#poItemsTable,
-#poItemsTable .table-responsive {
-    overflow: visible !important;
-}
 
 /* ========================================
    Choices.js-like Styling for Tom Select
@@ -418,225 +600,222 @@
     text-align: center;
     background-color: #f9f9f9;
 }
-
-/* Selected item (for single select) - Choices.js style */
-.ts-wrapper.single .ts-control .item {
-    color: #333;
-    padding: 2px 0;
-    font-size: 14px;
+.po-item-select + .choices .choices__inner {
+    min-height: calc(1.5em + 0.5rem + 2px);
 }
-
-/* Placeholder styling - Choices.js style */
-.ts-wrapper .ts-control input::placeholder {
-    color: #999;
-    opacity: 1;
+.ts-wrapper.choices[data-type*="select-multiple"] .choices__inner {
+    padding: 0.25rem 0.5rem;
 }
-
-/* Disabled state - Choices.js style */
-.ts-wrapper.disabled .ts-control {
-    background-color: #f3f3f3;
-    border-color: #ddd;
-    cursor: not-allowed;
-    opacity: 0.6;
+.form-select-sm + .choices .choices__inner {
+    min-height: calc(1.5em + 0.5rem + 2px);
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    border-radius: var(--bs-border-radius-sm, 0.25rem);
 }
-
-/* Scrollbar styling for dropdown */
-.ts-dropdown .ts-dropdown-content {
-    max-height: 300px;
-    overflow-y: auto;
+.po-filter-multi + .choices .choices__inner {
+    min-height: 2.75rem;
 }
-
-.ts-dropdown .ts-dropdown-content::-webkit-scrollbar {
-    width: 8px;
+.po-ux .po-filter-multiselect-wrap .input-group-text {
+    background-color: var(--bs-tertiary-bg, #e9ecef);
+    border-color: var(--bs-border-color);
 }
-
-.ts-dropdown .ts-dropdown-content::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 4px;
+.po-ux .po-filter-card {
+    overflow: visible;
 }
-
-.ts-dropdown .ts-dropdown-content::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
-    border-radius: 4px;
+.po-ux .po-filter-card .card-body,
+.po-ux .po-filter-card .card-header {
+    overflow: visible;
 }
-
-.ts-dropdown .ts-dropdown-content::-webkit-scrollbar-thumb:hover {
-    background: #a8a8a8;
+.po-ux .po-filter-multiselect-wrap {
+    overflow: visible;
 }
-
-/* Remove default arrow for cleaner look */
-.ts-wrapper.single.input-active .ts-control {
-    background-image: none;
+.po-ux .po-filter-multiselect-wrap .ts-wrapper {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: 1%;
 }
-
-/* Optgroup styling - Choices.js style */
-.ts-dropdown .optgroup {
-    padding: 8px 12px;
-    font-weight: 600;
-    font-size: 13px;
-    color: #666;
-    background-color: #f9f9f9;
-    border-bottom: 1px solid #e0e0e0;
+.po-ux .po-filter-multiselect-wrap .ts-control {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    min-height: calc(1.5em + 0.5rem + 2px);
+    font-size: 0.875rem;
 }
-
-.ts-dropdown .optgroup-header {
-    padding: 8px 12px;
-    font-weight: 600;
-    font-size: 13px;
-    color: #666;
-    background-color: #f9f9f9;
-}
+.choices__list--multiple .choices__item {
+        background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%) !important;
+        border: none !important;
+        border-radius: 0.375rem !important;
+        color: #fff !important;
+        font-size: 0.875rem !important;
+    }
 </style>
 <div class="modal fade" id="createPurchaseOrderModal" tabindex="-1" aria-labelledby="createPurchaseOrderModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-lg-down modal-dialog-centered">
         <div class="modal-content">
             <form method="POST" action="{{ route('admin.mess.purchaseorders.store') }}" id="createPOForm" enctype="multipart/form-data">
                 @csrf
-                <div class="modal-header border-bottom bg-light">
-                    <h5 class="modal-title fw-semibold" id="createPurchaseOrderModalLabel">Create Purchase Order</h5>
+                <div class="modal-header border-0 border-bottom bg-body-tertiary py-3 px-4">
+                    <div>
+                        <h5 class="modal-title fw-semibold mb-0" id="createPurchaseOrderModalLabel">Create purchase order</h5>
+                        <p class="mb-0 small text-body-secondary">Required fields are marked with <span class="text-danger">*</span></p>
+                    </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body px-3 px-md-4 py-3 py-md-4 bg-body-tertiary bg-opacity-25">
                     <input type="hidden" name="po_number" value="{{ $po_number }}">
 
-                    {{-- Order Details --}}
-                    <div class="card mb-4">
-                        <div class="card-header bg-white py-2">
-                            <h6 class="mb-0 fw-semibold text-primary">Order Details</h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="row g-3">
-                                <div class="col-md-4">
-                                    <label class="form-label">Order Number</label>
-                                    <input type="text" class="form-control bg-light" value="{{ $po_number }}" readonly placeholder="Auto-generated">
-                                    <small class="text-muted">Auto-generated</small>
+                    <div class="row g-3 g-xl-4 align-items-stretch mb-3 mb-xl-4">
+                        {{-- Order Details --}}
+                        <div class="col-12 col-xl-8">
+                            <div class="card border-0 shadow-sm h-100 rounded-4 overflow-hidden">
+                                <div class="card-header bg-white border-bottom py-3 px-4 d-flex align-items-center gap-2">
+                                    <i class="material-icons material-symbol-rounded text-primary" style="font-size: 1.25rem;" aria-hidden="true">assignment</i>
+                                    <h6 class="mb-0 fw-semibold text-primary">Order details</h6>
                                 </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Order Date <span class="text-danger">*</span></label>
-                                    <input type="date" name="po_date" class="form-control" value="{{ date('Y-m-d') }}" max="{{ date('Y-m-d') }}" required>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Store Name</label>
-                                    <select name="store_id" class="form-select">
-                                        <option value="">Select Store</option>
-                                        @foreach($stores as $store)
-                                            <option value="{{ $store->id }}">{{ $store->store_name }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Vendor Name <span class="text-danger">*</span></label>
-                                    <select name="vendor_id" class="form-select" required>
-                                        <option value="">Select Vendor</option>
-                                        @foreach($vendors as $vendor)
-                                            <option value="{{ $vendor->id }}">{{ $vendor->name }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Payment Mode</label>
-                                    <select name="payment_code" class="form-select">
-                                        <option value="">Select Payment Mode</option>
-                                        @foreach($paymentModes as $value => $label)
-                                            <option value="{{ $value }}">{{ $label }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Bill No./Invoice No</label>
-                                    <input type="text" name="bill_no" class="form-control" maxlength="100" placeholder="Bill number (optional)">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Bill Date</label>
-                                    <input type="date" name="bill_date" class="form-control" max="{{ date('Y-m-d') }}">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Challan No./Reference</label>
-                                    <input type="text" name="challan_no" class="form-control" maxlength="100" placeholder="Challan number (optional)">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Challan Date</label>
-                                    <input type="date" name="challan_date" class="form-control" max="{{ date('Y-m-d') }}">
+                                <div class="card-body p-3 p-md-4 bg-white">
+                                    <div class="row g-3">
+                                        <div class="col-md-4">
+                                            <label class="form-label fw-semibold small">Order number</label>
+                                            <input type="text" class="form-control rounded-3 bg-light" value="{{ $po_number }}" readonly placeholder="Auto-generated">
+                                            <div class="form-text">Auto-generated</div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label fw-semibold small">Order date <span class="text-danger">*</span></label>
+                                            <input type="date" name="po_date" class="form-control rounded-3" value="{{ date('Y-m-d') }}" max="{{ date('Y-m-d') }}" required>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label fw-semibold small">Store</label>
+                                            <select name="store_id" class="form-select rounded-3">
+                                                <option value="">Select Store</option>
+                                                @foreach($stores as $store)
+                                                    <option value="{{ $store->id }}">{{ $store->store_name }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label fw-semibold small">Vendor <span class="text-danger">*</span></label>
+                                            <select name="vendor_id" class="form-select rounded-3" required>
+                                                <option value="">Select Vendor</option>
+                                                @foreach($vendors as $vendor)
+                                                    <option value="{{ $vendor->id }}">{{ $vendor->name }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label fw-semibold small">Payment mode</label>
+                                            <select name="payment_code" class="form-select rounded-3">
+                                                <option value="">Select Payment Mode</option>
+                                                @foreach($paymentModes as $value => $label)
+                                                    <option value="{{ $value }}">{{ $label }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label fw-semibold small">Bill / invoice no.</label>
+                                            <input type="text" name="bill_no" class="form-control rounded-3" maxlength="100" placeholder="Optional">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label fw-semibold small">Bill date</label>
+                                            <input type="date" name="bill_date" class="form-control rounded-3" max="{{ date('Y-m-d') }}">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label fw-semibold small">Challan / reference</label>
+                                            <input type="text" name="challan_no" class="form-control rounded-3" maxlength="100" placeholder="Optional">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label fw-semibold small">Challan date</label>
+                                            <input type="date" name="challan_date" class="form-control rounded-3" max="{{ date('Y-m-d') }}">
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    {{-- Bill / Attachment (Upload) --}}
-                    <div class="card mb-4 border-primary">
-                        <div class="card-header bg-light py-2">
-                            <h6 class="mb-0 fw-semibold text-primary">Upload Bill (PDF / Image)</h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-12">
-                                    <label class="form-label">Bill / Attachment <small class="text-muted">(Optional)</small></label>
-                                    <div class="input-group">
-                                        <input type="file" name="bill_file" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.webp" id="createBillFileInput">
-                                        <button type="button" class="btn btn-outline-secondary" id="createBillClearBtn">Remove</button>
+                        {{-- Bill / Attachment (Upload) --}}
+                        <div class="col-12 col-xl-4">
+                            <div class="card border-0 shadow-sm h-100 rounded-4 overflow-hidden border-start border-primary border-4">
+                                <div class="card-header bg-white border-bottom py-3 px-4 d-flex align-items-center gap-2">
+                                    <i class="material-icons material-symbol-rounded text-primary" style="font-size: 1.25rem;" aria-hidden="true">attach_file</i>
+                                    <h6 class="mb-0 fw-semibold text-primary">Bill upload</h6>
+                                    <span class="badge rounded-pill text-bg-light text-body-secondary border ms-auto fw-normal">Optional</span>
+                                </div>
+                                <div class="card-body p-3 p-md-4 bg-white d-flex flex-column">
+                                    <div class="mb-auto">
+                                        <label class="form-label fw-semibold small">Attachment</label>
+                                        <div class="input-group rounded-3 overflow-hidden shadow-sm">
+                                            <input type="file" name="bill_file" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.webp" id="createBillFileInput">
+                                            <button type="button" class="btn btn-outline-secondary" id="createBillClearBtn">Remove</button>
+                                        </div>
+                                        <div class="form-text">PDF, JPG, JPEG, PNG or WEBP · max 5 MB</div>
                                     </div>
-                                    <small class="text-muted d-block mt-1">PDF, JPG, JPEG, PNG or WEBP. Max 5 MB.</small>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     {{-- Item Details --}}
-                    <div class="card mb-4">
-                        <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
-                            <h6 class="mb-0 fw-semibold text-primary">Item Details</h6>
-                            <button type="button" class="btn  btn-outline-primary" id="addPoItemRow">
-                                + Add Item
+                    <div class="card border-0 shadow-sm mb-0 rounded-4 overflow-hidden">
+                        <div class="card-header bg-white border-bottom py-3 px-4 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="material-icons material-symbol-rounded text-primary" style="font-size: 1.25rem;" aria-hidden="true">inventory_2</i>
+                                <div>
+                                    <h6 class="mb-0 fw-semibold text-primary">Line items</h6>
+                                    <span class="small text-body-secondary d-block">Multi-select on a row splits into separate lines.</span>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-primary rounded-3 d-inline-flex align-items-center gap-1" id="addPoItemRow">
+                                <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;">add</i> Add line
                             </button>
                         </div>
-                        <div class="card-body p-0">
+                        <div class="card-body p-0 bg-white">
+                            <div class="po-item-details-table-wrap">
                             <div class="table-responsive">
-                                <table class="table text-nowrap mb-0" id="poItemsTable">
-                                    <thead>
+                                <table class="table table-sm text-nowrap mb-0 align-middle" id="poItemsTable">
+                                    <thead class="table-light small">
                                         <tr>
-                                            <th style="width: 180px;">Item Name <span class="text-white">*</span></th>
-                                            <th style="width:150px;">Unit</th>
-                                            <th style="width:auto;">Item Code</th>
-                                            <th style="width:auto;">Quantity <span class="text-white">*</span></th>
-                                            <th style="width:auto;">Unit Price <span class="text-white">*</span></th>
-                                            <th style="width:auto;">Tax (%)</th>
-                                            <th style="width:auto;">Total Amount</th>
-                                            <th style="width:auto;"></th>
+                                            <th scope="col" style="width: 180px;" class="fw-semibold text-body-secondary">Item <span class="text-danger">*</span></th>
+                                            <th scope="col" style="width:150px;" class="fw-semibold text-body-secondary">Unit</th>
+                                            <th scope="col" class="fw-semibold text-body-secondary">Code</th>
+                                            <th scope="col" class="fw-semibold text-body-secondary">Qty <span class="text-danger">*</span></th>
+                                            <th scope="col" class="fw-semibold text-body-secondary">Rate <span class="text-danger">*</span></th>
+                                            <th scope="col" class="fw-semibold text-body-secondary">Tax %</th>
+                                            <th scope="col" class="fw-semibold text-body-secondary">Line total</th>
+                                            <th scope="col" class="fw-semibold text-body-secondary text-center" style="width:3rem;"> </th>
                                         </tr>
                                     </thead>
                                     <tbody id="poItemsBody">
                                         <tr class="po-item-row">
-                                            <td>
-                                                <select name="items[0][item_subcategory_id]" class="form-select  po-item-select" required>
+                                            <td class="py-2">
+                                                <select multiple name="items[0][item_subcategory_id]" class="form-select form-select-sm po-item-select rounded-3" required aria-label="Items for this line — select several to split into multiple lines">
                                                     <option value="">Select Item</option>
                                                     @foreach($itemSubcategories as $sub)
                                                         <option value="{{ $sub['id'] }}" data-unit="{{ e($sub['unit_measurement']) }}" data-code="{{ e($sub['item_code']) }}">{{ $sub['item_name'] }}</option>
                                                     @endforeach
                                                 </select>
                                             </td>
-                                            <td><input type="text" name="items[0][unit]" class="form-control  po-unit" readonly placeholder="—"></td>
-                                            <td><input type="text" name="items[0][item_code_display]" class="form-control  po-item-code" readonly placeholder="—"></td>
-                                            <td><input type="text" name="items[0][quantity]" class="form-control  po-qty" required></td>
-                                            <td><input type="text" name="items[0][unit_price]" class="form-control  po-unit-price" required></td>
-                                            <td><input type="text" name="items[0][tax_percent]" class="form-control  po-tax"></td>
-                                            <td><input type="text" name="items[0][total_display]" class="form-control  po-line-total bg-light" readonly></td>
-                                            <td><button type="button" class="btn  btn-outline-danger po-remove-row" disabled title="Remove">×</button></td>
+                                            <td class="py-2"><input type="text" name="items[0][unit]" class="form-control form-control-sm rounded-3 po-unit" readonly placeholder="—"></td>
+                                            <td class="py-2"><input type="text" name="items[0][item_code_display]" class="form-control form-control-sm rounded-3 po-item-code" readonly placeholder="—"></td>
+                                            <td class="py-2"><input type="text" name="items[0][quantity]" class="form-control form-control-sm rounded-3 po-qty" required></td>
+                                            <td class="py-2"><input type="text" name="items[0][unit_price]" class="form-control form-control-sm rounded-3 po-unit-price" required></td>
+                                            <td class="py-2"><input type="text" name="items[0][tax_percent]" class="form-control form-control-sm rounded-3 po-tax"></td>
+                                            <td class="py-2"><input type="text" name="items[0][total_display]" class="form-control form-control-sm rounded-3 po-line-total bg-light" readonly></td>
+                                            <td class="py-2 text-center"><button type="button" class="btn btn-sm btn-outline-danger rounded-3 po-remove-row" disabled title="Remove line">×</button></td>
                                         </tr>
                                     </tbody>
                                 </table>
                             </div>
+                            </div>
                         </div>
-                        <div class="card-footer bg-light d-flex justify-content-end align-items-center">
-                            <div class="d-flex align-items-center gap-2">
-                                <span class="fw-semibold">Grand Total:</span>
+                        <div class="card-footer bg-body-secondary bg-opacity-50 border-0 d-flex justify-content-end align-items-center py-3 px-4">
+                            <div class="d-flex align-items-baseline gap-2 flex-wrap justify-content-end">
+                                <span class="fw-semibold text-body-secondary small text-uppercase">Grand total</span>
                                 <span class="fs-5 text-primary fw-bold" id="poGrandTotal">₹0.00</span>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-top">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Create Purchase Order</button>
+                <div class="modal-footer border-0 border-top bg-body-tertiary bg-opacity-25 px-4 py-3">
+                    <button type="button" class="btn btn-outline-secondary rounded-3" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary rounded-3 px-4 shadow-sm">Create purchase order</button>
                 </div>
             </form>
         </div>
@@ -645,33 +824,37 @@
 
 {{-- Edit Purchase Order Modal --}}
 <div class="modal fade" id="editPurchaseOrderModal" tabindex="-1" aria-labelledby="editPurchaseOrderModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-lg-down modal-dialog-centered">
         <div class="modal-content">
             <form method="POST" id="editPOForm" action="" enctype="multipart/form-data">
                 @csrf
                 @method('PUT')
-                <div class="modal-header border-bottom bg-light">
-                    <h5 class="modal-title fw-semibold" id="editPurchaseOrderModalLabel">Edit Purchase Order</h5>
+                <div class="modal-header border-0 border-bottom bg-body-tertiary py-3 px-4">
+                    <div>
+                        <h5 class="modal-title fw-semibold mb-0" id="editPurchaseOrderModalLabel">Edit purchase order</h5>
+                        <p class="mb-0 small text-body-secondary">Update header, bill, and line items</p>
+                    </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
-                    <div class="card mb-4">
-                        <div class="card-header bg-white py-2">
-                            <h6 class="mb-0 fw-semibold text-primary">Order Details</h6>
+                <div class="modal-body px-3 px-md-4 py-4 bg-body-tertiary bg-opacity-25">
+                    <div class="card border-0 shadow-sm mb-4 rounded-4 overflow-hidden">
+                        <div class="card-header bg-white border-bottom py-3 px-4 d-flex align-items-center gap-2">
+                            <i class="material-icons material-symbol-rounded text-primary" style="font-size: 1.25rem;" aria-hidden="true">assignment</i>
+                            <h6 class="mb-0 fw-semibold text-primary">Order details</h6>
                         </div>
-                        <div class="card-body">
+                        <div class="card-body p-3 p-md-4 bg-white">
                             <div class="row g-3">
                                 <div class="col-md-4">
-                                    <label class="form-label">Order Number</label>
-                                    <input type="text" id="editPoNumber" class="form-control bg-light" readonly>
+                                    <label class="form-label fw-semibold small">Order number</label>
+                                    <input type="text" id="editPoNumber" class="form-control rounded-3 bg-light" readonly>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Order Date <span class="text-danger">*</span></label>
-                                    <input type="date" name="po_date" id="editPoDate" class="form-control" max="{{ date('Y-m-d') }}" required>
+                                    <label class="form-label fw-semibold small">Order date <span class="text-danger">*</span></label>
+                                    <input type="date" name="po_date" id="editPoDate" class="form-control rounded-3" max="{{ date('Y-m-d') }}" required>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Store Name</label>
-                                    <select name="store_id" id="editStoreId" class="form-select">
+                                    <label class="form-label fw-semibold small">Store</label>
+                                    <select name="store_id" id="editStoreId" class="form-select rounded-3">
                                         <option value="">Select Store</option>
                                         @foreach($stores as $store)
                                             <option value="{{ $store->id }}">{{ $store->store_name }}</option>
@@ -679,8 +862,8 @@
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Vendor Name <span class="text-danger">*</span></label>
-                                    <select name="vendor_id" id="editVendorId" class="form-select" required>
+                                    <label class="form-label fw-semibold small">Vendor <span class="text-danger">*</span></label>
+                                    <select name="vendor_id" id="editVendorId" class="form-select rounded-3" required>
                                         <option value="">Select Vendor</option>
                                         @foreach($vendors as $vendor)
                                             <option value="{{ $vendor->id }}">{{ $vendor->name }}</option>
@@ -688,8 +871,8 @@
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Payment Mode</label>
-                                    <select name="payment_code" id="editPaymentCode" class="form-select">
+                                    <label class="form-label fw-semibold small">Payment mode</label>
+                                    <select name="payment_code" id="editPaymentCode" class="form-select rounded-3">
                                         <option value="">Select Payment Mode</option>
                                         @foreach($paymentModes as $value => $label)
                                             <option value="{{ $value }}">{{ $label }}</option>
@@ -697,82 +880,94 @@
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Bill No./Invoice No</label>
-                                    <input type="text" name="bill_no" id="editBillNo" class="form-control" maxlength="100" placeholder="Bill number (optional)">
+                                    <label class="form-label fw-semibold small">Bill / invoice no.</label>
+                                    <input type="text" name="bill_no" id="editBillNo" class="form-control rounded-3" maxlength="100" placeholder="Optional">
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Bill Date</label>
-                                    <input type="date" name="bill_date" id="editBillDate" class="form-control" max="{{ date('Y-m-d') }}">
+                                    <label class="form-label fw-semibold small">Bill date</label>
+                                    <input type="date" name="bill_date" id="editBillDate" class="form-control rounded-3" max="{{ date('Y-m-d') }}">
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Challan No./Reference</label>
-                                    <input type="text" name="challan_no" id="editChallanNo" class="form-control" maxlength="100" placeholder="Challan number (optional)">
+                                    <label class="form-label fw-semibold small">Challan / reference</label>
+                                    <input type="text" name="challan_no" id="editChallanNo" class="form-control rounded-3" maxlength="100" placeholder="Optional">
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Challan Date</label>
-                                    <input type="date" name="challan_date" id="editChallanDate" class="form-control" max="{{ date('Y-m-d') }}">
+                                    <label class="form-label fw-semibold small">Challan date</label>
+                                    <input type="date" name="challan_date" id="editChallanDate" class="form-control rounded-3" max="{{ date('Y-m-d') }}">
                                 </div>
                             </div>
                         </div>
                     </div>
                     {{-- Bill / Attachment (Upload) --}}
-                    <div class="card mb-4 border-primary">
-                        <div class="card-header bg-light py-2">
-                            <h6 class="mb-0 fw-semibold text-primary">Upload Bill (PDF / Image)</h6>
+                    <div class="card border-0 shadow-sm mb-4 rounded-4 overflow-hidden border-start border-primary border-4">
+                        <div class="card-header bg-white border-bottom py-3 px-4 d-flex align-items-center gap-2">
+                            <i class="material-icons material-symbol-rounded text-primary" style="font-size: 1.25rem;" aria-hidden="true">attach_file</i>
+                            <h6 class="mb-0 fw-semibold text-primary">Bill upload</h6>
+                            <span class="badge rounded-pill text-bg-light text-body-secondary border ms-auto fw-normal">Optional</span>
                         </div>
-                        <div class="card-body">
+                        <div class="card-body p-3 p-md-4 bg-white">
                             <div class="row">
                                 <div class="col-md-12">
-                                    <label class="form-label">Bill / Attachment <small class="text-muted">(Optional – leave empty to keep existing)</small></label>
-                                    <div class="d-flex align-items-center border rounded px-2 py-1 bg-white gap-2" style="min-height: 38px;">
+                                    <label class="form-label fw-semibold small">Attachment <span class="text-body-secondary fw-normal">· leave blank to keep current file</span></label>
+                                    <div class="d-flex align-items-center border rounded-3 px-2 py-1 bg-white gap-2 shadow-sm" style="min-height: 38px;">
                                         <span id="editCurrentBillPath" class="flex-grow-1 text-muted small text-truncate me-2" style="min-width: 0;">No file chosen</span>
-                                        <label class="mb-0 btn  btn-outline-secondary py-1 px-2" style="cursor: pointer;">
+                                        <label class="mb-0 btn btn-outline-secondary py-1 px-2 rounded-3" style="cursor: pointer;">
                                             Choose file
                                             <input type="file" name="bill_file" class="d-none" accept=".pdf,.jpg,.jpeg,.png,.webp" id="editBillFileInput">
                                         </label>
-                                        <button type="button" class="btn  btn-outline-secondary py-1 px-2" id="editBillClearBtn">
+                                        <button type="button" class="btn btn-outline-secondary py-1 px-2 rounded-3" id="editBillClearBtn">
                                             Remove
                                         </button>
                                     </div>
-                                    <small class="text-muted d-block mt-1">PDF, JPG, JPEG, PNG or WEBP. Max 5 MB.</small>
+                                    <div class="form-text">PDF, JPG, JPEG, PNG or WEBP · max 5 MB</div>
                                     <p class="mb-0 mt-2 small" id="editCurrentBillLink"></p>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="card mb-4">
-                        <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
-                            <h6 class="mb-0 fw-semibold text-primary">Item Details</h6>
-                            <button type="button" class="btn  btn-outline-primary" id="addEditPoItemRow">+ Add Item</button>
+                    <div class="card border-0 shadow-sm mb-2 rounded-4 overflow-hidden">
+                        <div class="card-header bg-white border-bottom py-3 px-4 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="material-icons material-symbol-rounded text-primary" style="font-size: 1.25rem;" aria-hidden="true">inventory_2</i>
+                                <div>
+                                    <h6 class="mb-0 fw-semibold text-primary">Line items</h6>
+                                    <span class="small text-body-secondary d-block">Multi-select on a row splits into separate lines.</span>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-primary rounded-3 d-inline-flex align-items-center gap-1" id="addEditPoItemRow"><i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;">add</i> Add line</button>
                         </div>
-                        <div class="card-body p-0">
+                        <div class="card-body p-0 bg-white">
+                            <div class="po-item-details-table-wrap">
                             <div class="table-responsive">
-                                <table class="table text-nowrap mb-0">
-                                    <thead>
+                                <table class="table table-sm text-nowrap mb-0 align-middle">
+                                    <thead class="table-light small">
                                         <tr>
-                                            <th style="width:180px;">Item Name <span class="text-white">*</span></th>
-                                            <th style="width:auto;">Unit</th>
-                                            <th style="width:auto;">Item Code</th>
-                                            <th style="width:120px;">Quantity <span class="text-white">*</span></th>
-                                            <th style="width:120px;">Unit Price <span class="text-white">*</span></th>
-                                            <th style="width:120px;">Tax (%)</th>
-                                            <th style="width:120px;">Total Amount</th>
-                                            <th style="width:auto;"></th>
+                                            <th scope="col" style="width:180px;" class="fw-semibold text-body-secondary">Item <span class="text-danger">*</span></th>
+                                            <th scope="col" class="fw-semibold text-body-secondary">Unit</th>
+                                            <th scope="col" class="fw-semibold text-body-secondary">Code</th>
+                                            <th scope="col" style="width:120px;" class="fw-semibold text-body-secondary">Qty <span class="text-danger">*</span></th>
+                                            <th scope="col" style="width:120px;" class="fw-semibold text-body-secondary">Rate <span class="text-danger">*</span></th>
+                                            <th scope="col" style="width:120px;" class="fw-semibold text-body-secondary">Tax %</th>
+                                            <th scope="col" style="width:120px;" class="fw-semibold text-body-secondary">Line total</th>
+                                            <th scope="col" class="fw-semibold text-body-secondary text-center" style="width:3rem;"> </th>
                                         </tr>
                                     </thead>
                                     <tbody id="editPoItemsBody"></tbody>
                                 </table>
                             </div>
+                            </div>
                         </div>
-                        <div class="card-footer bg-light d-flex justify-content-end align-items-center">
-                            <span class="fw-semibold">Grand Total:</span>
-                            <span class="fs-5 text-primary fw-bold ms-2" id="editPoGrandTotal">₹0.00</span>
+                        <div class="card-footer bg-body-secondary bg-opacity-50 border-0 d-flex justify-content-end align-items-center py-3 px-4">
+                            <div class="d-flex align-items-baseline gap-2 flex-wrap justify-content-end">
+                                <span class="fw-semibold text-body-secondary small text-uppercase">Grand total</span>
+                                <span class="fs-5 text-primary fw-bold" id="editPoGrandTotal">₹0.00</span>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-top">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Update Purchase Order</button>
+                <div class="modal-footer border-0 border-top bg-body-tertiary bg-opacity-25 px-4 py-3">
+                    <button type="button" class="btn btn-outline-secondary rounded-3" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary rounded-3 px-4 shadow-sm">Update purchase order</button>
                 </div>
             </form>
         </div>
@@ -782,7 +977,7 @@
 {{-- View Purchase Order Modal (read-only) --}}
 <div class="modal fade" id="viewPurchaseOrderModal" tabindex="-1" aria-labelledby="viewPurchaseOrderModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-fullscreen-lg-down modal-xl modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow">
+        <div class="modal-content border-0 shadow rounded-4">
             <div class="modal-header bg-body-tertiary border-0 py-3 px-4">
                 <h5 class="modal-title fw-semibold" id="viewPurchaseOrderModalLabel">Purchase Order Details</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -895,11 +1090,11 @@
                     </div>
                 </div>
             </div>
-            <div class="modal-footer border-top">
-                <button type="button" class="btn btn-outline-primary btn-print-view-modal" data-print-target="#viewPurchaseOrderModal" title="Print">
-                    <i class="material-icons material-symbol-rounded">print</i> Print
+            <div class="modal-footer border-0 border-top bg-body-tertiary bg-opacity-25 px-4 py-3 d-flex flex-wrap gap-2 justify-content-end">
+                <button type="button" class="btn btn-outline-primary rounded-3 btn-print-view-modal d-inline-flex align-items-center gap-2" data-print-target="#viewPurchaseOrderModal" title="Print">
+                    <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;">print</i> Print
                 </button>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-secondary rounded-3" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -917,214 +1112,491 @@
     let editCurrentVendorId = null;
     let hasInitialCreateErrors = {{ $errors->any() ? 'true' : 'false' }};
 
-    // Tom Select instances storage
-    let tomSelectInstances = {
+    let choicesInstances = {
         filter: {},
         create: {},
         edit: {},
         items: []
     };
 
-    // Initialize Tom Select for a single element
-    function initTomSelect(element, options = {}) {
-        if (!element) return null;
-        if (element.tomselect) {
-            element.tomselect.destroy();
-        }
+    function safeFocus(el) {
+        if (!el || typeof el.focus !== 'function') return;
         try {
-            const defaultOptions = {
-                allowEmptyOption: true,
-                create: false,
-                dropdownParent: 'body',
-                maxOptions: null,
-                closeAfterSelect: true,
-                hideSelected: false,
-                highlight: false, // Disable auto-highlighting first item
-                // Searchable dropdown input (is par hi typing se filter hota hai)
-                controlInput: '<input>',
-                searchField: ['text'],
-                openOnFocus: true,
-                selectOnTab: false, // Changed to false to prevent accidental selection
-                render: {
-                    no_results: function(data, escape) {
-                        return '<div class="no-results">No results found for "' + escape(data.input) + '"</div>';
-                    }
-                },
-                onInitialize: function() {
-                    // Remove any active option on initialize
-                    this.activeOption = null;
-                },
-                onDropdownOpen: function(dropdown) {
-                    // Dropdown ke andar jo actual search input hai usko pakdo
-                    const searchInput = dropdown.querySelector('.ts-dropdown-content input') || this.control_input;
+            el.focus({ preventScroll: true });
+        } catch (e) {
+            try { el.focus(); } catch (e2) {}
+        }
+    }
 
-                    // Kis original <select> par ye dropdown laga hai
-                    const originalSelect = this.input || this.original_input || this.select;
-                    // Filters (Vendor/Store) + Item Name dropdowns par selection clear rakhni hai
-                    const shouldClearOnOpen =
-                        originalSelect &&
-                        originalSelect.classList &&
-                        (originalSelect.classList.contains('js-filter-select') ||
-                         originalSelect.classList.contains('js-item-select'));
-                    if (shouldClearOnOpen) {
-                        this.clear(true);
-                    }
+    /** Pin Choices dropdown for line items inside modal tables (avoids clipping). */
+    function bindPoItemChoicesFixedDropdown(selectEl, choices, api) {
+        var modalBody = null;
+        var placeScheduled = false;
+        function getDropdownEl() {
+            return choices.dropdown && choices.dropdown.element;
+        }
+        function place() {
+            var dd = getDropdownEl();
+            var wrap = api.wrapper;
+            if (!dd || !wrap || !wrap.classList.contains('is-open')) return;
+            var inner = wrap.querySelector('.choices__inner');
+            if (!inner) return;
+            var r = inner.getBoundingClientRect();
+            var flipped = wrap.classList.contains('is-flipped');
+            var margin = 8;
+            var spaceBelow = window.innerHeight - r.bottom - margin * 2;
+            var spaceAbove = r.top - margin * 2;
+            dd.classList.add('po-item-choices-dropdown-fixed');
+            dd.style.setProperty('position', 'fixed', 'important');
+            dd.style.setProperty('left', Math.max(margin, Math.min(r.left, window.innerWidth - Math.max(r.width, 200) - margin)) + 'px', 'important');
+            dd.style.setProperty('width', Math.max(r.width, 220) + 'px', 'important');
+            dd.style.setProperty('max-height', Math.max(120, flipped ? spaceAbove : spaceBelow) + 'px', 'important');
+            dd.style.setProperty('z-index', '200000', 'important');
+            if (flipped) {
+                dd.style.setProperty('top', 'auto', 'important');
+                dd.style.setProperty('bottom', (window.innerHeight - r.top + 2) + 'px', 'important');
+            } else {
+                dd.style.setProperty('top', (r.bottom + 2) + 'px', 'important');
+                dd.style.setProperty('bottom', 'auto', 'important');
+            }
+        }
+        function onScrollOrResize() {
+            if (placeScheduled) return;
+            placeScheduled = true;
+            requestAnimationFrame(function() {
+                placeScheduled = false;
+                place();
+            });
+        }
+        function onShow() {
+            modalBody = selectEl.closest('.modal-body');
+            requestAnimationFrame(function() {
+                place();
+                requestAnimationFrame(place);
+            });
+            setTimeout(place, 0);
+            setTimeout(place, 80);
+            window.addEventListener('resize', onScrollOrResize, { passive: true });
+            document.addEventListener('scroll', onScrollOrResize, true);
+            if (modalBody) modalBody.addEventListener('scroll', onScrollOrResize, { passive: true });
+        }
+        function onHide() {
+            var dd = getDropdownEl();
+            if (dd) {
+                dd.classList.remove('po-item-choices-dropdown-fixed');
+                ['position', 'left', 'top', 'right', 'bottom', 'width', 'max-height', 'z-index'].forEach(function(p) {
+                    dd.style.removeProperty(p);
+                });
+            }
+            window.removeEventListener('resize', onScrollOrResize);
+            document.removeEventListener('scroll', onScrollOrResize, true);
+            if (modalBody) modalBody.removeEventListener('scroll', onScrollOrResize);
+            modalBody = null;
+        }
+        selectEl.addEventListener('showDropdown', onShow);
+        selectEl.addEventListener('hideDropdown', onHide);
+    }
 
-                    // Clear any previous search text so box is blank
-                    if (searchInput) {
-                        searchInput.value = '';
-                    }
-                    if (typeof this.setTextboxValue === 'function') {
-                        this.setTextboxValue('');
-                    }
-                    if (typeof this.onSearchChange === 'function') {
-                        this.onSearchChange('');
-                    }
-                    if (typeof this.refreshOptions === 'function') {
-                        this.refreshOptions(false);
-                    }
+    function createChoicesInstance(selectEl, settings) {
+        if (!selectEl || typeof window.Choices === 'undefined') return null;
+        if (selectEl.choicesInstance) return selectEl.choicesInstance;
+        settings = settings || {};
+        var isMulti = !!selectEl.multiple;
 
-                    // Cursor ko hamesha input ke starting me le jao
-                    if (searchInput) {
-                        setTimeout(() => {
-                            searchInput.focus();
-                            try {
-                                searchInput.setSelectionRange(0, 0);
-                            } catch (e) {}
-                            searchInput.scrollLeft = 0;
-                        }, 0);
+        var choiceConfig = {
+            allowHTML: false,
+            itemSelectText: '',
+            shouldSort: false,
+            searchEnabled: settings.searchEnabled !== false,
+            searchChoices: settings.searchChoices !== false,
+            searchFloor: typeof settings.searchFloor === 'number' ? settings.searchFloor : 0,
+            searchResultLimit: typeof settings.maxOptions === 'number' ? settings.maxOptions : -1,
+            placeholder: true,
+            placeholderValue: settings.placeholder || (selectEl.getAttribute('data-placeholder') || selectEl.getAttribute('placeholder') || ''),
+            searchPlaceholderValue: '',
+            removeItemButton: isMulti
+        };
+
+        var choices = new window.Choices(selectEl, choiceConfig);
+        var api = {
+            _choices: choices,
+            selectEl: selectEl,
+            input: selectEl,
+            settings: settings,
+            activeOption: null,
+            items: [],
+            wrapper: choices.containerOuter ? choices.containerOuter.element : null,
+            control_input: null,
+            getValue: function() {
+                if (!this.selectEl) return isMulti ? [] : '';
+                if (isMulti) {
+                    try {
+                        var v = this._choices.getValue(true);
+                        if (Array.isArray(v)) return v.map(String).filter(Boolean);
+                        return v ? [String(v)] : [];
+                    } catch (e) {
+                        return Array.from(this.selectEl.selectedOptions).map(function(o) { return o.value; }).filter(Boolean);
                     }
-                },
-                onFocus: function() {
-                    // Position cursor at start when field is focused
-                    const input = this.control_input;
+                }
+                return this.selectEl.value || '';
+            },
+            setValue: function(v) {
+                this._choices.removeActiveItems();
+                if (isMulti) {
+                    var arr = Array.isArray(v) ? v : (v !== '' && v !== null && typeof v !== 'undefined' ? [v] : []);
+                    arr.forEach(function(x) {
+                        if (x === '' || x === null || typeof x === 'undefined') return;
+                        try { this._choices.setChoiceByValue(String(x)); } catch (e) {}
+                    }, this);
+                } else {
+                    var value = (v === null || typeof v === 'undefined') ? '' : String(v);
+                    if (value !== '') this._choices.setChoiceByValue(value);
+                }
+                this.syncItems();
+            },
+            clear: function() {
+                this._choices.removeActiveItems();
+                this.syncItems();
+            },
+            addOption: function(opt) {
+                if (!opt) return;
+                var val = (opt.value === null || typeof opt.value === 'undefined') ? '' : String(opt.value);
+                this._choices.setChoices([{ value: val, label: opt.text || val, selected: false, disabled: false }], 'value', 'label', false);
+            },
+            destroy: function() {
+                if (this._choices) this._choices.destroy();
+                if (this.selectEl) {
+                    this.selectEl.choicesInstance = null;
+                    this.selectEl.tomselect = null;
+                }
+            },
+            setTextboxValue: function(v) {
+                if (this.control_input) this.control_input.value = v || '';
+            },
+            onSearchChange: function() {},
+            refreshOptions: function() {},
+            syncItems: function() {
+                var v = this.getValue();
+                if (isMulti) {
+                    this.items = Array.isArray(v) ? v.map(String) : [];
+                } else {
+                    this.items = (v === '' || v === null || typeof v === 'undefined') ? [] : [String(v)];
+                }
+            }
+        };
+        api.control_input = api.wrapper ? api.wrapper.querySelector('input.choices__input--cloned') : null;
+        if (api.wrapper && api.wrapper.classList) api.wrapper.classList.add('ts-wrapper');
+        if (choices.dropdown && choices.dropdown.element && choices.dropdown.element.classList) {
+            choices.dropdown.element.classList.add('ts-dropdown');
+        }
+        api.syncItems();
+
+        selectEl.addEventListener('change', function() { api.syncItems(); });
+        selectEl.addEventListener('showDropdown', function() {
+            if (typeof settings.onDropdownOpen === 'function') {
+                settings.onDropdownOpen.call(api, choices.dropdown ? choices.dropdown.element : null);
+            }
+        });
+        selectEl.addEventListener('hideDropdown', function() {
+            if (typeof settings.onDropdownClose === 'function') {
+                settings.onDropdownClose.call(api, choices.dropdown ? choices.dropdown.element : null);
+            }
+        });
+        if (typeof settings.onInitialize === 'function') settings.onInitialize.call(api);
+
+        if (selectEl.classList.contains('po-item-select')) {
+            bindPoItemChoicesFixedDropdown(selectEl, choices, api);
+        }
+
+        selectEl.choicesInstance = api;
+        selectEl.tomselect = api;
+        return api;
+    }
+
+    function createBlankSearchConfig(extra) {
+        return Object.assign({
+            allowEmptyOption: true,
+            dropdownParent: 'body',
+            searchField: ['text'],
+            controlInput: '<input>',
+            highlight: false,
+            onInitialize: function() {
+                this.activeOption = null;
+            },
+            onDropdownOpen: function(dropdown) {
+                var self = this;
+                var modalEl = self.input && self.input.closest ? self.input.closest('.modal') : null;
+                var modalBody = modalEl ? modalEl.querySelector('.modal-body') : null;
+                var helper = window.MessModalDropdownStability;
+                self._modalDropdownState = helper && modalEl ? helper.onOpen(modalEl) : null;
+                if (!self._modalDropdownState && modalBody) self._modalDropdownState = { scrollTop: modalBody.scrollTop };
+                function clearInputAndCursor() {
+                    var input = (dropdown && dropdown.querySelector('input.choices__input--cloned')) ||
+                        (dropdown && dropdown.querySelector('input')) ||
+                        self.control_input;
+                    if (typeof self.setTextboxValue === 'function') self.setTextboxValue('');
+                    if (typeof self.onSearchChange === 'function') self.onSearchChange('');
+                    if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
                     if (input) {
-                        setTimeout(() => {
-                            input.setSelectionRange(0, 0);
-                            input.scrollLeft = 0;
-                        }, 0);
+                        input.style.display = 'block';
+                        input.style.visibility = 'visible';
+                        input.style.opacity = '1';
+                        input.value = '';
+                        safeFocus(input);
+                        try { input.setSelectionRange(0, 0); } catch (e) {}
+                        input.scrollLeft = 0;
                     }
-                },
-                onType: function(str) {
-                    // Keep default keyboard highlight behavior for arrow navigation
-                    void str;
-                },
-                ...options
-            };
-            return new TomSelect(element, defaultOptions);
-        } catch (error) {
-            console.error('Tom Select initialization failed:', error);
-            return null;
-        }
+                    if (helper && modalEl) {
+                        helper.keepScroll(modalEl, self._modalDropdownState);
+                    } else if (modalBody && self._modalDropdownState && typeof self._modalDropdownState.scrollTop === 'number') {
+                        modalBody.scrollTop = self._modalDropdownState.scrollTop;
+                    }
+                }
+                if (self.settings && self.settings.clearOnOpen) {
+                    self.clear(true);
+                }
+                clearInputAndCursor();
+                setTimeout(clearInputAndCursor, 0);
+                setTimeout(clearInputAndCursor, 50);
+                setTimeout(clearInputAndCursor, 100);
+                if (dropdown) {
+                    setTimeout(function() {
+                        var opts = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"], .choices__item--selectable[aria-selected="true"]');
+                        opts.forEach(function(opt) {
+                            opt.classList.remove('active');
+                            opt.classList.remove('selected');
+                            opt.setAttribute('aria-selected', 'false');
+                        });
+                    }, 0);
+                }
+            },
+            onDropdownClose: function() {
+                var self = this;
+                var modalEl = self.input && self.input.closest ? self.input.closest('.modal') : null;
+                var modalBody = modalEl ? modalEl.querySelector('.modal-body') : null;
+                var helper = window.MessModalDropdownStability;
+                if (helper && modalEl) {
+                    helper.onClose(modalEl, self._modalDropdownState);
+                } else if (modalBody && self._modalDropdownState && typeof self._modalDropdownState.scrollTop === 'number') {
+                    modalBody.scrollTop = self._modalDropdownState.scrollTop;
+                }
+                self._modalDropdownState = null;
+            }
+        }, extra || {});
     }
 
-    // Destroy Tom Select instance
-    function destroyTomSelect(element) {
-        if (element && element.tomselect) {
-            element.tomselect.destroy();
+    function initChoicesSingle(selectEl, opts) {
+        opts = opts || {};
+        if (!selectEl || typeof window.Choices === 'undefined') return null;
+        if (selectEl.tomselect) {
+            try { selectEl.tomselect.destroy(); } catch (e) {}
         }
+        var base = createBlankSearchConfig({
+            placeholder: opts.placeholder || 'Select',
+            maxOptions: opts.maxOptions,
+            clearOnOpen: opts.clearOnOpen === true
+        });
+        return createChoicesInstance(selectEl, Object.assign(base, opts));
     }
 
-    // Initialize filter dropdowns
+    // List filters: Tom Select multiselect + search (matches Item Report / store multiselect pattern)
     function initFilterDropdowns() {
-        const filterVendor = document.querySelector('form[method="GET"] select[name="vendor_id"]');
-        const filterStore = document.querySelector('form[method="GET"] select[name="store_id"]');
-        
-        if (filterVendor) {
-            tomSelectInstances.filter.vendor = initTomSelect(filterVendor, {
-                placeholder: 'All Vendors'
-            });
+        var filterVendor = document.getElementById('poFilterVendor');
+        var filterStore = document.getElementById('poFilterStore');
+        if (typeof window.TomSelect === 'undefined') return;
+        var tsOpts = {
+            dropdownParent: 'body',
+            maxItems: null,
+            maxOptions: 500,
+            plugins: ['remove_button', 'dropdown_input'],
+            sortField: { field: 'text', direction: 'asc' },
+            closeAfterSelect: false
+        };
+        if (filterVendor && !filterVendor.tomselect) {
+            var phV = filterVendor.getAttribute('data-placeholder') || 'All vendors';
+            choicesInstances.filter.vendor = new TomSelect(filterVendor, Object.assign({}, tsOpts, { placeholder: phV }));
         }
-        if (filterStore) {
-            tomSelectInstances.filter.store = initTomSelect(filterStore, {
-                placeholder: 'All Stores'
-            });
+        if (filterStore && !filterStore.tomselect) {
+            var phS = filterStore.getAttribute('data-placeholder') || 'All stores';
+            choicesInstances.filter.store = new TomSelect(filterStore, Object.assign({}, tsOpts, { placeholder: phS }));
         }
     }
 
-    // Initialize create modal dropdowns
     function initCreateModalDropdowns() {
-        const createStore = document.querySelector('#createPurchaseOrderModal select[name="store_id"]');
-        const createVendor = document.querySelector('#createPurchaseOrderModal select[name="vendor_id"]');
-        const createPayment = document.querySelector('#createPurchaseOrderModal select[name="payment_code"]');
-        
+        var createStore = document.querySelector('#createPurchaseOrderModal select[name="store_id"]');
+        var createVendor = document.querySelector('#createPurchaseOrderModal select[name="vendor_id"]');
+        var createPayment = document.querySelector('#createPurchaseOrderModal select[name="payment_code"]');
         if (createStore) {
-            tomSelectInstances.create.store = initTomSelect(createStore, {
-                placeholder: 'Select Store'
-            });
+            choicesInstances.create.store = initChoicesSingle(createStore, { placeholder: 'Select Store' });
         }
         if (createVendor) {
-            tomSelectInstances.create.vendor = initTomSelect(createVendor, {
-                placeholder: 'Select Vendor'
-            });
+            choicesInstances.create.vendor = initChoicesSingle(createVendor, { placeholder: 'Select Vendor' });
         }
         if (createPayment) {
-            tomSelectInstances.create.payment = initTomSelect(createPayment, {
-                placeholder: 'Select Payment Mode'
-            });
+            choicesInstances.create.payment = initChoicesSingle(createPayment, { placeholder: 'Select Payment Mode' });
         }
     }
 
-    // Initialize edit modal dropdowns
     function initEditModalDropdowns() {
-        const editStore = document.getElementById('editStoreId');
-        const editVendor = document.getElementById('editVendorId');
-        const editPayment = document.getElementById('editPaymentCode');
-        
+        var editStore = document.getElementById('editStoreId');
+        var editVendor = document.getElementById('editVendorId');
+        var editPayment = document.getElementById('editPaymentCode');
         if (editStore) {
-            tomSelectInstances.edit.store = initTomSelect(editStore, {
-                placeholder: 'Select Store'
-            });
+            choicesInstances.edit.store = initChoicesSingle(editStore, { placeholder: 'Select Store' });
         }
         if (editVendor) {
-            tomSelectInstances.edit.vendor = initTomSelect(editVendor, {
-                placeholder: 'Select Vendor'
-            });
+            choicesInstances.edit.vendor = initChoicesSingle(editVendor, { placeholder: 'Select Vendor' });
         }
         if (editPayment) {
-            tomSelectInstances.edit.payment = initTomSelect(editPayment, {
-                placeholder: 'Select Payment Mode'
-            });
+            choicesInstances.edit.payment = initChoicesSingle(editPayment, { placeholder: 'Select Payment Mode' });
         }
     }
 
-    // Initialize item dropdown in a row
+    function refreshRowItemChoices(select, itemsToUse, currentValue) {
+        var api = select.tomselect;
+        var multi = !!select.multiple;
+        var selectedIds = multi
+            ? (Array.isArray(currentValue) ? currentValue.map(String) : [])
+            : (currentValue ? [String(currentValue)] : []);
+        var selSet = new Set(selectedIds);
+        var list = [{ value: '', label: 'Select Item', disabled: true, selected: false }];
+        itemsToUse.forEach(function (item) {
+            var sid = String(item.id);
+            list.push({
+                value: sid,
+                label: item.item_name || '—',
+                selected: selSet.has(sid)
+            });
+        });
+        api._choices.clearChoices();
+        api._choices.setChoices(list, 'value', 'label', true);
+        itemsToUse.forEach(function (item) {
+            var opt = select.querySelector('option[value="' + String(item.id).replace(/"/g, '\\"') + '"]');
+            if (opt) {
+                opt.setAttribute('data-unit', item.unit_measurement || '');
+                opt.setAttribute('data-code', item.item_code || '');
+            }
+        });
+        if (multi) {
+            selectedIds.forEach(function (id) {
+                try { api._choices.setChoiceByValue(String(id)); } catch (e) {}
+            });
+        } else if (currentValue) {
+            try { api._choices.setChoiceByValue(String(currentValue)); } catch (e) {}
+        }
+        api.syncItems();
+    }
+
     function initItemDropdownInRow(row) {
-        const select = row.querySelector('.po-item-select');
+        var select = row.querySelector('.po-item-select');
         if (select && !select.tomselect) {
-            // Pehle se koi value set hai ya nahi (edit mode me hogi)
-            const hadValueBefore = !!select.value;
-            const instance = initTomSelect(select, {
+            var hadValueBefore = select.multiple
+                ? (select.selectedOptions && select.selectedOptions.length > 0)
+                : !!select.value;
+            var instance = initChoicesSingle(select, {
                 placeholder: 'Select Item',
-                maxOptions: 200
+                maxOptions: 200,
+                clearOnOpen: false
             });
             if (instance) {
-                tomSelectInstances.items.push(instance);
-                // Agar pehle koi value nahi thi (naya row / blank item),
-                // to TomSelect ke first-item auto select ko turant clear kar do
+                choicesInstances.items.push(instance);
                 if (!hadValueBefore) {
-                    instance.clear(true);
+                    instance.clear();
                 }
             }
         }
     }
 
-    // Initialize all item dropdowns in a tbody
     function initAllItemDropdowns(tbody) {
-        const rows = tbody.querySelectorAll('.po-item-row');
-        rows.forEach(row => initItemDropdownInRow(row));
+        tbody.querySelectorAll('.po-item-row').forEach(function (row) {
+            initItemDropdownInRow(row);
+        });
     }
 
-    // Destroy all item dropdowns
     function destroyAllItemDropdowns() {
-        tomSelectInstances.items.forEach(instance => {
+        choicesInstances.items.forEach(function (instance) {
             if (instance) instance.destroy();
         });
-        tomSelectInstances.items = [];
+        choicesInstances.items = [];
+    }
+
+    function findItemMeta(id, isEditModal) {
+        var list = isEditModal
+            ? (editModalItems && editModalItems.length ? editModalItems : itemSubcategories)
+            : filteredItems;
+        return (list || []).find(function (s) { return String(s.id) === String(id); });
+    }
+
+    function reindexPoItemRows(tbody, isEdit) {
+        tbody.querySelectorAll('.po-item-select').forEach(function (sel) {
+            if (sel.tomselect) sel.tomselect.destroy();
+        });
+        choicesInstances.items = choicesInstances.items.filter(function (inst) {
+            return !(inst.selectEl && tbody.contains(inst.selectEl));
+        });
+        var rows = tbody.querySelectorAll('.po-item-row');
+        rows.forEach(function (row, i) {
+            row.querySelectorAll('[name^="items["]').forEach(function (el) {
+                el.name = el.name.replace(/items\[\d+\]/, 'items[' + i + ']');
+            });
+            initItemDropdownInRow(row);
+            updateUnitAndCode(row);
+            calcLineTotal(row);
+        });
+        if (isEdit) {
+            editItemRowIndex = rows.length;
+            updateEditRemoveButtons();
+            updateEditGrandTotal();
+        } else {
+            itemRowIndex = rows.length;
+            updateRemoveButtons();
+            updateGrandTotal();
+        }
+    }
+
+    function maybeSplitMultiItemRow(row) {
+        var select = row.querySelector('.po-item-select');
+        if (!select || !select.multiple) return false;
+        var vals = Array.from(select.selectedOptions).map(function (o) { return o.value; }).filter(Boolean);
+        if (vals.length <= 1) return false;
+        var tbody = row.closest('tbody');
+        if (!tbody) return false;
+        var isEdit = tbody.id === 'editPoItemsBody';
+        var qty = (row.querySelector('.po-qty') || {}).value || '';
+        var price = (row.querySelector('.po-unit-price') || {}).value || '';
+        var tax = (row.querySelector('.po-tax') || {}).value || '0';
+        if (select.tomselect) select.tomselect.destroy();
+        choicesInstances.items = choicesInstances.items.filter(function (inst) {
+            return inst.selectEl !== select;
+        });
+        var rowsSnap = Array.prototype.slice.call(tbody.querySelectorAll('.po-item-row'));
+        var rowIndex = rowsSnap.indexOf(row);
+        row.remove();
+        vals.forEach(function (id, j) {
+            var meta = findItemMeta(id, isEdit);
+            var editItem = {
+                item_subcategory_id: id,
+                quantity: qty,
+                unit_price: price,
+                tax_percent: tax,
+                total_price: '',
+                unit: meta ? meta.unit_measurement : '',
+                item_code: meta ? meta.item_code : ''
+            };
+            var tpl = document.createElement('template');
+            tpl.innerHTML = getItemRowHtml(0, editItem, isEdit).trim();
+            var newRow = tpl.content.firstElementChild;
+            var ref = tbody.children[rowIndex + j] || null;
+            tbody.insertBefore(newRow, ref);
+        });
+        reindexPoItemRows(tbody, isEdit);
+        return true;
     }
 
     function getItemRowHtml(index, editItem, isEditModal) {
         const selected = editItem && editItem.item_subcategory_id ? editItem.item_subcategory_id : '';
+        const allowMulti = !selected;
+        const multiAttr = allowMulti ? ' multiple' : '';
         const itemsToUse = isEditModal ? (editModalItems && editModalItems.length ? editModalItems : itemSubcategories) : filteredItems;
         const options = itemsToUse.map(s =>
             `<option value="${s.id}" data-unit="${(s.unit_measurement || '').replace(/"/g, '&quot;')}" data-code="${(s.item_code || '').replace(/"/g, '&quot;')}" ${s.id == selected ? 'selected' : ''}>${(s.item_name || '—').replace(/</g, '&lt;')}</option>`
@@ -1137,19 +1609,19 @@
         const lineTotal = editItem ? editItem.total_price : '';
         return `
         <tr class="po-item-row ${isEditModal ? 'edit-po-item-row' : ''}">
-            <td>
-                <select name="items[${index}][item_subcategory_id]" class="form-select  po-item-select" required>
+            <td class="py-2">
+                <select${multiAttr} name="items[${index}][item_subcategory_id]" class="form-select form-select-sm po-item-select rounded-3" required aria-label="Line items">
                     <option value="">Select Item</option>
                     ${options}
                 </select>
             </td>
-            <td><input type="text" name="items[${index}][unit]" class="form-control  po-unit" readonly placeholder="—" value="${unit}"></td>
-            <td><input type="text" class="form-control  po-item-code" readonly placeholder="—" value="${code}"></td>
-            <td><input type="text" name="items[${index}][quantity]" class="form-control  po-qty" value="${qty}" required></td>
-            <td><input type="text" name="items[${index}][unit_price]" class="form-control  po-unit-price" value="${price}" required></td>
-            <td><input type="text" name="items[${index}][tax_percent]" class="form-control  po-tax" max="100" value="${tax}"></td>
-            <td><input type="text" class="form-control  po-line-total bg-light" readonly placeholder="0.00" value="${lineTotal}"></td>
-            <td><button type="button" class="btn  btn-outline-danger po-remove-row" title="Remove">×</button></td>
+            <td class="py-2"><input type="text" name="items[${index}][unit]" class="form-control form-control-sm rounded-3 po-unit" readonly placeholder="—" value="${unit}"></td>
+            <td class="py-2"><input type="text" class="form-control form-control-sm rounded-3 po-item-code" readonly placeholder="—" value="${code}"></td>
+            <td class="py-2"><input type="text" name="items[${index}][quantity]" class="form-control form-control-sm rounded-3 po-qty" value="${qty}" required></td>
+            <td class="py-2"><input type="text" name="items[${index}][unit_price]" class="form-control form-control-sm rounded-3 po-unit-price" value="${price}" required></td>
+            <td class="py-2"><input type="text" name="items[${index}][tax_percent]" class="form-control form-control-sm rounded-3 po-tax" max="100" value="${tax}"></td>
+            <td class="py-2"><input type="text" class="form-control form-control-sm rounded-3 po-line-total bg-light" readonly placeholder="0.00" value="${lineTotal}"></td>
+            <td class="py-2 text-center"><button type="button" class="btn btn-sm btn-outline-danger rounded-3 po-remove-row" title="Remove line">×</button></td>
         </tr>`;
     }
 
@@ -1176,83 +1648,69 @@
     }
 
     function updateItemDropdowns(tbody, isEditModal) {
-        const rows = tbody.querySelectorAll('.po-item-row');
-        const itemsToUse = isEditModal ? (editModalItems && editModalItems.length ? editModalItems : itemSubcategories) : filteredItems;
-        
-        rows.forEach(row => {
-            const select = row.querySelector('.po-item-select');
+        var rows = tbody.querySelectorAll('.po-item-row');
+        var itemsToUse = isEditModal ? (editModalItems && editModalItems.length ? editModalItems : itemSubcategories) : filteredItems;
+        rows.forEach(function (row) {
+            var select = row.querySelector('.po-item-select');
             if (!select) return;
-            
-            const currentValue = select.tomselect ? select.tomselect.getValue() : select.value;
-            
-            // If Tom Select exists, use its API to update options (faster)
-            if (select.tomselect) {
-                select.tomselect.clearOptions();
-                select.tomselect.addOption({ value: '', text: 'Select Item' });
-                
-                itemsToUse.forEach(item => {
-                    select.tomselect.addOption({
-                        value: item.id,
-                        text: item.item_name || '—'
-                    });
-                    
-                    // Update the underlying option element's data attributes
-                    const opt = select.querySelector(`option[value="${item.id}"]`);
-                    if (opt) {
-                        opt.setAttribute('data-unit', item.unit_measurement || '');
-                        opt.setAttribute('data-code', item.item_code || '');
-                    }
-                });
-                
-                select.tomselect.setValue(currentValue, true);
+            var currentValue;
+            if (select.multiple) {
+                currentValue = Array.from(select.selectedOptions).map(function (o) { return o.value; }).filter(Boolean);
             } else {
-                // Fallback: rebuild select options manually
+                currentValue = select.tomselect ? select.tomselect.getValue() : select.value;
+            }
+            if (select.tomselect && select.tomselect._choices) {
+                refreshRowItemChoices(select, itemsToUse, currentValue);
+            } else {
                 select.innerHTML = '<option value="">Select Item</option>';
-                
-                itemsToUse.forEach(item => {
-                    const option = document.createElement('option');
+                itemsToUse.forEach(function (item) {
+                    var option = document.createElement('option');
                     option.value = item.id;
                     option.textContent = item.item_name || '—';
                     option.setAttribute('data-unit', item.unit_measurement || '');
                     option.setAttribute('data-code', item.item_code || '');
-                    if (item.id == currentValue) {
+                    if (select.multiple) {
+                        if (Array.isArray(currentValue) && currentValue.some(function (v) { return String(v) === String(item.id); })) {
+                            option.selected = true;
+                        }
+                    } else if (String(item.id) === String(currentValue)) {
                         option.selected = true;
                     }
                     select.appendChild(option);
                 });
-                
-                // Initialize Tom Select
-                const instance = initTomSelect(select, {
+                var instance = initChoicesSingle(select, {
                     placeholder: 'Select Item',
-                    maxOptions: 200
+                    maxOptions: 200,
+                    clearOnOpen: false
                 });
                 if (instance) {
-                    tomSelectInstances.items.push(instance);
+                    choicesInstances.items.push(instance);
                 }
             }
-            
-            // Update unit and code after dropdown refresh
             updateUnitAndCode(row);
         });
     }
 
     function updateUnitAndCode(row) {
-        const select = row.querySelector('.po-item-select');
+        var select = row.querySelector('.po-item-select');
         if (!select) return;
-        
-        // Get the selected option - works with both Tom Select and regular select
-        let selectedOption;
-        if (select.tomselect) {
-            const selectedValue = select.tomselect.getValue();
-            selectedOption = select.querySelector(`option[value="${selectedValue}"]`);
+        var ids;
+        if (select.multiple) {
+            ids = Array.from(select.selectedOptions).map(function (o) { return o.value; }).filter(Boolean);
         } else {
-            selectedOption = select.options[select.selectedIndex];
+            var sv = select.tomselect ? select.tomselect.getValue() : select.value;
+            ids = sv ? [String(sv)] : [];
         }
-        
-        const unitInput = row.querySelector('.po-unit');
-        const codeInput = row.querySelector('.po-item-code');
-        if (unitInput) unitInput.value = selectedOption && selectedOption.dataset.unit ? selectedOption.dataset.unit : '';
-        if (codeInput) codeInput.value = selectedOption && selectedOption.dataset.code ? selectedOption.dataset.code : '';
+        var unitInput = row.querySelector('.po-unit');
+        var codeInput = row.querySelector('.po-item-code');
+        if (ids.length === 0) {
+            if (unitInput) unitInput.value = '';
+            if (codeInput) codeInput.value = '';
+            return;
+        }
+        var opt = select.querySelector('option[value="' + String(ids[0]).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"]');
+        if (unitInput) unitInput.value = opt && opt.dataset.unit ? opt.dataset.unit : '';
+        if (codeInput) codeInput.value = opt && opt.dataset.code ? opt.dataset.code : '';
     }
 
     function calcLineTotal(row) {
@@ -1324,7 +1782,10 @@
         ) {
             const row = e.target.closest('.po-item-row');
             if (!row) return;
-            if (e.target.classList.contains('po-item-select')) updateUnitAndCode(row);
+            if (e.target.classList.contains('po-item-select')) {
+                if (maybeSplitMultiItemRow(row)) return;
+                updateUnitAndCode(row);
+            }
             calcLineTotal(row);
             updateGrandTotal();
         }
@@ -1447,8 +1908,12 @@
                 fetchVendorItems(vendorId, function() {
                     const currentIds = [];
                     tbody.querySelectorAll('.po-item-select').forEach(sel => {
-                        const v = sel.tomselect ? sel.tomselect.getValue() : sel.value;
-                        if (v) currentIds.push(v);
+                        if (sel.multiple) {
+                            Array.from(sel.selectedOptions).forEach(o => { if (o.value) currentIds.push(o.value); });
+                        } else {
+                            const v = sel.tomselect ? sel.tomselect.getValue() : sel.value;
+                            if (v) currentIds.push(v);
+                        }
                     });
                     const merged = (filteredItems || []).slice();
                     currentIds.forEach(id => {
@@ -1482,18 +1947,18 @@
                     var storeVal = (po.store_id != null && po.store_id !== '') ? String(po.store_id) : '';
                     var vendorVal = (po.vendor_id != null && po.vendor_id !== '') ? String(po.vendor_id) : '';
                     var paymentVal = (po.payment_code != null && po.payment_code !== '') ? String(po.payment_code) : '';
-                    if (tomSelectInstances.edit.store) {
-                        tomSelectInstances.edit.store.setValue(storeVal, true);
+                    if (choicesInstances.edit.store) {
+                        choicesInstances.edit.store.setValue(storeVal);
                     } else {
                         document.getElementById('editStoreId').value = storeVal;
                     }
-                    if (tomSelectInstances.edit.vendor) {
-                        tomSelectInstances.edit.vendor.setValue(vendorVal, true);
+                    if (choicesInstances.edit.vendor) {
+                        choicesInstances.edit.vendor.setValue(vendorVal);
                     } else {
                         document.getElementById('editVendorId').value = vendorVal;
                     }
-                    if (tomSelectInstances.edit.payment) {
-                        tomSelectInstances.edit.payment.setValue(paymentVal, true);
+                    if (choicesInstances.edit.payment) {
+                        choicesInstances.edit.payment.setValue(paymentVal);
                     } else {
                         document.getElementById('editPaymentCode').value = paymentVal;
                     }
@@ -1547,9 +2012,8 @@
                             editItemRowIndex = items.length;
                         }
                         
-                        // Initialize Tom Select for all item dropdowns
+                        // Initialize Choices for all item dropdowns
                         initAllItemDropdowns(tbody);
-                        
                         updateEditGrandTotal();
                         updateEditRemoveButtons();
                         new bootstrap.Modal(document.getElementById('editPurchaseOrderModal')).show();
@@ -1659,7 +2123,10 @@
         ) {
             const row = e.target.closest('.po-item-row');
             if (!row) return;
-            if (e.target.classList.contains('po-item-select')) updateUnitAndCode(row);
+            if (e.target.classList.contains('po-item-select')) {
+                if (maybeSplitMultiItemRow(row)) return;
+                updateUnitAndCode(row);
+            }
             calcLineTotal(row);
             updateEditGrandTotal();
         }
@@ -1696,7 +2163,8 @@
             const isDropdownInteraction =
                 activeEl.matches('select') ||
                 !!activeEl.closest('.ts-wrapper') ||
-                !!activeEl.closest('.ts-dropdown');
+                !!activeEl.closest('.choices__list--dropdown') ||
+                !!activeEl.closest('[class*="choices"]');
             if (isDropdownInteraction) return;
 
             e.preventDefault();
@@ -1743,7 +2211,8 @@
             const isDropdownInteraction =
                 activeEl.matches('select') ||
                 !!activeEl.closest('.ts-wrapper') ||
-                !!activeEl.closest('.ts-dropdown');
+                !!activeEl.closest('.choices__list--dropdown') ||
+                !!activeEl.closest('[class*="choices"]');
             if (isDropdownInteraction) return;
 
             e.preventDefault();
@@ -1838,7 +2307,7 @@
 
         function resetCreatePurchaseOrderForm() {
             // Reuse existing reset logic by triggering modal show handler logic:
-            // - clears TomSelect selections
+            // - clears Choices selections
             // - resets items table to one row
             // - clears bill file input
             var createModal = document.getElementById('createPurchaseOrderModal');
@@ -1851,11 +2320,11 @@
             // Reset native form fields
             form.reset();
 
-            // Reset Tom Select dropdowns
-            if (tomSelectInstances && tomSelectInstances.create) {
-                if (tomSelectInstances.create.vendor) tomSelectInstances.create.vendor.clear();
-                if (tomSelectInstances.create.store) tomSelectInstances.create.store.clear();
-                if (tomSelectInstances.create.payment) tomSelectInstances.create.payment.clear();
+            // Reset Choices dropdowns
+            if (choicesInstances && choicesInstances.create) {
+                if (choicesInstances.create.vendor) choicesInstances.create.vendor.clear();
+                if (choicesInstances.create.store) choicesInstances.create.store.clear();
+                if (choicesInstances.create.payment) choicesInstances.create.payment.clear();
             }
 
             // Clear selected bill file (if any)
@@ -1987,20 +2456,20 @@
             currentVendorId = null;
             filteredItems = itemSubcategories;
 
-            // Reset form fields and Tom Select instances
+            // Reset form fields and Choices instances
             const form = document.getElementById('createPOForm');
             if (form) {
                 form.reset();
                 
-                // Reset Tom Select dropdowns
-                if (tomSelectInstances.create.vendor) {
-                    tomSelectInstances.create.vendor.clear();
+                // Reset Choices dropdowns
+                if (choicesInstances.create.vendor) {
+                    choicesInstances.create.vendor.clear();
                 }
-                if (tomSelectInstances.create.store) {
-                    tomSelectInstances.create.store.clear();
+                if (choicesInstances.create.store) {
+                    choicesInstances.create.store.clear();
                 }
-                if (tomSelectInstances.create.payment) {
-                    tomSelectInstances.create.payment.clear();
+                if (choicesInstances.create.payment) {
+                    choicesInstances.create.payment.clear();
                 }
             }
 
@@ -2017,9 +2486,8 @@
                 tbody.insertAdjacentHTML('beforeend', getItemRowHtml(0, null, false));
                 itemRowIndex = 1;
                 
-                // Initialize Tom Select for the first row
+                // Initialize Choices for the first row
                 initAllItemDropdowns(tbody);
-                
                 updateGrandTotal();
                 updateRemoveButtons();
             }
@@ -2088,7 +2556,7 @@
         setTimeout(function() { win.print(); win.close(); }, 350);
     });
 
-    // Initialize Tom Select on page load
+    // Initialize Choices on page load
     document.addEventListener('DOMContentLoaded', function() {
         // Initialize filter dropdowns only (always visible)
         initFilterDropdowns();
@@ -2110,7 +2578,7 @@
         if (createPOModal) {
             createPOModal.addEventListener('show.bs.modal', function() {
                 // Ensure dropdowns are initialized when modal opens
-                if (!tomSelectInstances.create.vendor || !tomSelectInstances.create.vendor.input) {
+                if (!choicesInstances.create.vendor || !choicesInstances.create.vendor.input) {
                     initCreateModalDropdowns();
                 }
             });
@@ -2121,7 +2589,7 @@
         if (editPOModal) {
             editPOModal.addEventListener('shown.bs.modal', function() {
                 // Reinitialize edit modal dropdowns to ensure they work properly
-                if (!tomSelectInstances.edit.store || !tomSelectInstances.edit.store.input) {
+                if (!choicesInstances.edit.store || !choicesInstances.edit.store.input) {
                     initEditModalDropdowns();
                 }
             });

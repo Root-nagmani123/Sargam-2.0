@@ -22,13 +22,13 @@
     </div>
 
     {{-- Page header --}}
-    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4 no-print p-4 rounded-3 shadow-sm" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4 no-print p-4 rounded-3 shadow-sm" style="background: #004a93; color: white;">
         <div>
             <h4 class="mb-2 fw-bold d-flex align-items-center gap-2">
                 <i class="material-symbols-rounded" style="font-size: 2rem;">receipt_long</i>
                 Process Mess Bills
             </h4>
-            <p class="mb-0 small opacity-90">View mess bills for Employee, OT, Course & Other, generate invoices, and mark payments. Filter by date to see bills from Selling Voucher and Date Range reports.</p>
+            <p class="mb-0 small opacity-90 text-white">View mess bills for Employee, OT, Course & Other, generate invoices, and mark payments. Filter by date to see bills from Selling Voucher and Date Range reports.</p>
         </div>
         <button type="button" class="btn btn-light shadow d-inline-flex align-items-center gap-2 px-4" data-bs-toggle="modal" data-bs-target="#addProcessMessBillsModal" style="font-weight: 600;">
             <i class="material-symbols-rounded" style="font-size: 1.3rem;">add_circle</i>
@@ -116,38 +116,50 @@
                     </div>
                     <div class="col-md-3">
                         <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">person</i>Employee / OT / Course</label>
-                        <select name="client_type" id="filterClientTypeSlug" class="form-select choices-select" data-placeholder="All client types">
-                            <option value="">All Client Types</option>
+                        @php
+                            $selectedClientTypes = request('client_type', []);
+                            if (!is_array($selectedClientTypes)) {
+                                $selectedClientTypes = $selectedClientTypes !== null ? [$selectedClientTypes] : [];
+                            }
+                        @endphp
+                        <select name="client_type[]" id="filterClientTypeSlug" class="form-select choices-select" multiple data-placeholder="All client types">
                             @foreach($clientTypes ?? [] as $key => $label)
-                                <option value="{{ $key }}" {{ ($clientType ?? request('client_type')) === $key ? 'selected' : '' }}>{{ $label }}</option>
+                                <option value="{{ $key }}" {{ in_array($key, $selectedClientTypes) ? 'selected' : '' }}>{{ $label }}</option>
                             @endforeach
                         </select>
                     </div>
                     <div class="col-md-3">
                         <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">category</i>Client Type</label>
-                        <select name="client_type_pk" id="filterClientTypePk" class="form-select choices-select" data-placeholder="All">
-                            <option value="">All</option>
+                        @php
+                            $selectedClientTypePks = request('client_type_pk', []);
+                            if (!is_array($selectedClientTypePks)) {
+                                $selectedClientTypePks = $selectedClientTypePks !== null ? [$selectedClientTypePks] : [];
+                            }
+                        @endphp
+                        <select name="client_type_pk[]" id="filterClientTypePk" class="form-select choices-select" multiple data-placeholder="All">
                         </select>
                     </div>
-                        <div class="col-md-3">
+                    @php
+                        $selectedBuyerNames = (array) ($buyerName ?? request('buyer_name', []));
+                    @endphp
+                    <div class="col-md-3">
                         <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">badge</i>Buyer Name</label>
-                        <select name="buyer_name" id="filterBuyerName" class="form-select shadow-sm border-0 choices-select">
-                            <option value="">All Buyers</option>
+                        <select name="buyer_name[]" id="filterBuyerName" class="form-select shadow-sm border-0 choices-select" multiple data-placeholder="All Buyers">
                             @if(($clientType ?? request('client_type')) === 'ot' && isset($otBuyerNames) && $otBuyerNames->isNotEmpty())
                                 @foreach($otBuyerNames as $buyer)
-                                    <option value="{{ $buyer }}" {{ ($buyerName ?? request('buyer_name')) === $buyer ? 'selected' : '' }}>{{ $buyer }}</option>
+                                    <option value="{{ $buyer }}" {{ in_array($buyer, $selectedBuyerNames, true) ? 'selected' : '' }}>{{ $buyer }}</option>
                                 @endforeach
                             @elseif(($clientType ?? request('client_type')) === 'course' && isset($courseBuyerNames) && $courseBuyerNames->isNotEmpty())
                                 @foreach($courseBuyerNames as $buyer)
-                                    <option value="{{ $buyer }}" {{ ($buyerName ?? request('buyer_name')) === $buyer ? 'selected' : '' }}>{{ $buyer }}</option>
+                                    <option value="{{ $buyer }}" {{ in_array($buyer, $selectedBuyerNames, true) ? 'selected' : '' }}>{{ $buyer }}</option>
                                 @endforeach
                             @elseif(($clientType ?? request('client_type')) === 'other' && isset($otherBuyerNames) && $otherBuyerNames->isNotEmpty())
                                 @foreach($otherBuyerNames as $buyer)
-                                    <option value="{{ $buyer }}" {{ ($buyerName ?? request('buyer_name')) === $buyer ? 'selected' : '' }}>{{ $buyer }}</option>
+                                    <option value="{{ $buyer }}" {{ in_array($buyer, $selectedBuyerNames, true) ? 'selected' : '' }}>{{ $buyer }}</option>
                                 @endforeach
                             @elseif(($clientType ?? request('client_type')) === 'section' && isset($sectionBuyerNames) && $sectionBuyerNames->isNotEmpty())
                                 @foreach($sectionBuyerNames as $buyer)
-                                    <option value="{{ $buyer }}" {{ ($buyerName ?? request('buyer_name')) === $buyer ? 'selected' : '' }}>{{ $buyer }}</option>
+                                    <option value="{{ $buyer }}" {{ in_array($buyer, $selectedBuyerNames, true) ? 'selected' : '' }}>{{ $buyer }}</option>
                                 @endforeach
                             @endif
                         </select>
@@ -185,9 +197,15 @@
             <form method="GET" action="{{ route('admin.mess.process-mess-bills-employee.index') }}" id="filterForm" class="no-print">
                 <input type="hidden" name="date_from" value="{{ $effectiveDateFrom ?? request('date_from') }}">
                 <input type="hidden" name="date_to" value="{{ $effectiveDateTo ?? request('date_to') }}">
-                <input type="hidden" name="client_type" value="{{ $clientType ?? request('client_type') }}">
-                <input type="hidden" name="client_type_pk" value="{{ $clientTypePk ?? request('client_type_pk') }}">
-                <input type="hidden" name="buyer_name" value="{{ $buyerName ?? request('buyer_name') }}">
+                @foreach((array) request('client_type', []) as $selectedClientType)
+                    <input type="hidden" name="client_type[]" value="{{ $selectedClientType }}">
+                @endforeach
+                @foreach((array) request('client_type_pk', []) as $selectedClientTypePk)
+                    <input type="hidden" name="client_type_pk[]" value="{{ $selectedClientTypePk }}">
+                @endforeach
+                @foreach((array) ($buyerName ?? request('buyer_name', [])) as $selectedBuyerName)
+                    <input type="hidden" name="buyer_name[]" value="{{ $selectedBuyerName }}">
+                @endforeach
                 <input type="hidden" name="status" value="{{ $statusFilter ?? request('status') }}">
                 <div class="d-flex flex-wrap justify-content-end align-items-right mb-3 gap-2">
                     <div class="d-flex align-items-center gap-2">
@@ -542,7 +560,7 @@
 }
 </style>
 <div class="modal fade" id="addProcessMessBillsModal" tabindex="-1" aria-labelledby="addProcessMessBillsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered modal-fullscreen-md-down">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-md-down">
         <div class="modal-content border-0 shadow-lg rounded-3">
             <div class="modal-header bg-light border-0 py-3">
                 <h5 class="modal-title fw-semibold d-flex align-items-center gap-2" id="addProcessMessBillsModalLabel">
@@ -558,7 +576,7 @@
                     @csrf
                     <div class="row g-3 mb-3">
                         <div class="col-md-3">
-                            <label class="form-label small fw-semibold text-dark mb-2\"><i class=\"material-symbols-rounded align-middle me-1\" style=\"font-size: 1rem;\">event</i>Date From <span class="text-danger">*</span></label>
+                            <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1rem;">event</i>Date From <span class="text-danger">*</span></label>
                             <input type="text" name="modal_date_from" id="modal_date_from" class="form-control "
                                    value="{{ now()->startOfMonth()->format('d-m-Y') }}" placeholder="dd-mm-yyyy" autocomplete="off" required>
                         </div>
@@ -569,8 +587,7 @@
                         </div>
                         <div class="col-md-3">
                             <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1rem;">person</i>Employee / OT / Course</label>
-                            <select name="modal_client_type" id="modal_client_type" class="form-select shadow-sm border-0 choices-select" data-placeholder="All Client Types">
-                                <option value="">All Client Types</option>
+                            <select name="modal_client_type[]" id="modal_client_type" class="form-select shadow-sm border-0 choices-select" multiple data-placeholder="Select Client Types">
                                 @foreach($clientTypes ?? [] as $key => $label)
                                     <option value="{{ $key }}">{{ $label }}</option>
                                 @endforeach
@@ -578,25 +595,26 @@
                         </div>
                         <div class="col-md-3">
                             <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1rem;">category</i>Client Type</label>
-                            <select name="modal_client_type_pk" id="modal_client_type_pk" class="form-select choices-select" data-placeholder="All">
-                                <option value="">All</option>
+                            <select name="modal_client_type_pk[]" id="modal_client_type_pk" class="form-select choices-select" multiple data-placeholder="Select Client Types">
                             </select>
                         </div>
+                        @php
+                            $selectedModalBuyerNames = (array) ($buyerName ?? request('buyer_name', []));
+                        @endphp
                         <div class="col-md-3">
                         <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">badge</i>Buyer Name</label>
-                        <select name="modal_buyer_name" id="modal_buyer_name" class="form-select choices-select">
-                            <option value="">All Buyers</option>
+                        <select name="modal_buyer_name[]" id="modal_buyer_name" class="form-select choices-select" multiple data-placeholder="Select Buyers">
                             @if(($clientType ?? request('client_type')) === 'course' && isset($courseBuyerNames) && $courseBuyerNames->isNotEmpty())
                                 @foreach($courseBuyerNames as $buyer)
-                                    <option value="{{ $buyer }}" {{ ($buyerName ?? request('buyer_name')) === $buyer ? 'selected' : '' }}>{{ $buyer }}</option>
+                                    <option value="{{ $buyer }}" {{ in_array($buyer, $selectedModalBuyerNames, true) ? 'selected' : '' }}>{{ $buyer }}</option>
                                 @endforeach
                             @elseif(($clientType ?? request('client_type')) === 'other' && isset($otherBuyerNames) && $otherBuyerNames->isNotEmpty())
                                 @foreach($otherBuyerNames as $buyer)
-                                    <option value="{{ $buyer }}" {{ ($buyerName ?? request('buyer_name')) === $buyer ? 'selected' : '' }}>{{ $buyer }}</option>
+                                    <option value="{{ $buyer }}" {{ in_array($buyer, $selectedModalBuyerNames, true) ? 'selected' : '' }}>{{ $buyer }}</option>
                                 @endforeach
                             @elseif(($clientType ?? request('client_type')) === 'section' && isset($sectionBuyerNames) && $sectionBuyerNames->isNotEmpty())
                                 @foreach($sectionBuyerNames as $buyer)
-                                    <option value="{{ $buyer }}" {{ ($buyerName ?? request('buyer_name')) === $buyer ? 'selected' : '' }}>{{ $buyer }}</option>
+                                    <option value="{{ $buyer }}" {{ in_array($buyer, $selectedModalBuyerNames, true) ? 'selected' : '' }}>{{ $buyer }}</option>
                                 @endforeach
                             @endif
                         </select>
@@ -671,13 +689,14 @@
                                 <th class="text-nowrap py-3 fw-semibold">Invoice No.</th>
                                 <th class="text-nowrap py-3 fw-semibold">Payment Type</th>
                                 <th class="text-nowrap py-3 fw-semibold text-end">Total</th>
+                                <th class="text-nowrap py-3 fw-semibold text-center">Status</th>
                                 <th class="text-nowrap py-3 fw-semibold text-center">Actions</th>
                                 <th class="text-nowrap py-3 fw-semibold text-center">Receipt</th>
                             </tr>
                         </thead>
                         <tbody id="modalBillsTableBody">
                             <tr>
-                                <td colspan="8" class="text-center py-5 text-muted">
+                                <td colspan="9" class="text-center py-5 text-muted">
                                     <i class="material-symbols-rounded d-block mb-2 text-primary" style="font-size: 3rem;">description</i>
                                     <div class="fw-semibold">Select date range and click <strong class="text-primary">Load Bills</strong> to load unpaid bills.</div>
                                 </td>
@@ -686,8 +705,15 @@
                     </table>
                 </div>
 
-                <div class="d-flex flex-wrap justify-content-between align-items-center mt-3 pt-3 border-top">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3 pt-3 border-top">
                     <div class="small text-muted fw-semibold" id="modalPaginationInfo">Showing 0 to 0 of 0 entries</div>
+                    <nav id="modalPaginationNav" class="d-none" aria-label="Bills list pages">
+                        <ul class="pagination pagination-sm mb-0">
+                            <li class="page-item" id="modalPaginationPrevLi"><button type="button" class="page-link py-1 px-2" id="modalPaginationPrev">Previous</button></li>
+                            <li class="page-item disabled" id="modalPaginationPageLi"><span class="page-link py-1 px-2" id="modalPaginationPageLabel">Page 1 of 1</span></li>
+                            <li class="page-item" id="modalPaginationNextLi"><button type="button" class="page-link py-1 px-2" id="modalPaginationNext">Next</button></li>
+                        </ul>
+                    </nav>
                 </div>
             </div>
             <div class="modal-footer bg-light border-0 rounded-bottom-3 py-3">
@@ -706,9 +732,78 @@
     .choices__list--dropdown {
         z-index: 2000;
     }
+    .ts-wrapper.choices {
+        position: relative;
+    }
+    .ts-wrapper.choices .choices__list--dropdown {
+        position: absolute !important;
+        top: 100%;
+        left: 0;
+        right: 0;
+    }
+    .ts-wrapper.choices.is-flipped .choices__list--dropdown {
+        top: auto;
+        bottom: 100%;
+    }
+    .ts-wrapper.choices[data-type*="select-one"] .choices__input {
+        display: block !important;
+        width: 100% !important;
+        min-width: 100% !important;
+    }
+    /* Niche open: search upar | Uper (flipped) open: search niche */
+    .ts-wrapper.choices .choices__list--dropdown.is-active {
+        display: flex;
+        flex-direction: column;
+    }
+    .ts-wrapper.choices.is-flipped .choices__list--dropdown.is-active {
+        flex-direction: column-reverse;
+    }
+    .ts-wrapper.choices .choices__list--dropdown.is-active .choices__list {
+        flex: 1 1 auto;
+        min-height: 0;
+    }
+    .ts-wrapper.choices[data-type*="select-one"] .choices__list--dropdown .choices__input--cloned,
+    .ts-wrapper.choices[data-type*="select-one"] .choices__list--dropdown .choices__input {
+        border-top: none !important;
+        border-bottom: 1px solid #ced4da !important;
+        margin-bottom: 0 !important;
+    }
+    .ts-wrapper.choices.is-flipped[data-type*="select-one"] .choices__list--dropdown .choices__input--cloned,
+    .ts-wrapper.choices.is-flipped[data-type*="select-one"] .choices__list--dropdown .choices__input {
+        border-bottom: none !important;
+        border-top: 1px solid #ced4da !important;
+    }
+    .ts-wrapper.choices .choices__list--dropdown .choices__input--cloned {
+        display: block !important;
+        position: relative !important;
+        opacity: 1 !important;
+        flex-shrink: 0;
+        min-height: 34px;
+        width: 100% !important;
+    }
 </style>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    function normalizeChoicesSearchText(text) {
+        return String(text || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    }
+
+    function applyPartialMatchChoicesSearchFilter(instance, rawQuery) {
+        if (!instance || !instance.dropdown || !instance.dropdown.element) return;
+        var dropdownEl = instance.dropdown.element;
+        var query = normalizeChoicesSearchText(rawQuery);
+        var choiceItems = dropdownEl.querySelectorAll('.choices__item--choice');
+        if (!choiceItems || !choiceItems.length) return;
+
+        choiceItems.forEach(function(item) {
+            if (item.classList.contains('choices__placeholder')) return;
+            var label = normalizeChoicesSearchText(item.textContent || '');
+            var value = normalizeChoicesSearchText(item.getAttribute('data-value') || '');
+            var show = !query || label.indexOf(query) !== -1 || value.indexOf(query) !== -1;
+            item.style.display = show ? '' : 'none';
+        });
+    }
+
     if (typeof flatpickr !== 'undefined') {
         var dateFromInput = document.getElementById('date_from');
         var dateToInput = document.getElementById('date_to');
@@ -750,16 +845,41 @@ document.addEventListener('DOMContentLoaded', function() {
         if (el.dataset.choicesInitialized === 'true') return;
 
         var placeholder = el.getAttribute('data-placeholder') || 'Select';
-        var shouldSearch = (el.options && el.options.length > 10);
+        // Keep search enabled for all Choices dropdowns.
+        var shouldSearch = el.getAttribute('data-search') !== 'false';
+        var isMultiple = !!el.multiple;
 
         var instance = new Choices(el, {
             searchEnabled: shouldSearch,
-            removeItemButton: false,
+            // Disable built-in filter; we apply substring match below (typing shows partial matches).
+            searchChoices: false,
+            removeItemButton: isMultiple,
             itemSelectText: '',
             shouldSort: false,
+            position: 'bottom',
             placeholderValue: placeholder,
-            allowHTML: false
+            allowHTML: false,
+            closeDropdownOnSelect: !isMultiple
         });
+        if (instance.containerOuter && instance.containerOuter.element && instance.containerOuter.element.classList) {
+            instance.containerOuter.element.classList.add('ts-wrapper');
+        }
+        if (instance.dropdown && instance.dropdown.element && instance.dropdown.element.classList) {
+            instance.dropdown.element.classList.add('ts-dropdown');
+        }
+        function applySearchFilterAfterRender() {
+            var typed = (instance.input && instance.input.element) ? (instance.input.element.value || '') : '';
+            requestAnimationFrame(function () {
+                applyPartialMatchChoicesSearchFilter(instance, typed);
+            });
+        }
+        el.addEventListener('showDropdown', applySearchFilterAfterRender);
+        if (instance.input && instance.input.element) {
+            instance.input.element.addEventListener('input', function() {
+                applySearchFilterAfterRender();
+            });
+            instance.input.element.addEventListener('keyup', applySearchFilterAfterRender);
+        }
 
         el.dataset.choicesInitialized = 'true';
         el.choicesInstance = instance;
@@ -802,10 +922,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 var el = document.getElementById(id);
                 initChoicesElement(el);
             });
+            
+            // After Choices.js initialization, populate the modal dropdowns
+            setTimeout(function() {
+                if (typeof fillModalClientTypePk === 'function') {
+                    fillModalClientTypePk();
+                }
+            }, 50);
         });
     }
 
     var modalBillsData = [];
+    var modalBillsCurrentPage = 1;
     var paymentDetailsBillId = null;
     var paymentDetailsDateFrom = null;
     var paymentDetailsDateTo = null;
@@ -834,6 +962,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function loadModalBills() {
+        modalBillsCurrentPage = 1;
         var df = document.getElementById('modal_date_from');
         var dt = document.getElementById('modal_date_to');
         var ct = document.getElementById('modal_client_type');
@@ -843,11 +972,17 @@ document.addEventListener('DOMContentLoaded', function() {
         var dateTo = (dt && dt.value) ? toYmd(dt.value) : '';
         var clientType = (ct && ct.value) ? ct.value : '';
         var clientTypePk = (ctp && ctp.value) ? ctp.value : '';
-        var buyerName = (bn && bn.value) ? bn.value.trim() : '';
+        var buyerNames = bn
+            ? Array.from(bn.selectedOptions || []).map(function (o) { return String(o.value || '').trim(); }).filter(Boolean)
+            : [];
         var url = '{{ route("admin.mess.process-mess-bills-employee.modal-data") }}?date_from=' + encodeURIComponent(dateFrom) + '&date_to=' + encodeURIComponent(dateTo);
         if (clientType) url += '&client_type=' + encodeURIComponent(clientType);
         if (clientTypePk) url += '&client_type_pk=' + encodeURIComponent(clientTypePk);
-        if (buyerName) url += '&buyer_name=' + encodeURIComponent(buyerName);
+        if (buyerNames.length) {
+            buyerNames.forEach(function (name) {
+                url += '&buyer_name[]=' + encodeURIComponent(name);
+            });
+        }
         fetch(url)
             .then(function(r) { return r.json(); })
             .then(function(data) {
@@ -869,7 +1004,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 .filter(function (name) { return !!name; })
                         ));
 
-                        buyerSelect.innerHTML = '<option value=\"\">All Buyers</option>';
+                        buyerSelect.innerHTML = '';
 
                         buyers.forEach(function (name) {
                             var opt = document.createElement('option');
@@ -905,8 +1040,33 @@ document.addEventListener('DOMContentLoaded', function() {
             return (b.buyer_name || '').toLowerCase().indexOf(search) >= 0 ||
                    String(b.invoice_no || '').indexOf(search) >= 0 ||
                    (b.payment_type || '').toLowerCase().indexOf(search) >= 0 ||
-                   String(b.total || '').indexOf(search) >= 0;
+                   String(b.total || '').indexOf(search) >= 0 ||
+                   (b.invoice_notification_sent && 'invoice sent'.indexOf(search) >= 0);
         });
+    }
+
+    function updateModalPaginationNav(totalPages, filteredLength) {
+        var nav = document.getElementById('modalPaginationNav');
+        var prevBtn = document.getElementById('modalPaginationPrev');
+        var nextBtn = document.getElementById('modalPaginationNext');
+        var prevLi = document.getElementById('modalPaginationPrevLi');
+        var nextLi = document.getElementById('modalPaginationNextLi');
+        var pageLi = document.getElementById('modalPaginationPageLi');
+        var label = document.getElementById('modalPaginationPageLabel');
+        if (!nav || !prevBtn || !nextBtn || !label) return;
+        if (totalPages <= 1 || !filteredLength) {
+            nav.classList.add('d-none');
+            return;
+        }
+        nav.classList.remove('d-none');
+        label.textContent = 'Page ' + modalBillsCurrentPage + ' of ' + totalPages;
+        var onFirst = modalBillsCurrentPage <= 1;
+        var onLast = modalBillsCurrentPage >= totalPages;
+        prevBtn.disabled = onFirst;
+        nextBtn.disabled = onLast;
+        if (prevLi) prevLi.classList.toggle('disabled', onFirst);
+        if (nextLi) nextLi.classList.toggle('disabled', onLast);
+        if (pageLi) pageLi.classList.add('disabled');
     }
 
     function renderModalTable() {
@@ -915,16 +1075,20 @@ document.addEventListener('DOMContentLoaded', function() {
         if (modalSelectAllEl) modalSelectAllEl.checked = false;
         var filtered = getFilteredModalBills();
         var perPage = parseInt((document.getElementById('modalPerPage') || {}).value || 10, 10);
-        var page = 1;
-        var start = (page - 1) * perPage;
+        var totalPages = filtered.length ? Math.ceil(filtered.length / perPage) : 0;
+        modalBillsCurrentPage = Math.max(1, Math.min(modalBillsCurrentPage, totalPages || 1));
+        var start = (modalBillsCurrentPage - 1) * perPage;
         var pageData = filtered.slice(start, start + perPage);
 
         if (pageData.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">No unpaid bills found. Adjust date range and click Load Bills.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted">No unpaid bills found. Adjust date range and click Load Bills.</td></tr>';
         } else {
             tbody.innerHTML = pageData.map(function(b, i) {
                 var sn = start + i + 1;
                 var printUrl = printReceiptBaseUrl.replace('__ID__', b.id);
+                var statusCell = b.invoice_notification_sent
+                    ? '<span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle fw-semibold">Invoice Sent</span>'
+                    : '<span class="text-muted small">—</span>';
                 return '<tr class="' + (i % 2 === 0 ? 'table-light' : '') + '">' +
                     '<td><input type="checkbox" class="form-check-input modal-bill-check" data-id="' + b.id + '" data-name="' + (b.buyer_name || '').replace(/"/g, '&quot;') + '"></td>' +
                     '<td>' + sn + '</td>' +
@@ -932,6 +1096,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     '<td>' + (b.invoice_no || '—') + '</td>' +
                     '<td>' + (b.payment_type || '—') + '</td>' +
                     '<td class="text-end">' + (b.total || '0') + '</td>' +
+                    '<td class="text-center">' + statusCell + '</td>' +
                     '<td class="text-center"><div class="btn-group btn-group-sm">' +
                     '<button type="button" class="btn btn-outline-primary generate-invoice-btn" data-bill-id="' + b.id + '" data-buyer-name="' + (b.buyer_name || '').replace(/"/g, '&quot;') + '" title="Generate Invoice">Invoice</button>' +
                     '<button type="button" class="btn btn-outline-success generate-payment-btn" data-bill-id="' + b.id + '" data-buyer-name="' + (b.buyer_name || '').replace(/"/g, '&quot;') + '" title="Mark as Paid">Payment</button>' +
@@ -942,6 +1107,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         document.getElementById('modalPaginationInfo').textContent = 'Showing ' + (filtered.length ? start + 1 : 0) + ' to ' + Math.min(start + perPage, filtered.length) + ' of ' + filtered.length + ' entries';
+        updateModalPaginationNav(totalPages, filtered.length);
         updateBulkActionsBar();
     }
 
@@ -991,10 +1157,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         var bn = document.getElementById('modal_buyer_name');
         if (bn) {
-            bn.innerHTML = '<option value=\"\">All Buyers</option>';
+            bn.innerHTML = '';
             if (bn.choicesInstance) {
                 bn.choicesInstance.clearStore();
-                bn.choicesInstance.setChoices([{ value: '', label: 'All Buyers', selected: true }], 'value', 'label', true);
+                bn.choicesInstance.setChoices([], 'value', 'label', true);
             }
         }
         var mp = document.getElementById('modal_mode_of_payment');
@@ -1013,8 +1179,29 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('addProcessMessBillsModal').addEventListener('show.bs.modal', function() { loadModalBills(); });
     document.getElementById('modalLoadBillsBtn').addEventListener('click', loadModalBills);
     document.getElementById('modalClearFiltersBtn').addEventListener('click', clearModalFilters);
-    document.getElementById('modalSearch').addEventListener('input', renderModalTable);
-    document.getElementById('modalPerPage').addEventListener('change', renderModalTable);
+    document.getElementById('modalSearch').addEventListener('input', function() {
+        modalBillsCurrentPage = 1;
+        renderModalTable();
+    });
+    document.getElementById('modalPerPage').addEventListener('change', function() {
+        modalBillsCurrentPage = 1;
+        renderModalTable();
+    });
+    document.getElementById('modalPaginationPrev').addEventListener('click', function() {
+        if (modalBillsCurrentPage > 1) {
+            modalBillsCurrentPage--;
+            renderModalTable();
+        }
+    });
+    document.getElementById('modalPaginationNext').addEventListener('click', function() {
+        var filtered = getFilteredModalBills();
+        var perPage = parseInt((document.getElementById('modalPerPage') || {}).value || 10, 10);
+        var totalPages = filtered.length ? Math.ceil(filtered.length / perPage) : 0;
+        if (modalBillsCurrentPage < totalPages) {
+            modalBillsCurrentPage++;
+            renderModalTable();
+        }
+    });
 
     // --- Client Type / Buyer dependent dropdowns in modal (similar to Sale Voucher Report) ---
     (function initModalClientTypeFilters() {
@@ -1023,6 +1210,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var modalBuyerName = document.getElementById('modal_buyer_name');
         var studentsByCourseUrl = "{{ url('/admin/mess/selling-voucher-date-range/students-by-course') }}";
         var buyersForReportUrl = "{{ route('admin.mess.reports.category-wise-print-slip.buyers') }}";
+        var courseBuyersByCourseUrl = "{{ url('/admin/mess/reports/category-wise-print-slip/course-buyers') }}";
 
         if (!modalClientType || !modalClientTypePk || !modalBuyerName) {
             return;
@@ -1078,36 +1266,58 @@ document.addEventListener('DOMContentLoaded', function() {
         var modalPkToClientGroupKey = {};
 
         function fillModalClientTypePk() {
-            var slug = modalClientType.value;
-            modalClientTypePk.innerHTML = '<option value=\"\">All</option>';
+            // Get selected slugs (now multiselect)
+            var selectedSlugs = [];
+            if (modalClientType.choicesInstance) {
+                selectedSlugs = modalClientType.choicesInstance.getValue(true);
+            } else {
+                selectedSlugs = Array.from(modalClientType.selectedOptions).map(function(opt) { return opt.value; });
+            }
+            
+            modalClientTypePk.innerHTML = '';
 
             var choicesPk = modalClientTypePk.choicesInstance || null;
             if (choicesPk) {
                 choicesPk.clearStore();
-                choicesPk.setChoices([{ value: '', label: 'All', selected: true }], 'value', 'label', true);
+                choicesPk.setChoices([], 'value', 'label', true);
             }
 
             modalPkToClientGroupKey = {};
 
-            if ((slug === 'ot' || slug === 'course') && otCourseOptions.length) {
-                otCourseOptions.forEach(function (o) {
-                    var opt = document.createElement('option');
-                    opt.value = o.value;
-                    opt.textContent = o.text;
-                    modalClientTypePk.appendChild(opt);
-                });
-            } else if (slug && clientTypeOptions[slug]) {
-                clientTypeOptions[slug].forEach(function (o) {
-                    var opt = document.createElement('option');
-                    opt.value = o.value;
-                    opt.textContent = o.text;
-                    if (o.dataClientName) {
-                        opt.dataset.clientName = o.dataClientName;
-                        modalPkToClientGroupKey[String(o.value)] = String(o.dataClientName);
-                    }
-                    modalClientTypePk.appendChild(opt);
-                });
-            }
+            // Collect options from all selected slugs
+            var allOptions = [];
+            selectedSlugs.forEach(function(slug) {
+                if ((slug === 'ot' || slug === 'course') && otCourseOptions.length) {
+                    allOptions = allOptions.concat(otCourseOptions);
+                } else if (slug && clientTypeOptions[slug]) {
+                    clientTypeOptions[slug].forEach(function (o) {
+                        allOptions.push(o);
+                        if (o.dataClientName) {
+                            modalPkToClientGroupKey[String(o.value)] = String(o.dataClientName);
+                        }
+                    });
+                }
+            });
+            
+            // Remove duplicates based on value
+            var uniqueOptions = [];
+            var seenValues = {};
+            allOptions.forEach(function(o) {
+                if (!seenValues[o.value]) {
+                    seenValues[o.value] = true;
+                    uniqueOptions.push(o);
+                }
+            });
+            
+            uniqueOptions.forEach(function (o) {
+                var opt = document.createElement('option');
+                opt.value = o.value;
+                opt.textContent = o.text;
+                if (o.dataClientName) {
+                    opt.dataset.clientName = o.dataClientName;
+                }
+                modalClientTypePk.appendChild(opt);
+            });
 
             if (choicesPk) {
                 var newChoices = Array.from(modalClientTypePk.options).map(function (o) {
@@ -1120,14 +1330,37 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         function fillModalBuyerNames() {
-            var slug = modalClientType.value;
-            var selectedPk = modalClientTypePk.value;
-            modalBuyerName.innerHTML = '<option value=\"\">All Buyers</option>';
+            // Get selected slugs (now multiselect)
+            var selectedSlugs = [];
+            if (modalClientType.choicesInstance) {
+                selectedSlugs = modalClientType.choicesInstance.getValue(true);
+            } else {
+                selectedSlugs = Array.from(modalClientType.selectedOptions).map(function(opt) { return opt.value; });
+            }
+            
+            // Get selected pks (now multiselect)
+            var selectedPks = [];
+            if (modalClientTypePk.choicesInstance) {
+                selectedPks = modalClientTypePk.choicesInstance.getValue(true);
+            } else {
+                selectedPks = Array.from(modalClientTypePk.selectedOptions).map(function(opt) { return opt.value; });
+            }
+            
+            modalBuyerName.innerHTML = '';
 
             var choicesBuyer = modalBuyerName.choicesInstance || null;
             if (choicesBuyer) {
                 choicesBuyer.clearStore();
-                choicesBuyer.setChoices([{ value: '', label: 'All Buyers', selected: true }], 'value', 'label', true);
+                choicesBuyer.setChoices([], 'value', 'label', true);
+            }
+
+            function syncChoicesBuyer() {
+                if (!choicesBuyer) return;
+                var newChoices = Array.from(modalBuyerName.options).map(function (o) {
+                    return { value: o.value, label: o.text, selected: o.selected };
+                });
+                choicesBuyer.clearStore();
+                choicesBuyer.setChoices(newChoices, 'value', 'label', true);
             }
 
             function addBuyerOptions(list) {
@@ -1138,6 +1371,89 @@ document.addEventListener('DOMContentLoaded', function() {
                     modalBuyerName.appendChild(opt);
                 });
             }
+
+            function getModalDateRangeYmd() {
+                var df = document.getElementById('modal_date_from');
+                var dt = document.getElementById('modal_date_to');
+                return {
+                    from: (df && df.value) ? toYmd(df.value) : '',
+                    to: (dt && dt.value) ? toYmd(dt.value) : ''
+                };
+            }
+
+            function loadBuyersFromReportEndpoint(slugToLoad) {
+                var range = getModalDateRangeYmd();
+                var qs = new URLSearchParams();
+                qs.set('client_type_slug', slugToLoad);
+                if (range.from) qs.set('from_date', range.from);
+                if (range.to) qs.set('to_date', range.to);
+
+                // Add PK if selected (course/ot => course_master_pk, others => client_type_pk)
+                var selectedPk = selectedPks[0] || '';
+                if (selectedPk) {
+                    if (slugToLoad === 'course' || slugToLoad === 'ot') {
+                        qs.set('course_master_pk', selectedPk);
+                    } else {
+                        qs.set('client_type_pk', selectedPk);
+                    }
+                }
+
+                fetch(buyersForReportUrl + '?' + qs.toString(), { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        var buyers = (data.buyers || []).map(function (name) {
+                            var v = String(name || '').trim();
+                            return v ? { value: v, text: v } : null;
+                        }).filter(Boolean);
+                        addBuyerOptions(buyers);
+                        syncChoicesBuyer();
+                    })
+                    .catch(function () {
+                        syncChoicesBuyer();
+                    });
+            }
+
+            // When multiple slugs are selected, load buyers from all of them
+            if (selectedSlugs.length > 1 || selectedSlugs.length === 0) {
+                // Multiple client types or none selected: load buyers from all selected types
+                var allBuyers = [];
+                
+                selectedSlugs.forEach(function(slug) {
+                    if (slug === 'employee') {
+                        // Add all employee buyers
+                        allBuyers = allBuyers.concat(employeeNames['academy staff'] || [])
+                            .concat(employeeNames['faculty'] || [])
+                            .concat(employeeNames['mess staff'] || []);
+                    } else if (slug === 'ot') {
+                        allBuyers = allBuyers.concat((otBuyerNames || []).map(function (name) { return { value: name, text: name }; }));
+                    } else if (slug === 'course') {
+                        allBuyers = allBuyers.concat((courseBuyerNames || []).map(function (name) { return { value: name, text: name }; }));
+                    } else if (slug === 'other') {
+                        allBuyers = allBuyers.concat((otherBuyerNames || []).map(function (name) { return { value: name, text: name }; }));
+                    } else if (slug === 'section') {
+                        allBuyers = allBuyers.concat((sectionBuyerNames || []).map(function (name) { return { value: name, text: name }; }));
+                    }
+                });
+                
+                // De-duplicate
+                var map = new Map();
+                allBuyers.forEach(function (o) {
+                    var key = String(o.value || '').trim().toLowerCase();
+                    if (!key) return;
+                    if (!map.has(key)) map.set(key, { value: o.value, text: o.text });
+                });
+                var unique = Array.from(map.values()).sort(function (a, b) {
+                    return String(a.text || '').localeCompare(String(b.text || ''), undefined, { sensitivity: 'base' });
+                });
+                
+                addBuyerOptions(unique);
+                syncChoicesBuyer();
+                return;
+            }
+            
+            // Single slug selected: use existing logic
+            var slug = selectedSlugs[0];
+            var selectedPk = selectedPks[0] || '';
 
             if (slug === 'employee') {
                 var selectedOpt = modalClientTypePk.options[modalClientTypePk.selectedIndex];
@@ -1156,6 +1472,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         addBuyerOptions(employeeNames[key] || []);
                     });
                 }
+                syncChoicesBuyer();
             } else if (slug === 'ot' && selectedPk) {
                 // OT + specific course: students by course
                 fetch(studentsByCourseUrl + '/' + selectedPk, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
@@ -1165,72 +1482,129 @@ document.addEventListener('DOMContentLoaded', function() {
                             return { value: s.display_name || '', text: s.display_name || '—' };
                         });
                         addBuyerOptions(students);
+                        syncChoicesBuyer();
                     })
                     .catch(function () {
-                        // ignore error; All Buyers hi rahe
+                        // ignore error; no buyer options
+                        syncChoicesBuyer();
                     });
             } else if (slug === 'ot' && !selectedPk) {
-                // Sirf OT select hai – OT ke liye jo buyer names controllers se aaye hain unko dikhao
-                var listOt = (courseBuyerNames || []).map(function (name) {
-                    return { value: name, text: name };
-                });
-                addBuyerOptions(listOt);
-            } else if (slug === 'course') {
-                var listCourse = (courseBuyerNames || []).map(function (name) {
-                    return { value: name, text: name };
-                });
-                addBuyerOptions(listOt);
-            } else if (slug === 'course') {
-                // Requirement (modal):
-                // - Course selected + Client Type = All => Buyer Name = ALL course names
-                // - Course selected + specific Client Type PK => Buyer Name = that course name only
-                var courses = (otCourseOptions || []);
-                if (!selectedPk) {
-                    var listCourseAll = courses.map(function (o) {
-                        return { value: o.text, text: o.text };
-                    });
-                    addBuyerOptions(listCourseAll);
-                } else {
-                    var matchCourse = courses.find(function (o) {
-                        return String(o.value) === String(selectedPk);
-                    });
-                    if (matchCourse) {
-                        addBuyerOptions([{ value: matchCourse.text, text: matchCourse.text }]);
+                // OT + All:
+                // 1) Prefer voucher-based buyer list (respects modal date range)
+                // 2) If empty, fallback to students from ALL OT courses
+                var range2 = getModalDateRangeYmd();
+                var qsOt = new URLSearchParams();
+                qsOt.set('client_type_slug', 'ot');
+                if (range2.from) qsOt.set('from_date', range2.from);
+                if (range2.to) qsOt.set('to_date', range2.to);
+
+                function loadStudentsAllOtCourses() {
+                    var coursePks = (otCourseOptions || []).map(function (o) { return o.value; }).filter(Boolean);
+                    if (!coursePks.length) {
+                        syncChoicesBuyer();
+                        return;
                     }
+
+                    Promise.all(coursePks.map(function (coursePk) {
+                        return fetch(studentsByCourseUrl + '/' + coursePk, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                            .then(function (r) { return r.json(); })
+                            .then(function (data) {
+                                return (data.students || []).map(function (s) {
+                                    return String(s.display_name || '').trim();
+                                }).filter(function (n) { return !!n; });
+                            })
+                            .catch(function () { return []; });
+                    }))
+                        .then(function (results) {
+                            var seen = new Set();
+                            var all = [];
+                            (results || []).forEach(function (names) {
+                                (names || []).forEach(function (n) {
+                                    var key = String(n || '').trim();
+                                    if (!key || seen.has(key)) return;
+                                    seen.add(key);
+                                    all.push({ value: key, text: key });
+                                });
+                            });
+                            all.sort(function (a, b) {
+                                return String(a.text || '').localeCompare(String(b.text || ''), undefined, { sensitivity: 'base' });
+                            });
+                            addBuyerOptions(all);
+                            syncChoicesBuyer();
+                        })
+                        .catch(function () {
+                            syncChoicesBuyer();
+                        });
                 }
+
+                fetch(buyersForReportUrl + '?' + qsOt.toString(), { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        var buyers = (data.buyers || []).map(function (name) { return String(name || '').trim(); })
+                            .filter(function (v) { return !!v; })
+                            .map(function (v) { return { value: v, text: v }; });
+                        if (buyers.length) {
+                            addBuyerOptions(buyers);
+                            syncChoicesBuyer();
+                            return;
+                        }
+                        loadStudentsAllOtCourses();
+                    })
+                    .catch(function () {
+                        loadStudentsAllOtCourses();
+                    });
+                return; // async
+            } else if (slug === 'course') {
+                // Course: same as Sale Voucher logic
+                // - Specific course => buyer names for that course (date filtered)
+                // - All => buyer names across course vouchers (date filtered)
+                if (selectedPk) {
+                    var range3 = getModalDateRangeYmd();
+                    var qsC = new URLSearchParams();
+                    if (range3.from) qsC.set('from_date', range3.from);
+                    if (range3.to) qsC.set('to_date', range3.to);
+                    var url = courseBuyersByCourseUrl + '/' + selectedPk + (qsC.toString() ? ('?' + qsC.toString()) : '');
+                    fetch(url, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                        .then(function (r) { return r.json(); })
+                        .then(function (data) {
+                            var buyers = (data.buyers || []).map(function (name) {
+                                var v = String(name || '').trim();
+                                return v ? { value: v, text: v } : null;
+                            }).filter(Boolean);
+                            addBuyerOptions(buyers);
+                            syncChoicesBuyer();
+                        })
+                        .catch(function () {
+                            // fallback: buyers endpoint still respects course_master_pk
+                            loadBuyersFromReportEndpoint('course');
+                        });
+                    return; // async
+                }
+
+                loadBuyersFromReportEndpoint('course');
+                return; // async
             } else if (slug === 'other') {
-                // Other: use distinct buyer names list
-                var listOther = (otherBuyerNames || []).map(function (name) {
-                    return { value: name, text: name };
-                });
-                addBuyerOptions(listOther);
+                loadBuyersFromReportEndpoint('other');
+                return; // async
             } else if (slug === 'section') {
-                var listSection = (sectionBuyerNames || []).map(function (name) {
-                    return { value: name, text: name };
-                });
-                addBuyerOptions(listSection);
+                loadBuyersFromReportEndpoint('section');
+                return; // async
             } else if (!slug && (allBuyerNames || []).length) {
                 // koi client type select nahi – saare distinct buyer names (course/other/section etc.) dikhado
                 var listAll = (allBuyerNames || []).map(function (name) {
                     return { value: name, text: name };
                 });
                 addBuyerOptions(listAll);
-            }
-
-            if (choicesBuyer) {
-                var newChoices = Array.from(modalBuyerName.options).map(function (o) {
-                    return { value: o.value, label: o.text, selected: o.selected };
-                });
-                choicesBuyer.clearStore();
-                choicesBuyer.setChoices(newChoices, 'value', 'label', true);
+                syncChoicesBuyer();
+            } else {
+                syncChoicesBuyer();
             }
         }
 
         modalClientType.addEventListener('change', fillModalClientTypePk);
         modalClientTypePk.addEventListener('change', fillModalBuyerNames);
 
-        // Initial fill
-        fillModalClientTypePk();
+        // Note: Initial fill is now called when modal is shown (after Choices.js init)
     })();
 
     // --- Main "Process Mess Bills" filters – Employee / OT / Course + Client Type + Buyer Name ---
@@ -1240,8 +1614,9 @@ document.addEventListener('DOMContentLoaded', function() {
         var buyerSelect = document.getElementById('filterBuyerName');
         var studentsByCourseUrl = "{{ url('/admin/mess/selling-voucher-date-range/students-by-course') }}";
         var buyersForReportUrl = "{{ route('admin.mess.reports.category-wise-print-slip.buyers') }}";
-        var preservedClientTypePk = {!! json_encode($clientTypePk ?? request('client_type_pk', '')) !!};
-        var preservedBuyerName = {!! json_encode($buyerName ?? request('buyer_name', '')) !!};
+        var courseBuyersByCourseUrl = "{{ url('/admin/mess/reports/category-wise-print-slip/course-buyers') }}";
+        var preservedClientTypePk = {!! json_encode((array) ($clientTypePks ?? request('client_type_pk', []))) !!};
+        var preservedBuyerName = {!! json_encode((array) ($buyerNames ?? request('buyer_name', []))) !!};
 
         if (!clientTypeSlug || !clientTypePk || !buyerSelect) {
             return;
@@ -1284,6 +1659,7 @@ document.addEventListener('DOMContentLoaded', function() {
 @endforeach
             ]
         };
+        var otBuyerNames = {!! json_encode(($otBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
         var courseBuyerNames = {!! json_encode(($courseBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
         var otherBuyerNames = {!! json_encode(($otherBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
         var sectionBuyerNames = {!! json_encode(($sectionBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
@@ -1362,11 +1738,25 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         function fillBuyerSelect(preserve) {
-            var slug = clientTypeSlug.value;
-            var selectedPk = clientTypePk.value;
-            var currentBuyer = preserve ? preservedBuyerName : '';
+            // Get selected slugs (now multiselect)
+            var selectedSlugs = [];
+            if (clientTypeSlug.choicesInstance) {
+                selectedSlugs = clientTypeSlug.choicesInstance.getValue(true);
+            } else {
+                selectedSlugs = Array.from(clientTypeSlug.selectedOptions).map(function(opt) { return opt.value; });
+            }
+            
+            // Get selected pks (now multiselect)
+            var selectedPks = [];
+            if (clientTypePk.choicesInstance) {
+                selectedPks = clientTypePk.choicesInstance.getValue(true);
+            } else {
+                selectedPks = Array.from(clientTypePk.selectedOptions).map(function(opt) { return opt.value; });
+            }
+            
+            var currentBuyer = preserve ? preservedBuyerName : [];
             console.log('=== fillBuyerSelect START ===');
-            console.log('slug:', slug, 'selectedPk:', selectedPk, 'preserve:', preserve);
+            console.log('selectedSlugs:', selectedSlugs, 'selectedPks:', selectedPks, 'preserve:', preserve);
             console.log('buyerSelect.choicesInstance exists?', !!buyerSelect.choicesInstance);
             
             // If Choices.js exists, destroy it first to rebuild clean
@@ -1382,7 +1772,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             // Clear existing options
-            buyerSelect.innerHTML = '<option value="">All Buyers</option>';
+            buyerSelect.innerHTML = '';
 
             function addOptions(list) {
                 console.log('addOptions called with', list ? list.length : 0, 'items');
@@ -1393,9 +1783,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     buyerSelect.appendChild(opt);
                     console.log('Added option:', o.text);
                 });
-                if (currentBuyer) {
-                    buyerSelect.value = currentBuyer;
-                    console.log('Set current buyer to:', currentBuyer);
+                if (Array.isArray(currentBuyer) && currentBuyer.length) {
+                    Array.from(buyerSelect.options).forEach(function (option) {
+                        option.selected = currentBuyer.indexOf(option.value) !== -1;
+                    });
+                    console.log('Set current buyers to:', currentBuyer);
                 }
             }
 
@@ -1450,7 +1842,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                         if (typeof window.Choices !== 'undefined') {
                             initChoicesElement(buyerSelect);
-                            if (currentBuyer && buyerSelect.choicesInstance) {
+                            if (Array.isArray(currentBuyer) && currentBuyer.length && buyerSelect.choicesInstance) {
                                 buyerSelect.choicesInstance.setChoiceByValue(currentBuyer);
                             }
                         }
@@ -1463,6 +1855,59 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     });
             }
+
+            // When multiple slugs are selected, load buyers from all of them
+            if (selectedSlugs.length > 1 || selectedSlugs.length === 0) {
+                // Multiple client types or none selected: load buyers from report endpoint for all selected types
+                var allBuyers = [];
+                var promises = [];
+                
+                selectedSlugs.forEach(function(slug) {
+                    if (slug === 'employee') {
+                        // Add all employee buyers
+                        allBuyers = allBuyers.concat(employeeNames['academy staff'] || [])
+                            .concat(employeeNames['faculty'] || [])
+                            .concat(employeeNames['mess staff'] || []);
+                    } else if (slug === 'ot') {
+                        allBuyers = allBuyers.concat((otBuyerNames || []).map(function (name) { return { value: name, text: name }; }));
+                    } else if (slug === 'course') {
+                        allBuyers = allBuyers.concat((courseBuyerNames || []).map(function (name) { return { value: name, text: name }; }));
+                    } else if (slug === 'other') {
+                        allBuyers = allBuyers.concat((otherBuyerNames || []).map(function (name) { return { value: name, text: name }; }));
+                    } else if (slug === 'section') {
+                        allBuyers = allBuyers.concat((sectionBuyerNames || []).map(function (name) { return { value: name, text: name }; }));
+                    }
+                });
+                
+                // De-duplicate
+                var map = new Map();
+                allBuyers.forEach(function (o) {
+                    var key = String(o.value || '').trim().toLowerCase();
+                    if (!key) return;
+                    if (!map.has(key)) map.set(key, { value: o.value, text: o.text });
+                });
+                var unique = Array.from(map.values()).sort(function (a, b) {
+                    return String(a.text || '').localeCompare(String(b.text || ''), undefined, { sensitivity: 'base' });
+                });
+                
+                addOptions(unique);
+                
+                if (typeof window.Choices !== 'undefined') {
+                    initChoicesElement(buyerSelect);
+                    if (Array.isArray(currentBuyer) && currentBuyer.length && buyerSelect.choicesInstance) {
+                        try {
+                            buyerSelect.choicesInstance.setChoiceByValue(currentBuyer);
+                        } catch (e) {
+                            console.error('Error setting buyer values:', e);
+                        }
+                    }
+                }
+                return;
+            }
+            
+            // Single slug selected: use existing logic
+            var slug = selectedSlugs[0];
+            var selectedPk = selectedPks[0] || '';
 
             if (slug === 'employee' && selectedPk) {
                 var selectedOpt = clientTypePk.options[clientTypePk.selectedIndex];
@@ -1509,7 +1954,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         // Re-initialize Choices.js after async data load
                         if (typeof window.Choices !== 'undefined') {
                             initChoicesElement(buyerSelect);
-                            if (currentBuyer) {
+                            if (Array.isArray(currentBuyer) && currentBuyer.length) {
                                 buyerSelect.choicesInstance.setChoiceByValue(currentBuyer);
                             }
                         }
@@ -1522,28 +1967,132 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
                 return; // Exit early for async case
             } else if (slug === 'ot' && !selectedPk) {
-                // OT selected but Course = All => show all OT buyers from precomputed list
-                var listOt = (otBuyerNames || []).map(function (name) {
-                    return { value: name, text: name };
-                });
-                addOptions(listOt);
-            } else if (slug === 'course') {
-                // Requirement:
-                // - If Course selected AND Client Type = All => Buyer Name should list ALL course names
-                // - If specific course selected => Buyer Name should be that course name
-                if (!selectedPk) {
-                    var listCourseAll = (otCourseOptions || []).map(function (o) {
-                        return { value: o.text, text: o.text };
-                    });
-                    addOptions(listCourseAll);
-                } else {
-                    var matchCourse = (otCourseOptions || []).find(function (o) {
-                        return String(o.value) === String(selectedPk);
-                    });
-                    if (matchCourse) {
-                        addOptions([{ value: matchCourse.text, text: matchCourse.text }]);
+                // OT selected but Course = All
+                // Same behavior as Sale Voucher Report:
+                // 1) Prefer buyer list from report endpoint (respects date filters)
+                // 2) If empty, fallback to loading students from ALL OT courses
+
+                var df2 = document.getElementById('date_from');
+                var dt2 = document.getElementById('date_to');
+                var dateFromYmd2 = (df2 && df2.value) ? toYmd(df2.value) : '';
+                var dateToYmd2 = (dt2 && dt2.value) ? toYmd(dt2.value) : '';
+
+                function initBuyerChoicesAfterAsync() {
+                    if (typeof window.Choices !== 'undefined') {
+                        initChoicesElement(buyerSelect);
+                        if (Array.isArray(currentBuyer) && currentBuyer.length && buyerSelect.choicesInstance) {
+                            try { buyerSelect.choicesInstance.setChoiceByValue(currentBuyer); } catch (e) {}
+                        }
                     }
                 }
+
+                function loadStudentsAllOtCourses() {
+                    var coursePks = (otCourseOptions || []).map(function (o) { return o.value; }).filter(Boolean);
+                    if (!coursePks.length) {
+                        initBuyerChoicesAfterAsync();
+                        return;
+                    }
+
+                    Promise.all(coursePks.map(function (coursePk) {
+                        return fetch(studentsByCourseUrl + '/' + coursePk, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                            .then(function (r) { return r.json(); })
+                            .then(function (data) {
+                                return (data.students || []).map(function (s) {
+                                    return String(s.display_name || '').trim();
+                                }).filter(function (n) { return !!n; });
+                            })
+                            .catch(function () { return []; });
+                    }))
+                        .then(function (results) {
+                            var seen = new Set();
+                            var all = [];
+                            (results || []).forEach(function (names) {
+                                (names || []).forEach(function (n) {
+                                    var key = String(n || '').trim();
+                                    if (!key || seen.has(key)) return;
+                                    seen.add(key);
+                                    all.push({ value: key, text: key });
+                                });
+                            });
+                            all.sort(function (a, b) {
+                                return String(a.text || '').localeCompare(String(b.text || ''), undefined, { sensitivity: 'base' });
+                            });
+                            addOptions(all);
+                            initBuyerChoicesAfterAsync();
+                        })
+                        .catch(function () {
+                            initBuyerChoicesAfterAsync();
+                        });
+                }
+
+                // Try report endpoint first
+                var qsOt = new URLSearchParams();
+                qsOt.set('client_type_slug', 'ot');
+                if (dateFromYmd2) qsOt.set('from_date', dateFromYmd2);
+                if (dateToYmd2) qsOt.set('to_date', dateToYmd2);
+
+                fetch(buyersForReportUrl + '?' + qsOt.toString(), { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        var buyers = (data.buyers || []).map(function (name) { return String(name || '').trim(); })
+                            .filter(function (v) { return !!v; })
+                            .map(function (v) { return { value: v, text: v }; });
+
+                        if (buyers.length) {
+                            addOptions(buyers);
+                            initBuyerChoicesAfterAsync();
+                            return;
+                        }
+
+                        loadStudentsAllOtCourses();
+                    })
+                    .catch(function () {
+                        loadStudentsAllOtCourses();
+                    });
+
+                return; // async branch
+            } else if (slug === 'course') {
+                // Same behavior as Sale Voucher filter:
+                // - If a specific course is selected => show buyer names for that course
+                // - If course = All => show buyer names across all course vouchers (respecting date filters)
+                if (selectedPk) {
+                    var df = document.getElementById('date_from');
+                    var dt = document.getElementById('date_to');
+                    var dateFromYmd = (df && df.value) ? toYmd(df.value) : '';
+                    var dateToYmd = (dt && dt.value) ? toYmd(dt.value) : '';
+
+                    var qs = new URLSearchParams();
+                    if (dateFromYmd) qs.set('from_date', dateFromYmd);
+                    if (dateToYmd) qs.set('to_date', dateToYmd);
+
+                    var url = courseBuyersByCourseUrl + '/' + selectedPk + (qs.toString() ? ('?' + qs.toString()) : '');
+                    fetch(url, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                        .then(function (r) { return r.json(); })
+                        .then(function (data) {
+                            var buyers = (data.buyers || []).map(function (name) {
+                                return { value: name || '', text: name || '—' };
+                            }).filter(function (o) { return !!o.value; });
+
+                            addOptions(buyers);
+
+                            if (typeof window.Choices !== 'undefined') {
+                                initChoicesElement(buyerSelect);
+                                if (currentBuyer && buyerSelect.choicesInstance) {
+                                    buyerSelect.choicesInstance.setChoiceByValue(currentBuyer);
+                                }
+                            }
+                        })
+                        .catch(function () {
+                            // Fallback to the report-based endpoint (still respects selected course + dates)
+                            loadBuyersFromReportEndpoint('course');
+                        });
+
+                    return; // async branch
+                }
+
+                // Course + "All"
+                loadBuyersFromReportEndpoint('course');
+                return; // async branch
             } else if (slug === 'section') {
                 // Requirement:
                 // - If Section selected AND Client Type = All => Buyer Name should list ALL section names
@@ -1593,17 +2142,19 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         clientTypeSlug.addEventListener('change', function () {
-            preservedClientTypePk = ''; // reset when main type changes
-            preservedBuyerName = ''; // reset when main type changes
+            preservedClientTypePk = []; // reset when main type changes
+            preservedBuyerName = []; // reset when main type changes
             fillClientTypePk(false);
         });
         clientTypePk.addEventListener('change', function () {
-            preservedBuyerName = '';
+            preservedBuyerName = [];
             fillBuyerSelect(false);
         });
 
-        // Initial populate on page load
-        fillClientTypePk(true);
+        // Initial populate on page load - delay to ensure Choices.js is initialized
+        setTimeout(function() {
+            fillClientTypePk(true);
+        }, 100);
     })();
 
     document.getElementById('modalSelectAll').addEventListener('change', function() {
@@ -2068,10 +2619,10 @@ function printProcessMessBillsTable() {
     var originalThead = table.querySelector('thead');
     var headerRow = originalThead ? originalThead.querySelector('tr') : null;
     var headerCells = headerRow ? Array.from(headerRow.children) : [];
-    // Remove Checkbox (0), Actions (6) and Receipt (7) columns from print
-    var removeIdx = { 0: true, 6: true, 7: true };
+    // Remove Checkbox (0), Actions (7) and Receipt (8) columns from print
+    var removeIdx = { 0: true, 7: true, 8: true };
     var printHeaderCells = headerCells.filter(function (_, idx) { return !removeIdx[idx]; });
-    var columnsCount = printHeaderCells.length || 6;
+    var columnsCount = printHeaderCells.length || 7;
     var columnHeadHtml = '<tr>' + printHeaderCells.map(function (th) { return '<th>' + th.innerHTML + '</th>'; }).join('') + '</tr>';
 
     var filtered = (typeof getFilteredModalBills === 'function') ? getFilteredModalBills() : [];
@@ -2083,6 +2634,7 @@ function printProcessMessBillsTable() {
             '<td>' + (b.invoice_no || '—') + '</td>' +
             '<td>' + (b.payment_type || '—') + '</td>' +
             '<td class="text-end">' + (b.total || '0') + '</td>' +
+            '<td>' + (b.invoice_notification_sent ? 'Invoice Sent' : '—') + '</td>' +
             '</tr>';
     }).join('');
 

@@ -4,41 +4,88 @@ namespace App\Exports\Mess;
 
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
-use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithCustomStartCell;
 use Maatwebsite\Excel\Concerns\WithEvents;
+use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class PurchaseSaleQuantityExport implements FromCollection, WithHeadings, WithEvents
+class PurchaseSaleQuantityExport implements FromCollection, WithCustomStartCell, WithHeadings, WithEvents
 {
-    protected array $reportData;
-    protected string $fromDate;
-    protected string $toDate;
-    protected string $viewType;
+    /**
+     * @var array<int, array{viewType: string, reportData: array<int, array>}>
+     */
+    protected array $viewSections;
 
-    public function __construct(array $reportData, string $fromDate, string $toDate, string $viewType)
+    protected string $fromDate;
+
+    protected string $toDate;
+
+    protected string $combinedViewLabel;
+
+    protected ?string $selectedStoreName;
+
+    protected ?string $selectedItemNamesLabel;
+
+    /**
+     * @param  array<int, array{viewType: string, reportData: array<int, array>}>  $viewSections
+     */
+    public function __construct(
+        array $viewSections,
+        string $fromDate,
+        string $toDate,
+        string $combinedViewLabel,
+        ?string $selectedStoreName = null,
+        ?string $selectedItemNamesLabel = null
+    ) {
+        $this->viewSections = $viewSections;
+        $this->fromDate = $fromDate;
+        $this->toDate = $toDate;
+        $this->combinedViewLabel = $combinedViewLabel;
+        $this->selectedStoreName = $selectedStoreName;
+        $this->selectedItemNamesLabel = $selectedItemNamesLabel;
+    }
+
+    /**
+     * Headings + data start at row 5; rows 1–4 are filled in AfterSheet (avoids insertNewRowBefore, which breaks PhpSpreadsheet cellmap).
+     */
+    public function startCell(): string
     {
-        $this->reportData = $reportData;
-        $this->fromDate   = $fromDate;
-        $this->toDate     = $toDate;
-        $this->viewType   = $viewType;
+        return 'A5';
     }
 
     public function collection(): Collection
     {
         $rows = [];
-        foreach ($this->reportData as $index => $row) {
-            $rows[] = [
-                $index + 1,
-                $row['category_name'] ?? '—',
-                $row['item_name'] ?? '—',
-                $row['unit'] ?? '—',
-                number_format($row['purchase_qty'] ?? 0, 2),
-                $row['avg_purchase_price'] !== null ? number_format($row['avg_purchase_price'], 2) : '—',
-                number_format($row['sale_qty'] ?? 0, 2),
-                $row['avg_sale_price'] !== null ? number_format($row['avg_sale_price'], 2) : '—',
-            ];
+        $sectionIndex = 0;
+        $multiView = count($this->viewSections) > 1;
+        foreach ($this->viewSections as $section) {
+            $viewLabel = match ($section['viewType']) {
+                'subcategory_wise' => 'Subcategory-wise',
+                'category_wise' => 'Category-wise',
+                default => 'Item-wise',
+            };
+            if ($multiView) {
+                if ($sectionIndex > 0) {
+                    $rows[] = ['', '', '', '', '', '', '', ''];
+                }
+                $rows[] = ['', '— '.$viewLabel.' —', '', '', '', '', '', ''];
+            }
+            foreach ($section['reportData'] as $index => $row) {
+                $rows[] = [
+                    $index + 1,
+                    $row['category_name'] ?? '—',
+                    $row['item_name'] ?? '—',
+                    $row['unit'] ?? '—',
+                    number_format($row['purchase_qty'] ?? 0, 2),
+                    $row['avg_purchase_price'] !== null ? number_format($row['avg_purchase_price'], 2) : '—',
+                    number_format($row['sale_qty'] ?? 0, 2),
+                    $row['avg_sale_price'] !== null ? number_format($row['avg_sale_price'], 2) : '—',
+                ];
+            }
+            $sectionIndex++;
         }
+
         return collect($rows);
     }
 
@@ -67,16 +114,13 @@ class PurchaseSaleQuantityExport implements FromCollection, WithHeadings, WithEv
                 /** @var Worksheet $sheet */
                 $sheet = $event->sheet->getDelegate();
 
-                // Insert 4 rows at the top for the header + spacer.
-                $sheet->insertNewRowBefore(1, 4);
-
-                // Merge header cells across all 8 columns (A–H).
+                // Merge LBSNAA banner rows (rows 1–3); data/headings already begin at row 5 via startCell().
                 $sheet->mergeCells('A1:H1');
                 $sheet->mergeCells('A2:H2');
                 $sheet->mergeCells('A3:H3');
 
                 $formattedFrom = \Carbon\Carbon::parse($this->fromDate)->format('d-F-Y');
-                $formattedTo   = \Carbon\Carbon::parse($this->toDate)->format('d-F-Y');
+                $formattedTo = \Carbon\Carbon::parse($this->toDate)->format('d-F-Y');
 
                 // Row 1: Mess name
                 $sheet->setCellValue('A1', "OFFICER'S MESS LBSNAA MUSSOORIE");
@@ -85,14 +129,15 @@ class PurchaseSaleQuantityExport implements FromCollection, WithHeadings, WithEv
                 $sheet->setCellValue('A2', 'Item Report - Purchase/Sale Quantity');
 
                 // Row 3: Date range + view type
-                $viewLabel = match ($this->viewType) {
-                    'subcategory_wise' => 'Subcategory-wise',
-                    'category_wise'    => 'Category-wise',
-                    default            => 'Item-wise',
-                };
+                $storeLabel = ($this->selectedStoreName !== null && $this->selectedStoreName !== '')
+                    ? $this->selectedStoreName
+                    : 'All Stores';
+                $itemsLabel = ($this->selectedItemNamesLabel !== null && $this->selectedItemNamesLabel !== '')
+                    ? $this->selectedItemNamesLabel
+                    : 'All Items';
                 $sheet->setCellValue(
                     'A3',
-                    "From {$formattedFrom} To {$formattedTo} | View: {$viewLabel}"
+                    "From {$formattedFrom} To {$formattedTo} | View: {$this->combinedViewLabel} | Store: {$storeLabel} | Items: {$itemsLabel}"
                 );
 
                 // Basic styling for header
@@ -101,9 +146,9 @@ class PurchaseSaleQuantityExport implements FromCollection, WithHeadings, WithEv
                 $sheet->getStyle('A2')->getFont()->setBold(true)->setSize(12);
                 $sheet->getStyle('A3')->getFont()->setSize(10);
 
-                // Table header is now on row 5 (because we inserted 4 rows).
-                $lastRow    = $sheet->getHighestRow();
-                $headerRow  = 5;
+                // Column headings are on row 5 (WithCustomStartCell); data from row 6.
+                $lastRow = $sheet->getHighestRow();
+                $headerRow = 5;
                 $tableRange = "A{$headerRow}:H{$lastRow}";
 
                 // Borders for the table.
@@ -131,8 +176,16 @@ class PurchaseSaleQuantityExport implements FromCollection, WithHeadings, WithEv
                 $sheet->getStyle("E{$headerRow}:H{$lastRow}")
                     ->getAlignment()->setHorizontal('right');
 
+                // Section title rows: bold category column when it looks like a section marker
+                for ($r = $headerRow + 1; $r <= $lastRow; $r++) {
+                    $bVal = (string) $sheet->getCell("B{$r}")->getValue();
+                    if (str_starts_with($bVal, '— ') && str_ends_with($bVal, ' —')) {
+                        $sheet->getStyle("A{$r}:H{$r}")->getFont()->setBold(true);
+                    }
+                }
+
                 // Freeze pane below header + column titles.
-                $sheet->freezePane("A" . ($headerRow + 1));
+                $sheet->freezePane('A'.($headerRow + 1));
 
                 // Repeat header rows on every printed page.
                 $sheet->getPageSetup()

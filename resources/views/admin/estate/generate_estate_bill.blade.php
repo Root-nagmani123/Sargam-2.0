@@ -1,9 +1,9 @@
 @extends('admin.layouts.master')
 
 @php
-    $estateBillPageLabel = (hasRole('Admin') || hasRole('Super Admin') || hasRole('Estate'))
-        ? 'Generate Estate Bill'
-        : 'My Estate Bill';
+$estateBillPageLabel = (hasRole('Admin') || hasRole('Super Admin') || hasRole('Estate'))
+? 'Generate Estate Bill'
+: 'My Estate Bill';
 @endphp
 
 @section('title', $estateBillPageLabel . ' - Sargam')
@@ -13,51 +13,47 @@
     <x-breadcrum title="{{ $estateBillPageLabel }}"></x-breadcrum>
     <x-session_message />
 
-    <div class="d-flex flex-column flex-md-row flex-wrap align-items-start align-items-md-center justify-content-between gap-3 mb-4">
-        <div>
-            <h1 class="h4 fw-semibold mb-1">{{ $estateBillPageLabel }}</h1>
-            <p class="text-muted small mb-0">
-                @if($estateBillPageLabel === 'Generate Estate Bill')
-                    View and generate estate bill summary. Select bill month and unit sub type, then use actions to notify or save as draft.
-                @else
-                    View your estate bill summary. Select bill month and (where available) unit sub type to review bills.
-                @endif
-            </p>
-        </div>
-    </div>
+
 
     <!-- Filters -->
     <div class="card shadow-sm border-0 rounded-3 mb-4">
-        <div class="card-header bg-transparent border-0 pt-4 px-4 pb-0">
-            <h2 class="h6 fw-semibold text-body mb-0 d-flex align-items-center gap-2">
-                <i class="material-symbols-rounded fs-5">filter_list</i>
-                Filters
-            </h2>
-        </div>
+
         <div class="card-body p-4">
-            <form method="get" action="{{ route('admin.estate.generate-estate-bill') }}">
-                @php
-                    $showUnitSubTypeFilter = hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin');
-                @endphp
-                {{-- Same structure in every column: label row → control row (equal height inputs) → help row, so Check All + Show line up with Bill / Unit / Search --}}
-                <div class="row g-3 g-md-4 align-items-start">
-                    <div class="col-12 col-sm-6 {{ $showUnitSubTypeFilter ? 'col-lg-3' : 'col-lg-4' }}">
-                        <label for="bill_month" class="form-label fw-medium mb-1">Bill Month <span class="text-danger">*</span></label>
-                        <input type="month" class="form-control" id="bill_month" name="bill_month" value="{{ old('bill_month', $billMonth) }}" max="{{ date('Y-m') }}" required aria-describedby="bill_month_help">
-                        <div id="bill_month_help" class="form-text small mb-0">Select the month for billing</div>
-                    </div>
-                    @if($showUnitSubTypeFilter)
-                    <div class="col-12 col-sm-6 col-lg-3">
-                        <label for="unit_sub_type_pk" class="form-label fw-medium mb-1">Unit Sub Type</label>
-                        <div class="estate-bill-unit-sub-ts">
-                            <select class="form-select" id="unit_sub_type_pk" name="unit_sub_type_pk" aria-label="Select Unit Sub Type" aria-describedby="unit_sub_type_help">
-                                <option value="">Select Unit Sub Type</option>
-                                @foreach($unitSubTypes as $ust)
-                                    <option value="{{ $ust->pk }}" {{ (string)$unitSubTypePk === (string)$ust->pk ? 'selected' : '' }}>{{ $ust->unit_sub_type }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div id="unit_sub_type_help" class="form-text small mb-0">Filter by unit category</div>
+            <div class="d-flex flex-column flex-md-row flex-wrap align-items-start align-items-md-center justify-content-between gap-3 mb-4">
+                <div>
+                    <h1 class="h4 fw-semibold mb-1">{{ $estateBillPageLabel }}</h1>
+                    <p class="text-muted small mb-0">
+                        @if($estateBillPageLabel === 'Generate Estate Bill')
+                        View and generate estate bill summary. Select bill month and unit sub type, then use actions to notify or save as draft.
+                        @else
+                        View your estate bill summary. Select bill month and (where available) unit sub type to review bills.
+                        @endif
+                    </p>
+                </div>
+            </div>
+            <hr class="my-2">
+            <form method="get" action="{{ route('admin.estate.generate-estate-bill') }}" class="row g-3 g-md-4 align-items-center">
+                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                    <label for="bill_month" class="form-label fw-medium">Bill Month <span class="text-danger">*</span></label>
+                    <input type="month" class="form-control" id="bill_month" name="bill_month" value="{{ old('bill_month', $billMonth) }}" max="{{ date('Y-m') }}" data-max-date="{{ date('Y-m-d') }}" required aria-describedby="bill_month_help">
+                    <div id="bill_month_help" class="form-text small">Select the month for billing</div>
+                </div>
+                @if(hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'))
+                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                    <label for="unit_sub_type_pk" class="form-label fw-medium">Unit Sub Type </label>
+                    <select class="form-select" id="unit_sub_type_pk" name="unit_sub_type_pk" aria-label="Select Unit Sub Type" aria-describedby="unit_sub_type_help">
+                        <option value="">— Select Unit Sub Type —</option>
+                        @foreach($unitSubTypes as $ust)
+                        <option value="{{ $ust->pk }}" {{ (string)$unitSubTypePk === (string)$ust->pk ? 'selected' : '' }}>{{ $ust->unit_sub_type }}</option>
+                        @endforeach
+                    </select>
+                    <div id="unit_sub_type_help" class="form-text small">Filter by unit category</div>
+                </div>
+                @endif
+                <div class="col-12 col-sm-6 col-md-4 col-lg-4 d-flex align-items-center gap-3">
+                    <div class="form-check form-check-inline mb-0 mt-2">
+                        <input class="form-check-input" type="checkbox" id="check_all" name="check_all" aria-describedby="check_all_help">
+                        <label class="form-check-label" for="check_all">Check All</label>
                     </div>
                     @endif
                     <div class="col-12 col-sm-6 {{ $showUnitSubTypeFilter ? 'col-lg-3' : 'col-lg-4' }}">
@@ -122,7 +118,7 @@
                             <label class="form-check-label text-muted small" for="bill_{{ $bill->pk }}">Select this bill</label>
                         </div>
                         <a href="{{ route('admin.estate.reports.bill-report-print') }}?bill_no={{ $bill->bill_no }}&month={{ $bill->bill_month }}&year={{ $bill->bill_year }}" target="_blank" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1" title="Print this bill">
-                            <i class="material-symbols-rounded">print</i>
+                            <i class="material-symbols-rounded" w>print</i>
                             Print
                         </a>
                     </div>
@@ -131,20 +127,44 @@
                         <div class="col-12 col-md-6">
                             <table class="table table-borderless table-sm mb-0">
                                 <tbody>
-                                    <tr><td class="text-muted pe-3 text-nowrap" style="width: 42%;">Bill No.</td><td class="fw-semibold">{{ $bill->bill_no ?? '—' }}</td></tr>
-                                    <tr><td class="text-muted">Month</td><td>{{ $bill->bill_month ?? '' }} {{ $bill->bill_year ?? '' }}</td></tr>
-                                    <tr><td class="text-muted">Emp Name</td><td><span class="text-primary fw-medium">{{ $bill->emp_name ?? '—' }}</span></td></tr>
-                                    <tr><td class="text-muted">Designation</td><td>{{ $bill->emp_designation ?? '—' }}</td></tr>
-                                    <tr><td class="text-muted">Employee Type</td><td><span class="badge text-bg-secondary">REGULAR</span></td></tr>
+                                    <tr>
+                                        <td class="text-muted pe-3 text-nowrap" style="width: 42%;">Bill No.</td>
+                                        <td class="fw-semibold">{{ $bill->bill_no ?? '—' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Month</td>
+                                        <td>{{ $bill->bill_month ?? '' }} {{ $bill->bill_year ?? '' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Emp Name</td>
+                                        <td><span class="text-primary fw-medium">{{ $bill->emp_name ?? '—' }}</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Designation</td>
+                                        <td>{{ $bill->emp_designation ?? '—' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Employee Type</td>
+                                        <td><span class="badge text-bg-secondary">REGULAR</span></td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
                         <div class="col-12 col-md-6">
                             <table class="table table-borderless table-sm mb-0">
                                 <tbody>
-                                    <tr><td class="text-muted pe-3 text-nowrap" style="width: 42%;">House No.</td><td><span class="text-primary fw-medium">{{ $bill->house_display ?? '—' }}</span></td></tr>
-                                    <tr><td class="text-muted">From Date</td><td>{{ $bill->from_date_formatted ?? '—' }}</td></tr>
-                                    <tr><td class="text-muted">To Date</td><td>{{ $bill->to_date_formatted ?? '—' }}</td></tr>
+                                    <tr>
+                                        <td class="text-muted pe-3 text-nowrap" style="width: 42%;">House No.</td>
+                                        <td><span class="text-primary fw-medium">{{ $bill->house_display ?? '—' }}</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">From Date</td>
+                                        <td>{{ $bill->from_date_formatted ?? '—' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">To Date</td>
+                                        <td>{{ $bill->to_date_formatted ?? '—' }}</td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
@@ -162,8 +182,8 @@
                     </div>
 
                     @php
-                        $hasMeterTwo = isset($bill->meter_two) && (int)$bill->meter_two !== 0;
-                        $hasMeterTwoUnits = isset($bill->meter_two_consume_unit) && (int)$bill->meter_two_consume_unit > 0;
+                    $hasMeterTwo = isset($bill->meter_two) && (int)$bill->meter_two !== 0;
+                    $hasMeterTwoUnits = isset($bill->meter_two_consume_unit) && (int)$bill->meter_two_consume_unit > 0;
                     @endphp
                     @if($hasMeterTwo || $hasMeterTwoUnits)
                     <div class="border-top pt-3 mt-3">
@@ -211,26 +231,8 @@
 @push('styles')
 <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
 <style>
-    .ts-dropdown { z-index: 1060 !important; }
-    /*
-     * Tom Select ships with Bootstrap-default padding (0.375rem); Sargam admin theme uses
-     * .form-control padding 10px 16px and font-size 0.875rem — match so Unit Sub Type aligns with Bill Month / Search.
-     */
-    .estate-bill-unit-sub-ts .ts-wrapper.single {
-        min-height: calc(0.875rem * 1.5 + 20px + 2 * var(--bs-border-width, 1px));
-    }
-    .estate-bill-unit-sub-ts .ts-wrapper.single .ts-control:not(.rtl) {
-        padding-top: 10px !important;
-        padding-bottom: 10px !important;
-        padding-left: 16px !important;
-        padding-right: 38px !important;
-        font-size: 0.875rem !important;
-        line-height: 1.5 !important;
-        border-radius: 8px !important;
-        min-height: calc(0.875rem * 1.5 + 20px + 2 * var(--bs-border-width, 1px));
-    }
-    .estate-bill-filter-actions-controls {
-        min-height: calc(0.875rem * 1.5 + 20px + 2 * var(--bs-border-width, 1px));
+    .ts-dropdown {
+        z-index: 1060 !important;
     }
 </style>
 @endpush
@@ -238,220 +240,318 @@
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-    if (typeof TomSelect !== 'undefined') {
-        var unitSubEl = document.getElementById('unit_sub_type_pk');
-        if (unitSubEl && !unitSubEl.tomselect) {
-            new TomSelect(unitSubEl, {
-                allowEmptyOption: true,
-                create: false,
-                dropdownParent: 'body',
-                placeholder: '— Select Unit Sub Type —',
-                maxOptions: null,
-                hideSelected: false,
-                onInitialize: function () { this.activeOption = null; }
-            });
-        }
-    }
+    document.addEventListener('DOMContentLoaded', function() {
+        var billMonthInput = document.getElementById('bill_month');
+        if (billMonthInput) {
+            var monthInputProbe = document.createElement('input');
+            monthInputProbe.setAttribute('type', 'month');
+            var supportsMonthInput = monthInputProbe.type === 'month';
 
-    var checkAll = document.getElementById('check_all');
-    var boxes = document.querySelectorAll('.bill-checkbox');
-    if (checkAll) {
-        checkAll.addEventListener('change', function () {
-            boxes.forEach(function (el) { el.checked = checkAll.checked; });
-        });
-    }
+            if (!supportsMonthInput) {
+                var existingMonth = (billMonthInput.value || '').trim();
+                var maxMonth = (billMonthInput.getAttribute('max') || '').trim();
+                var maxYear = /^\d{4}-(0[1-9]|1[0-2])$/.test(maxMonth) ? parseInt(maxMonth.slice(0, 4), 10) : new Date().getFullYear();
+                var maxMonthNumber = /^\d{4}-(0[1-9]|1[0-2])$/.test(maxMonth) ? parseInt(maxMonth.slice(5, 7), 10) : 12;
+                var selectedYear = /^\d{4}-(0[1-9]|1[0-2])$/.test(existingMonth) ? parseInt(existingMonth.slice(0, 4), 10) : maxYear;
+                var selectedMonth = /^\d{4}-(0[1-9]|1[0-2])$/.test(existingMonth) ? existingMonth.slice(5, 7) : '';
+                var startYear = Math.min(2000, selectedYear);
 
-    var basePrintUrl = '{{ route("admin.estate.reports.bill-report-print") }}';
-    var printAllUrl = '{{ route("admin.estate.reports.bill-report-print-all") }}';
-    function buildPrintUrl(billNo, month, year) {
-        return basePrintUrl + '?bill_no=' + encodeURIComponent(billNo) + '&month=' + encodeURIComponent(month) + '&year=' + encodeURIComponent(year);
-    }
-    function getBillCardsToPrint(selectedOnly) {
-        var cards = document.querySelectorAll('.bill-card');
-        if (selectedOnly) {
-            var checked = document.querySelectorAll('.bill-checkbox:checked');
-            return Array.prototype.filter.call(cards, function (card) {
-                var cb = card.querySelector('.bill-checkbox');
-                return cb && cb.checked;
-            });
-        }
-        return Array.prototype.slice.call(cards);
-    }
-    function openSelectedPrintInSingleTab(cards) {
-        if (!cards.length) {
-            alert('Please select at least one bill to print.');
-            return;
-        }
-        var selectedPks = [];
-        cards.forEach(function (card) {
-            var cb = card.querySelector('.bill-checkbox');
-            var v = cb ? parseInt(cb.value, 10) : 0;
-            if (v > 0) selectedPks.push(v);
-        });
-        if (!selectedPks.length) {
-            alert('Please select at least one bill to print.');
-            return;
-        }
+                billMonthInput.setAttribute('type', 'hidden');
 
-        var form = document.querySelector('form[action*="generate-estate-bill"]');
-        var billMonthEl = form ? form.querySelector('#bill_month') : null;
-        var unitSubTypeEl = form ? form.querySelector('#unit_sub_type_pk') : null;
-        var billMonth = billMonthEl ? (billMonthEl.value || '').trim() : '';
-        var unitSubTypePk = unitSubTypeEl ? (unitSubTypeEl.value || '').trim() : '';
+                var wrapper = document.createElement('div');
+                wrapper.className = 'd-flex gap-2';
 
-        var params = new URLSearchParams();
-        if (billMonth) params.set('bill_month', billMonth);
-        if (unitSubTypePk) params.set('unit_sub_type_pk', unitSubTypePk);
-        params.set('selected_pks', selectedPks.join(','));
+                var monthSelect = document.createElement('select');
+                monthSelect.className = 'form-select';
+                monthSelect.setAttribute('aria-label', 'Select Month');
+                monthSelect.required = true;
 
-        window.open(printAllUrl + '?' + params.toString(), '_blank', 'noopener');
-    }
-    var btnPrintSelected = document.getElementById('btn_print_selected');
-    if (btnPrintSelected) {
-        btnPrintSelected.addEventListener('click', function () {
-            openSelectedPrintInSingleTab(getBillCardsToPrint(true));
-        });
-    }
-    // Print All: opens the print-all page (all bills in one view with option to print or download PDF)
-    // Link is used instead of button; no extra script needed.
+                var yearSelect = document.createElement('select');
+                yearSelect.className = 'form-select';
+                yearSelect.setAttribute('aria-label', 'Select Year');
+                yearSelect.required = true;
 
-    function getSelectedBillPks() {
-        var pks = [];
-        document.querySelectorAll('.bill-checkbox:checked').forEach(function (el) {
-            var v = parseInt(el.value, 10);
-            if (v > 0) pks.push(v);
-        });
-        return pks;
-    }
-
-    function showStatusMessage(msg, type) {
-        type = type || 'success';
-        var alertClass = type === 'success' ? 'alert-success' : (type === 'error' ? 'alert-danger' : 'alert-warning');
-        var icon = type === 'success' ? 'check_circle' : (type === 'error' ? 'error' : 'info');
-        var statusEl = document.getElementById('status-msg');
-        if (statusEl) {
-            statusEl.innerHTML = '<div class="alert ' + alertClass + ' alert-dismissible fade show shadow-sm" role="alert">' +
-                '<i class="material-icons material-symbols-rounded me-2">' + icon + '</i> ' + msg +
-                '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>';
-            statusEl.style.display = 'block';
-            setTimeout(function () { statusEl.style.display = 'none'; }, 4000);
-        }
-    }
-
-    var btnNotify = document.getElementById('btn_notify_selected');
-    if (btnNotify) {
-        btnNotify.addEventListener('click', function () {
-            var pks = getSelectedBillPks();
-            if (pks.length === 0) {
-                showStatusMessage('Please select at least one bill to verify.', 'warning');
-                return;
-            }
-            btnNotify.disabled = true;
-            var form = document.querySelector('form[action*="generate-estate-bill"]');
-            var billMonth = form ? form.querySelector('#bill_month') : null;
-            var unitSub = form ? form.querySelector('#unit_sub_type_pk') : null;
-            var params = new URLSearchParams();
-            pks.forEach(function (p) { params.append('pks[]', p); });
-            params.append('_token', '{{ csrf_token() }}');
-            if (billMonth && billMonth.value) params.append('bill_month', billMonth.value);
-            if (unitSub && unitSub.value) params.append('unit_sub_type_pk', unitSub.value);
-            fetch('{{ route("admin.estate.generate-estate-bill.verify-selected") }}', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
-                body: params.toString()
-            }).then(function (r) { return r.json(); }).then(function (res) {
-                btnNotify.disabled = false;
-                if (res.status && res.message) {
-                    showStatusMessage(res.message, 'success');
+                var monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                for (var i = 1; i <= 12; i++) {
+                    var m = String(i).padStart(2, '0');
+                    var monthOpt = document.createElement('option');
+                    monthOpt.value = m;
+                    monthOpt.textContent = monthNames[i - 1];
+                    monthSelect.appendChild(monthOpt);
                 }
-            }).catch(function () {
-                btnNotify.disabled = false;
-                showStatusMessage('Failed to verify bills.', 'error');
-            });
-        });
-    }
 
-    var btnDraft = document.getElementById('btn_save_as_draft');
-    if (btnDraft) {
-        btnDraft.addEventListener('click', function () {
-            var pks = getSelectedBillPks();
-            if (pks.length === 0) {
-                showStatusMessage('Please select at least one bill to save as draft.', 'warning');
-                return;
-            }
-            btnDraft.disabled = true;
-            var form = document.querySelector('form[action*="generate-estate-bill"]');
-            var billMonth = form ? form.querySelector('#bill_month') : null;
-            var params = new URLSearchParams();
-            pks.forEach(function (p) { params.append('pks[]', p); });
-            params.append('_token', '{{ csrf_token() }}');
-            if (billMonth && billMonth.value) params.append('bill_month', billMonth.value);
-            fetch('{{ route("admin.estate.generate-estate-bill.save-as-draft") }}', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
-                body: params.toString()
-            }).then(function (r) { return r.json(); }).then(function (res) {
-                btnDraft.disabled = false;
-                if (res.status && res.message) {
-                    showStatusMessage(res.message, 'success');
-                    if (form && billMonth && billMonth.value) form.submit();
+                for (var y = maxYear; y >= startYear; y--) {
+                    var yearOpt = document.createElement('option');
+                    yearOpt.value = String(y);
+                    yearOpt.textContent = String(y);
+                    yearSelect.appendChild(yearOpt);
                 }
-            }).catch(function () {
-                btnDraft.disabled = false;
-                showStatusMessage('Failed to save as draft.', 'error');
+
+                yearSelect.value = String(selectedYear);
+                if (selectedMonth) monthSelect.value = selectedMonth;
+
+                var syncBillMonthValue = function() {
+                    var y = yearSelect.value;
+                    var m = monthSelect.value;
+                    if (!y || !m) {
+                        billMonthInput.value = '';
+                        return;
+                    }
+                    if (parseInt(y, 10) === maxYear && parseInt(m, 10) > maxMonthNumber) {
+                        m = String(maxMonthNumber).padStart(2, '0');
+                        monthSelect.value = m;
+                    }
+                    billMonthInput.value = y + '-' + m;
+                };
+
+                wrapper.appendChild(monthSelect);
+                wrapper.appendChild(yearSelect);
+                billMonthInput.insertAdjacentElement('afterend', wrapper);
+                monthSelect.addEventListener('change', syncBillMonthValue);
+                yearSelect.addEventListener('change', syncBillMonthValue);
+                syncBillMonthValue();
+            }
+        }
+
+        if (typeof TomSelect !== 'undefined') {
+            var unitSubEl = document.getElementById('unit_sub_type_pk');
+            if (unitSubEl && !unitSubEl.tomselect) {
+                new TomSelect(unitSubEl, {
+                    allowEmptyOption: true,
+                    create: false,
+                    dropdownParent: 'body',
+                    placeholder: '— Select Unit Sub Type —',
+                    maxOptions: null,
+                    hideSelected: false,
+                    onInitialize: function() {
+                        this.activeOption = null;
+                    }
+                });
+            }
+        }
+
+        var checkAll = document.getElementById('check_all');
+        var boxes = document.querySelectorAll('.bill-checkbox');
+        if (checkAll) {
+            checkAll.addEventListener('change', function() {
+                boxes.forEach(function(el) {
+                    el.checked = checkAll.checked;
+                });
             });
-        });
-    }
+        }
 
-    // If opened from notification, jump to the specific bill.
-    // Expected query params:
-    // - bill_no, bill_print_month, bill_print_year (used to locate the bill card)
-    // - open_estate_bill=1 (optional: also auto-open print in new tab)
-    (function () {
-        var params = new URLSearchParams(window.location.search);
-        var shouldOpen = params.get('open_estate_bill');
+        var basePrintUrl = '{{ route("admin.estate.reports.bill-report-print") }}';
+        var printAllUrl = '{{ route("admin.estate.reports.bill-report-print-all") }}';
 
-        var billNo = (params.get('bill_no') || '').trim();
-        var billPrintMonth = (params.get('bill_print_month') || params.get('month') || '').trim();
-        var billPrintYear = (params.get('bill_print_year') || params.get('year') || '').trim();
+        function buildPrintUrl(billNo, month, year) {
+            return basePrintUrl + '?bill_no=' + encodeURIComponent(billNo) + '&month=' + encodeURIComponent(month) + '&year=' + encodeURIComponent(year);
+        }
 
-        var hasBillInfo = !!(billNo && billPrintMonth && billPrintYear);
-        if (!hasBillInfo) return;
-
-        // Best-effort scroll to the matching bill card (if present on the page).
-        try {
+        function getBillCardsToPrint(selectedOnly) {
             var cards = document.querySelectorAll('.bill-card');
-            var target = null;
-            cards.forEach(function (card) {
-                if (target) return;
-                var cNo = (card.getAttribute('data-bill-no') || '').trim();
-                var cMonth = (card.getAttribute('data-bill-month') || '').trim();
-                var cYear = (card.getAttribute('data-bill-year') || '').trim();
-                if (cNo === billNo && cMonth === billPrintMonth && cYear === billPrintYear) {
-                    target = card;
-                }
+            if (selectedOnly) {
+                var checked = document.querySelectorAll('.bill-checkbox:checked');
+                return Array.prototype.filter.call(cards, function(card) {
+                    var cb = card.querySelector('.bill-checkbox');
+                    return cb && cb.checked;
+                });
+            }
+            return Array.prototype.slice.call(cards);
+        }
+
+        function openSelectedPrintInSingleTab(cards) {
+            if (!cards.length) {
+                alert('Please select at least one bill to print.');
+                return;
+            }
+            var selectedPks = [];
+            cards.forEach(function(card) {
+                var cb = card.querySelector('.bill-checkbox');
+                var v = cb ? parseInt(cb.value, 10) : 0;
+                if (v > 0) selectedPks.push(v);
             });
-
-            if (target && target.scrollIntoView) {
-                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                target.classList.add('border', 'border-primary');
+            if (!selectedPks.length) {
+                alert('Please select at least one bill to print.');
+                return;
             }
-        } catch (e) {}
 
-        // Optional: also auto-open the specific print page.
-        if (!shouldOpen || shouldOpen === '0' || shouldOpen === 'false') return;
+            var form = document.querySelector('form[action*="generate-estate-bill"]');
+            var billMonthEl = form ? form.querySelector('#bill_month') : null;
+            var unitSubTypeEl = form ? form.querySelector('#unit_sub_type_pk') : null;
+            var billMonth = billMonthEl ? (billMonthEl.value || '').trim() : '';
+            var unitSubTypePk = unitSubTypeEl ? (unitSubTypeEl.value || '').trim() : '';
 
-        var printUrl = buildPrintUrl(billNo, billPrintMonth, billPrintYear);
-        // Try open in a new tab; fallback to same-tab redirect when blocked.
-        setTimeout(function () {
-            var w = window.open(printUrl, '_blank', 'noopener');
-            if (!w) {
-                window.location.href = printUrl;
+            var params = new URLSearchParams();
+            if (billMonth) params.set('bill_month', billMonth);
+            if (unitSubTypePk) params.set('unit_sub_type_pk', unitSubTypePk);
+            params.set('selected_pks', selectedPks.join(','));
+
+            window.open(printAllUrl + '?' + params.toString(), '_blank', 'noopener');
+        }
+        var btnPrintSelected = document.getElementById('btn_print_selected');
+        if (btnPrintSelected) {
+            btnPrintSelected.addEventListener('click', function() {
+                openSelectedPrintInSingleTab(getBillCardsToPrint(true));
+            });
+        }
+        // Print All: opens the print-all page (all bills in one view with option to print or download PDF)
+        // Link is used instead of button; no extra script needed.
+
+        function getSelectedBillPks() {
+            var pks = [];
+            document.querySelectorAll('.bill-checkbox:checked').forEach(function(el) {
+                var v = parseInt(el.value, 10);
+                if (v > 0) pks.push(v);
+            });
+            return pks;
+        }
+
+        function showStatusMessage(msg, type) {
+            type = type || 'success';
+            var alertClass = type === 'success' ? 'alert-success' : (type === 'error' ? 'alert-danger' : 'alert-warning');
+            var icon = type === 'success' ? 'check_circle' : (type === 'error' ? 'error' : 'info');
+            var statusEl = document.getElementById('status-msg');
+            if (statusEl) {
+                statusEl.innerHTML = '<div class="alert ' + alertClass + ' alert-dismissible fade show shadow-sm" role="alert">' +
+                    '<i class="material-icons material-symbols-rounded me-2">' + icon + '</i> ' + msg +
+                    '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>';
+                statusEl.style.display = 'block';
+                setTimeout(function() {
+                    statusEl.style.display = 'none';
+                }, 4000);
             }
-        }, 400);
-    })();
-});
+        }
+
+        var btnNotify = document.getElementById('btn_notify_selected');
+        if (btnNotify) {
+            btnNotify.addEventListener('click', function() {
+                var pks = getSelectedBillPks();
+                if (pks.length === 0) {
+                    showStatusMessage('Please select at least one bill to verify.', 'warning');
+                    return;
+                }
+                btnNotify.disabled = true;
+                var form = document.querySelector('form[action*="generate-estate-bill"]');
+                var billMonth = form ? form.querySelector('#bill_month') : null;
+                var unitSub = form ? form.querySelector('#unit_sub_type_pk') : null;
+                var params = new URLSearchParams();
+                pks.forEach(function(p) {
+                    params.append('pks[]', p);
+                });
+                params.append('_token', '{{ csrf_token() }}');
+                if (billMonth && billMonth.value) params.append('bill_month', billMonth.value);
+                if (unitSub && unitSub.value) params.append('unit_sub_type_pk', unitSub.value);
+                fetch('{{ route("admin.estate.generate-estate-bill.verify-selected") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: params.toString()
+                }).then(function(r) {
+                    return r.json();
+                }).then(function(res) {
+                    btnNotify.disabled = false;
+                    if (res.status && res.message) {
+                        showStatusMessage(res.message, 'success');
+                    }
+                }).catch(function() {
+                    btnNotify.disabled = false;
+                    showStatusMessage('Failed to verify bills.', 'error');
+                });
+            });
+        }
+
+        var btnDraft = document.getElementById('btn_save_as_draft');
+        if (btnDraft) {
+            btnDraft.addEventListener('click', function() {
+                var pks = getSelectedBillPks();
+                if (pks.length === 0) {
+                    showStatusMessage('Please select at least one bill to save as draft.', 'warning');
+                    return;
+                }
+                btnDraft.disabled = true;
+                var form = document.querySelector('form[action*="generate-estate-bill"]');
+                var billMonth = form ? form.querySelector('#bill_month') : null;
+                var params = new URLSearchParams();
+                pks.forEach(function(p) {
+                    params.append('pks[]', p);
+                });
+                params.append('_token', '{{ csrf_token() }}');
+                if (billMonth && billMonth.value) params.append('bill_month', billMonth.value);
+                fetch('{{ route("admin.estate.generate-estate-bill.save-as-draft") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: params.toString()
+                }).then(function(r) {
+                    return r.json();
+                }).then(function(res) {
+                    btnDraft.disabled = false;
+                    if (res.status && res.message) {
+                        showStatusMessage(res.message, 'success');
+                        if (form && billMonth && billMonth.value) form.submit();
+                    }
+                }).catch(function() {
+                    btnDraft.disabled = false;
+                    showStatusMessage('Failed to save as draft.', 'error');
+                });
+            });
+        }
+
+        // If opened from notification, jump to the specific bill.
+        // Expected query params:
+        // - bill_no, bill_print_month, bill_print_year (used to locate the bill card)
+        // - open_estate_bill=1 (optional: also auto-open print in new tab)
+        (function() {
+            var params = new URLSearchParams(window.location.search);
+            var shouldOpen = params.get('open_estate_bill');
+
+            var billNo = (params.get('bill_no') || '').trim();
+            var billPrintMonth = (params.get('bill_print_month') || params.get('month') || '').trim();
+            var billPrintYear = (params.get('bill_print_year') || params.get('year') || '').trim();
+
+            var hasBillInfo = !!(billNo && billPrintMonth && billPrintYear);
+            if (!hasBillInfo) return;
+
+            // Best-effort scroll to the matching bill card (if present on the page).
+            try {
+                var cards = document.querySelectorAll('.bill-card');
+                var target = null;
+                cards.forEach(function(card) {
+                    if (target) return;
+                    var cNo = (card.getAttribute('data-bill-no') || '').trim();
+                    var cMonth = (card.getAttribute('data-bill-month') || '').trim();
+                    var cYear = (card.getAttribute('data-bill-year') || '').trim();
+                    if (cNo === billNo && cMonth === billPrintMonth && cYear === billPrintYear) {
+                        target = card;
+                    }
+                });
+
+                if (target && target.scrollIntoView) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center'
+                    });
+                    target.classList.add('border', 'border-primary');
+                }
+            } catch (e) {}
+
+            // Optional: also auto-open the specific print page.
+            if (!shouldOpen || shouldOpen === '0' || shouldOpen === 'false') return;
+
+            var printUrl = buildPrintUrl(billNo, billPrintMonth, billPrintYear);
+            // Try open in a new tab; fallback to same-tab redirect when blocked.
+            setTimeout(function() {
+                var w = window.open(printUrl, '_blank', 'noopener');
+                if (!w) {
+                    window.location.href = printUrl;
+                }
+            }, 400);
+        })();
+    });
 </script>
 @endpush
 @endsection

@@ -1,6 +1,16 @@
 @extends('admin.layouts.master')
 @section('title', 'Stock Balance as of Till Date')
 @section('setup_content')
+@php
+    /** @var array<int> $storeIds */
+    $storeIds = isset($storeIds) ? $storeIds : [];
+    $printLogoSrc = asset('images/lbsnaa_logo.jpg');
+    if (!is_file(public_path('images/lbsnaa_logo.jpg'))) {
+        $printLogoSrc = is_file(public_path('images/lbsnaa_logo.png'))
+            ? asset('images/lbsnaa_logo.png')
+            : 'https://www.lbsnaa.gov.in/admin_assets/images/logo.png';
+    }
+@endphp
 <div class="container-fluid stock-balance-report min-vh-100 d-flex flex-column">
     <x-breadcrum title="Stock Balance as of Till Date"></x-breadcrum>
     <!-- Header Section -->
@@ -11,46 +21,70 @@
                 <span class="text-muted small">Refine results by till date &amp; store</span>
             </div>
         </div>
-        <div class="card-body pt-3">
+        <div class="card-body p-3 p-lg-4">
             <form method="GET" action="{{ route('admin.mess.reports.stock-balance-till-date') }}">
-                <div class="row">
-                    <div class="col-md-3">
-                        <label class="form-label">Till Date</label>
-                        <input type="date" name="till_date" class="form-select" value="{{ $tillDate }}">
+                <div class="row g-3 g-lg-4 align-items-end">
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <label for="till_date" class="form-label small fw-semibold text-uppercase mb-1">Till Date</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-body-secondary" id="till_date_addon">
+                                <span class="material-symbols-rounded" style="font-size: 20px;" aria-hidden="true">event</span>
+                            </span>
+                            <input type="date"
+                                   name="till_date"
+                                   id="till_date"
+                                   class="form-control"
+                                   value="{{ $tillDate }}"
+                                   aria-describedby="till_date_addon">
+                        </div>
                     </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Select Store Name</label>
-                        <select name="store_id" class="form-select" data-placeholder="All Stores">
-                            <option value="">All Stores</option>
-                            @foreach($stores as $store)
-                                <option value="{{ $store->id }}" {{ $storeId == $store->id ? 'selected' : '' }}>
-                                    {{ $store->store_name }}
-                                </option>
-                            @endforeach
-                        </select>
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <label for="store_id" class="form-label small fw-semibold text-uppercase mb-1">Select Store Name</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-body-secondary" id="store_id_addon">
+                                <span class="material-symbols-rounded" style="font-size: 20px;" aria-hidden="true">storefront</span>
+                            </span>
+                            <select name="store_id[]"
+                                    id="store_id"
+                                    class="form-select stock-balance-store-multiselect"
+                                    multiple
+                                    data-placeholder="All Stores"
+                                    aria-describedby="store_id_addon">
+                                @foreach($stores as $store)
+                                    <option value="{{ $store->id }}" @selected(in_array((int) $store->id, $storeIds, true))>
+                                        {{ $store->store_name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
                     </div>
-                    <div class="col-md-6">
-                        <div class="mt-3 d-flex flex-wrap gap-2 align-items-center">
-                            <button type="submit" class="btn btn-primary d-inline-flex align-items-center">
-                                <span class="material-symbols-rounded me-1" style="font-size: 18px;">filter_list</span>
-                                <span>Apply Filters</span>
-                            </button>
-                            <a href="{{ route('admin.mess.reports.stock-balance-till-date') }}" class="btn btn-outline-secondary d-inline-flex align-items-center">
-                                <span class="material-symbols-rounded me-1" style="font-size: 18px;">refresh</span>
-                                <span>Reset</span>
-                            </a>
-                            <button type="button" class="btn btn-outline-primary d-inline-flex align-items-center" onclick="printStockBalance()" title="Print or Save as PDF">
-                                <span class="material-symbols-rounded me-1" style="font-size: 18px;">print</span>
-                                <span>Print</span>
-                            </button>
-                            <a href="{{ route('admin.mess.reports.stock-balance-till-date.pdf', request()->query()) }}" class="btn btn-danger d-inline-flex align-items-center" title="Download PDF">
-                                <span class="material-symbols-rounded me-1" style="font-size: 18px;">picture_as_pdf</span>
-                                <span>Download PDF</span>
-                            </a>
-                            <a href="{{ route('admin.mess.reports.stock-balance-till-date.excel', request()->query()) }}" class="btn btn-success d-inline-flex align-items-center" title="Export to Excel">
-                                <span class="material-symbols-rounded me-1" style="font-size: 18px;">table_view</span>
-                                <span>Export Excel</span>
-                            </a>
+                    <div class="col-12 col-xl-6">
+                        <div class="d-flex flex-column flex-sm-row flex-wrap gap-2 align-items-stretch align-items-sm-center justify-content-xl-end">
+                            <div class="btn-group shadow-sm" role="group" aria-label="Filter actions">
+                                <button type="submit" class="btn btn-primary d-inline-flex align-items-center justify-content-center gap-1 px-3">
+                                    <span class="material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">filter_list</span>
+                                    <span>Apply Filters</span>
+                                </button>
+                                <a href="{{ route('admin.mess.reports.stock-balance-till-date') }}" class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center gap-1 px-3">
+                                    <span class="material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">refresh</span>
+                                    <span>Reset</span>
+                                </a>
+                            </div>
+                            <div class="vr d-none d-sm-block text-body-secondary opacity-25 align-self-stretch"></div>
+                            <div class="btn-group shadow-sm" role="group" aria-label="Export actions">
+                                <button type="button" class="btn btn-outline-primary d-inline-flex align-items-center justify-content-center gap-1 px-3" onclick="printStockBalance()" title="Print or Save as PDF">
+                                    <span class="material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">print</span>
+                                    <span>Print</span>
+                                </button>
+                                <a href="{{ route('admin.mess.reports.stock-balance-till-date.pdf', request()->query()) }}" class="btn btn-danger d-inline-flex align-items-center justify-content-center gap-1 px-3" title="Download PDF">
+                                    <span class="material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">picture_as_pdf</span>
+                                    <span>Download PDF</span>
+                                </a>
+                                <a href="{{ route('admin.mess.reports.stock-balance-till-date.excel', request()->query()) }}" class="btn btn-success d-inline-flex align-items-center justify-content-center gap-1 px-3" title="Export to Excel">
+                                    <span class="material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">table_view</span>
+                                    <span>Export Excel</span>
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -60,13 +94,19 @@
 
 <div class="card border-0 shadow-sm flex-grow-1 d-flex flex-column min-h-0">
     <div class="card-body d-flex flex-column flex-grow-1 min-h-0">
-        <!-- Report Heading (Print Only) -->
-        <div class="report-header text-center mb-4">
-            <h4 class="fw-bold text-uppercase mb-1">Stock Balance as of Till Date</h4>
-            @if($selectedStoreName)
-                <h5 class="text-primary mb-1">Store Name: {{ $selectedStoreName }}</h5>
-            @endif
-            <p class="mb-0 text-muted">As on: {{ date('d-M-Y', strtotime($tillDate)) }}</p>
+        <!-- Report Heading -->
+        <div class="report-header text-center mb-4 pb-3 border-bottom border-body-secondary border-opacity-25">
+            <h4 class="fw-bold text-uppercase mb-3 fs-5 text-body-emphasis">Stock Balance as of Till Date</h4>
+            <div class="d-flex flex-wrap justify-content-center gap-2 gap-md-3">
+                <span class="badge text-bg-body-secondary text-body-emphasis fw-normal rounded-pill px-3 py-2 border border-body-secondary border-opacity-50">
+                    <span class="material-symbols-rounded icon-16 align-text-bottom me-1">event</span>
+                    Till: {{ date('d-F-Y', strtotime($tillDate)) }}
+                </span>
+                <span class="badge text-bg-primary fw-normal rounded-pill px-3 py-2 stock-balance-store-badge">
+                    <span class="material-symbols-rounded icon-16 align-text-bottom me-1">store</span>
+                    {{ $selectedStoreName ?? 'All Stores' }}
+                </span>
+            </div>
         </div>
 
         <!-- Report Table -->
@@ -113,7 +153,7 @@
                             </tr>
                         @endforelse
                         @if(count($reportData) > 0)
-                            <tr class="table-secondary fw-bold">
+                            <tr class="table-light fw-bold">
                                 <td colspan="6" class="text-end">Total Amount:</td>
                                 <td class="text-end">₹{{ number_format($totalAmount, 2) }}</td>
                             </tr>
@@ -205,102 +245,43 @@
         }
     }
 
-    @media screen {
-        .report-header {
-            display: none;
-        }
+    .stock-balance-report .report-header {
+        display: block;
     }
 
-    .report-header h4 {
-        margin-bottom: 10px;
-        color: #000;
+    .stock-balance-report .report-header .badge {
+        max-width: 100%;
+        white-space: normal;
     }
 
-    .report-header h5 {
-        margin-bottom: 20px;
-        color: #af2910;
+    .stock-balance-report .icon-16 {
+        font-size: 16px;
     }
 
-    /* Choices.js – Bootstrap form-control appearance (keep Choices default structure for dropdown to work) */
-    .stock-balance-report .choices {
-        margin-bottom: 0;
-        font-size: 1rem;
+    .stock-balance-report .stock-balance-store-badge {
+        text-align: left;
     }
-    .stock-balance-report .choices .choices__inner {
-        display: inline-block;
-        width: 100%;
-        min-height: 38px;
-        padding: 0.375rem 2.25rem 0.375rem 0.75rem;
-        font-size: 1rem;
-        font-weight: 400;
-        line-height: 1.5;
-        color: var(--bs-body-color);
-        background-color: var(--bs-body-bg);
-        border: 1px solid var(--bs-border-color);
-        border-radius: var(--bs-border-radius);
-    }
-    .stock-balance-report .choices.is-focused .choices__inner,
-    .stock-balance-report .choices.is-open .choices__inner {
-        border-color: #86b7fe;
-        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-    }
-    .stock-balance-report .choices[data-type*="select-one"] .choices__inner {
-        padding-bottom: 0.375rem;
-    }
-    .stock-balance-report .choices__list--single {
-        padding: 0;
-    }
-    .stock-balance-report .choices__list--single .choices__item {
-        padding: 0;
-    }
-    .stock-balance-report .choices[data-type*="select-one"] .choices__input {
-        padding: 0.375rem 0.75rem;
-        background-color: var(--bs-body-bg);
-    }
-    .stock-balance-report .choices__list--dropdown .choices__item,
-    .stock-balance-report .choices__list[aria-expanded] .choices__item {
-        padding: 0.375rem 0.75rem;
-    }
-    .stock-balance-report .choices__list--dropdown .choices__item--selectable.is-highlighted,
-    .stock-balance-report .choices__list[aria-expanded] .choices__item--selectable.is-highlighted {
-        background-color: var(--bs-primary-bg-subtle);
-        color: var(--bs-primary);
-    }
-    .stock-balance-report .choices__list--dropdown,
-    .stock-balance-report .choices__list[aria-expanded] {
-        border-color: var(--bs-border-color);
-        border-radius: var(--bs-border-radius);
-        box-shadow: var(--bs-box-shadow);
-        z-index: 1060;
-    }
+
 </style>
 
-{{-- Choices.js – default CSS required for dropdown; script below --}}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/styles/choices.min.css"/>
-<script src="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/scripts/choices.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css">
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 <script>
-    (function () {
-        document.addEventListener('DOMContentLoaded', function () {
-            if (typeof window.TomSelect === 'undefined') return;
-
-            document
-                .querySelectorAll('.stock-balance-report select')
-                .forEach(function (el) {
-                        if (el.dataset.tomselectInitialized === 'true') return;
-
-                    var placeholder = el.getAttribute('data-placeholder') || 'Select';
-
-                    new Choices(el, {
-                        shouldSort: false,
-                        placeholder: true,
-                        placeholderValue: placeholder,
-                        searchPlaceholderValue: 'Search...'
-                    });
-
-                    el.dataset.tomselectInitialized = 'true';
-                });
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof window.TomSelect === 'undefined') return;
+        document.querySelectorAll('.stock-balance-report select.stock-balance-store-multiselect').forEach(function (el) {
+            if (el.dataset.tomselectInitialized === 'true') return;
+            var placeholder = el.getAttribute('data-placeholder') || 'Select';
+            new TomSelect(el, {
+                placeholder: placeholder,
+                maxItems: null,
+                maxOptions: 500,
+                plugins: ['remove_button', 'dropdown_input'],
+                sortField: { field: 'text', direction: 'asc' }
+            });
+            el.dataset.tomselectInitialized = 'true';
         });
-    })();
+    });
 </script>
 <script>
 function printStockBalance() {
@@ -312,7 +293,7 @@ function printStockBalance() {
 
     const title     = 'Stock Balance as of Till Date';
     const dateLabel = @json('As on ' . date('d-F-Y', strtotime($tillDate)));
-    const storeName = @json($selectedStoreName ?? 'All Stores');
+    const storeName = @json($selectedStoreName ? $selectedStoreName : 'All Stores');
 
     // Build a new table so the header (with logos + meta + column headings)
     // lives inside <thead> and repeats on every printed page.
@@ -337,8 +318,8 @@ function printStockBalance() {
                     <div class="brand-line-3">Lal Bahadur Shastri National Academy of Administration</div>
                   </div>
                 </div>
-                <div class="d-none d-print-block">
-                  <img src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png" alt="LBSNAA Logo" height="40">
+                <div>
+                  <img src="{{ $printLogoSrc }}" alt="LBSNAA Logo" height="40">
                 </div>
               </div>
               <div class="d-flex flex-wrap justify-content-between align-items-center report-meta">

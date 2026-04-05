@@ -7,9 +7,13 @@
         "watch-poll": "mix watch -- --watch-options-poll=1000",
         "hot": "mix watch --hot",
         "prod": "npm run production",
-        "production": "mix --production"
+        "production": "mix --production",
+        "test:e2e": "playwright test",
+        "test:e2e:headed": "playwright test --headed",
+        "test:e2e:report": "playwright show-report"
     },
     "devDependencies": {
+        "@playwright/test": "^1.58.2",
         "@popperjs/core": "^2.11.6",
         "axios": "^0.25",
         "bootstrap": "^5.2.3",

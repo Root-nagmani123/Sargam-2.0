@@ -6,10 +6,13 @@ use App\Models\Notification;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Log;
+
 
 class NotificationService
 {
+    /** Invisible trailer on notification message: combined mess bill id + date range for correct print-receipt URL */
+    private const MESS_COMBINED_RECEIPT_MARKER = "\u{2060}MESS_COMBINED_RECEIPT\x1F";
+
     /**
      * Create a new notification
      * 
@@ -86,6 +89,66 @@ class NotificationService
         }
 
         return DB::table('notifications')->insert($notifications) ? count($notifications) : 0;
+    }
+
+    /**
+     * Append encoded combined mess bill payload (id + filter dates) for redirect to full combined receipt.
+     */
+    public static function appendMessCombinedReceiptPayload(
+        string $visibleMessage,
+        string $combinedId,
+        string $dateFromYmd,
+        string $dateToYmd
+    ): string {
+        $payload = json_encode([
+            'i' => $combinedId,
+            'f' => $dateFromYmd,
+            't' => $dateToYmd,
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+        return $visibleMessage . self::MESS_COMBINED_RECEIPT_MARKER . base64_encode((string) $payload);
+    }
+
+    /**
+     * @return array{i: string, f: string, t: string}|null
+     */
+    public static function parseMessCombinedReceiptPayload(?string $message): ?array
+    {
+        if ($message === null || $message === '') {
+            return null;
+        }
+        $pos = strpos($message, self::MESS_COMBINED_RECEIPT_MARKER);
+        if ($pos === false) {
+            return null;
+        }
+        $b64 = substr($message, $pos + strlen(self::MESS_COMBINED_RECEIPT_MARKER));
+        $json = base64_decode($b64, true);
+        if ($json === false) {
+            return null;
+        }
+        $data = json_decode($json, true);
+        if (!is_array($data) || empty($data['i']) || !is_string($data['i'])) {
+            return null;
+        }
+
+        return [
+            'i' => $data['i'],
+            'f' => isset($data['f']) && is_string($data['f']) ? $data['f'] : '',
+            't' => isset($data['t']) && is_string($data['t']) ? $data['t'] : '',
+        ];
+    }
+
+    public static function stripMessCombinedReceiptPayloadForDisplay(?string $message): string
+    {
+        if ($message === null || $message === '') {
+            return '';
+        }
+        $pos = strpos($message, self::MESS_COMBINED_RECEIPT_MARKER);
+        if ($pos === false) {
+            return $message;
+        }
+
+        return trim(substr($message, 0, $pos));
     }
 
     /**
@@ -308,17 +371,29 @@ class NotificationService
     public function getRedirectUrl(int $notificationPk): ?string
     {
         $notification = Notification::find($notificationPk);
-        log::info($notification);
-        
+
         if (!$notification) {
             return null;
         }
 
         $config = config('notifications', []);
         //print_r($config);
-        $type = strtolower($notification->type ?? '');
-        log::info($type);
-        $moduleName = $notification->module_name ?? '';
+        $type = strtolower(trim($notification->type ?? ''));
+        $moduleName = strtolower(trim($notification->module_name ?? ''));
+
+        // Combined Process Mess Bill: reference_pk was only the first voucher id; open full combined receipt with date range.
+        if ($type === 'mess' && ($moduleName === 'messinvoicecombined' || $moduleName === 'messpaymentcombined')) {
+            $parsed = self::parseMessCombinedReceiptPayload($notification->message);
+            if ($parsed !== null && $parsed['i'] !== '') {
+                $query = array_filter([
+                    'date_from' => $parsed['f'] !== '' ? $parsed['f'] : null,
+                    'date_to' => $parsed['t'] !== '' ? $parsed['t'] : null,
+                ], static fn ($v) => $v !== null && $v !== '');
+                $url = route('admin.mess.process-mess-bills-employee.print-receipt', ['id' => $parsed['i']]);
+
+                return $url . (count($query) > 0 ? '?' . http_build_query($query) : '');
+            }
+        }
 
         // Estate: when estate bill is ready, redirect to Generate Estate Bill
         // page for the bill's month and auto-open the specific bill print.
@@ -433,20 +508,29 @@ class NotificationService
             }
         }
 
-       
+        // Mess low stock: reference_pk holds mess_stores.id so the report opens filtered to that store.
+        if ($type === 'mess_stock' && $moduleName === 'lowstock') {
+            $storeId = (int) ($notification->reference_pk ?? 0);
+            $base = route('admin.mess.reports.low-stock');
+            if ($storeId > 0) {
+                return $base . '?' . http_build_query([
+                    'store_id' => $storeId,
+                    'till_date' => now()->format('Y-m-d'),
+                ]);
+            }
+        }
+
         // Try to find route mapping by type and module
         if (isset($config[$type]) && is_array($config[$type])) {
             // Check for exact module name match
             if (isset($config[$type][$moduleName])) {
                 $routeConfig = $config[$type][$moduleName];
-                log::info($routeConfig);
                 return $this->buildRouteUrl($routeConfig, $notification);
             }
 
             // Try case-insensitive module name match
             foreach ($config[$type] as $configModuleName => $routeConfig) {
-                if (strtolower($configModuleName) === strtolower($moduleName)) {
-                    log::info($routeConfig);
+                if (strtolower(trim($configModuleName)) === strtolower(trim($moduleName))) {
                     return $this->buildRouteUrl($routeConfig, $notification);
                 }
             }
@@ -454,12 +538,10 @@ class NotificationService
 
         // Fallback to default route
         if (isset($config['default'])) {
-            log::info($config['default']);
             return $this->buildRouteUrl($config['default'], $notification);
         }
 
         // Ultimate fallback to dashboard
-        log::info(route('admin.dashboard'));
         return route('admin.dashboard');
     }
 
@@ -479,7 +561,14 @@ class NotificationService
         $routeParams = [];
         foreach ($params as $paramName => $sourceField) {
             if ($sourceField === 'reference_pk') {
-                $routeParams[$paramName] = $notification->reference_pk;
+                if (!empty($notification->reference_pk)) {
+                    $routeParams[$paramName] = $notification->reference_pk;
+                } else {
+                    \Log::error('reference_pk missing in notification', [
+                        'notification_id' => $notification->id ?? null,
+                        'notification' => $notification
+                    ]);
+                }
             } elseif (isset($notification->$sourceField)) {
                 $routeParams[$paramName] = $notification->$sourceField;
             } elseif (is_string($sourceField) && !empty($sourceField)) {
@@ -488,14 +577,17 @@ class NotificationService
             }
         }
 
-        // Check if route exists
-        try {
-            if (Route::has($routeName)) {
-                return route($routeName, $routeParams);
-            }
-        } catch (\Exception $e) {
-            // Route doesn't exist or has invalid parameters, fallback to dashboard
-        }
+try {
+    return route($routeName, $routeParams);
+} catch (\Exception $e) {
+    \Log::error('Route generation failed', [
+        'route' => $routeName,
+        'params' => $routeParams,
+        'error' => $e->getMessage(),
+        'notification_id' => $notification->id ?? null
+    ]);
+}
+
 
         // Fallback to dashboard if route doesn't exist
         return route('admin.dashboard');
@@ -513,9 +605,7 @@ class NotificationService
        
         //echo $notificationPk;
         $marked = $this->markAsRead($notificationPk, $userId);
-        // print_r($marked);die;
         $redirectUrl = $this->getRedirectUrl($notificationPk);
-        // print_r($redirectUrl);die;
 
         return [
             'success' => $marked,

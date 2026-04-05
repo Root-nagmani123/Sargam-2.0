@@ -137,7 +137,7 @@ return [
 
     // Mess Invoice & Payment Notifications (opens the correct invoice/receipt when clicked)
     'mess' => [
-        'MessInvoice' => [
+        'messinvoice' => [
             'route' => 'admin.mess.process-mess-bills-employee.print-receipt',
             'params' => ['id' => 'reference_pk'],
         ],
