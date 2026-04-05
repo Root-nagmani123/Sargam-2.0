@@ -72,11 +72,23 @@
             @endforeach
             @if($allocations->isEmpty())
                 <tr id="storeAllocationEmptyRow">
-                    <td colspan="7" class="text-center text-muted py-4">No store allocations found. Click "Add Mess Store Allocation" to add one.</td>
+                    <td class="border-0"></td>
+                    <td class="border-0"></td>
+                    <td class="border-0"></td>
+                    <td class="text-center text-muted py-4 border-0">No store allocations found. Click "Add Mess Store Allocation" to add one.</td>
+                    <td class="border-0"></td>
+                    <td class="border-0"></td>
+                    <td class="border-0"></td>
                 </tr>
             @endif
             <tr id="storeAllocationNoMatchRow" class="d-none">
-                <td colspan="7" class="text-center text-muted py-4">No matching records.</td>
+                <td class="border-0"></td>
+                <td class="border-0"></td>
+                <td class="border-0"></td>
+                <td class="text-center text-muted py-4 border-0">No matching records.</td>
+                <td class="border-0"></td>
+                <td class="border-0"></td>
+                <td class="border-0"></td>
             </tr>
             </tbody>
         </table>
@@ -163,6 +175,19 @@
     z-index: 20050 !important;
     box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
 }
+/* Prevent item names from wrapping - single line display */
+#createStoreAllocationModal .choices__list--dropdown .choices__item,
+#editStoreAllocationModal .choices__list--dropdown .choices__item,
+#createStoreAllocationModal .choices__inner .choices__item,
+#editStoreAllocationModal .choices__inner .choices__item {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+#createStoreAllocationModal #allocationItemsTable td,
+#editStoreAllocationModal #editAllocationItemsTable td {
+    vertical-align: middle;
+}
 /* Dropdown open: let list escape modal-body overflow; footer stays under body layer */
 #createStoreAllocationModal .modal-body.alloc-dropdown-open,
 #editStoreAllocationModal .modal-body.alloc-dropdown-open {
@@ -191,7 +216,7 @@
 <div class="modal fade" id="createStoreAllocationModal" tabindex="-1" aria-labelledby="createStoreAllocationModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered">
         <div class="modal-content">
-            <form method="POST" action="{{ route('admin.mess.storeallocations.store') }}" id="createAllocationForm">
+            <form method="POST" action="{{ route('admin.mess.storeallocations.store') }}" id="createAllocationForm" novalidate>
                 @csrf
                 <div class="modal-header border-bottom bg-light">
                     <h5 class="modal-title fw-semibold" id="createStoreAllocationModalLabel">Add Mess Store Allocation</h5>
@@ -253,7 +278,7 @@
                                             <td><input type="text" name="items[0][unit]" class="form-control  alloc-unit" readonly placeholder="—"></td>
                                             <td><input type="number" name="items[0][unit_price]" class="form-control  alloc-unit-price" step="0.01" min="0" placeholder="0" required></td>
                                             <td><input type="text" class="form-control  alloc-line-total bg-light" readonly placeholder="0.00"></td>
-                                            <td><button type="button" class="btn btn-sm btn-outline-danger alloc-remove-row" disabled title="Remove">×</button></td>
+                                            <td class="text-center align-middle"><button type="button" class="btn btn-sm btn-outline-danger alloc-remove-row" disabled title="Remove">×</button></td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -274,7 +299,7 @@
 <div class="modal fade" id="editStoreAllocationModal" tabindex="-1" aria-labelledby="editStoreAllocationModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered">
         <div class="modal-content">
-            <form method="POST" id="editAllocationForm" action="">
+            <form method="POST" id="editAllocationForm" action="" novalidate>
                 @csrf
                 @method('PUT')
                 <div class="modal-header border-bottom bg-light">
@@ -628,15 +653,26 @@
             <td><input type="text" name="items[${index}][unit]" class="form-control  alloc-unit" readonly placeholder="—" value="${unit}"></td>
             <td><input type="number" name="items[${index}][unit_price]" class="form-control  alloc-unit-price" step="0.01" min="0" placeholder="0" value="${price}" required></td>
             <td><input type="text" class="form-control  alloc-line-total bg-light" readonly placeholder="0.00" value="${lineTotal}"></td>
-            <td><button type="button" class="btn btn-sm btn-outline-danger alloc-remove-row" title="Remove">×</button></td>
+            <td class="text-center align-middle"><button type="button" class="btn btn-sm btn-outline-danger alloc-remove-row" title="Remove">×</button></td>
         </tr>`;
     }
 
     function updateUnit(row) {
         const select = row.querySelector('.alloc-item-select');
-        const opt = select && select.options[select.selectedIndex];
+        if (!select) return;
+        const selectedValue = select.value;
+        if (!selectedValue) {
+            const unitInput = row.querySelector('.alloc-unit');
+            if (unitInput) unitInput.value = '';
+            return;
+        }
+        // Find the option with matching value to get data-unit attribute
+        const opt = Array.from(select.options).find(o => o.value == selectedValue);
         const unitInput = row.querySelector('.alloc-unit');
-        if (unitInput) unitInput.value = opt && opt.dataset.unit ? opt.dataset.unit : '';
+        if (unitInput) {
+            const unitValue = opt && opt.getAttribute('data-unit') ? opt.getAttribute('data-unit') : '';
+            unitInput.value = unitValue;
+        }
     }
 
     function calcLineTotal(row) {
@@ -662,6 +698,100 @@
             if (btn) btn.disabled = rows.length <= 1;
         });
     }
+
+    /**
+     * Remove item lines with no item selected (common after "+ Add Item" without choosing an item).
+     * Keeps HTML5/Choices from blocking submit with no visible invalid field in the modal.
+     */
+    function pruneIncompleteAllocationRows(tbodySelector) {
+        const tbody = document.querySelector(tbodySelector);
+        if (!tbody) return;
+        let rows;
+        while ((rows = Array.from(tbody.querySelectorAll('.allocation-item-row'))).length > 1) {
+            const emptyRow = rows.find(function(r) {
+                const sel = r.querySelector('.alloc-item-select');
+                return sel && !sel.value;
+            });
+            if (!emptyRow) break;
+            destroyChoices(emptyRow.querySelector('.alloc-item-select'));
+            emptyRow.remove();
+        }
+    }
+
+    function validateMessAllocationForm(form, itemsTbodySelector, e) {
+        const tbody = document.querySelector(itemsTbodySelector);
+        if (!tbody) return true;
+        pruneIncompleteAllocationRows(itemsTbodySelector);
+        if (itemsTbodySelector === '#allocationItemsBody') {
+            updateCreateRemoveButtons();
+        } else {
+            updateEditRemoveButtons();
+        }
+
+        const subStore = form.querySelector('select[name="sub_store_id"]');
+        if (!subStore || !String(subStore.value || '').trim()) {
+            e.preventDefault();
+            alert('Please select a store.');
+            return false;
+        }
+        const dateInput = form.querySelector('input[name="allocation_date"]');
+        if (!dateInput || !String(dateInput.value || '').trim()) {
+            e.preventDefault();
+            alert('Please select a date.');
+            return false;
+        }
+
+        const rows = Array.from(tbody.querySelectorAll('.allocation-item-row'));
+        if (!rows.length) {
+            e.preventDefault();
+            alert('Please add at least one item line with an item selected.');
+            return false;
+        }
+        for (let i = 0; i < rows.length; i++) {
+            const row = rows[i];
+            const sel = row.querySelector('.alloc-item-select');
+            if (!sel || !String(sel.value || '').trim()) {
+                e.preventDefault();
+                alert('Please select an item on each line, or remove incomplete rows using the × button.');
+                const wrap = sel && sel.closest('.choices');
+                if (wrap && typeof wrap.scrollIntoView === 'function') {
+                    wrap.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                }
+                return false;
+            }
+            const qty = row.querySelector('.alloc-qty');
+            const price = row.querySelector('.alloc-unit-price');
+            const q = qty ? parseFloat(qty.value) : NaN;
+            const p = price ? parseFloat(price.value) : NaN;
+            if (!qty || qty.value === '' || !Number.isFinite(q) || q < 0.01) {
+                e.preventDefault();
+                alert('Enter a valid quantity (minimum 0.01) for each item.');
+                qty && qty.focus();
+                return false;
+            }
+            if (!price || price.value === '' || !Number.isFinite(p) || p < 0) {
+                e.preventDefault();
+                alert('Enter a valid unit price for each item.');
+                price && price.focus();
+                return false;
+            }
+        }
+        return true;
+    }
+
+    document.getElementById('createAllocationForm').addEventListener('submit', function(e) {
+        validateMessAllocationForm(this, '#allocationItemsBody', e);
+    });
+
+    document.getElementById('editAllocationForm').addEventListener('submit', function(e) {
+        const action = this.getAttribute('action');
+        if (!action || action === '') {
+            e.preventDefault();
+            alert('Form is not ready. Please close this dialog and open Edit again.');
+            return;
+        }
+        validateMessAllocationForm(this, '#editAllocationItemsBody', e);
+    });
 
     document.getElementById('addAllocationItemRow').addEventListener('click', function() {
         const tbody = document.getElementById('allocationItemsBody');

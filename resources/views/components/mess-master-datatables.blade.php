@@ -17,6 +17,7 @@
     $lengthMenu = $lengthMenu ?? [[10, 25, 50, 100], [10, 25, 50, 100]];
     $responsive = isset($responsive) ? (bool) $responsive : false;
     $scrollX = isset($scrollX) ? (bool) $scrollX : false;
+    $searchSmart = isset($searchSmart) ? (bool) $searchSmart : true;
     $columnDefs = count($actionColumnIndices) > 0
         ? [['orderable' => false, 'targets' => $actionColumnIndices]]
         : [];
@@ -57,6 +58,7 @@ document.addEventListener('DOMContentLoaded', function() {
         pageLength: {{ $pageLength }},
         lengthMenu: lengthMenu,
         searchDelay: {{ $searchDelay }},
+        search: { smart: {{ $searchSmart ? 'true' : 'false' }} },
         responsive: {{ $responsive ? 'true' : 'false' }},
         scrollX: {{ $scrollX ? 'true' : 'false' }},
         dom: '<"row align-items-center mb-2"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row align-items-center mt-2"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',

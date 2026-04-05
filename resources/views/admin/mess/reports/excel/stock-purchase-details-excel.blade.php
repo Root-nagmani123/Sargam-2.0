@@ -62,52 +62,71 @@
         <th>Total</th>
     </tr>
 
-    {{-- Body – reuse grouping and totals like the on-screen report --}}
-    @forelse($purchaseOrders as $order)
-        @php
-            $storeName    = $order->store ? $order->store->store_name : 'N/A';
-            $billLabel    = $storeName . ' (Primary) Bill No. ' . ($order->po_number ?? $order->id) . ' (' . $order->po_date->format('d-m-Y') . ')';
-            $billSubtotal = 0;
-            $billTaxTotal = 0;
-        @endphp
-
-        {{-- Bill header row --}}
+    {{-- Body – vendor sections like Sale Voucher report, then bills under each vendor --}}
+    @php $grandTotalAmount = 0; @endphp
+    @forelse($purchaseOrdersByVendor as $vendorGroup)
         <tr>
-            <td colspan="8">{{ $billLabel }}</td>
+            <td colspan="8" style="font-weight:700;background:#e9ecef;">VENDOR : {{ $vendorGroup['vendor_name'] }}</td>
         </tr>
-
-        @foreach($order->items as $item)
+        @php $vendorSectionTotal = 0; @endphp
+        @foreach($vendorGroup['orders'] as $order)
             @php
-                $qty        = $item->quantity ?? 0;
-                $rate       = $item->unit_price ?? 0;
-                $taxPercent = $item->tax_percent ?? 0;
-                $subtotal   = $qty * $rate;
-                $taxAmount  = round($subtotal * ($taxPercent / 100), 2);
-                $total      = $subtotal + $taxAmount;
-                $billSubtotal += $subtotal;
-                $billTaxTotal += $taxAmount;
+                $storeName    = $order->store ? $order->store->store_name : 'N/A';
+                $billLabel    = $storeName . ' (Primary) Bill No. ' . ($order->po_number ?? $order->id) . ' (' . $order->po_date->format('d-m-Y') . ')';
+                $billSubtotal = 0;
+                $billTaxTotal = 0;
             @endphp
             <tr>
-                <td>{{ $item->itemSubcategory->item_name ?? $item->itemSubcategory->subcategory_name ?? $item->itemSubcategory->name ?? 'N/A' }}</td>
-                <td>{{ $item->itemSubcategory->item_code ?? '' }}</td>
-                <td>{{ $item->unit ?? '' }}</td>
-                <td>{{ $qty }}</td>
-                <td>{{ $rate }}</td>
-                <td>{{ $taxPercent }}</td>
-                <td>{{ $taxAmount }}</td>
-                <td>{{ $total }}</td>
+                <td colspan="8" style="font-weight:700;background:#5a6268;color:#fff;">{{ $billLabel }}</td>
+            </tr>
+            @foreach($order->items as $item)
+                @php
+                    $qty        = $item->quantity ?? 0;
+                    $rate       = $item->unit_price ?? 0;
+                    $taxPercent = $item->tax_percent ?? 0;
+                    $subtotal   = $qty * $rate;
+                    $taxAmount  = round($subtotal * ($taxPercent / 100), 2);
+                    $total      = $subtotal + $taxAmount;
+                    $billSubtotal += $subtotal;
+                    $billTaxTotal += $taxAmount;
+                @endphp
+                <tr>
+                    <td>{{ $item->itemSubcategory->item_name ?? $item->itemSubcategory->subcategory_name ?? $item->itemSubcategory->name ?? 'N/A' }}</td>
+                    <td>{{ $item->itemSubcategory->item_code ?? '' }}</td>
+                    <td>{{ $item->unit ?? '' }}</td>
+                    <td>{{ $qty }}</td>
+                    <td>{{ $rate }}</td>
+                    <td>{{ $taxPercent }}</td>
+                    <td>{{ $taxAmount }}</td>
+                    <td>{{ $total }}</td>
+                </tr>
+            @endforeach
+            @php
+                $billTotal = $billSubtotal + $billTaxTotal;
+                $vendorSectionTotal += $billTotal;
+                $grandTotalAmount += $billTotal;
+            @endphp
+            <tr>
+                <td colspan="7" style="text-align:right; font-weight:700;">Bill Total:</td>
+                <td style="font-weight:700;">{{ $billTotal }}</td>
             </tr>
         @endforeach
-
-        @php $billTotal = $billSubtotal + $billTaxTotal; @endphp
         <tr>
-            <td colspan="7" style="text-align:right; font-weight:700;">Bill Total:</td>
-            <td style="font-weight:700;">{{ $billTotal }}</td>
+            <td colspan="7" style="text-align:right; font-weight:700;background:#dee2e6;">Vendor Total ({{ $vendorGroup['vendor_name'] }}):</td>
+            <td style="font-weight:700;background:#dee2e6;">{{ $vendorSectionTotal }}</td>
         </tr>
     @empty
         <tr>
             <td colspan="8">No purchase details found</td>
         </tr>
     @endforelse
+
+    {{-- Grand Total Row --}}
+    @if($grandTotalAmount > 0)
+        <tr>
+            <td colspan="7" style="text-align:right; font-weight:700;background:#004a93;color:#fff;">Grand Total:</td>
+            <td style="font-weight:700;background:#004a93;color:#fff;">{{ number_format($grandTotalAmount, 2) }}</td>
+        </tr>
+    @endif
 </table>
 

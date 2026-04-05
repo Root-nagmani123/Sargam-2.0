@@ -219,7 +219,8 @@
         'ordering' => false,
         'actionColumnIndex' => 12,
         'infoLabel' => 'selling vouchers',
-        'searchDelay' => 0
+        'searchDelay' => 0,
+        'searchSmart' => false,
     ])
     @include('mess.partials.modal-dropdown-stability')
 </div>
@@ -945,36 +946,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Initialize Choices.js on filter dropdowns for multiselect with search
-    if (typeof Choices !== 'undefined') {
-        var filterStatusEl = document.getElementById('filter_status');
-        var filterStoreEl = document.getElementById('filter_store');
-        
-        if (filterStatusEl) {
-            new Choices(filterStatusEl, {
-                removeItemButton: true,
-                searchEnabled: true,
-                searchPlaceholderValue: 'Search status...',
-                placeholder: true,
-                placeholderValue: 'Select status',
-                itemSelectText: '',
-                shouldSort: false
-            });
-        }
-        
-        if (filterStoreEl) {
-            new Choices(filterStoreEl, {
-                removeItemButton: true,
-                searchEnabled: true,
-                searchPlaceholderValue: 'Search store...',
-                placeholder: true,
-                placeholderValue: 'Select store',
-                itemSelectText: '',
-                shouldSort: false
-            });
-        }
-    }
-
     // Keep modal scroll stable; don't toggle overflow classes on dropdown open/close.
     function installModalScrollGuard(modalId) {
         var modal = document.getElementById(modalId);
@@ -1113,6 +1084,62 @@ document.addEventListener('DOMContentLoaded', function() {
         selectEl.addEventListener('hideDropdown', onHide);
     }
 
+    /**
+     * Selling voucher dropdowns: type-to-search using whole words only.
+     * Each space-separated token must match a label word from the start (prefix while typing),
+     * so e.g. "rice" matches "Basmati Rice" but not "price".
+     */
+    function svNormalizeSearchQuery(q) {
+        return String(q || '').trim().replace(/\s{2,}/g, ' ');
+    }
+
+    function svLabelMatchesExactWordTokens(label, query) {
+        var q = svNormalizeSearchQuery(query).toLowerCase();
+        if (!q) return true;
+        var labelStr = String(label || '');
+        var words = labelStr.toLowerCase().match(/[\u0900-\u0FFF\w]+/g);
+        if (!words || !words.length) {
+            return labelStr.toLowerCase().indexOf(q) >= 0;
+        }
+        var tokens = q.split(/\s+/).filter(Boolean);
+        var allMatch = tokens.every(function(tok) {
+            return words.some(function(w) {
+                return w === tok || w.indexOf(tok) === 0;
+            });
+        });
+        if (allMatch) return true;
+        // Fallback: substring match so short queries and labels without word boundaries still filter
+        return labelStr.toLowerCase().indexOf(q) >= 0;
+    }
+
+    function patchChoicesSearcherExactWordTokens(choicesInstance) {
+        try {
+            var searcher = choicesInstance._searcher;
+            var store = choicesInstance._store;
+            if (!searcher || !store || searcher._svExactWordPatched) return;
+            searcher._svExactWordPatched = true;
+            var origSearch = searcher.search.bind(searcher);
+            searcher.search = function(needle) {
+                var nv = svNormalizeSearchQuery(needle);
+                if (!nv.length) return origSearch(needle);
+                var list = store.searchableChoices;
+                if (!list || !list.length) return origSearch(needle);
+                var out = [];
+                for (var i = 0; i < list.length; i++) {
+                    var item = list[i];
+                    if (item.placeholder) continue;
+                    var lab = item.label != null ? String(item.label) : '';
+                    if (svLabelMatchesExactWordTokens(lab, nv)) {
+                        out.push({ item: item, score: 0, rank: out.length + 1 });
+                    }
+                }
+                return out;
+            };
+        } catch (e) {
+            console.warn('patchChoicesSearcherExactWordTokens', e);
+        }
+    }
+
     function createChoicesInstance(selectEl, settings) {
         if (!selectEl || typeof window.Choices === 'undefined') return null;
         if (selectEl.choicesInstance) return selectEl.choicesInstance;
@@ -1128,10 +1155,21 @@ document.addEventListener('DOMContentLoaded', function() {
             searchResultLimit: typeof settings.maxOptions === 'number' ? settings.maxOptions : -1,
             placeholder: true,
             placeholderValue: settings.placeholder || (selectEl.getAttribute('placeholder') || ''),
-            searchPlaceholderValue: ''
+            searchPlaceholderValue: typeof settings.searchPlaceholderValue === 'string' ? settings.searchPlaceholderValue : ''
         };
 
+        if (settings.removeItemButton === true) {
+            choiceConfig.removeItemButton = true;
+        }
+
+        if (Array.isArray(settings.searchFields)) {
+            choiceConfig.searchFields = settings.searchFields;
+        }
+
         var choices = new window.Choices(selectEl, choiceConfig);
+        if (settings.exactWordTokenSearch === true) {
+            patchChoicesSearcherExactWordTokens(choices);
+        }
         var api = {
             _choices: choices,
             selectEl: selectEl,
@@ -1209,6 +1247,9 @@ document.addEventListener('DOMContentLoaded', function() {
             searchField: ['text'],
             controlInput: '<input>',
             highlight: false,
+            exactWordTokenSearch: true,
+            searchFields: ['label'],
+            searchPlaceholderValue: 'Type to search...',
             onInitialize: function () {
                 this.activeOption = null;
             },
@@ -1423,6 +1464,40 @@ document.addEventListener('DOMContentLoaded', function() {
         else selectEl.value = v;
     }
 
+    /** After Choices.js init on Edit Selling Voucher modal, push API values into instances (store/payment/client/course/name). */
+    function syncEditSellingVoucherChoicesFromVoucher(v, editSlug) {
+        editSlug = String(editSlug || 'employee').toLowerCase();
+        var paySel = document.querySelector('#editSellingVoucherModal select.edit-payment-type');
+        if (paySel && paySel.tomselect) {
+            try { paySel.tomselect.setValue(String(v.payment_type ?? 1)); } catch (e) {}
+        }
+        var stSel = document.querySelector('#editSellingVoucherModal select.edit-store');
+        var sid = v.store_id || v.inve_store_master_pk || '';
+        if (stSel && stSel.tomselect && sid !== '') {
+            try { stSel.tomselect.setValue(String(sid)); } catch (e) {}
+        }
+        var ecs = document.getElementById('editClientNameSelect');
+        if (ecs && ecs.tomselect && editSlug !== 'ot' && editSlug !== 'course' && v.client_type_pk != null && String(v.client_type_pk) !== '') {
+            try { ecs.tomselect.setValue(String(v.client_type_pk)); } catch (e) {}
+        }
+        var eot = document.getElementById('editModalOtCourseSelect');
+        if (eot && eot.tomselect && editSlug === 'ot' && v.client_type_pk != null && String(v.client_type_pk) !== '') {
+            try { eot.tomselect.setValue(String(v.client_type_pk)); } catch (e) {}
+        }
+        var crs = document.getElementById('editModalCourseSelect');
+        if (crs && crs.tomselect && editSlug === 'course' && v.client_type_pk != null && String(v.client_type_pk) !== '') {
+            try { crs.tomselect.setValue(String(v.client_type_pk)); } catch (e) {}
+        }
+        var cn = String(v.client_name || '').trim();
+        if (cn) {
+            ['editModalFacultySelect', 'editModalAcademyStaffSelect', 'editModalMessStaffSelect'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (!el || !el.tomselect) return;
+                try { el.tomselect.setValue(cn); } catch (e) {}
+            });
+        }
+    }
+
     // When user clicks any Cancel/Close button in a modal (secondary button),
     // close the modal and refresh the page to reset all filters/state (only for Add/Edit Selling Voucher modals).
     document.querySelectorAll('#addSellingVoucherModal button.btn-secondary[data-bs-dismiss="modal"], #editSellingVoucherModal button.btn-secondary[data-bs-dismiss="modal"]').forEach(function(btn) {
@@ -1431,15 +1506,18 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Filter dropdowns (Choices.js)
+    // Filter dropdowns (Choices.js): same exact word-token search as selling voucher modals
     if (typeof Choices !== 'undefined') {
-        var filterStatus = document.querySelector('form[method="GET"] select[name="status"]');
-        var filterStore = document.querySelector('form[method="GET"] select[name="store"]');
+        var filterStatus = document.getElementById('filter_status');
+        var filterStore = document.getElementById('filter_store');
 
         if (filterStatus) {
             try {
                 if (filterStatus.tomselect) {
                     filterStatus.tomselect.destroy();
+                }
+                if (filterStatus.choicesInstance) {
+                    try { filterStatus.choicesInstance.destroy(); } catch (e) {}
                 }
                 createChoicesInstance(filterStatus, {
                     allowEmptyOption: true,
@@ -1448,6 +1526,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     searchField: ['text'],
                     controlInput: '<input>',
                     highlight: false,
+                    removeItemButton: true,
+                    exactWordTokenSearch: true,
+                    searchFields: ['label'],
+                    searchPlaceholderValue: 'Search status...',
                     onInitialize: function () {
                         this.activeOption = null;
                     },
@@ -1500,6 +1582,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (filterStore.tomselect) {
                     filterStore.tomselect.destroy();
                 }
+                if (filterStore.choicesInstance) {
+                    try { filterStore.choicesInstance.destroy(); } catch (e) {}
+                }
                 createChoicesInstance(filterStore, {
                     allowEmptyOption: true,
                     dropdownParent: 'body',
@@ -1507,6 +1592,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     searchField: ['text'],
                     controlInput: '<input>',
                     highlight: false,
+                    removeItemButton: true,
+                    exactWordTokenSearch: true,
+                    searchFields: ['label'],
+                    searchPlaceholderValue: 'Search store...',
                     onInitialize: function () {
                         this.activeOption = null;
                     },
@@ -1804,6 +1893,13 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         var grandTotalEl = document.getElementById('modalGrandTotal');
         if (grandTotalEl) grandTotalEl.textContent = '₹0.00';
+
+        // Modal stays open after AJAX save; Choices was destroyed above — re-init so Client Type / dropdowns match defaults.
+        if (modalEl.classList.contains('show')) {
+            window.setTimeout(function () {
+                initAddModalTomSelects();
+            }, 0);
+        }
     }
 
     // After AJAX save (add/edit), refresh the listing DataTable so new rows show immediately.
@@ -1936,16 +2032,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
-    // Debug: Check if buttons exist
-    const viewButtons = document.querySelectorAll('.btn-view-sv');
-    const editButtons = document.querySelectorAll('.btn-edit-sv');
-    const returnButtons = document.querySelectorAll('.btn-return-sv');
-    console.log('Found buttons:', {
-        view: viewButtons.length,
-        edit: editButtons.length,
-        return: returnButtons.length
-    });
     
     let itemSubcategories = @json($itemSubcategories);
     let filteredItems = itemSubcategories;
@@ -2216,6 +2302,38 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    function appendEditModalItemRow() {
+        const tbody = document.getElementById('editModalItemsBody');
+        if (!tbody) return;
+        tbody.insertAdjacentHTML('beforeend', getEditRowHtml(editRowIndex, null));
+        editRowIndex++;
+        const newRow = tbody.querySelector('.sv-item-row:last-child');
+        const newSelect = newRow ? newRow.querySelector('.sv-item-select') : null;
+        if (newSelect && typeof Choices !== 'undefined') {
+            if (newSelect.tomselect) {
+                try { newSelect.tomselect.destroy(); } catch (e) {}
+            }
+            createChoicesInstance(newSelect, createEditModalItemSelectConfig());
+        }
+        updateEditRemoveButtons();
+        refreshEditAllAvailable();
+        updateEditGrandTotal();
+    }
+
+    /** Enter appends item row everywhere in modal except Choices dropdowns, buttons/links, and submit controls. */
+    function svEnterShouldAppendItemRow(modalEl, activeEl) {
+        if (!modalEl || !activeEl || !modalEl.contains(activeEl)) return false;
+        if (activeEl.tagName === 'TEXTAREA') return false;
+        if (activeEl.closest('button, a')) return false;
+        if (activeEl.closest('.choices')) return false;
+        if (activeEl.matches && activeEl.matches('select')) return false;
+        if (activeEl.tagName === 'INPUT') {
+            var it = (activeEl.type || '').toLowerCase();
+            if (it === 'submit' || it === 'button' || it === 'reset' || it === 'image') return false;
+        }
+        return true;
+    }
+
     const modalAddItemBtn = document.getElementById('modalAddItemRow');
     if (modalAddItemBtn) {
         modalAddItemBtn.addEventListener('click', function() {
@@ -2276,7 +2394,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const row = e.target.closest('.sv-item-row');
             if (!row) return;
             refreshAllAvailable();
-    const addSvModal = document.getElementById('addSellingVoucherModal');
             calcRow(row);
             updateGrandTotal();
         }
@@ -2284,32 +2401,14 @@ document.addEventListener('DOMContentLoaded', function() {
         addSvModal.addEventListener('change', onAddModalQtyOrRateInput);
     }
 
-    // Enter key inside Item Details table triggers Add Item (and prevents form submit)
-    const svItemsTable = document.getElementById('svItemsTable');
-    if (addSvModal && svItemsTable) {
+    // Enter (outside Choices + buttons): append item row anywhere in Add modal; prevents accidental form submit
+    if (addSvModal) {
         addSvModal.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' && svItemsTable.contains(document.activeElement)) {
-                const activeEl = document.activeElement;
-                const isRateField = activeEl && activeEl.classList && activeEl.classList.contains('sv-rate');
-
-                const activeRow = activeEl.closest('.sv-item-row');
-                const tbody = document.getElementById('modalItemsBody');
-                const lastRow = tbody ? tbody.querySelector('.sv-item-row:last-child') : null;
-
-                // Sirf last row ki Rate field par Enter => append
-                if (isRateField && activeRow && lastRow && activeRow === lastRow) {
-                    const addBtn = document.getElementById('modalAddItemRow');
-                    if (addBtn) {
-                        e.preventDefault();
-                        addBtn.click();
-                    }
-                    return;
-                }
-
-                // Baaki sab inputs par Enter => append/submit na ho
-                e.preventDefault();
-                if (activeEl.blur) activeEl.blur();
-            }
+            if (e.key !== 'Enter') return;
+            var activeEl = document.activeElement;
+            if (!svEnterShouldAppendItemRow(addSvModal, activeEl)) return;
+            e.preventDefault();
+            appendModalItemRow();
         });
     }
 
@@ -3161,15 +3260,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     console.log('Edit data:', data);
                     if (data.error) { alert(data.error); return; }
+                    destroyEditModalTomSelects();
                     const v = data.voucher;
                     const items = data.items || [];
                     document.getElementById('editSellingVoucherForm').action = editSvBaseUrl + '/' + voucherId;
                     
-                    // Set client type radio
+                    // Set client type radio (do not dispatch "change" — it resets fields and fights this loader)
                     const clientTypeRadio = document.querySelector('#editSellingVoucherModal input[name="client_type_slug"][value="' + (v.client_type_slug || 'employee') + '"]');
                     if (clientTypeRadio) {
                         clientTypeRadio.checked = true;
-                        clientTypeRadio.dispatchEvent(new Event('change'));
                     }
                     
                     document.querySelector('#editSellingVoucherModal select.edit-payment-type').value = String(v.payment_type ?? 1);
@@ -3226,6 +3325,45 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     }
                     editCurrentStoreId = storeSelect ? storeSelect.value || '' : null;
+
+                    // Align native fields / visibility BEFORE Choices init (same for store + no-store paths)
+                    (function applyEditSvClientTypeLayout() {
+                        const isOt = (v.client_type_slug || '') === 'ot';
+                        const isCourse = (v.client_type_slug || '') === 'course';
+                        const editClientSelect = document.getElementById('editClientNameSelect');
+                        const editOtSelect = document.getElementById('editModalOtCourseSelect');
+                        const editCourseSelect = document.getElementById('editModalCourseSelect');
+                        const editCourseNameSelect = document.getElementById('editModalCourseNameSelect');
+                        const editNameInp = document.getElementById('editModalClientNameInput');
+                        if (isOt) {
+                            if (editClientSelect) { editClientSelect.style.display = 'none'; editClientSelect.removeAttribute('required'); editClientSelect.removeAttribute('name'); }
+                            if (editOtSelect) { editOtSelect.style.display = 'block'; editOtSelect.setAttribute('required', 'required'); editOtSelect.setAttribute('name', 'client_type_pk'); editOtSelect.value = v.client_type_pk || ''; }
+                            if (editCourseSelect) { editCourseSelect.style.display = 'none'; editCourseSelect.removeAttribute('required'); editCourseSelect.removeAttribute('name'); editCourseSelect.value = ''; }
+                            if (editCourseNameSelect) { editCourseNameSelect.style.display = 'none'; editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
+                            if (editNameInp) { editNameInp.style.display = 'block'; editNameInp.readOnly = true; editNameInp.placeholder = 'Name (from course/student)'; editNameInp.value = v.client_name || ''; editNameInp.removeAttribute('required'); }
+                        } else if (isCourse) {
+                            if (editClientSelect) { editClientSelect.style.display = 'none'; editClientSelect.removeAttribute('required'); editClientSelect.removeAttribute('name'); }
+                            if (editOtSelect) { editOtSelect.style.display = 'none'; editOtSelect.removeAttribute('required'); editOtSelect.removeAttribute('name'); editOtSelect.value = ''; }
+                            if (editCourseSelect) { editCourseSelect.style.display = 'block'; editCourseSelect.setAttribute('required', 'required'); editCourseSelect.setAttribute('name', 'client_type_pk'); editCourseSelect.value = v.client_type_pk || ''; }
+                            if (editCourseNameSelect) { editCourseNameSelect.style.display = 'none'; editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
+                            if (editNameInp) { editNameInp.style.display = 'block'; editNameInp.readOnly = false; editNameInp.placeholder = 'Course name'; editNameInp.value = v.client_name || ''; editNameInp.setAttribute('required', 'required'); }
+                        } else {
+                            if (editClientSelect) {
+                                editClientSelect.style.display = 'block';
+                                editClientSelect.setAttribute('required', 'required');
+                                editClientSelect.setAttribute('name', 'client_type_pk');
+                                if (clientNameOptionsEdit.length) {
+                                    rebuildClientNameSelect(editClientSelect, clientNameOptionsEdit, (v.client_type_slug || 'employee'));
+                                }
+                                setSelectValue(document.getElementById('editClientNameSelect'), v.client_type_pk || '');
+                            }
+                            if (editOtSelect) { editOtSelect.style.display = 'none'; editOtSelect.removeAttribute('required'); editOtSelect.removeAttribute('name'); editOtSelect.value = ''; }
+                            if (editCourseSelect) { editCourseSelect.style.display = 'none'; editCourseSelect.removeAttribute('required'); editCourseSelect.removeAttribute('name'); editCourseSelect.value = ''; }
+                            if (editCourseNameSelect) { editCourseNameSelect.style.display = 'none'; editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
+                            if (editNameInp) { editNameInp.style.display = 'block'; editNameInp.readOnly = false; editNameInp.placeholder = 'Client / section / role name'; editNameInp.setAttribute('required', 'required'); }
+                        }
+                    })();
+
                     const openEditModalWithItems = function() {
                         buildEditItemsTable(items);
                         // Initialize Choices in Edit modal (payment, client, store, name dropdowns, item selects)
@@ -3247,6 +3385,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (typeof updateEditModalNameField === 'function') {
                             updateEditModalNameField();
                         }
+                        syncEditSellingVoucherChoicesFromVoucher(v, editSlug);
                         const modal = new bootstrap.Modal(document.getElementById('editSellingVoucherModal'));
                         modal.show();
                     };
@@ -3259,41 +3398,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         filteredItems = itemSubcategories;
                         openEditModalWithItems();
                     }
-                    const isOt = (v.client_type_slug || '') === 'ot';
-                    const isCourse = (v.client_type_slug || '') === 'course';
-                    const editClientSelect = document.getElementById('editClientNameSelect');
-                    const editOtSelect = document.getElementById('editModalOtCourseSelect');
-                    const editCourseSelect = document.getElementById('editModalCourseSelect');
-                    const editCourseNameSelect = document.getElementById('editModalCourseNameSelect');
-                    const editNameInp = document.getElementById('editModalClientNameInput');
-                    if (isOt) {
-                        if (editClientSelect) { editClientSelect.style.display = 'none'; editClientSelect.removeAttribute('required'); editClientSelect.removeAttribute('name'); }
-                        if (editOtSelect) { editOtSelect.style.display = 'block'; editOtSelect.setAttribute('required', 'required'); editOtSelect.setAttribute('name', 'client_type_pk'); editOtSelect.value = v.client_type_pk || ''; }
-                        if (editCourseSelect) { editCourseSelect.style.display = 'none'; editCourseSelect.removeAttribute('required'); editCourseSelect.removeAttribute('name'); editCourseSelect.value = ''; }
-                        if (editCourseNameSelect) { editCourseNameSelect.style.display = 'none'; editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
-                        if (editNameInp) { editNameInp.style.display = 'block'; editNameInp.readOnly = true; editNameInp.placeholder = 'Name (from course/student)'; editNameInp.value = v.client_name || ''; editNameInp.removeAttribute('required'); }
-                    } else if (isCourse) {
-                        if (editClientSelect) { editClientSelect.style.display = 'none'; editClientSelect.removeAttribute('required'); editClientSelect.removeAttribute('name'); }
-                        if (editOtSelect) { editOtSelect.style.display = 'none'; editOtSelect.removeAttribute('required'); editOtSelect.removeAttribute('name'); editOtSelect.value = ''; }
-                        if (editCourseSelect) { editCourseSelect.style.display = 'block'; editCourseSelect.setAttribute('required', 'required'); editCourseSelect.setAttribute('name', 'client_type_pk'); editCourseSelect.value = v.client_type_pk || ''; }
-                        if (editCourseNameSelect) { editCourseNameSelect.style.display = 'none'; editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
-                        if (editNameInp) { editNameInp.style.display = 'block'; editNameInp.readOnly = false; editNameInp.placeholder = 'Course name'; editNameInp.value = v.client_name || ''; editNameInp.setAttribute('required', 'required'); }
-                    } else {
-                        if (editClientSelect) {
-                            editClientSelect.style.display = 'block';
-                            editClientSelect.setAttribute('required', 'required');
-                            editClientSelect.setAttribute('name', 'client_type_pk');
-                            if (clientNameOptionsEdit.length) {
-                                rebuildClientNameSelect(editClientSelect, clientNameOptionsEdit, (v.client_type_slug || 'employee'));
-                            }
-                            setSelectValue(document.getElementById('editClientNameSelect'), v.client_type_pk || '');
-                        }
-                        if (editOtSelect) { editOtSelect.style.display = 'none'; editOtSelect.removeAttribute('required'); editOtSelect.removeAttribute('name'); editOtSelect.value = ''; }
-                        if (editCourseSelect) { editCourseSelect.style.display = 'none'; editCourseSelect.removeAttribute('required'); editCourseSelect.removeAttribute('name'); editCourseSelect.value = ''; }
-                        if (editCourseNameSelect) { editCourseNameSelect.style.display = 'none'; editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
-                        if (editNameInp) { editNameInp.style.display = 'block'; editNameInp.readOnly = false; editNameInp.placeholder = 'Client / section / role name'; editNameInp.setAttribute('required', 'required'); }
-                    }
-                    updateEditModalNameField();
                 })
                 .catch(err => { 
                     console.error('Error loading voucher for edit:', err); 
@@ -3305,22 +3409,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const editModalAddItemRow = document.getElementById('editModalAddItemRow');
     if (editModalAddItemRow) {
         editModalAddItemRow.addEventListener('click', function() {
-            const tbody = document.getElementById('editModalItemsBody');
-            if (tbody) {
-                tbody.insertAdjacentHTML('beforeend', getEditRowHtml(editRowIndex, null));
-                editRowIndex++;
-                const newRow = tbody.querySelector('.sv-item-row:last-child');
-                const newSelect = newRow ? newRow.querySelector('.sv-item-select') : null;
-                if (newSelect && typeof Choices !== 'undefined') {
-                    if (newSelect.tomselect) {
-                        try { newSelect.tomselect.destroy(); } catch (e) {}
-                    }
-                    createChoicesInstance(newSelect, createEditModalItemSelectConfig());
-                }
-                updateEditRemoveButtons();
-                refreshEditAllAvailable();
-                updateEditGrandTotal();
-            }
+            appendEditModalItemRow();
         });
     }
 
@@ -3412,33 +3501,16 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Edit modal: Enter sirf last-row Rate field par press hoga => new row append
-    const editFormEl = document.getElementById('editSellingVoucherForm');
-    if (editFormEl && editModalItemsBody) {
-        editFormEl.addEventListener('keydown', function(e) {
+    // Enter (outside Choices + buttons): append item row anywhere in Edit modal
+    const editSvModalEl = document.getElementById('editSellingVoucherModal');
+    if (editSvModalEl) {
+        editSvModalEl.addEventListener('keydown', function(e) {
             if (e.key !== 'Enter') return;
-            const activeEl = document.activeElement;
-            if (!activeEl) return;
-            if (!editModalItemsBody.contains(activeEl)) return;
-
-            const row = activeEl.closest('.sv-item-row');
-            if (!row) return;
-            const lastRow = editModalItemsBody.querySelector('.sv-item-row:last-child');
-            if (!lastRow) return;
-
-            const isRateField = activeEl.classList && activeEl.classList.contains('sv-rate');
-            if (isRateField && row === lastRow) {
-                const addBtn = document.getElementById('editModalAddItemRow');
-                if (addBtn) {
-                    e.preventDefault();
-                    addBtn.click();
-                }
-            } else {
-                // Other fields me Enter => append/submit na ho
-                e.preventDefault();
-                if (activeEl.blur) activeEl.blur();
-            }
-        }, true);
+            var activeEl = document.activeElement;
+            if (!svEnterShouldAppendItemRow(editSvModalEl, activeEl)) return;
+            e.preventDefault();
+            appendEditModalItemRow();
+        });
     }
 
     // Store selection change in EDIT modal
@@ -3596,8 +3668,14 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(function() { win.print(); win.close(); }, 350);
     });
 
-    console.log('✅ All event listeners attached successfully');
-    console.log('Script initialization complete');
+    document.addEventListener('shown.bs.tab', function (e) {
+        var t = e.target;
+        if (!t || !t.getAttribute || t.getAttribute('href') !== '#tab-setup') return;
+        var wrap = document.querySelector('#sellingVouchersTable_wrapper');
+        if (!wrap || wrap.offsetParent === null) return;
+        var inp = wrap.querySelector('.dataTables_filter input[type="search"]');
+        if (inp) window.setTimeout(function () { inp.focus(); }, 120);
+    });
 });
 </script>
 @endsection

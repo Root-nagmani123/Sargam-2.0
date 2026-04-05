@@ -12,7 +12,8 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class StockPurchaseDetailsExport implements FromView, WithStyles, WithEvents, WithTitle
 {
-    protected $purchaseOrders;
+    /** @var \Illuminate\Support\Collection<int, array{vendor_id: int, vendor_name: string, vendor: mixed, orders: mixed}> */
+    protected $purchaseOrdersByVendor;
     protected $fromDate;
     protected $toDate;
     /** @var \Illuminate\Support\Collection<int, \App\Models\Mess\Vendor> */
@@ -20,9 +21,9 @@ class StockPurchaseDetailsExport implements FromView, WithStyles, WithEvents, Wi
     /** @var \Illuminate\Support\Collection<int, \App\Models\Mess\Store> */
     protected $selectedStores;
 
-    public function __construct($purchaseOrders, $fromDate, $toDate, $selectedVendors, $selectedStores)
+    public function __construct($purchaseOrdersByVendor, $fromDate, $toDate, $selectedVendors, $selectedStores)
     {
-        $this->purchaseOrders  = $purchaseOrders;
+        $this->purchaseOrdersByVendor = $purchaseOrdersByVendor;
         $this->fromDate        = $fromDate;
         $this->toDate          = $toDate;
         $this->selectedVendors = $selectedVendors;
@@ -32,7 +33,7 @@ class StockPurchaseDetailsExport implements FromView, WithStyles, WithEvents, Wi
     public function view(): View
     {
         return view('admin.mess.reports.excel.stock-purchase-details-excel', [
-            'purchaseOrders'  => $this->purchaseOrders,
+            'purchaseOrdersByVendor' => $this->purchaseOrdersByVendor,
             'fromDate'        => $this->fromDate,
             'toDate'          => $this->toDate,
             'selectedVendors' => $this->selectedVendors,
@@ -66,7 +67,8 @@ class StockPurchaseDetailsExport implements FromView, WithStyles, WithEvents, Wi
         $sheet->getStyle($headerRange)->getAlignment()->setHorizontal('center');
         $sheet->getStyle($headerRange)->getFill()
             ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
-            ->getStartColor()->setARGB('FFE9ECEF');
+            ->getStartColor()->setARGB('FF0066CC');
+        $sheet->getStyle($headerRange)->getFont()->getColor()->setARGB('FFFFFFFF');
 
         // Borders for the table
         $lastRow    = $sheet->getHighestRow();
@@ -100,6 +102,39 @@ class StockPurchaseDetailsExport implements FromView, WithStyles, WithEvents, Wi
             AfterSheet::class => function (AfterSheet $event) {
                 $sheet   = $event->sheet->getDelegate();
                 $lastRow = $sheet->getHighestRow();
+
+                // Style bill header rows and grand total
+                for ($row = 8; $row <= $lastRow; $row++) {
+                    $cellValue = $sheet->getCell("A{$row}")->getValue();
+                    
+                    // Bill header rows (dark background, white text)
+                    if (is_string($cellValue) && strpos($cellValue, 'Bill No.') !== false) {
+                        $sheet->getStyle("A{$row}:H{$row}")->applyFromArray([
+                            'fill' => [
+                                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                                'startColor' => ['argb' => 'FF5A6268'],
+                            ],
+                            'font' => [
+                                'bold' => true,
+                                'color' => ['argb' => 'FFFFFFFF'],
+                            ],
+                        ]);
+                    }
+                    
+                    // Grand Total row (blue background, white text)
+                    if (is_string($cellValue) && $sheet->getCell("G{$row}")->getValue() === 'Grand Total:') {
+                        $sheet->getStyle("A{$row}:H{$row}")->applyFromArray([
+                            'fill' => [
+                                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                                'startColor' => ['argb' => 'FF004A93'],
+                            ],
+                            'font' => [
+                                'bold' => true,
+                                'color' => ['argb' => 'FFFFFFFF'],
+                            ],
+                        ]);
+                    }
+                }
 
                 // Freeze header region
                 $sheet->freezePane('A8');

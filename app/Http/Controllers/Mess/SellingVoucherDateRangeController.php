@@ -571,7 +571,7 @@ class SellingVoucherDateRangeController extends Controller
 
     public function edit(Request $request, $id)
     {
-        $report = SellingVoucherDateRangeReport::with(['items.itemSubcategory'])->findOrFail($id);
+        $report = SellingVoucherDateRangeReport::with(['items.itemSubcategory', 'course', 'clientTypeCategory'])->findOrFail($id);
 
         if ($report->status == SellingVoucherDateRangeReport::STATUS_APPROVED) {
             if ($request->wantsJson()) {
@@ -581,22 +581,31 @@ class SellingVoucherDateRangeController extends Controller
         }
 
         if ($request->wantsJson()) {
-            $clientTypeSlug = $report->clientTypeCategory ? $report->clientTypeCategory->client_type : ($report->client_type_slug ?? 'employee');
             $storeType = $report->store_type ?? 'store';
             $storeId = (int) $report->store_id;
             $availableMap = AvailableQuantityService::availableQuantitiesForStore($storeType, $storeId);
+
+            // Always use persisted slug. client_type_pk is mess_client_types.id for employee/section/other
+            // but course_master.pk for ot/course — do not infer slug from clientTypeCategory for ot/course.
+            $clientTypeSlug = strtolower(trim((string) ($report->client_type_slug ?? 'employee')));
+            if ($clientTypeSlug === '') {
+                $clientTypeSlug = 'employee';
+            }
+
+            $storeIdentifier = $storeType === 'sub_store' ? 'sub_' . $storeId : (string) $storeId;
 
             $voucher = [
                 'id' => $report->id,
                 'date_from' => $report->date_from ? $report->date_from->format('Y-m-d') : '',
                 'date_to' => $report->date_to ? $report->date_to->format('Y-m-d') : '',
-                'store_id' => $storeType === 'sub_store' ? 'sub_' . $storeId : (string) $storeId,
+                'store_id' => $storeIdentifier,
+                'inve_store_master_pk' => $storeIdentifier,
                 'report_title' => $report->report_title,
                 'status' => (int) $report->status,
                 'remarks' => $report->remarks,
                 'reference_number' => $report->reference_number,
                 'order_by' => $report->order_by,
-                'client_type_slug' => $report->client_type_slug ?? $clientTypeSlug,
+                'client_type_slug' => $clientTypeSlug,
                 'client_type_pk' => $report->client_type_pk,
                 'client_name' => $report->client_name,
                 'payment_type' => (int) $report->payment_type,

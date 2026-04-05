@@ -1,6 +1,11 @@
 @php
-    $fromLabel = $fromDate ? date('d-F-Y', strtotime($fromDate)) : null;
-    $toLabel = $toDate ? date('d-F-Y', strtotime($toDate)) : null;
+    try {
+        $fromLabel = $fromDate ? \Carbon\Carbon::parse($fromDate)->format('d-m-Y') : null;
+        $toLabel = $toDate ? \Carbon\Carbon::parse($toDate)->format('d-m-Y') : null;
+    } catch (\Throwable $e) {
+        $fromLabel = $fromDate ? (string) $fromDate : null;
+        $toLabel = $toDate ? (string) $toDate : null;
+    }
     $viewLabel = $combinedViewLabel ?? 'Item-wise';
     $viewTypeSections = $viewTypeSections ?? [];
     $storeLabel = (isset($selectedStoreName) && $selectedStoreName !== '') ? $selectedStoreName : 'All Stores';
@@ -23,7 +28,7 @@
             margin: 10mm 12mm;
         }
         body {
-            font-family: DejaVu Sans, Arial, sans-serif;
+            font-family: DejaVu Sans, sans-serif;
             font-size: 9pt;
             margin: 0;
             padding: 0;
@@ -257,13 +262,13 @@
             <table class="purchase-sale-data">
                 <thead>
                 <tr>
-                    <th style="width: 34px;" class="text-center">S. No.</th>
+                    <th style="width: 34px; text-align: center;">S. No.</th>
                     <th>Item Name</th>
                     <th style="width: 48px;">Unit</th>
-                    <th class="text-end">Total Purchase Qty</th>
-                    <th class="text-end">Avg Purchase Price</th>
-                    <th class="text-end">Total Sale Qty</th>
-                    <th class="text-end">Avg Sale Price</th>
+                    <th style="text-align: right;">Total Purchase Qty</th>
+                    <th style="text-align: right;">Avg Purchase Price</th>
+                    <th style="text-align: right;">Total Sale Qty</th>
+                    <th style="text-align: right;">Avg Sale Price</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -295,13 +300,13 @@
                 <table class="purchase-sale-data">
                     <thead>
                     <tr>
-                        <th style="width: 34px;" class="text-center">S. No.</th>
+                        <th style="width: 34px; text-align: center;">S. No.</th>
                         <th>Item Name</th>
                         <th style="width: 48px;">Unit</th>
-                        <th class="text-end">Total Purchase Qty</th>
-                        <th class="text-end">Avg Purchase Price</th>
-                        <th class="text-end">Total Sale Qty</th>
-                        <th class="text-end">Avg Sale Price</th>
+                        <th style="text-align: right;">Total Purchase Qty</th>
+                        <th style="text-align: right;">Avg Purchase Price</th>
+                        <th style="text-align: right;">Total Sale Qty</th>
+                        <th style="text-align: right;">Avg Sale Price</th>
                     </tr>
                     </thead>
                     <tbody>
