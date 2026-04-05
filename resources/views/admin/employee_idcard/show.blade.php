@@ -190,7 +190,7 @@
                         <div class="col-md-6">
                             <div class="p-3 bg-light rounded-2">
                                 <small class="text-muted d-block mb-1">Approval Authority</small>
-                                <strong class="text-dark d-block fs-6">{{ $request->approval_authority ?? '--' }}</strong>
+                                <strong class="text-dark d-block fs-6">{{ $request->approval_authority_name ?? '--' }}</strong>
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -384,14 +384,14 @@
             <div class="card border-0 shadow-sm rounded-3 mb-4">
                 <div class="card-header bg-light border-0 rounded-top-3 p-3">
                     <h6 class="mb-0 fw-bold">
-                        <i class="material-icons material-symbols-rounded align-middle me-2">info_outline</i>
+                        <i class="material-icons material-symbols-rounded align-middle me-2">info</i>
                         Quick Info
                     </h6>
                 </div>
                 <div class="card-body p-3">
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-muted">Created By:</span>
-                        <strong class="text-dark">{{ $request->created_by ?? '--' }}</strong>
+                        <strong class="text-dark">{{ $request->created_by_name ?? '--' }}</strong>
                     </div>
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-muted">Last Updated:</span>
