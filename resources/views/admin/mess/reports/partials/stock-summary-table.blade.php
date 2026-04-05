@@ -1,41 +1,61 @@
-<div class="card border-0 shadow-sm stock-summary-table-root">
-    <div class="card-header bg-light d-flex justify-content-between align-items-center py-2 flex-wrap gap-2">
-        <div class="d-flex align-items-center gap-2 flex-wrap">
-            <span class="fw-semibold text-dark fs-5">Stock Movement Summary</span>
+<div class="card border-0 stock-summary-table-root ssr-card">
+    <div class="ssr-card-topbar" aria-hidden="true"></div>
+    <div class="ssr-toolbar px-3 px-lg-4 py-3 d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <div class="d-flex align-items-center gap-3 min-w-0">
+            <div class="ssr-toolbar-icon d-none d-sm-flex" aria-hidden="true">
+                <span class="material-symbols-rounded">table_chart</span>
+            </div>
+            <div class="min-w-0">
+                <p class="ssr-toolbar-title mb-0 text-truncate">Stock movement summary</p>
+                <p class="ssr-toolbar-sub mb-0 small text-muted">Opening, purchase, sale and closing by item</p>
+            </div>
         </div>
-        <span class="text-muted stock-summary-table-meta">
-            Total items: {{ isset($reportPage) ? $reportPage->total() : (isset($reportData) ? count($reportData) : 0) }}
-        </span>
+        <div class="d-flex align-items-center gap-2 flex-shrink-0">
+            <span class="ssr-count-badge">
+                <span class="material-symbols-rounded ssr-count-badge-icon" aria-hidden="true">inventory_2</span>
+                <span class="ssr-count-badge-label">{{ isset($reportPage) ? $reportPage->total() : (isset($reportData) ? count($reportData) : 0) }}</span>
+                <span class="ssr-count-badge-text">items</span>
+            </span>
+        </div>
     </div>
-    <div class="table-responsive table-fit-single-view">
-        <table class="table table-fit align-middle mb-0 w-100">
-            <thead>
+
+    <p class="stock-summary-scroll-hint no-print d-md-none mb-0 px-3 pb-2 small" role="note">
+        <span class="ssr-scroll-hint-inner">
+            <span class="material-symbols-rounded ssr-scroll-hint-icon" aria-hidden="true">swap_horiz</span>
+            Swipe sideways for all columns
+        </span>
+    </p>
+
+    <div
+        class="table-responsive table-fit-single-view stock-summary-table-scroll ssr-table-scroller"
+        role="region"
+        aria-label="Stock movement summary table"
+        tabindex="0"
+    >
+        <table class="table table-fit align-middle mb-0 w-100 stock-summary-data-table ssr-table">
+            <thead class="ssr-thead">
                 <tr>
-                    <th rowspan="2" class="text-center align-middle">SR.<br>No</th>
-                    <th rowspan="2" class="text-center align-middle">Item Name</th>
-                    <th rowspan="2" class="align-middle text-end">Unit</th>
-                    <th colspan="3" class="text-center">Opening</th>
-                    <th colspan="3" class="text-center">Purchase</th>
-                    <th colspan="3" class="text-center">Sale</th>
-                    <th colspan="3" class="text-center">Closing</th>
+                    <th rowspan="2" class="sss-th-fixed text-center align-middle text-nowrap">SR.<br>No</th>
+                    <th rowspan="2" class="sss-th-fixed text-center align-middle">Item name</th>
+                    <th rowspan="2" class="sss-th-fixed align-middle text-end text-nowrap">Unit</th>
+                    <th colspan="3" class="sss-grp ssr-grp-opening text-center">Opening</th>
+                    <th colspan="3" class="sss-grp ssr-grp-purchase text-center">Purchase</th>
+                    <th colspan="3" class="sss-grp ssr-grp-sale text-center">Sale</th>
+                    <th colspan="3" class="sss-grp ssr-grp-closing text-center">Closing</th>
                 </tr>
                 <tr>
-                    <!-- Opening -->
-                    <th class="text-end">Qty</th>
-                    <th class="text-end">Rate</th>
-                    <th class="text-end">Amount</th>
-                    <!-- Purchase -->
-                    <th class="text-end">Qty</th>
-                    <th class="text-end">Rate</th>
-                    <th class="text-end">Amount</th>
-                    <!-- Sale -->
-                    <th class="text-end">Qty</th>
-                    <th class="text-end">Rate</th>
-                    <th class="text-end">Amount</th>
-                    <!-- Closing -->
-                    <th class="text-end">Qty</th>
-                    <th class="text-end">Rate</th>
-                    <th class="text-end">Amount</th>
+                    <th class="sss-sub ssr-grp-opening text-end">Qty</th>
+                    <th class="sss-sub ssr-grp-opening text-end">Rate</th>
+                    <th class="sss-sub ssr-grp-opening text-end">Amount</th>
+                    <th class="sss-sub ssr-grp-purchase text-end">Qty</th>
+                    <th class="sss-sub ssr-grp-purchase text-end">Rate</th>
+                    <th class="sss-sub ssr-grp-purchase text-end">Amount</th>
+                    <th class="sss-sub ssr-grp-sale text-end">Qty</th>
+                    <th class="sss-sub ssr-grp-sale text-end">Rate</th>
+                    <th class="sss-sub ssr-grp-sale text-end">Amount</th>
+                    <th class="sss-sub ssr-grp-closing text-end">Qty</th>
+                    <th class="sss-sub ssr-grp-closing text-end">Rate</th>
+                    <th class="sss-sub ssr-grp-closing text-end">Amount</th>
                 </tr>
             </thead>
             <tbody>
@@ -47,37 +67,30 @@
                     $rows = $reportPage ?? collect($reportData ?? []);
                 @endphp
                 @forelse($rows as $index => $item)
-                    <tr>
-                        <td class="text-center">
-                            {{ $serialStart + $index }}
-                        </td>
-                        <td class="fw-bold ssr-item-name">{{ $item['item_name'] }}</td>
-                        <td class="text-end">{{ isset($item['unit']) && is_numeric($item['unit']) ? number_format((float)$item['unit'], 2) : ($item['unit'] ?? '—') }}</td>
-                        <!-- Opening -->
-                        <td class="text-end">{{ number_format($item['opening_qty'], 2) }}</td>
-                        <td class="text-end">₹{{ number_format($item['opening_rate'], 2) }}</td>
-                        <td class="text-end">₹{{ number_format($item['opening_amount'], 2) }}</td>
-                        <!-- Purchase -->
-                        <td class="text-end">{{ number_format($item['purchase_qty'], 2) }}</td>
-                        <td class="text-end">₹{{ number_format($item['purchase_rate'], 2) }}</td>
-                        <td class="text-end">₹{{ number_format($item['purchase_amount'], 2) }}</td>
-                        <!-- Sale -->
-                        <td class="text-end">{{ number_format($item['sale_qty'], 2) }}</td>
-                        <td class="text-end">₹{{ number_format($item['sale_rate'], 2) }}</td>
-                        <td class="text-end">₹{{ number_format($item['sale_amount'], 2) }}</td>
-                        <!-- Closing -->
-                        <td class="text-end">{{ number_format($item['closing_qty'], 2) }}</td>
-                        <td class="text-end">₹{{ number_format($item['closing_rate'], 2) }}</td>
-                        <td class="text-end">₹{{ number_format($item['closing_amount'], 2) }}</td>
+                    <tr class="sss-body-row">
+                        <td class="text-center text-nowrap ssr-num ssr-cell-fixed">{{ $serialStart + $index }}</td>
+                        <td class="fw-semibold ssr-item-name ssr-cell-fixed">{{ $item['item_name'] }}</td>
+                        <td class="text-end ssr-num ssr-cell-fixed">{{ isset($item['unit']) && is_numeric($item['unit']) ? number_format((float)$item['unit'], 2) : ($item['unit'] ?? '—') }}</td>
+                        <td class="text-end ssr-num ssr-grp-opening">{{ number_format($item['opening_qty'], 2) }}</td>
+                        <td class="text-end ssr-num ssr-grp-opening">₹{{ number_format($item['opening_rate'], 2) }}</td>
+                        <td class="text-end ssr-num ssr-grp-opening ssr-amt">₹{{ number_format($item['opening_amount'], 2) }}</td>
+                        <td class="text-end ssr-num ssr-grp-purchase">{{ number_format($item['purchase_qty'], 2) }}</td>
+                        <td class="text-end ssr-num ssr-grp-purchase">₹{{ number_format($item['purchase_rate'], 2) }}</td>
+                        <td class="text-end ssr-num ssr-grp-purchase ssr-amt">₹{{ number_format($item['purchase_amount'], 2) }}</td>
+                        <td class="text-end ssr-num ssr-grp-sale">{{ number_format($item['sale_qty'], 2) }}</td>
+                        <td class="text-end ssr-num ssr-grp-sale">₹{{ number_format($item['sale_rate'], 2) }}</td>
+                        <td class="text-end ssr-num ssr-grp-sale ssr-amt">₹{{ number_format($item['sale_amount'], 2) }}</td>
+                        <td class="text-end ssr-num ssr-grp-closing">{{ number_format($item['closing_qty'], 2) }}</td>
+                        <td class="text-end ssr-num ssr-grp-closing">₹{{ number_format($item['closing_rate'], 2) }}</td>
+                        <td class="text-end ssr-num ssr-grp-closing ssr-amt">₹{{ number_format($item['closing_amount'], 2) }}</td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="15" class="text-center py-5" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
-                            <div class="d-flex flex-column align-items-center gap-3">
-                                <div>
-                                    <h6 class="text-muted mb-1">No Stock Movement Found</h6>
-                                    <p class="text-muted small mb-0">No transactions recorded for the selected period</p>
-                                </div>
+                        <td colspan="15" class="p-0 border-0">
+                            <div class="ssr-empty-state text-center py-5 px-3">
+                                <span class="material-symbols-rounded ssr-empty-icon" aria-hidden="true">inventory</span>
+                                <h6 class="ssr-empty-title mb-1">No stock movement</h6>
+                                <p class="ssr-empty-text small text-muted mb-0">Nothing recorded for this period and filters.</p>
                             </div>
                         </td>
                     </tr>
@@ -86,36 +99,35 @@
                     ($reportTotals['purchase_amount'] ?? 0) != 0 ||
                     ($reportTotals['sale_amount'] ?? 0) != 0 ||
                     ($reportTotals['closing_amount'] ?? 0) != 0)
-                    <tr class="table-primary fw-bold">
-                        <td colspan="3" class="text-end sticky-col sticky-col-total ssr-totals-label" style="letter-spacing: 0.02em;">
+                    <tr class="sss-totals-row">
+                        <td colspan="3" class="text-end ssr-totals-label ssr-cell-fixed">
                             Total
                         </td>
-                        <td class="text-end">—</td>
-                        <td class="text-end">—</td>
-                        <td class="text-end">₹{{ number_format(($reportTotals['opening_amount'] ?? 0), 2) }}</td>
-                        <td class="text-end">—</td>
-                        <td class="text-end">—</td>
-                        <td class="text-end">₹{{ number_format(($reportTotals['purchase_amount'] ?? 0), 2) }}</td>
-                        <td class="text-end">—</td>
-                        <td class="text-end">—</td>
-                        <td class="text-end">₹{{ number_format(($reportTotals['sale_amount'] ?? 0), 2) }}</td>
-                        <td class="text-end">—</td>
-                        <td class="text-end">—</td>
-                        <td class="text-end">₹{{ number_format(($reportTotals['closing_amount'] ?? 0), 2) }}</td>
+                        <td class="text-end ssr-num ssr-grp-opening ssr-totals-dash">—</td>
+                        <td class="text-end ssr-num ssr-grp-opening ssr-totals-dash">—</td>
+                        <td class="text-end ssr-num ssr-grp-opening ssr-amt">₹{{ number_format(($reportTotals['opening_amount'] ?? 0), 2) }}</td>
+                        <td class="text-end ssr-num ssr-grp-purchase ssr-totals-dash">—</td>
+                        <td class="text-end ssr-num ssr-grp-purchase ssr-totals-dash">—</td>
+                        <td class="text-end ssr-num ssr-grp-purchase ssr-amt">₹{{ number_format(($reportTotals['purchase_amount'] ?? 0), 2) }}</td>
+                        <td class="text-end ssr-num ssr-grp-sale ssr-totals-dash">—</td>
+                        <td class="text-end ssr-num ssr-grp-sale ssr-totals-dash">—</td>
+                        <td class="text-end ssr-num ssr-grp-sale ssr-amt">₹{{ number_format(($reportTotals['sale_amount'] ?? 0), 2) }}</td>
+                        <td class="text-end ssr-num ssr-grp-closing ssr-totals-dash">—</td>
+                        <td class="text-end ssr-num ssr-grp-closing ssr-totals-dash">—</td>
+                        <td class="text-end ssr-num ssr-grp-closing ssr-amt">₹{{ number_format(($reportTotals['closing_amount'] ?? 0), 2) }}</td>
                     </tr>
                 @endif
             </tbody>
         </table>
     </div>
     @if(isset($reportPage) && $reportPage->hasPages())
-        <div class="mt-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <div class="text-muted">
-                Showing {{ $reportPage->firstItem() }} to {{ $reportPage->lastItem() }} of {{ $reportPage->total() }} items
+        <div class="ssr-pagination-bar px-3 px-lg-4 py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div class="text-muted small">
+                Showing {{ $reportPage->firstItem() }}–{{ $reportPage->lastItem() }} of {{ $reportPage->total() }}
             </div>
-            <div>
+            <div class="ssr-pagination-links">
                 {{ $reportPage->appends(request()->query())->links() }}
             </div>
         </div>
     @endif
 </div>
-

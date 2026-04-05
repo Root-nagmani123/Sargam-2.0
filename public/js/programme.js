@@ -4,6 +4,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const coordinatorSelect = document.querySelector('select[name="coursecoordinator"]');
     const rowTemplate = container ? container.querySelector('.assistant-coordinator-row')?.cloneNode(true) : null;
     const choicesInstances = new WeakMap();
+    let isUpdating = false; // Flag to prevent infinite loops
+    let updateTimeout = null; // For debouncing
 
     const choicesClassNames = {
         containerOuter: ['choices', 'w-100'],
@@ -79,25 +81,22 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    function reinitAssistantChoices() {
-        if (!container) {
-            return;
+    // Debounced update function to prevent excessive calls
+    function debounceUpdateOptions() {
+        if (updateTimeout) {
+            clearTimeout(updateTimeout);
         }
-        const assistantSelects = container.querySelectorAll('select[name="assistantcoursecoordinator[]"]');
-        assistantSelects.forEach(function (selectEl) {
-            const selectedValue = selectEl.value;
-            initChoicesForSelect(selectEl);
-            if (selectedValue) {
-                selectEl.value = selectedValue;
-                selectEl.dispatchEvent(new Event('change', { bubbles: true }));
-            }
-        });
+        updateTimeout = setTimeout(function() {
+            updateAssistantOptionsNow();
+        }, 150);
     }
 
-    function updateAssistantOptions() {
-        if (!container) {
+    function updateAssistantOptionsNow() {
+        if (!container || isUpdating) {
             return;
         }
+        
+        isUpdating = true;
 
         const assistantSelects = container.querySelectorAll('select[name="assistantcoursecoordinator[]"]');
         const coordinatorValue = coordinatorSelect ? coordinatorSelect.value : '';
@@ -114,24 +113,30 @@ document.addEventListener('DOMContentLoaded', function () {
                 toDisable.add(coordinatorValue);
             }
 
+            // Disable options in the native select element
             Array.from(selectEl.options).forEach(function (optionEl) {
                 if (!optionEl.value) {
                     optionEl.disabled = false;
-                    optionEl.hidden = false;
                     return;
                 }
-                const shouldDisable = toDisable.has(optionEl.value);
-                optionEl.disabled = shouldDisable;
-                optionEl.hidden = shouldDisable;
+                optionEl.disabled = toDisable.has(optionEl.value);
             });
 
-            const selectedOption = selectEl.options[selectEl.selectedIndex];
-            if (selfValue && selectedOption && (selectedOption.disabled || selectedOption.hidden)) {
-                selectEl.value = '';
+            // Check if current value should be cleared
+            if (selfValue && toDisable.has(selfValue)) {
+                const instance = choicesInstances.get(selectEl);
+                if (instance) {
+                    instance.setChoiceByValue('');
+                }
             }
         });
+        
+        isUpdating = false;
+    }
 
-        reinitAssistantChoices();
+    // Wrapper for backward compatibility
+    function updateAssistantOptions() {
+        debounceUpdateOptions();
     }
 
     initAllDropdownChoices(document);
@@ -158,7 +163,7 @@ document.addEventListener('DOMContentLoaded', function () {
             coordinatorIndex += 1;
 
             initAllDropdownChoices(newRow);
-            updateAssistantOptions();
+            debounceUpdateOptions();
         });
 
         document.addEventListener('click', function (event) {
@@ -182,26 +187,31 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 });
                 row.remove();
-                updateAssistantOptions();
+                debounceUpdateOptions();
             } else {
                 alert('At least one assistant coordinator is required.');
             }
         });
 
         document.addEventListener('change', function (event) {
-            if (event.target && event.target.matches('select[name="assistantcoursecoordinator[]"]')) {
-                updateAssistantOptions();
+            if (!isUpdating && event.target && event.target.matches('select[name="assistantcoursecoordinator[]"]')) {
+                debounceUpdateOptions();
             }
         });
     }
 
     if (coordinatorSelect) {
         coordinatorSelect.addEventListener('change', function () {
-            updateAssistantOptions();
+            if (!isUpdating) {
+                debounceUpdateOptions();
+            }
         });
     }
 
-    updateAssistantOptions();
+    // Initialize options after Choices.js is ready
+    setTimeout(function() {
+        updateAssistantOptionsNow();
+    }, 200);
 
     const startDateInput = document.querySelector('input[name="startdate"]');
     const endDateInput = document.querySelector('input[name="enddate"]');

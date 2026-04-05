@@ -52,8 +52,15 @@
 
     $messViewLabelMap = ['item_wise' => 'Item-wise', 'subcategory_wise' => 'Subcategory-wise', 'category_wise' => 'Category-wise'];
     $messViewLabel = collect($viewTypes)->map(fn ($v) => $messViewLabelMap[$v] ?? $v)->implode(', ');
+    try {
+        $purchaseSalePeriodFromLabel = \Carbon\Carbon::parse($fromDate)->format('d-m-Y');
+        $purchaseSalePeriodToLabel = \Carbon\Carbon::parse($toDate)->format('d-m-Y');
+    } catch (\Throwable $e) {
+        $purchaseSalePeriodFromLabel = (string) $fromDate;
+        $purchaseSalePeriodToLabel = (string) $toDate;
+    }
     $purchaseSalePrintConfig = [
-        'periodBar' => 'From ' . date('d-F-Y', strtotime($fromDate)) . ' To ' . date('d-F-Y', strtotime($toDate)),
+        'periodBar' => 'From ' . $purchaseSalePeriodFromLabel . ' To ' . $purchaseSalePeriodToLabel,
         'storeLabel' => ($selectedStoreName !== null && $selectedStoreName !== '') ? $selectedStoreName : 'All Stores',
         'itemsLabel' => ($selectedItemNamesLabel !== null && $selectedItemNamesLabel !== '') ? $selectedItemNamesLabel : 'All Items',
         'viewLabel' => $messViewLabel,
@@ -188,7 +195,7 @@
         <div class="card-header bg-primary bg-opacity-10 border-0 py-3 text-center report-header">
             <h4 class="fw-bold mb-1 text-primary">Item Report</h4>
             <p class="mb-0 text-body-secondary small">
-                From {{ date('d-M-Y', strtotime($fromDate)) }} to {{ date('d-M-Y', strtotime($toDate)) }}
+                From {{ $purchaseSalePeriodFromLabel }} to {{ $purchaseSalePeriodToLabel }}
             </p>
             <p class="mb-0 text-body-secondary small">
                 View: {{ $messViewLabel }}
@@ -647,7 +654,7 @@ function printPurchaseSaleQuantity() {
 '  <style>\n' +
 '    * { box-sizing: border-box; }\n' +
 '    body {\n' +
-'      font-family: "Segoe UI", Arial, "Noto Sans Devanagari", "DejaVu Sans", sans-serif;\n' +
+'      font-family: "DejaVu Sans", "Noto Sans Devanagari", "Segoe UI", Arial, sans-serif;\n' +
 '      font-size: 9pt;\n' +
 '      margin: 0;\n' +
 '      padding: 10mm 12mm;\n' +
@@ -734,8 +741,10 @@ function printPurchaseSaleQuantity() {
 '      font-weight: 600;\n' +
 '      text-align: left;\n' +
 '    }\n' +
-'    table.purchase-sale-data thead th.text-end { text-align: right; }\n' +
-'    table.purchase-sale-data thead th.text-center { text-align: center; }\n' +
+'    table.purchase-sale-data thead th.text-end,\n' +
+'    table.purchase-sale-data thead th[style*="text-align: right"] { text-align: right; }\n' +
+'    table.purchase-sale-data thead th.text-center,\n' +
+'    table.purchase-sale-data thead th[style*="text-align: center"] { text-align: center; }\n' +
 '    table.purchase-sale-data .text-end { text-align: right; }\n' +
 '    table.purchase-sale-data .text-center { text-align: center; }\n' +
 '    table.purchase-sale-data tbody tr:nth-child(even) td { background: #fafbfc; }\n' +

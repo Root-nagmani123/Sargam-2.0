@@ -113,25 +113,23 @@
             <div class="report-content card border-0 shadow-sm rounded-3">
                 <div class="card-body p-3 p-lg-4">
                     <!-- Report header (title centered, date bar, vendor) -->
-                    <div class="report-header mb-4 border-bottom pb-3 text-center">
-                        <h4 class="report-title-center fw-bold mb-2 text-dark text-center text-uppercase tracking-wide">Stock Purchase Details</h4>
-                        <div class="report-date-bar py-2 px-3 mb-2 text-center rounded-1 d-inline-block text-white fw-semibold justify-content-center">
-                            Stock Purchase Details Report Between {{ date('d-F-Y', strtotime($fromDate)) }} To {{ date('d-F-Y', strtotime($toDate)) }}
-                        </div>
+                    <div class="report-header mb-4 pb-3 text-center border-bottom">
+                        <h4 class="report-title-center h5 fw-bold mb-3 text-dark text-uppercase mess-title-tracking">Stock Purchase Details</h4>
                         <div class="report-vendor-name fw-semibold mb-0 mt-2 text-center">
-                            <span class="text-muted">{{ $stockPurchasePrintVendorHeaderLabel }}</span>
-                            <span class="ms-1">{{ $selectedVendors->isEmpty() ? 'All Vendors' : $selectedVendors->pluck('name')->implode(', ') }}</span>
+                            <span class="text-muted">{{ $stockPurchasePrintVendorHeaderLabel }} {{ $stockPurchasePrintVendorLine }}</span>
                         </div>
-                        <div class="report-store-name fw-semibold mb-0 mt-1 text-center small">
-                            <span class="text-muted">Store:</span>
-                            <span class="ms-1">{{ $selectedStores->isEmpty() ? 'All Stores' : $selectedStores->pluck('store_name')->implode(', ') }}</span>
+                        <div class="report-store-name fw-semibold mb-0 mt-2 text-center">
+                            <span class="text-muted">Store: {{ $stockPurchasePrintStoreDetails }}</span>
+                        </div>
+                        <div class="d-inline-block px-3 py-2 mb-2 fw-semibold small h4">
+                            Stock Purchase Details Report Between {{ date('d-F-Y', strtotime($fromDate)) }} To {{ date('d-F-Y', strtotime($toDate)) }}
                         </div>
                     </div>
 
                     <!-- Table: grouped by bill -->
-                    <div class="table-responsive rounded-3 border bg-white stock-purchase-table-wrapper">
-                        <table class="table text-nowrap align-middle mb-0 stock-purchase-table">
-                            <thead class="stock-purchase-thead">
+                    <div class="table-responsive rounded-3 border shadow-sm bg-white stock-purchase-table-wrapper">
+                        <table class="table table-sm table-bordered align-middle mb-0 stock-purchase-table">
+                            <thead class="stock-purchase-thead table-light">
                                 <tr>
                                     <th>Item</th>
                                     <th>Item Code</th>
@@ -200,7 +198,12 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="8" class="text-center text-muted py-4">No purchase details found</td>
+                                        <td colspan="8" class="text-center text-body-secondary py-5">
+                                            <span class="d-inline-flex align-items-center gap-2">
+                                                <span class="text-muted" aria-hidden="true">—</span>
+                                                No purchase details found
+                                            </span>
+                                        </td>
                                     </tr>
                                 @endforelse
                                 @if($grandTotalAmount > 0)
@@ -280,11 +283,12 @@ function printStockPurchaseTable() {
     var lbsnaaLogoSrc = 'https://www.lbsnaa.gov.in/admin_assets/images/logo.png';
 
     var vendorDetailsHtml = vendorDetailRows.length === 0
-        ? '<div class="meta-line"><strong>Vendor Details:</strong> All Vendors</div>'
+        ? '<p class="small mb-0"><span class="text-secondary fw-semibold">Vendor details:</span> All Vendors</p>'
         : (
-            '<div class="meta-line"><strong>Vendor Details:</strong></div>' +
-            '<table class="vendor-detail-table">' +
-            '<thead><tr><th>Vendor</th><th>Contact</th><th>Phone</th><th>Email</th><th>Address</th></tr></thead>' +
+            '<p class="small fw-semibold text-secondary mb-2">Vendor details</p>' +
+            '<div class="table-responsive">' +
+            '<table class="table table-sm table-bordered align-middle mb-0">' +
+            '<thead class="table-light"><tr><th>Vendor</th><th>Contact</th><th>Phone</th><th>Email</th><th>Address</th></tr></thead>' +
             '<tbody>' +
             vendorDetailRows.map(function (row) {
                 return '<tr>' +
@@ -295,12 +299,16 @@ function printStockPurchaseTable() {
                     '<td>' + (row.address || '—') + '</td>' +
                 '</tr>';
             }).join('') +
-            '</tbody></table>'
+            '</tbody></table></div>'
         );
 
-    /* Match PDF: same class on cloned table for styling */
-    table.classList.add('stock-purchase-data');
-    table.classList.remove('table', 'text-nowrap', 'align-middle', 'mb-0', 'stock-purchase-table');
+    /* Bootstrap table utilities + data scope for bill / totals */
+    table.classList.add('stock-purchase-data', 'table', 'table-sm', 'table-bordered', 'align-middle', 'mb-0');
+    table.classList.remove('text-nowrap', 'stock-purchase-table');
+    var thead = table.querySelector('thead');
+    if (thead) {
+        thead.classList.add('table-light');
+    }
 
     printWindow.document.open();
     printWindow.document.write(`<!doctype html>
@@ -309,52 +317,45 @@ function printStockPurchaseTable() {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>${title} - OFFICER'S MESS LBSNAA MUSSOORIE</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
     <style>
+        html { font-size: 11pt; }
         body {
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            font-size: 11px;
-            margin: 0;
-            padding: 12px 16px;
-            color: #222;
+            font-family: "DejaVu Sans", Arial, Helvetica, sans-serif;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
-        .lbsnaa-header-wrap {
-            border-bottom: 3px solid #003366;
-            margin-bottom: 14px;
-            padding: 6px 0 12px;
+        .mess-title-tracking { letter-spacing: 0.04em; }
+        .mess-print-head {
+            border-bottom: 3px solid #003366 !important;
+            margin-bottom: 1.25rem;
+            padding-bottom: 1rem;
         }
-        .branding-table { width: 100%; border-collapse: collapse; margin: 0; }
-        .branding-table td { border: 0; padding: 0; vertical-align: middle; }
-        .branding-left-cell { width: 62%; vertical-align: middle; }
-        .branding-left-cell .header-img-left { float: left; margin: 2px 12px 6px 0; }
-        .branding-left-cell .branding-text-block { overflow: hidden; line-height: 1.28; padding-top: 1px; }
-        .branding-left-clear { clear: both; height: 0; line-height: 0; font-size: 0; }
-        .branding-right-cell { width: 38%; vertical-align: middle; text-align: right; }
-        .branding-right-cluster { display: inline-block; text-align: left; vertical-align: middle; max-width: 100%; }
-        .branding-right-cluster .header-img-right-seal { float: left; margin: 0 10px 0 0; }
-        .branding-right-cluster .branding-bilingual { overflow: hidden; max-width: 175px; line-height: 1.22; }
-        .branding-right-clear { clear: both; height: 0; line-height: 0; font-size: 0; }
-        .lbsnaa-brand-line-1 {
-            font-size: 9px;
+        .mess-date-pill {
+            background-color: #003366 !important;
+            color: #fff !important;
+            font-weight: 600;
+            font-size: 0.8125rem;
+        }
+        .mess-brand-line-1 {
             color: #1d70b8;
             text-transform: uppercase;
             letter-spacing: 0.07em;
             font-weight: 600;
+            font-size: 0.75rem;
         }
-        .lbsnaa-brand-line-2 {
-            font-size: 14px;
-            color: #000000;
+        .mess-brand-line-2 {
+            color: #000;
             font-weight: 700;
             text-transform: uppercase;
-            margin-top: 4px;
+            margin-top: 0.35rem;
+            font-size: 0.95rem;
             letter-spacing: 0.02em;
         }
-        .lbsnaa-brand-line-3 {
-            font-size: 10px;
+        .mess-brand-line-3 {
             color: #505a5f;
-            margin-top: 4px;
-            font-weight: normal;
+            margin-top: 0.35rem;
+            font-size: 0.8rem;
         }
         .header-img-left { width: 46px; height: 46px; object-fit: contain; display: block; }
         .header-img-right-seal { width: 48px; height: 48px; object-fit: contain; display: block; }
@@ -424,7 +425,8 @@ function printStockPurchaseTable() {
             white-space: normal;
         }
         table.stock-purchase-data thead th {
-            background: #d3d6d9;
+            background: #0066cc;
+            color: #fff;
             font-weight: 600;
             text-align: left;
         }
@@ -452,72 +454,84 @@ function printStockPurchaseTable() {
             border-top: 1px solid #adb5bd;
         }
         table.stock-purchase-data .bill-total-row td {
+            background-color: #f8f9fa !important;
             font-weight: 700;
-            background: #f8f9fa;
-            border-top: 1px solid #dee2e6;
         }
         table.stock-purchase-data .grand-total-row td {
-            background: #004a93;
-            color: #fff;
+            background-color: #004a93 !important;
+            color: #fff !important;
+            border-color: #004a93 !important;
             font-weight: 700;
-            border-color: #004a93;
         }
+        table.stock-purchase-data td.py-4,
+        table.stock-purchase-data td.py-5 { padding-top: 2rem !important; padding-bottom: 2rem !important; }
         thead { display: table-header-group; }
         tfoot { display: table-footer-group; }
         @media print {
-            body { margin: 0.5in; padding: 0; }
+            body { margin: 0.5in !important; padding: 0 !important; }
+            .bg-body-tertiary { background-color: #fff !important; }
         }
     </style>
 </head>
-<body>
-    <div class="lbsnaa-header-wrap">
-        <table class="branding-table">
-            <tr>
-                <td class="branding-left-cell">
-                    <img src="${emblemSrc}" alt="Emblem of India" class="header-img-left">
-                    <div class="branding-text-block">
-                        <div class="lbsnaa-brand-line-1">Government of India</div>
-                        <div class="lbsnaa-brand-line-2">OFFICER'S MESS LBSNAA MUSSOORIE</div>
-                        <div class="lbsnaa-brand-line-3">Lal Bahadur Shastri National Academy of Administration</div>
+<body class="bg-body-tertiary">
+<div class="container-fluid px-2 px-sm-3 py-3">
+    <header class="mess-print-head">
+        <div class="row g-3 align-items-center">
+            <div class="col">
+                <div class="d-flex align-items-start gap-3">
+                    <img src="${emblemSrc}" alt="Emblem of India" class="flex-shrink-0 rounded" width="46" height="46" style="object-fit:contain;">
+                    <div class="lh-sm text-start">
+                        <div class="mess-brand-line-1">Government of India</div>
+                        <div class="mess-brand-line-2">OFFICER'S MESS LBSNAA MUSSOORIE</div>
+                        <div class="mess-brand-line-3">Lal Bahadur Shastri National Academy of Administration</div>
                     </div>
+                </div>
+            </div>
+            <div class="col-auto">
+                <div class="d-flex align-items-start gap-2 justify-content-end">
+                    <img src="${lbsnaaLogoSrc}" alt="LBSNAA" class="flex-shrink-0 rounded" height="48" style="object-fit:contain;">
+                </div>
+            </div>
                     <div class="branding-left-clear"></div>
-                </td>
-                <td class="branding-right-cell">
-                    <div class="branding-right-cluster">
-                        <img src="${lbsnaaLogoSrc}" alt="LBSNAA" class="header-img-right-seal">
-                        <div class="branding-bilingual">
-                            <div class="branding-hindi" lang="hi">लाल बहादुर शास्त्री राष्ट्रीय प्रशासन अकादमी</div>
-                            <div class="branding-en-side" lang="en">Lal Bahadur Shastri National Academy of Administration</div>
-                        </div>
-                        <div class="branding-right-clear"></div>
-                    </div>
                 </td>
             </tr>
         </table>
     </div>
 
-    <div class="report-header-block">
-        <h1 class="report-title-center">${title}</h1>
-        <div class="report-date-bar">${dateRange}</div>
-        <div class="report-vendor-name">
-            <span class="text-muted">${vendorHeaderLabel}</span>
-            <span>${vendorLine}</span>
-        </div>
-        <div class="report-store-name">
-            <span class="text-muted">Store:</span>
-            <span>${storeDetails}</span>
-        </div>
-    </div>
+    </header>
 
-    <div class="report-meta-print">
-        ${vendorDetailsHtml}
-        <div class="meta-line"><strong>Store:</strong> ${storeDetails}</div>
-        <div class="meta-line"><strong>Printed on:</strong> ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}</div>
-    </div>
+    <section class="card border-0 shadow-sm mb-3 bg-white">
+        <div class="card-body text-center pb-3 border-bottom">
+            <h1 class="h5 fw-bold text-uppercase text-dark mb-3 mess-title-tracking">${title}</h1>
+            <div><span class="badge rounded-pill mess-date-pill px-3 py-2">${dateRange}</span></div>
+            <p class="fw-semibold small mb-0 mt-3"><span class="text-secondary">Vendor:</span> <span class="text-dark">${vendorLine}</span></p>
+            <p class="fw-semibold small mb-0 mt-2"><span class="text-secondary">Store:</span> <span class="text-dark">${storeDetails}</span></p>
+        </div>
+    </section>
 
-    <div class="table-responsive">
-        ${table.outerHTML}
-    </div>
+    <section class="card border shadow-sm mb-3 bg-white">
+        <div class="card-header py-2 small fw-semibold bg-body-secondary border-bottom">
+            Report context
+        </div>
+        <div class="card-body py-3 small">
+            ${vendorDetailsHtml}
+            <hr class="my-3 opacity-25">
+            <p class="mb-1"><span class="text-secondary fw-semibold">Store:</span> ${storeDetails}</p>
+            <p class="mb-0"><span class="text-secondary fw-semibold">Printed on:</span> ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}</p>
+        </div>
+    </section>
+
+    <section class="card border shadow-sm overflow-hidden bg-white">
+        <div class="card-header py-2 small fw-semibold bg-body-secondary border-bottom">
+            Purchase line items
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                ${table.outerHTML}
+            </div>
+        </div>
+    </section>
+</div>
 
     <script>
         window.addEventListener('load', function() {
@@ -554,11 +568,24 @@ function printStockPurchaseTable() {
     width: 100%;
     overflow-x: auto;
 }
+@media screen {
+    .stock-purchase-report .stock-purchase-table-wrapper {
+        max-height: min(72vh, 760px);
+        overflow: auto !important;
+    }
+    .stock-purchase-report .stock-purchase-table-wrapper .stock-purchase-thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+    }
+}
 .stock-purchase-report .table-responsive table {
     width: 100%;
     height: auto;
 }
 
+.mess-title-tracking { letter-spacing: 0.04em; }
+.mess-report-date-pill { background-color: #003366 !important; }
 .stock-purchase-report .stock-purchase-table { font-size: 0.9rem; }
 .stock-purchase-report .vendor-section-header-row .vendor-section-header {
     background-color: #f1f3f5;
@@ -575,8 +602,9 @@ function printStockPurchaseTable() {
 .stock-purchase-report .stock-purchase-table td { padding: 0.35rem 0.75rem; vertical-align: middle; }
 .stock-purchase-report .page-input { display: inline-block; }
 .report-date-bar { background: #004a93; color: #fff; font-size: 0.9rem; text-align: center; }
+.stock-purchase-table-wrapper .stock-purchase-thead th { border-bottom-width: 2px; }
 .report-vendor-name { font-size: 1rem; }
-.stock-purchase-thead th { background: #d3d6d9; font-weight: 600; padding: 0.5rem 0.75rem; text-align: left; }
+.stock-purchase-thead th { background: #0066cc; color: #fff; font-weight: 600; padding: 0.5rem 0.75rem; text-align: left; }
 .stock-purchase-thead th.text-end { text-align: right; }
 
 @media print {
@@ -603,13 +631,17 @@ function printStockPurchaseTable() {
     .report-content { box-shadow: none !important; border: none !important; }
     .report-content .card-body { padding: 0 !important; }
     .report-header { margin-top: 0 !important; margin-bottom: 1rem !important; }
-    .report-title-center { font-size: 1.15rem !important; color: #000 !important; text-align: center !important; }
-    .report-date-bar { background: #5a6268 !important; color: #fff !important; text-align: center !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .report-vendor-name { font-size: 1rem !important; color: #000 !important; margin-bottom: 0.75rem !important; }
-    body { font-size: 12px; }
-    .stock-purchase-table { font-size: 11px; border-collapse: collapse !important; }
+    html { font-size: 11pt !important; }
+    .report-title-center { font-size: 11pt !important; color: #000 !important; text-align: center !important; }
+    .report-date-bar { background: #5a6268 !important; color: #fff !important; text-align: center !important; font-size: 11pt !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .report-vendor-name { font-size: 11pt !important; color: #000 !important; margin-bottom: 0.75rem !important; }
+    .report-store-name { font-size: 11pt !important; }
+    body { font-size: 11pt !important; font-family: "DejaVu Sans", Arial, Helvetica, sans-serif !important; }
+    .stock-purchase-table { font-size: 11pt !important; border-collapse: collapse !important; }
+    .stock-purchase-table th, .stock-purchase-table td { font-size: 11pt !important; }
     .stock-purchase-table td, .stock-purchase-table th { border: 1px solid #333 !important; }
-    .stock-purchase-thead th { background: #d3d6d9 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .stock-purchase-thead th { background: #0066cc !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; position: static !important; box-shadow: none !important; }
+    .stock-purchase-report .stock-purchase-table-wrapper { max-height: none !important; overflow: visible !important; }
     .stock-purchase-report .bill-header-row .bill-header { background: #5a6268 !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .stock-purchase-report .vendor-section-header { background: #e9ecef !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .stock-purchase-report .vendor-total-row td { background: #dee2e6 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }

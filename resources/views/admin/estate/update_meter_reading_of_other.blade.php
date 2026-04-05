@@ -3,25 +3,42 @@
 @section('title', 'Update Meter Reading of Other - Sargam')
 
 @section('setup_content')
-<div class="container-fluid py-4">
-    <x-breadcrum title="Update Meter Reading of Other"></x-breadcrum>
-    <x-session_message />
+@php
+    $otherMeterReadingFlashParts = [];
+    if (session('error')) {
+        $otherMeterReadingFlashParts[] = trim((string) session('error'));
+    }
+    if ($errors->any()) {
+        foreach ($errors->all() as $err) {
+            $t = trim((string) $err);
+            if ($t !== '' && ! in_array($t, $otherMeterReadingFlashParts, true)) {
+                $otherMeterReadingFlashParts[] = $t;
+            }
+        }
+    }
+    $otherMeterReadingAlertMessage = ! empty($otherMeterReadingFlashParts)
+        ? implode("\n\n", $otherMeterReadingFlashParts)
+        : null;
+@endphp
+<div class="container-fluid">
+    <x-breadcrum :title="'Update Meter Reading of Other'" :items="['Home', 'Estate Management', 'Update Meter Reading of Other']" />
 
-    <div class="card border-0 shadow-sm rounded-3 border-start border-4 border-primary">
-        <div class="card-body p-4 p-lg-5">
-            <h2 class="h5 fw-semibold mb-1">Update Meter Reading of Other</h2>
-            <p class="text-muted small mb-4">Please Update Meter Reading</p>
-            <hr class="my-4">
-
+    <div class="card shadow-sm">
+        <div class="card-header bg-body-secondary bg-opacity-10 border-0 py-3 px-4 d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <h5 class="card-title mb-0">Please Update Meter Reading (Other)</h5>
+        </div>
+        <div class="card-body p-4">
             <form id="meterReadingFilterForm" class="needs-validation" novalidate>
                 @csrf
-                <div class="row g-3 mb-4">
-                    <div class="col-12 col-md-6 col-lg-4">
-                        <label for="bill_month" class="form-label">Bill Month <span class="text-danger">*</span></label>
-                        <input type="month" class="form-control" id="bill_month" name="bill_month" placeholder="Select Bill Month" max="{{ date('Y-m') }}" required>
-                        <div class="form-text">Select Bill Month</div>
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label for="bill_month" class="form-label">Meter Change Month <span class="text-danger">*</span></label>
+                        <input type="month" class="form-control" id="bill_month" name="bill_month" placeholder="Select month" max="{{ date('Y-m') }}" value="{{ old('reading_bill_month') }}" required>
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i> Same as permanent estate: list uses the previous calendar month; rows with reading end date in this month are excluded.
+                        </small>
                     </div>
-                    <div class="col-12 col-md-6 col-lg-4">
+                    <div class="col-md-4">
                         <label for="estate_name" class="form-label">Estate Name <span class="text-danger">*</span></label>
                         <select class="form-select" id="estate_name" name="estate_name">
                             <option value="">---Select---</option>
@@ -29,9 +46,11 @@
                                 <option value="{{ $c->pk }}">{{ $c->campus_name }}</option>
                             @endforeach
                         </select>
-                        <div class="form-text">Select Estate Name</div>
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i> Select Estate Name
+                        </small>
                     </div>
-                    <div class="col-12 col-md-6 col-lg-4">
+                    <div class="col-md-4">
                         <label for="unit_name" class="form-label">Unit Name <span class="text-danger">*</span></label>
                         <select class="form-select" id="unit_name" name="unit_type_id">
                             <option value="">---Select---</option>
@@ -45,16 +64,20 @@
                                 >{{ $ut->unit_type }}</option>
                             @endforeach
                         </select>
-                        <div class="form-text">Select Unit</div>
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i> Select Unit
+                        </small>
                     </div>
-                    <div class="col-12 col-md-6 col-lg-4">
+                    <div class="col-md-4">
                         <label for="building" class="form-label">Building <span class="text-danger">*</span></label>
                         <select class="form-select" id="building" name="building">
                             <option value="">---Select---</option>
                         </select>
-                        <div class="form-text">Select Building</div>
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i> Select Building
+                        </small>
                     </div>
-                    <div class="col-12 col-md-6 col-lg-4">
+                    <div class="col-md-4">
                         <label for="unit_sub_type" class="form-label">Unit Sub Type <span class="text-danger">*</span></label>
                         <select class="form-select" id="unit_sub_type" name="unit_sub_type">
                             <option value="">---Select---</option>
@@ -62,19 +85,20 @@
                                 <option value="{{ $ust->pk }}">{{ $ust->unit_sub_type }}</option>
                             @endforeach
                         </select>
-                        <div class="form-text">Select Unit Sub Type</div>
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i> Select Unit Sub Type
+                        </small>
                     </div>
-                    <div class="col-12 col-md-6 col-lg-4">
-                        <label for="meter_reading_date" class="form-label">Meter Reading Date <span class="text-danger">*</span></label>
-                        <div class="input-group">
-                            <select class="form-select" id="meter_reading_date" name="meter_reading_date">
-                                <option value="">---Select---</option>
-                            </select>
-                            <span class="input-group-text"><i class="bi bi-calendar3"></i></span>
-                        </div>
-                        <div class="form-text">Meter Reading Date</div>
+                    <div class="col-md-4">
+                        <label for="meter_reading_date" class="form-label">Meter Reading Date</label>
+                        <input type="date" class="form-control @error('reading_meter_reading_date') is-invalid @enderror" id="meter_reading_date" name="reading_meter_reading_date" placeholder="Select date" value="{{ old('reading_meter_reading_date') }}" autocomplete="off">
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i> Optional for Load Data; required when you click Save.
+                        </small>
                     </div>
-                    <div class="col-12">
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-12">
                         <button type="button" class="btn btn-primary" id="loadMeterReadingsBtn">
                             <i class="bi bi-search me-2"></i>Load Data
                         </button>
@@ -84,17 +108,21 @@
 
             <form id="meterReadingSaveForm" method="POST" action="{{ route('admin.estate.update-meter-reading-of-other.store') }}" style="display:none;">
                 @csrf
-                <div class="table-responsive mt-4 rounded-3 overflow-hidden border">
-                    <table class="table table-striped table-hover align-middle mb-0" id="updateMeterReadingOtherTable">
+                <input type="hidden" name="reading_bill_month" id="reading_bill_month_hidden" value="">
+                <input type="hidden" name="reading_meter_reading_date" id="reading_meter_reading_date_hidden" value="">
+
+                <div class="table-responsive mt-4">
+                    <table class="table table-bordered table-hover align-middle" id="updateMeterReadingOtherTable">
                         <thead class="table-primary">
                             <tr>
-                                <th><input type="checkbox" class="form-check-input" id="select_all" aria-label="Select all"></th>
+                                <th style="width:2.5rem;"><input type="checkbox" class="form-check-input" id="select_all" title="Select all"></th>
                                 <th>House No.</th>
                                 <th>Name</th>
-                                <th>Last Month Electric Reading Date</th>
+                                <th>Last month date</th>
                                 <th>Meter No.</th>
-                                <th>Last Month Meter Reading</th>
-                                <th>Current Month Reading <span class="text-danger">*</span></th>
+                                <th>Last Month Electric Meter Reading</th>
+                                <th>New Meter No.</th>
+                                <th>Current Month Electric Meter Reading <span class="text-danger">*</span></th>
                                 <th>Unit</th>
                             </tr>
                         </thead>
@@ -103,13 +131,15 @@
                     </table>
                 </div>
 
-                <div class="d-flex flex-wrap gap-2 mt-4">
-                    <button type="submit" class="btn btn-success d-inline-flex align-items-center gap-2">
-                        <i class="bi bi-save"></i> Save
+                <div class="alert alert-danger mb-4">
+                    <small>*Required Fields: All marked fields are mandatory</small>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save me-2"></i>Save
                     </button>
-                    <a href="{{ route('admin.estate.possession-for-others') }}" class="btn btn-secondary d-inline-flex align-items-center gap-2">
-                        <i class="bi bi-x-lg"></i> Cancel
-                    </a>
+                    <a href="{{ route('admin.estate.possession-for-others') }}" class="btn btn-outline-primary">Cancel</a>
                 </div>
             </form>
 
@@ -123,23 +153,37 @@
 
 @push('styles')
 <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
-<style>.ts-dropdown { z-index: 1060 !important; }</style>
+<style>
+.ts-dropdown { z-index: 1060 !important; }
+#updateMeterReadingOtherTable td { vertical-align: middle; font-size: 0.85rem; }
+#updateMeterReadingOtherTable .other-dual-stacked .other-dual-col { vertical-align: top; }
+#updateMeterReadingOtherTable .other-dual-seg { padding-top: 0.35rem; padding-bottom: 0.35rem; }
+#updateMeterReadingOtherTable .other-dual-seg[data-slot="1"] { border-bottom: 1px solid var(--bs-border-color, #dee2e6); }
+#updateMeterReadingOtherTable .other-dual-stacked .curr-reading,
+#updateMeterReadingOtherTable .other-dual-stacked .new-meter-no { max-width: 100%; }
+.other-pair-cb { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+</style>
 @endpush
 
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 <script>
+@if ($otherMeterReadingAlertMessage !== null)
+(function () {
+    try { alert(@json($otherMeterReadingAlertMessage)); } catch (e) {}
+})();
+@endif
 $(document).ready(function() {
     const listUrl = "{{ route('admin.estate.update-meter-reading-of-other.list') }}";
     const blocksUrl = "{{ route('admin.estate.update-meter-reading-of-other.blocks') }}";
     const unitSubTypesUrl = "{{ route('admin.estate.update-meter-reading-of-other.unit-sub-types') }}";
-    const meterReadingDatesUrl = "{{ route('admin.estate.update-meter-reading-of-other.meter-reading-dates') }}";
     const unitTypesByCampus = @json($unitTypesByCampus ?? []);
     const allUnitTypes = @json($unitTypes ?? []);
     const possessionPks = @json($possessionPks ?? '');
     const prefill = @json($prefill ?? null);
 
     let dataTable = null;
+    let lastInvalidReadingAlertAt = 0;
     window.otherMeterRowData = window.otherMeterRowData || {};
 
     var tsOpts = { allowEmptyOption: true, create: false, dropdownParent: 'body', maxOptions: null, hideSelected: false, onInitialize: function() { this.activeOption = null; } };
@@ -150,12 +194,11 @@ $(document).ready(function() {
     }
     function getSelVal(el) { return (el && el.tomselect) ? el.tomselect.getValue() : $(el).val(); }
 
-    var tsEstate = null, tsUnitName = null, tsBuilding = null, tsUnitSub = null, tsMeterDate = null;
+    var tsEstate = null, tsUnitName = null, tsBuilding = null, tsUnitSub = null;
     if (document.getElementById('estate_name')) tsEstate = initTs(document.getElementById('estate_name'), '---Select---');
     if (document.getElementById('unit_name')) tsUnitName = initTs(document.getElementById('unit_name'), '---Select---');
     if (document.getElementById('building')) tsBuilding = initTs(document.getElementById('building'), '---Select---');
     if (document.getElementById('unit_sub_type')) tsUnitSub = initTs(document.getElementById('unit_sub_type'), '---Select---');
-    if (document.getElementById('meter_reading_date')) tsMeterDate = initTs(document.getElementById('meter_reading_date'), 'Select');
 
     function parseBillMonthInput(val) {
         if (!val || val.length < 7) return { bill_month: null, bill_year: null };
@@ -164,30 +207,6 @@ $(document).ready(function() {
         const month = parts[1] ? parseInt(parts[1], 10) : null;
         return { bill_month: (month >= 1 && month <= 12) ? month : null, bill_year: year };
     }
-
-    $('#bill_month').on('change', function() {
-        const val = $(this).val();
-        const { bill_month, bill_year } = parseBillMonthInput(val);
-        var el = document.getElementById('meter_reading_date');
-        if (tsMeterDate) { try { tsMeterDate.destroy(); } catch (e) {} tsMeterDate = null; }
-        $('#meter_reading_date').html('<option value="">Select</option>');
-        if (!bill_month || !bill_year) {
-            if (el) tsMeterDate = initTs(el, 'Select');
-            return;
-        }
-        $.get(meterReadingDatesUrl, { bill_month: bill_month, bill_year: bill_year }, function(res) {
-            if (res.status && res.data && res.data.length) {
-                res.data.forEach(function(d) {
-                    $('#meter_reading_date').append('<option value="'+d.value+'">'+d.label+'</option>');
-                });
-            }
-            if (el) tsMeterDate = initTs(el, 'Select');
-            if (res.status && res.data && res.data.length === 1) {
-                if (tsMeterDate) tsMeterDate.setValue(res.data[0].value, true);
-                else $('#meter_reading_date').val(res.data[0].value);
-            }
-        });
-    });
 
     $(document).on('change', '#estate_name', function() {
         const campusId = getSelVal(this);
@@ -246,27 +265,28 @@ $(document).ready(function() {
         const billMonthVal = $('#bill_month').val();
         const { bill_month: billMonth, bill_year: billYear } = parseBillMonthInput(billMonthVal);
         if (!billMonth || !billYear) {
-            alert('Please select Bill Month.');
+            alert('Please select Meter Change Month.');
             return;
         }
         const today = new Date();
-        const maxMonth = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
+        const maxFromInput = $('#bill_month').attr('max');
+        const maxMonth = maxFromInput || (today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0'));
         if (billMonthVal > maxMonth) {
-            alert('Bill Month cannot be a future month. Please select current month or earlier.');
+            alert('Meter Change Month cannot be a future month. Please select current month or earlier.');
             return;
         }
         const params = {
             bill_month: billMonth,
             bill_year: billYear,
-            meter_reading_date: getSelVal(document.getElementById('meter_reading_date')) || '',
             campus_id: getSelVal(document.getElementById('estate_name')) || '',
             block_id: getSelVal(document.getElementById('building')) || '',
             unit_type_id: getSelVal(document.getElementById('unit_name')) || '',
             unit_sub_type_id: getSelVal(document.getElementById('unit_sub_type')) || ''
         };
-        if (possessionPks) {
-            params.possession_pks = typeof possessionPks === 'string' ? possessionPks : (Array.isArray(possessionPks) ? possessionPks.join(',') : '');
+        if (possessionPks && String(possessionPks).trim() !== '') {
+            params.possession_pks = String(possessionPks).trim();
         }
+        // Load grid by meter-change month + estate filters (meter reading date is for Save, not list).
         $.get(listUrl, params, function(res) {
             if (!res.status || !res.data || res.data.length === 0) {
                 $('#meterReadingSaveForm').hide();
@@ -282,22 +302,103 @@ $(document).ready(function() {
             const tbody = $('#updateMeterReadingOtherTable tbody');
             tbody.html('');
             window.otherMeterRowData = window.otherMeterRowData || {};
-            res.data.forEach(function(row, idx) {
-                const lastReading = typeof row.last_month_reading === 'number' ? row.last_month_reading : (parseInt(row.last_month_reading, 10) || null);
-                const currVal = (row.curr_month_reading !== null && row.curr_month_reading !== '' ? row.curr_month_reading : '');
+
+            function escAttr(s) {
+                return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+            }
+            function parseLastReading(v) {
+                if (typeof v === 'number' && !isNaN(v)) return v;
+                const n = parseInt(v, 10);
+                return !isNaN(n) ? n : null;
+            }
+
+            let readingIdx = 0;
+            res.data.forEach(function(row) {
+                if (row.dual_meter && row.m1 && row.m2) {
+                    const i0 = readingIdx++;
+                    const i1 = readingIdx++;
+                    const m1 = row.m1;
+                    const m2 = row.m2;
+                    const last1 = parseLastReading(m1.last_month_reading);
+                    const last2 = parseLastReading(m2.last_month_reading);
+                    const nm1 = String(m1.new_meter_no || '').trim() || String(m1.old_meter_no || '');
+                    const nm2 = String(m2.new_meter_no || '').trim() || String(m2.old_meter_no || '');
+                    const elec1 = (m1.last_month_reading != null && m1.last_month_reading !== '') ? m1.last_month_reading : 'N/A';
+                    const elec2 = (m2.last_month_reading != null && m2.last_month_reading !== '') ? m2.last_month_reading : 'N/A';
+                    window.otherMeterRowData[row.pk + '_1'] = { curr_month_elec_red: '', new_meter_no: nm1 };
+                    window.otherMeterRowData[row.pk + '_2'] = { curr_month_elec_red: '', new_meter_no: nm2 };
+
+                    const trDual = '<tr class="other-reading-row other-dual-stacked" data-dual="1" data-pk="'+ row.pk +'">' +
+                        '<td class="text-center align-middle position-relative">' +
+                            '<input type="checkbox" class="form-check-input row-check row-check-master" name="readings['+i0+'][selected]" value="1" data-pair-sel-id="otherPairSel_'+i1+'">' +
+                            '<input type="checkbox" class="form-check-input other-pair-cb" name="readings['+i1+'][selected]" value="1" id="otherPairSel_'+i1+'" tabindex="-1" aria-hidden="true">' +
+                        '</td>' +
+                        '<td>'+ escAttr(row.house_no || 'N/A') +'</td>' +
+                        '<td>'+ escAttr(row.name || 'N/A') +'</td>' +
+                        '<td class="text-nowrap">'+ escAttr(row.last_reading_date || 'N/A') +'</td>' +
+                        '<td class="other-dual-col">' +
+                            '<div class="other-dual-seg" data-slot="1">'+ escAttr(m1.old_meter_no || 'N/A') +'</div>' +
+                            '<div class="other-dual-seg" data-slot="2">'+ escAttr(m2.old_meter_no || 'N/A') +'</div>' +
+                        '</td>' +
+                        '<td class="other-dual-col">' +
+                            '<div class="other-dual-seg" data-slot="1">'+ escAttr(elec1) +'</div>' +
+                            '<div class="other-dual-seg" data-slot="2">'+ escAttr(elec2) +'</div>' +
+                        '</td>' +
+                        '<td class="other-dual-col other-dual-newmeter-col">' +
+                            '<div class="other-dual-seg" data-slot="1">' +
+                            '<input type="text" class="form-control form-control-sm new-meter-no" name="readings['+i0+'][new_meter_no]" value="'+ escAttr(nm1) +'" placeholder="Enter new meter no." inputmode="numeric" maxlength="50">' +
+                            '</div>' +
+                            '<div class="other-dual-seg" data-slot="2">' +
+                            '<input type="text" class="form-control form-control-sm new-meter-no" name="readings['+i1+'][new_meter_no]" value="'+ escAttr(nm2) +'" placeholder="Enter new meter no." inputmode="numeric" maxlength="50">' +
+                            '</div>' +
+                        '</td>' +
+                        '<td class="other-dual-col other-dual-reading-col">' +
+                            '<div class="other-dual-seg" data-slot="1">' +
+                            '<input type="number" class="form-control form-control-sm curr-reading" name="readings['+i0+'][curr_month_elec_red]" value="" min="0" step="1" placeholder="Enter" inputmode="numeric" data-last-reading="'+ (last1 !== null ? last1 : '') +'" data-existing-curr="">' +
+                            '<input type="hidden" name="readings['+i0+'][pk]" value="'+ row.pk +'">' +
+                            '<input type="hidden" name="readings['+i0+'][meter_slot]" value="1">' +
+                            '</div>' +
+                            '<div class="other-dual-seg" data-slot="2">' +
+                            '<input type="number" class="form-control form-control-sm curr-reading" name="readings['+i1+'][curr_month_elec_red]" value="" min="0" step="1" placeholder="Enter" inputmode="numeric" data-last-reading="'+ (last2 !== null ? last2 : '') +'" data-existing-curr="">' +
+                            '<input type="hidden" name="readings['+i1+'][pk]" value="'+ row.pk +'">' +
+                            '<input type="hidden" name="readings['+i1+'][meter_slot]" value="2">' +
+                            '</div>' +
+                        '</td>' +
+                        '<td class="other-dual-col other-dual-units text-body-secondary small">' +
+                            '<div class="other-dual-seg" data-slot="1"><span class="unit-cell">—</span></div>' +
+                            '<div class="other-dual-seg" data-slot="2"><span class="unit-cell">—</span></div>' +
+                        '</td>' +
+                        '</tr>';
+                    tbody.append(trDual);
+                    return;
+                }
+
+                const idx = readingIdx++;
+                const lastReading = parseLastReading(row.last_month_reading);
+                const existingCurrStored = (row.curr_month_reading !== null && row.curr_month_reading !== undefined && row.curr_month_reading !== '')
+                    ? String(row.curr_month_reading) : '';
                 const rowKey = row.pk + '_' + (row.meter_slot || 1);
-                window.otherMeterRowData[rowKey] = { curr_month_elec_red: currVal };
-                const tr = '<tr data-last-reading="'+ (lastReading !== null ? lastReading : '') +'" data-existing-curr="'+ (currVal !== '' ? currVal : '') +'" data-pk="'+ row.pk +'" data-meter-slot="'+ (row.meter_slot || 1) +'">' +
-                    '<td><input type="checkbox" class="form-check-input row-check" name="readings['+idx+'][selected]" value="1" aria-label="Select row"></td>' +
-                    '<td>'+ (row.house_no || 'N/A') +'</td>' +
-                    '<td>'+ (row.name || 'N/A') +'</td>' +
-                    '<td>'+ (row.last_reading_date || 'N/A') +'</td>' +
-                    '<td>'+ (row.meter_no || 'N/A') +'</td>' +
-                    '<td>'+ (row.last_month_reading || 'N/A') +'</td>' +
-                    '<td><input type="number" class="form-control form-control-sm curr-reading" name="readings['+idx+'][curr_month_elec_red]" value="'+ String(currVal).replace(/"/g, '&quot;') +'" min="0" step="1" placeholder="Enter">' +
-                    '<input type="hidden" name="readings['+idx+'][pk]" value="'+row.pk+'">' +
-                    '<input type="hidden" name="readings['+idx+'][meter_slot]" value="'+(row.meter_slot || 1)+'"></td>' +
-                    '<td class="unit-cell">'+ (row.unit || 'N/A') +'</td>' +
+                var oldMeterNoStr = (row.old_meter_no != null && row.old_meter_no !== undefined) ? String(row.old_meter_no).trim() : '';
+                var apiNewMeterNo = (row.new_meter_no != null && row.new_meter_no !== undefined) ? String(row.new_meter_no).trim() : '';
+                var newMeterNoPrefill = apiNewMeterNo !== '' ? apiNewMeterNo : (oldMeterNoStr !== '' && oldMeterNoStr !== 'N/A' ? oldMeterNoStr : '');
+                window.otherMeterRowData[rowKey] = { curr_month_elec_red: '', new_meter_no: newMeterNoPrefill };
+
+                const oldDisp = (row.old_meter_no != null && String(row.old_meter_no).trim() !== '') ? row.old_meter_no : (row.meter_no || 'N/A');
+                const slot = row.meter_slot || 1;
+                const lastElecDisp = (row.last_month_reading != null && row.last_month_reading !== '') ? row.last_month_reading : 'N/A';
+
+                const tr = '<tr class="other-reading-row other-reading-row-single" data-dual="0" data-pk="'+ row.pk +'" data-meter-slot="'+ slot +'">' +
+                    '<td><input type="checkbox" class="form-check-input row-check row-check-master" name="readings['+idx+'][selected]" value="1"></td>' +
+                    '<td>'+ escAttr(row.house_no || 'N/A') +'</td>' +
+                    '<td>'+ escAttr(row.name || 'N/A') +'</td>' +
+                    '<td class="text-nowrap">'+ escAttr(row.last_reading_date || 'N/A') +'</td>' +
+                    '<td>'+ escAttr(oldDisp) +'</td>' +
+                    '<td>'+ escAttr(lastElecDisp) +'</td>' +
+                    '<td><input type="text" class="form-control form-control-sm new-meter-no" name="readings['+idx+'][new_meter_no]" value="'+ escAttr(newMeterNoPrefill) +'" placeholder="Enter new meter no." inputmode="numeric" maxlength="50"></td>' +
+                    '<td><input type="number" class="form-control form-control-sm curr-reading" name="readings['+idx+'][curr_month_elec_red]" value="" min="0" step="1" placeholder="Enter" inputmode="numeric" data-last-reading="'+ (lastReading !== null ? lastReading : '') +'" data-existing-curr="'+ existingCurrStored.replace(/"/g, '&quot;') +'">' +
+                    '<input type="hidden" name="readings['+idx+'][pk]" value="'+ row.pk +'">' +
+                    '<input type="hidden" name="readings['+idx+'][meter_slot]" value="'+ slot +'"></td>' +
+                    '<td class="unit-cell text-body-secondary small">—</td>' +
                     '</tr>';
                 tbody.append(tr);
             });
@@ -307,76 +408,189 @@ $(document).ready(function() {
         });
     });
 
-    $('#select_all').on('change', function() {
-        const checked = $(this).prop('checked');
-        $('.row-check').prop('checked', checked).trigger('change');
+    $(document).on('change', '#updateMeterReadingOtherTable #select_all', function() {
+        const on = $(this).prop('checked');
+        $('#updateMeterReadingOtherTable .row-check-master').each(function() {
+            $(this).prop('checked', on);
+            const sid = $(this).data('pair-sel-id');
+            if (sid) {
+                $('#' + sid).prop('checked', on);
+            }
+        });
     });
+
+    $(document).on('change', '#updateMeterReadingOtherTable .row-check-master', function() {
+        const on = $(this).prop('checked');
+        const sid = $(this).data('pair-sel-id');
+        if (sid) {
+            $('#' + sid).prop('checked', on);
+        }
+    });
+
+    /** One table row per house (dual uses stacked cells in the same row). */
+    function otherMeterLogicalRowsFromTr($tr) {
+        return $tr;
+    }
+
+    function getCurrInputMinAllowed($input) {
+        const lastVal = $input.data('last-reading');
+        const existingVal = $input.data('existing-curr');
+        const lastReading = (lastVal !== '' && lastVal !== undefined && !isNaN(parseFloat(lastVal))) ? parseFloat(lastVal) : null;
+        const existingCurr = (existingVal !== '' && existingVal !== undefined && !isNaN(parseFloat(existingVal))) ? parseFloat(existingVal) : null;
+        if (lastReading === null && existingCurr === null) return null;
+        if (existingCurr !== null && lastReading !== null) return Math.max(lastReading, existingCurr);
+        return existingCurr !== null ? existingCurr : lastReading;
+    }
 
     function syncOtherRowDataFromInputs($row) {
         var pk = $row.data('pk');
-        var meterSlot = $row.data('meter-slot') || 1;
         if (!pk) return;
         window.otherMeterRowData = window.otherMeterRowData || {};
-        var key = pk + '_' + meterSlot;
-        if (!window.otherMeterRowData[key]) {
-            window.otherMeterRowData[key] = { curr_month_elec_red: '' };
+        if ($row.hasClass('other-dual-stacked')) {
+            ['1', '2'].forEach(function (slot) {
+                var key = pk + '_' + slot;
+                if (!window.otherMeterRowData[key]) {
+                    window.otherMeterRowData[key] = { curr_month_elec_red: '', new_meter_no: '' };
+                }
+                var $segN = $row.find('.other-dual-newmeter-col .other-dual-seg[data-slot="' + slot + '"]');
+                var $segR = $row.find('.other-dual-reading-col .other-dual-seg[data-slot="' + slot + '"]');
+                window.otherMeterRowData[key].new_meter_no = $segN.find('.new-meter-no').val() || '';
+                window.otherMeterRowData[key].curr_month_elec_red = $segR.find('.curr-reading').val() || '';
+            });
+            return;
         }
-        window.otherMeterRowData[key].curr_month_elec_red = $row.find('.curr-reading').val() || '';
+        var slotFlat = String($row.data('meter-slot') || '1');
+        var keyFlat = pk + '_' + slotFlat;
+        if (!window.otherMeterRowData[keyFlat]) {
+            window.otherMeterRowData[keyFlat] = { curr_month_elec_red: '', new_meter_no: '' };
+        }
+        var $cr = $row.find('.curr-reading').first();
+        var $nm = $row.find('.new-meter-no').first();
+        window.otherMeterRowData[keyFlat].curr_month_elec_red = $cr.length ? ($cr.val() || '') : '';
+        window.otherMeterRowData[keyFlat].new_meter_no = $nm.length ? ($nm.val() || '') : '';
     }
 
-    $(document).on('input change', '.curr-reading', function() {
-        const $row = $(this).closest('tr');
-        const lastVal = $row.data('last-reading');
-        const existingVal = $row.data('existing-curr');
+    $(document).on('input change', '#meterReadingSaveForm .new-meter-no', function() {
+        this.value = String(this.value || '').replace(/\D/g, '').slice(0, 50);
+        syncOtherRowDataFromInputs($(this).closest('tr'));
+    });
 
+    $(document).on('keydown', '#meterReadingSaveForm .new-meter-no', function(e) {
+        if (['e', 'E', '+', '-', '.', ','].includes(e.key)) {
+            e.preventDefault();
+        }
+    });
+
+    $(document).on('input', '#meterReadingSaveForm .curr-reading', function() {
+        const $inp = $(this);
+        const $row = $inp.closest('tr');
+        const lastVal = $inp.data('last-reading');
         const lastReading = (lastVal !== '' && lastVal !== undefined && !isNaN(parseFloat(lastVal))) ? parseFloat(lastVal) : null;
-        const existingCurr = (existingVal !== '' && existingVal !== undefined && !isNaN(parseFloat(existingVal))) ? parseFloat(existingVal) : null;
 
-        let currVal = $(this).val();
+        let currVal = $inp.val();
         let currReading = (currVal !== '' && currVal !== null && !isNaN(parseFloat(currVal))) ? parseFloat(currVal) : null;
-
-        // Block user from entering value less than last month / existing current.
-        let minAllowed = lastReading;
-        if (existingCurr !== null) {
-            minAllowed = (minAllowed !== null) ? Math.max(minAllowed, existingCurr) : existingCurr;
-        }
-        if (minAllowed !== null && currReading !== null && currReading < minAllowed) {
-            currReading = minAllowed;
-            currVal = String(minAllowed);
-            $(this).val(currVal);
-        }
 
         syncOtherRowDataFromInputs($row);
 
-        let unit = 'N/A';
+        let unit = '';
         if (lastReading !== null && currReading !== null && currReading >= lastReading) {
             unit = currReading - lastReading;
         }
-        $row.find('.unit-cell').text(unit);
+        const unitText = unit === '' ? '—' : String(unit);
+        if ($row.hasClass('other-dual-stacked')) {
+            var slot = $inp.closest('.other-dual-seg').data('slot');
+            if (slot !== undefined && slot !== null) {
+                $row.find('.other-dual-units .other-dual-seg[data-slot="' + slot + '"] .unit-cell').text(unitText);
+            }
+        } else {
+            $row.children('td.unit-cell').text(unitText);
+        }
     });
 
-    // Require current reading only for selected rows (gives immediate feedback).
-    $(document).on('change', '.row-check', function() {
-        const $row = $(this).closest('tr');
-        const $input = $row.find('.curr-reading');
-        if ($(this).prop('checked')) {
-            $input.attr('required', 'required');
-        } else {
-            $input.removeAttr('required');
+    $(document).on('blur', '#meterReadingSaveForm .curr-reading', function() {
+        const $inp = $(this);
+        const currVal = $inp.val();
+        const currReading = (currVal !== '' && currVal !== null && !isNaN(parseFloat(currVal))) ? parseFloat(currVal) : null;
+        const minAllowed = getCurrInputMinAllowed($inp);
+        if (minAllowed !== null && currReading !== null && currReading < minAllowed) {
+            lastInvalidReadingAlertAt = Date.now();
+            alert('Current Month Reading cannot be less than Last Month Meter Reading.');
         }
     });
 
     $('#meterReadingSaveForm').on('submit', function(e) {
-        const selectedCount = $('.row-check:checked').length;
+        const billMonthVal = $('#bill_month').val();
+        if (!billMonthVal) {
+            e.preventDefault();
+            alert('Please select Meter Change Month.');
+            $('#bill_month').trigger('focus');
+            return;
+        }
+        const meterReadingDateSubmit = ($('#meter_reading_date').val() || '').trim();
+        if (!meterReadingDateSubmit) {
+            e.preventDefault();
+            alert('Meter reading date is mandatory. Please select Meter Reading Date before saving.');
+            $('#meter_reading_date').trigger('focus');
+            return;
+        }
+
+        const selectedCount = $('#updateMeterReadingOtherTable .row-check-master:checked').length;
         if (selectedCount === 0) {
             e.preventDefault();
             alert('Please select at least one record by clicking the checkbox before saving.');
             return;
         }
-        // No DataTable pagination; submit normally.
+
+        let hasEmptyReading = false;
+        $('#updateMeterReadingOtherTable .row-check-master:checked').each(function() {
+            const $rows = otherMeterLogicalRowsFromTr($(this).closest('tr'));
+            $rows.find('.curr-reading').each(function() {
+                const currVal = $(this).val();
+                if (currVal === null || String(currVal).trim() === '') {
+                    hasEmptyReading = true;
+                    $(this).trigger('focus');
+                    return false;
+                }
+            });
+            if (hasEmptyReading) return false;
+        });
+        if (hasEmptyReading) {
+            e.preventDefault();
+            alert('Please fill Current Month Reading for all selected rows.');
+            return;
+        }
+
+        let hasInvalidReading = false;
+        $('#updateMeterReadingOtherTable .row-check-master:checked').each(function() {
+            const $rows = otherMeterLogicalRowsFromTr($(this).closest('tr'));
+            $rows.find('.curr-reading').each(function() {
+                const $inp = $(this);
+                const currReading = parseFloat(String($inp.val()).trim(), 10);
+                const minAllowed = getCurrInputMinAllowed($inp);
+                if (minAllowed !== null && !isNaN(currReading) && currReading < minAllowed) {
+                    hasInvalidReading = true;
+                    $inp.trigger('focus');
+                    return false;
+                }
+            });
+            if (hasInvalidReading) return false;
+        });
+        if (hasInvalidReading) {
+            e.preventDefault();
+            const now = Date.now();
+            if ((now - lastInvalidReadingAlertAt) > 800) {
+                lastInvalidReadingAlertAt = now;
+                alert('Current Month Reading cannot be less than Last Month Meter Reading.');
+            }
+            return;
+        }
+
+        $('#reading_bill_month_hidden').val($('#bill_month').val() || '');
+        $('#reading_meter_reading_date_hidden').val(meterReadingDateSubmit);
     });
 
     // Prefill form when coming from Estate Possession for Other with possession_pks
+    @if (! $errors->any())
     if (prefill) {
         if (prefill.bill_month) {
             $('#bill_month').val(prefill.bill_month).trigger('change');
@@ -385,6 +599,7 @@ $(document).ready(function() {
         else $('#estate_name').val(prefill.estate_campus_master_pk || '');
         $('#estate_name').trigger('change');
     }
+    @endif
 });
 </script>
 @endpush

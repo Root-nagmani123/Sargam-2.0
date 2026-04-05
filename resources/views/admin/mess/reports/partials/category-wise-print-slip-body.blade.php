@@ -70,12 +70,14 @@
             @forelse($groupedSections as $groupKey => $sectionVouchers)
                 @php
                     $first = $sectionVouchers->first();
-                    $buyerName = $first->client_name ?? ($first->clientTypeCategory->client_name ?? 'N/A');
-                    $clientTypeLabel = $first->clientTypeCategory
-                        ? ucfirst($first->clientTypeCategory->client_type)
-                        : ucfirst($first->client_type_slug ?? 'N/A');
+                    $buyerName = $first->client_name ?? ($first->clientTypeCategory?->client_name ?? 'N/A');
+                    $rawClientType = $first->clientTypeCategory
+                        ? (string) $first->clientTypeCategory->client_type
+                        : (string) ($first->client_type_slug ?? 'N/A');
+                    $clientTypeLabel = strtolower($rawClientType) === 'ot' ? 'OT' : ucfirst($rawClientType);
+                    $clientSectionName = $first->clientTypeCategory?->client_name ?? null;
                     $slug = $first->client_type_slug ?? '';
-                    $typeSuffix = ($slug === 'employee') ? 'Employee' : (($slug === 'ot') ? 'OT' : ucfirst($slug));
+                    $typeSuffix = ($slug === 'employee') ? 'Employee' : (($slug === 'ot') ? 'OT' : ucfirst((string) $slug));
                     if (!$typeSuffix) {
                         $typeSuffix = 'N/A';
                     }
@@ -95,7 +97,8 @@
                     );
                 @endphp
                 <div class="print-slip-section print-slip-page mb-4">
-                    <table class="report-details-table mb-2" style="width:100%;border-collapse:collapse;margin-bottom:10px;border:1px solid #dee2e6;border-radius:3px;">
+                    {{-- Buyer + client category: side-by-side on wide layout; stacks in narrow/PDF --}}
+                    <table class="report-details-table report-buyer-client-banner mb-2" style="width:100%;border-collapse:collapse;margin-bottom:10px;border:1px solid #dee2e6;border-radius:3px;">
                         <tr>
                             <td style="width:50%;padding:8px 10px;background:#f8f9fa;vertical-align:middle;font-weight:600;border:0;">
                                 BUYER NAME : {{ $buyerName }}- {{ $typeSuffix }}
@@ -123,6 +126,7 @@
                                     <th class="th-qty">Quantity</th>
                                     <th class="th-price">Price</th>
                                     <th class="th-amount">Amount</th>
+                                    <th class="th-remark">Remark</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -138,12 +142,6 @@
                                             <td class="text-center">{{ $requestNo }}</td>
                                             {{-- <td class="buyer-name-cell">{{ $buyerName }}</td> --}}
                                             <td>{{ $voucher->remarks ?? '—' }}</td>
-                                            @if($dompdfSafeTables)
-                                                <td></td><td></td><td></td><td></td>
-                                                <td class="text-center text-muted">No line items</td>
-                                            @else
-                                                <td colspan="5" class="text-center text-muted">No line items</td>
-                                            @endif
                                         </tr>
                                     @else
                                         @foreach($voucher->items as $itemIndex => $item)
@@ -172,6 +170,9 @@
                                                     <td class="text-end">{{ number_format($netQty, 2) }}</td>
                                                     <td class="text-end">{{ number_format($rate, 2) }}</td>
                                                     <td class="text-end">{{ number_format($itemAmount, 2) }}</td>
+                                                    @if($itemIndex === 0)
+                                                        <td class="align-middle" rowspan="{{ $rowCount }}">{{ $voucher->remarks ?? '—' }}</td>
+                                                    @endif
                                                 @else
                                                     @if($itemIndex === 0)
                                                         <td class="text-center align-middle" rowspan="{{ $rowCount }}">{{ $requestNo }}</td>
@@ -183,6 +184,9 @@
                                                     <td class="text-end">{{ number_format($netQty, 2) }}</td>
                                                     <td class="text-end">{{ number_format($rate, 2) }}</td>
                                                     <td class="text-end">{{ number_format($itemAmount, 2) }}</td>
+                                                    @if($itemIndex === 0)
+                                                        <td class="align-middle" rowspan="{{ $rowCount }}">{{ $voucher->remarks ?? '—' }}</td>
+                                                    @endif
                                                 @endif
                                             </tr>
                                         @endforeach
@@ -193,10 +197,12 @@
                                         <td></td><td></td><td></td><td></td><td></td>
                                         <td class="text-end"><strong>TOTAL</strong></td>
                                         <td class="text-end"><strong>{{ number_format($sectionTotal, 2) }}</strong></td>
+                                        <td></td>
                                     @else
                                         <td colspan="5"></td>
                                         <td class="text-end"><strong>TOTAL</strong></td>
                                         <td class="text-end"><strong>{{ number_format($sectionTotal, 2) }}</strong></td>
+                                        <td></td>
                                     @endif
                                 </tr>
                             </tbody>
@@ -218,10 +224,12 @@
                             <td></td><td></td><td></td><td></td><td></td>
                             <td class="text-end"><strong>GRAND TOTAL</strong></td>
                             <td class="text-end"><strong>{{ number_format($grandTotal ?? 0, 2) }}</strong></td>
+                            <td></td>
                         @else
                             <td colspan="5"></td>
                             <td class="text-end"><strong>GRAND TOTAL</strong></td>
                             <td class="text-end"><strong>{{ number_format($grandTotal ?? 0, 2) }}</strong></td>
+                            <td></td>
                         @endif
                     </tr>
                 </tbody>

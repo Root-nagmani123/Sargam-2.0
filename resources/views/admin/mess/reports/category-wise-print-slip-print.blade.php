@@ -152,9 +152,11 @@
             overflow-wrap: anywhere;
         }
 
-        .print-slip-table .th-buyer,
-        .print-slip-table .buyer-name-cell {
+        .print-slip-table .th-item {
             width: 22%;
+        }
+        .print-slip-table .th-remark {
+            width: 14%;
         }
 
         .print-slip-table .th-slip-no,

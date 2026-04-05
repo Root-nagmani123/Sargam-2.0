@@ -175,6 +175,19 @@
     z-index: 20050 !important;
     box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
 }
+/* Prevent item names from wrapping - single line display */
+#createStoreAllocationModal .choices__list--dropdown .choices__item,
+#editStoreAllocationModal .choices__list--dropdown .choices__item,
+#createStoreAllocationModal .choices__inner .choices__item,
+#editStoreAllocationModal .choices__inner .choices__item {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+#createStoreAllocationModal #allocationItemsTable td,
+#editStoreAllocationModal #editAllocationItemsTable td {
+    vertical-align: middle;
+}
 /* Dropdown open: let list escape modal-body overflow; footer stays under body layer */
 #createStoreAllocationModal .modal-body.alloc-dropdown-open,
 #editStoreAllocationModal .modal-body.alloc-dropdown-open {
@@ -265,7 +278,7 @@
                                             <td><input type="text" name="items[0][unit]" class="form-control  alloc-unit" readonly placeholder="—"></td>
                                             <td><input type="number" name="items[0][unit_price]" class="form-control  alloc-unit-price" step="0.01" min="0" placeholder="0" required></td>
                                             <td><input type="text" class="form-control  alloc-line-total bg-light" readonly placeholder="0.00"></td>
-                                            <td><button type="button" class="btn btn-sm btn-outline-danger alloc-remove-row" disabled title="Remove">×</button></td>
+                                            <td class="text-center align-middle"><button type="button" class="btn btn-sm btn-outline-danger alloc-remove-row" disabled title="Remove">×</button></td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -640,15 +653,26 @@
             <td><input type="text" name="items[${index}][unit]" class="form-control  alloc-unit" readonly placeholder="—" value="${unit}"></td>
             <td><input type="number" name="items[${index}][unit_price]" class="form-control  alloc-unit-price" step="0.01" min="0" placeholder="0" value="${price}" required></td>
             <td><input type="text" class="form-control  alloc-line-total bg-light" readonly placeholder="0.00" value="${lineTotal}"></td>
-            <td><button type="button" class="btn btn-sm btn-outline-danger alloc-remove-row" title="Remove">×</button></td>
+            <td class="text-center align-middle"><button type="button" class="btn btn-sm btn-outline-danger alloc-remove-row" title="Remove">×</button></td>
         </tr>`;
     }
 
     function updateUnit(row) {
         const select = row.querySelector('.alloc-item-select');
-        const opt = select && select.options[select.selectedIndex];
+        if (!select) return;
+        const selectedValue = select.value;
+        if (!selectedValue) {
+            const unitInput = row.querySelector('.alloc-unit');
+            if (unitInput) unitInput.value = '';
+            return;
+        }
+        // Find the option with matching value to get data-unit attribute
+        const opt = Array.from(select.options).find(o => o.value == selectedValue);
         const unitInput = row.querySelector('.alloc-unit');
-        if (unitInput) unitInput.value = opt && opt.dataset.unit ? opt.dataset.unit : '';
+        if (unitInput) {
+            const unitValue = opt && opt.getAttribute('data-unit') ? opt.getAttribute('data-unit') : '';
+            unitInput.value = unitValue;
+        }
     }
 
     function calcLineTotal(row) {

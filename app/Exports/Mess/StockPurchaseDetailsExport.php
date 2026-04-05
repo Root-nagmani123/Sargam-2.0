@@ -67,7 +67,8 @@ class StockPurchaseDetailsExport implements FromView, WithStyles, WithEvents, Wi
         $sheet->getStyle($headerRange)->getAlignment()->setHorizontal('center');
         $sheet->getStyle($headerRange)->getFill()
             ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
-            ->getStartColor()->setARGB('FFE9ECEF');
+            ->getStartColor()->setARGB('FF0066CC');
+        $sheet->getStyle($headerRange)->getFont()->getColor()->setARGB('FFFFFFFF');
 
         // Borders for the table
         $lastRow    = $sheet->getHighestRow();
@@ -101,6 +102,39 @@ class StockPurchaseDetailsExport implements FromView, WithStyles, WithEvents, Wi
             AfterSheet::class => function (AfterSheet $event) {
                 $sheet   = $event->sheet->getDelegate();
                 $lastRow = $sheet->getHighestRow();
+
+                // Style bill header rows and grand total
+                for ($row = 8; $row <= $lastRow; $row++) {
+                    $cellValue = $sheet->getCell("A{$row}")->getValue();
+                    
+                    // Bill header rows (dark background, white text)
+                    if (is_string($cellValue) && strpos($cellValue, 'Bill No.') !== false) {
+                        $sheet->getStyle("A{$row}:H{$row}")->applyFromArray([
+                            'fill' => [
+                                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                                'startColor' => ['argb' => 'FF5A6268'],
+                            ],
+                            'font' => [
+                                'bold' => true,
+                                'color' => ['argb' => 'FFFFFFFF'],
+                            ],
+                        ]);
+                    }
+                    
+                    // Grand Total row (blue background, white text)
+                    if (is_string($cellValue) && $sheet->getCell("G{$row}")->getValue() === 'Grand Total:') {
+                        $sheet->getStyle("A{$row}:H{$row}")->applyFromArray([
+                            'fill' => [
+                                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                                'startColor' => ['argb' => 'FF004A93'],
+                            ],
+                            'font' => [
+                                'bold' => true,
+                                'color' => ['argb' => 'FFFFFFFF'],
+                            ],
+                        ]);
+                    }
+                }
 
                 // Freeze header region
                 $sheet->freezePane('A8');
