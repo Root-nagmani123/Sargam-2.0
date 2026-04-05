@@ -5,6 +5,7 @@ namespace App\DataTables;
 use App\Models\EstateHomeRequestDetails;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Yajra\DataTables\Html\Column;
@@ -14,8 +15,16 @@ class EstatePossessionDetailsDataTable extends DataTable
 {
     public function dataTable(QueryBuilder $query): EloquentDataTable
     {
+        $hasReading2Col = Schema::hasColumn('estate_possession_details', 'electric_meter_reading_2');
+
         return (new EloquentDataTable($query))
             ->addIndexColumn()
+            ->addColumn('checkbox', function ($row) {
+                if (! (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'))) {
+                    return '';
+                }
+                return '<input type="checkbox" class="form-check-input row-select-possession-details" data-id="' . (int) $row->pk . '" aria-label="Select row">';
+            })
             ->editColumn('request_id', fn ($row) => e($row->request_id ?? '—'))
             ->editColumn('emp_name', fn ($row) => e($row->emp_name ?? '—'))
             ->editColumn('employee_id', fn ($row) => e($row->employee_id ?? '—'))
@@ -40,9 +49,24 @@ class EstatePossessionDetailsDataTable extends DataTable
                     return '—';
                 }
             })
-            ->editColumn('electric_meter_reading', function ($row) {
-                $v = $row->electric_meter_reading;
-                return ($v !== null && $v !== '') ? e((string) $v) : '—';
+            ->editColumn('electric_meter_reading', function ($row) use ($hasReading2Col) {
+                $primary = $row->electric_meter_reading;
+                $secondary = $hasReading2Col ? ($row->electric_meter_reading_2 ?? null) : null;
+
+                $seg = static function ($v) {
+                    return ($v !== null && trim((string) $v) !== '') ? (string) $v : '—';
+                };
+
+                $secStr = $secondary !== null ? trim((string) $secondary) : '';
+                $hasSecondaryEntered = $hasReading2Col
+                    && $secStr !== ''
+                    && ! (is_numeric($secStr) && (int) $secStr === 0);
+
+                if ($hasSecondaryEntered) {
+                    return $seg($primary) . '/' . $seg($secondary);
+                }
+
+                return ($primary !== null && $primary !== '') ? (string) $primary : '---';
             })
             ->addColumn('actions', function ($row) {
                 // Only Estate/Admin/Super Admin/Training/IST can edit possession details.
@@ -53,11 +77,19 @@ class EstatePossessionDetailsDataTable extends DataTable
                 $editUrl = route('admin.estate.possession-details.create', [
                     'requester_id' => $row->estate_home_request_details_pk,
                 ]);
+                $deleteUrl = route('admin.estate.possession-details.delete', ['id' => $row->pk]);
 
-                return '<div class="d-inline-flex align-items-center gap-1" role="group">
+                return '<div class="d-inline-flex align-items-center gap-2" role="group">
                     <a href="' . e($editUrl) . '" class="text-primary" title="Edit">
                         <i class="material-symbols-rounded">edit</i>
                     </a>
+                    <form method="POST" action="' . e($deleteUrl) . '" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this possession details record?\')">
+                        <input type="hidden" name="_token" value="' . csrf_token() . '">
+                        <input type="hidden" name="_method" value="DELETE">
+                        <button type="submit" class="btn btn-link p-0 text-danger" title="Delete" aria-label="Delete">
+                            <i class="material-symbols-rounded">delete</i>
+                        </button>
+                    </form>
                 </div>';
             })
             ->filter(function ($query) {
@@ -78,16 +110,15 @@ class EstatePossessionDetailsDataTable extends DataTable
                         ->orWhere('ehm.house_no', 'like', $searchLike);
                 });
             }, true)
-            ->rawColumns(['actions'])
+            ->rawColumns(['checkbox', 'actions'])
             ->setRowId('pk');
     }
 
     public function query(EstateHomeRequestDetails $model): QueryBuilder
     {
-        // Listing column "Electric Meter Reading (I)" = exactly epd.electric_meter_reading
-        // (value from Possession Details form). Do NOT use estate_month_reading_details
-        // (curr_month_elec_red) here — that shows "latest updated" reading and was causing
-        // wrong/old value to appear (bug raised multiple times).
+        // Last month readings = epd.electric_meter_reading (I) and optional epd.electric_meter_reading_2 (II).
+        // Do NOT use estate_month_reading_details (curr_month_elec_red) here — that shows "latest updated"
+        // reading and was causing wrong/old value to appear (bug raised multiple times).
         $query = $model->newQuery()
             ->from('estate_home_request_details as ehrd')
             ->join('estate_possession_details as epd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
@@ -100,7 +131,7 @@ class EstatePossessionDetailsDataTable extends DataTable
             }, function ($q) {
                 $q->leftJoin('estate_unit_type_master as eut', 'ehm.estate_unit_master_pk', '=', 'eut.pk');
             })
-            ->select([
+            ->select(array_merge([
                 'epd.pk as pk',
                 'ehrd.pk as estate_home_request_details_pk',
                 'ehrd.req_id as request_id',
@@ -115,11 +146,14 @@ class EstatePossessionDetailsDataTable extends DataTable
                 'epd.allotment_date',
                 'epd.possession_date',
                 'epd.electric_meter_reading',
-            ]);
+            ], Schema::hasColumn('estate_possession_details', 'electric_meter_reading_2')
+                ? ['epd.electric_meter_reading_2']
+                : []));
 
         // Show only *completed* possessions in listing.
         // Pending possessions (created at allotment time) store a sentinel date: 1900-01-01.
         $query->where('epd.possession_date', '>', '1900-01-01');
+        $query->where('epd.return_home_status', 0);
 
         // RBAC: Only Admin / Estate / Super Admin / Training-* / IST can see full list.
         // All other roles (including Staff / HAC Person etc.) should only see their own possessions.
@@ -180,6 +214,12 @@ class EstatePossessionDetailsDataTable extends DataTable
         $isEstateAuthority = hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin');
 
         $columns = [
+            Column::computed('checkbox')
+                ->title('<input type="checkbox" class="form-check-input" id="selectAllPossessionDetails" aria-label="Select all">')
+                ->addClass('text-center')
+                ->orderable(false)
+                ->searchable(false)
+                ->width('40px'),
             Column::computed('DT_RowIndex')->title('S.NO.')->addClass('text-center')->orderable(false)->searchable(false)->width('50px'),
             // Hidden column for default sort: newest possession (highest pk) first
             Column::make('pk')->name('epd.pk')->title('ID')->orderable(true)->searchable(false)->addClass('d-none')->visible(false),
@@ -196,7 +236,7 @@ class EstatePossessionDetailsDataTable extends DataTable
             Column::make('house_no')->name('ehm.house_no')->title('HOUSE NO.')->orderable(true)->searchable(false),
             Column::make('allotment_date')->name('epd.allotment_date')->title('ALLOTMENT DATE')->orderable(true)->searchable(false),
             Column::make('possession_date')->name('epd.possession_date')->title('POSSESSION DATE')->orderable(true)->searchable(false),
-            Column::make('electric_meter_reading')->name('epd.electric_meter_reading')->title('Electric Meter Reading (I)')->orderable(false)->searchable(false)->addClass('text-end')->width('140px'),
+            Column::make('electric_meter_reading')->name('epd.electric_meter_reading')->title('LAST MONTH ELECTRIC METER READING')->orderable(false)->searchable(false)->addClass('text-end')->width('140px'),
         ];
 
         if ($isEstateAuthority) {

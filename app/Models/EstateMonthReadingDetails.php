@@ -32,6 +32,7 @@ class EstateMonthReadingDetails extends Model
         'meter_one_elec_charge',
         'meter_two_elec_charge',
         'electricty_charges',
+        'per_unit',
     ];
 
     protected $casts = [

@@ -3,7 +3,25 @@
 @section('title', 'Update Meter No. - Sargam')
 
 @section('setup_content')
+@php
+    $qYear = request('bill_year');
+    $qMonth = request('bill_month');
+    $filterDefaultYear = ($qYear !== null && $qYear !== '' && is_numeric($qYear)) ? (int) $qYear : now()->year;
+    $filterDefaultMonth = ($qMonth !== null && $qMonth !== '' && is_numeric($qMonth) && (int) $qMonth >= 1 && (int) $qMonth <= 12) ? (int) $qMonth : now()->month;
+@endphp
 <div class="container-fluid">
+    @if (session('success'))
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+    @if (session('error'))
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            {{ session('error') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
     <!-- Breadcrumb -->
     <nav aria-label="breadcrumb" class="mb-3">
         <ol class="breadcrumb">
@@ -33,7 +51,7 @@
                 <ul class="dropdown-menu dropdown-menu-end" id="updateMeterNoColumnToggleMenu"></ul>
             </div>
             <button type="button" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-2" id="btnUpdateMeterNoPrint" title="Print">
-                <i class="material-icons material-symbols-rounded">print</i>
+                <i class="bi bi-printer"></i>
                 <span class="d-none d-md-inline">Print</span>
             </button>
         </div>
@@ -46,24 +64,24 @@
             <div class="row g-3 mb-3 no-print align-items-end">
                 <div class="col-sm-6 col-md-4 col-lg-3">
                     <label for="filterBillYear" class="form-label mb-1">Bill Year<span class="text-danger">*</span></label>
-                    <input type="number" min="2000" max="2100" class="form-control form-control-sm" id="filterBillYear" placeholder="e.g. 2025" value="{{ now()->year }}">
+                    <input type="number" min="2000" max="2100" class="form-control form-control-sm" id="filterBillYear" placeholder="e.g. 2025" value="{{ $filterDefaultYear }}">
                 </div>
                 <div class="col-sm-6 col-md-4 col-lg-3">
                     <label for="filterBillMonth" class="form-label mb-1">Bill Month<span class="text-danger">*</span></label>
                     <select id="filterBillMonth" class="form-select form-select-sm">
                         <option value="">Select month</option>
-                        <option value="1" @if(now()->month === 1) selected @endif>January</option>
-                        <option value="2" @if(now()->month === 2) selected @endif>February</option>
-                        <option value="3" @if(now()->month === 3) selected @endif>March</option>
-                        <option value="4" @if(now()->month === 4) selected @endif>April</option>
-                        <option value="5" @if(now()->month === 5) selected @endif>May</option>
-                        <option value="6" @if(now()->month === 6) selected @endif>June</option>
-                        <option value="7" @if(now()->month === 7) selected @endif>July</option>
-                        <option value="8" @if(now()->month === 8) selected @endif>August</option>
-                        <option value="9" @if(now()->month === 9) selected @endif>September</option>
-                        <option value="10" @if(now()->month === 10) selected @endif>October</option>
-                        <option value="11" @if(now()->month === 11) selected @endif>November</option>
-                        <option value="12" @if(now()->month === 12) selected @endif>December</option>
+                        <option value="1" @if($filterDefaultMonth === 1) selected @endif>January</option>
+                        <option value="2" @if($filterDefaultMonth === 2) selected @endif>February</option>
+                        <option value="3" @if($filterDefaultMonth === 3) selected @endif>March</option>
+                        <option value="4" @if($filterDefaultMonth === 4) selected @endif>April</option>
+                        <option value="5" @if($filterDefaultMonth === 5) selected @endif>May</option>
+                        <option value="6" @if($filterDefaultMonth === 6) selected @endif>June</option>
+                        <option value="7" @if($filterDefaultMonth === 7) selected @endif>July</option>
+                        <option value="8" @if($filterDefaultMonth === 8) selected @endif>August</option>
+                        <option value="9" @if($filterDefaultMonth === 9) selected @endif>September</option>
+                        <option value="10" @if($filterDefaultMonth === 10) selected @endif>October</option>
+                        <option value="11" @if($filterDefaultMonth === 11) selected @endif>November</option>
+                        <option value="12" @if($filterDefaultMonth === 12) selected @endif>December</option>
                     </select>
                 </div>
                 <div class="col-sm-12 col-md-4 col-lg-3 d-flex gap-2">

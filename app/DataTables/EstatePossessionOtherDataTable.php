@@ -34,9 +34,25 @@ class EstatePossessionOtherDataTable extends DataTable
             ->editColumn('house_no', fn($row) => $row->house_no ?? $row->house_no_display ?? 'N/A')
             ->editColumn('allotment_date', fn($row) => $row->allotment_date ? $row->allotment_date->format('d-m-Y') : '—')
             ->editColumn('possession_date_oth', fn($row) => $row->possession_date_oth ? $row->possession_date_oth->format('d-m-Y') : '—')
-            // Always show the possession record's stored last month reading,
-            // which we keep in sync whenever meter readings are updated.
-            ->editColumn('meter_reading_oth', fn($row) => $row->meter_reading_oth ?? '---')
+            // Show "primary/secondary" only after secondary reading is actually saved (not empty / not 0).
+            ->editColumn('meter_reading_oth', function ($row) {
+                $primary = $row->meter_reading_oth;
+                $secondary = $row->meter_reading_oth1;
+
+                $seg = static function ($v) {
+                    return ($v !== null && trim((string) $v) !== '') ? (string) $v : '—';
+                };
+
+                $secStr = $secondary !== null ? trim((string) $secondary) : '';
+                $hasSecondaryEntered = $secStr !== ''
+                    && ! (is_numeric($secStr) && (int) $secStr === 0);
+
+                if ($hasSecondaryEntered) {
+                    return $seg($primary) . '/' . $seg($secondary);
+                }
+
+                return ($primary !== null && $primary !== '') ? (string) $primary : '---';
+            })
             ->filter(function ($query) {
                 $searchValue = request()->input('search.value');
                 if (empty($searchValue)) {
@@ -69,11 +85,26 @@ class EstatePossessionOtherDataTable extends DataTable
             ->orderColumn('possession_date_oth', fn ($query, $order) => $query->orderBy('estate_possession_other.possession_date_oth', $order))
             ->addColumn('actions', function ($row) {
                 $editUrl = route('admin.estate.possession-view', ['id' => $row->pk]);
-                return '<div class="d-inline-flex align-items-center gap-1" role="group">
-                    <a href="' . $editUrl . '" class="text-primary" title="Edit">
-                        <i class="material-symbols-rounded">edit</i>
-                    </a>
-                </div>';
+                $canDelete = hasRole('Admin') || hasRole('Estate') || hasRole('Super Admin');
+                $deleteUrl = route('admin.estate.possession-delete', ['id' => $row->pk]);
+
+                $html = '<div class="d-inline-flex align-items-center gap-2" role="group">';
+                $html .= '<a href="' . $editUrl . '" class="text-primary" title="Edit">
+                    <i class="material-symbols-rounded">edit</i>
+                </a>';
+
+                if ($canDelete) {
+                    $html .= '<form method="POST" action="' . $deleteUrl . '" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this possession?\')">
+                        <input type="hidden" name="_token" value="' . csrf_token() . '">
+                        <input type="hidden" name="_method" value="DELETE">
+                        <button type="submit" class="btn btn-link p-0 text-danger" title="Delete" aria-label="Delete">
+                            <i class="material-symbols-rounded">delete</i>
+                        </button>
+                    </form>';
+                }
+
+                $html .= '</div>';
+                return $html;
             })
             ->rawColumns(['checkbox', 'actions'])
             ->setRowId('pk');
@@ -111,6 +142,7 @@ class EstatePossessionOtherDataTable extends DataTable
             ->leftJoinSub($latestOtherReadings, 'emro_latest', function ($join) {
                 $join->on('emro_latest.estate_possession_other_pk', '=', 'estate_possession_other.pk');
             })
+            ->where('estate_possession_other.return_home_status', 0)
             ->orderByDesc('estate_possession_other.pk');
     }
 
@@ -152,7 +184,12 @@ class EstatePossessionOtherDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::computed('checkbox')->title('')->addClass('text-center')->orderable(false)->searchable(false)->width('40px'),
+            Column::computed('checkbox')
+                ->title('<input type="checkbox" class="form-check-input" id="selectAllPossessionOthers" aria-label="Select all">')
+                ->addClass('text-center')
+                ->orderable(false)
+                ->searchable(false)
+                ->width('40px'),
             Column::computed('DT_RowIndex')->title('S.NO.')->addClass('text-center')->orderable(true)->searchable(false)->width('50px'),
             Column::make('request_id')->title('REQUEST ID')->orderable(true)->searchable(true),
             Column::make('name')->title('NAME')->orderable(true)->searchable(true),
