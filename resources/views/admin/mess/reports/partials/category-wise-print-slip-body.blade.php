@@ -86,6 +86,13 @@
                             $courseDisplay = $selectedCourse->course_name;
                         }
                     }
+                    $messClientCategory = $first->clientTypeCategory?->client_name ?? null;
+                    $clientTypeDisplay = mess_category_wise_client_type_line_base(
+                        $clientTypeLabel,
+                        $slug,
+                        $buyerName,
+                        $messClientCategory
+                    );
                 @endphp
                 <div class="print-slip-section print-slip-page mb-4">
                     <table class="report-details-table mb-2" style="width:100%;border-collapse:collapse;margin-bottom:10px;border:1px solid #dee2e6;border-radius:3px;">
@@ -95,7 +102,7 @@
                             </td>
                             <td style="width:50%;padding:8px 10px;background:#f8f9fa;vertical-align:middle;font-weight:600;text-align:right;border:0;">
                                 CLIENT TYPE : <strong>
-                                    {{ $clientTypeLabel }}
+                                    {{ $clientTypeDisplay }}
                                     @if($courseDisplay)
                                         [{{ $courseDisplay }}]
                                     @endif
@@ -108,7 +115,8 @@
                             <thead>
                                 <tr>
                                     <th class="th-slip-no">Slip No.</th>
-                                    <th class="th-buyer">Buyer Name</th>
+                                    {{-- Temporarily hide Buyer Name column in table (still in header bar above). --}}
+                                    {{-- <th class="th-buyer">Buyer Name</th> --}}
                                     <th class="th-remark">Remark</th>
                                     <th class="th-item">Item Name</th>
                                     <th class="th-date">Request Date</th>
@@ -128,7 +136,7 @@
                                     @if($voucher->items->isEmpty())
                                         <tr>
                                             <td class="text-center">{{ $requestNo }}</td>
-                                            <td class="buyer-name-cell">{{ $buyerName }}</td>
+                                            {{-- <td class="buyer-name-cell">{{ $buyerName }}</td> --}}
                                             <td>{{ $voucher->remarks ?? '—' }}</td>
                                             @if($dompdfSafeTables)
                                                 <td></td><td></td><td></td><td></td>
@@ -157,7 +165,7 @@
                                             <tr>
                                                 @if($dompdfSafeTables)
                                                     <td class="text-center align-middle">{{ $requestNo }}</td>
-                                                    <td class="align-middle buyer-name-cell">{{ $buyerName }}</td>
+                                                    {{-- <td class="align-middle buyer-name-cell">{{ $buyerName }}</td> --}}
                                                     <td class="align-middle">{{ $voucher->remarks ?? '—' }}</td>
                                                     <td>{{ $itemName }}</td>
                                                     <td class="text-center">{{ $itemIssueDateFormatted }}</td>
@@ -167,7 +175,7 @@
                                                 @else
                                                     @if($itemIndex === 0)
                                                         <td class="text-center align-middle" rowspan="{{ $rowCount }}">{{ $requestNo }}</td>
-                                                        <td class="align-middle buyer-name-cell" rowspan="{{ $rowCount }}">{{ $buyerName }}</td>
+                                                        {{-- <td class="align-middle buyer-name-cell" rowspan="{{ $rowCount }}">{{ $buyerName }}</td> --}}
                                                         <td class="align-middle" rowspan="{{ $rowCount }}">{{ $voucher->remarks ?? '—' }}</td>
                                                     @endif
                                                     <td>{{ $itemName }}</td>
@@ -182,11 +190,11 @@
                                 @endforeach
                                 <tr class="total-row">
                                     @if($dompdfSafeTables)
-                                        <td></td><td></td><td></td><td></td><td></td><td></td>
+                                        <td></td><td></td><td></td><td></td><td></td>
                                         <td class="text-end"><strong>TOTAL</strong></td>
                                         <td class="text-end"><strong>{{ number_format($sectionTotal, 2) }}</strong></td>
                                     @else
-                                        <td colspan="6"></td>
+                                        <td colspan="5"></td>
                                         <td class="text-end"><strong>TOTAL</strong></td>
                                         <td class="text-end"><strong>{{ number_format($sectionTotal, 2) }}</strong></td>
                                     @endif
@@ -207,11 +215,11 @@
                 <tbody>
                     <tr class="grand-total-row">
                         @if($dompdfSafeTables)
-                            <td></td><td></td><td></td><td></td><td></td><td></td>
+                            <td></td><td></td><td></td><td></td><td></td>
                             <td class="text-end"><strong>GRAND TOTAL</strong></td>
                             <td class="text-end"><strong>{{ number_format($grandTotal ?? 0, 2) }}</strong></td>
                         @else
-                            <td colspan="6"></td>
+                            <td colspan="5"></td>
                             <td class="text-end"><strong>GRAND TOTAL</strong></td>
                             <td class="text-end"><strong>{{ number_format($grandTotal ?? 0, 2) }}</strong></td>
                         @endif
