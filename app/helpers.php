@@ -44,6 +44,58 @@ function format_date($date, $format = 'd-m-Y')
     return \Carbon\Carbon::parse($date)->format($format);
 }
 
+/**
+ * Core buyer name for Sale Voucher CLIENT TYPE line (e.g. strip trailing "(Officers Mess)" from the voucher label).
+ */
+function mess_buyer_core_name_for_client_type(?string $buyerName): string
+{
+    $name = trim((string) $buyerName);
+    if ($name === '') {
+        return '';
+    }
+    $stripped = preg_replace('/\s*\([^)]*\)\s*$/u', '', $name);
+    $stripped = trim((string) $stripped);
+
+    return $stripped !== '' ? $stripped : $name;
+}
+
+/**
+ * Left part of CLIENT TYPE on Sale Voucher category-wise slip: type label + (buyer core, mess client category e.g. Faculty).
+ * Course/OT keep category out of parentheses; course name is appended separately as [Course].
+ */
+function mess_category_wise_client_type_line_base(
+    string $clientTypeLabel,
+    string $slug,
+    string $buyerName,
+    ?string $messClientCategoryName
+): string {
+    $cat = trim((string) $messClientCategoryName);
+    $cat = $cat === '' ? null : $cat;
+
+    if ($slug === 'employee') {
+        $coreBuyer = mess_buyer_core_name_for_client_type($buyerName);
+        if ($coreBuyer !== '') {
+            $parts = [$coreBuyer];
+            if ($cat !== null && strcasecmp($cat, $coreBuyer) !== 0) {
+                $parts[] = $cat;
+            }
+
+            return $clientTypeLabel . ' (' . implode(', ', $parts) . ')';
+        }
+        if ($cat !== null) {
+            return $clientTypeLabel . ' (' . $cat . ')';
+        }
+
+        return $clientTypeLabel;
+    }
+
+    if ($cat !== null && ! in_array($slug, ['course', 'ot'], true)) {
+        return $clientTypeLabel . ' (' . $cat . ')';
+    }
+
+    return $clientTypeLabel;
+}
+
 function createDirectory($path)
 {
     $directory = public_path('storage/' . $path);
