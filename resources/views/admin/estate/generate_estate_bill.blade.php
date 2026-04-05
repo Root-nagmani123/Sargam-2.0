@@ -32,7 +32,7 @@ $estateBillPageLabel = (hasRole('Admin') || hasRole('Super Admin') || hasRole('E
                 </div>
             </div>
             <hr class="my-2">
-            <form method="get" action="{{ route('admin.estate.generate-estate-bill') }}" class="row g-3 g-md-4 align-items-center">
+            <form method="get" action="{{ route('admin.estate.generate-estate-bill') }}" class="row g-3 g-md-4 align-items-end">
                 <div class="col-12 col-sm-6 col-md-4 col-lg-3">
                     <label for="bill_month" class="form-label fw-medium">Bill Month <span class="text-danger">*</span></label>
                     <input type="month" class="form-control" id="bill_month" name="bill_month" value="{{ old('bill_month', $billMonth) }}" max="{{ date('Y-m') }}" data-max-date="{{ date('Y-m-d') }}" required aria-describedby="bill_month_help">
@@ -50,40 +50,34 @@ $estateBillPageLabel = (hasRole('Admin') || hasRole('Super Admin') || hasRole('E
                     <div id="unit_sub_type_help" class="form-text small">Filter by unit category</div>
                 </div>
                 @endif
-                <div class="col-12 col-sm-6 col-md-4 col-lg-4 d-flex align-items-center gap-3">
-                    <div class="form-check form-check-inline mb-0 mt-2">
-                        <input class="form-check-input" type="checkbox" id="check_all" name="check_all" aria-describedby="check_all_help">
-                        <label class="form-check-label" for="check_all">Check All</label>
-                    </div>
-                    @endif
-                    <div class="col-12 col-sm-6 {{ $showUnitSubTypeFilter ? 'col-lg-3' : 'col-lg-4' }}">
-                        <label for="search" class="form-label fw-medium mb-1">Search</label>
-                        <input type="search" class="form-control" id="search" name="search" value="{{ old('search', $search ?? '') }}" placeholder="House, bill no., name…" autocomplete="off" aria-describedby="search_help" title="Also: month/year, designation, employee type, unit e.g. Type-(12)">
-                        <div id="search_help" class="form-text small mb-0 text-muted">Bill, house, name, designation, type.</div>
-                    </div>
-                    <div class="col-12 col-sm-6 {{ $showUnitSubTypeFilter ? 'col-lg-3' : 'col-lg-4' }}">
-                        <div class="form-label fw-medium mb-1 text-body invisible user-select-none" aria-hidden="true">Unit Sub Type</div>
-                        <div class="d-flex flex-nowrap align-items-center gap-3 estate-bill-filter-actions-controls">
-                            <div class="form-check mb-0">
-                                <input class="form-check-input" type="checkbox" id="check_all" name="check_all" aria-describedby="check_all_help">
-                                <label class="form-check-label text-nowrap" for="check_all">Check All</label>
-                            </div>
-                            <span id="check_all_help" class="visually-hidden">Select or clear all bill checkboxes</span>
-                            <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-2 flex-shrink-0 text-nowrap">
-                                <i class="material-symbols-rounded" style="font-size: 1.1rem;">visibility</i>
-                                Show
-                            </button>
-                        </div>
-                        <div class="form-text small mb-0 invisible user-select-none" aria-hidden="true">Filter by unit category</div>
-                    </div>
+                <div class="col-12 col-sm-6 col-md-6 {{ ($showUnitSubTypeFilter ?? false) ? 'col-lg-3' : 'col-lg-5' }}">
+                    <label for="search" class="form-label fw-medium">Search</label>
+                    <input type="search" class="form-control" id="search" name="search" value="{{ old('search', $search ?? '') }}" placeholder="House, bill no., name…" autocomplete="off" aria-describedby="search_help" title="Also: month/year, designation, employee type, unit e.g. Type-(12)">
+                    <div id="search_help" class="form-text small text-muted mb-0">Bill, house, name, designation, type.</div>
                 </div>
-                <div class="row g-3 mt-2 pt-3 border-top align-items-center">
-                    <div class="col-12 d-flex gap-2 flex-wrap justify-content-sm-end align-items-center">
+                <div class="col-12 col-sm-6 col-md-6 {{ ($showUnitSubTypeFilter ?? false) ? 'col-lg-3' : 'col-lg-4' }}">
+                    {{-- Match Search column: label + field + form-text so align-items-end lines up with the input row, not the hint --}}
+                    <div class="form-label fw-medium invisible user-select-none" aria-hidden="true">&nbsp;</div>
+                    <div class="d-flex flex-wrap align-items-center gap-3">
+                        <div class="form-check mb-0">
+                            <input class="form-check-input" type="checkbox" id="check_all" name="check_all" aria-describedby="check_all_help">
+                            <label class="form-check-label text-nowrap" for="check_all">Check All</label>
+                        </div>
+                        <span id="check_all_help" class="visually-hidden">Select or clear all bill checkboxes</span>
+                        <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-2 flex-shrink-0 text-nowrap">
+                            <i class="material-symbols-rounded" style="font-size: 1.1rem;">visibility</i>
+                            Show
+                        </button>
+                    </div>
+                    <div class="form-text small text-muted mb-0 invisible user-select-none" aria-hidden="true">&nbsp;</div>
+                </div>
+                <div class="col-12 mt-2 pt-3 border-top">
+                    <div class="d-flex gap-2 flex-wrap justify-content-sm-end align-items-center">
                         <button type="button" id="btn_print_selected" class="btn btn-outline-success btn-sm d-inline-flex align-items-center gap-1" title="Print selected bills in a single tab">
                             <i class="material-symbols-rounded" style="font-size: 1rem;">print</i>
                             Print Selected
                         </button>
-                        @if($showUnitSubTypeFilter)
+                        @if($showUnitSubTypeFilter ?? false)
                         <button type="button" id="btn_notify_selected" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1">Notify Selected</button>
                         @endif
                     </div>
@@ -118,7 +112,7 @@ $estateBillPageLabel = (hasRole('Admin') || hasRole('Super Admin') || hasRole('E
                             <label class="form-check-label text-muted small" for="bill_{{ $bill->pk }}">Select this bill</label>
                         </div>
                         <a href="{{ route('admin.estate.reports.bill-report-print') }}?bill_no={{ $bill->bill_no }}&month={{ $bill->bill_month }}&year={{ $bill->bill_year }}" target="_blank" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1" title="Print this bill">
-                            <i class="material-symbols-rounded" w>print</i>
+                            <i class="material-symbols-rounded" style="font-size: 1rem;">print</i>
                             Print
                         </a>
                     </div>

@@ -8343,7 +8343,9 @@ class EstateController extends Controller
             }
         }
 
-        return view('admin.estate.generate_estate_bill', compact('unitSubTypes', 'bills', 'billMonth', 'unitSubTypePk', 'search'));
+        $showUnitSubTypeFilter = hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin');
+
+        return view('admin.estate.generate_estate_bill', compact('unitSubTypes', 'bills', 'billMonth', 'unitSubTypePk', 'search', 'showUnitSubTypeFilter'));
     }
 
     /**
