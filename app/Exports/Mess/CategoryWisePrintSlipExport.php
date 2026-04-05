@@ -51,9 +51,10 @@ class CategoryWisePrintSlipExport implements FromCollection, WithStyles, WithEve
             foreach ($groupedSections as $sectionVouchers) {
                 $first = $sectionVouchers->first();
                 $buyerName = $first->client_name ?? ($first->clientTypeCategory?->client_name ?? 'N/A');
-                $clientTypeLabel = $first->clientTypeCategory
-                    ? ucfirst($first->clientTypeCategory->client_type)
-                    : ucfirst($first->client_type_slug ?? 'N/A');
+                $rawClientType = $first->clientTypeCategory
+                    ? (string) $first->clientTypeCategory->client_type
+                    : (string) ($first->client_type_slug ?? 'N/A');
+                $clientTypeLabel = strtolower($rawClientType) === 'ot' ? 'OT' : ucfirst($rawClientType);
                 $slug = $first->client_type_slug ?? '';
                 $typeSuffix = ($slug === 'employee') ? 'Employee' : (($slug === 'ot') ? 'OT' : ucfirst($slug));
                 if (! $typeSuffix) {
@@ -171,7 +172,7 @@ class CategoryWisePrintSlipExport implements FromCollection, WithStyles, WithEve
                     ->getFill()
                     ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
                     ->getStartColor()
-                    ->setARGB($f === 'GRAND TOTAL' ? 'FFE2E8F0' : 'FFF3F4F6');
+                    ->setARGB($e === 'GRAND TOTAL' ? 'FFE2E8F0' : 'FFF3F4F6');
             }
         }
 

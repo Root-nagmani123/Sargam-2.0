@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const coordinatorSelect = document.querySelector('select[name="coursecoordinator"]');
     const rowTemplate = container ? container.querySelector('.assistant-coordinator-row')?.cloneNode(true) : null;
     const choicesInstances = new WeakMap();
+    let isUpdating = false; // Flag to prevent infinite loops
 
     const choicesClassNames = {
         containerOuter: ['choices', 'w-100'],
@@ -79,25 +80,39 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    function reinitAssistantChoices() {
-        if (!container) {
+    function updateChoicesInstance(selectEl, disabledValues) {
+        const instance = choicesInstances.get(selectEl);
+        if (!instance) {
             return;
         }
-        const assistantSelects = container.querySelectorAll('select[name="assistantcoursecoordinator[]"]');
-        assistantSelects.forEach(function (selectEl) {
-            const selectedValue = selectEl.value;
-            initChoicesForSelect(selectEl);
-            if (selectedValue) {
-                selectEl.value = selectedValue;
-                selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+
+        const currentValue = selectEl.value;
+        const choices = instance._currentState.choices;
+        
+        // Update each choice's disabled state
+        choices.forEach(function(choice) {
+            if (!choice.value) {
+                choice.disabled = false;
+                return;
             }
+            choice.disabled = disabledValues.has(choice.value);
         });
+
+        // Force Choices.js to re-render with updated choices
+        instance._render();
+
+        // Clear selection if current value is now disabled
+        if (currentValue && disabledValues.has(currentValue)) {
+            instance.setChoiceByValue('');
+        }
     }
 
     function updateAssistantOptions() {
-        if (!container) {
+        if (!container || isUpdating) {
             return;
         }
+        
+        isUpdating = true; // Set flag to prevent recursion
 
         const assistantSelects = container.querySelectorAll('select[name="assistantcoursecoordinator[]"]');
         const coordinatorValue = coordinatorSelect ? coordinatorSelect.value : '';
@@ -114,24 +129,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 toDisable.add(coordinatorValue);
             }
 
-            Array.from(selectEl.options).forEach(function (optionEl) {
-                if (!optionEl.value) {
-                    optionEl.disabled = false;
-                    optionEl.hidden = false;
-                    return;
-                }
-                const shouldDisable = toDisable.has(optionEl.value);
-                optionEl.disabled = shouldDisable;
-                optionEl.hidden = shouldDisable;
-            });
-
-            const selectedOption = selectEl.options[selectEl.selectedIndex];
-            if (selfValue && selectedOption && (selectedOption.disabled || selectedOption.hidden)) {
-                selectEl.value = '';
-            }
+            // Update Choices instance instead of reinitializing
+            updateChoicesInstance(selectEl, toDisable);
         });
-
-        reinitAssistantChoices();
+        
+        isUpdating = false; // Reset flag
     }
 
     initAllDropdownChoices(document);
@@ -189,7 +191,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         document.addEventListener('change', function (event) {
-            if (event.target && event.target.matches('select[name="assistantcoursecoordinator[]"]')) {
+            if (!isUpdating && event.target && event.target.matches('select[name="assistantcoursecoordinator[]"]')) {
                 updateAssistantOptions();
             }
         });
@@ -197,11 +199,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (coordinatorSelect) {
         coordinatorSelect.addEventListener('change', function () {
-            updateAssistantOptions();
+            if (!isUpdating) {
+                updateAssistantOptions();
+            }
         });
     }
 
-    updateAssistantOptions();
+    // Initialize options after a small delay to ensure all Choices instances are ready
+    setTimeout(function() {
+        updateAssistantOptions();
+    }, 100);
 
     const startDateInput = document.querySelector('input[name="startdate"]');
     const endDateInput = document.querySelector('input[name="enddate"]');

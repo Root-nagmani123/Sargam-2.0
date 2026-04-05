@@ -1464,6 +1464,40 @@ document.addEventListener('DOMContentLoaded', function() {
         else selectEl.value = v;
     }
 
+    /** After Choices.js init on Edit Selling Voucher modal, push API values into instances (store/payment/client/course/name). */
+    function syncEditSellingVoucherChoicesFromVoucher(v, editSlug) {
+        editSlug = String(editSlug || 'employee').toLowerCase();
+        var paySel = document.querySelector('#editSellingVoucherModal select.edit-payment-type');
+        if (paySel && paySel.tomselect) {
+            try { paySel.tomselect.setValue(String(v.payment_type ?? 1)); } catch (e) {}
+        }
+        var stSel = document.querySelector('#editSellingVoucherModal select.edit-store');
+        var sid = v.store_id || v.inve_store_master_pk || '';
+        if (stSel && stSel.tomselect && sid !== '') {
+            try { stSel.tomselect.setValue(String(sid)); } catch (e) {}
+        }
+        var ecs = document.getElementById('editClientNameSelect');
+        if (ecs && ecs.tomselect && editSlug !== 'ot' && editSlug !== 'course' && v.client_type_pk != null && String(v.client_type_pk) !== '') {
+            try { ecs.tomselect.setValue(String(v.client_type_pk)); } catch (e) {}
+        }
+        var eot = document.getElementById('editModalOtCourseSelect');
+        if (eot && eot.tomselect && editSlug === 'ot' && v.client_type_pk != null && String(v.client_type_pk) !== '') {
+            try { eot.tomselect.setValue(String(v.client_type_pk)); } catch (e) {}
+        }
+        var crs = document.getElementById('editModalCourseSelect');
+        if (crs && crs.tomselect && editSlug === 'course' && v.client_type_pk != null && String(v.client_type_pk) !== '') {
+            try { crs.tomselect.setValue(String(v.client_type_pk)); } catch (e) {}
+        }
+        var cn = String(v.client_name || '').trim();
+        if (cn) {
+            ['editModalFacultySelect', 'editModalAcademyStaffSelect', 'editModalMessStaffSelect'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (!el || !el.tomselect) return;
+                try { el.tomselect.setValue(cn); } catch (e) {}
+            });
+        }
+    }
+
     // When user clicks any Cancel/Close button in a modal (secondary button),
     // close the modal and refresh the page to reset all filters/state (only for Add/Edit Selling Voucher modals).
     document.querySelectorAll('#addSellingVoucherModal button.btn-secondary[data-bs-dismiss="modal"], #editSellingVoucherModal button.btn-secondary[data-bs-dismiss="modal"]').forEach(function(btn) {
@@ -3226,15 +3260,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     console.log('Edit data:', data);
                     if (data.error) { alert(data.error); return; }
+                    destroyEditModalTomSelects();
                     const v = data.voucher;
                     const items = data.items || [];
                     document.getElementById('editSellingVoucherForm').action = editSvBaseUrl + '/' + voucherId;
                     
-                    // Set client type radio
+                    // Set client type radio (do not dispatch "change" — it resets fields and fights this loader)
                     const clientTypeRadio = document.querySelector('#editSellingVoucherModal input[name="client_type_slug"][value="' + (v.client_type_slug || 'employee') + '"]');
                     if (clientTypeRadio) {
                         clientTypeRadio.checked = true;
-                        clientTypeRadio.dispatchEvent(new Event('change'));
                     }
                     
                     document.querySelector('#editSellingVoucherModal select.edit-payment-type').value = String(v.payment_type ?? 1);
@@ -3291,6 +3325,45 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     }
                     editCurrentStoreId = storeSelect ? storeSelect.value || '' : null;
+
+                    // Align native fields / visibility BEFORE Choices init (same for store + no-store paths)
+                    (function applyEditSvClientTypeLayout() {
+                        const isOt = (v.client_type_slug || '') === 'ot';
+                        const isCourse = (v.client_type_slug || '') === 'course';
+                        const editClientSelect = document.getElementById('editClientNameSelect');
+                        const editOtSelect = document.getElementById('editModalOtCourseSelect');
+                        const editCourseSelect = document.getElementById('editModalCourseSelect');
+                        const editCourseNameSelect = document.getElementById('editModalCourseNameSelect');
+                        const editNameInp = document.getElementById('editModalClientNameInput');
+                        if (isOt) {
+                            if (editClientSelect) { editClientSelect.style.display = 'none'; editClientSelect.removeAttribute('required'); editClientSelect.removeAttribute('name'); }
+                            if (editOtSelect) { editOtSelect.style.display = 'block'; editOtSelect.setAttribute('required', 'required'); editOtSelect.setAttribute('name', 'client_type_pk'); editOtSelect.value = v.client_type_pk || ''; }
+                            if (editCourseSelect) { editCourseSelect.style.display = 'none'; editCourseSelect.removeAttribute('required'); editCourseSelect.removeAttribute('name'); editCourseSelect.value = ''; }
+                            if (editCourseNameSelect) { editCourseNameSelect.style.display = 'none'; editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
+                            if (editNameInp) { editNameInp.style.display = 'block'; editNameInp.readOnly = true; editNameInp.placeholder = 'Name (from course/student)'; editNameInp.value = v.client_name || ''; editNameInp.removeAttribute('required'); }
+                        } else if (isCourse) {
+                            if (editClientSelect) { editClientSelect.style.display = 'none'; editClientSelect.removeAttribute('required'); editClientSelect.removeAttribute('name'); }
+                            if (editOtSelect) { editOtSelect.style.display = 'none'; editOtSelect.removeAttribute('required'); editOtSelect.removeAttribute('name'); editOtSelect.value = ''; }
+                            if (editCourseSelect) { editCourseSelect.style.display = 'block'; editCourseSelect.setAttribute('required', 'required'); editCourseSelect.setAttribute('name', 'client_type_pk'); editCourseSelect.value = v.client_type_pk || ''; }
+                            if (editCourseNameSelect) { editCourseNameSelect.style.display = 'none'; editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
+                            if (editNameInp) { editNameInp.style.display = 'block'; editNameInp.readOnly = false; editNameInp.placeholder = 'Course name'; editNameInp.value = v.client_name || ''; editNameInp.setAttribute('required', 'required'); }
+                        } else {
+                            if (editClientSelect) {
+                                editClientSelect.style.display = 'block';
+                                editClientSelect.setAttribute('required', 'required');
+                                editClientSelect.setAttribute('name', 'client_type_pk');
+                                if (clientNameOptionsEdit.length) {
+                                    rebuildClientNameSelect(editClientSelect, clientNameOptionsEdit, (v.client_type_slug || 'employee'));
+                                }
+                                setSelectValue(document.getElementById('editClientNameSelect'), v.client_type_pk || '');
+                            }
+                            if (editOtSelect) { editOtSelect.style.display = 'none'; editOtSelect.removeAttribute('required'); editOtSelect.removeAttribute('name'); editOtSelect.value = ''; }
+                            if (editCourseSelect) { editCourseSelect.style.display = 'none'; editCourseSelect.removeAttribute('required'); editCourseSelect.removeAttribute('name'); editCourseSelect.value = ''; }
+                            if (editCourseNameSelect) { editCourseNameSelect.style.display = 'none'; editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
+                            if (editNameInp) { editNameInp.style.display = 'block'; editNameInp.readOnly = false; editNameInp.placeholder = 'Client / section / role name'; editNameInp.setAttribute('required', 'required'); }
+                        }
+                    })();
+
                     const openEditModalWithItems = function() {
                         buildEditItemsTable(items);
                         // Initialize Choices in Edit modal (payment, client, store, name dropdowns, item selects)
@@ -3312,6 +3385,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (typeof updateEditModalNameField === 'function') {
                             updateEditModalNameField();
                         }
+                        syncEditSellingVoucherChoicesFromVoucher(v, editSlug);
                         const modal = new bootstrap.Modal(document.getElementById('editSellingVoucherModal'));
                         modal.show();
                     };
@@ -3324,41 +3398,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         filteredItems = itemSubcategories;
                         openEditModalWithItems();
                     }
-                    const isOt = (v.client_type_slug || '') === 'ot';
-                    const isCourse = (v.client_type_slug || '') === 'course';
-                    const editClientSelect = document.getElementById('editClientNameSelect');
-                    const editOtSelect = document.getElementById('editModalOtCourseSelect');
-                    const editCourseSelect = document.getElementById('editModalCourseSelect');
-                    const editCourseNameSelect = document.getElementById('editModalCourseNameSelect');
-                    const editNameInp = document.getElementById('editModalClientNameInput');
-                    if (isOt) {
-                        if (editClientSelect) { editClientSelect.style.display = 'none'; editClientSelect.removeAttribute('required'); editClientSelect.removeAttribute('name'); }
-                        if (editOtSelect) { editOtSelect.style.display = 'block'; editOtSelect.setAttribute('required', 'required'); editOtSelect.setAttribute('name', 'client_type_pk'); editOtSelect.value = v.client_type_pk || ''; }
-                        if (editCourseSelect) { editCourseSelect.style.display = 'none'; editCourseSelect.removeAttribute('required'); editCourseSelect.removeAttribute('name'); editCourseSelect.value = ''; }
-                        if (editCourseNameSelect) { editCourseNameSelect.style.display = 'none'; editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
-                        if (editNameInp) { editNameInp.style.display = 'block'; editNameInp.readOnly = true; editNameInp.placeholder = 'Name (from course/student)'; editNameInp.value = v.client_name || ''; editNameInp.removeAttribute('required'); }
-                    } else if (isCourse) {
-                        if (editClientSelect) { editClientSelect.style.display = 'none'; editClientSelect.removeAttribute('required'); editClientSelect.removeAttribute('name'); }
-                        if (editOtSelect) { editOtSelect.style.display = 'none'; editOtSelect.removeAttribute('required'); editOtSelect.removeAttribute('name'); editOtSelect.value = ''; }
-                        if (editCourseSelect) { editCourseSelect.style.display = 'block'; editCourseSelect.setAttribute('required', 'required'); editCourseSelect.setAttribute('name', 'client_type_pk'); editCourseSelect.value = v.client_type_pk || ''; }
-                        if (editCourseNameSelect) { editCourseNameSelect.style.display = 'none'; editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
-                        if (editNameInp) { editNameInp.style.display = 'block'; editNameInp.readOnly = false; editNameInp.placeholder = 'Course name'; editNameInp.value = v.client_name || ''; editNameInp.setAttribute('required', 'required'); }
-                    } else {
-                        if (editClientSelect) {
-                            editClientSelect.style.display = 'block';
-                            editClientSelect.setAttribute('required', 'required');
-                            editClientSelect.setAttribute('name', 'client_type_pk');
-                            if (clientNameOptionsEdit.length) {
-                                rebuildClientNameSelect(editClientSelect, clientNameOptionsEdit, (v.client_type_slug || 'employee'));
-                            }
-                            setSelectValue(document.getElementById('editClientNameSelect'), v.client_type_pk || '');
-                        }
-                        if (editOtSelect) { editOtSelect.style.display = 'none'; editOtSelect.removeAttribute('required'); editOtSelect.removeAttribute('name'); editOtSelect.value = ''; }
-                        if (editCourseSelect) { editCourseSelect.style.display = 'none'; editCourseSelect.removeAttribute('required'); editCourseSelect.removeAttribute('name'); editCourseSelect.value = ''; }
-                        if (editCourseNameSelect) { editCourseNameSelect.style.display = 'none'; editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
-                        if (editNameInp) { editNameInp.style.display = 'block'; editNameInp.readOnly = false; editNameInp.placeholder = 'Client / section / role name'; editNameInp.setAttribute('required', 'required'); }
-                    }
-                    updateEditModalNameField();
                 })
                 .catch(err => { 
                     console.error('Error loading voucher for edit:', err); 

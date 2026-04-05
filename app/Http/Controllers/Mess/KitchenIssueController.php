@@ -636,7 +636,15 @@ class KitchenIssueController extends Controller
      */
     public function edit(Request $request, $id)
     {
-        $kitchenIssue = KitchenIssueMaster::with(['items.itemSubcategory', 'clientTypeCategory'])->findOrFail($id);
+        $kitchenIssue = KitchenIssueMaster::with([
+            'items.itemSubcategory',
+            'clientTypeCategory',
+            'course',
+            'employee',
+            'student',
+            'store',
+            'subStore',
+        ])->findOrFail($id);
 
         if ($kitchenIssue->status == KitchenIssueMaster::STATUS_APPROVED) {
             if ($request->wantsJson()) {
@@ -660,6 +668,11 @@ class KitchenIssueController extends Controller
             $storeId = (int) $kitchenIssue->store_id;
             $storeIdentifier = $storeType === 'sub_store' ? 'sub_' . $storeId : (string) $storeId;
             $availableMap = AvailableQuantityService::availableQuantitiesForStore($storeType, $storeId);
+
+            $resolvedClientName = trim((string) ($kitchenIssue->client_name ?? ''));
+            if ($resolvedClientName === '') {
+                $resolvedClientName = trim((string) ($kitchenIssue->client_full_name ?? ''));
+            }
             
             $voucher = [
                 'pk' => $kitchenIssue->pk,
@@ -669,7 +682,7 @@ class KitchenIssueController extends Controller
                 'client_type_slug' => $clientTypeSlug,
                 'client_id' => $kitchenIssue->client_id,
                 'name_id' => $kitchenIssue->name_id,
-                'client_name' => $kitchenIssue->client_name,
+                'client_name' => $resolvedClientName,
                 'issue_date' => $kitchenIssue->issue_date ? $kitchenIssue->issue_date->format('Y-m-d') : '',
                 'store_id' => $storeIdentifier,
                 'inve_store_master_pk' => $storeIdentifier, // For backward compatibility with view

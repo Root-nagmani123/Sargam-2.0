@@ -63,6 +63,7 @@
     </tr>
 
     {{-- Body – vendor sections like Sale Voucher report, then bills under each vendor --}}
+    @php $grandTotalAmount = 0; @endphp
     @forelse($purchaseOrdersByVendor as $vendorGroup)
         <tr>
             <td colspan="8" style="font-weight:700;background:#e9ecef;">VENDOR : {{ $vendorGroup['vendor_name'] }}</td>
@@ -76,7 +77,7 @@
                 $billTaxTotal = 0;
             @endphp
             <tr>
-                <td colspan="8">{{ $billLabel }}</td>
+                <td colspan="8" style="font-weight:700;background:#5a6268;color:#fff;">{{ $billLabel }}</td>
             </tr>
             @foreach($order->items as $item)
                 @php
@@ -103,6 +104,7 @@
             @php
                 $billTotal = $billSubtotal + $billTaxTotal;
                 $vendorSectionTotal += $billTotal;
+                $grandTotalAmount += $billTotal;
             @endphp
             <tr>
                 <td colspan="7" style="text-align:right; font-weight:700;">Bill Total:</td>
@@ -118,5 +120,13 @@
             <td colspan="8">No purchase details found</td>
         </tr>
     @endforelse
+
+    {{-- Grand Total Row --}}
+    @if($grandTotalAmount > 0)
+        <tr>
+            <td colspan="7" style="text-align:right; font-weight:700;background:#004a93;color:#fff;">Grand Total:</td>
+            <td style="font-weight:700;background:#004a93;color:#fff;">{{ number_format($grandTotalAmount, 2) }}</td>
+        </tr>
+    @endif
 </table>
 

@@ -65,23 +65,23 @@
 
             {{-- Opening --}}
             <td>{{ $item['opening_qty'] }}</td>
-            <td>{{ $item['opening_rate'] }}</td>
-            <td>{{ $item['opening_amount'] }}</td>
+            <td>{{ number_format((float) ($item['opening_rate'] ?? 0), 2) }}</td>
+            <td>{{ number_format((float) ($item['opening_amount'] ?? 0), 2) }}</td>
 
             {{-- Purchase --}}
             <td>{{ $item['purchase_qty'] }}</td>
-            <td>{{ $item['purchase_rate'] }}</td>
-            <td>{{ $item['purchase_amount'] }}</td>
+            <td>{{ number_format((float) ($item['purchase_rate'] ?? 0), 2) }}</td>
+            <td>{{ number_format((float) ($item['purchase_amount'] ?? 0), 2) }}</td>
 
             {{-- Sale --}}
             <td>{{ $item['sale_qty'] }}</td>
-            <td>{{ $item['sale_rate'] }}</td>
-            <td>{{ $item['sale_amount'] }}</td>
+            <td>{{ number_format((float) ($item['sale_rate'] ?? 0), 2) }}</td>
+            <td>{{ number_format((float) ($item['sale_amount'] ?? 0), 2) }}</td>
 
             {{-- Closing --}}
             <td>{{ $item['closing_qty'] }}</td>
-            <td>{{ $item['closing_rate'] }}</td>
-            <td>{{ $item['closing_amount'] }}</td>
+            <td>{{ number_format((float) ($item['closing_rate'] ?? 0), 2) }}</td>
+            <td>{{ number_format((float) ($item['closing_amount'] ?? 0), 2) }}</td>
         </tr>
     @empty
         <tr>

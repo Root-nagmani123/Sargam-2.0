@@ -115,16 +115,14 @@
                     <!-- Report header (title centered, date bar, vendor) -->
                     <div class="report-header mb-4 pb-3 text-center border-bottom">
                         <h4 class="report-title-center h5 fw-bold mb-3 text-dark text-uppercase mess-title-tracking">Stock Purchase Details</h4>
-                        <div class="d-inline-block px-3 py-2 mb-2 rounded-pill text-white fw-semibold small mess-report-date-pill">
-                            Stock Purchase Details Report Between {{ date('d-F-Y', strtotime($fromDate)) }} To {{ date('d-F-Y', strtotime($toDate)) }}
-                        </div>
                         <div class="report-vendor-name fw-semibold mb-0 mt-2 text-center">
-                            <span class="text-muted">{{ $stockPurchasePrintVendorHeaderLabel }}</span>
-                            <span class="ms-1">{{ $selectedVendors->isEmpty() ? 'All Vendors' : $selectedVendors->pluck('name')->implode(', ') }}</span>
+                            <span class="text-muted">{{ $stockPurchasePrintVendorHeaderLabel }} {{ $stockPurchasePrintVendorLine }}</span>
                         </div>
-                        <div class="fw-semibold mb-0 mt-2 small">
-                            <span class="text-secondary">Store:</span>
-                            <span class="ms-1 text-body">{{ $selectedStores->isEmpty() ? 'All Stores' : $selectedStores->pluck('store_name')->implode(', ') }}</span>
+                        <div class="report-store-name fw-semibold mb-0 mt-2 text-center">
+                            <span class="text-muted">Store: {{ $stockPurchasePrintStoreDetails }}</span>
+                        </div>
+                        <div class="d-inline-block px-3 py-2 mb-2 fw-semibold small h4">
+                            Stock Purchase Details Report Between {{ date('d-F-Y', strtotime($fromDate)) }} To {{ date('d-F-Y', strtotime($toDate)) }}
                         </div>
                     </div>
 
@@ -427,7 +425,8 @@ function printStockPurchaseTable() {
             white-space: normal;
         }
         table.stock-purchase-data thead th {
-            background: #d3d6d9;
+            background: #0066cc;
+            color: #fff;
             font-weight: 600;
             text-align: left;
         }
@@ -495,27 +494,10 @@ function printStockPurchaseTable() {
             </div>
                     <div class="branding-left-clear"></div>
                 </td>
-                <td class="branding-right-cell">
-                    <div class="branding-right-cluster">
-                        <img src="${lbsnaaLogoSrc}" alt="LBSNAA" class="header-img-right-seal">
-                        <div class="branding-bilingual">
-                            <div class="branding-hindi" lang="hi">लाल बहादुर शास्त्री राष्ट्रीय प्रशासन अकादमी</div>
-                            <div class="branding-en-side" lang="en">Lal Bahadur Shastri National Academy of Administration</div>
-                        </div>
-                        <div class="branding-right-clear"></div>
-                    </div>
-                </td>
             </tr>
         </table>
     </div>
 
-    <div class="report-header-block">
-        <h1 class="report-title-center">${title}</h1>
-        <div class="report-date-bar">${dateRange}</div>
-        <div class="report-vendor-name">
-            <span class="text-muted">${vendorHeaderLabel}</span>
-            <span>${vendorLine}</span>
-        </div>
     </header>
 
     <section class="card border-0 shadow-sm mb-3 bg-white">
@@ -595,8 +577,6 @@ function printStockPurchaseTable() {
         position: sticky;
         top: 0;
         z-index: 2;
-        background: #e9ecef !important;
-        box-shadow: 0 1px 0 #ced4da;
     }
 }
 .stock-purchase-report .table-responsive table {
@@ -624,7 +604,7 @@ function printStockPurchaseTable() {
 .report-date-bar { background: #004a93; color: #fff; font-size: 0.9rem; text-align: center; }
 .stock-purchase-table-wrapper .stock-purchase-thead th { border-bottom-width: 2px; }
 .report-vendor-name { font-size: 1rem; }
-.stock-purchase-thead th { background: #d3d6d9; font-weight: 600; padding: 0.5rem 0.75rem; text-align: left; }
+.stock-purchase-thead th { background: #0066cc; color: #fff; font-weight: 600; padding: 0.5rem 0.75rem; text-align: left; }
 .stock-purchase-thead th.text-end { text-align: right; }
 
 @media print {
@@ -660,7 +640,7 @@ function printStockPurchaseTable() {
     .stock-purchase-table { font-size: 11pt !important; border-collapse: collapse !important; }
     .stock-purchase-table th, .stock-purchase-table td { font-size: 11pt !important; }
     .stock-purchase-table td, .stock-purchase-table th { border: 1px solid #333 !important; }
-    .stock-purchase-thead th { background: #d3d6d9 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; position: static !important; box-shadow: none !important; }
+    .stock-purchase-thead th { background: #0066cc !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; position: static !important; box-shadow: none !important; }
     .stock-purchase-report .stock-purchase-table-wrapper { max-height: none !important; overflow: visible !important; }
     .stock-purchase-report .bill-header-row .bill-header { background: #5a6268 !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .stock-purchase-report .vendor-section-header { background: #e9ecef !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }

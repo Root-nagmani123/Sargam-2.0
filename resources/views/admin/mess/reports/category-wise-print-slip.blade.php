@@ -15,7 +15,7 @@
     @endif
     @if(!request('print_all'))
     <!-- Header Section -->
-    <div class="card mb-4 border-0 shadow-sm rounded-3 no-print">
+    <div class="card mb-4 border-0 shadow-sm rounded-3 no-print cw-sale-voucher-filter-card">
         <div class="card-header bg-white border-0 pb-0">
             <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
                 <div>
@@ -267,6 +267,14 @@
     .pagination-custom .pagination-page-input { text-align: center; }
     .pagination-custom .pagination-arrow { padding: 4px 10px; }
 
+    /* Tom Select: keep dropdown anchored to filters (avoid body-append + wrong position at page bottom) */
+    .cw-sale-voucher-filter-card .card-body {
+        overflow: visible;
+    }
+    .cw-sale-voucher-filter-card .ts-dropdown {
+        z-index: 1056;
+    }
+
     .print-page-break { page-break-after: always; }
     .print-all-mode .print-page-wrap { margin-bottom: 0; }
     .print-grand-total-block { display: block; margin-top: 12px; page-break-inside: avoid; }
@@ -449,7 +457,6 @@ document.addEventListener('DOMContentLoaded', function() {
             placeholder: sel.getAttribute('data-placeholder') || 'Select',
             plugins: ['remove_button', 'dropdown_input'],
             sortField: { field: 'text', direction: 'asc' },
-            dropdownParent: document.body,
             hideSelected: false
         });
         if (typeof onChange === 'function') inst.on('change', onChange);

@@ -225,6 +225,58 @@
         }
         thead { display: table-header-group; }
         tfoot { display: table-footer-group; }
+
+        .report-header-block {
+            text-align: center;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .report-title-center {
+            font-size: 13pt;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin: 0 0 6px;
+            color: #212529;
+        }
+        .report-date-bar {
+            background: #003366;
+            color: #fff;
+            padding: 6px 12px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 9pt;
+            display: inline-block;
+            border-radius: 50rem;
+        }
+        .report-meta-print {
+            font-size: 9pt;
+            margin: 8px 0 12px;
+            line-height: 1.45;
+            text-align: left;
+            color: #212529;
+        }
+        .report-meta-print .meta-line {
+            margin-bottom: 4px;
+            word-wrap: break-word;
+        }
+        table.vendor-detail-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 8pt;
+            margin: 6px 0 10px;
+        }
+        table.vendor-detail-table th,
+        table.vendor-detail-table td {
+            border: 1px solid #dee2e6;
+            padding: 4px 6px;
+            vertical-align: top;
+        }
+        table.vendor-detail-table thead th {
+            background: #e9ecef;
+            font-weight: 600;
+            text-align: left;
+        }
     </style>
 </head>
 <body>
@@ -255,30 +307,20 @@
         <div class="report-header-block">
             <h1 class="report-title-center">Stock Purchase Details</h1>
             <div class="report-date-bar">{{ $dateRange }}</div>
-            <div class="report-vendor-name">
-                <span class="text-muted">{{ $vendorHeaderLabel }}</span>
-                <span>{{ $vendorLine }}</span>
-            </div>
-            <div class="report-store-name">
-                <span class="text-muted">Store:</span>
-                <span>{{ $storeDetails }}</span>
-            </div>
         </div>
 
         <div class="report-meta-print">
-            @if($vendorDetailRows->isEmpty())
-                <div class="meta-line"><strong>Vendor Details:</strong> All Vendors</div>
-            @else
-                <div class="meta-line"><strong>Vendor Details:</strong></div>
+            <div class="meta-line">{{ $vendorHeaderLabel }} {{ $vendorLine }}</div>
+            @if($vendorDetailRows->isNotEmpty())
                 <table class="vendor-detail-table">
                     <thead>
-                        <tr>
-                            <th>Vendor</th>
-                            <th>Contact</th>
-                            <th>Phone</th>
-                            <th>Email</th>
-                            <th>Address</th>
-                        </tr>
+                    <tr>
+                        <th>Name</th>
+                        <th>Contact</th>
+                        <th>Phone</th>
+                        <th>Email</th>
+                        <th>Address</th>
+                    </tr>
                     </thead>
                     <tbody>
                         @foreach($vendorDetailRows as $row)

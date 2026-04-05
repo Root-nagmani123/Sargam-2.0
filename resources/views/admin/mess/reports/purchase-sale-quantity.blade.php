@@ -654,7 +654,7 @@ function printPurchaseSaleQuantity() {
 '  <style>\n' +
 '    * { box-sizing: border-box; }\n' +
 '    body {\n' +
-'      font-family: "Segoe UI", Arial, "Noto Sans Devanagari", "DejaVu Sans", sans-serif;\n' +
+'      font-family: "DejaVu Sans", "Noto Sans Devanagari", "Segoe UI", Arial, sans-serif;\n' +
 '      font-size: 9pt;\n' +
 '      margin: 0;\n' +
 '      padding: 10mm 12mm;\n' +
@@ -741,8 +741,10 @@ function printPurchaseSaleQuantity() {
 '      font-weight: 600;\n' +
 '      text-align: left;\n' +
 '    }\n' +
-'    table.purchase-sale-data thead th.text-end { text-align: right; }\n' +
-'    table.purchase-sale-data thead th.text-center { text-align: center; }\n' +
+'    table.purchase-sale-data thead th.text-end,\n' +
+'    table.purchase-sale-data thead th[style*="text-align: right"] { text-align: right; }\n' +
+'    table.purchase-sale-data thead th.text-center,\n' +
+'    table.purchase-sale-data thead th[style*="text-align: center"] { text-align: center; }\n' +
 '    table.purchase-sale-data .text-end { text-align: right; }\n' +
 '    table.purchase-sale-data .text-center { text-align: center; }\n' +
 '    table.purchase-sale-data tbody tr:nth-child(even) td { background: #fafbfc; }\n' +

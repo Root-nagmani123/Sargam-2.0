@@ -71,12 +71,13 @@
                 @php
                     $first = $sectionVouchers->first();
                     $buyerName = $first->client_name ?? ($first->clientTypeCategory?->client_name ?? 'N/A');
-                    $clientTypeLabel = $first->clientTypeCategory
-                        ? ucfirst($first->clientTypeCategory->client_type)
-                        : ucfirst($first->client_type_slug ?? 'N/A');
+                    $rawClientType = $first->clientTypeCategory
+                        ? (string) $first->clientTypeCategory->client_type
+                        : (string) ($first->client_type_slug ?? 'N/A');
+                    $clientTypeLabel = strtolower($rawClientType) === 'ot' ? 'OT' : ucfirst($rawClientType);
                     $clientSectionName = $first->clientTypeCategory?->client_name ?? null;
                     $slug = $first->client_type_slug ?? '';
-                    $typeSuffix = ($slug === 'employee') ? 'Employee' : (($slug === 'ot') ? 'OT' : ucfirst($slug));
+                    $typeSuffix = ($slug === 'employee') ? 'Employee' : (($slug === 'ot') ? 'OT' : ucfirst((string) $slug));
                     if (!$typeSuffix) {
                         $typeSuffix = 'N/A';
                     }
@@ -167,13 +168,17 @@
                                             @endphp
                                             <tr>
                                                 @if($dompdfSafeTables)
-                                                    <td class="text-center align-middle">{{ $requestNo }}</td>
+                                                    @if($itemIndex === 0)
+                                                        <td class="text-center align-middle" rowspan="{{ $rowCount }}">{{ $requestNo }}</td>
+                                                    @endif
                                                     <td>{{ $itemName }}</td>
                                                     <td class="text-center">{{ $itemIssueDateFormatted }}</td>
                                                     <td class="text-end">{{ number_format($netQty, 2) }}</td>
                                                     <td class="text-end">{{ number_format($rate, 2) }}</td>
                                                     <td class="text-end">{{ number_format($itemAmount, 2) }}</td>
-                                                    <td class="align-middle">{{ $voucher->remarks ?? '—' }}</td>
+                                                    @if($itemIndex === 0)
+                                                        <td class="align-middle" rowspan="{{ $rowCount }}">{{ $voucher->remarks ?? '—' }}</td>
+                                                    @endif
                                                 @else
                                                     @if($itemIndex === 0)
                                                         <td class="text-center align-middle" rowspan="{{ $rowCount }}">{{ $requestNo }}</td>
