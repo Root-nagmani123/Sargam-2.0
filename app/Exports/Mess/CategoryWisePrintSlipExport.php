@@ -230,7 +230,6 @@ class CategoryWisePrintSlipExport implements FromCollection, WithStyles, WithEve
                 $sheet->getPageSetup()
                     ->setOrientation(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::ORIENTATION_LANDSCAPE)
                     ->setPrintArea("A1:G{$lastRow}");
-                    ->setPrintArea("A1:G{$lastRow}");
             },
         ];
     }

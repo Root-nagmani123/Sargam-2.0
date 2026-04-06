@@ -1,44 +1,4 @@
-@php
-    // Determine active tab based on current route/path
-    $activeNavTab = '#home';
-    $path = request()->path();
-    $routeName = request()->route()?->getName() ?? '';
-    if (request()->routeIs('admin.dashboard') || request()->routeIs('admin.dashboard.*')) {
-        $activeNavTab = '#home';
-    } elseif (request()->routeIs('admin.estate.*')) {
-        // Estate module pages only define @section('setup_content'); without this, #home stays active and content looks blank after redirect.
-        $activeNavTab = '#tab-setup';
-    } elseif (
-        request()->routeIs('admin.employee_idcard.*') || request()->routeIs('admin.issue-management*') ||
-        request()->routeIs('admin.mess.*') ||
-        request()->routeIs('member.*') || request()->routeIs('faculty.*') || request()->routeIs('programme.*') ||
-        request()->routeIs('admin.roles.*') || request()->routeIs('admin.users.*') ||
-        str_starts_with($path, 'setup/') || str_starts_with($path, 'admin/setup') ||
-        str_starts_with($path, 'admin/employee-idcard') || str_starts_with($path, 'admin/issue-management') ||
-        str_starts_with($path, 'courseAttendanceNoticeMap') || str_starts_with($path, 'course_memo') ||
-        str_starts_with($path, 'building_floor') || str_starts_with($path, 'group_mapping') ||
-        str_starts_with($path, 'course-repository') || str_starts_with($path, 'feedback') || str_starts_with($path, 'admin/feedback') ||
-        str_starts_with($path, 'admin/notice') || str_starts_with($path, 'attendance') ||
-        str_starts_with($path, 'security') || str_starts_with($path, 'ot_notice') ||
-        str_starts_with($path, 'forms') || str_starts_with($path, 'registration') ||
-        str_starts_with($path, 'mdo_escrot') || str_starts_with($path, 'student_medical') ||
-        str_starts_with($path, 'medical_exception') || str_starts_with($path, 'memo_discipline') ||
-        str_starts_with($path, 'country') || str_starts_with($path, 'state') || str_starts_with($path, 'city') ||
-        str_starts_with($path, 'stream') || str_starts_with($path, 'subject') || str_starts_with($path, 'Venue-Master') ||
-        str_starts_with($path, 'batch') || str_starts_with($path, 'curriculum') || str_starts_with($path, 'mapping') ||
-        str_starts_with($path, 'admin/master') || str_contains($path, 'breadcrumb-showcase') || str_starts_with($path, 'password') ||
-        request()->routeIs('calendar.index') || request()->routeIs('feedback.*') || str_starts_with($path, 'calendar') ||
-        str_starts_with($path, 'expertise') || str_starts_with($path, 'faculty_notice') || str_starts_with($path, 'faculty_mdo')
-    ) {
-        $activeNavTab = '#tab-setup';
-    } elseif (str_starts_with($path, 'communications') || request()->routeIs('*communications*')) {
-        $activeNavTab = '#tab-communications';
-    } elseif (str_starts_with($path, 'academics') || request()->routeIs('*academics*')) {
-        $activeNavTab = '#tab-academics';
-    } elseif (str_starts_with($path, 'material') || request()->routeIs('*material*')) {
-        $activeNavTab = '#tab-material-management';
-    }
-@endphp
+{{-- $activeNavTab is set in admin.layouts.master before this include --}}
 <header class="topbar">
     <!-- Skip to Content (GIGW Mandatory) -->
 <a href="#main-content" class="visually-hidden-focusable skip-link">
@@ -1640,6 +1600,26 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         }
+
+        // GET filters add query string; sidebar links are usually path-only. Match path, prefer non-Home panes first.
+        const pathMatchOrder = [...sidebarPanes].sort(function (a, b) {
+            if (a.tab === '#home') return 1;
+            if (b.tab === '#home') return -1;
+            return 0;
+        });
+        for (const item of pathMatchOrder) {
+            const links = document.querySelectorAll(`${item.pane} .sidebar-link[href]`);
+            for (const link of links) {
+                if (!link.href) continue;
+                const target = new URL(link.href, window.location.origin);
+                const targetPath = target.pathname.replace(/\/+$/, '');
+                const targetQuery = target.search || '';
+                if (targetPath === currentPath && !targetQuery && currentQuery) {
+                    return item.tab;
+                }
+            }
+        }
+
         return null;
     }
 
