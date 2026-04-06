@@ -79,15 +79,14 @@ class CategoryWisePrintSlipExport implements FromCollection, WithStyles, WithEve
 
                 $rows[] = ['BUYER NAME : ' . $buyerName . '- ' . $typeSuffix, '', '', '', '', '', ''];
                 $rows[] = ['CLIENT TYPE : ' . $clientTypeHeader, '', '', '', '', '', ''];
-                // Buyer Name column hidden for now (match on-screen / PDF table).
-                $rows[] = ['Slip No.', 'Remark', 'Item Name', 'Request Date', 'Quantity', 'Price', 'Amount'];
+                // Buyer Name column hidden for now (match on-screen / PDF table). Remark last (Excel only).
+                $rows[] = ['Slip No.', 'Item Name', 'Request Date', 'Quantity', 'Price', 'Amount', 'Remark'];
 
                 $sectionTotal = 0.0;
 
                 foreach ($sectionVouchers as $voucher) {
                     $requestNo = $voucher->request_no ?? ('SV-' . str_pad($voucher->id ?? $voucher->pk ?? 0, 6, '0', STR_PAD_LEFT));
                     $requestDate = $voucher->issue_date ? $voucher->issue_date->format('d-m-Y') : 'N/A';
-                    $rowCount = $voucher->items->count();
 
                     foreach ($voucher->items as $itemIndex => $item) {
                         $issueQty = (float) ($item->quantity ?? 0);
@@ -106,26 +105,24 @@ class CategoryWisePrintSlipExport implements FromCollection, WithStyles, WithEve
                             : $requestDate;
 
                         $row = ['', '', '', '', '', '', ''];
-                        $row = ['', '', '', '', '', '', ''];
                         if ($itemIndex === 0) {
                             $row[0] = $requestNo;
-                            // $row[1] = $buyerName;
-                            $row[1] = $voucher->remarks ?? '—';
+                            $row[6] = $voucher->remarks ?? '—';
                         }
-                        $row[2] = $itemName;
-                        $row[3] = $itemIssueDateFormatted;
-                        $row[4] = number_format($netQty, 2);
-                        $row[5] = number_format($rate, 2);
-                        $row[6] = number_format($itemAmount, 2);
+                        $row[1] = $itemName;
+                        $row[2] = $itemIssueDateFormatted;
+                        $row[3] = number_format($netQty, 2);
+                        $row[4] = number_format($rate, 2);
+                        $row[5] = number_format($itemAmount, 2);
                         $rows[] = $row;
                     }
                 }
 
-                $rows[] = ['', '', '', '', '', 'TOTAL', number_format($sectionTotal, 2)];
+                $rows[] = ['', '', '', '', 'TOTAL', number_format($sectionTotal, 2), ''];
             }
         }
 
-        $rows[] = ['', '', '', '', '', 'GRAND TOTAL', number_format($this->grandTotal, 2)];
+        $rows[] = ['', '', '', '', 'GRAND TOTAL', number_format($this->grandTotal, 2), ''];
 
         return collect($rows);
     }
@@ -165,15 +162,15 @@ class CategoryWisePrintSlipExport implements FromCollection, WithStyles, WithEve
 
         $sheet->getColumnDimension('A')->setWidth(14);
         $sheet->getColumnDimension('B')->setWidth(28);
-        $sheet->getColumnDimension('C')->setWidth(14);
+        $sheet->getColumnDimension('C')->setWidth(12);
         $sheet->getColumnDimension('D')->setWidth(12);
         $sheet->getColumnDimension('E')->setWidth(12);
-        $sheet->getColumnDimension('F')->setWidth(12);
-        $sheet->getColumnDimension('G')->setWidth(14);
+        $sheet->getColumnDimension('F')->setWidth(14);
+        $sheet->getColumnDimension('G')->setWidth(28);
 
-        $sheet->getStyle("E5:G{$lastRow}")->getAlignment()->setHorizontal('right');
+        $sheet->getStyle("D5:F{$lastRow}")->getAlignment()->setHorizontal('right');
         $sheet->getStyle("A5:A{$lastRow}")->getAlignment()->setHorizontal('center');
-        $sheet->getStyle("D5:D{$lastRow}")->getAlignment()->setHorizontal('center');
+        $sheet->getStyle("C5:C{$lastRow}")->getAlignment()->setHorizontal('center');
 
         for ($row = 5; $row <= $lastRow; $row++) {
             $a = (string) $sheet->getCell("A{$row}")->getValue();
@@ -181,14 +178,14 @@ class CategoryWisePrintSlipExport implements FromCollection, WithStyles, WithEve
                 $sheet->getStyle("A{$row}:G{$row}")->getFont()->setBold(true);
                 $sheet->getStyle("A{$row}:G{$row}")->getFont()->setBold(true);
             }
-            $f = (string) $sheet->getCell("F{$row}")->getValue();
-            if ($f === 'TOTAL' || $f === 'GRAND TOTAL') {
+            $e = (string) $sheet->getCell("E{$row}")->getValue();
+            if ($e === 'TOTAL' || $e === 'GRAND TOTAL') {
                 $sheet->getStyle("A{$row}:G{$row}")->getFont()->setBold(true);
                 $sheet->getStyle("A{$row}:G{$row}")
                     ->getFill()
                     ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
                     ->getStartColor()
-                    ->setARGB($f === 'GRAND TOTAL' ? 'FFE2E8F0' : 'FFF3F4F6');
+                    ->setARGB($e === 'GRAND TOTAL' ? 'FFE2E8F0' : 'FFF3F4F6');
             }
         }
 

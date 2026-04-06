@@ -54,7 +54,7 @@
         .text-body-secondary { color: #6c757d; }
         .fw-semibold { font-weight: 600; }
         .fw-bold { font-weight: 700; }
-        .small { font-size: 0.875rem; }
+        .small { font-size: 11pt; }
         .mb-0 { margin-bottom: 0; }
         .mb-1 { margin-bottom: 0.25rem; }
         .mb-3 { margin-bottom: 1rem; }
@@ -88,7 +88,7 @@
             background-color: #003366;
             color: #fff;
             font-weight: 600;
-            font-size: 0.8125rem;
+            font-size: 11pt;
             display: inline-block;
             padding: 0.35rem 0.85rem;
             border-radius: 50rem;
@@ -144,14 +144,14 @@
         .card.shadow-sm { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06); }
         .card-header {
             padding: 0.45rem 0.75rem;
-            font-size: 0.8125rem;
+            font-size: 11pt;
             font-weight: 600;
             background: #e9ecef;
             border-bottom: 1px solid #dee2e6;
         }
         .card-body { padding: 0.75rem 1rem; }
         .h5 {
-            font-size: 1rem;
+            font-size: 11pt;
             font-weight: 700;
             margin: 0 0 0.75rem;
             text-transform: uppercase;
@@ -167,6 +167,10 @@
         .table-sm th,
         .table-sm td {
             padding: 0.3rem 0.45rem;
+            font-size: 11pt;
+        }
+        table.stock-purchase-data th,
+        table.stock-purchase-data td {
             font-size: 11pt;
         }
         .table-bordered th,
@@ -192,7 +196,7 @@
             background: #e9ecef;
             color: #212529;
             font-weight: 700;
-            font-size: 8.5pt;
+            font-size: 11pt;
             border-color: #adb5bd;
         }
         table.stock-purchase-data .bill-header-row td,
@@ -200,7 +204,7 @@
             background: #5a6268;
             color: #fff;
             font-weight: 700;
-            font-size: 8.5pt;
+            font-size: 11pt;
             border-color: #5a6268;
         }
         table.stock-purchase-data .vendor-total-row td {
@@ -233,7 +237,7 @@
             border-bottom: 1px solid #dee2e6;
         }
         .report-title-center {
-            font-size: 13pt;
+            font-size: 11pt;
             font-weight: 700;
             text-transform: uppercase;
             margin: 0 0 6px;
@@ -245,12 +249,12 @@
             padding: 6px 12px;
             text-align: center;
             font-weight: 600;
-            font-size: 9pt;
+            font-size: 11pt;
             display: inline-block;
             border-radius: 50rem;
         }
         .report-meta-print {
-            font-size: 9pt;
+            font-size: 11pt;
             margin: 8px 0 12px;
             line-height: 1.45;
             text-align: left;
@@ -263,7 +267,7 @@
         table.vendor-detail-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 8pt;
+            font-size: 11pt;
             margin: 6px 0 10px;
         }
         table.vendor-detail-table th,

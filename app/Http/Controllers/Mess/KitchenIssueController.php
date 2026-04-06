@@ -522,8 +522,12 @@ class KitchenIssueController extends Controller
 
             DB::commit();
 
-            // AJAX request: return JSON so frontend can keep modal open without full page reload
-            if ($request->ajax() || $request->wantsJson()) {
+            // Modal / fetch: return JSON so the form can reset without full page reload (header + respond_json flag)
+            $returnJson = $request->ajax()
+                || $request->wantsJson()
+                || $request->expectsJson()
+                || $request->boolean('respond_json');
+            if ($returnJson) {
                 return response()->json([
                     'success' => true,
                     'message' => 'Selling Voucher created successfully',
@@ -537,7 +541,11 @@ class KitchenIssueController extends Controller
         } catch (ValidationException $e) {
             DB::rollBack();
 
-            if ($request->ajax() || $request->wantsJson()) {
+            $returnJson = $request->ajax()
+                || $request->wantsJson()
+                || $request->expectsJson()
+                || $request->boolean('respond_json');
+            if ($returnJson) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation failed.',
@@ -552,7 +560,11 @@ class KitchenIssueController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
 
-            if ($request->ajax() || $request->wantsJson()) {
+            $returnJson = $request->ajax()
+                || $request->wantsJson()
+                || $request->expectsJson()
+                || $request->boolean('respond_json');
+            if ($returnJson) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Failed to create Selling Voucher: ' . $e->getMessage(),

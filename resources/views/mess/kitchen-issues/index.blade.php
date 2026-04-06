@@ -441,11 +441,13 @@
         <div class="modal-content">
             <form action="{{ route('admin.mess.material-management.store') }}" method="POST" id="sellingVoucherModalForm" enctype="multipart/form-data">
                 @csrf
+                {{-- Forces JSON response from store() so the modal can reset without a full page redirect --}}
+                <input type="hidden" name="respond_json" value="1">
                 <div class="modal-header border-bottom bg-light">
                     <h5 class="modal-title fw-semibold" id="addSellingVoucherModalLabel">Add Selling Voucher</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body" >
                     @if($errors->any())
                         <div class="alert alert-danger alert-dismissible fade show py-2" role="alert">
                             <ul class="mb-0 small">
@@ -459,17 +461,17 @@
 
                     {{-- Voucher Details (same pattern as Order Details) --}}
                     <div class="card mb-4">
-                        <div class="card-header bg-white py-2">
+                        <div class="card-header bg-white p-1">
                             <h6 class="mb-0 fw-semibold text-primary">Voucher Details</h6>
                         </div>
-                        <div class="card-body">
+                        <div class="card-body p-1">
                             <div class="row g-3">
                                 <div class="col-md-12">
                                     <label class="form-label">Client Type <span class="text-danger">*</span></label>
                                     <div class="d-flex flex-wrap gap-3 pt-1">
                                         @foreach($clientTypes as $slug => $label)
                                             <div class="form-check">
-                                                <input class="form-check-input client-type-radio" type="radio" name="client_type_slug" id="modal_ct_{{ $slug }}" value="{{ $slug }}" {{ old('client_type_slug') === $slug ? 'checked' : '' }} required>
+                                                <input class="form-check-input client-type-radio" type="radio" name="client_type_slug" id="modal_ct_{{ $slug }}" value="{{ $slug }}" {{ old('client_type_slug', 'employee') === $slug ? 'checked' : '' }} required>
                                                 <label class="form-check-label" for="modal_ct_{{ $slug }}">{{ $label }}</label>
                                             </div>
                                         @endforeach
@@ -1142,7 +1144,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function createChoicesInstance(selectEl, settings) {
         if (!selectEl || typeof window.Choices === 'undefined') return null;
-        if (selectEl.choicesInstance) return selectEl.choicesInstance;
+        if (selectEl.choicesInstance && selectEl.tomselect && selectEl.tomselect._choices) {
+            return selectEl.choicesInstance;
+        }
+        selectEl.choicesInstance = null;
+        selectEl.tomselect = null;
         settings = settings || {};
 
         var choiceConfig = {
@@ -1195,10 +1201,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 this._choices.setChoices([{ value: val, label: opt.text || val, selected: false, disabled: false }], 'value', 'label', false);
             },
             destroy: function() {
-                if (this._choices) this._choices.destroy();
-                if (this.selectEl) {
-                    this.selectEl.choicesInstance = null;
-                    this.selectEl.tomselect = null;
+                try {
+                    if (this._choices) this._choices.destroy();
+                } catch (e) {
+                    console.warn('Choices destroy failed', e);
+                } finally {
+                    if (this.selectEl) {
+                        this.selectEl.choicesInstance = null;
+                        this.selectEl.tomselect = null;
+                    }
+                    this._choices = null;
                 }
             },
             setTextboxValue: function(v) {
@@ -1664,6 +1676,8 @@ document.addEventListener('DOMContentLoaded', function() {
             if (el.tomselect) {
                 try { el.tomselect.destroy(); } catch (e) {}
             }
+            el.tomselect = null;
+            el.choicesInstance = null;
         });
     }
 
@@ -1851,10 +1865,39 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Helper: reset Add Selling Voucher modal form (without closing modal)
+    /** Client Type: force Employee and fix defaultChecked so form.reset() cannot restore OT/Course from initial page HTML. */
+    function resetAddModalClientTypeToEmployee(modalEl) {
+        if (!modalEl) return;
+        var empRadio = null;
+        modalEl.querySelectorAll('.client-type-radio').forEach(function(r) {
+            var isEmp = String(r.value || '').toLowerCase() === 'employee';
+            r.checked = isEmp;
+            r.defaultChecked = isEmp;
+            if (isEmp) empRadio = r;
+        });
+        if (empRadio) {
+            empRadio.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    }
+
+    /** Transfer From Store: clear selection and set only the empty option as defaultSelected (avoids form.reset() restoring old('store_id')). */
+    function resetAddModalStoreSelectToEmpty(modalEl) {
+        var storeSel = modalEl && modalEl.querySelector('select[name="store_id"]');
+        if (!storeSel) return;
+        storeSel.querySelectorAll('option').forEach(function(opt) {
+            opt.defaultSelected = String(opt.value) === '';
+        });
+        storeSel.value = '';
+    }
+
+    // Helper: reset Add Selling Voucher modal form (without closing modal).
+    // Keeps modal open; clears fields, item rows, and store-scoped item cache so the next entry starts fresh.
     function resetSellingVoucherModalForm() {
         var modalEl = document.getElementById('addSellingVoucherModal');
         if (!modalEl) return;
+
+        currentStoreId = null;
+        filteredItems = itemSubcategories;
 
         destroyAddModalTomSelects();
 
@@ -1864,14 +1907,13 @@ document.addEventListener('DOMContentLoaded', function() {
             form.classList.remove('was-validated');
             form.querySelectorAll('.is-invalid').forEach(function(el) { el.classList.remove('is-invalid'); });
         }
-        var storeSel = modalEl.querySelector('select[name="store_id"]');
-        if (storeSel) storeSel.value = '';
+        modalEl.querySelectorAll('.modal-body .alert.alert-danger').forEach(function(a) { a.remove(); });
+        resetAddModalStoreSelectToEmpty(modalEl);
         var issueDateInp = modalEl.querySelector('input[name="issue_date"]');
         if (issueDateInp) issueDateInp.value = new Date().toISOString().slice(0, 10);
         var paymentSel = modalEl.querySelector('select[name="payment_type"]');
         if (paymentSel) paymentSel.value = '1';
-        var empRadio = modalEl.querySelector('.client-type-radio[value="employee"]');
-        if (empRadio) { empRadio.checked = true; empRadio.dispatchEvent(new Event('change')); }
+        // Clear client / name UI on native selects BEFORE firing client-type change (rebuildClientNameSelect preserves current value).
         var clientPkSel = modalEl.querySelector('#modalClientNameSelect');
         if (clientPkSel) clientPkSel.value = '';
         var clientNameInp = document.getElementById('modalClientNameInput');
@@ -1879,6 +1921,7 @@ document.addEventListener('DOMContentLoaded', function() {
         modalEl.querySelectorAll('#modalClientNameWrap select, #modalNameFieldWrap select').forEach(function(s) {
             if (s && typeof s.value !== 'undefined') s.value = '';
         });
+        resetAddModalClientTypeToEmployee(modalEl);
         var billInput = document.getElementById('addSvBillFileInput');
         if (billInput) billInput.value = '';
         var billWrap = document.getElementById('addSvBillFileChosenWrap');
@@ -1894,12 +1937,39 @@ document.addEventListener('DOMContentLoaded', function() {
         var grandTotalEl = document.getElementById('modalGrandTotal');
         if (grandTotalEl) grandTotalEl.textContent = '₹0.00';
 
-        // Modal stays open after AJAX save; Choices was destroyed above — re-init so Client Type / dropdowns match defaults.
-        if (modalEl.classList.contains('show')) {
+        // Modal stays open after AJAX save; re-init dropdowns and item grid (defer so DOM + destroy settle).
+        window.requestAnimationFrame(function () {
             window.setTimeout(function () {
-                initAddModalTomSelects();
-            }, 0);
-        }
+                try {
+                    initAddModalTomSelects();
+                    if (typeof updateModalNameField === 'function') updateModalNameField();
+                    updateAddItemDropdowns();
+                    refreshAllAvailable();
+                    document.querySelectorAll('#modalItemsBody .sv-item-row').forEach(function(row) { calcRow(row); });
+                    updateGrandTotal();
+                    syncAddModalChoicesToNative();
+                } catch (err) {
+                    console.error('resetSellingVoucherModalForm re-init failed', err);
+                }
+            }, 10);
+        });
+    }
+
+    /** Force Choices.js UI to match underlying <select> values (fixes stale labels after reset). */
+    function syncAddModalChoicesToNative() {
+        var modal = document.getElementById('addSellingVoucherModal');
+        if (!modal) return;
+        modal.querySelectorAll('select').forEach(function(sel) {
+            if (!sel.tomselect || typeof sel.tomselect.clear !== 'function') return;
+            try {
+                var v = sel.value;
+                if (v === null || v === undefined || v === '') {
+                    sel.tomselect.clear();
+                } else {
+                    sel.tomselect.setValue(String(v));
+                }
+            } catch (e) {}
+        });
     }
 
     // After AJAX save (add/edit), refresh the listing DataTable so new rows show immediately.
@@ -1972,23 +2042,36 @@ document.addEventListener('DOMContentLoaded', function() {
 
             fetch(action, {
                 method: method,
+                credentials: 'same-origin',
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
                     'X-CSRF-TOKEN': csrf ? csrf.value : '',
-                    'Accept': 'application/json'
+                    Accept: 'application/json, text/javascript, */*;q=0.01'
                 },
                 body: formData
             })
                 .then(function(response) {
-                    return response.json().then(function(payload) {
-                        return { ok: response.ok, status: response.status, payload: payload };
-                    }).catch(function() {
-                        return { ok: response.ok, status: response.status, payload: null };
+                    return response.text().then(function(text) {
+                        var data = null;
+                        if (text) {
+                            try {
+                                data = JSON.parse(text);
+                            } catch (e) {
+                                data = null;
+                            }
+                        }
+                        return {
+                            ok: response.ok,
+                            status: response.status,
+                            data: data,
+                            raw: text
+                        };
                     });
                 })
                 .then(function(res) {
-                    var data = res.payload;
-                    if (res.ok && data && data.success) {
+                    var data = res.data;
+                    var success = !!(data && (data.success === true || data.success === 1 || data.success === '1' || data.voucher_id != null));
+                    if (res.ok && success) {
                         resetSellingVoucherModalForm();
                         refreshSellingVouchersTable();
                         if (window.toastr && data.message) {
@@ -2005,6 +2088,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                     msg = data.errors[firstKey][0];
                                 }
                             } catch (e) {}
+                        }
+                        if (!data && res.raw && res.raw.indexOf('<!DOCTYPE') !== -1) {
+                            msg = 'Server returned a page instead of JSON. Try refreshing the page or check your session.';
                         }
                         alert(msg);
                     }
@@ -3535,6 +3621,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (addSellingVoucherModal) {
         addSellingVoucherModal.addEventListener('hidden.bs.modal', function() {
             addSellingVoucherModal.classList.remove('sv-choices-dropdown-open');
+            currentStoreId = null;
+            filteredItems = itemSubcategories;
             destroyAddModalTomSelects();
             const form = document.getElementById('sellingVoucherModalForm');
             if (form) {
@@ -3542,19 +3630,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 form.classList.remove('was-validated');
                 form.querySelectorAll('.is-invalid').forEach(function(el) { el.classList.remove('is-invalid'); });
             }
-            const storeSel = addSellingVoucherModal.querySelector('select[name="store_id"]');
-            if (storeSel) storeSel.value = '';
+            resetAddModalStoreSelectToEmpty(addSellingVoucherModal);
             const issueDateInp = addSellingVoucherModal.querySelector('input[name="issue_date"]');
             if (issueDateInp) issueDateInp.value = new Date().toISOString().slice(0, 10);
             const paymentSel = addSellingVoucherModal.querySelector('select[name="payment_type"]');
             if (paymentSel) paymentSel.value = '1';
-            const empRadio = addSellingVoucherModal.querySelector('.client-type-radio[value="employee"]');
-            if (empRadio) { empRadio.checked = true; empRadio.dispatchEvent(new Event('change')); }
             const clientPkSel = addSellingVoucherModal.querySelector('#modalClientNameSelect');
             if (clientPkSel) clientPkSel.value = '';
             const clientNameInp = document.getElementById('modalClientNameInput');
             if (clientNameInp) clientNameInp.value = '';
             addSellingVoucherModal.querySelectorAll('#modalClientNameWrap select, #modalNameFieldWrap select').forEach(function(s) { if (s.value !== undefined) s.value = ''; });
+            resetAddModalClientTypeToEmployee(addSellingVoucherModal);
             const billInput = document.getElementById('addSvBillFileInput');
             if (billInput) billInput.value = '';
             const billWrap = document.getElementById('addSvBillFileChosenWrap');
