@@ -120,7 +120,6 @@
                                     <th class="th-slip-no">Slip No.</th>
                                     {{-- Temporarily hide Buyer Name column in table (still in header bar above). --}}
                                     {{-- <th class="th-buyer">Buyer Name</th> --}}
-                                    <th class="th-remark">Remark</th>
                                     <th class="th-item">Item Name</th>
                                     <th class="th-date">Request Date</th>
                                     <th class="th-qty">Quantity</th>
@@ -141,6 +140,11 @@
                                         <tr>
                                             <td class="text-center">{{ $requestNo }}</td>
                                             {{-- <td class="buyer-name-cell">{{ $buyerName }}</td> --}}
+                                            <td>—</td>
+                                            <td class="text-center">{{ $requestDate }}</td>
+                                            <td class="text-end">—</td>
+                                            <td class="text-end">—</td>
+                                            <td class="text-end">—</td>
                                             <td>{{ $voucher->remarks ?? '—' }}</td>
                                         </tr>
                                     @else
@@ -164,7 +168,6 @@
                                                 @if($dompdfSafeTables)
                                                     <td class="text-center align-middle">{{ $requestNo }}</td>
                                                     {{-- <td class="align-middle buyer-name-cell">{{ $buyerName }}</td> --}}
-                                                    <td class="align-middle">{{ $voucher->remarks ?? '—' }}</td>
                                                     <td>{{ $itemName }}</td>
                                                     <td class="text-center">{{ $itemIssueDateFormatted }}</td>
                                                     <td class="text-end">{{ number_format($netQty, 2) }}</td>
@@ -177,7 +180,6 @@
                                                     @if($itemIndex === 0)
                                                         <td class="text-center align-middle" rowspan="{{ $rowCount }}">{{ $requestNo }}</td>
                                                         {{-- <td class="align-middle buyer-name-cell" rowspan="{{ $rowCount }}">{{ $buyerName }}</td> --}}
-                                                        <td class="align-middle" rowspan="{{ $rowCount }}">{{ $voucher->remarks ?? '—' }}</td>
                                                     @endif
                                                     <td>{{ $itemName }}</td>
                                                     <td class="text-center">{{ $itemIssueDateFormatted }}</td>
@@ -194,12 +196,12 @@
                                 @endforeach
                                 <tr class="total-row">
                                     @if($dompdfSafeTables)
-                                        <td></td><td></td><td></td><td></td><td></td>
+                                        <td></td><td></td><td></td><td></td>
                                         <td class="text-end"><strong>TOTAL</strong></td>
                                         <td class="text-end"><strong>{{ number_format($sectionTotal, 2) }}</strong></td>
                                         <td></td>
                                     @else
-                                        <td colspan="5"></td>
+                                        <td colspan="4"></td>
                                         <td class="text-end"><strong>TOTAL</strong></td>
                                         <td class="text-end"><strong>{{ number_format($sectionTotal, 2) }}</strong></td>
                                         <td></td>
@@ -221,12 +223,12 @@
                 <tbody>
                     <tr class="grand-total-row">
                         @if($dompdfSafeTables)
-                            <td></td><td></td><td></td><td></td><td></td>
+                            <td></td><td></td><td></td><td></td>
                             <td class="text-end"><strong>GRAND TOTAL</strong></td>
                             <td class="text-end"><strong>{{ number_format($grandTotal ?? 0, 2) }}</strong></td>
                             <td></td>
                         @else
-                            <td colspan="5"></td>
+                            <td colspan="4"></td>
                             <td class="text-end"><strong>GRAND TOTAL</strong></td>
                             <td class="text-end"><strong>{{ number_format($grandTotal ?? 0, 2) }}</strong></td>
                             <td></td>
