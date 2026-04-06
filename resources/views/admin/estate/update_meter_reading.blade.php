@@ -2,7 +2,11 @@
 
 @section('title', 'Update Meter Reading - Sargam')
 
-@section('setup_content')
+@php
+    $estateSelfHomeTab = request('scope') === 'self'
+        && (hasRole('Admin') || hasRole('Super Admin') || hasRole('Estate'));
+@endphp
+@section($estateSelfHomeTab ? 'content' : 'setup_content')
 @php
     $meterReadingPageFlashParts = [];
     if (session('error')) {
@@ -454,7 +458,7 @@ $(document).ready(function() {
                     '<td><input type="number" class="form-control form-control-sm new-meter-reading" name="readings['+idx+'][curr_month_elec_red]" value="'+ escAttr(newMeterReading) +'" min="0" placeholder="Enter" step="1" inputmode="numeric">' +
                     '<input type="hidden" name="readings['+idx+'][pk]" value="'+row.pk+'">' +
                     '<input type="hidden" name="readings['+idx+'][meter_slot]" value="'+ meterSlot +'"></td>' +
-                    '<td class="unit-cell"></td>' +
+                    '<td class="unit-cell">—</td>' +
                     '</tr>';
                 tbody.append(tr);
             });
@@ -617,7 +621,7 @@ $(document).ready(function() {
                 $row.find('.other-dual-units .other-dual-seg[data-slot="' + slot + '"] .unit-cell').text(unitText);
             }
         } else {
-            $row.find('td.unit-cell').last().text(unit === '' ? '' : unitText);
+            $row.find('td.unit-cell').last().text(unit === '' ? '—' : unitText);
         }
     });
 

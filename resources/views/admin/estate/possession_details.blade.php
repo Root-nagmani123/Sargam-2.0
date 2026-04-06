@@ -2,7 +2,12 @@
 
 @section('title', 'Possession Details - Sargam')
 
-@section('setup_content')
+@php
+    $estateSelfHomeTab = request('scope') === 'self'
+        && (hasRole('Admin') || hasRole('Super Admin') || hasRole('Estate'));
+    $estateSelfQuery = $estateSelfHomeTab ? ['scope' => 'self'] : [];
+@endphp
+@section($estateSelfHomeTab ? 'content' : 'setup_content')
 <div class="container-fluid py-4">
     <x-breadcrum title="Possession Details"></x-breadcrum>
     <x-estate-workflow-stepper current="possession-details" />
@@ -15,18 +20,19 @@
                     <p class="text-muted small mb-0">LBSNAA employee possession records (allotted via HAC Approved flow).</p>
                 </div>
                 <div class="d-flex flex-wrap gap-2 flex-shrink-0">
-                    @if(hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'))
+                    {{-- Home ?scope=self: read-only; bulk/add/update from Setup → Estate --}}
+                    @if((hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin')) && ! $estateSelfHomeTab)
                         <button type="button" class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-2" id="btnBulkDeletePossessionDetails" title="Delete selected">
                             <i class="material-symbols-rounded">delete</i>
                             <span class="d-none d-md-inline">Delete Selected</span>
                         </button>
                     @endif
-                    @if(hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'))
+                    @if((hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin')) && ! $estateSelfHomeTab)
                     <a href="{{ route('admin.estate.possession-details.create') }}" class="btn btn-success btn-sm d-inline-flex align-items-center gap-2" title="Add possession details">
                         <i class="bi bi-plus-lg"></i>
                         <span>Add Possession</span>
                     </a>
-                                        <a href="{{ route('admin.estate.update-meter-reading') }}" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-2">
+                    <a href="{{ route('admin.estate.update-meter-reading') }}" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-2">
                         <i class="bi bi-arrow-right-circle"></i>
                         <span>Update Reading</span>
                     </a>

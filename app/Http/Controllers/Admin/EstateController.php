@@ -30,6 +30,7 @@ use Illuminate\Http\Request;
 use App\Services\NotificationService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\View;
@@ -324,11 +325,14 @@ class EstateController extends Controller
             ->orderBy('ust.unit_sub_type')
             ->pluck('ust.unit_sub_type', 'ust.pk');
 
-        // For self-service users (non-estate/admin/super-admin/HAC-person), resolve their own employee_master.pk
-        // so the Request For Estate form can be prefilled with their details.
-        if ($user && ! (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin') || hasRole('HAC Person'))) {
+        // Self-service + Home sidebar (?scope=self): resolve employee_master.pk for prefilled add form.
+        $needsSelfEmployeePk = $user && (
+            $this->isEstateAuthorityPersonalScope(request())
+            || ! (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin') || hasRole('HAC Person'))
+        );
+        if ($needsSelfEmployeePk) {
             $employeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null);
-            if (!empty($employeeIds)) {
+            if (! empty($employeeIds)) {
                 $selfEmployeePk = DB::table('employee_master')
                     ->whereIn('pk', $employeeIds)
                     ->orWhere(function ($q) use ($employeeIds) {
@@ -8122,6 +8126,36 @@ class EstateController extends Controller
     }
 
     /**
+     * Admin / Estate / Super Admin opening estate with ?scope=self (e.g. Home sidebar) should see only their own rows.
+     */
+    private function isEstateAuthorityPersonalScope(\Illuminate\Http\Request $request): bool
+    {
+        return $request->get('scope') === 'self'
+            && (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'));
+    }
+
+    /**
+     * Limit generate-bill / print queries (ehrd alias) to the current user's employee_pk(s).
+     *
+     * @param  \Illuminate\Database\Query\Builder  $query
+     */
+    private function applyGenerateEstateBillEmployeeSelfFilter($query): void
+    {
+        $user = \Illuminate\Support\Facades\Auth::user();
+        if (! $user) {
+            $query->whereRaw('1 = 0');
+
+            return;
+        }
+        $employeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null);
+        if (! empty($employeeIds)) {
+            $query->whereIn('ehrd.employee_pk', $employeeIds);
+        } else {
+            $query->whereRaw('1 = 0');
+        }
+    }
+
+    /**
      * Filter estate_month_reading_details (alias emrd) for Generate Bill / print: match selected Y-m by
      * to_date's calendar month when set (actual reading month), else bill_month + bill_year.
      *
@@ -8297,8 +8331,13 @@ class EstateController extends Controller
             $billMonth = $currentYm;
         }
         $unitSubTypePk = $request->get('unit_sub_type_pk');
-        $search = trim((string) $request->get('search', ''));
+        $searchRaw = trim((string) $request->get('search', ''));
         $bills = collect();
+
+        // Search: Setup → Estate only, for Admin / Estate / Super Admin (not Home ?scope=self). Others cannot use search (UI + query ignored).
+        $showGenerateEstateBillSearch = (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'))
+            && ! $this->isEstateAuthorityPersonalScope($request);
+        $search = $showGenerateEstateBillSearch ? $searchRaw : '';
 
         $hasUnitTypeOnSubType = \Illuminate\Support\Facades\Schema::hasColumn('estate_unit_sub_type_master', 'estate_unit_type_master_pk');
 
@@ -8355,17 +8394,9 @@ class EstateController extends Controller
 
             // RBAC: Non-admin/estate/super-admin/training/IST users should only see/generate their own bills.
             if (! (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST'))) {
-                $user = \Illuminate\Support\Facades\Auth::user();
-                if ($user) {
-                    $employeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null);
-                    if (!empty($employeeIds)) {
-                        $query->whereIn('ehrd.employee_pk', $employeeIds);
-                    } else {
-                        $query->whereRaw('1 = 0');
-                    }
-                } else {
-                    $query->whereRaw('1 = 0');
-                }
+                $this->applyGenerateEstateBillEmployeeSelfFilter($query);
+            } elseif ($this->isEstateAuthorityPersonalScope($request)) {
+                $this->applyGenerateEstateBillEmployeeSelfFilter($query);
             }
 
             if (!empty($unitSubTypePk)) {
@@ -8426,9 +8457,22 @@ class EstateController extends Controller
             }
         }
 
-        $showUnitSubTypeFilter = hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin');
+        $showUnitSubTypeFilter = (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'))
+            && ! $this->isEstateAuthorityPersonalScope($request);
 
-        return view('admin.estate.generate_estate_bill', compact('unitSubTypes', 'bills', 'billMonth', 'unitSubTypePk', 'search', 'showUnitSubTypeFilter'));
+        $estateBillIsPersonalView = $this->isEstateAuthorityPersonalScope($request)
+            || ! (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'));
+
+        return view('admin.estate.generate_estate_bill', compact(
+            'unitSubTypes',
+            'bills',
+            'billMonth',
+            'unitSubTypePk',
+            'search',
+            'showUnitSubTypeFilter',
+            'showGenerateEstateBillSearch',
+            'estateBillIsPersonalView'
+        ));
     }
 
     /**
@@ -8637,6 +8681,81 @@ class EstateController extends Controller
         })->values()->all();
 
         return response()->json(['status' => true, 'data' => $data]);
+    }
+
+    /**
+     * Estate bill PDF logo: Dompdf often fails on remote http(s) URLs; embed as data URI.
+     * Prefer local raster assets. Skip admin logo.svg for Dompdf — it embeds a seal bitmap plus vector text;
+     * Dompdf mostly paints the seal tiny in a wide box. Official PNG is a single seal suited to a small square beside the title block.
+     */
+    private function estateBillPdfLogoForDompdf(): string
+    {
+        foreach ([
+            public_path('images/lbsnaa_logo.jpg'),
+            public_path('images/lbsnaa_logo.png'),
+            public_path('admin_assets/images/logos/logo.png'),
+        ] as $path) {
+            $uri = $this->estatePdfTryFileToDataUri($path);
+            if ($uri !== null) {
+                return $uri;
+            }
+        }
+
+        $officialPng = 'https://www.lbsnaa.gov.in/admin_assets/images/logo.png';
+        $embedded = $this->estatePdfTryHttpToDataUri($officialPng, 'image/png');
+        if ($embedded !== null) {
+            return $embedded;
+        }
+
+        foreach ([
+            public_path('admin_assets/images/logos/logo.svg'),
+            public_path('admin_assets/images/logos/logo-icon.svg'),
+        ] as $path) {
+            $uri = $this->estatePdfTryFileToDataUri($path);
+            if ($uri !== null) {
+                return $uri;
+            }
+        }
+
+        return $officialPng;
+    }
+
+    private function estatePdfTryFileToDataUri(string $path): ?string
+    {
+        if (! is_file($path) || ! is_readable($path)) {
+            return null;
+        }
+        $raw = @file_get_contents($path);
+        if ($raw === false || $raw === '') {
+            return null;
+        }
+        $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+        $mime = match ($ext) {
+            'png' => 'image/png',
+            'webp' => 'image/webp',
+            'gif' => 'image/gif',
+            'svg' => 'image/svg+xml',
+            default => 'image/jpeg',
+        };
+
+        return 'data:'.$mime.';base64,'.base64_encode($raw);
+    }
+
+    private function estatePdfTryHttpToDataUri(string $url, string $mime): ?string
+    {
+        try {
+            $response = Http::timeout(20)->connectTimeout(8)->get($url);
+            if ($response->successful()) {
+                $body = $response->body();
+                if ($body !== '' && strlen($body) > 100) {
+                    return 'data:'.$mime.';base64,'.base64_encode($body);
+                }
+            }
+        } catch (\Throwable $e) {
+            // Dompdf will not reliably load remote URLs; caller falls back.
+        }
+
+        return null;
     }
 
     /**
@@ -8908,7 +9027,8 @@ class EstateController extends Controller
             // Direct bill link (from Generate Estate Bill): when bill_no is present,
             // return a streamed PDF so browser shows PDF preview.
             if (!empty($billNo)) {
-                $pdf = Pdf::loadView('admin.estate.estate_bill_report_print_single_pdf', compact('bill'))
+                $estateBillLogoSrc = $this->estateBillPdfLogoForDompdf();
+                $pdf = Pdf::loadView('admin.estate.estate_bill_report_print_single_pdf', compact('bill', 'estateBillLogoSrc'))
                     ->setPaper('a4', 'portrait');
                 $filename = 'estate-bill-' . preg_replace('/[^A-Za-z0-9\-]/', '', (string) ($bill->bill_no ?? 'bill')) . '.pdf';
                 return $pdf->stream($filename);
@@ -8995,7 +9115,11 @@ class EstateController extends Controller
         $bills = collect();
         $isSelectedPrint = false;
         $isOtherSelected = false;
-        $backUrl = route('admin.estate.generate-estate-bill');
+        $backUrl = route('admin.estate.generate-estate-bill', array_filter([
+            'bill_month' => $billMonth,
+            'unit_sub_type_pk' => $unitSubTypePk,
+            'scope' => $this->isEstateAuthorityPersonalScope($request) ? 'self' : null,
+        ], static fn ($v) => $v !== null && $v !== ''));
 
         $selectedPksRaw = $request->get('selected_pks');
         $selectedPks = collect(is_array($selectedPksRaw) ? $selectedPksRaw : explode(',', (string) $selectedPksRaw))
@@ -9139,13 +9263,18 @@ class EstateController extends Controller
                 $query->where('ehm.estate_unit_sub_type_master_pk', $unitSubTypePk);
             }
 
+            if ($this->isEstateAuthorityPersonalScope($request)) {
+                $this->applyGenerateEstateBillEmployeeSelfFilter($query);
+            }
+
             if (!empty($selectedPks)) {
                 $isSelectedPrint = true;
                 $query->whereIn('emrd.pk', $selectedPks);
-                $backUrl = route('admin.estate.generate-estate-bill', [
+                $backUrl = route('admin.estate.generate-estate-bill', array_filter([
                     'bill_month' => $billMonth,
                     'unit_sub_type_pk' => $unitSubTypePk,
-                ]);
+                    'scope' => $this->isEstateAuthorityPersonalScope($request) ? 'self' : null,
+                ], static fn ($v) => $v !== null && $v !== ''));
             }
 
             $bills = $this->orderEstateGenerateBillQueryLatestFirst($query)->get();
@@ -9260,6 +9389,10 @@ class EstateController extends Controller
                 $query->where('ehm.estate_unit_sub_type_master_pk', $unitSubTypePk);
             }
 
+            if ($this->isEstateAuthorityPersonalScope($request)) {
+                $this->applyGenerateEstateBillEmployeeSelfFilter($query);
+            }
+
             $bills = $this->orderEstateGenerateBillQueryLatestFirst($query)->get();
 
             foreach ($bills as $b) {
@@ -9314,7 +9447,8 @@ class EstateController extends Controller
                 ->with('error', 'No bills found for the selected filters.');
         }
 
-        $pdf = Pdf::loadView('admin.estate.estate_bill_report_print_all_pdf', compact('bills'))
+        $estateBillLogoSrc = $this->estateBillPdfLogoForDompdf();
+        $pdf = Pdf::loadView('admin.estate.estate_bill_report_print_all_pdf', compact('bills', 'estateBillLogoSrc'))
             ->setPaper('a4', 'portrait');
 
         $filename = 'estate-bills-' . str_replace('-', '', $billMonth ?? 'all') . '.pdf';
