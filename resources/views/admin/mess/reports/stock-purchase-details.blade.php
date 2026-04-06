@@ -335,7 +335,7 @@ function printStockPurchaseTable() {
             background-color: #003366 !important;
             color: #fff !important;
             font-weight: 600;
-            font-size: 0.8125rem;
+            font-size: 11pt;
         }
         .mess-brand-line-1 {
             color: #1d70b8;
@@ -368,7 +368,7 @@ function printStockPurchaseTable() {
             border-bottom: 1px solid #dee2e6;
         }
         .report-title-center {
-            font-size: 15px;
+            font-size: 11pt;
             font-weight: 700;
             text-transform: uppercase;
             margin: 0 0 8px;
@@ -380,24 +380,24 @@ function printStockPurchaseTable() {
             padding: 8px 12px;
             text-align: center;
             font-weight: 600;
-            font-size: 10px;
+            font-size: 11pt;
             display: inline-block;
         }
         .report-vendor-name, .report-store-name {
-            font-size: 10px;
+            font-size: 11pt;
             font-weight: 600;
             margin-top: 8px;
             color: #212529;
         }
-        .report-store-name { font-size: 9px; margin-top: 4px; }
+        .report-store-name { font-size: 11pt; margin-top: 4px; }
         .text-muted { color: #6c757d; font-weight: 600; }
-        .report-meta-print { font-size: 9px; margin: 10px 0 12px; line-height: 1.4; }
+        .report-meta-print { font-size: 11pt; margin: 10px 0 12px; line-height: 1.4; }
         .report-meta-print .meta-line { margin-bottom: 4px; word-wrap: break-word; }
         .vendor-detail-table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 4px;
-            font-size: 8.5px;
+            font-size: 11pt;
         }
         .vendor-detail-table th,
         .vendor-detail-table td {
@@ -414,7 +414,7 @@ function printStockPurchaseTable() {
         table.stock-purchase-data {
             width: 100%;
             border-collapse: collapse;
-            font-size: 9px;
+            font-size: 11pt;
             margin-bottom: 10px;
         }
         table.stock-purchase-data th,
@@ -438,7 +438,7 @@ function printStockPurchaseTable() {
             background: #e9ecef;
             color: #212529;
             font-weight: 700;
-            font-size: 9.5px;
+            font-size: 11pt;
             border-color: #adb5bd;
         }
         table.stock-purchase-data .bill-header-row td,
@@ -467,6 +467,19 @@ function printStockPurchaseTable() {
         table.stock-purchase-data td.py-5 { padding-top: 2rem !important; padding-bottom: 2rem !important; }
         thead { display: table-header-group; }
         tfoot { display: table-footer-group; }
+        .print-report-card-header {
+            font-size: 11pt;
+        }
+        body h1.h5,
+        body .card-body.small,
+        body .fw-semibold.small,
+        body .small {
+            font-size: 11pt;
+        }
+        body .table-sm th,
+        body .table-sm td {
+            font-size: 11pt;
+        }
         @media print {
             body { margin: 0.5in !important; padding: 0 !important; }
             .bg-body-tertiary { background-color: #fff !important; }
@@ -492,12 +505,7 @@ function printStockPurchaseTable() {
                     <img src="${lbsnaaLogoSrc}" alt="LBSNAA" class="flex-shrink-0 rounded" height="48" style="object-fit:contain;">
                 </div>
             </div>
-                    <div class="branding-left-clear"></div>
-                </td>
-            </tr>
-        </table>
-    </div>
-
+        </div>
     </header>
 
     <section class="card border-0 shadow-sm mb-3 bg-white">
@@ -510,7 +518,7 @@ function printStockPurchaseTable() {
     </section>
 
     <section class="card border shadow-sm mb-3 bg-white">
-        <div class="card-header py-2 small fw-semibold bg-body-secondary border-bottom">
+        <div class="card-header py-2 small fw-semibold bg-body-secondary border-bottom print-report-card-header">
             Report context
         </div>
         <div class="card-body py-3 small">
@@ -522,7 +530,7 @@ function printStockPurchaseTable() {
     </section>
 
     <section class="card border shadow-sm overflow-hidden bg-white">
-        <div class="card-header py-2 small fw-semibold bg-body-secondary border-bottom">
+        <div class="card-header py-2 small fw-semibold bg-body-secondary border-bottom print-report-card-header">
             Purchase line items
         </div>
         <div class="card-body p-0">
@@ -586,7 +594,7 @@ function printStockPurchaseTable() {
 
 .mess-title-tracking { letter-spacing: 0.04em; }
 .mess-report-date-pill { background-color: #003366 !important; }
-.stock-purchase-report .stock-purchase-table { font-size: 0.9rem; }
+.stock-purchase-report .stock-purchase-table { font-size: 11pt; }
 .stock-purchase-report .vendor-section-header-row .vendor-section-header {
     background-color: #f1f3f5;
     color: #212529;

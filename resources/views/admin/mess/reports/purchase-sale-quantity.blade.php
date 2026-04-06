@@ -318,7 +318,7 @@
 
 {{-- Tom Select: view, category, item & store filters --}}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css">
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" rel="stylesheet" />
+<link rel="stylesheet" href="{{ asset('admin_assets/css/material-icons-local.css') }}" />
 
 <style>
     @media print {

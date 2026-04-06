@@ -35,27 +35,27 @@
         <table class="table table-fit align-middle mb-0 w-100 stock-summary-data-table ssr-table">
             <thead class="ssr-thead">
                 <tr>
-                    <th rowspan="2" class="sss-th-fixed text-center align-middle text-nowrap">SR.<br>No</th>
-                    <th rowspan="2" class="sss-th-fixed text-center align-middle">Item name</th>
-                    <th rowspan="2" class="sss-th-fixed align-middle text-end text-nowrap">Unit</th>
-                    <th colspan="3" class="sss-grp ssr-grp-opening text-center">Opening</th>
-                    <th colspan="3" class="sss-grp ssr-grp-purchase text-center">Purchase</th>
-                    <th colspan="3" class="sss-grp ssr-grp-sale text-center">Sale</th>
-                    <th colspan="3" class="sss-grp ssr-grp-closing text-center">Closing</th>
+                    <th rowspan="2" class="sss-th-fixed text-center align-middle text-nowrap">SR.<br>No.</th>
+                    <th rowspan="2" class="sss-th-fixed text-start align-middle">Item Name</th>
+                    <th rowspan="2" class="sss-th-fixed text-center align-middle text-nowrap">Unit</th>
+                    <th colspan="3" class="sss-grp ssr-grp-opening text-center align-middle">Opening</th>
+                    <th colspan="3" class="sss-grp ssr-grp-purchase text-center align-middle">Purchase</th>
+                    <th colspan="3" class="sss-grp ssr-grp-sale text-center align-middle">Sale</th>
+                    <th colspan="3" class="sss-grp ssr-grp-closing text-center align-middle">Closing</th>
                 </tr>
                 <tr>
-                    <th class="sss-sub ssr-grp-opening text-end">Qty</th>
-                    <th class="sss-sub ssr-grp-opening text-end">Rate</th>
-                    <th class="sss-sub ssr-grp-opening text-end">Amount</th>
-                    <th class="sss-sub ssr-grp-purchase text-end">Qty</th>
-                    <th class="sss-sub ssr-grp-purchase text-end">Rate</th>
-                    <th class="sss-sub ssr-grp-purchase text-end">Amount</th>
-                    <th class="sss-sub ssr-grp-sale text-end">Qty</th>
-                    <th class="sss-sub ssr-grp-sale text-end">Rate</th>
-                    <th class="sss-sub ssr-grp-sale text-end">Amount</th>
-                    <th class="sss-sub ssr-grp-closing text-end">Qty</th>
-                    <th class="sss-sub ssr-grp-closing text-end">Rate</th>
-                    <th class="sss-sub ssr-grp-closing text-end">Amount</th>
+                    <th class="sss-sub ssr-grp-opening text-end text-nowrap">Qty</th>
+                    <th class="sss-sub ssr-grp-opening text-end text-nowrap">Rate</th>
+                    <th class="sss-sub ssr-grp-opening text-end text-nowrap">Amount</th>
+                    <th class="sss-sub ssr-grp-purchase text-end text-nowrap">Qty</th>
+                    <th class="sss-sub ssr-grp-purchase text-end text-nowrap">Rate</th>
+                    <th class="sss-sub ssr-grp-purchase text-end text-nowrap">Amount</th>
+                    <th class="sss-sub ssr-grp-sale text-end text-nowrap">Qty</th>
+                    <th class="sss-sub ssr-grp-sale text-end text-nowrap">Rate</th>
+                    <th class="sss-sub ssr-grp-sale text-end text-nowrap">Amount</th>
+                    <th class="sss-sub ssr-grp-closing text-end text-nowrap">Qty</th>
+                    <th class="sss-sub ssr-grp-closing text-end text-nowrap">Rate</th>
+                    <th class="sss-sub ssr-grp-closing text-end text-nowrap">Amount</th>
                 </tr>
             </thead>
             <tbody>
@@ -69,20 +69,20 @@
                 @forelse($rows as $index => $item)
                     <tr class="sss-body-row">
                         <td class="text-center text-nowrap ssr-num ssr-cell-fixed">{{ $serialStart + $index }}</td>
-                        <td class="fw-semibold ssr-item-name ssr-cell-fixed">{{ $item['item_name'] }}</td>
-                        <td class="text-end ssr-num ssr-cell-fixed">{{ isset($item['unit']) && is_numeric($item['unit']) ? number_format((float)$item['unit'], 2) : ($item['unit'] ?? '—') }}</td>
-                        <td class="text-end ssr-num ssr-grp-opening">{{ number_format($item['opening_qty'], 2) }}</td>
-                        <td class="text-end ssr-num ssr-grp-opening">₹{{ number_format($item['opening_rate'], 2) }}</td>
-                        <td class="text-end ssr-num ssr-grp-opening ssr-amt">₹{{ number_format($item['opening_amount'], 2) }}</td>
-                        <td class="text-end ssr-num ssr-grp-purchase">{{ number_format($item['purchase_qty'], 2) }}</td>
-                        <td class="text-end ssr-num ssr-grp-purchase">₹{{ number_format($item['purchase_rate'], 2) }}</td>
-                        <td class="text-end ssr-num ssr-grp-purchase ssr-amt">₹{{ number_format($item['purchase_amount'], 2) }}</td>
-                        <td class="text-end ssr-num ssr-grp-sale">{{ number_format($item['sale_qty'], 2) }}</td>
-                        <td class="text-end ssr-num ssr-grp-sale">₹{{ number_format($item['sale_rate'], 2) }}</td>
-                        <td class="text-end ssr-num ssr-grp-sale ssr-amt">₹{{ number_format($item['sale_amount'], 2) }}</td>
-                        <td class="text-end ssr-num ssr-grp-closing">{{ number_format($item['closing_qty'], 2) }}</td>
-                        <td class="text-end ssr-num ssr-grp-closing">₹{{ number_format($item['closing_rate'], 2) }}</td>
-                        <td class="text-end ssr-num ssr-grp-closing ssr-amt">₹{{ number_format($item['closing_amount'], 2) }}</td>
+                        <td class="text-start fw-medium ssr-item-name ssr-cell-fixed">{{ $item['item_name'] }}</td>
+                        <td class="text-center text-nowrap ssr-num ssr-cell-fixed">{{ $item['unit'] ?? '—' }}</td>
+                        <td class="text-end text-nowrap ssr-num ssr-grp-opening">{{ number_format($item['opening_qty'], 2) }}</td>
+                        <td class="text-end text-nowrap ssr-num ssr-grp-opening">₹{{ number_format($item['opening_rate'], 2) }}</td>
+                        <td class="text-end text-nowrap ssr-num ssr-grp-opening ssr-amt">₹{{ number_format($item['opening_amount'], 2) }}</td>
+                        <td class="text-end text-nowrap ssr-num ssr-grp-purchase">{{ number_format($item['purchase_qty'], 2) }}</td>
+                        <td class="text-end text-nowrap ssr-num ssr-grp-purchase">₹{{ number_format($item['purchase_rate'], 2) }}</td>
+                        <td class="text-end text-nowrap ssr-num ssr-grp-purchase ssr-amt">₹{{ number_format($item['purchase_amount'], 2) }}</td>
+                        <td class="text-end text-nowrap ssr-num ssr-grp-sale">{{ number_format($item['sale_qty'], 2) }}</td>
+                        <td class="text-end text-nowrap ssr-num ssr-grp-sale">₹{{ number_format($item['sale_rate'], 2) }}</td>
+                        <td class="text-end text-nowrap ssr-num ssr-grp-sale ssr-amt">₹{{ number_format($item['sale_amount'], 2) }}</td>
+                        <td class="text-end text-nowrap ssr-num ssr-grp-closing">{{ number_format($item['closing_qty'], 2) }}</td>
+                        <td class="text-end text-nowrap ssr-num ssr-grp-closing">₹{{ number_format($item['closing_rate'], 2) }}</td>
+                        <td class="text-end text-nowrap ssr-num ssr-grp-closing ssr-amt">₹{{ number_format($item['closing_amount'], 2) }}</td>
                     </tr>
                 @empty
                     <tr>
@@ -100,21 +100,21 @@
                     ($reportTotals['sale_amount'] ?? 0) != 0 ||
                     ($reportTotals['closing_amount'] ?? 0) != 0)
                     <tr class="sss-totals-row">
-                        <td colspan="3" class="text-end ssr-totals-label ssr-cell-fixed">
+                        <td colspan="3" class="text-end fw-bold ssr-totals-label ssr-cell-fixed">
                             Total
                         </td>
-                        <td class="text-end ssr-num ssr-grp-opening ssr-totals-dash">—</td>
-                        <td class="text-end ssr-num ssr-grp-opening ssr-totals-dash">—</td>
-                        <td class="text-end ssr-num ssr-grp-opening ssr-amt">₹{{ number_format(($reportTotals['opening_amount'] ?? 0), 2) }}</td>
-                        <td class="text-end ssr-num ssr-grp-purchase ssr-totals-dash">—</td>
-                        <td class="text-end ssr-num ssr-grp-purchase ssr-totals-dash">—</td>
-                        <td class="text-end ssr-num ssr-grp-purchase ssr-amt">₹{{ number_format(($reportTotals['purchase_amount'] ?? 0), 2) }}</td>
-                        <td class="text-end ssr-num ssr-grp-sale ssr-totals-dash">—</td>
-                        <td class="text-end ssr-num ssr-grp-sale ssr-totals-dash">—</td>
-                        <td class="text-end ssr-num ssr-grp-sale ssr-amt">₹{{ number_format(($reportTotals['sale_amount'] ?? 0), 2) }}</td>
-                        <td class="text-end ssr-num ssr-grp-closing ssr-totals-dash">—</td>
-                        <td class="text-end ssr-num ssr-grp-closing ssr-totals-dash">—</td>
-                        <td class="text-end ssr-num ssr-grp-closing ssr-amt">₹{{ number_format(($reportTotals['closing_amount'] ?? 0), 2) }}</td>
+                        <td class="text-end text-nowrap ssr-num ssr-grp-opening ssr-totals-dash">—</td>
+                        <td class="text-end text-nowrap ssr-num ssr-grp-opening ssr-totals-dash">—</td>
+                        <td class="text-end text-nowrap fw-bold ssr-num ssr-grp-opening ssr-amt">₹{{ number_format(($reportTotals['opening_amount'] ?? 0), 2) }}</td>
+                        <td class="text-end text-nowrap ssr-num ssr-grp-purchase ssr-totals-dash">—</td>
+                        <td class="text-end text-nowrap ssr-num ssr-grp-purchase ssr-totals-dash">—</td>
+                        <td class="text-end text-nowrap fw-bold ssr-num ssr-grp-purchase ssr-amt">₹{{ number_format(($reportTotals['purchase_amount'] ?? 0), 2) }}</td>
+                        <td class="text-end text-nowrap ssr-num ssr-grp-sale ssr-totals-dash">—</td>
+                        <td class="text-end text-nowrap ssr-num ssr-grp-sale ssr-totals-dash">—</td>
+                        <td class="text-end text-nowrap fw-bold ssr-num ssr-grp-sale ssr-amt">₹{{ number_format(($reportTotals['sale_amount'] ?? 0), 2) }}</td>
+                        <td class="text-end text-nowrap ssr-num ssr-grp-closing ssr-totals-dash">—</td>
+                        <td class="text-end text-nowrap ssr-num ssr-grp-closing ssr-totals-dash">—</td>
+                        <td class="text-end text-nowrap fw-bold ssr-num ssr-grp-closing ssr-amt">₹{{ number_format(($reportTotals['closing_amount'] ?? 0), 2) }}</td>
                     </tr>
                 @endif
             </tbody>

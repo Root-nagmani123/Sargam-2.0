@@ -9,19 +9,19 @@
         <x-breadcrum title="Purchase Orders"></x-breadcrum>
     </div>
     <div class="datatables">
-        <div class="card shadow-sm border-0 rounded-4 overflow-hidden">
-            <div class="card-header bg-body-tertiary border-0 py-3 px-3 px-md-4">
+        <div class="card shadow-lg border-0 rounded-4 overflow-hidden">
+            <div class="card-header bg-gradient border-0 py-3 px-3 px-md-4" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
                 <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 no-print">
                     <div class="d-flex align-items-start gap-3">
-                        <div class="rounded-3 bg-primary bg-opacity-10 text-primary d-none d-sm-flex align-items-center justify-content-center flex-shrink-0" style="width: 2.75rem; height: 2.75rem;">
-                            <i class="material-icons material-symbol-rounded" style="font-size: 1.35rem;" aria-hidden="true">receipt_long</i>
+                        <div class="rounded-4 bg-primary bg-gradient text-white d-none d-sm-flex align-items-center justify-content-center flex-shrink-0 shadow-sm" style="width: 3rem; height: 3rem;">
+                            <i class="material-icons material-symbol-rounded" style="font-size: 1.5rem;" aria-hidden="true">receipt_long</i>
                         </div>
                         <div>
-                            <h4 class="mb-1 fw-semibold text-body">Purchase Orders</h4>
-                            <p class="mb-0 text-body-secondary small">Filter the list, open a row to view, or create a new purchase order.</p>
+                            <h4 class="mb-1 fw-bold text-dark">Purchase Orders</h4>
+                            <p class="mb-0 text-body-secondary small fw-medium">Filter the list, open a row to view, or create a new purchase order.</p>
                         </div>
                     </div>
-                    <button type="button" class="btn btn-primary px-3 py-2 rounded-3 d-inline-flex align-items-center gap-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#createPurchaseOrderModal">
+                    <button type="button" class="btn btn-primary px-4 py-2 rounded-pill d-inline-flex align-items-center gap-2 shadow-sm fw-semibold" data-bs-toggle="modal" data-bs-target="#createPurchaseOrderModal" style="transition: all 0.3s ease;">
                         <i class="material-icons material-symbol-rounded" style="font-size: 1.1rem;" aria-hidden="true">add</i>
                         <span class="d-none d-sm-inline">Create Purchase Order</span>
                         <span class="d-inline d-sm-none">New</span>
@@ -30,54 +30,54 @@
             </div>
             <div class="card-body p-3 p-md-4">
                 @if(session('success'))
-                    <div class="alert alert-success alert-dismissible fade show shadow-sm border-0 rounded-3 d-flex align-items-start gap-2" role="alert">
-                        <i class="material-icons material-symbol-rounded flex-shrink-0" style="font-size: 1.25rem;" aria-hidden="true">check_circle</i>
-                        <div class="flex-grow-1">{{ session('success') }}</div>
+                    <div class="alert alert-success alert-dismissible fade show shadow-lg border-0 rounded-4 d-flex align-items-start gap-3 bg-gradient" role="alert" style="background: linear-gradient(135deg, #d1f4e0 0%, #a8e6cf 100%); border-left: 4px solid #28a745 !important;">
+                        <i class="material-icons material-symbol-rounded flex-shrink-0 text-success" style="font-size: 1.5rem;" aria-hidden="true">check_circle</i>
+                        <div class="flex-grow-1 fw-medium">{{ session('success') }}</div>
                         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
                 @endif
 
                 {{-- Filters --}}
-                <form method="GET" action="{{ route('admin.mess.purchaseorders.index') }}" class="card border-0 shadow-sm rounded-4 mb-4 no-print po-filter-card" aria-label="Purchase order list filters">
-                    <div class="card-header bg-white border-bottom py-3 px-3 px-md-4 d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <form method="GET" action="{{ route('admin.mess.purchaseorders.index') }}" class="card border-0 shadow-lg rounded-4 mb-4 no-print po-filter-card" aria-label="Purchase order list filters">
+                    <div class="card-header bg-gradient border-bottom py-3 px-3 px-md-4 d-flex flex-wrap align-items-center justify-content-between gap-3" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
                         <div class="d-flex align-items-start gap-3">
-                            <span class="rounded-3 bg-primary bg-opacity-10 text-primary d-inline-flex align-items-center justify-content-center flex-shrink-0" style="width: 2.5rem; height: 2.5rem;" aria-hidden="true">
-                                <i class="material-icons material-symbol-rounded" style="font-size: 1.25rem;">tune</i>
+                            <span class="rounded-4 bg-primary bg-gradient text-white d-inline-flex align-items-center justify-content-center flex-shrink-0 shadow-sm" style="width: 2.75rem; height: 2.75rem;" aria-hidden="true">
+                                <i class="material-icons material-symbol-rounded" style="font-size: 1.35rem;">tune</i>
                             </span>
                             <div>
-                                <h6 class="mb-0 fw-semibold text-body">Refine results</h6>
-                                <p class="mb-0 small text-body-secondary">Set a period, then narrow by vendor and store. Multi-select is supported.</p>
+                                <h6 class="mb-0 fw-bold text-dark">Refine results</h6>
+                                <p class="mb-0 small text-body-secondary fw-medium">Set a period, then narrow by vendor and store. Multi-select is supported.</p>
                             </div>
                         </div>
                     </div>
-                    <div class="card-body p-3 p-md-4 bg-body-secondary bg-opacity-10">
+                    <div class="card-body p-3 p-md-4" style="background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);">
                         <div class="row g-4 align-items-stretch">
                             <div class="col-12 col-lg-5 col-xl-4">
-                                <div class="h-100 rounded-4 border bg-body p-3 p-md-4 shadow-sm">
+                                <div class="h-100 rounded-4 border-0 bg-white p-3 p-md-4 shadow-sm">
                                     <div class="d-flex align-items-center gap-2 mb-3">
-                                        <span class="badge rounded-pill text-bg-light border fw-semibold text-uppercase" style="font-size: 0.65rem; letter-spacing: 0.06em;">Period</span>
-                                        <span class="small text-body-secondary">Order date range</span>
+                                        <span class="badge rounded-pill bg-primary bg-gradient text-white fw-bold text-uppercase shadow-sm" style="font-size: 0.7rem; letter-spacing: 0.08em; padding: 0.35rem 0.75rem;">Period</span>
+                                        <span class="small text-body-secondary fw-medium">Order date range</span>
                                     </div>
                                     <div class="row g-3">
                                         <div class="col-sm-6">
-                                            <label class="form-label fw-semibold small mb-1" for="poFilterDateFrom">From</label>
-                                            <div class="rounded-3 overflow-hidden shadow-sm">
-                                                <div class="input-group">
-                                                    <span class="input-group-text px-3" id="poFilterDateFrom-addon">
-                                                        <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;" aria-hidden="true">event</i>
+                                            <label class="form-label fw-bold small mb-2 text-dark" for="poFilterDateFrom">From</label>
+                                            <div class="rounded-3 overflow-hidden">
+                                                <div class="input-group input-group-sm shadow">
+                                                    <span class="input-group-text bg-light border-end-0 px-3" id="poFilterDateFrom-addon">
+                                                        <i class="material-icons material-symbol-rounded text-primary" style="font-size: 1.125rem;" aria-hidden="true">event</i>
                                                     </span>
-                                                    <input type="date" name="date_from" id="poFilterDateFrom" class="form-control form-control-sm border-secondary-subtle" value="{{ $filterDateFrom }}" aria-describedby="poFilterDateFrom-addon">
+                                                    <input type="date" name="date_from" id="poFilterDateFrom" class="form-control border-start-0 ps-0" value="{{ $filterDateFrom }}" aria-describedby="poFilterDateFrom-addon">
                                                 </div>
                                             </div>
                                         </div>
                                         <div class="col-sm-6">
-                                            <label class="form-label fw-semibold small mb-1" for="poFilterDateTo">To</label>
-                                            <div class="rounded-3 overflow-hidden shadow-sm">
-                                                <div class="input-group">
-                                                    <span class="input-group-text text-body-secondary px-3" id="poFilterDateTo-addon">
-                                                        <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;" aria-hidden="true">event</i>
+                                            <label class="form-label fw-bold small mb-2 text-dark" for="poFilterDateTo">To</label>
+                                            <div class="rounded-3 overflow-hidden">
+                                                <div class="input-group input-group-sm shadow">
+                                                    <span class="input-group-text bg-light border-end-0 px-3" id="poFilterDateTo-addon">
+                                                        <i class="material-icons material-symbol-rounded text-primary" style="font-size: 1.125rem;" aria-hidden="true">event</i>
                                                     </span>
-                                                    <input type="date" name="date_to" id="poFilterDateTo" class="form-control form-control-sm border-secondary-subtle" value="{{ $filterDateTo }}" aria-describedby="poFilterDateTo-addon">
+                                                    <input type="date" name="date_to" id="poFilterDateTo" class="form-control border-start-0 ps-0" value="{{ $filterDateTo }}" aria-describedby="poFilterDateTo-addon">
                                                 </div>
                                             </div>
                                         </div>
@@ -85,60 +85,60 @@
                                 </div>
                             </div>
                             <div class="col-12 col-lg-7 col-xl-8">
-                                <div class="h-100 rounded-4 border border-light-subtle bg-body p-3 p-md-4 shadow-sm">
+                                <div class="h-100 rounded-4 border-0 bg-white p-3 p-md-4 shadow-sm">
                                     <div class="d-flex align-items-center gap-2 mb-3">
-                                        <span class="badge rounded-pill text-bg-light border text-body-secondary fw-semibold text-uppercase" style="font-size: 0.65rem; letter-spacing: 0.06em;">Scope</span>
-                                        <span class="small text-body-secondary">Vendors and stores <span class="d-none d-sm-inline">(leave blank for all)</span></span>
+                                        <span class="badge rounded-pill bg-success bg-gradient text-white fw-bold text-uppercase shadow-sm" style="font-size: 0.7rem; letter-spacing: 0.08em; padding: 0.35rem 0.75rem;">Scope</span>
+                                        <span class="small text-body-secondary fw-medium">Vendors and stores <span class="d-none d-sm-inline">(leave blank for all)</span></span>
                                     </div>
                                     <div class="row g-3 align-items-start">
                                         <div class="col-12 col-md-6">
-                                            <label class="form-label fw-semibold small mb-1" for="poFilterVendor">Vendors</label>
-                                            <div class="input-group input-group-sm shadow-sm rounded-3 po-filter-multiselect-wrap">
-                                                <span class="input-group-text border-secondary-subtle" id="poFilterVendor-addon" aria-hidden="true">
-                                                    <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;">local_shipping</i>
+                                            <label class="form-label fw-bold small mb-2 text-dark" for="poFilterVendor">Vendors</label>
+                                            <div class="input-group input-group-sm shadow rounded-3 po-filter-multiselect-wrap">
+                                                <span class="input-group-text bg-light border-end-0" id="poFilterVendor-addon" aria-hidden="true">
+                                                    <i class="material-icons material-symbol-rounded text-primary" style="font-size: 1.125rem;">local_shipping</i>
                                                 </span>
-                                                <select name="vendor_id[]" id="poFilterVendor" multiple class="form-select form-select-sm rounded-0 border-secondary-subtle po-filter-ts-vendor" data-placeholder="All vendors" aria-label="Filter by one or more vendors" aria-describedby="poFilterVendor-addon">
+                                                <select name="vendor_id[]" id="poFilterVendor" multiple class="form-select form-select-sm rounded-0 border-start-0 po-filter-ts-vendor" data-placeholder="All vendors" aria-label="Filter by one or more vendors" aria-describedby="poFilterVendor-addon">
                                                     @foreach($vendors as $v)
                                                         <option value="{{ $v->id }}" {{ in_array((int) $v->id, $filterVendorIds ?? [], true) ? 'selected' : '' }}>{{ $v->name }}</option>
                                                     @endforeach
                                                 </select>
                                             </div>
-                                            <div class="form-text mt-1 mb-0">All vendors when none selected. Type to search.</div>
+                                            <div class="form-text mt-1 mb-0 fst-italic">All vendors when none selected. Type to search.</div>
                                         </div>
                                         <div class="col-12 col-md-6">
-                                            <label class="form-label fw-semibold small mb-1" for="poFilterStore">Stores</label>
-                                            <div class="input-group input-group-sm shadow-sm rounded-3 po-filter-multiselect-wrap">
-                                                <span class="input-group-text border-secondary-subtle" id="poFilterStore-addon" aria-hidden="true">
-                                                    <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;">storefront</i>
+                                            <label class="form-label fw-bold small mb-2 text-dark" for="poFilterStore">Stores</label>
+                                            <div class="input-group input-group-sm shadow rounded-3 po-filter-multiselect-wrap">
+                                                <span class="input-group-text bg-light border-end-0" id="poFilterStore-addon" aria-hidden="true">
+                                                    <i class="material-icons material-symbol-rounded text-primary" style="font-size: 1.125rem;">storefront</i>
                                                 </span>
-                                                <select name="store_id[]" id="poFilterStore" multiple class="form-select form-select-sm rounded-0 border-secondary-subtle po-filter-ts-store" data-placeholder="All stores" aria-label="Filter by one or more stores" aria-describedby="poFilterStore-addon">
+                                                <select name="store_id[]" id="poFilterStore" multiple class="form-select form-select-sm rounded-0 border-start-0" data-placeholder="All stores" aria-label="Filter by one or more stores" aria-describedby="poFilterStore-addon">
                                                     @foreach($stores as $s)
                                                         <option value="{{ $s->id }}" {{ in_array((int) $s->id, $filterStoreIds ?? [], true) ? 'selected' : '' }}>{{ $s->store_name }}</option>
                                                     @endforeach
                                                 </select>
                                             </div>
-                                            <div class="form-text mt-1 mb-0">All stores when none selected. Type to search.</div>
+                                            <div class="form-text mt-1 mb-0 fst-italic">All stores when none selected. Type to search.</div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                             <div class="col-12">
-                                <div class="d-flex flex-column flex-md-row flex-wrap align-items-stretch align-items-md-center justify-content-between gap-3 pt-3 mt-2 border-top border-light-subtle">
+                                <div class="d-flex flex-column flex-md-row flex-wrap align-items-stretch align-items-md-center justify-content-between gap-3 pt-3 mt-2 border-top">
                                     <div class="d-flex flex-wrap gap-2">
-                                        <button type="submit" class="btn btn-primary rounded-3 d-inline-flex align-items-center justify-content-center gap-2 px-3 py-2 shadow-sm">
+                                        <button type="submit" class="btn btn-primary rounded-pill d-inline-flex align-items-center justify-content-center gap-2 px-4 py-2 shadow-sm fw-semibold" style="transition: all 0.3s ease;">
                                             <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;" aria-hidden="true">filter_alt</i>
                                             <span>Apply filters</span>
                                         </button>
-                                        <a href="{{ route('admin.mess.purchaseorders.index') }}" class="btn btn-outline-secondary rounded-3 d-inline-flex align-items-center justify-content-center gap-2 py-2">
+                                        <a href="{{ route('admin.mess.purchaseorders.index') }}" class="btn btn-outline-secondary rounded-pill d-inline-flex align-items-center justify-content-center gap-2 px-4 py-2 fw-semibold" style="transition: all 0.3s ease;">
                                             <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;" aria-hidden="true">restart_alt</i>
                                             <span>Clear</span>
                                         </a>
-                                        <button type="button" class="btn btn-outline-primary rounded-3 d-inline-flex align-items-center justify-content-center gap-2 py-2" onclick="window.print()" title="Print list or Save as PDF">
+                                        <button type="button" class="btn btn-outline-primary rounded-pill d-inline-flex align-items-center justify-content-center gap-2 px-4 py-2 fw-semibold" onclick="window.print()" title="Print list or Save as PDF" style="transition: all 0.3s ease;">
                                             <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;" aria-hidden="true">print</i>
                                             <span>Print</span>
                                         </button>
                                     </div>
-                                    <p class="mb-0 small text-body-secondary text-center text-md-end ms-md-auto flex-shrink-0" style="max-width: 28rem;">Tip: use the search field in each dropdown to find vendors or stores. Remove chips to clear a selection; leave both empty for all.</p>
+                                    <p class="mb-0 small text-body-secondary text-center text-md-end ms-md-auto flex-shrink-0 fst-italic" style="max-width: 28rem;">Tip: use the search field in each dropdown to find vendors or stores. Remove chips to clear a selection; leave both empty for all.</p>
                                 </div>
                             </div>
                         </div>
@@ -159,48 +159,48 @@
                     <div class="report-print-date small text-muted mt-1">Printed on {{ now()->format('d-m-Y, h:i A') }}</div>
                 </div>
 
-                <div class="table-responsive">
-                    <table id="purchaseOrdersTable" class="table align-middle mb-0 w-100">
-                        <thead>
-                            <tr class="small text-body-secondary text-uppercase">
-                                <th scope="col" class="fw-semibold border-0 py-3 ps-3">#</th>
-                                <th scope="col" class="fw-semibold border-0 py-3">Order No.</th>
-                                <th scope="col" class="fw-semibold border-0 py-3">Vendor</th>
-                                <th scope="col" class="fw-semibold border-0 py-3">Store</th>
-                                <th scope="col" class="fw-semibold border-0 py-3">Status</th>
-                                <th scope="col" class="fw-semibold border-0 py-3 pe-3 text-end d-print-none">Actions</th>
+                <div class="table-responsive shadow-sm rounded-4 overflow-hidden">
+                    <table id="purchaseOrdersTable" class="table table-hover align-middle mb-0 w-100">
+                        <thead class="table-light">
+                            <tr class="small text-uppercase">
+                                <th scope="col" class="fw-bold border-0 py-3 ps-4 text-muted">#</th>
+                                <th scope="col" class="fw-bold border-0 py-3 text-muted">Order No.</th>
+                                <th scope="col" class="fw-bold border-0 py-3 text-muted">Vendor</th>
+                                <th scope="col" class="fw-bold border-0 py-3 text-muted">Store</th>
+                                <th scope="col" class="fw-bold border-0 py-3 text-muted">Status</th>
+                                <th scope="col" class="fw-bold border-0 py-3 pe-4 text-end d-print-none text-muted">Actions</th>
                             </tr>
                         </thead>
-                        <tbody class="small">
+                        <tbody>
                         @foreach($purchaseOrders as $po)
                             @php
                                 $statusBadgeClass = $po->status === 'approved' ? 'text-bg-success'
                                     : ($po->status === 'rejected' ? 'text-bg-danger'
                                     : ($po->status === 'completed' ? 'text-bg-primary' : 'text-bg-warning'));
                             @endphp
-                            <tr>
-                                <td class="ps-3 text-body-secondary">{{ $loop->iteration }}</td>
-                                <td class="fw-semibold text-body">{{ $po->po_number }}</td>
-                                <td>{{ $po->vendor->name ?? 'N/A' }}</td>
-                                <td>{{ $po->store->store_name ?? 'N/A' }}</td>
-                                <td>
-                                    <span class="badge rounded-pill {{ $statusBadgeClass }}">
+                            <tr class="border-bottom">
+                                <td class="ps-4 py-3 text-body-secondary fw-medium">{{ $loop->iteration }}</td>
+                                <td class="py-3 fw-bold text-dark">{{ $po->po_number }}</td>
+                                <td class="py-3 text-body">{{ $po->vendor->name ?? 'N/A' }}</td>
+                                <td class="py-3 text-body">{{ $po->store->store_name ?? 'N/A' }}</td>
+                                <td class="py-3">
+                                    <span class="badge rounded-pill {{ $statusBadgeClass }} px-3 py-2 fw-semibold" style="font-size: 0.75rem; letter-spacing: 0.02em;">
                                         {{ ucfirst($po->status) }}
                                     </span>
                                 </td>
-                                <td class="d-print-none text-end pe-3">
-                                    <div class="d-inline-flex align-items-center justify-content-end gap-1">
-                                    <button type="button" class="btn btn-sm btn-light border btn-view-po rounded-3" data-po-id="{{ $po->id }}" title="View">
+                                <td class="d-print-none text-end pe-4 py-3">
+                                    <div class="d-inline-flex align-items-center justify-content-end gap-2">
+                                    <button type="button" class="btn btn-sm btn-outline-primary border-2 btn-view-po rounded-3 shadow-sm" data-po-id="{{ $po->id }}" title="View" style="transition: all 0.3s ease;">
                                         <i class="material-icons material-symbol-rounded align-middle" style="font-size: 1.125rem;">visibility</i>
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-light border btn-edit-po rounded-3" data-po-id="{{ $po->id }}" title="Edit">
+                                    <button type="button" class="btn btn-sm btn-outline-info border-2 btn-edit-po rounded-3 shadow-sm" data-po-id="{{ $po->id }}" title="Edit" style="transition: all 0.3s ease;">
                                         <i class="material-icons material-symbol-rounded align-middle" style="font-size: 1.125rem;">edit</i>
                                     </button>
                                     @if($canDeletePurchaseOrder)
                                         <form action="{{ route('admin.mess.purchaseorders.destroy', $po->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this purchase order?');">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-outline-danger border rounded-3" title="Delete">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger border-2 rounded-3 shadow-sm" title="Delete" style="transition: all 0.3s ease;">
                                                 <i class="material-icons material-symbol-rounded align-middle" style="font-size: 1.125rem;">delete</i>
                                             </button>
                                         </form>
@@ -483,15 +483,15 @@
    Choices.js-like Styling for Tom Select
    ======================================== */
 
-/* Control (Input Container) - Choices.js style */
+/* Control (Input Container) - Enhanced Bootstrap Style */
 .ts-wrapper .ts-control {
     background-color: #fff;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    padding: 4px 8px;
-    min-height: 38px;
-    box-shadow: none;
-    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    border: 2px solid #dee2e6;
+    border-radius: 0.5rem;
+    padding: 6px 12px;
+    min-height: 42px;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
 }
 
 .ts-wrapper.single .ts-control {
@@ -502,20 +502,21 @@
     padding-right: 2.25rem;
 }
 
-/* Focus state - Choices.js style */
+/* Focus state - Enhanced Bootstrap Style */
 .ts-wrapper.focus .ts-control {
-    border-color: #80bdff;
+    border-color: #86b7fe;
     outline: 0;
-    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+    transform: scale(1.01);
 }
 
-/* Dropdown container - Choices.js style */
+/* Dropdown container - Enhanced Bootstrap Style */
 .ts-dropdown {
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    border: 2px solid #dee2e6;
+    border-radius: 0.5rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.175);
     background-color: #fff;
-    margin-top: 4px;
+    margin-top: 0.25rem;
 }
 
 /* Search input inside dropdown - Choices.js style */
@@ -529,32 +530,35 @@
     padding: 4px 0;
 }
 
-/* Dropdown input (search field) - Choices.js style */
+/* Dropdown input (search field) - Enhanced Bootstrap Style */
 .ts-dropdown-content input {
-    border: 1px solid #ddd !important;
-    border-radius: 4px;
-    padding: 8px 12px !important;
-    margin: 8px 8px 4px 8px;
-    width: calc(100% - 16px) !important;
-    font-size: 14px;
-    background-color: #f9f9f9;
+    border: 2px solid #dee2e6 !important;
+    border-radius: 0.375rem;
+    padding: 0.5rem 0.75rem !important;
+    margin: 0.5rem !important;
+    width: calc(100% - 1rem) !important;
+    font-size: 0.875rem;
+    background-color: #f8f9fa;
     box-sizing: border-box;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
 }
 
 .ts-dropdown-content input:focus {
     outline: none;
-    border-color: #80bdff !important;
+    border-color: #86b7fe !important;
     background-color: #fff;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+    transform: scale(1.01);
 }
 
-/* Options list - Choices.js style */
+/* Options list - Enhanced Bootstrap Style */
 .ts-dropdown .option {
-    padding: 10px 12px;
-    font-size: 14px;
-    color: #333;
+    padding: 0.625rem 0.75rem;
+    font-size: 0.875rem;
+    color: #212529;
     cursor: pointer;
-    border-bottom: 1px solid #f0f0f0;
-    transition: background-color 0.15s ease;
+    border-bottom: 1px solid #e9ecef;
+    transition: background-color 0.3s ease, transform 0.2s ease;
     background-color: transparent;
 }
 
@@ -562,10 +566,11 @@
     border-bottom: none;
 }
 
-/* Option hover state - Choices.js style */
+/* Option hover state - Enhanced Bootstrap Style */
 .ts-dropdown .option:hover {
-    background-color: #f5f5f5;
-    color: #333;
+    background-color: rgba(13, 110, 253, 0.1);
+    color: #0d6efd;
+    transform: translateX(4px);
 }
 
 /* Prevent default active state highlighting */
@@ -580,10 +585,11 @@
     color: #333;
 }
 
-/* Selected option highlight - Choices.js style */
+/* Selected option highlight - Enhanced Bootstrap Style */
 .ts-dropdown .option.selected {
-    background-color: #e9ecef;
-    color: #333;
+    background-color: #0d6efd;
+    color: #fff;
+    font-weight: 600;
 }
 
 /* Aria-selected ko bhi visually normal rakho (auto selected highlight hide) */
@@ -592,32 +598,39 @@
     color: #333;
 }
 
-/* No results message - Choices.js style */
+/* No results message - Enhanced Bootstrap Style */
 .ts-dropdown .no-results {
-    padding: 12px;
-    color: #999;
-    font-size: 14px;
+    padding: 1rem;
+    color: #6c757d;
+    font-size: 0.875rem;
     text-align: center;
-    background-color: #f9f9f9;
+    background-color: #f8f9fa;
+    font-style: italic;
 }
 .po-item-select + .choices .choices__inner {
-    min-height: calc(1.5em + 0.5rem + 2px);
+    min-height: calc(1.5em + 0.75rem + 4px);
+    border-radius: 0.375rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
 }
 .ts-wrapper.choices[data-type*="select-multiple"] .choices__inner {
-    padding: 0.25rem 0.5rem;
+    padding: 0.375rem 0.75rem;
+    border-width: 2px;
 }
 .form-select-sm + .choices .choices__inner {
-    min-height: calc(1.5em + 0.5rem + 2px);
-    padding: 0.25rem 0.5rem;
+    min-height: calc(1.5em + 0.75rem + 4px);
+    padding: 0.375rem 0.75rem;
     font-size: 0.875rem;
-    border-radius: var(--bs-border-radius-sm, 0.25rem);
+    border-radius: 0.375rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
 }
 .po-filter-multi + .choices .choices__inner {
-    min-height: 2.75rem;
+    min-height: 3rem;
+    border-width: 2px;
 }
 .po-ux .po-filter-multiselect-wrap .input-group-text {
-    background-color: var(--bs-tertiary-bg, #e9ecef);
-    border-color: var(--bs-border-color);
+    background-color: #f8f9fa;
+    border-color: #dee2e6;
+    border-width: 2px;
 }
 .po-ux .po-filter-card {
     overflow: visible;
@@ -637,54 +650,244 @@
 .po-ux .po-filter-multiselect-wrap .ts-control {
     border-top-left-radius: 0;
     border-bottom-left-radius: 0;
-    min-height: calc(1.5em + 0.5rem + 2px);
+    min-height: calc(1.5em + 0.75rem + 4px);
     font-size: 0.875rem;
+    border-width: 2px;
+    border-left-width: 0;
 }
 .choices__list--multiple .choices__item {
         background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%) !important;
         border: none !important;
-        border-radius: 0.375rem !important;
+        border-radius: 0.5rem !important;
         color: #fff !important;
         font-size: 0.875rem !important;
+        padding: 0.375rem 0.75rem !important;
+        font-weight: 600 !important;
+        box-shadow: 0 0.125rem 0.25rem rgba(13, 110, 253, 0.3) !important;
+        transition: all 0.3s ease !important;
+    }
+    
+    .choices__list--multiple .choices__item:hover {
+        transform: scale(1.05);
+        box-shadow: 0 0.25rem 0.5rem rgba(13, 110, 253, 0.4) !important;
+    }
+
+    /* ========================================
+       Native Bootstrap Select Enhancement
+       ======================================== */
+    
+    /* Enhanced Bootstrap form-select styling */
+    .form-select {
+        transition: all 0.3s ease;
+        font-weight: 500;
+    }
+    
+    .form-select:hover {
+        border-color: #86b7fe;
+        box-shadow: 0 0.125rem 0.5rem rgba(13, 110, 253, 0.15);
+    }
+    
+    .form-select:focus {
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+        transform: scale(1.01);
+    }
+    
+    .form-select-lg {
+        font-size: 0.95rem;
+        padding: 0.625rem 2.5rem 0.625rem 0.875rem;
+        min-height: 42px;
+    }
+    
+    .form-select.border-2 {
+        border-width: 2px !important;
+    }
+    
+    /* Multi-select enhancement */
+    select[multiple].form-select {
+        min-height: 120px;
+        padding: 0.5rem;
+    }
+    
+    select[multiple].form-select option {
+        padding: 0.5rem 0.75rem;
+        margin-bottom: 0.25rem;
+        border-radius: 0.375rem;
+        transition: all 0.2s ease;
+    }
+    
+    select[multiple].form-select option:hover {
+        background-color: rgba(13, 110, 253, 0.1);
+        color: #0d6efd;
+    }
+    
+    select[multiple].form-select option:checked {
+        background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+        color: white;
+        font-weight: 600;
+    }
+    
+    /* ========================================
+       Enhanced Bootstrap Input Controls
+       ======================================== */
+    
+    /* Form control enhancements */
+    .form-control {
+        transition: all 0.3s ease;
+        font-weight: 500;
+    }
+    
+    .form-control:hover:not([readonly]) {
+        border-color: #86b7fe;
+        box-shadow: 0 0.125rem 0.5rem rgba(13, 110, 253, 0.15);
+    }
+    
+    .form-control-lg {
+        font-size: 0.95rem;
+        padding: 0.625rem 0.875rem;
+        min-height: 42px;
+    }
+    
+    .form-control.border-2 {
+        border-width: 2px !important;
+    }
+    
+    /* File input enhancement */
+    .form-control[type="file"] {
+        padding: 0.5rem 0.75rem;
+    }
+    
+    .form-control[type="file"]:hover {
+        cursor: pointer;
+    }
+
+    /* ========================================
+       Enhanced UI/UX Animations & Effects
+       ======================================== */
+    
+    /* Button hover effects */
+    .btn {
+        transition: all 0.3s ease;
+    }
+    
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 0.5rem 1rem rgba(13, 110, 253, 0.3) !important;
+    }
+    
+    .btn-success:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 0.5rem 1rem rgba(25, 135, 84, 0.3) !important;
+    }
+    
+    .btn-warning:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 0.5rem 1rem rgba(255, 193, 7, 0.3) !important;
+    }
+    
+    .btn-info:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 0.5rem 1rem rgba(13, 202, 240, 0.3) !important;
+    }
+    
+    .btn-outline-primary:hover,
+    .btn-outline-info:hover,
+    .btn-outline-danger:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.15) !important;
+    }
+    
+    /* Card hover effects */
+    .card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    /* Table row hover - enhanced */
+    .table-hover tbody tr:hover {
+        background-color: rgba(13, 110, 253, 0.05) !important;
+        transform: scale(1.005);
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+    
+    /* Badge enhancements */
+    .badge {
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .badge:hover {
+        transform: scale(1.05);
+    }
+    
+    /* Form controls focus enhancement */
+    .form-control:focus,
+    .form-select:focus {
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+        transform: scale(1.01);
+        transition: all 0.3s ease;
+    }
+    
+    /* Input group enhancements */
+    .input-group:focus-within {
+        box-shadow: 0 0.25rem 0.75rem rgba(13, 110, 253, 0.15);
+        transition: all 0.3s ease;
+    }
+    
+    /* Smooth scrolling for modal body */
+    .modal-body {
+        scroll-behavior: smooth;
+    }
+    
+    /* Icon rotation on hover */
+    .material-icons {
+        transition: transform 0.3s ease;
+    }
+    
+    .btn:hover .material-icons {
+        transform: scale(1.1);
     }
 </style>
 <div class="modal fade" id="createPurchaseOrderModal" tabindex="-1" aria-labelledby="createPurchaseOrderModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-lg-down modal-dialog-centered">
-        <div class="modal-content">
+        <div class="modal-content border-0 shadow-lg rounded-4">
             <form method="POST" action="{{ route('admin.mess.purchaseorders.store') }}" id="createPOForm" enctype="multipart/form-data">
                 @csrf
-                <div class="modal-header border-0 border-bottom bg-body-tertiary py-3 px-4">
+                <div class="modal-header border-0 border-bottom py-3 px-4 bg-gradient" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
                     <div>
-                        <h5 class="modal-title fw-semibold mb-0" id="createPurchaseOrderModalLabel">Create purchase order</h5>
-                        <p class="mb-0 small text-body-secondary">Required fields are marked with <span class="text-danger">*</span></p>
+                        <h5 class="modal-title fw-bold mb-1 text-dark" id="createPurchaseOrderModalLabel">Create purchase order</h5>
+                        <p class="mb-0 small text-body-secondary fw-medium">Required fields are marked with <span class="text-danger fw-bold">*</span></p>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body px-3 px-md-4 py-3 py-md-4 bg-body-tertiary bg-opacity-25">
+                <div class="modal-body px-3 px-md-4 py-3 py-md-4" style="background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);">
                     <input type="hidden" name="po_number" value="{{ $po_number }}">
 
                     <div class="row g-3 g-xl-4 align-items-stretch mb-3 mb-xl-4">
                         {{-- Order Details --}}
                         <div class="col-12 col-xl-8">
-                            <div class="card border-0 shadow-sm h-100 rounded-4 overflow-hidden">
-                                <div class="card-header bg-white border-bottom py-3 px-4 d-flex align-items-center gap-2">
-                                    <i class="material-icons material-symbol-rounded text-primary" style="font-size: 1.25rem;" aria-hidden="true">assignment</i>
-                                    <h6 class="mb-0 fw-semibold text-primary">Order details</h6>
+                            <div class="card border-0 shadow-lg h-100 rounded-4 overflow-hidden">
+                                <div class="card-header bg-gradient border-bottom py-3 px-4 d-flex align-items-center gap-2" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
+                                    <div class="rounded-3 bg-primary bg-gradient text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm" style="width: 2.25rem; height: 2.25rem;">
+                                        <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;" aria-hidden="true">assignment</i>
+                                    </div>
+                                    <h6 class="mb-0 fw-bold text-dark">Order details</h6>
                                 </div>
                                 <div class="card-body p-3 p-md-4 bg-white">
                                     <div class="row g-3">
                                         <div class="col-md-4">
-                                            <label class="form-label fw-semibold small">Order number</label>
-                                            <input type="text" class="form-control rounded-3 bg-light" value="{{ $po_number }}" readonly placeholder="Auto-generated">
-                                            <div class="form-text">Auto-generated</div>
+                                            <label class="form-label fw-bold small mb-2 text-dark">Order number</label>
+                                            <input type="text" class="form-control form-control-lg rounded-3 bg-light border-0 shadow" value="{{ $po_number }}" readonly placeholder="Auto-generated">
+                                            <div class="form-text fst-italic">Auto-generated</div>
                                         </div>
                                         <div class="col-md-4">
-                                            <label class="form-label fw-semibold small">Order date <span class="text-danger">*</span></label>
-                                            <input type="date" name="po_date" class="form-control rounded-3" value="{{ date('Y-m-d') }}" max="{{ date('Y-m-d') }}" required>
+                                            <label class="form-label fw-bold small mb-2 text-dark">Order date <span class="text-danger">*</span></label>
+                                            <input type="date" name="po_date" class="form-control form-control-lg rounded-3 shadow border-2" value="{{ date('Y-m-d') }}" max="{{ date('Y-m-d') }}" required>
                                         </div>
                                         <div class="col-md-4">
-                                            <label class="form-label fw-semibold small">Store</label>
-                                            <select name="store_id" class="form-select rounded-3">
+                                            <label class="form-label fw-bold small mb-2 text-dark">Store</label>
+                                            <select name="store_id" class="form-select form-select-lg rounded-3 shadow border-2">
                                                 <option value="">Select Store</option>
                                                 @foreach($stores as $store)
                                                     <option value="{{ $store->id }}">{{ $store->store_name }}</option>
@@ -692,8 +895,8 @@
                                             </select>
                                         </div>
                                         <div class="col-md-4">
-                                            <label class="form-label fw-semibold small">Vendor <span class="text-danger">*</span></label>
-                                            <select name="vendor_id" class="form-select rounded-3" required>
+                                            <label class="form-label fw-bold small mb-2 text-dark">Vendor <span class="text-danger">*</span></label>
+                                            <select name="vendor_id" class="form-select form-select-lg rounded-3 shadow border-2" required>
                                                 <option value="">Select Vendor</option>
                                                 @foreach($vendors as $vendor)
                                                     <option value="{{ $vendor->id }}">{{ $vendor->name }}</option>
@@ -701,8 +904,8 @@
                                             </select>
                                         </div>
                                         <div class="col-md-4">
-                                            <label class="form-label fw-semibold small">Payment mode</label>
-                                            <select name="payment_code" class="form-select rounded-3">
+                                            <label class="form-label fw-bold small mb-2 text-dark">Payment mode</label>
+                                            <select name="payment_code" class="form-select form-select-lg rounded-3 shadow border-2">
                                                 <option value="">Select Payment Mode</option>
                                                 @foreach($paymentModes as $value => $label)
                                                     <option value="{{ $value }}">{{ $label }}</option>
@@ -710,20 +913,20 @@
                                             </select>
                                         </div>
                                         <div class="col-md-4">
-                                            <label class="form-label fw-semibold small">Bill / invoice no.</label>
-                                            <input type="text" name="bill_no" class="form-control rounded-3" maxlength="100" placeholder="Optional">
+                                            <label class="form-label fw-bold small mb-2 text-dark">Bill / invoice no.</label>
+                                            <input type="text" name="bill_no" class="form-control form-control-lg rounded-3 shadow border-2" maxlength="100" placeholder="Optional">
                                         </div>
                                         <div class="col-md-4">
-                                            <label class="form-label fw-semibold small">Bill date</label>
-                                            <input type="date" name="bill_date" class="form-control rounded-3" max="{{ date('Y-m-d') }}">
+                                            <label class="form-label fw-bold small mb-2 text-dark">Bill date</label>
+                                            <input type="date" name="bill_date" class="form-control form-control-lg rounded-3 shadow border-2" max="{{ date('Y-m-d') }}">
                                         </div>
                                         <div class="col-md-4">
-                                            <label class="form-label fw-semibold small">Challan / reference</label>
-                                            <input type="text" name="challan_no" class="form-control rounded-3" maxlength="100" placeholder="Optional">
+                                            <label class="form-label fw-bold small mb-2 text-dark">Challan / reference</label>
+                                            <input type="text" name="challan_no" class="form-control form-control-lg rounded-3 shadow border-2" maxlength="100" placeholder="Optional">
                                         </div>
                                         <div class="col-md-4">
-                                            <label class="form-label fw-semibold small">Challan date</label>
-                                            <input type="date" name="challan_date" class="form-control rounded-3" max="{{ date('Y-m-d') }}">
+                                            <label class="form-label fw-bold small mb-2 text-dark">Challan date</label>
+                                            <input type="date" name="challan_date" class="form-control form-control-lg rounded-3 shadow border-2" max="{{ date('Y-m-d') }}">
                                         </div>
                                     </div>
                                 </div>
@@ -732,20 +935,22 @@
 
                         {{-- Bill / Attachment (Upload) --}}
                         <div class="col-12 col-xl-4">
-                            <div class="card border-0 shadow-sm h-100 rounded-4 overflow-hidden border-start border-primary border-4">
-                                <div class="card-header bg-white border-bottom py-3 px-4 d-flex align-items-center gap-2">
-                                    <i class="material-icons material-symbol-rounded text-primary" style="font-size: 1.25rem;" aria-hidden="true">attach_file</i>
-                                    <h6 class="mb-0 fw-semibold text-primary">Bill upload</h6>
-                                    <span class="badge rounded-pill text-bg-light text-body-secondary border ms-auto fw-normal">Optional</span>
+                            <div class="card border-0 shadow-lg h-100 rounded-4 overflow-hidden" style="border-left: 4px solid var(--bs-primary) !important;">
+                                <div class="card-header bg-gradient border-bottom py-3 px-4 d-flex align-items-center gap-2" style="background: linear-gradient(135deg, #ffffff 0%, #f0f8ff 100%);">
+                                    <div class="rounded-3 bg-primary bg-gradient text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm" style="width: 2.25rem; height: 2.25rem;">
+                                        <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;" aria-hidden="true">attach_file</i>
+                                    </div>
+                                    <h6 class="mb-0 fw-bold text-dark">Bill upload</h6>
+                                    <span class="badge rounded-pill bg-secondary bg-opacity-25 text-secondary border-0 ms-auto fw-semibold px-3">Optional</span>
                                 </div>
                                 <div class="card-body p-3 p-md-4 bg-white d-flex flex-column">
                                     <div class="mb-auto">
-                                        <label class="form-label fw-semibold small">Attachment</label>
-                                        <div class="input-group rounded-3 overflow-hidden shadow-sm">
+                                        <label class="form-label fw-bold small mb-2 text-dark">Attachment</label>
+                                        <div class="input-group rounded-3 overflow-hidden shadow">
                                             <input type="file" name="bill_file" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.webp" id="createBillFileInput">
                                             <button type="button" class="btn btn-outline-secondary" id="createBillClearBtn">Remove</button>
                                         </div>
-                                        <div class="form-text">PDF, JPG, JPEG, PNG or WEBP · max 5 MB</div>
+                                        <div class="form-text fst-italic">PDF, JPG, JPEG, PNG or WEBP · max 5 MB</div>
                                     </div>
                                 </div>
                             </div>
@@ -753,39 +958,41 @@
                     </div>
 
                     {{-- Item Details --}}
-                    <div class="card border-0 shadow-sm mb-0 rounded-4 overflow-hidden">
-                        <div class="card-header bg-white border-bottom py-3 px-4 d-flex flex-wrap justify-content-between align-items-center gap-2">
-                            <div class="d-flex align-items-center gap-2">
-                                <i class="material-icons material-symbol-rounded text-primary" style="font-size: 1.25rem;" aria-hidden="true">inventory_2</i>
+                    <div class="card border-0 shadow-lg mb-0 rounded-4 overflow-hidden">
+                        <div class="card-header bg-gradient border-bottom py-3 px-4 d-flex flex-wrap justify-content-between align-items-center gap-3" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="rounded-3 bg-success bg-gradient text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm" style="width: 2.5rem; height: 2.5rem;">
+                                    <i class="material-icons material-symbol-rounded" style="font-size: 1.25rem;" aria-hidden="true">inventory_2</i>
+                                </div>
                                 <div>
-                                    <h6 class="mb-0 fw-semibold text-primary">Line items</h6>
-                                    <span class="small text-body-secondary d-block">Multi-select on a row splits into separate lines.</span>
+                                    <h6 class="mb-0 fw-bold text-dark">Line items</h6>
+                                    <span class="small text-body-secondary d-block fw-medium">Multi-select on a row splits into separate lines.</span>
                                 </div>
                             </div>
-                            <button type="button" class="btn btn-sm btn-primary rounded-3 d-inline-flex align-items-center gap-1" id="addPoItemRow">
+                            <button type="button" class="btn btn-sm btn-success rounded-pill d-inline-flex align-items-center gap-2 px-3 shadow-sm fw-semibold" id="addPoItemRow" style="transition: all 0.3s ease;">
                                 <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;">add</i> Add line
                             </button>
                         </div>
                         <div class="card-body p-0 bg-white">
                             <div class="po-item-details-table-wrap">
                             <div class="table-responsive">
-                                <table class="table table-sm text-nowrap mb-0 align-middle" id="poItemsTable">
-                                    <thead class="table-light small">
+                                <table class="table table-sm table-hover text-nowrap mb-0 align-middle" id="poItemsTable">
+                                    <thead class="table-light">
                                         <tr>
-                                            <th scope="col" style="width: 180px;" class="fw-semibold text-body-secondary">Item <span class="text-danger">*</span></th>
-                                            <th scope="col" style="width:150px;" class="fw-semibold text-body-secondary">Unit</th>
-                                            <th scope="col" class="fw-semibold text-body-secondary">Code</th>
-                                            <th scope="col" class="fw-semibold text-body-secondary">Qty <span class="text-danger">*</span></th>
-                                            <th scope="col" class="fw-semibold text-body-secondary">Rate <span class="text-danger">*</span></th>
-                                            <th scope="col" class="fw-semibold text-body-secondary">Tax %</th>
-                                            <th scope="col" class="fw-semibold text-body-secondary">Line total</th>
-                                            <th scope="col" class="fw-semibold text-body-secondary text-center" style="width:3rem;"> </th>
+                                            <th scope="col" style="width: 180px;" class="fw-bold text-dark py-3 ps-3">Item <span class="text-danger">*</span></th>
+                                            <th scope="col" style="width:150px;" class="fw-bold text-dark py-3">Unit</th>
+                                            <th scope="col" class="fw-bold text-dark py-3">Code</th>
+                                            <th scope="col" class="fw-bold text-dark py-3">Qty <span class="text-danger">*</span></th>
+                                            <th scope="col" class="fw-bold text-dark py-3">Rate <span class="text-danger">*</span></th>
+                                            <th scope="col" class="fw-bold text-dark py-3">Tax %</th>
+                                            <th scope="col" class="fw-bold text-dark py-3">Line total</th>
+                                            <th scope="col" class="fw-bold text-dark py-3 pe-3 text-center" style="width:3rem;"> </th>
                                         </tr>
                                     </thead>
                                     <tbody id="poItemsBody">
                                         <tr class="po-item-row">
                                             <td class="py-2">
-                                                <select multiple name="items[0][item_subcategory_id]" class="form-select form-select-sm po-item-select rounded-3" required aria-label="Items for this line — select several to split into multiple lines">
+                                                <select multiple name="items[0][item_subcategory_id]" class="form-select form-select-sm po-item-select rounded-3 shadow-sm border-2" required aria-label="Items for this line — select several to split into multiple lines">
                                                     <option value="">Select Item</option>
                                                     @foreach($itemSubcategories as $sub)
                                                         <option value="{{ $sub['id'] }}" data-unit="{{ e($sub['unit_measurement']) }}" data-code="{{ e($sub['item_code']) }}">{{ $sub['item_name'] }}</option>
@@ -805,17 +1012,17 @@
                             </div>
                             </div>
                         </div>
-                        <div class="card-footer bg-body-secondary bg-opacity-50 border-0 d-flex justify-content-end align-items-center py-3 px-4">
-                            <div class="d-flex align-items-baseline gap-2 flex-wrap justify-content-end">
-                                <span class="fw-semibold text-body-secondary small text-uppercase">Grand total</span>
-                                <span class="fs-5 text-primary fw-bold" id="poGrandTotal">₹0.00</span>
+                        <div class="card-footer bg-gradient border-0 d-flex justify-content-end align-items-center py-3 px-4" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
+                            <div class="d-flex align-items-baseline gap-3 flex-wrap justify-content-end">
+                                <span class="fw-bold text-dark small text-uppercase" style="letter-spacing: 0.05em;">Grand total</span>
+                                <span class="fs-4 text-primary fw-bold" id="poGrandTotal" style="font-family: 'Segoe UI', system-ui, sans-serif;">₹0.00</span>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-0 border-top bg-body-tertiary bg-opacity-25 px-4 py-3">
-                    <button type="button" class="btn btn-outline-secondary rounded-3" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary rounded-3 px-4 shadow-sm">Create purchase order</button>
+                <div class="modal-footer border-0 border-top py-3 px-4 bg-gradient" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4 fw-semibold" data-bs-dismiss="modal" style="transition: all 0.3s ease;">Cancel</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-5 shadow-sm fw-semibold" style="transition: all 0.3s ease;">Create purchase order</button>
                 </div>
             </form>
         </div>
@@ -825,36 +1032,38 @@
 {{-- Edit Purchase Order Modal --}}
 <div class="modal fade" id="editPurchaseOrderModal" tabindex="-1" aria-labelledby="editPurchaseOrderModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-lg-down modal-dialog-centered">
-        <div class="modal-content">
+        <div class="modal-content border-0 shadow-lg rounded-4">
             <form method="POST" id="editPOForm" action="" enctype="multipart/form-data">
                 @csrf
                 @method('PUT')
-                <div class="modal-header border-0 border-bottom bg-body-tertiary py-3 px-4">
+                <div class="modal-header border-0 border-bottom py-3 px-4 bg-gradient" style="background: linear-gradient(135deg, #fff3cd 0%, #ffe69c 100%);">
                     <div>
-                        <h5 class="modal-title fw-semibold mb-0" id="editPurchaseOrderModalLabel">Edit purchase order</h5>
-                        <p class="mb-0 small text-body-secondary">Update header, bill, and line items</p>
+                        <h5 class="modal-title fw-bold mb-1 text-dark" id="editPurchaseOrderModalLabel">Edit purchase order</h5>
+                        <p class="mb-0 small text-body-secondary fw-medium">Update header, bill, and line items</p>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body px-3 px-md-4 py-4 bg-body-tertiary bg-opacity-25">
-                    <div class="card border-0 shadow-sm mb-4 rounded-4 overflow-hidden">
-                        <div class="card-header bg-white border-bottom py-3 px-4 d-flex align-items-center gap-2">
-                            <i class="material-icons material-symbol-rounded text-primary" style="font-size: 1.25rem;" aria-hidden="true">assignment</i>
-                            <h6 class="mb-0 fw-semibold text-primary">Order details</h6>
+                <div class="modal-body px-3 px-md-4 py-4" style="background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);">
+                    <div class="card border-0 shadow-lg mb-4 rounded-4 overflow-hidden">
+                        <div class="card-header bg-gradient border-bottom py-3 px-4 d-flex align-items-center gap-2" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
+                            <div class="rounded-3 bg-warning bg-gradient text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm" style="width: 2.25rem; height: 2.25rem;">
+                                <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;" aria-hidden="true">assignment</i>
+                            </div>
+                            <h6 class="mb-0 fw-bold text-dark">Order details</h6>
                         </div>
                         <div class="card-body p-3 p-md-4 bg-white">
                             <div class="row g-3">
                                 <div class="col-md-4">
-                                    <label class="form-label fw-semibold small">Order number</label>
-                                    <input type="text" id="editPoNumber" class="form-control rounded-3 bg-light" readonly>
+                                    <label class="form-label fw-bold small mb-2 text-dark">Order number</label>
+                                    <input type="text" id="editPoNumber" class="form-control form-control-lg rounded-3 bg-light border-0 shadow" readonly>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label fw-semibold small">Order date <span class="text-danger">*</span></label>
-                                    <input type="date" name="po_date" id="editPoDate" class="form-control rounded-3" max="{{ date('Y-m-d') }}" required>
+                                    <label class="form-label fw-bold small mb-2 text-dark">Order date <span class="text-danger">*</span></label>
+                                    <input type="date" name="po_date" id="editPoDate" class="form-control form-control-lg rounded-3 shadow border-2" max="{{ date('Y-m-d') }}" required>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label fw-semibold small">Store</label>
-                                    <select name="store_id" id="editStoreId" class="form-select rounded-3">
+                                    <label class="form-label fw-bold small mb-2 text-dark">Store</label>
+                                    <select name="store_id" id="editStoreId" class="form-select form-select-lg rounded-3 shadow border-2">
                                         <option value="">Select Store</option>
                                         @foreach($stores as $store)
                                             <option value="{{ $store->id }}">{{ $store->store_name }}</option>
@@ -862,8 +1071,8 @@
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label fw-semibold small">Vendor <span class="text-danger">*</span></label>
-                                    <select name="vendor_id" id="editVendorId" class="form-select rounded-3" required>
+                                    <label class="form-label fw-bold small mb-2 text-dark">Vendor <span class="text-danger">*</span></label>
+                                    <select name="vendor_id" id="editVendorId" class="form-select form-select-lg rounded-3 shadow border-2" required>
                                         <option value="">Select Vendor</option>
                                         @foreach($vendors as $vendor)
                                             <option value="{{ $vendor->id }}">{{ $vendor->name }}</option>
@@ -871,8 +1080,8 @@
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label fw-semibold small">Payment mode</label>
-                                    <select name="payment_code" id="editPaymentCode" class="form-select rounded-3">
+                                    <label class="form-label fw-bold small mb-2 text-dark">Payment mode</label>
+                                    <select name="payment_code" id="editPaymentCode" class="form-select form-select-lg rounded-3 shadow border-2">
                                         <option value="">Select Payment Mode</option>
                                         @foreach($paymentModes as $value => $label)
                                             <option value="{{ $value }}">{{ $label }}</option>
@@ -880,76 +1089,80 @@
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label fw-semibold small">Bill / invoice no.</label>
-                                    <input type="text" name="bill_no" id="editBillNo" class="form-control rounded-3" maxlength="100" placeholder="Optional">
+                                    <label class="form-label fw-bold small mb-2 text-dark">Bill / invoice no.</label>
+                                    <input type="text" name="bill_no" id="editBillNo" class="form-control form-control-lg rounded-3 shadow border-2" maxlength="100" placeholder="Optional">
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label fw-semibold small">Bill date</label>
-                                    <input type="date" name="bill_date" id="editBillDate" class="form-control rounded-3" max="{{ date('Y-m-d') }}">
+                                    <label class="form-label fw-bold small mb-2 text-dark">Bill date</label>
+                                    <input type="date" name="bill_date" id="editBillDate" class="form-control form-control-lg rounded-3 shadow border-2" max="{{ date('Y-m-d') }}">
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label fw-semibold small">Challan / reference</label>
-                                    <input type="text" name="challan_no" id="editChallanNo" class="form-control rounded-3" maxlength="100" placeholder="Optional">
+                                    <label class="form-label fw-bold small mb-2 text-dark">Challan / reference</label>
+                                    <input type="text" name="challan_no" id="editChallanNo" class="form-control form-control-lg rounded-3 shadow border-2" maxlength="100" placeholder="Optional">
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label fw-semibold small">Challan date</label>
-                                    <input type="date" name="challan_date" id="editChallanDate" class="form-control rounded-3" max="{{ date('Y-m-d') }}">
+                                    <label class="form-label fw-bold small mb-2 text-dark">Challan date</label>
+                                    <input type="date" name="challan_date" id="editChallanDate" class="form-control form-control-lg rounded-3 shadow border-2" max="{{ date('Y-m-d') }}">
                                 </div>
                             </div>
                         </div>
                     </div>
                     {{-- Bill / Attachment (Upload) --}}
-                    <div class="card border-0 shadow-sm mb-4 rounded-4 overflow-hidden border-start border-primary border-4">
-                        <div class="card-header bg-white border-bottom py-3 px-4 d-flex align-items-center gap-2">
-                            <i class="material-icons material-symbol-rounded text-primary" style="font-size: 1.25rem;" aria-hidden="true">attach_file</i>
-                            <h6 class="mb-0 fw-semibold text-primary">Bill upload</h6>
-                            <span class="badge rounded-pill text-bg-light text-body-secondary border ms-auto fw-normal">Optional</span>
+                    <div class="card border-0 shadow-lg mb-4 rounded-4 overflow-hidden" style="border-left: 4px solid var(--bs-warning) !important;">
+                        <div class="card-header bg-gradient border-bottom py-3 px-4 d-flex align-items-center gap-2" style="background: linear-gradient(135deg, #ffffff 0%, #fff9e6 100%);">
+                            <div class="rounded-3 bg-warning bg-gradient text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm" style="width: 2.25rem; height: 2.25rem;">
+                                <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;" aria-hidden="true">attach_file</i>
+                            </div>
+                            <h6 class="mb-0 fw-bold text-dark">Bill upload</h6>
+                            <span class="badge rounded-pill bg-secondary bg-opacity-25 text-secondary border-0 ms-auto fw-semibold px-3">Optional</span>
                         </div>
                         <div class="card-body p-3 p-md-4 bg-white">
                             <div class="row">
                                 <div class="col-md-12">
-                                    <label class="form-label fw-semibold small">Attachment <span class="text-body-secondary fw-normal">· leave blank to keep current file</span></label>
-                                    <div class="d-flex align-items-center border rounded-3 px-2 py-1 bg-white gap-2 shadow-sm" style="min-height: 38px;">
+                                    <label class="form-label fw-bold small mb-2 text-dark">Attachment <span class="text-body-secondary fw-normal fst-italic">· leave blank to keep current file</span></label>
+                                    <div class="d-flex align-items-center border rounded-3 px-3 py-2 bg-white gap-2 shadow" style="min-height: 42px;">
                                         <span id="editCurrentBillPath" class="flex-grow-1 text-muted small text-truncate me-2" style="min-width: 0;">No file chosen</span>
-                                        <label class="mb-0 btn btn-outline-secondary py-1 px-2 rounded-3" style="cursor: pointer;">
+                                        <label class="mb-0 btn btn-outline-secondary py-1 px-3 rounded-pill fw-semibold" style="cursor: pointer; transition: all 0.3s ease;">
                                             Choose file
                                             <input type="file" name="bill_file" class="d-none" accept=".pdf,.jpg,.jpeg,.png,.webp" id="editBillFileInput">
                                         </label>
-                                        <button type="button" class="btn btn-outline-secondary py-1 px-2 rounded-3" id="editBillClearBtn">
+                                        <button type="button" class="btn btn-outline-danger py-1 px-3 rounded-pill fw-semibold" id="editBillClearBtn" style="transition: all 0.3s ease;">
                                             Remove
                                         </button>
                                     </div>
-                                    <div class="form-text">PDF, JPG, JPEG, PNG or WEBP · max 5 MB</div>
+                                    <div class="form-text fst-italic">PDF, JPG, JPEG, PNG or WEBP · max 5 MB</div>
                                     <p class="mb-0 mt-2 small" id="editCurrentBillLink"></p>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="card border-0 shadow-sm mb-2 rounded-4 overflow-hidden">
-                        <div class="card-header bg-white border-bottom py-3 px-4 d-flex flex-wrap justify-content-between align-items-center gap-2">
-                            <div class="d-flex align-items-center gap-2">
-                                <i class="material-icons material-symbol-rounded text-primary" style="font-size: 1.25rem;" aria-hidden="true">inventory_2</i>
+                    <div class="card border-0 shadow-lg mb-2 rounded-4 overflow-hidden">
+                        <div class="card-header bg-gradient border-bottom py-3 px-4 d-flex flex-wrap justify-content-between align-items-center gap-3" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="rounded-3 bg-warning bg-gradient text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm" style="width: 2.5rem; height: 2.5rem;">
+                                    <i class="material-icons material-symbol-rounded" style="font-size: 1.25rem;" aria-hidden="true">inventory_2</i>
+                                </div>
                                 <div>
-                                    <h6 class="mb-0 fw-semibold text-primary">Line items</h6>
-                                    <span class="small text-body-secondary d-block">Multi-select on a row splits into separate lines.</span>
+                                    <h6 class="mb-0 fw-bold text-dark">Line items</h6>
+                                    <span class="small text-body-secondary d-block fw-medium">Multi-select on a row splits into separate lines.</span>
                                 </div>
                             </div>
-                            <button type="button" class="btn btn-sm btn-primary rounded-3 d-inline-flex align-items-center gap-1" id="addEditPoItemRow"><i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;">add</i> Add line</button>
+                            <button type="button" class="btn btn-sm btn-warning rounded-pill d-inline-flex align-items-center gap-2 px-3 shadow-sm fw-semibold" id="addEditPoItemRow" style="transition: all 0.3s ease;"><i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;">add</i> Add line</button>
                         </div>
                         <div class="card-body p-0 bg-white">
                             <div class="po-item-details-table-wrap">
                             <div class="table-responsive">
-                                <table class="table table-sm text-nowrap mb-0 align-middle">
-                                    <thead class="table-light small">
+                                <table class="table table-sm table-hover text-nowrap mb-0 align-middle">
+                                    <thead class="table-light">
                                         <tr>
-                                            <th scope="col" style="width:180px;" class="fw-semibold text-body-secondary">Item <span class="text-danger">*</span></th>
-                                            <th scope="col" class="fw-semibold text-body-secondary">Unit</th>
-                                            <th scope="col" class="fw-semibold text-body-secondary">Code</th>
-                                            <th scope="col" style="width:120px;" class="fw-semibold text-body-secondary">Qty <span class="text-danger">*</span></th>
-                                            <th scope="col" style="width:120px;" class="fw-semibold text-body-secondary">Rate <span class="text-danger">*</span></th>
-                                            <th scope="col" style="width:120px;" class="fw-semibold text-body-secondary">Tax %</th>
-                                            <th scope="col" style="width:120px;" class="fw-semibold text-body-secondary">Line total</th>
-                                            <th scope="col" class="fw-semibold text-body-secondary text-center" style="width:3rem;"> </th>
+                                            <th scope="col" style="width:180px;" class="fw-bold text-dark py-3 ps-3">Item <span class="text-danger">*</span></th>
+                                            <th scope="col" class="fw-bold text-dark py-3">Unit</th>
+                                            <th scope="col" class="fw-bold text-dark py-3">Code</th>
+                                            <th scope="col" style="width:120px;" class="fw-bold text-dark py-3">Qty <span class="text-danger">*</span></th>
+                                            <th scope="col" style="width:120px;" class="fw-bold text-dark py-3">Rate <span class="text-danger">*</span></th>
+                                            <th scope="col" style="width:120px;" class="fw-bold text-dark py-3">Tax %</th>
+                                            <th scope="col" style="width:120px;" class="fw-bold text-dark py-3">Line total</th>
+                                            <th scope="col" class="fw-bold text-dark py-3 pe-3 text-center" style="width:3rem;"> </th>
                                         </tr>
                                     </thead>
                                     <tbody id="editPoItemsBody"></tbody>
@@ -957,17 +1170,17 @@
                             </div>
                             </div>
                         </div>
-                        <div class="card-footer bg-body-secondary bg-opacity-50 border-0 d-flex justify-content-end align-items-center py-3 px-4">
-                            <div class="d-flex align-items-baseline gap-2 flex-wrap justify-content-end">
-                                <span class="fw-semibold text-body-secondary small text-uppercase">Grand total</span>
-                                <span class="fs-5 text-primary fw-bold" id="editPoGrandTotal">₹0.00</span>
+                        <div class="card-footer bg-gradient border-0 d-flex justify-content-end align-items-center py-3 px-4" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
+                            <div class="d-flex align-items-baseline gap-3 flex-wrap justify-content-end">
+                                <span class="fw-bold text-dark small text-uppercase" style="letter-spacing: 0.05em;">Grand total</span>
+                                <span class="fs-4 text-warning fw-bold" id="editPoGrandTotal" style="font-family: 'Segoe UI', system-ui, sans-serif;">₹0.00</span>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-0 border-top bg-body-tertiary bg-opacity-25 px-4 py-3">
-                    <button type="button" class="btn btn-outline-secondary rounded-3" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary rounded-3 px-4 shadow-sm">Update purchase order</button>
+                <div class="modal-footer border-0 border-top py-3 px-4 bg-gradient" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4 fw-semibold" data-bs-dismiss="modal" style="transition: all 0.3s ease;">Cancel</button>
+                    <button type="submit" class="btn btn-warning rounded-pill px-5 shadow-sm fw-semibold" style="transition: all 0.3s ease;">Update purchase order</button>
                 </div>
             </form>
         </div>
@@ -977,84 +1190,87 @@
 {{-- View Purchase Order Modal (read-only) --}}
 <div class="modal fade" id="viewPurchaseOrderModal" tabindex="-1" aria-labelledby="viewPurchaseOrderModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-fullscreen-lg-down modal-xl modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow rounded-4">
-            <div class="modal-header bg-body-tertiary border-0 py-3 px-4">
-                <h5 class="modal-title fw-semibold" id="viewPurchaseOrderModalLabel">Purchase Order Details</h5>
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-0 py-3 px-4 bg-gradient" style="background: linear-gradient(135deg, #e7f3ff 0%, #cfe2ff 100%);">
+                <h5 class="modal-title fw-bold text-dark" id="viewPurchaseOrderModalLabel">Purchase Order Details</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body p-3 p-lg-4 bg-body-tertiary">
-                <div class="card border-0 shadow-sm mb-4 overflow-hidden">
-                    <div class="card-header bg-white border-0 py-3 px-4">
-                        <h6 class="mb-0 fw-semibold text-primary">Order Details</h6>
+            <div class="modal-body p-3 p-lg-4" style="background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);">
+                <div class="card border-0 shadow-lg mb-4 overflow-hidden rounded-4">
+                    <div class="card-header bg-gradient border-0 py-3 px-4 d-flex align-items-center gap-2" style="background: linear-gradient(135deg, #ffffff 0%, #e7f3ff 100%);">
+                        <div class="rounded-3 bg-info bg-gradient text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm" style="width: 2.5rem; height: 2.5rem;">
+                            <i class="material-icons material-symbol-rounded" style="font-size: 1.25rem;">receipt_long</i>
+                        </div>
+                        <h6 class="mb-0 fw-bold text-dark">Order Details</h6>
                     </div>
                     <div class="card-body p-3 p-lg-4">
                         <div class="row g-3">
                             <div class="col-12 col-md-6 col-xl-4">
-                                <div class="border rounded-3 p-3 h-100 bg-light-subtle">
-                                    <label class="form-label text-body-secondary small mb-1">Order Number</label>
-                                    <p class="mb-0 fw-medium text-body" id="viewPoNumber">&mdash;</p>
+                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
+                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase" style="letter-spacing: 0.05em;">Order Number</label>
+                                    <p class="mb-0 fw-bold text-dark fs-6" id="viewPoNumber">&mdash;</p>
                                 </div>
                             </div>
                             <div class="col-12 col-md-6 col-xl-4">
-                                <div class="border rounded-3 p-3 h-100 bg-light-subtle">
-                                    <label class="form-label text-body-secondary small mb-1">Order Date</label>
-                                    <p class="mb-0 fw-medium text-body" id="viewPoDate">&mdash;</p>
+                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
+                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase" style="letter-spacing: 0.05em;">Order Date</label>
+                                    <p class="mb-0 fw-bold text-dark fs-6" id="viewPoDate">&mdash;</p>
                                 </div>
                             </div>
                             <div class="col-12 col-md-6 col-xl-4">
-                                <div class="border rounded-3 p-3 h-100 bg-light-subtle">
-                                    <label class="form-label text-body-secondary small mb-1">Store Name</label>
-                                    <p class="mb-0 fw-medium text-body" id="viewStoreName">&mdash;</p>
+                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
+                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase" style="letter-spacing: 0.05em;">Store Name</label>
+                                    <p class="mb-0 fw-bold text-dark fs-6" id="viewStoreName">&mdash;</p>
                                 </div>
                             </div>
                             <div class="col-12 col-md-6 col-xl-4">
-                                <div class="border rounded-3 p-3 h-100 bg-light-subtle">
-                                    <label class="form-label text-body-secondary small mb-1">Vendor Name</label>
-                                    <p class="mb-0 fw-medium text-body" id="viewVendorName">&mdash;</p>
+                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
+                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase" style="letter-spacing: 0.05em;">Vendor Name</label>
+                                    <p class="mb-0 fw-bold text-dark fs-6" id="viewVendorName">&mdash;</p>
                                 </div>
                             </div>
                             <div class="col-12 col-md-6 col-xl-4">
-                                <div class="border rounded-3 p-3 h-100 bg-light-subtle">
-                                    <label class="form-label text-body-secondary small mb-1">Payment Mode</label>
-                                    <p class="mb-0 fw-medium text-body" id="viewPaymentCode">&mdash;</p>
+                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
+                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase" style="letter-spacing: 0.05em;">Payment Mode</label>
+                                    <p class="mb-0 fw-bold text-dark fs-6" id="viewPaymentCode">&mdash;</p>
                                 </div>
                             </div>
                             <div class="col-12 col-md-6 col-xl-4">
-                                <div class="border rounded-3 p-3 h-100 bg-light-subtle">
-                                    <label class="form-label text-body-secondary small mb-1">Bill No./Invoice No</label>
-                                    <p class="mb-0 fw-medium text-body" id="viewBillNo">&mdash;</p>
+                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
+                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase" style="letter-spacing: 0.05em;">Bill No./Invoice No</label>
+                                    <p class="mb-0 fw-bold text-dark fs-6" id="viewBillNo">&mdash;</p>
                                 </div>
                             </div>
                             <div class="col-12 col-md-6 col-xl-4">
-                                <div class="border rounded-3 p-3 h-100 bg-light-subtle">
-                                    <label class="form-label text-body-secondary small mb-1">Bill Date</label>
-                                    <p class="mb-0 fw-medium text-body" id="viewBillDate">&mdash;</p>
+                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
+                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase" style="letter-spacing: 0.05em;">Bill Date</label>
+                                    <p class="mb-0 fw-bold text-dark fs-6" id="viewBillDate">&mdash;</p>
                                 </div>
                             </div>
                             <div class="col-12 col-md-6 col-xl-4">
-                                <div class="border rounded-3 p-3 h-100 bg-light-subtle">
-                                    <label class="form-label text-body-secondary small mb-1">Challan No./Reference</label>
-                                    <p class="mb-0 fw-medium text-body" id="viewChallanNo">&mdash;</p>
+                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
+                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase" style="letter-spacing: 0.05em;">Challan No./Reference</label>
+                                    <p class="mb-0 fw-bold text-dark fs-6" id="viewChallanNo">&mdash;</p>
                                 </div>
                             </div>
                             <div class="col-12 col-md-6 col-xl-4">
-                                <div class="border rounded-3 p-3 h-100 bg-light-subtle">
-                                    <label class="form-label text-body-secondary small mb-1">Challan Date</label>
-                                    <p class="mb-0 fw-medium text-body" id="viewChallanDate">&mdash;</p>
+                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
+                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase" style="letter-spacing: 0.05em;">Challan Date</label>
+                                    <p class="mb-0 fw-bold text-dark fs-6" id="viewChallanDate">&mdash;</p>
                                 </div>
                             </div>
                             <div class="col-12 col-md-6 col-xl-4">
-                                <div class="border rounded-3 p-3 h-100 bg-light-subtle">
-                                    <label class="form-label text-body-secondary small mb-1">Status</label>
-                                    <p class="mb-0"><span class="badge" id="viewStatus">&mdash;</span></p>
+                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
+                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase" style="letter-spacing: 0.05em;">Status</label>
+                                    <p class="mb-0"><span class="badge fs-6 px-3 py-2" id="viewStatus">&mdash;</span></p>
                                 </div>
                             </div>
                             <div class="col-12">
-                                <div class="border rounded-3 p-3 bg-light-subtle">
-                                    <label class="form-label text-body-secondary small mb-1">Bill</label>
+                                <div class="border-0 rounded-4 p-4 shadow-sm" style="background: linear-gradient(135deg, #ffffff 0%, #e7f3ff 100%);">
+                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase" style="letter-spacing: 0.05em;">Bill</label>
                                     <p class="mb-0" id="viewBillWrap">
-                                        <a href="#" id="viewBillLink" target="_blank" rel="noopener" class="btn  btn-outline-primary" style="display: none;">View / Download Bill</a>
-                                        <span id="viewBillNone" class="text-muted">No bill uploaded</span>
+                                        <a href="#" id="viewBillLink" target="_blank" rel="noopener" class="btn btn-info rounded-pill px-4 py-2 shadow-sm fw-semibold" style="display: none; transition: all 0.3s ease;">View / Download Bill</a>
+                                        <span id="viewBillNone" class="text-muted fst-italic">No bill uploaded</span>
                                     </p>
                                 </div>
                             </div>
@@ -1062,39 +1278,42 @@
                     </div>
                 </div>
 
-                <div class="card border-0 shadow-sm mb-0 overflow-hidden">
-                    <div class="card-header bg-white border-0 py-3 px-4">
-                        <h6 class="mb-0 fw-semibold text-primary">Item Details</h6>
+                <div class="card border-0 shadow-lg mb-0 overflow-hidden rounded-4">
+                    <div class="card-header bg-gradient border-0 py-3 px-4 d-flex align-items-center gap-2" style="background: linear-gradient(135deg, #ffffff 0%, #e7f3ff 100%);">
+                        <div class="rounded-3 bg-info bg-gradient text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm" style="width: 2.5rem; height: 2.5rem;">
+                            <i class="material-icons material-symbol-rounded" style="font-size: 1.25rem;">inventory_2</i>
+                        </div>
+                        <h6 class="mb-0 fw-bold text-dark">Item Details</h6>
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
-                            <table class="table align-middle mb-0">
-                                <thead>
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
                                     <tr>
-                                        <th class="text-nowrap">Item Name</th>
-                                        <th class="text-nowrap">Unit</th>
-                                        <th class="text-nowrap">Item Code</th>
-                                        <th class="text-nowrap">Quantity</th>
-                                        <th class="text-nowrap">Unit Price</th>
-                                        <th class="text-nowrap">Tax (%)</th>
-                                        <th class="text-nowrap">Total Amount</th>
+                                        <th class="text-nowrap fw-bold text-dark py-3 ps-4">Item Name</th>
+                                        <th class="text-nowrap fw-bold text-dark py-3">Unit</th>
+                                        <th class="text-nowrap fw-bold text-dark py-3">Item Code</th>
+                                        <th class="text-nowrap fw-bold text-dark py-3">Quantity</th>
+                                        <th class="text-nowrap fw-bold text-dark py-3">Unit Price</th>
+                                        <th class="text-nowrap fw-bold text-dark py-3">Tax (%)</th>
+                                        <th class="text-nowrap fw-bold text-dark py-3 pe-4">Total Amount</th>
                                     </tr>
                                 </thead>
                                 <tbody id="viewPoItemsBody"></tbody>
                             </table>
                         </div>
                     </div>
-                    <div class="card-footer bg-body-tertiary d-flex justify-content-end align-items-center py-3 px-4">
-                        <span class="fw-semibold">Grand Total:</span>
-                        <span class="fs-5 text-primary fw-bold ms-2" id="viewPoGrandTotal">&#8377;0.00</span>
+                    <div class="card-footer bg-gradient d-flex justify-content-end align-items-center py-3 px-4" style="background: linear-gradient(135deg, #e7f3ff 0%, #cfe2ff 100%);">
+                        <span class="fw-bold text-dark" style="letter-spacing: 0.05em;">Grand Total:</span>
+                        <span class="fs-4 text-info fw-bold ms-3" id="viewPoGrandTotal" style="font-family: 'Segoe UI', system-ui, sans-serif;">&#8377;0.00</span>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer border-0 border-top bg-body-tertiary bg-opacity-25 px-4 py-3 d-flex flex-wrap gap-2 justify-content-end">
-                <button type="button" class="btn btn-outline-primary rounded-3 btn-print-view-modal d-inline-flex align-items-center gap-2" data-print-target="#viewPurchaseOrderModal" title="Print">
+            <div class="modal-footer border-0 border-top py-3 px-4 d-flex flex-wrap gap-2 justify-content-end bg-gradient" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
+                <button type="button" class="btn btn-info rounded-pill d-inline-flex align-items-center gap-2 px-4 shadow-sm fw-semibold btn-print-view-modal" data-print-target="#viewPurchaseOrderModal" title="Print" style="transition: all 0.3s ease;">
                     <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;">print</i> Print
                 </button>
-                <button type="button" class="btn btn-secondary rounded-3" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-secondary rounded-pill px-4 fw-semibold" data-bs-dismiss="modal" style="transition: all 0.3s ease;">Close</button>
             </div>
         </div>
     </div>
