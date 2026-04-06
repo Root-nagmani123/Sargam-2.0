@@ -57,13 +57,14 @@ class StockPurchaseDetailsExport implements FromView, WithStyles, WithEvents, Wi
         $sheet->mergeCells('A5:H5');
 
         $sheet->getStyle('A1:A5')->getAlignment()->setHorizontal('center');
-        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
-        $sheet->getStyle('A2')->getFont()->setBold(true)->setSize(12);
-        $sheet->getStyle('A3:A5')->getFont()->setSize(10);
+        // 11pt across sheet — matches PDF / print for visual parity
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(11);
+        $sheet->getStyle('A2')->getFont()->setBold(true)->setSize(11);
+        $sheet->getStyle('A3:A5')->getFont()->setSize(11);
 
         // Table header (row 7 in the view)
         $headerRange = 'A7:H7';
-        $sheet->getStyle($headerRange)->getFont()->setBold(true);
+        $sheet->getStyle($headerRange)->getFont()->setBold(true)->setSize(11);
         $sheet->getStyle($headerRange)->getAlignment()->setHorizontal('center');
         $sheet->getStyle($headerRange)->getFill()
             ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
@@ -72,6 +73,7 @@ class StockPurchaseDetailsExport implements FromView, WithStyles, WithEvents, Wi
 
         // Borders for the table
         $lastRow    = $sheet->getHighestRow();
+        $sheet->getStyle("A8:H{$lastRow}")->getFont()->setSize(11);
         $tableRange = "A7:H{$lastRow}";
         $sheet->getStyle($tableRange)->getBorders()->getAllBorders()
             ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN)
@@ -116,6 +118,7 @@ class StockPurchaseDetailsExport implements FromView, WithStyles, WithEvents, Wi
                             ],
                             'font' => [
                                 'bold' => true,
+                                'size' => 11,
                                 'color' => ['argb' => 'FFFFFFFF'],
                             ],
                         ]);
@@ -130,6 +133,7 @@ class StockPurchaseDetailsExport implements FromView, WithStyles, WithEvents, Wi
                             ],
                             'font' => [
                                 'bold' => true,
+                                'size' => 11,
                                 'color' => ['argb' => 'FFFFFFFF'],
                             ],
                         ]);

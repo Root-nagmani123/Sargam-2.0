@@ -32,6 +32,28 @@ class IdCardSecurityMapper
     }
 
     /**
+     * Resolve display name for employee_master.pk or pk_old (e.g. created_by on ID card rows).
+     */
+    private static function resolveEmployeeNameFromEmployeePk($employeePk): ?string
+    {
+        if ($employeePk === null || $employeePk === '') {
+            return null;
+        }
+        $emp = DB::table('employee_master')
+            ->where(function ($q) use ($employeePk) {
+                $q->where('pk', $employeePk)->orWhere('pk_old', $employeePk);
+            })
+            ->select(['first_name', 'last_name'])
+            ->first();
+        if (! $emp) {
+            return null;
+        }
+        $name = trim(($emp->first_name ?? '') . ' ' . ($emp->last_name ?? ''));
+
+        return $name !== '' ? $name : null;
+    }
+
+    /**
      * Generate ID card number for government (Permanent) employees.
      * Format: DDMMYYYY(dob) + first 4 letters of name (uppercase).
      * Example: 20022026MAYA (20-Feb-2026, name "Maya").
@@ -152,7 +174,11 @@ class IdCardSecurityMapper
             }
         }
         if ($dto->requested_by === null && !empty($row->created_by)) {
-            $creator = DB::table('employee_master')->where('pk', $row->created_by)->first();
+            $creator = DB::table('employee_master')
+                ->where(function ($q) use ($row) {
+                    $q->where('pk', $row->created_by)->orWhere('pk_old', $row->created_by);
+                })
+                ->first();
             if ($creator) {
                 $dto->requested_by = trim(($creator->first_name ?? '') . ' ' . ($creator->last_name ?? ''));
                 if (!empty($creator->department_master_pk)) {
@@ -161,7 +187,16 @@ class IdCardSecurityMapper
                 }
             }
         }
+        $dto->created_by_name = null;
+        if ($row->relationLoaded('creator') && $row->creator) {
+            $n = trim(($row->creator->first_name ?? '') . ' ' . ($row->creator->last_name ?? ''));
+            $dto->created_by_name = $n !== '' ? $n : null;
+        }
+        if ($dto->created_by_name === null) {
+            $dto->created_by_name = static::resolveEmployeeNameFromEmployeePk($row->created_by);
+        }
         $dto->approval_authority = null;
+        $dto->approval_authority_name = null;
         $dto->vendor_organization_name = null;
         $dto->fir_receipt = null;
         $dto->payment_receipt = null;
@@ -299,17 +334,42 @@ class IdCardSecurityMapper
             $dto->section = $deptName ?? (string) $row->section;
             $dto->requested_section = $dto->section;
         }
+        $dto->created_by_name = null;
         if (!empty($row->created_by)) {
-            $creator = DB::table('employee_master')->where('pk', $row->created_by)->first();
+            $creator = DB::table('employee_master')
+                ->where(function ($q) use ($row) {
+                    $q->where('pk', $row->created_by)->orWhere('pk_old', $row->created_by);
+                })
+                ->first();
             if ($creator) {
-                $dto->requested_by = trim(($creator->first_name ?? '') . ' ' . ($creator->last_name ?? ''));
+                $creatorName = trim(($creator->first_name ?? '') . ' ' . ($creator->last_name ?? ''));
+                $dto->created_by_name = $creatorName !== '' ? $creatorName : null;
+                $dto->requested_by = $creatorName !== '' ? $creatorName : null;
                 if (!empty($creator->department_master_pk)) {
                     $dto->requested_section = DB::table('department_master')->where('pk', $creator->department_master_pk)->value('department_name');
                 }
             }
         }
-        // Contractual table: department_approval_emp_pk = Approval Authority (employee pk)
-        $dto->approval_authority = isset($row->department_approval_emp_pk) ? (int) $row->department_approval_emp_pk : null;
+        // Contractual table: department_approval_emp_pk = Approval Authority (employee pk / pk_old)
+        $dto->approval_authority = null;
+        $dto->approval_authority_name = null;
+        $deptApprPk = $row->department_approval_emp_pk ?? null;
+        if ($deptApprPk !== null && $deptApprPk !== '') {
+            $dto->approval_authority = (int) $deptApprPk;
+            $authEmp = DB::table('employee_master as em')
+                ->leftJoin('designation_master as dm', 'em.designation_master_pk', '=', 'dm.pk')
+                ->where(function ($q) use ($deptApprPk) {
+                    $q->where('em.pk', $deptApprPk)->orWhere('em.pk_old', $deptApprPk);
+                })
+                ->select(['em.first_name', 'em.last_name', 'dm.designation_name'])
+                ->first();
+            if ($authEmp) {
+                $name = trim(($authEmp->first_name ?? '') . ' ' . ($authEmp->last_name ?? ''));
+                $dto->approval_authority_name = $name !== ''
+                    ? $name . (! empty($authEmp->designation_name) ? ' (' . $authEmp->designation_name . ')' : '')
+                    : null;
+            }
+        }
         $dto->depart_approval_status = isset($row->depart_approval_status) ? (int) $row->depart_approval_status : null;
         $dto->vendor_organization_name = $row->vender_name ?? null;
         $dto->fir_receipt = null;

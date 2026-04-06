@@ -225,28 +225,15 @@ class UserController extends Controller
             ]);
         }
 
-        if ($request->boolean('calendar_only')) {
-            $calendarHtml = view('components.calendar', [
-                'year' => $year,
-                'month' => $month,
-                'selected' => now()->toDateString(),
-                'events' => $events,
-                'theme' => 'gov-red',
-            ])->render();
-
-            return response()->json([
-                'html' => $calendarHtml,
-            ]);
-        }
-
-        return view('admin.dashboard', compact('year', 'month', 'events','emp_dob_data', 'totalActiveCourses', 'upcomingCourses', 'total_guest_faculty', 'total_internal_faculty', 'exemptionCount', 'MDO_count', 'todayTimetable', 'totalSessions', 'totalStudents', 'isCCorACC'));
         $todayFamilyApprovals = $this->getTodayPendingFamilyApprovalsCount();
         $todayVehicleApprovals = $this->getTodayPendingVehicleApprovalsCount();
         $todayIdCardRequests = $this->getTodayPendingIdCardRequestsCount();
         $todayPendingSplit = $this->getTodayPendingIdCardRequestsSplit();
         $todayPendingPermanentIdCardRequests = (int) ($todayPendingSplit['perm'] ?? 0);
         $todayPendingContractualIdCardRequests = (int) ($todayPendingSplit['cont'] ?? 0);
-        $todayApproval1SecurityRequests = $this->getTodayPendingSecurityApproval1Count();
+        $todayApproval1Split = $this->getTodayPendingSecurityApproval1Split();
+        $todayApproval1IdCardRequests = (int) ($todayApproval1Split['idcard'] ?? 0);
+        $todayApproval1DuplicateIdCardRequests = (int) ($todayApproval1Split['duplicate'] ?? 0);
         $todayDuplicatePermIdCardRequests = $this->getTodayDuplicatePermanentIdCardRequestsCount();
         $todayDuplicateContractualIdCardRequests = $this->getTodayDuplicateContractualIdCardRequestsCount();
 
@@ -270,7 +257,8 @@ class UserController extends Controller
             'todayIdCardRequests',
             'todayPendingPermanentIdCardRequests',
             'todayPendingContractualIdCardRequests',
-            'todayApproval1SecurityRequests',
+            'todayApproval1IdCardRequests',
+            'todayApproval1DuplicateIdCardRequests',
             'todayDuplicatePermIdCardRequests',
             'todayDuplicateContractualIdCardRequests'
         ));
@@ -496,32 +484,33 @@ class UserController extends Controller
     }
 
     /**
-     * Today's pending Security Approval-I requests (contractual regular + duplicate)
-     * for the logged-in department approval authority.
+     * Today's pending Security Approval-I for the logged-in department authority,
+     * split into contractual new ID card vs contractual duplicate ID card (matches Approval I screen).
+     *
+     * @return array{idcard: int, duplicate: int}
      */
-    private function getTodayPendingSecurityApproval1Count(): int
+    private function getTodayPendingSecurityApproval1Split(): array
     {
         $user = Auth::user();
         if (! $user) {
-            return 0;
+            return ['idcard' => 0, 'duplicate' => 0];
         }
 
         $employeePk = $user->user_id ?? $user->pk ?? null;
         if (! $employeePk) {
-            return 0;
+            return ['idcard' => 0, 'duplicate' => 0];
         }
 
         $start = Carbon::today()->startOfDay()->toDateTimeString();
         $end = Carbon::today()->endOfDay()->toDateTimeString();
 
-        // Contractual regular: pending at Approval-I for this authority
+        // Contractual regular ID card: pending at Approval-I for this authority
         $contQuery = DB::table('security_con_oth_id_apply')
             ->whereBetween('created_date', [$start, $end])
             ->where('id_status', 1)
             ->where('depart_approval_status', 1)
             ->where('department_approval_emp_pk', $employeePk);
 
-        // Exclude those where Approval-I already done (status=1 in approval table)
         $contA1Done = DB::table('security_con_oth_id_apply_approval')
             ->where('status', 1)
             ->pluck('security_parm_id_apply_pk');
@@ -529,9 +518,9 @@ class UserController extends Controller
             $contQuery->whereNotIn('emp_id_apply', $contA1Done);
         }
 
-        $contCount = (int) $contQuery->count();
+        $idcardCount = (int) $contQuery->count();
 
-        // Contractual duplicate: pending at Approval-I for this authority
+        // Contractual duplicate ID card: pending at Approval-I for this authority
         $dupA1Done = DB::table('security_dup_other_id_apply_approval')
             ->where('status', 1)
             ->pluck('security_con_id_apply_pk');
@@ -547,9 +536,9 @@ class UserController extends Controller
             $dupQuery->whereNotIn('emp_id_apply', $dupA1Done);
         }
 
-        $dupCount = (int) $dupQuery->count();
+        $duplicateCount = (int) $dupQuery->count();
 
-        return $contCount + $dupCount;
+        return ['idcard' => $idcardCount, 'duplicate' => $duplicateCount];
     }
 
     private function getTodayDuplicatePermanentIdCardRequestsCount(): int
