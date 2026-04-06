@@ -83,7 +83,7 @@ class EstateRequestPutInHacDataTable extends DataTable
                 ->whereRaw('1 = 0');
         }
 
-        return $model->newQuery()
+        $q = $model->newQuery()
             ->select([
                 'estate_home_request_details.pk',
                 'estate_home_request_details.req_id',
@@ -102,6 +102,24 @@ class EstateRequestPutInHacDataTable extends DataTable
             ->where('estate_home_request_details.hac_status', 0)
             ->where('estate_home_request_details.change_status', 0)
             ->orderBy('estate_home_request_details.pk', 'desc');
+
+        // Home ?scope=self: only this user's requests (same as Request For Estate self view).
+        if (request('scope') === 'self'
+            && (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'))) {
+            $user = Auth::user();
+            if ($user) {
+                $employeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null);
+                if (! empty($employeeIds)) {
+                    $q->whereIn('estate_home_request_details.employee_pk', $employeeIds);
+                } else {
+                    $q->whereRaw('1 = 0');
+                }
+            } else {
+                $q->whereRaw('1 = 0');
+            }
+        }
+
+        return $q;
     }
 
     public function html(): HtmlBuilder

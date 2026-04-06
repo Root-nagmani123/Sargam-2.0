@@ -17,14 +17,20 @@ class EstatePossessionDetailsDataTable extends DataTable
     {
         $hasReading2Col = Schema::hasColumn('estate_possession_details', 'electric_meter_reading_2');
 
-        return (new EloquentDataTable($query))
-            ->addIndexColumn()
-            ->addColumn('checkbox', function ($row) {
-                if (! (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'))) {
-                    return '';
-                }
+        $isEstateAuthority = hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin');
+        // Home ?scope=self: read-only list; edit/delete/bulk from Setup → Estate only.
+        $hideAuthorityMutations = request('scope') === 'self' && $isEstateAuthority;
+
+        $dataTable = (new EloquentDataTable($query))
+            ->addIndexColumn();
+
+        if ($isEstateAuthority && ! $hideAuthorityMutations) {
+            $dataTable->addColumn('checkbox', function ($row) {
                 return '<input type="checkbox" class="form-check-input row-select-possession-details" data-id="' . (int) $row->pk . '" aria-label="Select row">';
-            })
+            });
+        }
+
+        $dataTable = $dataTable
             ->editColumn('request_id', fn ($row) => e($row->request_id ?? '—'))
             ->editColumn('emp_name', fn ($row) => e($row->emp_name ?? '—'))
             ->editColumn('employee_id', fn ($row) => e($row->employee_id ?? '—'))
@@ -67,13 +73,10 @@ class EstatePossessionDetailsDataTable extends DataTable
                 }
 
                 return ($primary !== null && $primary !== '') ? (string) $primary : '---';
-            })
-            ->addColumn('actions', function ($row) {
-                // Only Estate/Admin/Super Admin/Training/IST can edit possession details.
-                if (! (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'))) {
-                    return '';
-                }
+            });
 
+        if ($isEstateAuthority && ! $hideAuthorityMutations) {
+            $dataTable->addColumn('actions', function ($row) {
                 $editUrl = route('admin.estate.possession-details.create', [
                     'requester_id' => $row->estate_home_request_details_pk,
                 ]);
@@ -91,7 +94,10 @@ class EstatePossessionDetailsDataTable extends DataTable
                         </button>
                     </form>
                 </div>';
-            })
+            });
+        }
+
+        return $dataTable
             ->filter(function ($query) {
                 $searchValue = trim((string) request()->input('search.value', ''));
                 if ($searchValue === '') {
@@ -110,7 +116,10 @@ class EstatePossessionDetailsDataTable extends DataTable
                         ->orWhere('ehm.house_no', 'like', $searchLike);
                 });
             }, true)
-            ->rawColumns(['checkbox', 'actions'])
+            ->rawColumns(array_values(array_filter([
+                ($isEstateAuthority && ! $hideAuthorityMutations) ? 'checkbox' : null,
+                ($isEstateAuthority && ! $hideAuthorityMutations) ? 'actions' : null,
+            ])))
             ->setRowId('pk');
     }
 
@@ -155,14 +164,15 @@ class EstatePossessionDetailsDataTable extends DataTable
         $query->where('epd.possession_date', '>', '1900-01-01');
         $query->where('epd.return_home_status', 0);
 
-        // RBAC: Only Admin / Estate / Super Admin / Training-* / IST can see full list.
-        // All other roles (including Staff / HAC Person etc.) should only see their own possessions.
+        // RBAC: Admin / Estate / Super Admin see full list unless Home ?scope=self (own rows only).
+        // Other roles (Staff / HAC / Training / IST etc.) always see only their own possessions.
         $user = \Illuminate\Support\Facades\Auth::user();
         $isEstateAuthority = $user && (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'));
-        if (! $isEstateAuthority) {
+        $authorityPersonalScope = request('scope') === 'self' && $isEstateAuthority;
+        if (! $isEstateAuthority || $authorityPersonalScope) {
             if ($user) {
                 $employeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null);
-                if (!empty($employeeIds)) {
+                if (! empty($employeeIds)) {
                     $query->whereIn('ehrd.employee_pk', $employeeIds);
                 } else {
                     $query->whereRaw('1 = 0');
@@ -212,14 +222,18 @@ class EstatePossessionDetailsDataTable extends DataTable
     public function getColumns(): array
     {
         $isEstateAuthority = hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin');
+        $hideAuthorityMutations = request('scope') === 'self' && $isEstateAuthority;
 
-        $columns = [
-            Column::computed('checkbox')
+        $columns = [];
+        if ($isEstateAuthority && ! $hideAuthorityMutations) {
+            $columns[] = Column::computed('checkbox')
                 ->title('<input type="checkbox" class="form-check-input" id="selectAllPossessionDetails" aria-label="Select all">')
                 ->addClass('text-center')
                 ->orderable(false)
                 ->searchable(false)
-                ->width('40px'),
+                ->width('40px');
+        }
+        $columns = array_merge($columns, [
             Column::computed('DT_RowIndex')->title('S.NO.')->addClass('text-center')->orderable(false)->searchable(false)->width('50px'),
             // Hidden column for default sort: newest possession (highest pk) first
             Column::make('pk')->name('epd.pk')->title('ID')->orderable(true)->searchable(false)->addClass('d-none')->visible(false),
@@ -237,9 +251,9 @@ class EstatePossessionDetailsDataTable extends DataTable
             Column::make('allotment_date')->name('epd.allotment_date')->title('ALLOTMENT DATE')->orderable(true)->searchable(false),
             Column::make('possession_date')->name('epd.possession_date')->title('POSSESSION DATE')->orderable(true)->searchable(false),
             Column::make('electric_meter_reading')->name('epd.electric_meter_reading')->title('LAST MONTH ELECTRIC METER READING')->orderable(false)->searchable(false)->addClass('text-end')->width('140px'),
-        ];
+        ]);
 
-        if ($isEstateAuthority) {
+        if ($isEstateAuthority && ! $hideAuthorityMutations) {
             $columns[] = Column::computed('actions')->title('Actions')->addClass('text-center')->orderable(false)->searchable(false)->width('120px');
         }
 
