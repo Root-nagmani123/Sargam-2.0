@@ -319,6 +319,220 @@ class EmployeeIDCardRequestController extends Controller
         return $cont;
     }
 
+    private static function normalizeBeneficiaryNameKey(string $name): string
+    {
+        return mb_strtolower(trim(preg_replace('/\s+/u', ' ', $name)));
+    }
+
+    private static function normalizeMobileDigits(?string $mobile): ?string
+    {
+        if ($mobile === null || trim((string) $mobile) === '') {
+            return null;
+        }
+        $digits = preg_replace('/\D+/', '', (string) $mobile);
+
+        return $digits !== '' ? $digits : null;
+    }
+
+    /**
+     * Pending contractual row for the same real-world person.
+     * Name matching is done in PHP with {@see normalizeBeneficiaryNameKey} so it matches DB values that only differ
+     * by internal spaces/tabs (SQL LOWER(TRIM(...)) alone does not collapse "A  B" vs "A B").
+     */
+    private static function hasPendingContractualByBeneficiaryIdentity(string $beneficiaryName, ?string $mobileRaw, ?string $dobYmd): bool
+    {
+        $nameKey = static::normalizeBeneficiaryNameKey($beneficiaryName);
+        if ($nameKey === '') {
+            return false;
+        }
+
+        $rows = DB::table('security_con_oth_id_apply')
+            ->where('id_status', SecurityParmIdApply::ID_STATUS_PENDING)
+            ->get(['employee_name', 'mobile_no', 'employee_dob']);
+
+        $mobileDigits = static::normalizeMobileDigits($mobileRaw);
+
+        foreach ($rows as $row) {
+            if (static::normalizeBeneficiaryNameKey((string) ($row->employee_name ?? '')) !== $nameKey) {
+                continue;
+            }
+
+            if ($mobileDigits !== null) {
+                $rowM = static::normalizeMobileDigits($row->mobile_no ?? null);
+                if ($rowM === $mobileDigits || $rowM === null) {
+                    return true;
+                }
+
+                continue;
+            }
+
+            if ($dobYmd) {
+                $rowDob = null;
+                if (! empty($row->employee_dob)) {
+                    try {
+                        $rowDob = \Carbon\Carbon::parse($row->employee_dob)->toDateString();
+                    } catch (\Exception $e) {
+                        $rowDob = null;
+                    }
+                }
+                if ($rowDob === null || $rowDob === $dobYmd) {
+                    return true;
+                }
+
+                continue;
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * All employee_master identifiers that may appear in security_con_oth_id_apply.created_by (pk and pk_old).
+     *
+     * @return list<int>
+     */
+    private static function employeeLinkedCreatedByIds(?int $employeeMasterPk): array
+    {
+        if ($employeeMasterPk === null || $employeeMasterPk <= 0) {
+            return [];
+        }
+        $hasPkOld = Schema::hasColumn('employee_master', 'pk_old');
+        $cols = $hasPkOld ? ['pk', 'pk_old'] : ['pk'];
+        $row = DB::table('employee_master')->where('pk', $employeeMasterPk)->first($cols);
+        if (! $row) {
+            return [(int) $employeeMasterPk];
+        }
+        $ids = [(int) ($row->pk ?? $employeeMasterPk)];
+        if ($hasPkOld && isset($row->pk_old) && (int) $row->pk_old > 0 && (int) $row->pk_old !== (int) ($row->pk ?? 0)) {
+            $ids[] = (int) $row->pk_old;
+        }
+
+        return array_values(array_unique(array_filter($ids, fn ($v) => (int) $v > 0)));
+    }
+
+    /**
+     * True if this employee already has a pending (not approved/rejected) permanent ID card application.
+     */
+    private static function hasPendingPermanentIdCardRequest(int $employeeMasterPk): bool
+    {
+        return SecurityParmIdApply::where('employee_master_pk', $employeeMasterPk)
+            ->where('id_status', SecurityParmIdApply::ID_STATUS_PENDING)
+            ->exists();
+    }
+
+    /**
+     * Pending permanent application whose linked employee name matches (PHP-normalized), for cases where
+     * employee_master_pk was not resolved on the form but the beneficiary is the same person.
+     */
+    private static function hasPendingPermanentMatchingBeneficiaryName(string $beneficiaryName): bool
+    {
+        $nameKey = static::normalizeBeneficiaryNameKey($beneficiaryName);
+        if ($nameKey === '') {
+            return false;
+        }
+
+        $rows = DB::table('security_parm_id_apply as spa')
+            ->join('employee_master as em', 'em.pk', '=', 'spa.employee_master_pk')
+            ->where('spa.id_status', SecurityParmIdApply::ID_STATUS_PENDING)
+            ->select(['em.first_name', 'em.last_name'])
+            ->get();
+
+        foreach ($rows as $r) {
+            $full = static::normalizeBeneficiaryNameKey(trim(($r->first_name ?? '') . ' ' . ($r->last_name ?? '')));
+            if ($full === $nameKey) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * True if a pending contractual row exists for the same beneficiary (normalized name) and the same
+     * submitter/subject id(s) including pk_old. Also includes $rawAuthUserId (session user_id) because
+     * created_by is sometimes stored as login id rather than resolved employee_master.pk.
+     * Does not filter on DOB — old rows may have NULL employee_dob, which previously let duplicates through.
+     *
+     * @param  int|string|null  $rawAuthUserId
+     */
+    private static function hasPendingContractualBeneficiaryRequest(int $authEmployeePk, int $subjectEmployeePk, string $beneficiaryName, $rawAuthUserId = null): bool
+    {
+        if ($authEmployeePk <= 0) {
+            return false;
+        }
+        $nameKey = static::normalizeBeneficiaryNameKey($beneficiaryName);
+        if ($nameKey === '') {
+            return false;
+        }
+
+        $idSet = array_merge(
+            static::employeeLinkedCreatedByIds($authEmployeePk),
+            static::employeeLinkedCreatedByIds($subjectEmployeePk),
+        );
+        if ($rawAuthUserId !== null && $rawAuthUserId !== '') {
+            $idSet[] = (int) $rawAuthUserId;
+        }
+        $idSet = array_values(array_unique(array_filter($idSet, fn ($v) => (int) $v > 0)));
+        if ($idSet === []) {
+            return false;
+        }
+
+        $rows = DB::table('security_con_oth_id_apply')
+            ->where('id_status', SecurityParmIdApply::ID_STATUS_PENDING)
+            ->whereIn('created_by', $idSet)
+            ->get(['employee_name']);
+
+        foreach ($rows as $row) {
+            if (static::normalizeBeneficiaryNameKey((string) ($row->employee_name ?? '')) === $nameKey) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Pending new-card request for this subject: permanent row, contractual row matched by beneficiary identity
+     * (name + mobile / DOB / name-only), or contractual row matched by created_by. Works when the logged-in user
+     * has no employee_master row (e.g. Admin) — authEmployeePk may be null.
+     *
+     * @param  int|string|null  $rawAuthUserId
+     */
+    private static function hasAnyPendingNewEmployeeIdCardRequest(
+        int $subjectEmployeePk,
+        string $beneficiaryName,
+        ?int $authEmployeePk,
+        $rawAuthUserId = null,
+        ?string $mobileRaw = null,
+        ?string $dobYmd = null
+    ): bool {
+        if (static::normalizeBeneficiaryNameKey($beneficiaryName) === '') {
+            return false;
+        }
+
+        if ($subjectEmployeePk > 0 && static::hasPendingPermanentIdCardRequest($subjectEmployeePk)) {
+            return true;
+        }
+
+        if (static::hasPendingPermanentMatchingBeneficiaryName($beneficiaryName)) {
+            return true;
+        }
+
+        if (static::hasPendingContractualByBeneficiaryIdentity($beneficiaryName, $mobileRaw, $dobYmd)) {
+            return true;
+        }
+
+        if ($authEmployeePk !== null && (int) $authEmployeePk > 0) {
+            $subj = $subjectEmployeePk > 0 ? $subjectEmployeePk : (int) $authEmployeePk;
+
+            return static::hasPendingContractualBeneficiaryRequest((int) $authEmployeePk, $subj, $beneficiaryName, $rawAuthUserId);
+        }
+
+        return false;
+    }
+
     public function create()
     {
         $authUserId = Auth::user()->user_id ?? Auth::id();
@@ -581,6 +795,32 @@ class EmployeeIDCardRequestController extends Controller
             throw ValidationException::withMessages([
                 'employee_type' => 'You already have a valid ID card. You can raise a new request for yourself only after expiry, or apply for another person.',
             ]);
+        }
+
+        // Block a second *new* ID card request while one is already pending (generation flow only).
+        $requestForPending = ($requestFor !== '' && $requestFor !== null) ? $requestFor : 'Own ID Card';
+        if (! $isDupOrExt && in_array($requestForPending, ['Own ID Card', 'Others ID Card'], true)) {
+            $pendingMsg = 'An Employee ID Card request is already pending for this employee. Please wait until it is approved or rejected before submitting a new one.';
+            $beneficiaryName = trim((string) ($validated['name'] ?? ''));
+            $subjectPk = (int) ($employeePk ?: ($authEmployeePk ?? 0));
+            $rawSessionUserId = Auth::user()->user_id ?? Auth::id();
+            $pendingDobYmd = ! empty($validated['date_of_birth'])
+                ? static::parseDateToYmd($validated['date_of_birth'])
+                : null;
+            $pendingMobile = $validated['mobile_number'] ?? null;
+            if ($beneficiaryName !== ''
+                && static::hasAnyPendingNewEmployeeIdCardRequest(
+                    $subjectPk,
+                    $beneficiaryName,
+                    $authEmployeePk,
+                    $rawSessionUserId,
+                    $pendingMobile,
+                    $pendingDobYmd
+                )) {
+                throw ValidationException::withMessages([
+                    'employee_type' => $pendingMsg,
+                ]);
+            }
         }
 
         $cardNameCode = $employeeType === 'Permanent Employee' ? 'p' : 'c';
