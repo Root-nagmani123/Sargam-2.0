@@ -5,41 +5,60 @@
     /** @var array<int> $storeIds */
     $storeIds = $storeIds ?? [];
 @endphp
-<div class="container-fluid stock-summary-report">
-    <div id="stock-summary-print-meta" class="d-none" hidden
-         data-store-name="{{ e($selectedStoreName ?? ($storeType == 'main' ? 'Officer\'s Main Mess(Primary)' : 'All Sub Stores')) }}"></div>
+<div class="container-fluid stock-summary-report pb-4">
+    <div id="stock-summary-print-meta" class="d-none" hidden data-store-name="{{ e($selectedStoreName ?? ($storeType == 'main' ? 'Officer\'s Main Mess(Primary)' : 'All Sub Stores')) }}"></div>
     <x-breadcrum title="Stock Summary Report"></x-breadcrum>
+
+    <div class="row no-print mb-3 mb-md-4">
+        <div class="col-12 col-lg-10 col-xl-8">
+            <div class="d-flex align-items-start gap-2 p-3 rounded-3 bg-primary-subtle bg-opacity-50 border border-primary-subtle ssr-info-banner">
+                <span class="material-symbols-rounded text-primary flex-shrink-0" style="font-size:1.25rem;margin-top:1px;" aria-hidden="true">info</span>
+                <p class="mb-0 text-primary-emphasis small lh-sm">
+                    Opening, purchase, sale, and closing stock for the selected period and stores. Use filters to narrow the view, then print or export if needed.
+                </p>
+            </div>
+        </div>
+    </div>
+
     <!-- Filters Section (Hide on Print) -->
-    <div class="card mb-4 border-0 shadow-sm no-print">
-        <div class="card-header bg-white border-0 pb-0">
-            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-                <h5 class="mb-0 fw-semibold text-dark">Filter Stock Summary</h5>
-                <span class="text-muted small">Refine results by date, store type &amp; store</span>
+    <div class="card mb-4 border-0 shadow-sm rounded-3 overflow-hidden no-print">
+        <div style="height:3px;background:linear-gradient(90deg,#0b4a7e 0%,#2980b9 50%,#0b4a7e 100%);" aria-hidden="true"></div>
+        <div class="card-header bg-body-tertiary border-0 py-3 px-3 px-lg-4">
+            <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2">
+                <div class="d-flex align-items-start gap-3">
+                    <span class="d-none d-sm-flex align-items-center justify-content-center flex-shrink-0 rounded-3 bg-primary-subtle text-primary p-2" aria-hidden="true">
+                        <span class="material-symbols-rounded" style="font-size: 1.5rem;">tune</span>
+                    </span>
+                    <div>
+                        <h5 class="mb-1 fw-semibold text-body">Filters</h5>
+                        <p class="mb-0 small text-body-secondary">Refine results by date, store type, and store selection.</p>
+                    </div>
+                </div>
             </div>
         </div>
         <div class="card-body p-3 p-lg-4">
             <form method="GET" action="{{ route('admin.mess.reports.stock-summary') }}">
                 <div class="row g-3">
-                    <div class="col-md-3">
-                        <label class="form-label small fw-semibold text-uppercase mb-1 text-muted">From Date</label>
-                        <input type="date" name="from_date" class="form-control" 
+                    <div class="col-12 col-sm-6 col-xl-3">
+                        <label for="stock_summary_from_date" class="form-label small fw-semibold text-uppercase text-body-secondary mb-1">From Date</label>
+                        <input type="date" name="from_date" id="stock_summary_from_date" class="form-control rounded-2"
                                value="{{ $fromDate }}" required>
                     </div>
-                    <div class="col-md-3">
-                        <label class="form-label small fw-semibold text-uppercase mb-1 text-muted">To Date</label>
-                        <input type="date" name="to_date" class="form-control" 
+                    <div class="col-12 col-sm-6 col-xl-3">
+                        <label for="stock_summary_to_date" class="form-label small fw-semibold text-uppercase text-body-secondary mb-1">To Date</label>
+                        <input type="date" name="to_date" id="stock_summary_to_date" class="form-control rounded-2"
                                value="{{ $toDate }}" required>
                     </div>
-                    <div class="col-md-3">
-                        <label class="form-label fw-semibold text-uppercase mb-1 text-muted">Store Type</label>
-                        <select name="store_type" id="store_type" class="form-select stock-summary-store-type" data-placeholder="Select Store Type">
+                    <div class="col-12 col-sm-6 col-xl-3">
+                        <label for="store_type" class="form-label small fw-semibold text-uppercase text-body-secondary mb-1">Store Type</label>
+                        <select name="store_type" id="store_type" class="form-select rounded-2 stock-summary-store-type" data-placeholder="Select Store Type">
                             <option value="main" @selected($storeType == 'main')>Main Store</option>
                             <option value="sub" @selected($storeType == 'sub')>Sub Store</option>
                         </select>
                     </div>
-                    <div class="col-md-3{{ $storeType == 'main' ? '' : ' d-none' }}" id="main_store_div">
-                        <label class="form-label fw-semibold text-uppercase mb-1 text-muted">Main Store</label>
-                        <select name="main_store_id[]" id="stock_summary_main_store" class="form-select form-select-sm stock-summary-store-multiselect" multiple data-placeholder="All Main Stores">
+                    <div class="col-12 col-sm-6 col-xl-3{{ $storeType == 'main' ? '' : ' d-none' }}" id="main_store_div">
+                        <label for="stock_summary_main_store" class="form-label small fw-semibold text-uppercase text-body-secondary mb-1">Main Store</label>
+                        <select name="main_store_id[]" id="stock_summary_main_store" class="form-select form-select-sm rounded-2 stock-summary-store-multiselect" multiple data-placeholder="All Main Stores">
                             @foreach($stores as $store)
                                 <option value="{{ $store->id }}" @selected($storeType === 'main' && in_array((int) $store->id, $storeIds, true))>
                                     {{ $store->store_name }}
@@ -47,9 +66,9 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-md-3{{ $storeType == 'sub' ? '' : ' d-none' }}" id="sub_store_div">
-                        <label class="form-label small fw-semibold text-uppercase mb-1 text-muted">Sub Store</label>
-                        <select name="sub_store_id[]" id="stock_summary_sub_store" class="form-select form-select-sm stock-summary-store-multiselect" multiple data-placeholder="All Sub Stores">
+                    <div class="col-12 col-sm-6 col-xl-3{{ $storeType == 'sub' ? '' : ' d-none' }}" id="sub_store_div">
+                        <label for="stock_summary_sub_store" class="form-label small fw-semibold text-uppercase text-body-secondary mb-1">Sub Store</label>
+                        <select name="sub_store_id[]" id="stock_summary_sub_store" class="form-select form-select-sm rounded-2 stock-summary-store-multiselect" multiple data-placeholder="All Sub Stores">
                             @foreach($subStores as $subStore)
                                 <option value="{{ $subStore->id }}" @selected($storeType === 'sub' && in_array((int) $subStore->id, $storeIds, true))>
                                     {{ $subStore->sub_store_name }}
@@ -58,62 +77,66 @@
                         </select>
                     </div>
                 </div>
-                <div class="mt-3 d-flex flex-wrap gap-2 align-items-center">
-                    <button type="submit" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1">
-                        <span class="material-symbols-rounded me-1" style="font-size: 18px;">filter_list</span>
-                        Apply Filters
+                <div class="d-flex flex-wrap align-items-center gap-2 pt-3 mt-3 border-top border-light-subtle">
+                    <button type="submit" class="btn btn-primary btn-sm rounded-2 d-inline-flex align-items-center gap-1 px-3">
+                        <span class="material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">filter_list</span>
+                        <span>Apply filters</span>
                     </button>
-                    <a href="{{ route('admin.mess.reports.stock-summary') }}" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1">
-                        <span class="material-symbols-rounded me-1" style="font-size: 18px;">refresh</span>
-                        Reset
+                    <a href="{{ route('admin.mess.reports.stock-summary') }}" class="btn btn-outline-secondary btn-sm rounded-2 d-inline-flex align-items-center gap-1 px-3">
+                        <span class="material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">refresh</span>
+                        <span>Reset</span>
                     </a>
-                    <div class="btn-group shadow-sm" role="group" aria-label="Print or download PDF">
-                    <button type="button" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center justify-content-center gap-1 px-3" onclick="printStockSummary()" title="Print report or choose Save as PDF in print dialog">
-                        <span class="material-symbols-rounded" style="font-size: 18px; line-height: 1;">print</span>
-                        <span>Print</span>
-                    </button>
-                    <button type="button" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center justify-content-center gap-1 px-3" title="Download PDF" data-stock-summary-pdf-url="{{ route('admin.mess.reports.stock-summary.pdf', request()->query()) }}" onclick="window.location.href=this.getAttribute('data-stock-summary-pdf-url')">
-                        <span class="material-symbols-rounded" style="font-size: 18px; line-height: 1;">picture_as_pdf</span>
-                        <span>PDF</span>
-                    </button>
+                    <div class="vr d-none d-md-block text-secondary mx-1 align-self-stretch my-1" role="separator" aria-hidden="true"></div>
+                    <div class="btn-group shadow-sm rounded-2" role="group" aria-label="Print or download PDF">
+                        <button type="button" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center justify-content-center gap-1 px-3 rounded-0 rounded-start-2" onclick="printStockSummary()" title="Print report or choose Save as PDF in print dialog">
+                            <span class="material-symbols-rounded" style="font-size: 18px; line-height: 1;" aria-hidden="true">print</span>
+                            <span>Print</span>
+                        </button>
+                        <button type="button" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center justify-content-center gap-1 px-3 rounded-0 rounded-end-2" title="Download PDF" data-stock-summary-pdf-url="{{ route('admin.mess.reports.stock-summary.pdf', request()->query()) }}" onclick="window.location.href=this.getAttribute('data-stock-summary-pdf-url')">
+                            <span class="material-symbols-rounded" style="font-size: 18px; line-height: 1;" aria-hidden="true">picture_as_pdf</span>
+                            <span>PDF</span>
+                        </button>
                     </div>
-
-                    <a href="{{ route('admin.mess.reports.stock-summary.excel', request()->query()) }}" class="btn btn-success btn-sm d-inline-flex align-items-center gap-1" title="Export to Excel">
-                        <span class="material-symbols-rounded me-1" style="font-size: 18px;">table_view</span>
-                        Export Excel
+                    <a href="{{ route('admin.mess.reports.stock-summary.excel', request()->query()) }}" class="btn btn-success btn-sm rounded-2 d-inline-flex align-items-center gap-1 px-3" title="Export to Excel">
+                        <span class="material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">table_view</span>
+                        <span>Export Excel</span>
                     </a>
                 </div>
             </form>
         </div>
     </div>
 
-<div class="card border-0 shadow-sm">
-    <div class="card-body p-3 p-lg-4">
+    <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+        <div class="card-body p-3 p-lg-4">
             <!-- Report Header -->
-    <div class="report-header text-center mb-4">
-        <h4 class="fw-bold text-uppercase mb-1">Stock Summary Report</h4>
-        <p class="mb-1 text-muted">
-            <span class="badge bg-light text-dark fw-normal px-3 py-2">
-                Period: {{ date('d-F-Y', strtotime($fromDate)) }} to {{ date('d-F-Y', strtotime($toDate)) }}
-            </span>
-        </p>
-        <p class="mb-0">
-            <span class="badge bg-primary-subtle text-primary-emphasis fw-normal px-3 py-2">
-                <strong>Store:</strong>
-                {{ $selectedStoreName ?? ($storeType == 'main' ? "Officer's Main Mess(Primary)" : 'All Sub Stores') }}
-            </span>
-        </p>
-    </div>
+            <div class="report-header text-center mb-4 rounded-3 p-4" style="background:linear-gradient(135deg,#f0f4f8 0%,#e8edf4 50%,#f0f4f8 100%);border:1px solid #e2e8f0;">
+                <div class="d-flex align-items-center justify-content-center gap-2 mb-3">
+                    <span class="material-symbols-rounded text-primary" style="font-size:1.75rem;" aria-hidden="true">assessment</span>
+                    <h4 class="fw-bold text-uppercase mb-0 text-body">Stock Summary Report</h4>
+                </div>
+                <div class="d-flex flex-column flex-sm-row flex-wrap align-items-center justify-content-center gap-2">
+                    <span class="badge rounded-pill bg-white text-body-emphasis fw-normal px-3 py-2 shadow-sm border">
+                        <span class="material-symbols-rounded align-middle me-1" style="font-size:1rem;" aria-hidden="true">date_range</span>
+                        Period: {{ date('d-F-Y', strtotime($fromDate)) }} to {{ date('d-F-Y', strtotime($toDate)) }}
+                    </span>
+                    <span class="badge rounded-pill bg-primary-subtle text-primary-emphasis border border-primary-subtle fw-normal px-3 py-2 text-wrap text-start shadow-sm" style="max-width: min(100%, 42rem);">
+                        <span class="material-symbols-rounded align-middle me-1" style="font-size:1rem;" aria-hidden="true">store</span>
+                        <span class="fw-semibold">Store:</span>
+                        {{ $selectedStoreName ?? ($storeType == 'main' ? "Officer's Main Mess(Primary)" : 'All Sub Stores') }}
+                    </span>
+                </div>
+            </div>
 
-    <!-- Report Table -->
-    <div id="stock-summary-table-wrap">
-        @include('admin.mess.reports.partials.stock-summary-table', [
-            'reportData' => $reportData,
-            'reportPage' => $reportPage,
-            'reportTotals' => $reportTotals,
-        ])
+            <!-- Report Table -->
+            <div id="stock-summary-table-wrap">
+                @include('admin.mess.reports.partials.stock-summary-table', [
+                    'reportData' => $reportData,
+                    'reportPage' => $reportPage,
+                    'reportTotals' => $reportTotals,
+                ])
+            </div>
+        </div>
     </div>
-</div>
 </div>
 
 
@@ -604,11 +627,11 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     .stock-summary-report .stock-summary-data-table {
-        min-width: 920px;
-        --ssr-opening: rgba(11, 74, 126, 0.04);
-        --ssr-purchase: rgba(15, 23, 42, 0.03);
-        --ssr-sale: rgba(11, 74, 126, 0.04);
-        --ssr-closing: rgba(15, 23, 42, 0.03);
+        min-width: 1280px;
+        --ssr-opening: #eef4fb;
+        --ssr-purchase: #eefbf3;
+        --ssr-sale: #fef8ee;
+        --ssr-closing: #f3eefb;
     }
 
     .stock-summary-report .stock-summary-table-root .ssr-table,
@@ -621,6 +644,28 @@ document.addEventListener('DOMContentLoaded', function () {
         --bs-table-bg: transparent;
         --bs-table-accent-bg: transparent;
     }
+
+    /* Ensure sticky header clone uses same col widths */
+    .stock-summary-report .ssr-sticky-head table col {
+        /* widths inherited from colgroup in the source table clone */
+    }
+
+    /* Column width definitions for alignment */
+    .stock-summary-report .ssr-table col:nth-child(1)  { width: 52px; }
+    .stock-summary-report .ssr-table col:nth-child(2)  { width: 180px; }
+    .stock-summary-report .ssr-table col:nth-child(3)  { width: 56px; }
+    .stock-summary-report .ssr-table col:nth-child(4),
+    .stock-summary-report .ssr-table col:nth-child(7),
+    .stock-summary-report .ssr-table col:nth-child(10),
+    .stock-summary-report .ssr-table col:nth-child(13) { width: 72px; }   /* Qty */
+    .stock-summary-report .ssr-table col:nth-child(5),
+    .stock-summary-report .ssr-table col:nth-child(8),
+    .stock-summary-report .ssr-table col:nth-child(11),
+    .stock-summary-report .ssr-table col:nth-child(14) { width: 76px; }   /* Rate */
+    .stock-summary-report .ssr-table col:nth-child(6),
+    .stock-summary-report .ssr-table col:nth-child(9),
+    .stock-summary-report .ssr-table col:nth-child(12),
+    .stock-summary-report .ssr-table col:nth-child(15) { width: 100px; }  /* Amount */
 
     .stock-summary-report .ssr-table > :not(caption) > * > * {
         border-bottom-color: #e2e8f0;
@@ -644,14 +689,39 @@ document.addEventListener('DOMContentLoaded', function () {
 
     .stock-summary-report .ssr-thead .sss-grp,
     .stock-summary-report .ssr-thead .sss-sub {
-        background: #eef2f6;
-        color: #334155;
+        color: #fff;
+    }
+
+    /* Distinct color-coded group headers */
+    .stock-summary-report .ssr-thead .sss-grp.ssr-grp-opening,
+    .stock-summary-report .ssr-thead .sss-sub.ssr-grp-opening {
+        background: #1a73b5;
+        border-color: rgba(255, 255, 255, 0.18);
+    }
+
+    .stock-summary-report .ssr-thead .sss-grp.ssr-grp-purchase,
+    .stock-summary-report .ssr-thead .sss-sub.ssr-grp-purchase {
+        background: #198754;
+        border-color: rgba(255, 255, 255, 0.18);
+    }
+
+    .stock-summary-report .ssr-thead .sss-grp.ssr-grp-sale,
+    .stock-summary-report .ssr-thead .sss-sub.ssr-grp-sale {
+        background: #d97706;
+        border-color: rgba(255, 255, 255, 0.18);
+    }
+
+    .stock-summary-report .ssr-thead .sss-grp.ssr-grp-closing,
+    .stock-summary-report .ssr-thead .sss-sub.ssr-grp-closing {
+        background: #6f42c1;
+        border-color: rgba(255, 255, 255, 0.18);
     }
 
     .stock-summary-report .ssr-thead .sss-grp {
-        font-size: 0.6875rem;
+        font-size: 0.72rem;
         text-transform: uppercase;
         letter-spacing: 0.06em;
+        font-weight: 700;
     }
 
     .stock-summary-report .ssr-thead .sss-sub {
@@ -694,19 +764,71 @@ document.addEventListener('DOMContentLoaded', function () {
         background-color: var(--ssr-closing);
     }
 
-    .stock-summary-report .sss-body-row:nth-child(even) td {
-        filter: brightness(0.985);
+    /* Group column left borders for visual separation */
+    .stock-summary-report .ssr-table td.ssr-grp-opening:first-of-type,
+    .stock-summary-report .ssr-thead .sss-grp.ssr-grp-opening:first-of-type {
+        border-left: 2px solid #1a73b5;
+    }
+
+    .stock-summary-report .ssr-table tbody td.ssr-grp-purchase:nth-child(7),
+    .stock-summary-report .ssr-thead .sss-grp.ssr-grp-purchase {
+        border-left: 2px solid #198754;
+    }
+
+    .stock-summary-report .ssr-table tbody td.ssr-grp-sale:nth-child(10),
+    .stock-summary-report .ssr-thead .sss-grp.ssr-grp-sale {
+        border-left: 2px solid #d97706;
+    }
+
+    .stock-summary-report .ssr-table tbody td.ssr-grp-closing:nth-child(13),
+    .stock-summary-report .ssr-thead .sss-grp.ssr-grp-closing {
+        border-left: 2px solid #6f42c1;
+    }
+
+    .stock-summary-report .sss-body-row:nth-child(even) td.ssr-cell-fixed {
+        background: #fafbfc;
+    }
+
+    .stock-summary-report .sss-body-row:nth-child(even) td.ssr-grp-opening {
+        background-color: #e5eff8;
+    }
+
+    .stock-summary-report .sss-body-row:nth-child(even) td.ssr-grp-purchase {
+        background-color: #e5f8ed;
+    }
+
+    .stock-summary-report .sss-body-row:nth-child(even) td.ssr-grp-sale {
+        background-color: #fef3e0;
+    }
+
+    .stock-summary-report .sss-body-row:nth-child(even) td.ssr-grp-closing {
+        background-color: #ece5f8;
     }
 
     .stock-summary-report .sss-body-row:hover td.ssr-cell-fixed {
-        background-color: #f8fafc;
+        background-color: #f0f4f8;
     }
 
-    .stock-summary-report .sss-body-row:hover td.ssr-grp-opening,
-    .stock-summary-report .sss-body-row:hover td.ssr-grp-purchase,
-    .stock-summary-report .sss-body-row:hover td.ssr-grp-sale,
+    .stock-summary-report .sss-body-row:hover td.ssr-grp-opening {
+        background-color: #d6e8f7 !important;
+    }
+
+    .stock-summary-report .sss-body-row:hover td.ssr-grp-purchase {
+        background-color: #d1f2e0 !important;
+    }
+
+    .stock-summary-report .sss-body-row:hover td.ssr-grp-sale {
+        background-color: #fde9c9 !important;
+    }
+
     .stock-summary-report .sss-body-row:hover td.ssr-grp-closing {
-        background-color: rgba(11, 74, 126, 0.08);
+        background-color: #e0d4f5 !important;
+    }
+
+    /* Negative values in red */
+    .stock-summary-report .ssr-negative {
+        color: #dc3545 !important;
+        font-weight: 600;
     }
 
     .stock-summary-report .ssr-table .ssr-item-name {
@@ -745,14 +867,33 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     .stock-summary-report .sss-totals-row td {
-        padding-top: 0.6rem;
-        padding-bottom: 0.6rem;
+        padding-top: 0.7rem;
+        padding-bottom: 0.7rem;
         font-size: 0.8125rem;
         font-weight: 700;
-        border-top: 2px solid #0b4a7e !important;
+        border-top: 3px double #0b4a7e !important;
         border-bottom: none !important;
-        background: #f1f5f9 !important;
         color: #0f172a;
+    }
+
+    .stock-summary-report .sss-totals-row td.ssr-cell-fixed {
+        background: #e8edf4 !important;
+    }
+
+    .stock-summary-report .sss-totals-row td.ssr-grp-opening {
+        background: #dbe8f5 !important;
+    }
+
+    .stock-summary-report .sss-totals-row td.ssr-grp-purchase {
+        background: #d4f0e1 !important;
+    }
+
+    .stock-summary-report .sss-totals-row td.ssr-grp-sale {
+        background: #fde9c9 !important;
+    }
+
+    .stock-summary-report .sss-totals-row td.ssr-grp-closing {
+        background: #e0d4f5 !important;
     }
 
     .stock-summary-report .sss-totals-row .ssr-totals-dash {
@@ -760,8 +901,27 @@ document.addEventListener('DOMContentLoaded', function () {
         color: #94a3b8;
     }
 
-    .stock-summary-report .sss-totals-row .ssr-amt {
-        color: #0b4a7e;
+    .stock-summary-report .sss-totals-row .ssr-grp-opening .ssr-amt,
+    .stock-summary-report .sss-totals-row td.ssr-grp-opening.ssr-amt {
+        color: #1a73b5;
+        font-size: 0.8125rem;
+    }
+
+    .stock-summary-report .sss-totals-row .ssr-grp-purchase .ssr-amt,
+    .stock-summary-report .sss-totals-row td.ssr-grp-purchase.ssr-amt {
+        color: #198754;
+        font-size: 0.8125rem;
+    }
+
+    .stock-summary-report .sss-totals-row .ssr-grp-sale .ssr-amt,
+    .stock-summary-report .sss-totals-row td.ssr-grp-sale.ssr-amt {
+        color: #d97706;
+        font-size: 0.8125rem;
+    }
+
+    .stock-summary-report .sss-totals-row .ssr-grp-closing .ssr-amt,
+    .stock-summary-report .sss-totals-row td.ssr-grp-closing.ssr-amt {
+        color: #6f42c1;
         font-size: 0.8125rem;
     }
 
@@ -816,18 +976,33 @@ document.addEventListener('DOMContentLoaded', function () {
         border-color: rgba(255, 255, 255, 0.22) !important;
     }
 
-    /* Group headers: one neutral slate band (brand accent only on fixed columns) */
+    /* Group headers in sticky clone — preserve distinct group colors */
     .stock-summary-report .ssr-sticky-head .sss-grp.ssr-grp-opening,
-    .stock-summary-report .ssr-sticky-head .sss-sub.ssr-grp-opening,
+    .stock-summary-report .ssr-sticky-head .sss-sub.ssr-grp-opening {
+        background: #1a73b5 !important;
+        color: #fff !important;
+        border-color: rgba(255, 255, 255, 0.18) !important;
+    }
+
     .stock-summary-report .ssr-sticky-head .sss-grp.ssr-grp-purchase,
-    .stock-summary-report .ssr-sticky-head .sss-sub.ssr-grp-purchase,
+    .stock-summary-report .ssr-sticky-head .sss-sub.ssr-grp-purchase {
+        background: #198754 !important;
+        color: #fff !important;
+        border-color: rgba(255, 255, 255, 0.18) !important;
+    }
+
     .stock-summary-report .ssr-sticky-head .sss-grp.ssr-grp-sale,
-    .stock-summary-report .ssr-sticky-head .sss-sub.ssr-grp-sale,
+    .stock-summary-report .ssr-sticky-head .sss-sub.ssr-grp-sale {
+        background: #d97706 !important;
+        color: #fff !important;
+        border-color: rgba(255, 255, 255, 0.18) !important;
+    }
+
     .stock-summary-report .ssr-sticky-head .sss-grp.ssr-grp-closing,
     .stock-summary-report .ssr-sticky-head .sss-sub.ssr-grp-closing {
-        background: #e8edf2 !important;
-        color: #1e293b !important;
-        border-color: #cbd5e1 !important;
+        background: #6f42c1 !important;
+        color: #fff !important;
+        border-color: rgba(255, 255, 255, 0.18) !important;
     }
 
     /* Error highlighting */
@@ -858,6 +1033,132 @@ document.addEventListener('DOMContentLoaded', function () {
             border: 2px solid #ff0000 !important;
         }
     }
+
+    /* ── Enhanced UX: transitions & micro-interactions ── */
+    .stock-summary-report .btn {
+        transition: all 0.2s ease-in-out;
+    }
+
+    .stock-summary-report .btn:hover:not(:disabled) {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .stock-summary-report .btn:active:not(:disabled) {
+        transform: translateY(0);
+        box-shadow: none;
+    }
+
+    .stock-summary-report .form-control,
+    .stock-summary-report .form-select {
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .stock-summary-report .form-control:focus,
+    .stock-summary-report .form-select:focus {
+        border-color: #0b4a7e;
+        box-shadow: 0 0 0 0.2rem rgba(11, 74, 126, 0.12);
+    }
+
+    .stock-summary-report > .card {
+        transition: box-shadow 0.3s ease;
+    }
+
+    .stock-summary-report .badge {
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .stock-summary-report .report-header .badge:hover {
+        transform: scale(1.03);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .stock-summary-report .sss-body-row td {
+        transition: background-color 0.15s ease;
+    }
+
+    .stock-summary-report .ssr-info-banner {
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+    }
+
+    .stock-summary-report .ssr-count-badge {
+        transition: background-color 0.2s ease, transform 0.15s ease;
+        cursor: default;
+    }
+
+    .stock-summary-report .ssr-count-badge:hover {
+        background: #e2e8f0;
+        transform: scale(1.05);
+    }
+
+    @keyframes ssr-fade-in {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .stock-summary-report > .card,
+    .stock-summary-report > .row {
+        animation: ssr-fade-in 0.35s ease-out both;
+    }
+
+    .stock-summary-report > .card:nth-child(2) {
+        animation-delay: 0.08s;
+    }
+
+    .stock-summary-report > .card:nth-child(3) {
+        animation-delay: 0.16s;
+    }
+
+    /* Enhanced report header */
+    .stock-summary-report .report-header {
+        position: relative;
+        overflow: hidden;
+    }
+
+    .stock-summary-report .report-header::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle at 30% 50%, rgba(11, 74, 126, 0.04) 0%, transparent 60%);
+        pointer-events: none;
+    }
+
+    /* Better focus-visible for accessibility */
+    .stock-summary-report .btn:focus-visible {
+        outline: 2px solid #0b4a7e;
+        outline-offset: 2px;
+        box-shadow: 0 0 0 0.25rem rgba(11, 74, 126, 0.2);
+    }
+
+    .stock-summary-report .form-control:focus-visible,
+    .stock-summary-report .form-select:focus-visible {
+        outline: none;
+        border-color: #0b4a7e;
+        box-shadow: 0 0 0 0.25rem rgba(11, 74, 126, 0.18);
+    }
+
+    /* Enhanced filter card header */
+    .stock-summary-report .card-header .material-symbols-rounded {
+        transition: transform 0.3s ease;
+    }
+
+    .stock-summary-report .card-header:hover .material-symbols-rounded {
+        transform: rotate(15deg);
+    }
+
+    /* Pagination hover effects */
+    .stock-summary-report .ssr-pagination-links .page-link {
+        transition: all 0.15s ease;
+    }
+
+    .stock-summary-report .ssr-pagination-links .page-link:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    }
 </style>
 
 <script>
@@ -882,6 +1183,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
             const stickyTable = document.createElement('table');
             stickyTable.className = table.className;
+
+            // Clone colgroup for consistent column widths
+            const colgroup = table.querySelector('colgroup');
+            if (colgroup) {
+                stickyTable.appendChild(colgroup.cloneNode(true));
+            }
 
             stickyTable.appendChild(thead.cloneNode(true));
             stickyWrap.appendChild(stickyTable);

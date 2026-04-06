@@ -95,10 +95,10 @@
                     <td>{{ $item->itemSubcategory->item_code ?? '' }}</td>
                     <td>{{ $item->unit ?? '' }}</td>
                     <td>{{ $qty }}</td>
-                    <td>{{ $rate }}</td>
+                    <td>{{ number_format($rate, 2) }}</td>
                     <td>{{ $taxPercent }}</td>
-                    <td>{{ $taxAmount }}</td>
-                    <td>{{ $total }}</td>
+                    <td>{{ number_format($taxAmount, 2) }}</td>
+                    <td>{{ number_format($total, 2) }}</td>
                 </tr>
             @endforeach
             @php
@@ -108,12 +108,12 @@
             @endphp
             <tr>
                 <td colspan="7" style="text-align:right; font-weight:700;">Bill Total:</td>
-                <td style="font-weight:700;">{{ $billTotal }}</td>
+                <td style="font-weight:700;">{{ number_format($billTotal, 2) }}</td>
             </tr>
         @endforeach
         <tr>
             <td colspan="7" style="text-align:right; font-weight:700;background:#dee2e6;">Vendor Total ({{ $vendorGroup['vendor_name'] }}):</td>
-            <td style="font-weight:700;background:#dee2e6;">{{ $vendorSectionTotal }}</td>
+            <td style="font-weight:700;background:#dee2e6;">{{ number_format($vendorSectionTotal, 2) }}</td>
         </tr>
     @empty
         <tr>
