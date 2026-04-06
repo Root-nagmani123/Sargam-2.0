@@ -1,14 +1,20 @@
 @extends('admin.layouts.master')
 
 @php
-$estateBillPageLabel = (hasRole('Admin') || hasRole('Super Admin') || hasRole('Estate'))
-? 'Generate Estate Bill'
-: 'My Estate Bill';
+    $estateBillIsPersonalView = $estateBillIsPersonalView ?? false;
+    $estateBillPageLabel = $estateBillIsPersonalView ? 'My Estate Bill' : 'Generate Estate Bill';
+    $estateSelfHomeTab = request('scope') === 'self'
+        && (hasRole('Admin') || hasRole('Super Admin') || hasRole('Estate'));
+    $showGenerateEstateBillSearch = $showGenerateEstateBillSearch ?? false;
+    $showUnitSubTypeFilter = $showUnitSubTypeFilter ?? false;
+    $genBillActionsCol = $showGenerateEstateBillSearch
+        ? ($showUnitSubTypeFilter ? 'col-lg-3' : 'col-lg-4')
+        : 'col-lg-9';
 @endphp
 
 @section('title', $estateBillPageLabel . ' - Sargam')
 
-@section('setup_content')
+@section($estateSelfHomeTab ? 'content' : 'setup_content')
 <div class="container-fluid py-4">
     <x-breadcrum title="{{ $estateBillPageLabel }}"></x-breadcrum>
     <x-session_message />
@@ -23,22 +29,25 @@ $estateBillPageLabel = (hasRole('Admin') || hasRole('Super Admin') || hasRole('E
                 <div>
                     <h1 class="h4 fw-semibold mb-1">{{ $estateBillPageLabel }}</h1>
                     <p class="text-muted small mb-0">
-                        @if($estateBillPageLabel === 'Generate Estate Bill')
-                        View and generate estate bill summary. Select bill month and unit sub type, then use actions to notify or save as draft.
-                        @else
+                        @if($estateBillIsPersonalView)
                         View your estate bill summary. Select bill month and (where available) unit sub type to review bills.
+                        @else
+                        View and generate estate bill summary. Select bill month and unit sub type, then use actions to notify or save as draft.
                         @endif
                     </p>
                 </div>
             </div>
             <hr class="my-2">
             <form method="get" action="{{ route('admin.estate.generate-estate-bill') }}" class="row g-3 g-md-4 align-items-end">
+                @if(request('scope') === 'self')
+                <input type="hidden" name="scope" value="self">
+                @endif
                 <div class="col-12 col-sm-6 col-md-4 col-lg-3">
                     <label for="bill_month" class="form-label fw-medium">Bill Month <span class="text-danger">*</span></label>
                     <input type="month" class="form-control" id="bill_month" name="bill_month" value="{{ old('bill_month', $billMonth) }}" max="{{ date('Y-m') }}" data-max-date="{{ date('Y-m-d') }}" required aria-describedby="bill_month_help">
                     <div id="bill_month_help" class="form-text small">Select the month for billing</div>
                 </div>
-                @if(hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'))
+                @if($showUnitSubTypeFilter)
                 <div class="col-12 col-sm-6 col-md-4 col-lg-3">
                     <label for="unit_sub_type_pk" class="form-label fw-medium">Unit Sub Type </label>
                     <select class="form-select" id="unit_sub_type_pk" name="unit_sub_type_pk" aria-label="Select Unit Sub Type" aria-describedby="unit_sub_type_help">
@@ -50,12 +59,14 @@ $estateBillPageLabel = (hasRole('Admin') || hasRole('Super Admin') || hasRole('E
                     <div id="unit_sub_type_help" class="form-text small">Filter by unit category</div>
                 </div>
                 @endif
-                <div class="col-12 col-sm-6 col-md-6 {{ ($showUnitSubTypeFilter ?? false) ? 'col-lg-3' : 'col-lg-5' }}">
+                @if($showGenerateEstateBillSearch)
+                <div class="col-12 col-sm-6 col-md-6 {{ $showUnitSubTypeFilter ? 'col-lg-3' : 'col-lg-5' }}">
                     <label for="search" class="form-label fw-medium">Search</label>
                     <input type="search" class="form-control" id="search" name="search" value="{{ old('search', $search ?? '') }}" placeholder="House, bill no., name…" autocomplete="off" aria-describedby="search_help" title="Also: month/year, designation, employee type, unit e.g. Type-(12)">
                     <div id="search_help" class="form-text small text-muted mb-0">Bill, house, name, designation, type.</div>
                 </div>
-                <div class="col-12 col-sm-6 col-md-6 {{ ($showUnitSubTypeFilter ?? false) ? 'col-lg-3' : 'col-lg-4' }}">
+                @endif
+                <div class="col-12 col-sm-6 col-md-6 {{ $genBillActionsCol }}">
                     {{-- Match Search column: label + field + form-text so align-items-end lines up with the input row, not the hint --}}
                     <div class="form-label fw-medium invisible user-select-none" aria-hidden="true">&nbsp;</div>
                     <div class="d-flex flex-wrap align-items-center gap-3">
@@ -77,7 +88,7 @@ $estateBillPageLabel = (hasRole('Admin') || hasRole('Super Admin') || hasRole('E
                             <i class="material-symbols-rounded" style="font-size: 1rem;">print</i>
                             Print Selected
                         </button>
-                        @if($showUnitSubTypeFilter ?? false)
+                        @if($showUnitSubTypeFilter)
                         <button type="button" id="btn_notify_selected" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1">Notify Selected</button>
                         @endif
                     </div>
@@ -93,7 +104,7 @@ $estateBillPageLabel = (hasRole('Admin') || hasRole('Super Admin') || hasRole('E
     <div class="d-flex flex-column flex-sm-row flex-wrap align-items-center justify-content-center justify-content-sm-between gap-3 mb-4">
         <p class="lead fw-semibold text-body mb-0 py-2 px-3 bg-body-secondary rounded-3 d-inline-block">LAL BAHADUR SHASTRI NATIONAL ACADEMY OF ADMINISTRATION, MUSSOORIE — ESTATE BILL</p>
         <div class="d-flex gap-2 flex-wrap justify-content-center">
-            <a href="{{ route('admin.estate.reports.bill-report-print-all', ['bill_month' => $billMonth, 'unit_sub_type_pk' => $unitSubTypePk]) }}" target="_blank" rel="noopener" id="btn_print_all" class="btn btn-success btn-sm d-inline-flex align-items-center gap-1" title="View all bills in one page — print or download as PDF at once">
+            <a href="{{ route('admin.estate.reports.bill-report-print-all', array_filter(['bill_month' => $billMonth, 'unit_sub_type_pk' => $unitSubTypePk, 'scope' => request('scope') === 'self' ? 'self' : null], static fn ($v) => $v !== null && $v !== '')) }}" target="_blank" rel="noopener" id="btn_print_all" class="btn btn-success btn-sm d-inline-flex align-items-center gap-1" title="View all bills in one page — print or download as PDF at once">
                 <i class="material-symbols-rounded" style="font-size: 1rem;">print</i>
                 Print All
             </a>
@@ -378,6 +389,8 @@ $estateBillPageLabel = (hasRole('Admin') || hasRole('Super Admin') || hasRole('E
             var params = new URLSearchParams();
             if (billMonth) params.set('bill_month', billMonth);
             if (unitSubTypePk) params.set('unit_sub_type_pk', unitSubTypePk);
+            var scopeSelfEl = form ? form.querySelector('input[name="scope"][value="self"]') : null;
+            if (scopeSelfEl) params.set('scope', 'self');
             params.set('selected_pks', selectedPks.join(','));
 
             window.open(printAllUrl + '?' + params.toString(), '_blank', 'noopener');

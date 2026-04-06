@@ -137,6 +137,15 @@ class EstateHacApprovedDataTable extends DataTable
     {
         $canSeeHacApproved = hasRole('HAC Person') || hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin');
 
+        $authorityPersonalScope = request('scope') === 'self'
+            && (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'));
+        $selfEmployeePks = [];
+        if ($authorityPersonalScope && Auth::check()) {
+            $selfEmployeePks = array_values(array_filter(
+                getEmployeeIdsForUser(Auth::user()->user_id ?? Auth::user()->pk ?? null) ?? []
+            ));
+        }
+
         $part1 = DB::table('estate_change_home_req_details as ec')
             ->join('estate_home_request_details as eh', 'ec.estate_home_req_details_pk', '=', 'eh.pk')
             ->where('ec.estate_change_hac_status', 1)
@@ -158,7 +167,14 @@ class EstateHacApprovedDataTable extends DataTable
                 'ec.change_house_no as current_or_availability',
                 'ec.remarks',
                 'ec.change_ap_dis_status'
-            );
+            )
+            ->when($authorityPersonalScope, function ($q) use ($selfEmployeePks) {
+                if (! empty($selfEmployeePks)) {
+                    $q->whereIn('eh.employee_pk', $selfEmployeePks);
+                } else {
+                    $q->whereRaw('1 = 0');
+                }
+            });
 
         $hasPossessionPks = DB::table('estate_possession_details')
             ->whereNotNull('estate_home_request_details')
@@ -191,7 +207,14 @@ class EstateHacApprovedDataTable extends DataTable
                 'eh.current_alot as current_or_availability',
                 'eh.remarks',
                 DB::raw('NULL as change_ap_dis_status')
-            );
+            )
+            ->when($authorityPersonalScope, function ($q) use ($selfEmployeePks) {
+                if (! empty($selfEmployeePks)) {
+                    $q->whereIn('eh.employee_pk', $selfEmployeePks);
+                } else {
+                    $q->whereRaw('1 = 0');
+                }
+            });
 
         $unionQuery = $part1->unionAll($part2);
 

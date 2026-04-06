@@ -66,15 +66,35 @@
         $amountInWords .= ' and ' . $toWordsIndian($paise) . ' Paise';
     }
     $amountInWords .= ' only';
+
+    if (! isset($estateBillLogoSrc)) {
+        $estateBillLogoSrc = is_file(public_path('admin_assets/images/logos/logo.png'))
+            ? asset('admin_assets/images/logos/logo.png')
+            : asset('admin_assets/images/logos/logo.svg');
+    }
 @endphp
 @if($bill)
 <div class="bill-doc">
     <div class="bill-header">
         <span class="bill-badge">Consumer Copy</span>
         <div class="bill-header-main">
-            <img src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png" alt="LBSNAA Official Logo" class="bill-logo" style="width: 300px; height: 100px; margin-bottom: 3px; object-fit: contain;">
-            <p class="org-sub" style="font-size: 10px; margin: 0;">Mussoorie · Estate Section</p>
-            <h1 class="bill-title" style="font-size: 12px; font-weight: 700; margin: 10px 0 0 0;">Estate Bill — Electricity, Water &amp; Licence</h1>
+            @if(($billDocContext ?? 'html') === 'pdf')
+                <table class="bill-header-pdf-brand" width="100%" style="border-collapse: collapse; margin: 0 auto 4px;">
+                    <tr>
+                        <td style="vertical-align: middle; text-align: center; padding: 0;">
+                            <img src="{{ $estateBillLogoSrc }}" alt="" class="bill-logo bill-logo-pdf-seal" width="48" height="48" style="width: 48px; height: 48px; object-fit: contain; display: block; margin: 0 auto 6px;">
+                            <p class="org-name" style="margin: 0 0 3px 0; font-size: 10.2pt; font-weight: 700; line-height: 1.2; color: #af2910; text-align: center;">Lal Bahadur Shastri National Academy of Administration</p>
+                            <p class="org-sub" style="margin: 0; font-size: 8.2pt; line-height: 1.25; color: #1e3a5f; text-transform: uppercase; letter-spacing: 0.04em; text-align: center;">Mussoorie · Estate Section</p>
+                        </td>
+                    </tr>
+                </table>
+                <h1 class="bill-title" style="font-size: 9.8pt; font-weight: 700; margin: 8px 0 0 0; text-align: center; color: #1e3a5f;">Estate Bill — Electricity, Water &amp; Licence</h1>
+            @else
+                <img src="{{ $estateBillLogoSrc }}" alt="LBSNAA Official Logo" class="bill-logo" style="width: 300px; height: 100px; margin-bottom: 3px; object-fit: contain;">
+                <p class="org-name" style="font-size: 14px; font-weight: 700; margin: 0 0 4px 0; color: #af2910;">Lal Bahadur Shastri National Academy of Administration</p>
+                <p class="org-sub" style="font-size: 10px; margin: 0;">Mussoorie · Estate Section</p>
+                <h1 class="bill-title" style="font-size: 12px; font-weight: 700; margin: 10px 0 0 0;">Estate Bill — Electricity, Water &amp; Licence</h1>
+            @endif
         </div>
     </div>
     <div class="bill-meta-bar">

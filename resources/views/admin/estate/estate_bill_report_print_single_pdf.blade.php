@@ -20,7 +20,7 @@
             padding: 10px 15px 11px;
             position: relative;
         }
-        .bill-header-main { margin: 0; padding: 0 86px 0 6px; }
+        .bill-header-main { margin: 0; width: 100%; box-sizing: border-box; padding: 0 88px 0 12px; }
         .bill-header .org-name { font-size: 10.8pt; font-weight: 700; margin: 0 0 2px 0; }
         .bill-header .org-sub { font-size: 8.2pt; margin: 0; }
         .bill-header .bill-title { font-size: 9.8pt; font-weight: 700; margin: 7px 0 0 0; }
@@ -33,8 +33,9 @@
             z-index: 2;
         }
         .bill-logo {
-            width: 112px;
-            height: 30px;
+            width: 158px;
+            height: 48px;
+            max-width: 100%;
             display: block;
             margin: 0 auto 5px;
             object-fit: contain;
@@ -85,6 +86,6 @@
     </style>
 </head>
 <body>
-@include('admin.estate.partials._bill_doc', ['bill' => $bill])
+@include('admin.estate.partials._bill_doc', ['bill' => $bill, 'billDocContext' => 'pdf'])
 </body>
 </html>
