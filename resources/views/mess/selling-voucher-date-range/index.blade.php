@@ -4608,6 +4608,8 @@ $selectedStores = collect((array) request()->input('store', []))
             var firstRow = tbody.querySelector('.dr-item-row');
             if (firstRow) {
                 firstRow.querySelector('.dr-item-select').addEventListener('change', function() {
+                    var rateInp = firstRow.querySelector('.dr-rate');
+                    if (rateInp) rateInp.dataset.manualRate = '';
                     updateAddRowUnit(firstRow);
                 });
                 firstRow.querySelector('.dr-qty').addEventListener('input', function() {
@@ -4616,6 +4618,8 @@ $selectedStores = collect((array) request()->input('store', []))
                     updateAddGrandTotal();
                 });
                 firstRow.querySelector('.dr-rate').addEventListener('input', function() {
+                    // Must match initial row wiring: otherwise FIFO tier logic overwrites rate every keystroke.
+                    this.dataset.manualRate = '1';
                     updateAddRowTotal(firstRow);
                     updateAddGrandTotal();
                 });
@@ -4806,6 +4810,13 @@ $selectedStores = collect((array) request()->input('store', []))
                     if (res.ok && data && data.success) {
                         // Reset form for next entry but keep modal open
                         resetAddReportForm();
+                        initAddModalTomSelects();
+                        refreshAllAvailable();
+                        document.querySelectorAll('#addModalItemsBody .dr-item-row').forEach(
+                            function(row) {
+                                updateAddRowTotal(row);
+                            });
+                        updateAddGrandTotal();
                         refreshSellingVoucherDateRangeTable();
 
                         if (window.toastr && data.message) {
