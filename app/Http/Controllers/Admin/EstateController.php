@@ -5842,6 +5842,7 @@ class EstateController extends Controller
 
         $this->applyMeterReadingListBillPeriodOrLegacy($query, 'emrd.bill_month', 'emrd.bill_year', $billMonth, $billYear);
         $this->applyMeterReadingExcludeReadingDateInUiMonth($query, 'emrd.to_date', 'emrd.from_date', $billMonth, $billYear);
+        $this->applyMeterReadingExcludePossessionIfAnyReadingDateInUiMonth($query, $billMonth, $billYear, 'epd.pk', 'regular');
         if ($campusId) {
             $query->where('ehm.estate_campus_master_pk', $campusId);
         }
@@ -6066,6 +6067,13 @@ class EstateController extends Controller
             'estate_month_reading_details.from_date',
             $billMonth,
             $billYear
+        );
+        $this->applyMeterReadingExcludePossessionIfAnyReadingDateInUiMonth(
+            $datesQuery,
+            $billMonth,
+            $billYear,
+            'estate_month_reading_details.estate_possession_details_pk',
+            'regular'
         );
         $dates = $datesQuery->select('to_date')
             ->distinct()
@@ -6453,10 +6461,28 @@ class EstateController extends Controller
 
             if ($currentMeterReadingDate) {
                 $update['to_date'] = $currentMeterReadingDate;
-                // Previous period end becomes period start; meter reading date is the new end.
-                if ($row && ! empty($row->to_date)) {
+                // from_date = first day of selected Meter Change Month (same as other-employee flow);
+                // do not use current row's to_date (wrong after retarget to a row with month-end to_date).
+                if (! empty($readingBillMonth)) {
                     try {
-                        $update['from_date'] = \Carbon\Carbon::parse((string) $row->to_date)->toDateString();
+                        $update['from_date'] = \Carbon\Carbon::createFromFormat('Y-m', (string) $readingBillMonth)
+                            ->startOfMonth()
+                            ->toDateString();
+                    } catch (\Throwable $e) {
+                        if ($row && ! empty($row->to_date)) {
+                            try {
+                                $update['from_date'] = \Carbon\Carbon::parse((string) $row->to_date)
+                                    ->addDay()
+                                    ->toDateString();
+                            } catch (\Throwable $e2) {
+                            }
+                        }
+                    }
+                } elseif ($row && ! empty($row->to_date)) {
+                    try {
+                        $update['from_date'] = \Carbon\Carbon::parse((string) $row->to_date)
+                            ->addDay()
+                            ->toDateString();
                     } catch (\Throwable $e) {
                     }
                 }
@@ -7108,6 +7134,7 @@ class EstateController extends Controller
             $billMonth,
             $billYear
         );
+        $this->applyMeterReadingExcludePossessionIfAnyReadingDateInUiMonth($query, $billMonth, $billYear, 'epo.pk', 'other');
 
         if ($campusId) {
             $query->where('epo.estate_campus_master_pk', $campusId);
@@ -7311,6 +7338,13 @@ class EstateController extends Controller
             $billMonth,
             $billYear
         );
+        $this->applyMeterReadingExcludePossessionIfAnyReadingDateInUiMonth(
+            $datesQuery,
+            $billMonth,
+            $billYear,
+            'estate_month_reading_details_other.estate_possession_other_pk',
+            'other'
+        );
         $dates = $datesQuery->select('to_date')
             ->distinct()
             ->orderBy('to_date')
@@ -7370,6 +7404,48 @@ class EstateController extends Controller
             $q->whereRaw($coalesce . ' IS NULL')
                 ->orWhereRaw('DATE(' . $coalesce . ') < ?', [$startS])
                 ->orWhereRaw('DATE(' . $coalesce . ') > ?', [$endS]);
+        });
+    }
+
+    /**
+     * Drop the whole possession from the list when any month-reading row for that possession already has a
+     * reading date in the selected UI month. Needed because bill_period_or_legacy can match an older period
+     * row (e.g. February) while a newer row (March) already completed the same meter-change month.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Query\Builder  $query
+     * @param  string  $outerPossessionRef  Outer qualified column (e.g. epd.pk, estate_month_reading_details.estate_possession_details_pk)
+     * @param  'regular'|'other'  $kind
+     */
+    private function applyMeterReadingExcludePossessionIfAnyReadingDateInUiMonth(
+        $query,
+        $billMonth,
+        $billYear,
+        string $outerPossessionRef,
+        string $kind
+    ): void {
+        [$uiM, $uiY] = $this->meterReadingParseUiMonthYear($billMonth, $billYear);
+        if ($uiM === null || $uiY === null) {
+            return;
+        }
+        $startS = \Carbon\Carbon::createFromDate($uiY, $uiM, 1)->toDateString();
+        $endS = \Carbon\Carbon::createFromDate($uiY, $uiM, 1)->endOfMonth()->toDateString();
+
+        if ($kind === 'other') {
+            $query->whereNotExists(function ($sub) use ($startS, $endS, $outerPossessionRef) {
+                $sub->select(\Illuminate\Support\Facades\DB::raw(1))
+                    ->from('estate_month_reading_details_other as emro_any')
+                    ->whereColumn('emro_any.estate_possession_other_pk', $outerPossessionRef)
+                    ->whereRaw('DATE(COALESCE(emro_any.to_date, emro_any.from_date)) BETWEEN ? AND ?', [$startS, $endS]);
+            });
+
+            return;
+        }
+
+        $query->whereNotExists(function ($sub) use ($startS, $endS, $outerPossessionRef) {
+            $sub->select(\Illuminate\Support\Facades\DB::raw(1))
+                ->from('estate_month_reading_details as emrd_any')
+                ->whereColumn('emrd_any.estate_possession_details_pk', $outerPossessionRef)
+                ->whereRaw('DATE(COALESCE(emrd_any.to_date, emrd_any.from_date)) BETWEEN ? AND ?', [$startS, $endS]);
         });
     }
 
@@ -7666,6 +7742,7 @@ class EstateController extends Controller
 
         $readings = (array) $request->input('readings', []);
         $selected = collect($readings)->filter(fn ($r) => !empty($r['selected']))->values();
+        $hasUnitTypeOnSubTypeForOtherElectric = \Illuminate\Support\Facades\Schema::hasColumn('estate_unit_sub_type_master', 'estate_unit_type_master_pk');
         // When a new bill-period row is inserted, map form pk → new pk so a second POST line (other meter slot) updates the same new row.
         $resolvedOtherReadingPkByFormPk = [];
         $emroHasWaterCharges = \Illuminate\Support\Facades\Schema::hasColumn('estate_month_reading_details_other', 'water_charges');
@@ -7691,10 +7768,18 @@ class EstateController extends Controller
                 }
 
                 $otherPossessionCtx = null;
+                $electricUnitTypePkOther = null;
                 if (! empty($row->estate_possession_other_pk)) {
-                    $otherPossessionCtx = DB::table('estate_possession_other as epo')
+                    $otherEpoQuery = DB::table('estate_possession_other as epo')
                         ->leftJoin('estate_house_master as ehm', 'epo.estate_house_master_pk', '=', 'ehm.pk')
-                        ->where('epo.pk', (int) $row->estate_possession_other_pk)
+                        ->where('epo.pk', (int) $row->estate_possession_other_pk);
+                    if ($hasUnitTypeOnSubTypeForOtherElectric) {
+                        $otherEpoQuery->leftJoin('estate_unit_sub_type_master as eust', 'ehm.estate_unit_sub_type_master_pk', '=', 'eust.pk');
+                    }
+                    $houseDerivedExpr = $hasUnitTypeOnSubTypeForOtherElectric
+                        ? 'eust.estate_unit_type_master_pk'
+                        : 'ehm.estate_unit_master_pk';
+                    $otherPossessionCtx = $otherEpoQuery
                         ->select([
                             'epo.estate_campus_master_pk',
                             'epo.estate_unit_type_master_pk',
@@ -7703,8 +7788,13 @@ class EstateController extends Controller
                             'epo.pk as possession_pk',
                             'ehm.pk as house_pk',
                             'ehm.house_no as ehm_house_no',
+                            DB::raw('COALESCE(epo.estate_unit_type_master_pk, ' . $houseDerivedExpr . ') as electric_unit_type_pk_resolved'),
                         ])
                         ->first();
+                    if ($otherPossessionCtx && isset($otherPossessionCtx->electric_unit_type_pk_resolved)) {
+                        $u = (int) $otherPossessionCtx->electric_unit_type_pk_resolved;
+                        $electricUnitTypePkOther = $u > 0 ? $u : null;
+                    }
                 }
 
                 if (\Illuminate\Support\Facades\Schema::hasColumn('estate_possession_other', 'return_home_status')
@@ -7736,7 +7826,7 @@ class EstateController extends Controller
                         ? (int) $oldCurr2
                         : (int) ($row->last_month_elec_red2 ?? 0);
                     $units = $curr >= $baseline2 ? $curr - $baseline2 : 0;
-                    $charge = $units > 0 ? $this->calculateElectricChargeForUnits(null, $units) : 0.0;
+                    $charge = $units > 0 ? $this->calculateElectricChargeForUnits($electricUnitTypePkOther, $units) : 0.0;
 
                     $update['curr_month_elec_red2'] = $curr;
                     $update['meter_two_elec_charge'] = $charge;
@@ -7751,7 +7841,7 @@ class EstateController extends Controller
                         ? (int) $oldCurr
                         : (int) ($row->last_month_elec_red ?? 0);
                     $units = $curr >= $baseline ? $curr - $baseline : 0;
-                    $charge = $units > 0 ? $this->calculateElectricChargeForUnits(null, $units) : 0.0;
+                    $charge = $units > 0 ? $this->calculateElectricChargeForUnits($electricUnitTypePkOther, $units) : 0.0;
 
                     $update['curr_month_elec_red'] = $curr;
                     $update['meter_one_elec_charge'] = $charge;
@@ -7770,12 +7860,30 @@ class EstateController extends Controller
                 // For reference, store units in per_unit (matches previous behaviour for primary meter).
                 $update['per_unit'] = $units;
 
-                // Meter Reading Date → new period end (to_date); previous to_date becomes period start (from_date).
+                // Meter reading date = period end (to_date). Period start = first day of selected bill month
+                // (not the current row's to_date — that breaks when retargeting to a row whose to_date is month-end).
                 if ($readingMeterDateForStore !== '') {
                     $update['to_date'] = $readingMeterDateForStore;
-                    if (! empty($row->to_date)) {
+                    if ($readingBillMonthOther !== '') {
                         try {
-                            $update['from_date'] = \Carbon\Carbon::parse((string) $row->to_date)->toDateString();
+                            $update['from_date'] = \Carbon\Carbon::createFromFormat('Y-m', $readingBillMonthOther)
+                                ->startOfMonth()
+                                ->toDateString();
+                        } catch (\Throwable $e) {
+                            if (! empty($row->to_date)) {
+                                try {
+                                    $update['from_date'] = \Carbon\Carbon::parse((string) $row->to_date)
+                                        ->addDay()
+                                        ->toDateString();
+                                } catch (\Throwable $e2) {
+                                }
+                            }
+                        }
+                    } elseif (! empty($row->to_date)) {
+                        try {
+                            $update['from_date'] = \Carbon\Carbon::parse((string) $row->to_date)
+                                ->addDay()
+                                ->toDateString();
                         } catch (\Throwable $e) {
                         }
                     }
@@ -8272,18 +8380,7 @@ class EstateController extends Controller
                 $b->to_date_formatted = $b->to_date ? \Carbon\Carbon::parse($b->to_date)->format('d-m-Y') : '—';
                 $b->house_display = $b->unit_sub_type && $b->house_no ? $b->unit_sub_type . '-(' . $b->house_no . ')' : ($b->house_no ?? '—');
 
-                // Recalculate electricity using same slab logic as print view so values match PDF
-                $unitTypePk = isset($b->unit_type_pk) ? (int) $b->unit_type_pk : null;
-                if (! $unitTypePk && isset($b->unit_sub_type_pk) && $b->unit_sub_type_pk) {
-                    $derived = DB::table('estate_eligibility_mapping')
-                        ->where('estate_unit_sub_type_master_pk', (int) $b->unit_sub_type_pk)
-                        ->whereNotNull('estate_unit_type_master_pk')
-                        ->orderBy('estate_unit_type_master_pk')
-                        ->value('estate_unit_type_master_pk');
-                    if ($derived) {
-                        $unitTypePk = (int) $derived;
-                    }
-                }
+                // Electricity: use charges/units saved on the bill (set when meter reading was saved). Do not recalculate from current Define Electric Slab.
                 $prev1 = isset($b->last_month_elec_red) ? (int) $b->last_month_elec_red : 0;
                 $curr1 = isset($b->curr_month_elec_red) ? (int) $b->curr_month_elec_red : 0;
                 $u1 = isset($b->meter_one_consume_unit) && $b->meter_one_consume_unit !== null
@@ -8300,27 +8397,13 @@ class EstateController extends Controller
                     ? (int) $b->meter_two_consume_unit
                     : (($curr2 >= $prev2) ? $curr2 - $prev2 : 0);
 
-                $totalElectricRecalc = 0.0;
-
-                if ($u1 > 0) {
-                    $m1Charge = $this->calculateElectricChargeForUnits($unitTypePk, $u1);
-                    $b->meter_one_elec_charge = $m1Charge;
+                if ($b->meter_one_consume_unit === null && ($u1 > 0 || $curr1 > 0 || $prev1 > 0)) {
                     $b->meter_one_consume_unit = $u1;
-                    $totalElectricRecalc += $m1Charge;
                 }
-
-                if ($u2 > 0) {
-                    $m2Charge = $this->calculateElectricChargeForUnits($unitTypePk, $u2);
-                    $b->meter_two_elec_charge = $m2Charge;
+                if ($b->meter_two_consume_unit === null && ($u2 > 0 || $curr2 > 0 || $prev2 > 0)) {
                     $b->meter_two_consume_unit = $u2;
-                    $totalElectricRecalc += $m2Charge;
                 }
 
-                if ($totalElectricRecalc > 0) {
-                    $b->electricty_charges = $totalElectricRecalc;
-                }
-
-                // Convenience field for UI total units across both meters.
                 $b->total_consumed_unit = (int) ($b->meter_one_consume_unit ?? 0) + (int) ($b->meter_two_consume_unit ?? 0);
 
                 // Fallback: when reading has 0/null water or licence, use estate_house_master (Define House) values
@@ -8713,10 +8796,10 @@ class EstateController extends Controller
                     'emro.licence_fees',
                     'emro.house_no',
                     'emro.meter_one',
-                    DB::raw('NULL as meter_one_elec_charge'),
+                    'emro.meter_one_elec_charge',
                     DB::raw('NULL as meter_one_consume_unit'),
                     'emro.meter_two',
-                    DB::raw('NULL as meter_two_elec_charge'),
+                    'emro.meter_two_elec_charge',
                     DB::raw('NULL as meter_two_consume_unit'),
                     ($hasUnitTypeOnSubType ? 'eust.estate_unit_type_master_pk as unit_type_pk' : 'epo.estate_unit_type_master_pk as unit_type_pk'),
                     'epo.estate_unit_sub_type_master_pk as unit_sub_type_pk',
@@ -8787,20 +8870,7 @@ class EstateController extends Controller
             $bill->to_date_formatted = $bill->to_date ? \Carbon\Carbon::parse($bill->to_date)->format('d.m.Y') : '—';
             $bill->house_display = $bill->unit_sub_type && $bill->house_no ? $bill->unit_sub_type . '-(' . $bill->house_no . ')' : ($bill->house_no ?? '—');
 
-            // If electricity charges are missing/zero, compute them using Define Electric Slab (progressive slabs).
-            // Units: prefer stored consume_unit; if null, derive from readings (curr - prev, not negative).
-            $unitTypePk = isset($bill->unit_type_pk) ? (int) $bill->unit_type_pk : null;
-            // If unit type is missing on house, try deriving it from unit sub type via estate_eligibility_mapping.
-            if (! $unitTypePk && isset($bill->unit_sub_type_pk) && $bill->unit_sub_type_pk) {
-                $derived = DB::table('estate_eligibility_mapping')
-                    ->where('estate_unit_sub_type_master_pk', (int) $bill->unit_sub_type_pk)
-                    ->whereNotNull('estate_unit_type_master_pk')
-                    ->orderBy('estate_unit_type_master_pk')
-                    ->value('estate_unit_type_master_pk');
-                if ($derived) {
-                    $unitTypePk = (int) $derived;
-                }
-            }
+            // Electricity: use charges saved on the bill row (snapshot when meter reading was saved). Do not recalculate from current Define Electric Slab.
             $prev1 = isset($bill->last_month_elec_red) ? (int) $bill->last_month_elec_red : 0;
             $curr1 = isset($bill->curr_month_elec_red) ? (int) $bill->curr_month_elec_red : 0;
             $prev2 = isset($bill->last_month_elec_red2) && (int) $bill->last_month_elec_red2 > 0 ? (int) $bill->last_month_elec_red2 : 0;
@@ -8816,16 +8886,6 @@ class EstateController extends Controller
                 ? (int) $bill->meter_two_consume_unit
                 : (($curr2 >= $prev2) ? $curr2 - $prev2 : 0);
 
-            // 1) Electricity from consumption (slab) – ALWAYS recalculate for print using Define Electric Slab.
-            if ($u1 > 0 || $u2 > 0) {
-                $m1Charge = $u1 > 0 ? $this->calculateElectricChargeForUnits($unitTypePk, $u1) : 0.0;
-                $m2Charge = $u2 > 0 ? $this->calculateElectricChargeForUnits($unitTypePk, $u2) : 0.0;
-                $bill->meter_one_elec_charge = $m1Charge;
-                $bill->meter_two_elec_charge = $m2Charge;
-                $bill->electricty_charges = $m1Charge + $m2Charge;
-            }
-
-            // Always set consume units on bill so view shows 0 or value (not dash when null)
             $bill->meter_one_consume_unit = $u1 > 0 ? $u1 : (($curr1 > 0 || $prev1 > 0) ? 0 : null);
             $bill->meter_two_consume_unit = $u2 > 0 ? $u2 : (($curr2 > 0 || $prev2 > 0) ? 0 : null);
 
@@ -8860,6 +8920,7 @@ class EstateController extends Controller
 
     /**
      * Calculate electricity charge for given units using Define Electric Slab (progressive slabs per unit type).
+     * Used when persisting meter readings (snapshot on the bill row), not when displaying existing bills.
      * Progressive slab: each slab's rate applies only to units falling in that slab's range.
      * e.g. 1-100 @ ₹2, 101-300 @ ₹2.5 → 150 units = 100×2 + 50×2.5 = 200 + 125 = 325.
      */
@@ -8976,10 +9037,10 @@ class EstateController extends Controller
                     'emro.licence_fees',
                     'emro.house_no',
                     'emro.meter_one',
-                    DB::raw('NULL as meter_one_elec_charge'),
+                    'emro.meter_one_elec_charge',
                     DB::raw('NULL as meter_one_consume_unit'),
                     'emro.meter_two',
-                    DB::raw('NULL as meter_two_elec_charge'),
+                    'emro.meter_two_elec_charge',
                     DB::raw('NULL as meter_two_consume_unit'),
                     ($hasUnitTypeOnSubType ? 'eust.estate_unit_type_master_pk as unit_type_pk' : 'epo.estate_unit_type_master_pk as unit_type_pk'),
                     'epo.estate_unit_sub_type_master_pk as unit_sub_type_pk',
@@ -9000,32 +9061,15 @@ class EstateController extends Controller
                 $b->to_date_formatted = $b->to_date ? \Carbon\Carbon::parse($b->to_date)->format('d.m.Y') : '—';
                 $b->house_display = $b->unit_sub_type && $b->house_no ? $b->unit_sub_type . '-(' . $b->house_no . ')' : ($b->house_no ?? '—');
 
-                $unitTypePk = isset($b->unit_type_pk) ? (int) $b->unit_type_pk : null;
-                if (! $unitTypePk && isset($b->unit_sub_type_pk) && $b->unit_sub_type_pk) {
-                    $derived = DB::table('estate_eligibility_mapping')
-                        ->where('estate_unit_sub_type_master_pk', (int) $b->unit_sub_type_pk)
-                        ->whereNotNull('estate_unit_type_master_pk')
-                        ->orderBy('estate_unit_type_master_pk')
-                        ->value('estate_unit_type_master_pk');
-                    if ($derived) {
-                        $unitTypePk = (int) $derived;
-                    }
-                }
-
+                // Electricity: use amounts saved on the bill row; display-only consumption from readings.
                 $prev1 = (int) ($b->last_month_elec_red ?? 0);
                 $curr1 = (int) ($b->curr_month_elec_red ?? 0);
                 $prev2 = (int) ($b->last_month_elec_red2 ?? 0);
                 $curr2 = (int) ($b->curr_month_elec_red2 ?? 0);
                 $u1 = ($curr1 >= $prev1) ? $curr1 - $prev1 : 0;
                 $u2 = ($curr2 >= $prev2) ? $curr2 - $prev2 : 0;
-
-                $m1 = $u1 > 0 ? $this->calculateElectricChargeForUnits($unitTypePk, $u1) : 0.0;
-                $m2 = $u2 > 0 ? $this->calculateElectricChargeForUnits($unitTypePk, $u2) : 0.0;
                 $b->meter_one_consume_unit = ($u1 > 0 || $curr1 > 0 || $prev1 > 0) ? $u1 : null;
                 $b->meter_two_consume_unit = ($u2 > 0 || $curr2 > 0 || $prev2 > 0) ? $u2 : null;
-                $b->meter_one_elec_charge = $m1;
-                $b->meter_two_elec_charge = $m2;
-                $b->electricty_charges = $m1 + $m2;
 
                 $billWater = (float) ($b->water_charges ?? 0);
                 $billLicence = (float) ($b->licence_fees ?? 0);
@@ -9112,17 +9156,7 @@ class EstateController extends Controller
                 $b->to_date_formatted = $b->to_date ? \Carbon\Carbon::parse($b->to_date)->format('d.m.Y') : '—';
                 $b->house_display = $b->unit_sub_type && $b->house_no ? $b->unit_sub_type . '-(' . $b->house_no . ')' : ($b->house_no ?? '—');
 
-                $unitTypePk = isset($b->unit_type_pk) ? (int) $b->unit_type_pk : null;
-                if (! $unitTypePk && isset($b->unit_sub_type_pk) && $b->unit_sub_type_pk) {
-                    $derived = DB::table('estate_eligibility_mapping')
-                        ->where('estate_unit_sub_type_master_pk', (int) $b->unit_sub_type_pk)
-                        ->whereNotNull('estate_unit_type_master_pk')
-                        ->orderBy('estate_unit_type_master_pk')
-                        ->value('estate_unit_type_master_pk');
-                    if ($derived) {
-                        $unitTypePk = (int) $derived;
-                    }
-                }
+                // Electricity: use charges/units saved on the bill; fill display-only consumption when null (legacy).
                 $prev1 = (int) ($b->last_month_elec_red ?? 0);
                 $curr1 = (int) ($b->curr_month_elec_red ?? 0);
                 $u1 = isset($b->meter_one_consume_unit) && $b->meter_one_consume_unit !== null
@@ -9141,22 +9175,11 @@ class EstateController extends Controller
                 $u2 = isset($b->meter_two_consume_unit) && $b->meter_two_consume_unit !== null
                     ? (int) $b->meter_two_consume_unit
                     : (($curr2 >= $prev2) ? $curr2 - $prev2 : 0);
-
-                $totalElectricRecalc = 0.0;
-                if ($u1 > 0) {
-                    $m1 = $this->calculateElectricChargeForUnits($unitTypePk, $u1);
-                    $b->meter_one_elec_charge = $m1;
+                if ($b->meter_one_consume_unit === null && ($u1 > 0 || $curr1 > 0 || $prev1 > 0)) {
                     $b->meter_one_consume_unit = $u1;
-                    $totalElectricRecalc += $m1;
                 }
-                if ($u2 > 0) {
-                    $m2 = $this->calculateElectricChargeForUnits($unitTypePk, $u2);
-                    $b->meter_two_elec_charge = $m2;
+                if ($b->meter_two_consume_unit === null && ($u2 > 0 || $curr2 > 0 || $prev2 > 0)) {
                     $b->meter_two_consume_unit = $u2;
-                    $totalElectricRecalc += $m2;
-                }
-                if ($totalElectricRecalc > 0) {
-                    $b->electricty_charges = $totalElectricRecalc;
                 }
 
                 $billWater = (float) ($b->water_charges ?? 0);
@@ -9245,17 +9268,7 @@ class EstateController extends Controller
                 $b->to_date_formatted = $b->to_date ? \Carbon\Carbon::parse($b->to_date)->format('d.m.Y') : '—';
                 $b->house_display = $b->unit_sub_type && $b->house_no ? $b->unit_sub_type . '-(' . $b->house_no . ')' : ($b->house_no ?? '—');
 
-                $unitTypePk = isset($b->unit_type_pk) ? (int) $b->unit_type_pk : null;
-                if (! $unitTypePk && isset($b->unit_sub_type_pk) && $b->unit_sub_type_pk) {
-                    $derived = DB::table('estate_eligibility_mapping')
-                        ->where('estate_unit_sub_type_master_pk', (int) $b->unit_sub_type_pk)
-                        ->whereNotNull('estate_unit_type_master_pk')
-                        ->orderBy('estate_unit_type_master_pk')
-                        ->value('estate_unit_type_master_pk');
-                    if ($derived) {
-                        $unitTypePk = (int) $derived;
-                    }
-                }
+                // Electricity: use charges/units saved on the bill; fill display-only consumption when null (legacy).
                 $prev1 = (int) ($b->last_month_elec_red ?? 0);
                 $curr1 = (int) ($b->curr_month_elec_red ?? 0);
                 $u1 = isset($b->meter_one_consume_unit) && $b->meter_one_consume_unit !== null
@@ -9274,22 +9287,11 @@ class EstateController extends Controller
                 $u2 = isset($b->meter_two_consume_unit) && $b->meter_two_consume_unit !== null
                     ? (int) $b->meter_two_consume_unit
                     : (($curr2 >= $prev2) ? $curr2 - $prev2 : 0);
-
-                $totalElectricRecalc = 0.0;
-                if ($u1 > 0) {
-                    $m1 = $this->calculateElectricChargeForUnits($unitTypePk, $u1);
-                    $b->meter_one_elec_charge = $m1;
+                if ($b->meter_one_consume_unit === null && ($u1 > 0 || $curr1 > 0 || $prev1 > 0)) {
                     $b->meter_one_consume_unit = $u1;
-                    $totalElectricRecalc += $m1;
                 }
-                if ($u2 > 0) {
-                    $m2 = $this->calculateElectricChargeForUnits($unitTypePk, $u2);
-                    $b->meter_two_elec_charge = $m2;
+                if ($b->meter_two_consume_unit === null && ($u2 > 0 || $curr2 > 0 || $prev2 > 0)) {
                     $b->meter_two_consume_unit = $u2;
-                    $totalElectricRecalc += $m2;
-                }
-                if ($totalElectricRecalc > 0) {
-                    $b->electricty_charges = $totalElectricRecalc;
                 }
 
                 $billWater = (float) ($b->water_charges ?? 0);
@@ -10155,8 +10157,7 @@ class EstateController extends Controller
                 'eor.section',
                 'b.block_name as building_name',
             ])
-            ->orderBy('b.block_name')
-            ->orderBy('emro.house_no')
+            ->orderByDesc('emro.pk')
             ->get();
 
         $rows = [];
@@ -10166,8 +10167,8 @@ class EstateController extends Controller
             $prev2 = (int) ($r->last_month_elec_red2 ?? 0);
             $curr2 = (int) ($r->curr_month_elec_red2 ?? 0);
             $units = (($curr >= $prev) ? $curr - $prev : 0) + (($curr2 >= $prev2) ? $curr2 - $prev2 : 0);
-            // Recalculate electricity using progressive slab (unitTypePk = null for Other)
-            $totalCharge = $units > 0 ? $this->calculateElectricChargeForUnits(null, $units) : 0.0;
+            // Use electricity amount saved on the bill (set when meter reading was saved), not current slab rates.
+            $totalCharge = (float) ($r->electricty_charges ?? 0);
             // Prefer Define House (estate_house_master) licence_fee so changes in Define House reflect here
             $licence = (float) ($r->licence_fees ?? 0);
             if (isset($r->ehm_licence_fee) && $r->ehm_licence_fee !== null && $r->ehm_licence_fee !== '') {
