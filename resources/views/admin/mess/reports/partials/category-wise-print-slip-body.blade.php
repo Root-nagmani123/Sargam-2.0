@@ -123,7 +123,6 @@
                                     <thead>
                                         <tr>
                                             <th class="th-slip-no">Slip No.</th>
-                                            <th class="th-remark">Remark</th>
                                             <th class="th-item">Item Name</th>
                                             <th class="th-date">Request Date</th>
                                             <th class="th-qty">Quantity</th>
@@ -183,12 +182,12 @@
                 <tbody>
                     <tr class="grand-total-row">
                         @if($dompdfSafeTables)
-                            <td></td><td></td><td></td><td></td><td></td>
+                            <td></td><td></td><td></td><td></td>
                             <td class="text-end"><strong>GRAND TOTAL</strong></td>
                             <td class="text-end"><strong>{{ number_format($grandTotal ?? 0, 2) }}</strong></td>
                             <td></td>
                         @else
-                            <td colspan="5"></td>
+                            <td colspan="4"></td>
                             <td class="text-end"><strong>GRAND TOTAL</strong></td>
                             <td class="text-end"><strong>{{ number_format($grandTotal ?? 0, 2) }}</strong></td>
                             <td></td>
