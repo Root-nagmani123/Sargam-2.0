@@ -37,7 +37,7 @@
                     <th class="store-alloc-sort" data-sort="store">Store Name <span class="sort-icon"></span></th>
                     <th class="store-alloc-sort" data-sort="item">Item Name <span class="sort-icon"></span></th>
                     <th class="store-alloc-sort" data-sort="type">Item Type <span class="sort-icon"></span></th>
-                    <th class="store-alloc-sort text-end" data-sort="quantity">Number of Items <span class="sort-icon"></span></th>
+                    <th class="store-alloc-sort" data-sort="quantity">Number of Items <span class="sort-icon"></span></th>
                     <th class="store-alloc-sort" data-sort="date">Date <span class="sort-icon"></span></th>
                     <th class="text-center">Action</th>
                 </tr>
@@ -51,21 +51,23 @@
                     <td>{{ $allocation->subStore->sub_store_name ?? 'N/A' }}</td>
                     <td>{{ $item->itemSubcategory->item_name ?? 'N/A' }}</td>
                     <td>{{ optional(optional($item->itemSubcategory)->category)->category_name ?? 'N/A' }}</td>
-                    <td class="text-end">{{ $item->quantity }}</td>
+                    <td>{{ $item->quantity }}</td>
                     <td>{{ $allocation->allocation_date ? $allocation->allocation_date->format('d-m-Y') : '—' }}</td>
-                    <td class="text-center">
-                        <button type="button" class="btn btn-sm btn-info btn-edit-allocation text-primary bg-transparent border-0 p-0" data-allocation-id="{{ $allocation->id }}" title="Edit allocation">
-                            <span class="material-symbols-rounded" style="font-size: 1.1rem;">edit</span>
-                        </button>
-                        @if($canDeleteStoreAllocation)
-                            <form action="{{ route('admin.mess.storeallocations.destroy', $allocation->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this store allocation?');">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-sm btn-outline-danger bg-transparent border-0 p-0 text-primary" title="Delete allocation">
-                                    <span class="material-symbols-rounded" style="font-size: 1.1rem;">delete</span>
-                                </button>
-                            </form>
-                        @endif
+                    <td class="text-center align-middle store-alloc-actions-cell">
+                        <div class="d-inline-flex align-items-center justify-content-center gap-2">
+                            <button type="button" class="btn btn-sm btn-info btn-edit-allocation text-primary bg-transparent border-0 p-0 d-inline-flex align-items-center justify-content-center" data-allocation-id="{{ $allocation->id }}" title="Edit allocation">
+                                <span class="material-symbols-rounded" style="font-size: 1.1rem;">edit</span>
+                            </button>
+                            @if($canDeleteStoreAllocation)
+                                <form action="{{ route('admin.mess.storeallocations.destroy', $allocation->id) }}" method="POST" class="d-inline-flex align-items-center justify-content-center m-0" onsubmit="return confirm('Are you sure you want to delete this store allocation?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-outline-danger bg-transparent border-0 p-0 text-primary d-inline-flex align-items-center justify-content-center" title="Delete allocation">
+                                        <span class="material-symbols-rounded" style="font-size: 1.1rem;">delete</span>
+                                    </button>
+                                </form>
+                            @endif
+                        </div>
                     </td>
                 </tr>
                 @endforeach
@@ -100,6 +102,8 @@
 {{-- Create Store Allocation Modal + DataTables-style --}}
 <style>
 /* DataTables-style: sortable header */
+.mess-store-allocation-page #storeAllocationTable .store-alloc-actions-cell { vertical-align: middle !important; }
+.mess-store-allocation-page #storeAllocationTable .store-alloc-actions-cell .d-inline-flex { min-height: 2rem; }
 .store-alloc-sort { cursor: pointer; user-select: none; white-space: nowrap; }
 .store-alloc-sort:hover { opacity: 0.9; }
 .store-alloc-sort .sort-icon { color: rgba(255,255,255,0.9); font-size: 0.7em; margin-left: 2px; }
@@ -128,23 +132,25 @@
 #editStoreAllocationModal .modal-body .card:has(#editAllocationItemsTable) {
     overflow: visible;
 }
-#createStoreAllocationModal #allocationItemsTable td,
-#editStoreAllocationModal #editAllocationItemsTable td { vertical-align: top; }
 #createStoreAllocationModal #allocationItemsTable td:first-child,
-#editStoreAllocationModal #editAllocationItemsTable td:first-child { position: relative; }
+#editStoreAllocationModal #editAllocationItemsTable td:first-child { position: relative; min-width: 0; }
 #createStoreAllocationModal #allocationItemsTable .choices,
 #editStoreAllocationModal #editAllocationItemsTable .choices {
     max-width: 100%;
     width: 100%;
     min-width: 0;
 }
-#createStoreAllocationModal #allocationItemsTable .choices__inner,
-#editStoreAllocationModal #editAllocationItemsTable .choices__inner {
-    min-height: 31px;
+/* Item row: outer uses Bootstrap .form-select; inner is borderless flex (see classNames in JS) */
+#createStoreAllocationModal #allocationItemsTable .alloc-item-choices-outer.form-select,
+#editStoreAllocationModal #editAllocationItemsTable .alloc-item-choices-outer.form-select {
+    padding: 0;
+    background-image: none;
 }
-#createStoreAllocationModal #allocationItemsTable .choices.is-open .choices__inner,
-#editStoreAllocationModal #editAllocationItemsTable .choices.is-open .choices__inner {
-    min-height: 31px;
+#createStoreAllocationModal #allocationItemsTable .alloc-item-choices-outer.form-select:focus-within,
+#editStoreAllocationModal #editAllocationItemsTable .alloc-item-choices-outer.form-select:focus-within {
+    border-color: var(--bs-border-color);
+    outline: 0;
+    box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
 }
 /* Item row open: stack above following rows (table paints lower rows on top otherwise) */
 #createStoreAllocationModal #allocationItemsTable tbody tr:has(.choices.is-open),
@@ -174,15 +180,35 @@
 #editStoreAllocationModal #editAllocationItemsTable .choices__list--dropdown.alloc-item-dd-fixed {
     z-index: 20050 !important;
     box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    overflow: visible !important;
 }
-/* Prevent item names from wrapping - single line display */
-#createStoreAllocationModal .choices__list--dropdown .choices__item,
-#editStoreAllocationModal .choices__list--dropdown .choices__item,
-#createStoreAllocationModal .choices__inner .choices__item,
-#editStoreAllocationModal .choices__inner .choices__item {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+/* Search field: keep visible (Choices + Bootstrap); fixed dropdown scrolls list only */
+#createStoreAllocationModal #allocationItemsTable .choices__list--dropdown .choices__input,
+#editStoreAllocationModal #editAllocationItemsTable .choices__list--dropdown .choices__input {
+    display: block !important;
+    width: 100% !important;
+    box-sizing: border-box;
+    margin: 0 !important;
+}
+/* Remove row: × perfectly centered in cell */
+#createStoreAllocationModal #allocationItemsTable td.alloc-action-cell,
+#editStoreAllocationModal #editAllocationItemsTable td.alloc-action-cell {
+    width: 52px;
+    vertical-align: middle !important;
+    text-align: center !important;
+    padding: 0.35rem 0.25rem !important;
+}
+#createStoreAllocationModal #allocationItemsTable td.alloc-action-cell .alloc-remove-row,
+#editStoreAllocationModal #editAllocationItemsTable td.alloc-action-cell .alloc-remove-row {
+    width: 2rem;
+    height: 2rem;
+    min-width: 2rem;
+    padding: 0;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    font-size: 1.15rem;
 }
 #createStoreAllocationModal #allocationItemsTable td,
 #editStoreAllocationModal #editAllocationItemsTable td {
@@ -266,19 +292,19 @@
                                     </thead>
                                     <tbody id="allocationItemsBody">
                                         <tr class="allocation-item-row">
-                                            <td style="width: 280px;">
-                                                <select name="items[0][item_subcategory_id]" class="form-select form-select-sm alloc-item-select choices-select" data-placeholder="Select Item" required>
+                                            <td class="align-middle" style="width: 280px;">
+                                                <select name="items[0][item_subcategory_id]" class="form-select form-select-sm alloc-item-select choices-select w-100" data-placeholder="Select Item" required>
                                                     <option value="">Select Item</option>
                                                     @foreach($itemSubcategories as $sub)
                                                         <option value="{{ $sub['id'] }}" data-unit="{{ e($sub['unit_measurement']) }}">{{ $sub['item_name'] }}</option>
                                                     @endforeach
                                                 </select>
                                             </td>
-                                            <td><input type="number" name="items[0][quantity]" class="form-control  alloc-qty" step="0.01" min="0.01" placeholder="0" required></td>
-                                            <td><input type="text" name="items[0][unit]" class="form-control  alloc-unit" readonly placeholder="—"></td>
-                                            <td><input type="number" name="items[0][unit_price]" class="form-control  alloc-unit-price" step="0.01" min="0" placeholder="0" required></td>
-                                            <td><input type="text" class="form-control  alloc-line-total bg-light" readonly placeholder="0.00"></td>
-                                            <td class="text-center align-middle"><button type="button" class="btn btn-sm btn-outline-danger alloc-remove-row" disabled title="Remove">×</button></td>
+                                            <td class="align-middle"><input type="number" name="items[0][quantity]" class="form-control form-control-sm alloc-qty" step="0.01" min="0.01" placeholder="0" required></td>
+                                            <td class="align-middle"><input type="text" name="items[0][unit]" class="form-control form-control-sm alloc-unit" readonly placeholder="—"></td>
+                                            <td class="align-middle"><input type="number" name="items[0][unit_price]" class="form-control form-control-sm alloc-unit-price" step="0.01" min="0" placeholder="0" required></td>
+                                            <td class="align-middle"><input type="text" class="form-control form-control-sm alloc-line-total bg-light" readonly placeholder="0.00"></td>
+                                            <td class="alloc-action-cell"><button type="button" class="btn btn-sm btn-outline-danger alloc-remove-row" disabled title="Remove">×</button></td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -519,6 +545,65 @@
     let createRowIndex = 1;
     let editRowIndex = 0;
 
+    /** Choices.js defaults (v10) — merge when skinning item rows with Bootstrap */
+    const CHOICES_DEFAULT_CLASSNAMES = {
+        containerOuter: 'choices',
+        containerInner: 'choices__inner',
+        input: 'choices__input',
+        inputCloned: 'choices__input--cloned',
+        list: 'choices__list',
+        listItems: 'choices__list--multiple',
+        listSingle: 'choices__list--single',
+        listDropdown: 'choices__list--dropdown',
+        item: 'choices__item',
+        itemSelectable: 'choices__item--selectable',
+        itemDisabled: 'choices__item--disabled',
+        itemChoice: 'choices__item--choice',
+        placeholder: 'choices__placeholder',
+        group: 'choices__group',
+        groupHeading: 'choices__heading',
+        button: 'choices__button',
+        activeState: 'is-active',
+        focusState: 'is-focused',
+        openState: 'is-open',
+        disabledState: 'is-disabled',
+        highlightedState: 'is-highlighted',
+        selectedState: 'is-selected',
+        flippedState: 'is-flipped',
+        loadingState: 'is-loading',
+        noResults: 'has-no-results',
+        noChoices: 'has-no-choices',
+    };
+
+    function buildChoicesOptions(el) {
+        const placeholder = el.getAttribute('data-placeholder') || 'Select';
+        const base = {
+            shouldSort: false,
+            position: 'bottom',
+            placeholder: true,
+            placeholderValue: placeholder,
+            searchPlaceholderValue: 'Search items...',
+        };
+        if (el.classList.contains('alloc-item-select')) {
+            base.searchEnabled = true;
+            base.searchChoices = true;
+            base.searchFloor = 0;
+            base.searchResultLimit = 500;
+            base.classNames = Object.assign({}, CHOICES_DEFAULT_CLASSNAMES, {
+                containerOuter: 'choices form-select form-select-sm w-100 alloc-item-choices-outer',
+                containerInner: 'choices__inner d-flex align-items-center flex-nowrap overflow-hidden border-0 rounded-0 bg-transparent px-2',
+                listSingle: 'choices__list--single flex-grow-1 min-w-0 text-start',
+                listDropdown: 'choices__list--dropdown border rounded-2 shadow-sm bg-body mt-1 py-1',
+                item: 'choices__item text-truncate min-w-0',
+                itemSelectable: 'choices__item--selectable px-3 py-2 text-truncate d-block w-100',
+                itemChoice: 'choices__item--choice px-3 py-2 text-truncate d-block w-100',
+                placeholder: 'choices__placeholder text-truncate text-body-secondary mb-0 w-100 small',
+                button: 'choices__button flex-shrink-0 align-self-center',
+            });
+        }
+        return base;
+    }
+
     function positionAllocItemDropdownFixed(selectEl) {
         const wrap = selectEl.closest('.choices');
         if (!wrap) return;
@@ -527,16 +612,25 @@
         if (!inner || !dd) return;
         const r = inner.getBoundingClientRect();
         const spaceBelow = window.innerHeight - r.bottom - 8;
-        const maxH = Math.min(320, Math.max(120, spaceBelow));
+        const maxPanel = Math.min(320, Math.max(160, spaceBelow));
         dd.classList.add('alloc-item-dd-fixed');
         dd.style.position = 'fixed';
         dd.style.left = r.left + 'px';
         dd.style.top = (r.bottom + 2) + 'px';
         dd.style.width = Math.max(r.width, 1) + 'px';
-        dd.style.maxHeight = maxH + 'px';
-        dd.style.overflowY = 'auto';
         dd.style.zIndex = '20050';
         dd.style.boxSizing = 'border-box';
+        /* Do not scroll the whole panel — clips/hides the search. Scroll inner list only. */
+        dd.style.maxHeight = '';
+        dd.style.overflowY = '';
+        dd.style.overflow = '';
+        const searchInput = dd.querySelector('.choices__input');
+        const innerList = dd.querySelector('.choices__list[role="listbox"]');
+        const searchH = searchInput ? Math.ceil(searchInput.getBoundingClientRect().height || 44) : 44;
+        if (innerList) {
+            innerList.style.maxHeight = Math.max(72, maxPanel - searchH - 8) + 'px';
+            innerList.style.overflowY = 'auto';
+        }
     }
 
     function clearAllocItemDropdownFixed(selectEl) {
@@ -551,8 +645,14 @@
         dd.style.width = '';
         dd.style.maxHeight = '';
         dd.style.overflowY = '';
+        dd.style.overflow = '';
         dd.style.zIndex = '';
         dd.style.boxSizing = '';
+        const innerList = dd.querySelector('.choices__list[role="listbox"]');
+        if (innerList) {
+            innerList.style.maxHeight = '';
+            innerList.style.overflowY = '';
+        }
     }
 
     function initChoices(root) {
@@ -562,16 +662,22 @@
         scope.querySelectorAll('select.choices-select').forEach(function(el) {
             if (el.dataset.choicesInitialized === 'true') return;
 
-            const placeholder = el.getAttribute('data-placeholder') || 'Select';
-            const opts = {
-                shouldSort: false,
-                position: 'bottom',
-                placeholder: true,
-                placeholderValue: placeholder,
-                searchPlaceholderValue: 'Search...',
-            };
+            const opts = buildChoicesOptions(el);
             el._choices = new Choices(el, opts);
             el.dataset.choicesInitialized = 'true';
+
+            // Choices.js may not bubble change the same way as a native select; unit must update on pick.
+            if (el.classList.contains('alloc-item-select')) {
+                const syncAllocRowFromItem = function () {
+                    const row = el.closest('.allocation-item-row');
+                    if (row) {
+                        updateUnit(row);
+                        calcLineTotal(row);
+                    }
+                };
+                el.addEventListener('addItem', syncAllocRowFromItem);
+                el.addEventListener('removeItem', syncAllocRowFromItem);
+            }
 
             function setModalBodyDropdownOpen(show) {
                 const mb = el.closest('.modal-body');
@@ -643,36 +749,47 @@
         const lineTotal = editItem ? editItem.total_price : '';
         return `
         <tr class="allocation-item-row edit-alloc-item-row">
-            <td style="width: 280px;">
-                <select name="items[${index}][item_subcategory_id]" class="form-select form-select-sm alloc-item-select choices-select" data-placeholder="Select Item" required>
+            <td class="align-middle" style="width: 280px;">
+                <select name="items[${index}][item_subcategory_id]" class="form-select form-select-sm alloc-item-select choices-select w-100" data-placeholder="Select Item" required>
                     <option value="">Select Item</option>
                     ${options}
                 </select>
             </td>
-            <td><input type="number" name="items[${index}][quantity]" class="form-control  alloc-qty" step="0.01" min="0.01" placeholder="0" value="${qty}" required></td>
-            <td><input type="text" name="items[${index}][unit]" class="form-control  alloc-unit" readonly placeholder="—" value="${unit}"></td>
-            <td><input type="number" name="items[${index}][unit_price]" class="form-control  alloc-unit-price" step="0.01" min="0" placeholder="0" value="${price}" required></td>
-            <td><input type="text" class="form-control  alloc-line-total bg-light" readonly placeholder="0.00" value="${lineTotal}"></td>
-            <td class="text-center align-middle"><button type="button" class="btn btn-sm btn-outline-danger alloc-remove-row" title="Remove">×</button></td>
+            <td class="align-middle"><input type="number" name="items[${index}][quantity]" class="form-control form-control-sm alloc-qty" step="0.01" min="0.01" placeholder="0" value="${qty}" required></td>
+            <td class="align-middle"><input type="text" name="items[${index}][unit]" class="form-control form-control-sm alloc-unit" readonly placeholder="—" value="${unit}"></td>
+            <td class="align-middle"><input type="number" name="items[${index}][unit_price]" class="form-control form-control-sm alloc-unit-price" step="0.01" min="0" placeholder="0" value="${price}" required></td>
+            <td class="align-middle"><input type="text" class="form-control form-control-sm alloc-line-total bg-light" readonly placeholder="0.00" value="${lineTotal}"></td>
+            <td class="alloc-action-cell"><button type="button" class="btn btn-sm btn-outline-danger alloc-remove-row" title="Remove">×</button></td>
         </tr>`;
+    }
+
+    function allocUnitDisplay(value) {
+        if (value == null || value === '' || value === '—') {
+            return '';
+        }
+        return String(value);
     }
 
     function updateUnit(row) {
         const select = row.querySelector('.alloc-item-select');
-        if (!select) return;
+        const unitInput = row.querySelector('.alloc-unit');
+        if (!select || !unitInput) return;
         const selectedValue = select.value;
         if (!selectedValue) {
-            const unitInput = row.querySelector('.alloc-unit');
-            if (unitInput) unitInput.value = '';
+            unitInput.value = '';
             return;
         }
-        // Find the option with matching value to get data-unit attribute
-        const opt = Array.from(select.options).find(o => o.value == selectedValue);
-        const unitInput = row.querySelector('.alloc-unit');
-        if (unitInput) {
-            const unitValue = opt && opt.getAttribute('data-unit') ? opt.getAttribute('data-unit') : '';
-            unitInput.value = unitValue;
+        const sub = itemSubcategories.find(function (s) {
+            return String(s.id) === String(selectedValue);
+        });
+        if (sub) {
+            unitInput.value = allocUnitDisplay(sub.unit_measurement);
+            return;
         }
+        const opt = Array.from(select.options).find(function (o) {
+            return String(o.value) === String(selectedValue);
+        });
+        unitInput.value = allocUnitDisplay(opt && opt.getAttribute('data-unit'));
     }
 
     function calcLineTotal(row) {
@@ -862,6 +979,10 @@
                     if (selectEl._choices && selectEl.value) {
                         selectEl._choices.setChoiceByValue(String(selectEl.value));
                     }
+                });
+                tbody.querySelectorAll('.allocation-item-row').forEach(function(row) {
+                    updateUnit(row);
+                    calcLineTotal(row);
                 });
                 updateEditRemoveButtons();
                 const editModalEl = document.getElementById('editStoreAllocationModal');
