@@ -33,8 +33,30 @@ class KitchenIssueController extends Controller
     public function index(Request $request)
     {
         // This page lists only Selling Vouchers (type 1); data is in kitchen_issue_master + kitchen_issue_items
-        $query = KitchenIssueMaster::with(['store', 'items.itemSubcategory', 'clientTypeCategory', 'course', 'employee', 'student'])
-            ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER);
+        $query = KitchenIssueMaster::query()
+            ->select([
+                'pk',
+                'client_type',
+                'payment_type',
+                'client_name',
+                'store_id',
+                'store_type',
+                'status',
+                'client_type_pk',
+                'issue_date',
+                'created_at',
+            ])
+            ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+            ->with([
+                'store:id,store_name',
+                'subStore:id,sub_store_name',
+                'items' => function ($q) {
+                    $q->select('pk', 'kitchen_issue_master_pk', 'item_subcategory_id', 'item_name', 'quantity', 'return_quantity')
+                        ->with('itemSubcategory');
+                },
+                'clientTypeCategory:id,client_name',
+                'course:pk,course_name',
+            ]);
 
         if ($request->filled('store')) {
             $storeFilter = $request->store;
@@ -76,6 +98,11 @@ class KitchenIssueController extends Controller
             $query->where('kitchen_issue_type', $request->kitchen_issue_type);
         }
         // Date filter: support only start_date, only end_date, or both
+        if (! $request->filled('start_date') && ! $request->filled('end_date')) {
+            // Match the filter UI default (start date shows today when no query string) so the first load
+            // does not pull the full historical table into memory for client-side DataTables.
+            $query->whereDate('issue_date', now()->toDateString());
+        }
         if ($request->filled('start_date')) {
             $query->where('issue_date', '>=', $request->start_date);
         }
@@ -83,7 +110,7 @@ class KitchenIssueController extends Controller
             $query->where('issue_date', '<=', $request->end_date);
         }
 
-        // DataTables handles pagination/search on the client; return full filtered set.
+        // DataTables handles pagination/search on the client; return full filtered set (bounded by filters above).
         $kitchenIssues = $query->orderBy('issue_date', 'desc')
             ->orderBy('pk', 'desc')
             ->get();
@@ -96,7 +123,7 @@ class KitchenIssueController extends Controller
             ->get(['pk', 'course_name']);
 
         // Get active stores and sub-stores
-        $stores = Store::active()->get()->map(function ($store) {
+        $stores = Store::active()->get(['id', 'store_name'])->map(function ($store) {
             return [
                 'id' => $store->id,
                 'store_name' => $store->store_name,
@@ -104,7 +131,7 @@ class KitchenIssueController extends Controller
             ];
         });
         
-        $subStores = SubStore::active()->get()->map(function ($subStore) {
+        $subStores = SubStore::active()->get(['id', 'sub_store_name'])->map(function ($subStore) {
             return [
                 'id' => 'sub_' . $subStore->id,
                 'store_name' => $subStore->sub_store_name . ' (Sub-Store)',
@@ -120,13 +147,16 @@ class KitchenIssueController extends Controller
             return [
                 'id' => $s->id,
                 'item_name' => $s->item_name ?? $s->name ?? '—',
-                'item_code' => $s->item_code ?? '—',
+                'item_code' => $s->item_code ?? $s->subcategory_code ?? '—',
                 'unit_measurement' => $s->unit_measurement ?? '—',
                 'standard_cost' => $s->standard_cost ?? 0,
             ];
         });
         $clientTypes = ClientType::clientTypes();
-        $clientNamesByType = ClientType::active()->orderBy('client_type')->orderBy('client_name')->get()
+        $clientNamesByType = ClientType::active()
+            ->orderBy('client_type')
+            ->orderBy('client_name')
+            ->get(['id', 'client_type', 'client_name'])
             ->groupBy('client_type');
 
         // Same split as Selling Voucher Date Range:
