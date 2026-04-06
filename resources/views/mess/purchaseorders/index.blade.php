@@ -21,7 +21,7 @@
                             <p class="mb-0 text-body-secondary small fw-medium">Filter the list, open a row to view, or create a new purchase order.</p>
                         </div>
                     </div>
-                    <button type="button" class="btn btn-primary px-4 py-2 rounded-pill d-inline-flex align-items-center gap-2 shadow-sm fw-semibold" data-bs-toggle="modal" data-bs-target="#createPurchaseOrderModal" style="transition: all 0.3s ease;">
+                    <button type="button" class="btn btn-primary px-4 py-2 rounded-1 d-inline-flex align-items-center gap-2 shadow-sm fw-semibold" data-bs-toggle="modal" data-bs-target="#createPurchaseOrderModal" style="transition: all 0.3s ease;">
                         <i class="material-icons material-symbol-rounded" style="font-size: 1.1rem;" aria-hidden="true">add</i>
                         <span class="d-none d-sm-inline">Create Purchase Order</span>
                         <span class="d-inline d-sm-none">New</span>
@@ -55,7 +55,7 @@
                             <div class="col-12 col-lg-5 col-xl-4">
                                 <div class="h-100 rounded-4 border-0 bg-white p-3 p-md-4 shadow-sm">
                                     <div class="d-flex align-items-center gap-2 mb-3">
-                                        <span class="badge rounded-pill bg-primary bg-gradient text-white fw-bold text-uppercase shadow-sm" style="font-size: 0.7rem; letter-spacing: 0.08em; padding: 0.35rem 0.75rem;">Period</span>
+                                        <span class="badge rounded-1 bg-primary bg-gradient text-white fw-bold text-uppercase shadow-sm" style="font-size: 0.7rem; letter-spacing: 0.08em; padding: 0.35rem 0.75rem;">Period</span>
                                         <span class="small text-body-secondary fw-medium">Order date range</span>
                                     </div>
                                     <div class="row g-3">
@@ -87,7 +87,7 @@
                             <div class="col-12 col-lg-7 col-xl-8">
                                 <div class="h-100 rounded-4 border-0 bg-white p-3 p-md-4 shadow-sm">
                                     <div class="d-flex align-items-center gap-2 mb-3">
-                                        <span class="badge rounded-pill bg-success bg-gradient text-white fw-bold text-uppercase shadow-sm" style="font-size: 0.7rem; letter-spacing: 0.08em; padding: 0.35rem 0.75rem;">Scope</span>
+                                        <span class="badge rounded-1 bg-success bg-gradient text-white fw-bold text-uppercase shadow-sm" style="font-size: 0.7rem; letter-spacing: 0.08em; padding: 0.35rem 0.75rem;">Scope</span>
                                         <span class="small text-body-secondary fw-medium">Vendors and stores <span class="d-none d-sm-inline">(leave blank for all)</span></span>
                                     </div>
                                     <div class="row g-3 align-items-start">
@@ -125,15 +125,15 @@
                             <div class="col-12">
                                 <div class="d-flex flex-column flex-md-row flex-wrap align-items-stretch align-items-md-center justify-content-between gap-3 pt-3 mt-2 border-top">
                                     <div class="d-flex flex-wrap gap-2">
-                                        <button type="submit" class="btn btn-primary rounded-pill d-inline-flex align-items-center justify-content-center gap-2 px-4 py-2 shadow-sm fw-semibold" style="transition: all 0.3s ease;">
+                                        <button type="submit" class="btn btn-primary rounded-1 d-inline-flex align-items-center justify-content-center gap-2 px-4 py-2 shadow-sm fw-semibold" style="transition: all 0.3s ease;">
                                             <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;" aria-hidden="true">filter_alt</i>
                                             <span>Apply filters</span>
                                         </button>
-                                        <a href="{{ route('admin.mess.purchaseorders.index') }}" class="btn btn-outline-secondary rounded-pill d-inline-flex align-items-center justify-content-center gap-2 px-4 py-2 fw-semibold" style="transition: all 0.3s ease;">
+                                        <a href="{{ route('admin.mess.purchaseorders.index') }}" class="btn btn-outline-secondary rounded-1 d-inline-flex align-items-center justify-content-center gap-2 px-4 py-2 fw-semibold" style="transition: all 0.3s ease;">
                                             <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;" aria-hidden="true">restart_alt</i>
                                             <span>Clear</span>
                                         </a>
-                                        <button type="button" class="btn btn-outline-primary rounded-pill d-inline-flex align-items-center justify-content-center gap-2 px-4 py-2 fw-semibold" onclick="window.print()" title="Print list or Save as PDF" style="transition: all 0.3s ease;">
+                                        <button type="button" class="btn btn-outline-primary rounded-1 d-inline-flex align-items-center justify-content-center gap-2 px-4 py-2 fw-semibold" onclick="window.print()" title="Print list or Save as PDF" style="transition: all 0.3s ease;">
                                             <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;" aria-hidden="true">print</i>
                                             <span>Print</span>
                                         </button>
@@ -184,7 +184,7 @@
                                 <td class="py-3 text-body">{{ $po->vendor->name ?? 'N/A' }}</td>
                                 <td class="py-3 text-body">{{ $po->store->store_name ?? 'N/A' }}</td>
                                 <td class="py-3">
-                                    <span class="badge rounded-pill {{ $statusBadgeClass }} px-3 py-2 fw-semibold" style="font-size: 0.75rem; letter-spacing: 0.02em;">
+                                    <span class="badge rounded-1 {{ $statusBadgeClass }} px-3 py-2 fw-semibold" style="font-size: 0.75rem; letter-spacing: 0.02em;">
                                         {{ ucfirst($po->status) }}
                                     </span>
                                 </td>
@@ -491,7 +491,7 @@
     padding: 6px 12px;
     min-height: 42px;
     box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-    transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .ts-wrapper.single .ts-control {
@@ -507,7 +507,6 @@
     border-color: #86b7fe;
     outline: 0;
     box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
-    transform: scale(1.01);
 }
 
 /* Dropdown container - Enhanced Bootstrap Style */
@@ -541,6 +540,7 @@
     background-color: #f8f9fa;
     box-sizing: border-box;
     box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
 }
 
 .ts-dropdown-content input:focus {
@@ -548,7 +548,6 @@
     border-color: #86b7fe !important;
     background-color: #fff;
     box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
-    transform: scale(1.01);
 }
 
 /* Options list - Enhanced Bootstrap Style */
@@ -558,7 +557,7 @@
     color: #212529;
     cursor: pointer;
     border-bottom: 1px solid #e9ecef;
-    transition: background-color 0.3s ease, transform 0.2s ease;
+    transition: background-color 0.15s ease;
     background-color: transparent;
 }
 
@@ -568,21 +567,20 @@
 
 /* Option hover state - Enhanced Bootstrap Style */
 .ts-dropdown .option:hover {
-    background-color: rgba(13, 110, 253, 0.1);
+    background-color: rgba(13, 110, 253, 0.08);
     color: #0d6efd;
-    transform: translateX(4px);
 }
 
 /* Prevent default active state highlighting */
 .ts-dropdown .option.active {
     background-color: transparent;
-    color: #333;
+    color: #212529;
 }
 
 /* Only show active state on hover */
 .ts-dropdown .option.active:hover {
-    background-color: #f5f5f5;
-    color: #333;
+    background-color: rgba(13, 110, 253, 0.08);
+    color: #0d6efd;
 }
 
 /* Selected option highlight - Enhanced Bootstrap Style */
@@ -592,10 +590,15 @@
     font-weight: 600;
 }
 
+.ts-dropdown .option.selected:hover {
+    background-color: #0b5ed7;
+    color: #fff;
+}
+
 /* Aria-selected ko bhi visually normal rakho (auto selected highlight hide) */
-.ts-dropdown .option[aria-selected="true"] {
+.ts-dropdown .option[aria-selected="true"]:not(.selected) {
     background-color: transparent;
-    color: #333;
+    color: #212529;
 }
 
 /* No results message - Enhanced Bootstrap Style */
@@ -664,12 +667,11 @@
         padding: 0.375rem 0.75rem !important;
         font-weight: 600 !important;
         box-shadow: 0 0.125rem 0.25rem rgba(13, 110, 253, 0.3) !important;
-        transition: all 0.3s ease !important;
+        transition: opacity 0.2s ease !important;
     }
     
     .choices__list--multiple .choices__item:hover {
-        transform: scale(1.05);
-        box-shadow: 0 0.25rem 0.5rem rgba(13, 110, 253, 0.4) !important;
+        opacity: 0.9;
     }
 
     /* ========================================
@@ -678,19 +680,17 @@
     
     /* Enhanced Bootstrap form-select styling */
     .form-select {
-        transition: all 0.3s ease;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
         font-weight: 500;
     }
     
-    .form-select:hover {
-        border-color: #86b7fe;
-        box-shadow: 0 0.125rem 0.5rem rgba(13, 110, 253, 0.15);
+    .form-select:hover:not(:focus) {
+        border-color: #b8c5d6;
     }
     
     .form-select:focus {
         border-color: #86b7fe;
         box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
-        transform: scale(1.01);
     }
     
     .form-select-lg {
@@ -713,11 +713,11 @@
         padding: 0.5rem 0.75rem;
         margin-bottom: 0.25rem;
         border-radius: 0.375rem;
-        transition: all 0.2s ease;
+        transition: background-color 0.15s ease;
     }
     
     select[multiple].form-select option:hover {
-        background-color: rgba(13, 110, 253, 0.1);
+        background-color: rgba(13, 110, 253, 0.08);
         color: #0d6efd;
     }
     
@@ -733,13 +733,12 @@
     
     /* Form control enhancements */
     .form-control {
-        transition: all 0.3s ease;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
         font-weight: 500;
     }
     
-    .form-control:hover:not([readonly]) {
-        border-color: #86b7fe;
-        box-shadow: 0 0.125rem 0.5rem rgba(13, 110, 253, 0.15);
+    .form-control:hover:not([readonly]):not(:focus) {
+        border-color: #b8c5d6;
     }
     
     .form-control-lg {
@@ -767,34 +766,29 @@
     
     /* Button hover effects */
     .btn {
-        transition: all 0.3s ease;
+        transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
     }
     
     .btn-primary:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 0.5rem 1rem rgba(13, 110, 253, 0.3) !important;
+        box-shadow: 0 0.25rem 0.5rem rgba(13, 110, 253, 0.25) !important;
     }
     
     .btn-success:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 0.5rem 1rem rgba(25, 135, 84, 0.3) !important;
+        box-shadow: 0 0.25rem 0.5rem rgba(25, 135, 84, 0.25) !important;
     }
     
     .btn-warning:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 0.5rem 1rem rgba(255, 193, 7, 0.3) !important;
+        box-shadow: 0 0.25rem 0.5rem rgba(255, 193, 7, 0.25) !important;
     }
     
     .btn-info:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 0.5rem 1rem rgba(13, 202, 240, 0.3) !important;
+        box-shadow: 0 0.25rem 0.5rem rgba(13, 202, 240, 0.25) !important;
     }
     
     .btn-outline-primary:hover,
     .btn-outline-info:hover,
     .btn-outline-danger:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.15) !important;
+        box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.12) !important;
     }
     
     /* Card hover effects */
@@ -803,36 +797,24 @@
     }
     
     /* Table row hover - enhanced */
+    .table-hover tbody tr {
+        transition: background-color 0.15s ease;
+    }
+    
     .table-hover tbody tr:hover {
         background-color: rgba(13, 110, 253, 0.05) !important;
-        transform: scale(1.005);
-        transition: all 0.2s ease;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     }
     
     /* Badge enhancements */
     .badge {
-        transition: all 0.3s ease;
+        transition: opacity 0.2s ease;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-    
-    .badge:hover {
-        transform: scale(1.05);
-    }
-    
-    /* Form controls focus enhancement */
-    .form-control:focus,
-    .form-select:focus {
-        border-color: #86b7fe;
-        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
-        transform: scale(1.01);
-        transition: all 0.3s ease;
     }
     
     /* Input group enhancements */
     .input-group:focus-within {
-        box-shadow: 0 0.25rem 0.75rem rgba(13, 110, 253, 0.15);
-        transition: all 0.3s ease;
+        box-shadow: 0 0.125rem 0.5rem rgba(13, 110, 253, 0.12);
+        transition: box-shadow 0.2s ease;
     }
     
     /* Smooth scrolling for modal body */
@@ -840,13 +822,9 @@
         scroll-behavior: smooth;
     }
     
-    /* Icon rotation on hover */
+    /* Icon effects */
     .material-icons {
-        transition: transform 0.3s ease;
-    }
-    
-    .btn:hover .material-icons {
-        transform: scale(1.1);
+        transition: opacity 0.2s ease;
     }
 </style>
 <div class="modal fade" id="createPurchaseOrderModal" tabindex="-1" aria-labelledby="createPurchaseOrderModalLabel" aria-hidden="true">
@@ -854,23 +832,23 @@
         <div class="modal-content border-0 shadow-lg rounded-4">
             <form method="POST" action="{{ route('admin.mess.purchaseorders.store') }}" id="createPOForm" enctype="multipart/form-data">
                 @csrf
-                <div class="modal-header border-0 border-bottom py-3 px-4 bg-gradient" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
+                <div class="modal-header border-0 border-bottom py-3 px-4 bg-light bg-gradient">
                     <div>
                         <h5 class="modal-title fw-bold mb-1 text-dark" id="createPurchaseOrderModalLabel">Create purchase order</h5>
                         <p class="mb-0 small text-body-secondary fw-medium">Required fields are marked with <span class="text-danger fw-bold">*</span></p>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body px-3 px-md-4 py-3 py-md-4" style="background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);">
+                <div class="modal-body px-3 px-md-4 py-3 py-md-4 bg-white">
                     <input type="hidden" name="po_number" value="{{ $po_number }}">
 
                     <div class="row g-3 g-xl-4 align-items-stretch mb-3 mb-xl-4">
                         {{-- Order Details --}}
                         <div class="col-12 col-xl-8">
                             <div class="card border-0 shadow-lg h-100 rounded-4 overflow-hidden">
-                                <div class="card-header bg-gradient border-bottom py-3 px-4 d-flex align-items-center gap-2" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
-                                    <div class="rounded-3 bg-primary bg-gradient text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm" style="width: 2.25rem; height: 2.25rem;">
-                                        <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;" aria-hidden="true">assignment</i>
+                                <div class="card-header bg-white border-bottom py-3 px-4 d-flex align-items-center gap-2">
+                                    <div class="rounded-3 bg-primary bg-gradient text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm" style="width: 36px; height: 36px;">
+                                        <i class="material-icons material-symbol-rounded fs-6" aria-hidden="true">assignment</i>
                                     </div>
                                     <h6 class="mb-0 fw-bold text-dark">Order details</h6>
                                 </div>
@@ -936,12 +914,12 @@
                         {{-- Bill / Attachment (Upload) --}}
                         <div class="col-12 col-xl-4">
                             <div class="card border-0 shadow-lg h-100 rounded-4 overflow-hidden" style="border-left: 4px solid var(--bs-primary) !important;">
-                                <div class="card-header bg-gradient border-bottom py-3 px-4 d-flex align-items-center gap-2" style="background: linear-gradient(135deg, #ffffff 0%, #f0f8ff 100%);">
-                                    <div class="rounded-3 bg-primary bg-gradient text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm" style="width: 2.25rem; height: 2.25rem;">
-                                        <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;" aria-hidden="true">attach_file</i>
+                                <div class="card-header bg-white border-bottom py-3 px-4 d-flex align-items-center gap-2">
+                                    <div class="rounded-3 bg-primary bg-gradient text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm" style="width: 36px; height: 36px;">
+                                        <i class="material-icons material-symbol-rounded fs-6" aria-hidden="true">attach_file</i>
                                     </div>
                                     <h6 class="mb-0 fw-bold text-dark">Bill upload</h6>
-                                    <span class="badge rounded-pill bg-secondary bg-opacity-25 text-secondary border-0 ms-auto fw-semibold px-3">Optional</span>
+                                    <span class="badge rounded-1 bg-secondary bg-opacity-25 text-secondary border-0 ms-auto fw-semibold px-3">Optional</span>
                                 </div>
                                 <div class="card-body p-3 p-md-4 bg-white d-flex flex-column">
                                     <div class="mb-auto">
@@ -959,18 +937,18 @@
 
                     {{-- Item Details --}}
                     <div class="card border-0 shadow-lg mb-0 rounded-4 overflow-hidden">
-                        <div class="card-header bg-gradient border-bottom py-3 px-4 d-flex flex-wrap justify-content-between align-items-center gap-3" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
+                        <div class="card-header bg-white border-bottom py-3 px-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
                             <div class="d-flex align-items-center gap-3">
-                                <div class="rounded-3 bg-success bg-gradient text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm" style="width: 2.5rem; height: 2.5rem;">
-                                    <i class="material-icons material-symbol-rounded" style="font-size: 1.25rem;" aria-hidden="true">inventory_2</i>
+                                <div class="rounded-3 bg-success bg-gradient text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm" style="width: 40px; height: 40px;">
+                                    <i class="material-icons material-symbol-rounded fs-5" aria-hidden="true">inventory_2</i>
                                 </div>
                                 <div>
                                     <h6 class="mb-0 fw-bold text-dark">Line items</h6>
-                                    <span class="small text-body-secondary d-block fw-medium">Multi-select on a row splits into separate lines.</span>
+                                    <span class="small text-body-secondary d-block fw-medium">Add items to create purchase order lines.</span>
                                 </div>
                             </div>
-                            <button type="button" class="btn btn-sm btn-success rounded-pill d-inline-flex align-items-center gap-2 px-3 shadow-sm fw-semibold" id="addPoItemRow" style="transition: all 0.3s ease;">
-                                <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;">add</i> Add line
+                            <button type="button" class="btn btn-sm btn-success rounded-1 d-inline-flex align-items-center gap-2 px-3 shadow-sm fw-semibold" id="addPoItemRow">
+                                <i class="material-icons material-symbol-rounded fs-6">add</i> Add line
                             </button>
                         </div>
                         <div class="card-body p-0 bg-white">
@@ -992,7 +970,7 @@
                                     <tbody id="poItemsBody">
                                         <tr class="po-item-row">
                                             <td class="py-2">
-                                                <select multiple name="items[0][item_subcategory_id]" class="form-select form-select-sm po-item-select rounded-3 shadow-sm border-2" required aria-label="Items for this line — select several to split into multiple lines">
+                                                <select name="items[0][item_subcategory_id]" class="form-select form-select-sm po-item-select rounded-3 shadow-sm border-2" required aria-label="Select item for this line">
                                                     <option value="">Select Item</option>
                                                     @foreach($itemSubcategories as $sub)
                                                         <option value="{{ $sub['id'] }}" data-unit="{{ e($sub['unit_measurement']) }}" data-code="{{ e($sub['item_code']) }}">{{ $sub['item_name'] }}</option>
@@ -1012,17 +990,17 @@
                             </div>
                             </div>
                         </div>
-                        <div class="card-footer bg-gradient border-0 d-flex justify-content-end align-items-center py-3 px-4" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
+                        <div class="card-footer bg-light border-0 d-flex justify-content-end align-items-center py-3 px-4">
                             <div class="d-flex align-items-baseline gap-3 flex-wrap justify-content-end">
-                                <span class="fw-bold text-dark small text-uppercase" style="letter-spacing: 0.05em;">Grand total</span>
-                                <span class="fs-4 text-primary fw-bold" id="poGrandTotal" style="font-family: 'Segoe UI', system-ui, sans-serif;">₹0.00</span>
+                                <span class="fw-bold text-dark small text-uppercase">Grand total</span>
+                                <span class="fs-4 text-primary fw-bold" id="poGrandTotal">₹0.00</span>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-0 border-top py-3 px-4 bg-gradient" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
-                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4 fw-semibold" data-bs-dismiss="modal" style="transition: all 0.3s ease;">Cancel</button>
-                    <button type="submit" class="btn btn-primary rounded-pill px-5 shadow-sm fw-semibold" style="transition: all 0.3s ease;">Create purchase order</button>
+                <div class="modal-footer border-0 border-top py-3 px-4 bg-light">
+                    <button type="button" class="btn btn-outline-secondary rounded-1 px-4 fw-semibold" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary rounded-1 px-5 shadow-sm fw-semibold">Create purchase order</button>
                 </div>
             </form>
         </div>
@@ -1114,7 +1092,7 @@
                                 <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;" aria-hidden="true">attach_file</i>
                             </div>
                             <h6 class="mb-0 fw-bold text-dark">Bill upload</h6>
-                            <span class="badge rounded-pill bg-secondary bg-opacity-25 text-secondary border-0 ms-auto fw-semibold px-3">Optional</span>
+                            <span class="badge rounded-1 bg-secondary bg-opacity-25 text-secondary border-0 ms-auto fw-semibold px-3">Optional</span>
                         </div>
                         <div class="card-body p-3 p-md-4 bg-white">
                             <div class="row">
@@ -1122,11 +1100,11 @@
                                     <label class="form-label fw-bold small mb-2 text-dark">Attachment <span class="text-body-secondary fw-normal fst-italic">· leave blank to keep current file</span></label>
                                     <div class="d-flex align-items-center border rounded-3 px-3 py-2 bg-white gap-2 shadow" style="min-height: 42px;">
                                         <span id="editCurrentBillPath" class="flex-grow-1 text-muted small text-truncate me-2" style="min-width: 0;">No file chosen</span>
-                                        <label class="mb-0 btn btn-outline-secondary py-1 px-3 rounded-pill fw-semibold" style="cursor: pointer; transition: all 0.3s ease;">
+                                        <label class="mb-0 btn btn-outline-secondary py-1 px-3 rounded-1 fw-semibold" style="cursor: pointer; transition: all 0.3s ease;">
                                             Choose file
                                             <input type="file" name="bill_file" class="d-none" accept=".pdf,.jpg,.jpeg,.png,.webp" id="editBillFileInput">
                                         </label>
-                                        <button type="button" class="btn btn-outline-danger py-1 px-3 rounded-pill fw-semibold" id="editBillClearBtn" style="transition: all 0.3s ease;">
+                                        <button type="button" class="btn btn-outline-danger py-1 px-3 rounded-1 fw-semibold" id="editBillClearBtn" style="transition: all 0.3s ease;">
                                             Remove
                                         </button>
                                     </div>
@@ -1144,10 +1122,10 @@
                                 </div>
                                 <div>
                                     <h6 class="mb-0 fw-bold text-dark">Line items</h6>
-                                    <span class="small text-body-secondary d-block fw-medium">Multi-select on a row splits into separate lines.</span>
+                                    <span class="small text-body-secondary d-block fw-medium">Add items to create purchase order lines.</span>
                                 </div>
                             </div>
-                            <button type="button" class="btn btn-sm btn-warning rounded-pill d-inline-flex align-items-center gap-2 px-3 shadow-sm fw-semibold" id="addEditPoItemRow" style="transition: all 0.3s ease;"><i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;">add</i> Add line</button>
+                            <button type="button" class="btn btn-sm btn-warning rounded-1 d-inline-flex align-items-center gap-2 px-3 shadow-sm fw-semibold" id="addEditPoItemRow" style="transition: all 0.3s ease;"><i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;">add</i> Add line</button>
                         </div>
                         <div class="card-body p-0 bg-white">
                             <div class="po-item-details-table-wrap">
@@ -1179,8 +1157,8 @@
                     </div>
                 </div>
                 <div class="modal-footer border-0 border-top py-3 px-4 bg-gradient" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
-                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4 fw-semibold" data-bs-dismiss="modal" style="transition: all 0.3s ease;">Cancel</button>
-                    <button type="submit" class="btn btn-warning rounded-pill px-5 shadow-sm fw-semibold" style="transition: all 0.3s ease;">Update purchase order</button>
+                    <button type="button" class="btn btn-outline-secondary rounded-1 px-4 fw-semibold" data-bs-dismiss="modal" style="transition: all 0.3s ease;">Cancel</button>
+                    <button type="submit" class="btn btn-warning rounded-1 px-5 shadow-sm fw-semibold" style="transition: all 0.3s ease;">Update purchase order</button>
                 </div>
             </form>
         </div>
@@ -1269,7 +1247,7 @@
                                 <div class="border-0 rounded-4 p-4 shadow-sm" style="background: linear-gradient(135deg, #ffffff 0%, #e7f3ff 100%);">
                                     <label class="form-label text-primary small mb-2 fw-bold text-uppercase" style="letter-spacing: 0.05em;">Bill</label>
                                     <p class="mb-0" id="viewBillWrap">
-                                        <a href="#" id="viewBillLink" target="_blank" rel="noopener" class="btn btn-info rounded-pill px-4 py-2 shadow-sm fw-semibold" style="display: none; transition: all 0.3s ease;">View / Download Bill</a>
+                                        <a href="#" id="viewBillLink" target="_blank" rel="noopener" class="btn btn-info rounded-1 px-4 py-2 shadow-sm fw-semibold" style="display: none; transition: all 0.3s ease;">View / Download Bill</a>
                                         <span id="viewBillNone" class="text-muted fst-italic">No bill uploaded</span>
                                     </p>
                                 </div>
@@ -1310,10 +1288,10 @@
                 </div>
             </div>
             <div class="modal-footer border-0 border-top py-3 px-4 d-flex flex-wrap gap-2 justify-content-end bg-gradient" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
-                <button type="button" class="btn btn-info rounded-pill d-inline-flex align-items-center gap-2 px-4 shadow-sm fw-semibold btn-print-view-modal" data-print-target="#viewPurchaseOrderModal" title="Print" style="transition: all 0.3s ease;">
+                <button type="button" class="btn btn-info rounded-1 d-inline-flex align-items-center gap-2 px-4 shadow-sm fw-semibold btn-print-view-modal" data-print-target="#viewPurchaseOrderModal" title="Print" style="transition: all 0.3s ease;">
                     <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;">print</i> Print
                 </button>
-                <button type="button" class="btn btn-secondary rounded-pill px-4 fw-semibold" data-bs-dismiss="modal" style="transition: all 0.3s ease;">Close</button>
+                <button type="button" class="btn btn-secondary rounded-1 px-4 fw-semibold" data-bs-dismiss="modal" style="transition: all 0.3s ease;">Close</button>
             </div>
         </div>
     </div>
@@ -1712,16 +1690,27 @@
             var hadValueBefore = select.multiple
                 ? (select.selectedOptions && select.selectedOptions.length > 0)
                 : !!select.value;
-            var instance = initChoicesSingle(select, {
+            
+            // Proper Choices.js config for multi-select
+            var instance = createChoicesInstance(select, {
                 placeholder: 'Select Item',
                 maxOptions: 200,
-                clearOnOpen: false
+                searchEnabled: true,
+                searchChoices: true,
+                searchFloor: 0,
+                removeItemButton: !!select.multiple,
+                shouldSort: false,
+                itemSelectText: '',
+                allowHTML: false
             });
+            
             if (instance) {
                 choicesInstances.items.push(instance);
                 if (!hadValueBefore) {
                     instance.clear();
                 }
+                
+                // Note: Change event is already handled by delegated listener on tbody
             }
         }
     }
@@ -1814,8 +1803,6 @@
 
     function getItemRowHtml(index, editItem, isEditModal) {
         const selected = editItem && editItem.item_subcategory_id ? editItem.item_subcategory_id : '';
-        const allowMulti = !selected;
-        const multiAttr = allowMulti ? ' multiple' : '';
         const itemsToUse = isEditModal ? (editModalItems && editModalItems.length ? editModalItems : itemSubcategories) : filteredItems;
         const options = itemsToUse.map(s =>
             `<option value="${s.id}" data-unit="${(s.unit_measurement || '').replace(/"/g, '&quot;')}" data-code="${(s.item_code || '').replace(/"/g, '&quot;')}" ${s.id == selected ? 'selected' : ''}>${(s.item_name || '—').replace(/</g, '&lt;')}</option>`
@@ -1829,7 +1816,7 @@
         return `
         <tr class="po-item-row ${isEditModal ? 'edit-po-item-row' : ''}">
             <td class="py-2">
-                <select${multiAttr} name="items[${index}][item_subcategory_id]" class="form-select form-select-sm po-item-select rounded-3" required aria-label="Line items">
+                <select name="items[${index}][item_subcategory_id]" class="form-select form-select-sm po-item-select rounded-3 shadow-sm border-2" required aria-label="Select item for this line">
                     <option value="">Select Item</option>
                     ${options}
                 </select>
@@ -1897,11 +1884,20 @@
                     }
                     select.appendChild(option);
                 });
-                var instance = initChoicesSingle(select, {
+                
+                // Properly initialize Choices with correct config
+                var instance = createChoicesInstance(select, {
                     placeholder: 'Select Item',
                     maxOptions: 200,
-                    clearOnOpen: false
+                    searchEnabled: true,
+                    searchChoices: true,
+                    searchFloor: 0,
+                    removeItemButton: !!select.multiple,
+                    shouldSort: false,
+                    itemSelectText: '',
+                    allowHTML: false
                 });
+                
                 if (instance) {
                     choicesInstances.items.push(instance);
                 }
@@ -2705,8 +2701,7 @@
                 tbody.insertAdjacentHTML('beforeend', getItemRowHtml(0, null, false));
                 itemRowIndex = 1;
                 
-                // Initialize Choices for the first row
-                initAllItemDropdowns(tbody);
+                // Note: Initialize dropdowns in 'shown.bs.modal' event instead (when modal is visible)
                 updateGrandTotal();
                 updateRemoveButtons();
             }
@@ -2786,12 +2781,6 @@
         // Initialize edit modal dropdowns immediately  
         initEditModalDropdowns();
         
-        // Initialize item dropdowns in create modal
-        const createTbody = document.getElementById('poItemsBody');
-        if (createTbody) {
-            initAllItemDropdowns(createTbody);
-        }
-        
         // Setup modal event listeners
         const createPOModal = document.getElementById('createPurchaseOrderModal');
         if (createPOModal) {
@@ -2799,6 +2788,21 @@
                 // Ensure dropdowns are initialized when modal opens
                 if (!choicesInstances.create.vendor || !choicesInstances.create.vendor.input) {
                     initCreateModalDropdowns();
+                }
+            });
+            
+            // Initialize item dropdowns when modal is SHOWN (not hidden)
+            createPOModal.addEventListener('shown.bs.modal', function() {
+                const createTbody = document.getElementById('poItemsBody');
+                if (createTbody) {
+                    // Destroy any existing instances first
+                    createTbody.querySelectorAll('.po-item-select').forEach(function(sel) {
+                        if (sel.tomselect) {
+                            try { sel.tomselect.destroy(); } catch(e) {}
+                        }
+                    });
+                    // Re-initialize all item dropdowns
+                    initAllItemDropdowns(createTbody);
                 }
             });
         }
