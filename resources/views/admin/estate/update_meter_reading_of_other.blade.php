@@ -35,7 +35,7 @@
                         <label for="bill_month" class="form-label">Meter Change Month <span class="text-danger">*</span></label>
                         <input type="month" class="form-control" id="bill_month" name="bill_month" placeholder="Select month" max="{{ date('Y-m') }}" value="{{ old('reading_bill_month') }}" required>
                         <small class="text-muted">
-                            <i class="bi bi-info-circle"></i> Same as permanent estate: list uses the previous calendar month; rows with reading end date in this month are excluded.
+                            <i class="bi bi-info-circle"></i> Select Change Month
                         </small>
                     </div>
                     <div class="col-md-4">

@@ -2,7 +2,12 @@
 
 @section('title', 'Put In HAC - Request For Estate - Sargam')
 
-@section('setup_content')
+@php
+    $estateSelfHomeTab = request('scope') === 'self'
+        && (hasRole('Admin') || hasRole('Super Admin') || hasRole('Estate'));
+    $estateSelfQuery = $estateSelfHomeTab ? ['scope' => 'self'] : [];
+@endphp
+@section($estateSelfHomeTab ? 'content' : 'setup_content')
 <div class="container-fluid px-2 px-sm-3 px-md-4">
     <x-breadcrum title="Put In HAC" />
     <x-estate-workflow-stepper current="put-in-hac" />
@@ -18,7 +23,7 @@
                 </div>
                 @if(!hasRole('HAC Person') || hasRole('Estate') || hasRole('Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST') || hasRole('Staff') || hasRole('Student-OT') || hasRole('Doctor') || hasRole('Guest Faculty') || hasRole('Internal Faculty'))
                 <div>
-                    <a href="{{ route('admin.estate.request-for-estate') }}" class="btn btn-light btn-sm">
+                    <a href="{{ route('admin.estate.request-for-estate', $estateSelfQuery) }}" class="btn btn-light btn-sm">
                         <i class="bi bi-arrow-left me-1"></i> Back to Request for Estate
                     </a>
                 </div>

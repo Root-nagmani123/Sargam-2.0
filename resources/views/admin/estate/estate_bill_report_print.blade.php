@@ -32,8 +32,8 @@
         line-height: 1.12;
         width: 100%;
     }
-    .bill-header { padding: 7px 10px 8px; }
-    .bill-header-main { max-width: calc(100% - 95px); }
+    .bill-header { padding: 7px 88px 8px 10px; }
+    .bill-header-main { width: 100%; max-width: 100%; margin: 0; }
     .bill-header::after { margin-top: 4px; height: 1px; }
     .bill-header .org-name { font-size: 9.1pt; margin-bottom: 1px; }
     .bill-header .org-sub { font-size: 7pt; }
@@ -82,15 +82,25 @@
     background: #ffffff;
     color: #af2910;
     text-align: center;
-    padding: 18px 24px 20px;
+    padding: 18px 110px 20px 24px;
     position: relative;
+    box-sizing: border-box;
 }
 .bill-header-main {
-    max-width: calc(100% - 150px);
-    margin: 0 auto;
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
+}
+.bill-header-main > .bill-logo { flex-shrink: 0; }
+.bill-header-main > .org-name,
+.bill-header-main > .org-sub,
+.bill-header-main > .bill-title {
+    width: 100%;
+    text-align: center;
+    box-sizing: border-box;
 }
 .bill-header::after {
     content: ''; display: block; height: 4px;
@@ -314,6 +324,9 @@
         $amountInWords = 'Rupees ' . $rupeesWords;
         if ($paise > 0) $amountInWords .= ' and ' . $toWordsIndian($paise) . ' Paise';
         $amountInWords .= ' only';
+        $estateBillLogoSrc = is_file(public_path('admin_assets/images/logos/logo.png'))
+            ? asset('admin_assets/images/logos/logo.png')
+            : asset('admin_assets/images/logos/logo.svg');
     @endphp
     <!-- Bill for print (visible on screen and in print) -->
     <div class="estate-bill-print no-print mb-4">
@@ -329,7 +342,7 @@
             <div class="bill-header">
                 <span class="bill-badge">Consumer Copy</span>
                 <div class="bill-header-main">
-                    <img src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png" alt="LBSNAA Official Logo" class="bill-logo">
+                    <img src="{{ $estateBillLogoSrc }}" alt="LBSNAA Official Logo" class="bill-logo">
                     <p class="org-name">Lal Bahadur Shastri National Academy of Administration</p>
                     <p class="org-sub">Mussoorie · Estate Section</p>
                     <h1 class="bill-title">Estate Bill — Electricity, Water &amp; Licence</h1>

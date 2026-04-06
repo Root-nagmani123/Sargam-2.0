@@ -2,7 +2,11 @@
 
 @section('title', 'Request For Estate - Sargam')
 
-@section('setup_content')
+@php
+    $estateSelfHomeTab = request('scope') === 'self'
+        && (hasRole('Admin') || hasRole('Super Admin') || hasRole('Estate'));
+@endphp
+@section($estateSelfHomeTab ? 'content' : 'setup_content')
 <div class="container-fluid px-2 px-sm-3 px-md-4">
    <x-breadcrum title="Request For Estate" />
    <x-estate-workflow-stepper current="request-for-estate" />
@@ -25,7 +29,7 @@
 
             <div id="request-for-estate-card-body">
             @php
-                $showUserActionHelp = !(
+                $showUserActionHelp = request('scope') === 'self' || ! (
                     hasRole('Estate') ||
                     hasRole('Admin') ||
                     hasRole('Super Admin')
