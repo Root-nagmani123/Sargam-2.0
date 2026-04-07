@@ -46,15 +46,24 @@
     border-color: #666;
 }
 
-/* Horizontal Scroll for Table */
+/* Scrollable table with frozen header */
 .datatables .table-responsive {
-    overflow-x: auto !important;
+    max-height: 70vh;
+    overflow: auto !important;
     -webkit-overflow-scrolling: touch;
 }
 
 .datatables #medicalExemptionTable {
     min-width: 100%;
     width: max-content;
+}
+
+.datatables #medicalExemptionTable thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
 }
 
 .datatables #medicalExemptionTable th,
@@ -292,9 +301,10 @@ $(document).ready(function () {
     let table = $('#medicalExemptionTable').DataTable({
         processing: true,
         serverSide: true,
+        responsive: false,
 
-        scrollX: true,
-        scrollCollapse: true,
+        scrollX: false,
+        scrollCollapse: false,
         autoWidth: false,
 
         ajax: {

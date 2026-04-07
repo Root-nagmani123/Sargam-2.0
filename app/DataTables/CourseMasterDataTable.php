@@ -231,14 +231,14 @@ HTML;
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center')->searchable(false)->orderable(false),
-            Column::make('course_name')->title('Course Name')->addClass('text-center')->orderable(false)->searchable(true),
-            Column::make('couse_short_name')->title('Short Name')->addClass('text-center')->orderable(false)->searchable(true),
-            Column::make('course_year')->title('Course Year')->addClass('text-center')->orderable(false)->searchable(true),
-            Column::make('start_year')->title('Start Date')->addClass('text-center')->orderable(false)->searchable(false),
-            Column::make('end_date')->title('End Date')->addClass('text-center')->orderable(false)->searchable(false),
-                Column::computed('status')->addClass('text-center')->orderable(false)->searchable(false),
-            Column::computed('action')->addClass('text-center')->orderable(false)->searchable(false),
+            Column::computed('DT_RowIndex')->title('S.No.')->searchable(false)->orderable(false),
+            Column::make('course_name')->title('Course Name')->orderable(false)->searchable(true),
+            Column::make('couse_short_name')->title('Short Name')->orderable(false)->searchable(true),
+            Column::make('course_year')->title('Course Year')->orderable(false)->searchable(true),
+            Column::make('start_year')->title('Start Date')->orderable(false)->searchable(false),
+            Column::make('end_date')->title('End Date')->orderable(false)->searchable(false),
+                Column::computed('status')->orderable(false)->searchable(false),
+            Column::computed('action')->orderable(false)->searchable(false),
         
         ];
     }

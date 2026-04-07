@@ -167,6 +167,7 @@
         'grandTotal' => $grandTotal ?? 0,
         'filtersApplied' => $filtersApplied ?? false,
         'printPageBreakPerBuyer' => request('print_all'),
+        'freezeSaleVoucherTableHeader' => true,
     ])
 
     <!-- Pagination removed: all data loaded in a single view -->
@@ -219,16 +220,62 @@
         table-layout: fixed;
         width: 100%;
     }
-    /* Scroll long tables on screen; keep column headers visible */
+    /* Split header/body tables: shared column widths (no sticky bugs from border-collapse) */
+    .print-slip-table.cw-slip-col-sync col.cw-slip-col-slip { width: 9%; }
+    .print-slip-table.cw-slip-col-sync col.cw-slip-col-remark { width: 13%; }
+    .print-slip-table.cw-slip-col-sync col.cw-slip-col-item { width: 22%; }
+    .print-slip-table.cw-slip-col-sync col.cw-slip-col-date { width: 11%; }
+    .print-slip-table.cw-slip-col-sync col.cw-slip-col-qty { width: 9%; }
+    .print-slip-table.cw-slip-col-sync col.cw-slip-col-price { width: 9%; }
+    .print-slip-table.cw-slip-col-sync col.cw-slip-col-amount { width: 10%; }
+    .print-slip-table.cw-slip-col-sync col.cw-slip-col-remark2 { width: 14%; }
+
+    /* Screen: frozen header = separate head table; body scrolls in sibling pane */
     @media screen {
-        .print-slip-section .table-responsive {
+        .print-slip-section .cw-slip-table-split {
+            display: flex;
+            flex-direction: column;
+            max-height: min(65vh, 640px);
+            border: 1px solid var(--bs-border-color, #dee2e6);
+            border-radius: 0.25rem;
+            background: #fff;
+        }
+        .print-slip-section .cw-slip-table-head-wrap {
+            flex: 0 0 auto;
+            overflow: hidden;
+            background: #fff;
+        }
+        .print-slip-section .cw-slip-table-head-wrap .print-slip-table {
+            margin-bottom: 0 !important;
+        }
+        .print-slip-section .cw-slip-table-head-wrap thead th {
+            border-bottom-color: #8eb8d0 !important;
+        }
+        .print-slip-section .cw-slip-table-body-scroll {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow: auto !important;
+            -webkit-overflow-scrolling: touch;
+        }
+        .print-slip-section .cw-slip-table-body-scroll .print-slip-table {
+            margin-bottom: 0 !important;
+        }
+        .print-slip-section .cw-slip-table-body-scroll tbody tr:first-child td {
+            border-top: 0 !important;
+        }
+        /* Fallback single-table mode (PDF/print routes): sticky header inside scroll box */
+        .print-slip-section .cw-slip-table-scroll {
             max-height: min(65vh, 640px);
             overflow: auto !important;
+            -webkit-overflow-scrolling: touch;
         }
-        .print-slip-section .print-slip-table thead th {
+        .print-slip-section .cw-slip-table-scroll .print-slip-table thead th {
             position: sticky;
             top: 0;
-            z-index: 2;
+            z-index: 3;
+            background: #e8f4fc !important;
+            background-clip: padding-box;
+            box-shadow: 0 1px 0 rgba(0, 74, 147, 0.12);
         }
         .print-grand-total-block .table-responsive {
             overflow-x: auto !important;
@@ -326,9 +373,19 @@
             margin-bottom: 14px;
         }
         .print-slip-section .table-responsive,
+        .print-slip-section .cw-slip-table-scroll,
+        .print-slip-section .cw-slip-table-split,
+        .print-slip-section .cw-slip-table-body-scroll,
         .print-grand-total-block .table-responsive {
             max-height: none !important;
             overflow: visible !important;
+        }
+        .print-slip-section .cw-slip-table-split {
+            display: block !important;
+            border: none !important;
+        }
+        .print-slip-section .cw-slip-table-body-scroll tbody tr:first-child td {
+            border-top: none !important;
         }
         .print-slip-section .print-slip-table thead th,
         .print-grand-total-block .print-slip-table thead th {
