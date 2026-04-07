@@ -228,7 +228,8 @@
                                                 default => 'secondary'
                                             };
                                         @endphp
-                                        <span class="badge bg-{{ $statusClass }}">{{ $statusText }}</span>
+                                        <span class="badge bg-{{ $statusClass }}"
+                                              @if(($request->status ?? '') === 'Approved') title="Please collect your ID card from security section" @endif>{{ $statusText }}</span>
                                     </td>
                                 </tr>
                             </table>

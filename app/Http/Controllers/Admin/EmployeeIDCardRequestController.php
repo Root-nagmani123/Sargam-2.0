@@ -16,6 +16,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -602,7 +603,7 @@ class EmployeeIDCardRequestController extends Controller
 
     /**
      * AJAX: Logged-in user's employee details for autofill on create form.
-     * Used for Permanent + "Own ID Card" and Contractual + "Others ID Card".
+     * Used for Contractual + "Own ID Card" (self autofill). Permanent create uses "Others ID Card" only (no /me autofill).
      * Resolves employee by pk or pk_old so data is found either way.
      */
     public function me()
@@ -708,7 +709,17 @@ class EmployeeIDCardRequestController extends Controller
             'joining_letter' => 'nullable|mimes:pdf,doc,docx|max:5120',
             'fir_receipt' => 'required_if:duplication_reason,Lost|nullable|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120',
             'payment_receipt' => 'nullable|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120',
-            'documents' => 'nullable|mimes:pdf,doc,docx|max:5120',
+            'documents' => [
+                'nullable',
+                'file',
+                Rule::requiredIf(function () use ($request) {
+                    $dup = in_array($request->input('request_for') ?? '', ['Replacement', 'Duplication', 'Extension'], true);
+
+                    return ($request->input('employee_type') === 'Contractual Employee') && ! $dup;
+                }),
+                'mimes:pdf,doc,docx',
+                'max:5120',
+            ],
             'remarks' => 'nullable|string',
             'employee_master_pk' => 'nullable|integer|exists:employee_master,pk',
         ], [
@@ -723,6 +734,7 @@ class EmployeeIDCardRequestController extends Controller
             'section.required_if' => 'Section is required for Contractual Employees.',
             'vendor_organization_name.required_if' => 'Vendor / Organization Name is required for Contractual Employees.',
             'id_card_valid_upto.after' => 'ID Card Valid Upto date must be a future date.',
+            'documents.required' => 'Please upload a supporting document (PDF or DOC, max 5 MB): include appointment letter, joining letter, contract/engagement order, or similar proof as applicable.',
         ]);
 
         $authEmpPk = Auth::user()->user_id ?? Auth::id();
@@ -1086,10 +1098,9 @@ class EmployeeIDCardRequestController extends Controller
                 if ($request->hasFile('documents')) {
                     $docPath = $request->file('documents')->store('idcard/documents', 'public');
                 }
-                $empIdApply_data= $empIdApply;
-               
+
                 // Insert matches security_con_oth_id_apply structure (pk auto; section = bigint department_master_pk)
-                DB::table('security_con_oth_id_apply')->insert([
+                $contRow = [
                     'emp_id_apply' => $empIdApply,
                     'employee_name' => $validated['name'] ?? null,
                     'sec_id_card_config_pk' => $configMap->config_pk,
@@ -1115,7 +1126,11 @@ class EmployeeIDCardRequestController extends Controller
                     'department_approval_emp_pk' => !empty($validated['approval_authority']) ? (int) $validated['approval_authority'] : null,
                     'section' => $userDepartmentPk,
                     'depart_approval_status' => 1,
-                ]);
+                ];
+                if ($docPath !== null && Schema::hasColumn('security_con_oth_id_apply', 'joining_letter_path')) {
+                    $contRow['joining_letter_path'] = $docPath;
+                }
+                DB::table('security_con_oth_id_apply')->insert($contRow);
              
 
                 // Case 3 - Request Employee ID Card (Other/Contractual): Only security_con_oth_id_apply at request time.
@@ -1126,6 +1141,9 @@ class EmployeeIDCardRequestController extends Controller
         $successMsg = 'Employee ID Card request created successfully!';
         if ($joiningLetterPath) {
             $successMsg .= ' Joining document uploaded successfully.';
+        }
+        if ($employeeType === 'Contractual Employee' && ! $isDupOrExt && $request->hasFile('documents')) {
+            $successMsg .= ' Supporting document saved to database successfully.';
         }
         return redirect()
             ->route('admin.employee_idcard.index')
@@ -1167,6 +1185,25 @@ class EmployeeIDCardRequestController extends Controller
         return view('admin.employee_idcard.show', ['request' => $request]);
     }
 
+    /**
+     * Approved requests are read-only in the user panel (no edit / archive).
+     */
+    private function redirectIfApprovedIdCardLocked(mixed $routeId, array $res): ?\Illuminate\Http\RedirectResponse
+    {
+        if ($res['type'] === 'cont') {
+            $row = DB::table('security_con_oth_id_apply')->where('pk', $res['pk'])->first();
+        } else {
+            $row = SecurityParmIdApply::find($res['pk']);
+        }
+        if ($row && (int) ($row->id_status ?? 0) === SecurityParmIdApply::ID_STATUS_APPROVED) {
+            return redirect()
+                ->route('admin.employee_idcard.show', $routeId)
+                ->with('error', 'This ID card request is approved. Edit and delete are not allowed.');
+        }
+
+        return null;
+    }
+
     public function edit($id)
     {
         $cardTypes = DB::table('sec_id_cardno_master')->orderBy('sec_card_name')->pluck('sec_card_name');
@@ -1191,6 +1228,9 @@ class EmployeeIDCardRequestController extends Controller
             }
         }
         $res = static::resolveId($id);
+        if ($redirectApproved = $this->redirectIfApprovedIdCardLocked($id, $res)) {
+            return $redirectApproved;
+        }
         if ($res['type'] === 'cont') {
             $row = DB::table('security_con_oth_id_apply')->where('pk', $res['pk'])->first();
             if (!$row) {
@@ -1268,6 +1308,9 @@ class EmployeeIDCardRequestController extends Controller
         ]);
 
         $res = static::resolveId($id);
+        if ($redirectApproved = $this->redirectIfApprovedIdCardLocked($id, $res)) {
+            return $redirectApproved;
+        }
         if ($res['type'] === 'cont') {
             $row = DB::table('security_con_oth_id_apply')->where('pk', $res['pk'])->first();
             if (!$row) {
@@ -1318,7 +1361,11 @@ class EmployeeIDCardRequestController extends Controller
                 $documentsUploadedList[] = 'Photo';
             }
             if ($request->hasFile('documents')) {
-                $up['doc_path'] = $request->file('documents')->store('idcard/documents', 'public');
+                $storedDoc = $request->file('documents')->store('idcard/documents', 'public');
+                $up['doc_path'] = $storedDoc;
+                if (Schema::hasColumn('security_con_oth_id_apply', 'joining_letter_path')) {
+                    $up['joining_letter_path'] = $storedDoc;
+                }
                 $documentsUploadedList[] = 'Documents';
             }
             DB::table('security_con_oth_id_apply')->where('pk', $res['pk'])->update($up);
@@ -1573,6 +1620,9 @@ class EmployeeIDCardRequestController extends Controller
     public function destroy($id)
     {
         $res = static::resolveId($id);
+        if ($redirectApproved = $this->redirectIfApprovedIdCardLocked($id, $res)) {
+            return $redirectApproved;
+        }
         if ($res['type'] === 'cont') {
             $row = DB::table('security_con_oth_id_apply')->where('pk', $res['pk'])->first();
             if (!$row) {

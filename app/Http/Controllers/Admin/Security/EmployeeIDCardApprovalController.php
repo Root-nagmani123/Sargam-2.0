@@ -1532,56 +1532,9 @@ class EmployeeIDCardApprovalController extends Controller
 
             DB::beginTransaction();
             try {
-                // 1) Generate / update id_card_no using sec_id_cardno_config (prefix + next full_sec_no)
-                if (empty(trim($row->id_card_no ?? ''))) {
-                    $configPk = $row->sec_id_card_config_pk ?? null;
+                // ID card number is generated at final approval (Level 3), not here.
 
-                    if (!$configPk) {
-                        DB::rollBack();
-                        return redirect()->back()->with('error', 'ID card configuration not found for this contractual employee.');
-                    }
-
-                    $config = DB::table('sec_id_cardno_config')
-                        ->where('pk', $configPk)
-                        ->lockForUpdate()
-                        ->first();
-
-                    if (!$config || empty($config->prefix) || empty($config->full_sec_no)) {
-                        DB::rollBack();
-                        return redirect()->back()->with('error', 'Invalid ID card configuration for this contractual employee.');
-                    }
-
-                    $prefix = $config->prefix;
-                    $currentFull = $config->full_sec_no;
-
-                    // Extract numeric part and increment
-                    if (str_starts_with($currentFull, $prefix)) {
-                        $numericPart = substr($currentFull, strlen($prefix));
-                    } else {
-                        $numericPart = $currentFull;
-                    }
-
-                    $numericLen = strlen($numericPart);
-                    $nextNumber = (int) $numericPart + 1;
-                    $nextPadded = str_pad((string) $nextNumber, $numericLen, '0', STR_PAD_LEFT);
-                    $newFull = $prefix . $nextPadded;
-
-                    // Update contractual apply table
-                    DB::table('security_con_oth_id_apply')
-                        ->where('pk', $contPk)
-                        ->update([
-                            'id_card_no' => $newFull,
-                        ]);
-
-                    // Update config table with new full_sec_no
-                    DB::table('sec_id_cardno_config')
-                        ->where('pk', $configPk)
-                        ->update([
-                            'full_sec_no' => $newFull,
-                        ]);
-                }
-
-                // 2) Update existing pending row (status=0) -> status=1, recommend_status=1
+                // 1) Update existing pending row (status=0) -> status=1, recommend_status=1
                 DB::table('security_con_oth_id_apply_approval')
                     ->where('security_parm_id_apply_pk', $row->emp_id_apply)
                     ->where('status', 0)
@@ -1594,7 +1547,7 @@ class EmployeeIDCardApprovalController extends Controller
                         'modified_date' => now()->format('Y-m-d H:i:s'),
                     ]);
 
-                // 3) Create new pending row for final approver (status=0, rest mostly null)
+                // 2) Create new pending row for final approver (status=0, rest mostly null)
                 DB::table('security_con_oth_id_apply_approval')->insert([
                     'security_parm_id_apply_pk' => $row->emp_id_apply,
                     'status' => 0,
@@ -1610,10 +1563,10 @@ class EmployeeIDCardApprovalController extends Controller
                 DB::commit();
             } catch (\Throwable $e) {
                 DB::rollBack();
-                return redirect()->back()->with('error', 'Unable to generate ID Card number. Please try again.');
+                return redirect()->back()->with('error', 'Unable to process Level 2 approval. Please try again.');
             }
 
-            // Do not mark id_status approved here; final approval at Level 3
+            // Do not mark id_status approved here; final approval at Level 3 (ID number generated there).
             return redirect()->route('admin.security.employee_idcard_approval.approval2')
                 ->with('success', 'Contractual ID Card request approved at Level 2 and forwarded for final approval.');
         }
@@ -1628,18 +1581,7 @@ class EmployeeIDCardApprovalController extends Controller
         }
         // Permanent employees don't need Approval 1 - they go directly to Approval 2
         // No prerequisite check needed for permanent employees
-
-        // Auto-generate ID card number for government (Permanent) employees: DDMMYYYY + first 4 letters of name
-        if (empty(trim($row->id_card_no ?? ''))) {
-            $dob = $row->employee_dob ?? ($row->employee ? ($row->employee->dob ?? null) : null);
-            $name = $row->employee
-                ? trim(($row->employee->first_name ?? '') . ' ' . ($row->employee->last_name ?? ''))
-                : '';
-            $generated = IdCardSecurityMapper::generateGovernmentEmployeeIdCardNumber($dob, $name);
-            if ($generated) {
-                $row->id_card_no = $generated;
-            }
-        }
+        // ID card number is generated at final approval (Level 3), not at Level 2.
 
         SecurityParmIdApplyApproval::create([
             'security_parm_id_apply_pk' => $row->emp_id_apply,
@@ -1844,19 +1786,60 @@ class EmployeeIDCardApprovalController extends Controller
             if ($hasRejected) {
                 return redirect()->back()->with('error', 'This request has already been rejected.');
             }
-           
-            DB::table('security_con_oth_id_apply_approval')
-            ->where('security_parm_id_apply_pk', $row->emp_id_apply)
-            ->where('status', 0)
-            ->orderByDesc('pk')
-            ->limit(1)
-            ->update([
-                'status' => 2,
-                'recommend_status' => 0,
-                'modified_by' => $employeePk,
-                'modified_date' => now()->format('Y-m-d H:i:s'),
-            ]);
-            DB::table('security_con_oth_id_apply')->where('pk', $contPk)->update(['id_status' => 2]);
+
+            DB::beginTransaction();
+            try {
+                // Generate id_card_no at final approval (Level 3): prefix + next full_sec_no from sec_id_cardno_config
+                if (empty(trim($row->id_card_no ?? ''))) {
+                    $configPk = $row->sec_id_card_config_pk ?? null;
+                    if (! $configPk) {
+                        DB::rollBack();
+                        return redirect()->back()->with('error', 'ID card configuration not found for this contractual employee.');
+                    }
+                    $config = DB::table('sec_id_cardno_config')
+                        ->where('pk', $configPk)
+                        ->lockForUpdate()
+                        ->first();
+                    if (! $config || empty($config->prefix) || empty($config->full_sec_no)) {
+                        DB::rollBack();
+                        return redirect()->back()->with('error', 'Invalid ID card configuration for this contractual employee.');
+                    }
+                    $prefix = $config->prefix;
+                    $currentFull = $config->full_sec_no;
+                    if (str_starts_with($currentFull, $prefix)) {
+                        $numericPart = substr($currentFull, strlen($prefix));
+                    } else {
+                        $numericPart = $currentFull;
+                    }
+                    $numericLen = strlen($numericPart);
+                    $nextNumber = (int) $numericPart + 1;
+                    $nextPadded = str_pad((string) $nextNumber, $numericLen, '0', STR_PAD_LEFT);
+                    $newFull = $prefix . $nextPadded;
+                    DB::table('security_con_oth_id_apply')
+                        ->where('pk', $contPk)
+                        ->update(['id_card_no' => $newFull]);
+                    DB::table('sec_id_cardno_config')
+                        ->where('pk', $configPk)
+                        ->update(['full_sec_no' => $newFull]);
+                }
+
+                DB::table('security_con_oth_id_apply_approval')
+                    ->where('security_parm_id_apply_pk', $row->emp_id_apply)
+                    ->where('status', 0)
+                    ->orderByDesc('pk')
+                    ->limit(1)
+                    ->update([
+                        'status' => 2,
+                        'recommend_status' => 0,
+                        'modified_by' => $employeePk,
+                        'modified_date' => now()->format('Y-m-d H:i:s'),
+                    ]);
+                DB::table('security_con_oth_id_apply')->where('pk', $contPk)->update(['id_status' => 2]);
+                DB::commit();
+            } catch (\Throwable $e) {
+                DB::rollBack();
+                return redirect()->back()->with('error', 'Unable to generate ID card number or complete final approval. Please try again.');
+            }
 
             // Final approval row (status 3) and mark main row approved
             // DB::table('security_con_oth_id_apply_approval')->insert([
@@ -1875,9 +1858,9 @@ class EmployeeIDCardApprovalController extends Controller
             // return redirect()->route('admin.security.employee_idcard_approval.approval3')
             //     ->with('success', 'Contractual ID Card request approved at Level 3. ID card is now fully approved.');
 
-                    return redirect()->route('admin.security.employee_idcard_approval.approval3')
+            return redirect()->route('admin.security.employee_idcard_approval.approval3')
                 ->with('success', 'Contractual ID Card request approved successfully at final level.');
-    }
+        }
 
         // Permanent regular ID Card request (emp_id_apply string, primary key on security_parm_id_apply)
         $row = SecurityParmIdApply::with('employee')->findOrFail($empIdApply);
@@ -1891,6 +1874,19 @@ class EmployeeIDCardApprovalController extends Controller
             ->exists();
         if (! $hasA2) {
             return redirect()->back()->with('error', 'This request must be approved at Level 2 first.');
+        }
+
+        // Auto-generate ID card number at final approval (Level 3): DDMMYYYY + first 4 letters of name
+        if (empty(trim($row->id_card_no ?? ''))) {
+            $row->loadMissing('employee');
+            $dob = $row->employee_dob ?? ($row->employee ? ($row->employee->dob ?? null) : null);
+            $name = $row->employee
+                ? trim(($row->employee->first_name ?? '') . ' ' . ($row->employee->last_name ?? ''))
+                : '';
+            $generated = IdCardSecurityMapper::generateGovernmentEmployeeIdCardNumber($dob, $name);
+            if ($generated) {
+                $row->id_card_no = $generated;
+            }
         }
 
         // Insert final approver row into idcard_request_approvar_master_new with sequence = 1

@@ -33,7 +33,8 @@
                 @endphp
                 <div class="text-end">
                     <h6 class="mb-2">Current Status</h6>
-                    <span class="badge bg-{{ $statusClass }} p-2">
+                    <span class="badge bg-{{ $statusClass }} p-2"
+                          @if(($request->status ?? '') === 'Approved') title="Please collect your ID card from security section" @endif>
                         <i class="material-icons material-symbols-rounded" style="font-size:16px;">{{ $statusIcon }}</i>
                         {{ $request->status }}
                     </span>
@@ -307,16 +308,20 @@
                             </div>
                         @endif
 
-                        <!-- Joining Letter -->
+                        <!-- Joining letter (permanent) or supporting document (contractual: appointment / joining letter etc.) -->
                         @php
-                            $joiningExists = $request->joining_letter && \Storage::disk('public')->exists($request->joining_letter);
+                            $supportingPath = $request->joining_letter ?? $request->documents;
+                            $supportingExists = $supportingPath && \Storage::disk('public')->exists($supportingPath);
+                            $supportingLabel = ($request->employee_type ?? '') === 'Contractual Employee'
+                                ? 'Supporting document'
+                                : 'Joining Letter';
                         @endphp
-                        @if($joiningExists)
+                        @if($supportingExists)
                             <div class="col-12">
                                 <div class="card border-0 bg-light rounded-2 p-3 text-center">
                                     <i class="material-icons material-symbols-rounded text-info" style="font-size:48px;">description</i>
-                                    <small class="d-block mt-2 text-muted">Joining Letter</small>
-                                    <a href="{{ asset('storage/' . $request->joining_letter) }}" target="_blank" class="btn btn-sm btn-outline-info mt-2 w-100">
+                                    <small class="d-block mt-2 text-muted">{{ $supportingLabel }}</small>
+                                    <a href="{{ asset('storage/' . $supportingPath) }}" target="_blank" class="btn btn-sm btn-outline-info mt-2 w-100">
                                         <i class="material-icons material-symbols-rounded align-middle" style="font-size:16px;">visibility</i>
                                         View / Download
                                     </a>
@@ -358,24 +363,6 @@
                             </div>
                         @endif
 
-                        <!-- Documents -->
-                        @php
-                            $documentsExists = $request->documents && \Storage::disk('public')->exists($request->documents);
-                        @endphp
-                        @if($documentsExists)
-                            <div class="col-12">
-                                <div class="card border-0 bg-light rounded-2 p-3 text-center">
-                                    <i class="material-icons material-symbols-rounded text-success" style="font-size:48px;">description</i>
-                                    <small class="d-block mt-2 text-muted">Documents</small>
-                                    <a href="{{ asset('storage/' . $request->documents) }}" target="_blank" class="btn btn-sm btn-outline-success mt-2 w-100">
-                                        <i class="material-icons material-symbols-rounded align-middle" style="font-size:16px;">download</i>
-                                        Download
-                                    </a>
-                                </div>
-                            </div>
-                       @else
-                           
-                        @endif
                     </div>
                 </div>
             </div>
@@ -418,7 +405,8 @@
                     <hr>
                     <div class="d-flex justify-content-between">
                         <span class="text-muted">Status:</span>
-                        <span class="badge bg-{{ $statusClass }}">{{ $request->status }}</span>
+                        <span class="badge bg-{{ $statusClass }}"
+                              @if(($request->status ?? '') === 'Approved') title="Please collect your ID card from security section" @endif>{{ $request->status }}</span>
                     </div>
                 </div>
             </div>
@@ -433,14 +421,17 @@
                 </div>
                 <div class="card-body p-3">
                     <div class="d-grid gap-2">
+                        @if(($request->status ?? '') !== 'Approved')
                         <a href="{{ route('admin.employee_idcard.edit', $request->id) }}" class="btn btn-primary rounded-2">
                             <i class="material-icons material-symbols-rounded align-middle me-2">edit</i>
                             Edit Request
                         </a>
+                        @endif
                         <a href="{{ route('admin.employee_idcard.index') }}" class="btn btn-outline-secondary rounded-2">
                             <i class="material-icons material-symbols-rounded align-middle me-2">arrow_back</i>
                             Back to List
                         </a>
+                        @if(($request->status ?? '') !== 'Approved')
                         <form action="{{ route('admin.employee_idcard.destroy', $request->id) }}" method="POST" class="mt-2" onsubmit="return confirm('Are you sure you want to delete this request?');">
                             @csrf
                             @method('DELETE')
@@ -449,6 +440,7 @@
                                 Delete Request
                             </button>
                         </form>
+                        @endif
                     </div>
                 </div>
             </div>

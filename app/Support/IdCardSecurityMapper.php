@@ -100,7 +100,11 @@ class IdCardSecurityMapper
             $photoPath = 'idcard/photos/' . $photoPath;
         }
         $dto->photo = $photoPath;
-        $dto->joining_letter = $row->joining_letter_path ?? null;
+        $joiningPath = $row->joining_letter_path ?? null;
+        if ($joiningPath && strpos((string) $joiningPath, '/') === false) {
+            $joiningPath = 'idcard/joining_letters/' . $joiningPath;
+        }
+        $dto->joining_letter = $joiningPath;
         $dto->created_at = $row->created_date;
         // Card type display name from sec_id_cardno_master (permanent_type = master pk)
         $cardTypeName = '--';
@@ -225,7 +229,14 @@ class IdCardSecurityMapper
             $photoPath = 'idcard/photos/' . $photoPath;
         }
         $dto->photo = $photoPath;
-        $dto->joining_letter = $row->joining_letter_path ?? null;
+        // Contractual: supporting document is stored as doc_path (same role as joining_letter_path for permanent).
+        $docPathRaw = $row->doc_path ?? $row->joining_letter_path ?? null;
+        $docPathNorm = $docPathRaw;
+        if ($docPathNorm && strpos((string) $docPathNorm, '/') === false) {
+            $docPathNorm = 'idcard/documents/' . $docPathNorm;
+        }
+        $dto->joining_letter = $docPathNorm;
+        $dto->documents = $docPathNorm;
         $dto->created_at = isset($row->created_date) ? \Carbon\Carbon::parse($row->created_date) : null;
         $cardTypeName = '--';
         if (!empty($row->permanent_type)) {
@@ -374,7 +385,6 @@ class IdCardSecurityMapper
         $dto->vendor_organization_name = $row->vender_name ?? null;
         $dto->fir_receipt = null;
         $dto->payment_receipt = null;
-        $dto->documents = $row->doc_path ?? null;
         $dto->updated_at = $dto->created_at;
         return $dto;
     }
