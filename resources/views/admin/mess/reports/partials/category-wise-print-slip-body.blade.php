@@ -123,6 +123,7 @@
                                     <thead>
                                         <tr>
                                             <th class="th-slip-no">Slip No.</th>
+                                            <th class="th-remark">Remark</th>
                                             <th class="th-item">Item Name</th>
                                             <th class="th-date">Request Date</th>
                                             <th class="th-qty">Quantity</th>

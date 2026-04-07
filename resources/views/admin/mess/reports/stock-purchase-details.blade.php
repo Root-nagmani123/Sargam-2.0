@@ -349,11 +349,11 @@ function printStockPurchaseTable() {
     } catch (e) {
         printCfg = {};
     }
-    var dateRange = printCfg.dateRange || '';
-    var vendorLine = printCfg.vendorLine || '';
-    var vendorHeaderLabel = printCfg.vendorHeaderLabel || 'Vendor:';
-    var vendorDetailRows = Array.isArray(printCfg.vendorDetailRows) ? printCfg.vendorDetailRows : [];
-    var storeDetails = printCfg.storeDetails || '';
+    var dateRange = printCfg.dateRange || @json($stockPurchasePrintDateRange);
+    var vendorLine = printCfg.vendorLine || @json($stockPurchasePrintVendorLine);
+    var vendorHeaderLabel = printCfg.vendorHeaderLabel || @json($stockPurchasePrintVendorHeaderLabel);
+    var vendorDetailRows = Array.isArray(printCfg.vendorDetailRows) ? printCfg.vendorDetailRows : @json($stockPurchasePrintVendorDetailRows);
+    var storeDetails = printCfg.storeDetails || @json($stockPurchasePrintStoreDetails);
 
     var vendorDetailsHtml = '';
     if (vendorDetailRows.length > 0) {
@@ -420,6 +420,29 @@ function printStockPurchaseTable() {
 '            border-radius: 10px;\n' +
 '            font-size: 10px;\n' +
 '            font-weight: 500;\n' +
+'            -webkit-print-color-adjust: exact;\n' +
+'            print-color-adjust: exact;\n' +
+'            border: 1px solid #004a93;\n' +
+'        }\n' +
+'        @media print {\n' +
+'            .date-pill {\n' +
+'                background: #004a93 !important;\n' +
+'                color: #fff !important;\n' +
+'                -webkit-print-color-adjust: exact !important;\n' +
+'                print-color-adjust: exact !important;\n' +
+'            }\n' +
+'            /* Fallback if browser ignores background */\n' +
+'            .date-pill-fallback {\n' +
+'                display: block;\n' +
+'                text-align: center;\n' +
+'                font-size: 10px;\n' +
+'                font-weight: 700;\n' +
+'                color: #004a93;\n' +
+'                margin-top: 2px;\n' +
+'            }\n' +
+'        }\n' +
+'        .date-pill-fallback {\n' +
+'            display: none;\n' +
 '        }\n' +
 '        .report-meta {\n' +
 '            font-size: 10px;\n' +
@@ -511,7 +534,7 @@ function printStockPurchaseTable() {
 '\n' +
 '<div class="report-title-block">\n' +
 '    <h2>' + title + '</h2>\n' +
-'    <span class="date-pill">' + dateRange + '</span>\n' +
+'    <p style="font-size:11px;font-weight:700;color:#004a93;margin:4px 0 0;text-align:center;">' + dateRange + '</p>\n' +
 '</div>\n' +
 '\n' +
 '<div class="report-meta">\n' +

@@ -8,6 +8,8 @@
     $itemIds = isset($itemIds) ? $itemIds : [];
     /** @var array<int, string> $viewTypes */
     $viewTypes = isset($viewTypes) ? $viewTypes : ['item_wise'];
+    /** @var int $perPage */
+    $perPage = isset($perPage) ? (int) $perPage : 25;
 
     $messEmblemSrc = 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
     // Print opens about:blank; remote URLs often fail. Raster: data URI on <img>. SVG: must be inlined in HTML — <img src="data:image/svg+xml;base64,…"> often stays blank when the SVG embeds raster (xlink:data PNG), which is how admin logo.svg is built.
@@ -138,6 +140,14 @@
                     </div>
                 </div>
                 <div class="row g-3 g-md-4">
+                    <div class="col-12 col-sm-6 col-md-4 col-lg-2">
+                        <label class="form-label" for="purchase_sale_per_page">Rows per page</label>
+                        <select name="per_page" id="purchase_sale_per_page" class="form-select">
+                            @foreach([10, 25, 50, 100] as $n)
+                                <option value="{{ $n }}" @selected((int) $perPage === (int) $n)>{{ $n }}</option>
+                            @endforeach
+                        </select>
+                    </div>
                     <div class="col-12 col-md-6 col-lg-4">
                         <label for="purchase_sale_store_id" class="form-label">Store</label>
                         <div class="input-group">
@@ -191,7 +201,7 @@
     </div>
 
     {{-- Report card --}}
-    <div class="card border-0 rounded-3 shadow-sm overflow-hidden">
+    <div class="card border-0 rounded-3 shadow-sm">
         <div class="card-header bg-primary bg-opacity-10 border-0 py-3 text-center report-header">
             <h4 class="fw-bold mb-1 text-primary">Item Report</h4>
             <p class="mb-0 text-body-secondary small">
@@ -234,9 +244,10 @@
                                     </tr>
                                 </thead>
                                 <tbody class="table-group-divider">
+                                    @php $psqItemPaginator = $section['paginator'] ?? null; @endphp
                                     @forelse($section['reportData'] as $index => $row)
                                         <tr>
-                                            <td class="text-center">{{ $index + 1 }}</td>
+                                            <td class="text-center">{{ $psqItemPaginator && $psqItemPaginator->firstItem() !== null ? $psqItemPaginator->firstItem() + $index : $index + 1 }}</td>
                                             <td>{{ $row['item_name'] }}</td>
                                             <td>{{ $row['unit'] }}</td>
                                             <td class="text-end">{{ number_format($row['purchase_qty'], 2) }}</td>
@@ -281,7 +292,13 @@
                                         <tbody class="table-group-divider">
                                             @foreach($group['items'] as $idx => $row)
                                                 <tr>
-                                                    <td class="text-center">{{ $idx + 1 }}</td>
+                                                    <td class="text-center">
+                                                        @if(($section['viewType'] ?? '') === 'category_wise' && ! empty($section['paginator']))
+                                                            {{ $section['paginator']->firstItem() !== null ? $section['paginator']->firstItem() + $idx : $idx + 1 }}
+                                                        @else
+                                                            {{ $idx + 1 }}
+                                                        @endif
+                                                    </td>
                                                     <td>{{ $row['item_name'] }}</td>
                                                     <td>{{ $row['unit'] }}</td>
                                                     <td class="text-end">{{ number_format($row['purchase_qty'], 2) }}</td>
@@ -305,6 +322,11 @@
                             </div>
                         @endforelse
                     @endif
+                    @if(! empty($section['paginator']) && $section['paginator']->hasPages())
+                        <div class="d-flex justify-content-center py-3 px-2 border-top border-secondary border-opacity-25 bg-body-secondary bg-opacity-10 no-print">
+                            {{ $section['paginator']->withQueryString()->links() }}
+                        </div>
+                    @endif
                 </div>
             @empty
                 <div class="alert alert-info fade show rounded-0 border-0 mb-0 d-flex align-items-center gap-2" role="alert">
@@ -323,14 +345,36 @@
 <style>
     /* ── Scrollable table body with sticky header ── */
     @media screen {
+        /* Fix: .page-wrapper has overflow-x:hidden which implicitly creates
+           overflow-y:auto (CSS spec), forming a scroll container that breaks
+           position:sticky inside nested scroll wrappers. Use overflow-x:clip
+           which clips without creating a scroll container. */
+        .purchase-sale-quantity-report {
+            /* Ensure ancestors don't interfere */
+        }
+        .page-wrapper:has(.purchase-sale-quantity-report) {
+            overflow-x: clip !important;
+        }
         .purchase-sale-quantity-report .psq-scroll-wrapper {
             max-height: min(72vh, 760px);
-            overflow: auto;
+            overflow: auto !important;
+            display: block !important;
             position: relative;
         }
         /* Override Bootstrap .table-responsive overflow so sticky thead works
-           within the psq-scroll-wrapper scroll container */
+           within the psq-scroll-wrapper scroll container.
+           Also force overflow visible on ALL intermediate ancestors between
+           the scroll wrapper and the sticky th elements. */
         .purchase-sale-quantity-report .psq-scroll-wrapper .table-responsive {
+            overflow: visible !important;
+            overflow-x: visible !important;
+            overflow-y: visible !important;
+            -webkit-overflow-scrolling: unset !important;
+        }
+        .purchase-sale-quantity-report .psq-scroll-wrapper .purchase-sale-view-section {
+            overflow: visible !important;
+        }
+        .purchase-sale-quantity-report .psq-scroll-wrapper .purchase-sale-group-block {
             overflow: visible !important;
         }
         .purchase-sale-quantity-report .psq-table {
