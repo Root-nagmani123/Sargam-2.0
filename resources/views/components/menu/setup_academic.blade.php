@@ -15,7 +15,6 @@
                             <!-- ---------------------------------- -->
                             <!-- Academic -->
                             <!-- ---------------------------------- -->
-                            @include('components.profile')
                             <!-- Main Container with Improved Layout -->
 
                             @if (hasRole('Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') ||
