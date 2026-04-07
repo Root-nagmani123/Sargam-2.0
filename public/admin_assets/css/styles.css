@@ -22308,9 +22308,9 @@ fieldset:disabled .btn {
     width: 100%;
 }
 
-.tab-content>.tab-pane {
+/* .tab-content>.tab-pane {
     display: none;
-}
+} */
 
 .tab-content>.active {
     display: block;
