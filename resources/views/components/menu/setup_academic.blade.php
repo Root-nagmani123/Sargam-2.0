@@ -179,7 +179,8 @@
                                 </a></li> --}}
                             </ul>
                             @endif
-                            <li class="sidebar-item" style="background: #4077ad;border-radius: 30px 0px 0px 30px;width: 100%; box-shadow: -2px 3px rgba(251, 248, 248, 0.1);min-width: 250px;">
+                            <li class="sidebar-item"
+                                style="background: #4077ad;border-radius: 30px 0px 0px 30px;width: 100%; box-shadow: -2px 3px rgba(251, 248, 248, 0.1);min-width: 250px;">
                                 <a class="sidebar-link d-flex justify-content-between align-items-center"
                                     data-bs-toggle="collapse" href="#reportCollapse" role="button" aria-expanded="false"
                                     aria-controls="reportCollapse">
@@ -197,7 +198,8 @@
                                     </a></li>
                                 <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('admin.feedback.faculty_view') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Faculty Feedback with Comments</span>
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Faculty Feedback with
+                                            Comments</span>
                                     </a></li>
                                 <li class="sidebar-item"><a class="sidebar-link" href="{{ route('feedback.average') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Faculty Feedback
