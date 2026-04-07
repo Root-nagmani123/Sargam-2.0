@@ -581,7 +581,6 @@ function printStockPurchaseTable() {
 .stock-purchase-report .table-responsive {
     width: 100%;
     overflow-x: auto;
-    overflow-y: visible;
 }
 @media screen {
     .stock-purchase-report .stock-purchase-table-wrapper {
