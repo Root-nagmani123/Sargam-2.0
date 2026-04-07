@@ -1,7 +1,7 @@
 <!-- Tab Content Container -->
 <!-- //admin tabs -->
     <div class="tab-content" id="sidebarTabContent">
-        <div class="tab-pane fade" id="sidebar-setup" role="tabpanel" aria-labelledby="setup-tab">
+        <div class="" id="sidebar-setup" role="tabpanel" aria-labelledby="setup-tab">
           <aside class="side-mini-panel with-vertical sidebar-google-style">
     <div class="vh-100 d-flex flex-column overflow-hidden">
         <!-- ---------------------------------- -->
