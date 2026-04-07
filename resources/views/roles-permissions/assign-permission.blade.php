@@ -3,6 +3,7 @@
 @section('setup_content')
 <div class="container-fluid">
     <x-breadcrum title="Assign Permission" />
+    <x-session_message />
     <div class="datatables">
         <div class="card" style="border-left: 4px solid #004a93;">
             <div class="card-body">
