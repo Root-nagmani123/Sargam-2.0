@@ -328,6 +328,11 @@
             overflow: auto;
             position: relative;
         }
+        /* Override Bootstrap .table-responsive overflow so sticky thead works
+           within the psq-scroll-wrapper scroll container */
+        .purchase-sale-quantity-report .psq-scroll-wrapper .table-responsive {
+            overflow: visible !important;
+        }
         .purchase-sale-quantity-report .psq-table {
             border-collapse: separate !important;
             border-spacing: 0;
