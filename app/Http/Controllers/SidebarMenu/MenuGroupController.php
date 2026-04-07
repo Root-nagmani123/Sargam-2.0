@@ -59,7 +59,7 @@ class MenuGroupController extends Controller
     public function destroy($id)
     {
         $this->service->delete($id);
-        return back()->with('success', 'Deleted');
+        return back()->with('success', 'Menu Group Deleted Successfully ');
     }
 
     public function status($id,Request $request)

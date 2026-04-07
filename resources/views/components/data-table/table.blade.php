@@ -145,6 +145,8 @@
             $('#{{ $id }}').DataTable().draw();
         });
 
+        $('#{{ $id }}').DataTable().destroy();
+
         var table = $('#{{ $id }}').DataTable({
             processing: true,
             serverSide: true,
