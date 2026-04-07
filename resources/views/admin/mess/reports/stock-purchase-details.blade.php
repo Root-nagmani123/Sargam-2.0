@@ -36,79 +36,77 @@
         'storeDetails' => $stockPurchasePrintStoreDetails,
     ], JSON_THROW_ON_ERROR);
 @endphp
-<div class="container-fluid stock-purchase-report py-3 py-md-4">
+<div class="container-fluid stock-purchase-report">
     <div id="stock-purchase-print-config" class="d-none" hidden
          data-config="{{ htmlspecialchars($stockPurchasePrintConfigJson, ENT_QUOTES, 'UTF-8') }}"></div>
     <x-breadcrum title="Stock Purchase Details Report"></x-breadcrum>
+    <!-- Filters Section (Top - same pattern as other report pages) -->
 
-    <div class="card mb-4 border-0 rounded-4 shadow-sm no-print spr-filter-card">
-        <div class="card-header bg-body border-0 border-bottom border-light-subtle py-3 px-3 px-lg-4">
-            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-                <div class="d-flex align-items-center gap-2 gap-sm-3">
-                    <div class="spr-filter-icon-circle bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center flex-shrink-0">
-                        <span class="material-symbols-rounded text-primary fs-5 lh-1" aria-hidden="true">filter_list</span>
-                    </div>
-                    <div class="min-w-0">
-                        <h2 class="h5 mb-0 fw-semibold text-body lh-sm">Filter purchases</h2>
-                        <span class="text-body-tertiary small d-block">Refine results by date range, vendor, and store</span>
+    <div class="card mb-4 border-0 shadow-sm rounded-3 overflow-hidden no-print">
+        <div style="height:3px;background:linear-gradient(90deg,#0b4a7e 0%,#2980b9 50%,#0b4a7e 100%);" aria-hidden="true"></div>
+        <div class="card-header bg-body-tertiary border-0 py-3 px-3 px-lg-4">
+            <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2">
+                <div class="d-flex align-items-start gap-3">
+                    <span class="d-none d-sm-flex align-items-center justify-content-center flex-shrink-0 rounded-3 bg-primary-subtle text-primary p-2" aria-hidden="true">
+                        <span class="material-symbols-rounded" style="font-size: 1.5rem;">tune</span>
+                    </span>
+                    <div>
+                        <h5 class="mb-1 fw-semibold text-body">Filter Purchases</h5>
+                        <p class="mb-0 small text-body-secondary">Refine results by date, vendor &amp; store</p>
                     </div>
                 </div>
-                <span class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle fw-medium px-3 py-2 rounded-1 d-none d-md-inline-flex align-items-center gap-1">
-                    <span class="material-symbols-rounded fs-6 lh-1" aria-hidden="true">tune</span>
-                    Quick filters
-                </span>
             </div>
         </div>
-        <div class="card-body pt-3 pb-3 px-3 px-lg-4">
-            <form id="stockPurchaseDetailsFilterForm" method="GET" action="{{ route('admin.mess.reports.stock-purchase-details') }}">
+        <div class="card-body pt-3 p-3 p-lg-4">
+            <form method="GET" action="{{ route('admin.mess.reports.stock-purchase-details') }}">
                 <div class="row g-3">
                     <div class="col-12 col-sm-6 col-xl-3">
-                        <label class="form-label fw-medium small text-uppercase text-body-secondary mb-1" for="spr_from_date">From date</label>
-                        <input type="date" name="from_date" id="spr_from_date" class="form-control" value="{{ $fromDate }}" required autocomplete="off">
+                        <label class="form-label small fw-semibold text-uppercase text-body-secondary mb-1">From Date</label>
+                        <input type="date" name="from_date" class="form-control rounded-2" value="{{ $fromDate }}" required>
                     </div>
                     <div class="col-12 col-sm-6 col-xl-3">
-                        <label class="form-label fw-medium small text-uppercase text-body-secondary mb-1" for="spr_to_date">To date</label>
-                        <input type="date" name="to_date" id="spr_to_date" class="form-control" value="{{ $toDate }}" required autocomplete="off">
+                        <label class="form-label small fw-semibold text-uppercase text-body-secondary mb-1">To Date</label>
+                        <input type="date" name="to_date" class="form-control rounded-2" value="{{ $toDate }}" required>
                     </div>
                     <div class="col-12 col-sm-6 col-xl-3">
-                        <label class="form-label fw-medium small text-uppercase text-body-secondary mb-1" for="stock_purchase_vendor_id">Vendor name</label>
-                        <select name="vendor_id[]" id="stock_purchase_vendor_id" class="form-select form-select-sm choices-select" multiple data-placeholder="All vendors">
+                        <label class="form-label small fw-semibold text-uppercase text-body-secondary mb-1">Vendor Name</label>
+                        <select name="vendor_id[]" class="form-select form-select-sm rounded-2 choices-select" multiple data-placeholder="All Vendors">
                             @foreach($vendors as $vendor)
                                 <option value="{{ $vendor->id }}" @selected(in_array((int) $vendor->id, $selectedVendorIds, true))>{{ $vendor->name }}</option>
                             @endforeach
                         </select>
                     </div>
                     <div class="col-12 col-sm-6 col-xl-3">
-                        <label class="form-label fw-medium small text-uppercase text-body-secondary mb-1" for="stock_purchase_store_id">Store name</label>
-                        <select name="store_id[]" id="stock_purchase_store_id" class="form-select form-select-sm choices-select" multiple data-placeholder="All stores">
+                        <label class="form-label small fw-semibold text-uppercase text-body-secondary mb-1">Store Name</label>
+                        <select name="store_id[]" class="form-select form-select-sm rounded-2 choices-select" multiple data-placeholder="All Stores">
                             @foreach($stores as $store)
                                 <option value="{{ $store->id }}" @selected(in_array((int) $store->id, $selectedStoreIds, true))>{{ $store->store_name }}</option>
                             @endforeach
                         </select>
                     </div>
                 </div>
-                <div class="d-flex flex-wrap align-items-center column-gap-2 row-gap-2 pt-3 mt-3 border-top border-secondary-subtle">
-                    <button type="submit" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-2 px-3">
-                        <span class="material-symbols-rounded fs-6 lh-1" aria-hidden="true">filter_list</span>
+                <div class="d-flex flex-wrap align-items-center gap-2 pt-3 mt-3 border-top border-light-subtle">
+                    <button type="submit" class="btn btn-primary btn-sm rounded-2 d-inline-flex align-items-center gap-1 px-3">
+                        <span class="material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">filter_list</span>
                         <span>Apply filters</span>
                     </button>
-                    <a href="{{ route('admin.mess.reports.stock-purchase-details') }}" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-2 px-3">
-                        <span class="material-symbols-rounded fs-6 lh-1" aria-hidden="true">refresh</span>
+                    <a href="{{ route('admin.mess.reports.stock-purchase-details') }}" class="btn btn-outline-secondary btn-sm rounded-2 d-inline-flex align-items-center gap-1 px-3">
+                        <span class="material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">refresh</span>
                         <span>Reset</span>
                     </a>
-                    <div class="vr d-none d-md-block text-body-secondary opacity-50 mx-1 align-self-stretch my-1 flex-shrink-0" role="separator" aria-hidden="true"></div>
-                    <div class="btn-group shadow-sm" role="group" aria-label="Print or download PDF">
-                        <button type="button" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center justify-content-center gap-2 px-3 rounded-start" onclick="printStockPurchaseTable()" title="Print report or choose Save as PDF in print dialog">
-                            <span class="material-symbols-rounded fs-6 lh-1" aria-hidden="true">print</span>
+                    <div class="vr d-none d-md-block text-secondary mx-1 align-self-stretch my-1" role="separator" aria-hidden="true"></div>
+                    <div class="btn-group shadow-sm rounded-2" role="group" aria-label="Print or download PDF">
+                        <button type="button" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center justify-content-center gap-1 px-3 rounded-0 rounded-start-2" onclick="printStockPurchaseTable()" title="Print report or choose Save as PDF in print dialog">
+                            <span class="material-symbols-rounded" style="font-size: 18px; line-height: 1;" aria-hidden="true">print</span>
                             <span>Print</span>
                         </button>
-                        <a href="{{ route('admin.mess.reports.stock-purchase-details.pdf', request()->query()) }}" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center justify-content-center gap-2 px-3 rounded-end" title="Download PDF">
-                            <span class="material-symbols-rounded fs-6 lh-1" aria-hidden="true">picture_as_pdf</span>
+                        <a href="{{ route('admin.mess.reports.stock-purchase-details.pdf', request()->query()) }}" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center justify-content-center gap-1 px-3 rounded-0 rounded-end-2" title="Download PDF">
+                            <span class="material-symbols-rounded" style="font-size: 18px; line-height: 1;" aria-hidden="true">picture_as_pdf</span>
                             <span>PDF</span>
                         </a>
                     </div>
-                    <a href="{{ route('admin.mess.reports.stock-purchase-details.excel', request()->query()) }}" class="btn btn-success btn-sm d-inline-flex align-items-center gap-2 px-3" title="Export to Excel">
-                        <span class="material-symbols-rounded fs-6 lh-1" aria-hidden="true">table_view</span>
+                    <a href="{{ route('admin.mess.reports.stock-purchase-details.excel', request()->query()) }}" class="btn btn-success btn-sm rounded-2 d-inline-flex align-items-center gap-1 px-3" title="Export to Excel">
+                        <span class="material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">table_view</span>
                         <span>Export Excel</span>
                     </a>
                 </div>
@@ -118,33 +116,36 @@
 
     <!-- Report Area (full width below filters) -->
     <div class="report-area">
-            <div class="report-content card border-0 shadow-sm rounded-4">
+            <!-- Report content -->
+            <div class="report-content card border-0 shadow-sm rounded-3">
                 <div class="card-body p-3 p-lg-4">
-                    <div class="report-header text-center mb-4 rounded-3 p-4 px-lg-5 bg-body-tertiary border border-secondary-subtle">
-                        <div class="d-flex align-items-center justify-content-center gap-2 gap-sm-3 mb-3 flex-wrap">
-                            <span class="material-symbols-rounded text-primary fs-3 lh-1" aria-hidden="true">receipt_long</span>
-                            <h3 class="h4 fw-bold mb-0 text-body text-uppercase mess-title-tracking">Stock purchase details</h3>
+                    <!-- Report header (title centered, date bar, vendor) -->
+                    <div class="report-header text-center mb-4 rounded-3 p-4" style="background:linear-gradient(135deg,#f0f4f8 0%,#e8edf4 50%,#f0f4f8 100%);border:1px solid #e2e8f0;">
+                        <div class="d-flex align-items-center justify-content-center gap-2 mb-3">
+                            <span class="material-symbols-rounded text-primary" style="font-size:1.75rem;" aria-hidden="true">receipt_long</span>
+                            <h4 class="fw-bold mb-0 text-body text-uppercase mess-title-tracking">Stock Purchase Details</h4>
                         </div>
                         <div class="d-flex flex-column flex-sm-row flex-wrap align-items-center justify-content-center gap-2 mb-2">
-                            <span class="badge rounded-1 bg-body text-body-emphasis fw-normal px-3 py-2 shadow-sm border border-secondary-subtle">
-                                <span class="material-symbols-rounded align-middle me-1 fs-6 lh-1" aria-hidden="true">date_range</span>
+                            <span class="badge rounded-pill bg-white text-body-emphasis fw-normal px-3 py-2 shadow-sm border">
+                                <span class="material-symbols-rounded align-middle me-1" style="font-size:1rem;" aria-hidden="true">date_range</span>
                                 {{ date('d-F-Y', strtotime($fromDate)) }} to {{ date('d-F-Y', strtotime($toDate)) }}
                             </span>
                         </div>
-                        <div class="d-flex flex-column flex-sm-row flex-wrap align-items-stretch align-items-sm-center justify-content-center gap-2">
-                            <span class="badge rounded-1 bg-primary-subtle text-primary-emphasis border border-primary-subtle fw-normal px-3 py-2 shadow-sm text-wrap text-start spr-meta-badge">
-                                <span class="material-symbols-rounded align-middle me-1 fs-6 lh-1" aria-hidden="true">person</span>
+                        <div class="d-flex flex-column flex-sm-row flex-wrap align-items-center justify-content-center gap-2">
+                            <span class="badge rounded-pill bg-primary-subtle text-primary-emphasis border border-primary-subtle fw-normal px-3 py-2 shadow-sm text-wrap text-start" style="max-width: min(100%, 42rem);">
+                                <span class="material-symbols-rounded align-middle me-1" style="font-size:1rem;" aria-hidden="true">person</span>
                                 <span class="fw-semibold">{{ $stockPurchasePrintVendorHeaderLabel }}</span> {{ $stockPurchasePrintVendorLine }}
                             </span>
-                            <span class="badge rounded-1 bg-success-subtle text-success-emphasis border border-success-subtle fw-normal px-3 py-2 shadow-sm text-wrap text-sm-start">
-                                <span class="material-symbols-rounded align-middle me-1 fs-6 lh-1" aria-hidden="true">store</span>
+                            <span class="badge rounded-pill bg-success-subtle text-success-emphasis border border-success-subtle fw-normal px-3 py-2 shadow-sm">
+                                <span class="material-symbols-rounded align-middle me-1" style="font-size:1rem;" aria-hidden="true">store</span>
                                 <span class="fw-semibold">Store:</span> {{ $stockPurchasePrintStoreDetails }}
                             </span>
                         </div>
                     </div>
 
-                    <div class="table-responsive rounded-3 border border-secondary-subtle shadow-sm bg-body stock-purchase-table-wrapper" role="region" aria-label="Stock purchase table" tabindex="0">
-                        <table class="table table-sm table-bordered align-middle mb-0 w-100 stock-purchase-table">
+                    <!-- Table: grouped by bill -->
+                    <div class="table-responsive rounded-3 border border-light-subtle shadow-sm bg-white stock-purchase-table-wrapper" role="region" aria-label="Stock purchase table" tabindex="0">
+                        <table class="table table-sm table-bordered align-middle mb-0 stock-purchase-table" style="width:100%;">
                             <thead class="stock-purchase-thead">
                                 <tr>
                                     <th class="spr-th">Item</th>
@@ -163,7 +164,7 @@
                                     <tr class="vendor-section-header-row">
                                         <td colspan="8" class="vendor-section-header small fw-semibold">
                                             <span class="d-inline-flex align-items-center gap-1">
-                                                <span class="material-symbols-rounded fs-6 lh-1 opacity-75" aria-hidden="true">person</span>
+                                                <span class="material-symbols-rounded" style="font-size:1rem;opacity:0.7;" aria-hidden="true">person</span>
                                                 VENDOR : {{ $vendorGroup['vendor_name'] }}
                                             </span>
                                         </td>
@@ -179,7 +180,7 @@
                                         <tr class="bill-header-row">
                                             <td colspan="8" class="bill-header small fw-semibold text-white">
                                                 <span class="d-inline-flex align-items-center gap-1">
-                                                    <span class="material-symbols-rounded fs-6 lh-1" aria-hidden="true">receipt</span>
+                                                    <span class="material-symbols-rounded" style="font-size:1rem;" aria-hidden="true">receipt</span>
                                                     {{ $billLabel }}
                                                 </span>
                                             </td>
@@ -219,7 +220,7 @@
                                     <tr class="vendor-total-row fw-semibold">
                                         <td colspan="7" class="text-end small">
                                             <span class="d-inline-flex align-items-center gap-1">
-                                                <span class="material-symbols-rounded fs-6 lh-1" aria-hidden="true">functions</span>
+                                                <span class="material-symbols-rounded" style="font-size:0.875rem;" aria-hidden="true">functions</span>
                                                 Vendor Total ({{ $vendorGroup['vendor_name'] }}):
                                             </span>
                                         </td>
@@ -228,13 +229,13 @@
                                 @empty
                                     <tr>
                                         <td colspan="8" class="p-0 border-0">
-                                            <div class="spr-empty-state text-center py-5 px-3 m-2 rounded-3 border border-secondary-subtle border-dashed bg-body-secondary bg-opacity-10">
-                                                <span class="material-symbols-rounded d-block mx-auto mb-3 fs-1 text-secondary lh-1" aria-hidden="true">shopping_cart_off</span>
+                                            <div class="spr-empty-state text-center py-5 px-3">
+                                                <span class="material-symbols-rounded d-block mx-auto mb-2" style="font-size:2.25rem;color:#94a3b8;" aria-hidden="true">shopping_cart_off</span>
                                                 <h6 class="fw-semibold text-body-secondary mb-2">No purchase details found</h6>
-                                                <p class="small text-body-tertiary mb-3 mb-sm-4">No records match the selected period, vendor, and store filters.</p>
-                                                <span class="badge bg-body-secondary text-body-emphasis rounded-1 px-3 py-2 fw-normal border border-secondary-subtle">
-                                                    <span class="material-symbols-rounded align-middle me-1 fs-6 lh-1" aria-hidden="true">lightbulb</span>
-                                                    Try adjusting date range or filters
+                                                <p class="small text-body-tertiary mb-3">No records match the selected period, vendor, and store filters.</p>
+                                                <span class="badge bg-body-secondary text-body-emphasis rounded-pill px-3 py-2 fw-normal">
+                                                    <span class="material-symbols-rounded align-middle me-1" style="font-size:0.875rem;" aria-hidden="true">lightbulb</span>
+                                                    Try adjusting date range or filter criteria
                                                 </span>
                                             </div>
                                         </td>
@@ -244,7 +245,7 @@
                                     <tr class="grand-total-row fw-bold">
                                         <td colspan="7" class="text-end">
                                             <span class="d-inline-flex align-items-center gap-1">
-                                                <span class="material-symbols-rounded fs-6 lh-1" aria-hidden="true">payments</span>
+                                                <span class="material-symbols-rounded" style="font-size:1rem;" aria-hidden="true">payments</span>
                                                 Grand Total:
                                             </span>
                                         </td>
@@ -266,48 +267,6 @@
         document.addEventListener('DOMContentLoaded', function () {
             if (typeof window.TomSelect === 'undefined') return;
 
-            var repositionQueued = false;
-            function queueRepositionOpenSprTomSelects() {
-                if (repositionQueued) return;
-                repositionQueued = true;
-                requestAnimationFrame(function () {
-                    repositionQueued = false;
-                    document.querySelectorAll('.stock-purchase-report select.choices-select').forEach(function (sel) {
-                        if (sel.tomselect && sel.tomselect.isOpen && typeof sel.tomselect.positionDropdown === 'function') {
-                            sel.tomselect.positionDropdown();
-                        }
-                    });
-                });
-            }
-
-            /** Portaled to body + position:fixed so theme .page-wrapper { overflow-x:hidden } cannot clip the list */
-            function pinStockPurchaseDropdownBelow(ts) {
-                var control = ts.control;
-                var dd = ts.dropdown;
-                if (!control || !dd) return;
-                var rect = control.getBoundingClientRect();
-                var gap = 2;
-                var w = Math.max(rect.width, 160);
-                var left = rect.left;
-                if (left + w > window.innerWidth - 8) {
-                    left = Math.max(8, window.innerWidth - w - 8);
-                }
-                dd.style.position = 'fixed';
-                dd.style.top = (rect.bottom + gap) + 'px';
-                dd.style.left = left + 'px';
-                dd.style.width = w + 'px';
-                dd.style.right = 'auto';
-                dd.style.bottom = 'auto';
-                var content = ts.dropdown_content;
-                if (content) {
-                    var maxH = Math.max(120, window.innerHeight - rect.bottom - gap - 12);
-                    content.style.maxHeight = maxH + 'px';
-                }
-            }
-
-            window.addEventListener('scroll', queueRepositionOpenSprTomSelects, true);
-            window.addEventListener('resize', queueRepositionOpenSprTomSelects);
-
             document
                 .querySelectorAll('.stock-purchase-report select.choices-select')
                 .forEach(function (el) {
@@ -315,7 +274,7 @@
 
                     var placeholder = el.getAttribute('data-placeholder') || 'Select';
 
-                    var ts = new TomSelect(el, {
+                    new TomSelect(el, {
                         placeholder: placeholder,
                         maxItems: null,
                         maxOptions: 500,
@@ -323,14 +282,8 @@
                         sortField: {
                             field: 'text',
                             direction: 'asc'
-                        },
-                        dropdownParent: 'body',
-                        dropdownClass: 'stock-purchase-ts-dropdown-portal'
+                        }
                     });
-
-                    ts.positionDropdown = function () {
-                        pinStockPurchaseDropdownBelow(this);
-                    };
 
                     el.dataset.tomselectInitialized = 'true';
                 });
@@ -559,7 +512,7 @@ function printStockPurchaseTable() {
 '        .data-table .spr-item-row:nth-child(even) td { background: #f9fafb; }\n' +
 '\n' +
 '        /* ── Print-specific ── */\n' +
-'        @page { size: A4 landscape; margin: 8mm; }\n' +
+'        @page { size: A4 portrait; margin: 8mm; }\n' +
 '        @media print {\n' +
 '            body { padding: 0; }\n' +
 '            thead { display: table-header-group; }\n' +
@@ -606,33 +559,6 @@ function printStockPurchaseTable() {
 </script>
 
 <style>
-/* Matdash .page-wrapper uses overflow-x:hidden; clip avoids extra scrollport that clips Tom Select (same idea as Item Report) */
-@media screen {
-    .page-wrapper:has(.stock-purchase-report) {
-        overflow-x: clip !important;
-    }
-}
-
-.stock-purchase-report .spr-filter-card,
-.stock-purchase-report .spr-filter-card .card-body,
-.stock-purchase-report .spr-filter-card .row,
-.stock-purchase-report .spr-filter-card [class*='col-'] {
-    overflow: visible;
-}
-
-/* Body-portaled Tom Select; z-index above report card / sticky chrome */
-.stock-purchase-ts-dropdown-portal {
-    z-index: 1100 !important;
-}
-
-.stock-purchase-report .spr-filter-icon-circle {
-    width: 2.375rem;
-    height: 2.375rem;
-}
-.stock-purchase-report .spr-meta-badge {
-    max-width: min(100%, 42rem);
-}
-
 /* Auto height and width for report container and content */
 .stock-purchase-report {
     width: 100%;
@@ -655,6 +581,7 @@ function printStockPurchaseTable() {
 .stock-purchase-report .table-responsive {
     width: 100%;
     overflow-x: auto;
+    overflow-y: visible;
 }
 @media screen {
     .stock-purchase-report .stock-purchase-table-wrapper {
@@ -781,6 +708,14 @@ function printStockPurchaseTable() {
 }
 .stock-purchase-report .spr-item-row:hover td {
     background-color: #eef4fb !important;
+}
+
+/* Empty state */
+.stock-purchase-report .spr-empty-state {
+    background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+    border-radius: 0.5rem;
+    border: 1px dashed #cbd5e1;
+    margin: 0.5rem;
 }
 
 /* Scrollbar */
