@@ -460,6 +460,60 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
 @endphp
 
 <div class="container-fluid px-3 px-lg-4">
+    @if($isMyBirthday ?? false)
+    {{-- Birthday Banner with Confetti --}}
+    <div class="birthday-banner-wrapper mb-3" id="birthday-banner">
+        <canvas id="confetti-canvas"></canvas>
+        <div class="birthday-banner-content">
+            <div class="d-flex align-items-center justify-content-center gap-3 flex-wrap">
+                <span style="font-size:2.5rem;">🎂</span>
+                <div class="text-center">
+                    <h3 class="mb-0 fw-bold text-white">Happy Birthday, {{ $userName }}! 🎉</h3>
+                    <p class="mb-0 text-white-50 small">Wishing you a wonderful year ahead!</p>
+                    @if(($myBirthdayWishCount ?? 0) > 0)
+                    <div class="mt-1">
+                        <span class="badge bg-white text-primary rounded-pill px-3 py-1 fw-semibold" style="font-size:0.85rem;">
+                            🎁 {{ $myBirthdayWishCount }} {{ $myBirthdayWishCount === 1 ? 'wish' : 'wishes' }} received today!
+                        </span>
+                    </div>
+                    @endif
+                </div>
+                <span style="font-size:2.5rem;">🎈</span>
+            </div>
+        </div>
+    </div>
+    <style>
+    .birthday-banner-wrapper {
+        position: relative;
+        border-radius: 1rem;
+        overflow: hidden;
+        background: linear-gradient(135deg, #e91e63 0%, #9c27b0 40%, #673ab7 70%, #3f51b5 100%);
+        box-shadow: 0 6px 30px rgba(233, 30, 99, 0.35);
+        min-height: 100px;
+    }
+    #confetti-canvas {
+        position: absolute;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        pointer-events: none;
+        z-index: 1;
+    }
+    .birthday-banner-content {
+        position: relative;
+        z-index: 2;
+        padding: 1.5rem 2rem;
+    }
+    .birthday-banner-wrapper::before {
+        content: '';
+        position: absolute;
+        top: -50%; right: -20%;
+        width: 60%; height: 200%;
+        background: radial-gradient(ellipse, rgba(255,255,255,0.1) 0%, transparent 70%);
+        pointer-events: none;
+    }
+    </style>
+    @endif
+
     <div class="dashboard-welcome shadow-sm bg-gradient d-flex flex-wrap align-items-center justify-content-between gap-2">
         <div>
             <h2 class="mb-0 text-white">{{ $greeting }}, {{ $userName }}</h2>
@@ -898,6 +952,16 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                     <span class="ms-auto badge rounded-pill text-bg-primary-subtle text-primary border border-primary-subtle">
                         {{ $emp_dob_data->count() }}
                     </span>
+                    @if($emp_dob_data->isNotEmpty())
+                    <a href="{{ route('admin.birthday-wish.index') }}" class="btn btn-sm btn-primary rounded-pill ms-2 d-inline-flex align-items-center gap-1" title="Send wishes to all">
+                        <span class="material-icons material-symbols-rounded" style="font-size:14px;">send</span>
+                        <span style="font-size:0.75rem;">Send Wishes</span>
+                    </a>
+                    <button type="button" class="btn btn-sm btn-success rounded-pill ms-1 d-inline-flex align-items-center gap-1" id="btn-quick-wish-all" title="Quick wish everyone at once">
+                        <span class="material-icons material-symbols-rounded" style="font-size:14px;">celebration</span>
+                        <span style="font-size:0.75rem;">Wish All</span>
+                    </button>
+                    @endif
                 </div>
                 <div class="card-body p-3 dashboard-list-scroll">
                     @if($emp_dob_data->isEmpty())
@@ -939,6 +1003,12 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                                                 <span class="material-icons material-symbols-rounded" style="font-size: 16px;">cake</span>
                                                 Birthday
                                             </div>
+                                            @php $wishCount = $birthdayWishCounts[$employee->pk] ?? 0; @endphp
+                                            @if($wishCount > 0)
+                                            <span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle" style="font-size:0.65rem;" title="{{ $wishCount }} wishes sent">
+                                                🎁 {{ $wishCount }} {{ $wishCount === 1 ? 'wish' : 'wishes' }}
+                                            </span>
+                                            @endif
                                         </div>
 
                                         <div class="dashboard-birthday-contact">
@@ -961,6 +1031,41 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                                                 </span>
                                             @endif
                                         </div>
+
+                                        <div class="d-flex gap-2 mt-2 flex-wrap">
+                                            @if($email !== '')
+                                            <a href="mailto:{{ $email }}?subject={{ $subject }}&body={{ $body }}"
+                                               class="btn btn-sm btn-outline-primary rounded-pill d-inline-flex align-items-center gap-1"
+                                               title="Send Birthday Email">
+                                                <span class="material-icons material-symbols-rounded" style="font-size:14px;">mail</span>
+                                                <span style="font-size:0.75rem;">Email</span>
+                                            </a>
+                                            @endif
+                                            @if(!empty($employee->mobile))
+                                            @php
+                                                $whatsappPhone = preg_replace('/[^0-9]/', '', $employee->mobile);
+                                                if(!str_starts_with($whatsappPhone, '91') && strlen($whatsappPhone) == 10) { $whatsappPhone = '91' . $whatsappPhone; }
+                                                $whatsappMsg = rawurlencode("Dear " . ($fullName ?: '') . ",\n\nWishing you a very Happy Birthday! 🎂🎉\n\nRegards,\n" . ($user->first_name ?? $user->name ?? ''));
+                                            @endphp
+                                            <a href="https://wa.me/{{ $whatsappPhone }}?text={{ $whatsappMsg }}"
+                                               target="_blank"
+                                               class="btn btn-sm btn-outline-success rounded-pill d-inline-flex align-items-center gap-1"
+                                               title="Send Birthday WhatsApp">
+                                                <span class="material-icons material-symbols-rounded" style="font-size:14px;">chat</span>
+                                                <span style="font-size:0.75rem;">WhatsApp</span>
+                                            </a>
+                                            @endif
+                                            <button type="button"
+                                                class="btn btn-sm btn-outline-secondary rounded-pill d-inline-flex align-items-center gap-1 btn-custom-wish"
+                                                data-name="{{ $fullName }}"
+                                                data-email="{{ $email }}"
+                                                data-mobile="{{ $employee->mobile ?? '' }}"
+                                                data-pk="{{ $employee->pk }}"
+                                                title="Send Custom Message">
+                                                <span class="material-icons material-symbols-rounded" style="font-size:14px;">edit</span>
+                                                <span style="font-size:0.75rem;">Custom</span>
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -970,6 +1075,49 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                     @endif
                 </div>
             </div>
+
+            @if(($upcomingBirthdays ?? collect())->isNotEmpty())
+            <div class="card dashboard-panel shadow-sm rounded-4 mb-4">
+                <div class="card-header py-3 px-4 d-flex align-items-center gap-2">
+                    <span class="material-icons material-symbols-rounded text-warning">upcoming</span>
+                    <h6 class="mb-0 fw-semibold">Upcoming Birthdays</h6>
+                    <span class="ms-auto badge rounded-pill text-bg-warning-subtle text-warning border border-warning-subtle">
+                        Next 7 days
+                    </span>
+                </div>
+                <div class="card-body p-3" style="max-height: 16rem; overflow-y: auto;">
+                    <div class="d-grid gap-2">
+                        @foreach($upcomingBirthdays as $upcoming)
+                        @php
+                            $upName = trim(($upcoming->first_name ?? '') . ' ' . ($upcoming->last_name ?? ''));
+                            $upPhoto = !empty($upcoming->profile_picture) ? asset('storage/' . $upcoming->profile_picture) : null;
+                            $upAvClasses = ['text-bg-primary', 'text-bg-info', 'text-bg-success', 'text-bg-warning', 'text-bg-danger'];
+                            $upAvClass = $upAvClasses[$loop->index % count($upAvClasses)];
+                        @endphp
+                        <div class="d-flex align-items-center gap-2 px-2 py-2 rounded-3" style="background: rgba(var(--bs-warning-rgb), 0.05);">
+                            @if($upPhoto)
+                                <img src="{{ $upPhoto }}" alt="" class="rounded-circle object-fit-cover flex-shrink-0" style="width:2rem; height:2rem;">
+                            @else
+                                <div class="rounded-circle {{ $upAvClass }} fw-semibold d-inline-flex align-items-center justify-content-center flex-shrink-0" style="width:2rem; height:2rem; font-size:0.75rem;">
+                                    {{ strtoupper(substr($upcoming->first_name, 0, 1)) }}
+                                </div>
+                            @endif
+                            <div class="min-w-0 flex-grow-1">
+                                <div class="fw-semibold small text-truncate">{{ $upName }}</div>
+                                <div class="text-body-secondary" style="font-size:0.7rem;">{{ $upcoming->designation_name ?? '' }}</div>
+                            </div>
+                            <div class="text-end flex-shrink-0">
+                                <span class="badge rounded-pill bg-warning-subtle text-warning border border-warning-subtle" style="font-size:0.65rem;">
+                                    🎂 {{ $upcoming->birthday_date }}
+                                </span>
+                                <div class="text-body-secondary" style="font-size:0.6rem;">in {{ $upcoming->days_away }} {{ $upcoming->days_away == 1 ? 'day' : 'days' }}</div>
+                            </div>
+                        </div>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+            @endif
 
             <div class="card dashboard-panel shadow-sm rounded-4">
                 <div class="card-header py-3 px-4 d-flex align-items-center gap-2">
@@ -989,8 +1137,220 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
     </div>
 </div>
 
+<!-- Custom Birthday Wish Modal -->
+<div class="modal fade" id="customWishModal" tabindex="-1" aria-labelledby="customWishModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header bg-primary bg-opacity-10 border-0 rounded-top-4 px-4 py-3">
+                <h5 class="modal-title fw-semibold d-flex align-items-center gap-2" id="customWishModalLabel">
+                    <span class="material-icons material-symbols-rounded text-primary">celebration</span>
+                    Send Birthday Wish
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body px-4 py-3">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold small">To</label>
+                    <input type="text" class="form-control" id="wish-recipient-name" readonly>
+                    <input type="hidden" id="wish-recipient-email">
+                    <input type="hidden" id="wish-recipient-mobile">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold small">Choose Template</label>
+                    <select class="form-select" id="wish-template-select">
+                        <option value="formal">Formal Birthday Wish</option>
+                        <option value="casual">Casual Birthday Wish</option>
+                        <option value="professional">Professional Birthday Wish</option>
+                        <option value="custom">Write Custom Message</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold small">Subject <small class="text-muted">(for Email)</small></label>
+                    <input type="text" class="form-control" id="wish-subject" value="Happy Birthday!">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold small">Message</label>
+                    <textarea class="form-control" id="wish-message" rows="6"></textarea>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label fw-semibold small">Send via</label>
+                    <div class="d-flex gap-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="send-via-email" checked>
+                            <label class="form-check-label small" for="send-via-email">
+                                <span class="material-icons material-symbols-rounded align-middle text-primary" style="font-size:16px;">mail</span> Email
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="send-via-whatsapp">
+                            <label class="form-check-label small" for="send-via-whatsapp">
+                                <span class="material-icons material-symbols-rounded align-middle text-success" style="font-size:16px;">chat</span> WhatsApp
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 px-4 pb-4">
+                <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary rounded-pill px-4 d-flex align-items-center gap-2" id="btn-send-wish">
+                    <span class="material-icons material-symbols-rounded" style="font-size:18px;">send</span> Send Wish
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @push('scripts')
 <script>
+// Birthday wish modal logic
+(function() {
+    const templates = {
+        formal: function(name) {
+            return "Dear " + name + ",\n\nOn the occasion of your birthday, I extend my heartfelt wishes for a wonderful year ahead. May this special day bring you joy, success, and good health.\n\nWarm regards,";
+        },
+        casual: function(name) {
+            return "Hey " + name + "! 🎂🎉\n\nWishing you a fantastic birthday! Hope your day is filled with joy, laughter, and all things wonderful. Have an amazing year ahead!\n\nCheers!";
+        },
+        professional: function(name) {
+            return "Dear " + name + ",\n\nWishing you a very Happy Birthday! May this new year of your life bring you continued success and fulfilment in all your endeavours.\n\nBest wishes,";
+        },
+        custom: function(name) {
+            return "Dear " + name + ",\n\n";
+        }
+    };
+
+    var currentRecipient = {};
+
+    document.addEventListener('click', function(e) {
+        var btn = e.target.closest('.btn-custom-wish');
+        if (!btn) return;
+        currentRecipient = {
+            name: btn.dataset.name || '',
+            email: btn.dataset.email || '',
+            mobile: btn.dataset.mobile || '',
+            employee_pk: btn.dataset.pk || ''
+        };
+        document.getElementById('wish-recipient-name').value = currentRecipient.name;
+        document.getElementById('wish-recipient-email').value = currentRecipient.email;
+        document.getElementById('wish-recipient-mobile').value = currentRecipient.mobile;
+
+        var emailCheckbox = document.getElementById('send-via-email');
+        var whatsappCheckbox = document.getElementById('send-via-whatsapp');
+        emailCheckbox.checked = currentRecipient.email !== '';
+        emailCheckbox.disabled = currentRecipient.email === '';
+        whatsappCheckbox.checked = false;
+        whatsappCheckbox.disabled = currentRecipient.mobile === '';
+
+        document.getElementById('wish-template-select').value = 'formal';
+        document.getElementById('wish-subject').value = 'Happy Birthday ' + currentRecipient.name + '!';
+        document.getElementById('wish-message').value = templates.formal(currentRecipient.name);
+
+        var modal = new bootstrap.Modal(document.getElementById('customWishModal'));
+        modal.show();
+    });
+
+    var templateSelect = document.getElementById('wish-template-select');
+    if (templateSelect) {
+        templateSelect.addEventListener('change', function() {
+            var name = currentRecipient.name || '';
+            var tpl = templates[this.value] || templates.custom;
+            document.getElementById('wish-message').value = tpl(name);
+        });
+    }
+
+    var sendBtn = document.getElementById('btn-send-wish');
+    if (sendBtn) {
+        sendBtn.addEventListener('click', function() {
+            var message = document.getElementById('wish-message').value.trim();
+            var subject = document.getElementById('wish-subject').value.trim();
+            var sendEmail = document.getElementById('send-via-email').checked;
+            var sendWhatsapp = document.getElementById('send-via-whatsapp').checked;
+
+            if (!message) { alert('Please enter a message.'); return; }
+            if (!sendEmail && !sendWhatsapp) { alert('Please select at least one channel (Email or WhatsApp).'); return; }
+
+            var sent = false;
+
+            if (sendEmail && currentRecipient.email) {
+                var csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
+                sendBtn.disabled = true;
+                sendBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Sending...';
+
+                fetch('{{ route("admin.birthday-wish.send-email") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken
+                    },
+                    body: JSON.stringify({
+                        email: currentRecipient.email,
+                        subject: subject,
+                        message: message,
+                        employee_pk: currentRecipient.employee_pk ? parseInt(currentRecipient.employee_pk) : null
+                    })
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.success) {
+                        if (sendWhatsapp && currentRecipient.mobile) {
+                            openWhatsApp(currentRecipient.mobile, message);
+                        }
+                        bootstrap.Modal.getInstance(document.getElementById('customWishModal')).hide();
+                        showToast('Birthday wish sent via email!', 'success');
+                    } else {
+                        alert('Failed to send email: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(function(err) {
+                    alert('Error sending email: ' + err.message);
+                })
+                .finally(function() {
+                    sendBtn.disabled = false;
+                    sendBtn.innerHTML = '<span class="material-icons material-symbols-rounded" style="font-size:18px;">send</span> Send Wish';
+                });
+                sent = true;
+            }
+
+            if (sendWhatsapp && currentRecipient.mobile && !sendEmail) {
+                openWhatsApp(currentRecipient.mobile, message);
+                // Send in-app notification for WhatsApp-only
+                if (currentRecipient.employee_pk) {
+                    var csrfToken2 = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
+                    fetch('{{ route("admin.birthday-wish.send-notification") }}', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken2 },
+                        body: JSON.stringify({ employee_pks: [parseInt(currentRecipient.employee_pk)] })
+                    }).catch(function() {});
+                }
+                bootstrap.Modal.getInstance(document.getElementById('customWishModal')).hide();
+                showToast('Birthday wish sent via WhatsApp!', 'success');
+                sent = true;
+            }
+
+            if (!sent) {
+                alert('No valid email or mobile for the selected channels.');
+            }
+        });
+    }
+
+    function openWhatsApp(mobile, message) {
+        var phone = mobile.replace(/[^0-9]/g, '');
+        if (phone.length === 10) phone = '91' + phone;
+        var url = 'https://wa.me/' + phone + '?text=' + encodeURIComponent(message);
+        window.open(url, '_blank');
+    }
+
+    function showToast(msg, type) {
+        var toastHtml = '<div class="toast align-items-center text-bg-' + (type || 'primary') + ' border-0 show" role="alert" style="position:fixed;top:20px;right:20px;z-index:9999;">' +
+            '<div class="d-flex"><div class="toast-body">' + msg + '</div>' +
+            '<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div></div>';
+        var div = document.createElement('div');
+        div.innerHTML = toastHtml;
+        document.body.appendChild(div);
+        setTimeout(function() { div.remove(); }, 4000);
+    }
+})();
+
 window.markAsReadDashboard = function(notificationId, clickedElement) {
     if (clickedElement && clickedElement.dataset.processing === 'true') {
         return;
@@ -1159,6 +1519,127 @@ document.addEventListener('DOMContentLoaded', function() {
         bindCalendarComponent(comp);
     });
 });
+
+// ── Confetti Effect for Birthday Banner ──
+(function() {
+    var canvas = document.getElementById('confetti-canvas');
+    if (!canvas) return;
+    var ctx = canvas.getContext('2d');
+    var W, H, particles = [], colors = ['#f44336','#e91e63','#9c27b0','#673ab7','#3f51b5','#2196f3','#00bcd4','#4caf50','#ffeb3b','#ff9800','#ff5722','#fff'];
+
+    function resize() {
+        W = canvas.width = canvas.parentElement.offsetWidth;
+        H = canvas.height = canvas.parentElement.offsetHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    for (var i = 0; i < 80; i++) {
+        particles.push({
+            x: Math.random() * W,
+            y: Math.random() * H - H,
+            r: Math.random() * 5 + 2,
+            d: Math.random() * 80,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            tilt: Math.random() * 10 - 5,
+            tiltAngle: 0,
+            tiltAngleInc: Math.random() * 0.07 + 0.05
+        });
+    }
+
+    var animFrame;
+    function draw() {
+        ctx.clearRect(0, 0, W, H);
+        particles.forEach(function(p) {
+            ctx.beginPath();
+            ctx.lineWidth = p.r;
+            ctx.strokeStyle = p.color;
+            ctx.moveTo(p.x + p.tilt + p.r / 2, p.y);
+            ctx.lineTo(p.x + p.tilt, p.y + p.tilt + p.r / 2);
+            ctx.stroke();
+        });
+        update();
+        animFrame = requestAnimationFrame(draw);
+    }
+
+    function update() {
+        particles.forEach(function(p) {
+            p.tiltAngle += p.tiltAngleInc;
+            p.y += (Math.cos(p.d) + 1 + p.r / 2) * 0.6;
+            p.x += Math.sin(p.d) * 0.5;
+            p.tilt = Math.sin(p.tiltAngle) * 12;
+            if (p.y > H) { p.y = -10; p.x = Math.random() * W; }
+        });
+    }
+
+    draw();
+    // Stop confetti after 8 seconds
+    setTimeout(function() {
+        cancelAnimationFrame(animFrame);
+        if (ctx) ctx.clearRect(0, 0, W, H);
+    }, 8000);
+})();
+
+// ── Quick Wish All Button ──
+(function() {
+    var btn = document.getElementById('btn-quick-wish-all');
+    if (!btn) return;
+
+    btn.addEventListener('click', function() {
+        if (!confirm('Send birthday wishes (email + notification) to all birthday people today?')) return;
+
+        var csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        var allCards = document.querySelectorAll('.btn-custom-wish');
+        var recipients = [];
+        allCards.forEach(function(card) {
+            var name = card.dataset.name || '';
+            var email = card.dataset.email || '';
+            var pk = card.dataset.pk || '';
+            if (email && pk) {
+                recipients.push({ email: email, name: name, employee_pk: parseInt(pk) });
+            }
+        });
+
+        if (recipients.length === 0) {
+            alert('No recipients with email found.');
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Sending...';
+
+        fetch('{{ route("admin.birthday-wish.send-bulk-email") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: JSON.stringify({
+                recipients: recipients,
+                subject: 'Happy Birthday!',
+                message_template: "Dear {name},\n\nWishing you a very Happy Birthday! May this special day bring you joy, success, and good health.\n\nWarm regards,\n{{ $userName ?? 'Team' }}"
+            })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                var div = document.createElement('div');
+                div.innerHTML = '<div class="toast align-items-center text-bg-success border-0 show" role="alert" style="position:fixed;top:20px;right:20px;z-index:9999;">' +
+                    '<div class="d-flex"><div class="toast-body">🎉 ' + data.message + '</div>' +
+                    '<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div></div>';
+                document.body.appendChild(div);
+                setTimeout(function() { div.remove(); }, 5000);
+            } else {
+                alert('Error: ' + (data.error || 'Unknown'));
+            }
+        })
+        .catch(function(err) { alert('Error: ' + err.message); })
+        .finally(function() {
+            btn.disabled = false;
+            btn.innerHTML = '<span class="material-icons material-symbols-rounded" style="font-size:14px;">celebration</span><span style="font-size:0.75rem;">Wish All</span>';
+        });
+    });
+})();
 </script>
 @endpush
 @endsection

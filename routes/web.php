@@ -64,6 +64,7 @@ use App\Http\Controllers\Admin\IssueManagement\{
 use App\Http\Controllers\Admin\EmployeeIDCardRequestController;
 use App\Http\Controllers\Admin\DuplicateIDCardRequestController;
 use App\Http\Controllers\Admin\FamilyIDCardRequestController;
+use App\Http\Controllers\Admin\BirthdayWishController;
 
 
 Route::get('clear-cache', function () {
@@ -111,6 +112,12 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard/students/{id}/detail', [UserController::class, 'studentDetail'])->name('admin.dashboard.students.detail');
     Route::get('/directory/lbsnaa', [DirectoryController::class, 'lbsnaa'])->name('admin.directory.lbsnaa');
     Route::get('/directory/ot', [DirectoryController::class, 'ot'])->name('admin.directory.ot');
+
+    // Birthday Wish Routes
+    Route::get('/birthday-wishes', [BirthdayWishController::class, 'index'])->name('admin.birthday-wish.index');
+    Route::post('/birthday-wishes/send-email', [BirthdayWishController::class, 'sendEmail'])->name('admin.birthday-wish.send-email');
+    Route::post('/birthday-wishes/send-bulk-email', [BirthdayWishController::class, 'sendBulkEmail'])->name('admin.birthday-wish.send-bulk-email');
+    Route::post('/birthday-wishes/send-notification', [BirthdayWishController::class, 'sendNotification'])->name('admin.birthday-wish.send-notification');
 
     // Dashboard Statistics (Batch Profile)
     // NOTE: Currently served by a Blade view; replace with controller when business logic is ready.
