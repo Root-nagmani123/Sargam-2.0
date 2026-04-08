@@ -948,11 +948,13 @@ class EstateController extends Controller
             ->orderByRaw("TRIM(CONCAT(COALESCE(em.first_name, ''), ' ', COALESCE(em.middle_name, ''), ' ', COALESCE(em.last_name, ''))) asc")
             ->orderBy('em.pk');
 
-        // Self-service: non-estate/admin users should only see themselves in employee dropdown.
-        // Sirf Admin / Estate ko full employee list milegi; baaki sab (HAC Person, Staff, etc.) ko sirf apna naam.
+        // Self-service: staff / HAC / etc. see only themselves. Admin / Estate / Super Admin see full list
+        // on the setup screen, but on ?scope=self (Home sidebar personal tab) they must see only themselves.
         $user = Auth::user();
+        $isEstateAuthority = hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin');
+        $restrictToSelf = $user && (! $isEstateAuthority || $this->isEstateAuthorityPersonalScope($request));
         $employeeIds = [];
-        if ($user && ! (hasRole('Estate') || hasRole('Admin'))) {
+        if ($restrictToSelf) {
             $employeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null);
             // Normalize possible pk_old values to canonical employee_master.pk
             if (!empty($employeeIds)) {
@@ -1016,7 +1018,7 @@ class EstateController extends Controller
             if (!empty($blockedEmployeePks)) {
                 $fallbackQuery->whereNotIn('em.pk', $blockedEmployeePks);
             }
-            if ($user && ! (hasRole('Estate') || hasRole('Admin'))) {
+            if ($restrictToSelf) {
                 $fallbackEmployeeIds = $employeeIds;
                 if (empty($fallbackEmployeeIds)) {
                     $fallbackEmployeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null);
@@ -1090,8 +1092,8 @@ class EstateController extends Controller
                     // Only show active employees in dropdown (even for returned backfill)
                     $extraReturnedQuery->where('em.status', 1)->where('em.payroll', 0);
 
-                    // Self-service restriction: non-estate/admin users should still only see themselves
-                    if ($user && ! (hasRole('Estate') || hasRole('Admin'))) {
+                    // Self-service / Home ?scope=self: only own row in returned-employee backfill
+                    if ($restrictToSelf) {
                         if (!empty($employeeIds)) {
                             $extraReturnedQuery->whereIn('em.pk', $employeeIds);
                         } else {
@@ -3699,6 +3701,15 @@ class EstateController extends Controller
             if ($reading->last_month_elec_red2 === null && $meterReadingSecondary !== null && $meterReadingSecondary !== '') {
                 $update['last_month_elec_red2'] = (int) $meterReadingSecondary;
             }
+            // Possession edit updates epd.electric_meter_reading*; keep month-reading "current" columns in sync for Update Meter Reading / bills.
+            $update['curr_month_elec_red'] = ($meterReadingPrimary !== null && $meterReadingPrimary !== '')
+                ? (int) $meterReadingPrimary
+                : 0;
+            if (\Illuminate\Support\Facades\Schema::hasColumn('estate_month_reading_details', 'curr_month_elec_red2')) {
+                $update['curr_month_elec_red2'] = ($meterReadingSecondary !== null && $meterReadingSecondary !== '')
+                    ? (int) $meterReadingSecondary
+                    : 0;
+            }
             $this->applyElectricChargeToMonthReading($reading->pk, $update);
             DB::table('estate_month_reading_details')->where('pk', $reading->pk)->update($update);
             return;
@@ -3754,6 +3765,11 @@ class EstateController extends Controller
             ->first();
         if (! $row) {
             return;
+        }
+        foreach (['last_month_elec_red', 'curr_month_elec_red', 'last_month_elec_red2', 'curr_month_elec_red2'] as $meterCol) {
+            if (array_key_exists($meterCol, $update)) {
+                $row->{$meterCol} = $update[$meterCol];
+            }
         }
         $prev1 = (int) ($row->last_month_elec_red ?? 0);
         $prev2 = (int) ($row->last_month_elec_red2 ?? 0);
@@ -10005,6 +10021,12 @@ class EstateController extends Controller
             ->join('estate_possession_details as epd', 'emrd.estate_possession_details_pk', '=', 'epd.pk')
             ->join('estate_home_request_details as ehrd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
             ->leftJoin('estate_house_master as ehm', 'epd.estate_house_master_pk', '=', 'ehm.pk')
+            // Same building + house no. as month-reading row (covers stale/wrong possession house FK vs define-house row)
+            ->leftJoin('estate_house_master as ehm_bn', function ($join) {
+                $join->on('ehm_bn.estate_block_master_pk', '=', 'ehm.estate_block_master_pk')
+                    // Avoid utf8mb4_unicode_ci vs utf8mb4_0900_ai_ci mix on '=' (MySQL 1267).
+                    ->whereRaw('CONVERT(LOWER(TRIM(COALESCE(ehm_bn.house_no, \'\'))) USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(LOWER(TRIM(COALESCE(emrd.house_no, \'\'))) USING utf8mb4) COLLATE utf8mb4_unicode_ci');
+            })
             ->leftJoin('estate_block_master as b', 'ehm.estate_block_master_pk', '=', 'b.pk')
             ->leftJoin('employee_master as em', 'ehrd.employee_pk', '=', 'em.' . $this->estateEmployeePkColumn())
             ->leftJoin('employee_type_master as etm', 'em.emp_type', '=', 'etm.pk')
@@ -10030,7 +10052,7 @@ class EstateController extends Controller
             $lbsnaQ->whereRaw('1 = 0'); // no employee mapping: show no LBSNA rows
         }
         $lbsnaQ = $lbsnaQ->select([
-                DB::raw("'LBSNA Employee' as employee_type"),
+                DB::raw("COALESCE(NULLIF(TRIM(etm.category_type_name), ''), 'LBSNA Employee') as employee_type"),
                 'ehrd.emp_name as name',
                 'dm.department_name as section',
                 'b.block_name as building_name',
@@ -10046,13 +10068,19 @@ class EstateController extends Controller
                 'emrd.meter_one_consume_unit',
                 'emrd.meter_two_consume_unit',
                 'emrd.electricty_charges',
-                'emrd.water_charges',
-                'emrd.licence_fees',
+                // Define House: estate_house_master.water_charge / licence_fee. Reading rows often NULL or 0 — fall back; NULLIF avoids COALESCE(0, real) swallowing the good row.
+                DB::raw('IF((emrd.water_charges IS NOT NULL AND emrd.water_charges <> 0), emrd.water_charges, COALESCE(NULLIF(ehm.water_charge, 0), NULLIF(ehm_bn.water_charge, 0), ehm.water_charge, ehm_bn.water_charge, emrd.water_charges)) as water_charges'),
+                DB::raw('IF((emrd.licence_fees IS NOT NULL AND emrd.licence_fees <> 0), emrd.licence_fees, COALESCE(NULLIF(ehm.licence_fee, 0), NULLIF(ehm_bn.licence_fee, 0), ehm.licence_fee, ehm_bn.licence_fee, emrd.licence_fees)) as licence_fees'),
             ]);
 
         $otherQ = DB::table('estate_month_reading_details_other as emro')
             ->join('estate_possession_other as epo', 'emro.estate_possession_other_pk', '=', 'epo.pk')
             ->join('estate_other_req as eor', 'epo.estate_other_req_pk', '=', 'eor.pk')
+            ->leftJoin('estate_house_master as ehm_o', 'epo.estate_house_master_pk', '=', 'ehm_o.pk')
+            ->leftJoin('estate_house_master as ehm_o_bn', function ($join) {
+                $join->on('ehm_o_bn.estate_block_master_pk', '=', 'epo.estate_block_master_pk')
+                    ->whereRaw('CONVERT(LOWER(TRIM(COALESCE(ehm_o_bn.house_no, \'\'))) USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(LOWER(TRIM(COALESCE(emro.house_no, \'\'))) USING utf8mb4) COLLATE utf8mb4_unicode_ci');
+            })
             ->leftJoin('estate_block_master as b', 'epo.estate_block_master_pk', '=', 'b.pk')
             ->where(function ($q) use ($billMonthVariants) {
                 $first = true;
@@ -10077,7 +10105,7 @@ class EstateController extends Controller
             }
         }
         $otherQ = $otherQ->select([
-                DB::raw("'Other Employee' as employee_type"),
+                DB::raw("TRIM(CONCAT('Other Employee', IF(CHAR_LENGTH(TRIM(COALESCE(eor.designation, ''))) > 0, CONCAT(' — ', TRIM(eor.designation)), ''))) as employee_type"),
                 'eor.emp_name as name',
                 'eor.section as section',
                 'b.block_name as building_name',
@@ -10093,8 +10121,8 @@ class EstateController extends Controller
                 DB::raw('NULL as meter_one_consume_unit'),
                 DB::raw('NULL as meter_two_consume_unit'),
                 'emro.electricty_charges',
-                'emro.water_charges',
-                'emro.licence_fees',
+                DB::raw('IF((emro.water_charges IS NOT NULL AND emro.water_charges <> 0), emro.water_charges, COALESCE(NULLIF(ehm_o.water_charge, 0), NULLIF(ehm_o_bn.water_charge, 0), ehm_o.water_charge, ehm_o_bn.water_charge, emro.water_charges)) as water_charges'),
+                DB::raw('IF((emro.licence_fees IS NOT NULL AND emro.licence_fees <> 0), emro.licence_fees, COALESCE(NULLIF(ehm_o.licence_fee, 0), NULLIF(ehm_o_bn.licence_fee, 0), ehm_o.licence_fee, ehm_o_bn.licence_fee, emro.licence_fees)) as licence_fees'),
             ]);
 
         $union = $lbsnaQ->unionAll($otherQ);

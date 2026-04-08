@@ -33,8 +33,8 @@
                     <thead>
                         <tr>
                             <th>S.No.</th>
-                            <th>Designation</th>
                             <th>Name</th>
+                            <th>Designation</th>
                             <th>House No.</th>
                             <th>Meter Reading Date</th>
                             <th>Last Meter Reading</th>
@@ -92,8 +92,8 @@ $(document).ready(function() {
                         tbody.append(
                             '<tr>' +
                                 '<td>' + (row.sno || (i + 1)) + '</td>' +
-                                '<td>' + (row.employee_type || 'N/A') + '</td>' +
                                 '<td>' + (row.name || 'N/A') + '</td>' +
+                                '<td>' + (row.employee_type || 'N/A') + '</td>' +
                                 '<td>' + (row.house_no || 'N/A') + '</td>' +
                                 '<td>' + (row.meter_reading_date || '-') + '</td>' +
                                 '<td>' + (row.last_meter_reading || 'N/A') + '</td>' +
@@ -129,7 +129,7 @@ $(document).ready(function() {
                     var $filter = $wrapper.find('.dataTables_filter');
                     $filter.addClass('d-flex align-items-center justify-content-end flex-wrap gap-2');
 
-                    var colLabels = ['S.No.', 'Designation', 'Name', 'House No.', 'Meter Reading Date', 'Last Meter Reading'];
+                    var colLabels = ['S.No.', 'Name', 'Designation', 'House No.', 'Meter Reading Date', 'Last Meter Reading'];
                     var $colDropdown = $('<div class="dropdown d-inline-block" data-bs-auto-close="outside">' +
                         '<button class="btn btn-outline-secondary btn-sm rounded-1 dropdown-toggle" type="button" id="pendingMeterColDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Show/Hide columns"><i class="material-icons material-symbols-rounded" style="font-size:18px;vertical-align:middle">view_column</i> Columns</button>' +
                         '<ul class="dropdown-menu dropdown-menu-end py-2" aria-labelledby="pendingMeterColDropdown" id="pendingMeterColMenu"></ul></div>');
