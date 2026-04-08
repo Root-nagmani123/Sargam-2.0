@@ -253,6 +253,7 @@ class MenuService
                     }]);
             }])
             ->orderBy('order', 'asc')
+            ->where('is_active', 1)
             ->get();
 
 

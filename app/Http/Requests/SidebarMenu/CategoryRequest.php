@@ -33,11 +33,11 @@ class CategoryRequest extends FormRequest
                 Rule::unique('sidebar_categories', 'slug')->ignore($id),
             ],
 
-            'icon' => ['nullable','max:100'],
+            'icon' => ['nullable', 'max:100'],
 
-            'order' => ['nullable','integer'],
+            'order' => ['nullable', 'integer', Rule::unique('sidebar_categories', 'order')->ignore($id)],
 
-            'is_active' => ['required','in:0,1'],
+            'is_active' => ['required', 'in:0,1'],
         ];
     }
 }
