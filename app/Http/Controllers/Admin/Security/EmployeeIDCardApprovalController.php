@@ -1141,6 +1141,7 @@ class EmployeeIDCardApprovalController extends Controller
                     'emp.last_name as emp_last_name',
                     'emp.father_name as emp_father_name',
                     'emp.dob as emp_dob',
+                    'emp.doj as emp_doj',
                     'emp.mobile as emp_mobile',
                     'emp.landline_contact_no as emp_landline',
                     'desig.designation_name',
@@ -1190,6 +1191,14 @@ class EmployeeIDCardApprovalController extends Controller
             $telephone = !empty($row->emp_landline) ? (string) $row->emp_landline : null;
 
             $dob = $row->employee_dob ?? $row->emp_dob ?? null;
+            $academyJoiningYmd = null;
+            if (! empty($row->emp_doj)) {
+                try {
+                    $academyJoiningYmd = \Carbon\Carbon::parse($row->emp_doj)->format('Y-m-d');
+                } catch (\Exception $e) {
+                    $academyJoiningYmd = null;
+                }
+            }
 
             $request = (object) [
                 'id' => 'p-dup-' . $row->emp_id_apply,
@@ -1198,6 +1207,7 @@ class EmployeeIDCardApprovalController extends Controller
                 'father_name' => $fatherName,
                 'id_card_number' => $row->id_card_no,
                 'date_of_birth' => $dob,
+                'academy_joining' => $academyJoiningYmd,
                 'blood_group' => $row->blood_group,
                 'mobile_number' => $mobile,
                 'telephone_number' => $telephone,

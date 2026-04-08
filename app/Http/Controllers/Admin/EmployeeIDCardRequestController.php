@@ -603,14 +603,13 @@ class EmployeeIDCardRequestController extends Controller
     }
 
     /**
-     * AJAX: Logged-in user's employee details for autofill on create form.
-     * Used for Contractual + "Own ID Card" (self autofill). Permanent create uses "Others ID Card" only (no /me autofill).
+     * AJAX: Logged-in user's employee details for autofill on create form (Permanent + Contractual "Own ID Card").
      * Resolves employee by pk or pk_old so data is found either way.
      */
     public function me()
     {
-        $userId = Auth::user()->user_id ?? null;
-        if (!$userId) {
+        $userId = Auth::user()->user_id ?? Auth::id();
+        if (! $userId) {
             return response()->json(['employee' => null]);
         }
         $emp = EmployeeMaster::with('designation')

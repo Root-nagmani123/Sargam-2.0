@@ -69,9 +69,9 @@
                                 @if($photoExists)
                                     <img src="{{ asset('storage/' . $photoPath) }}" alt="Employee Photo" class="img-fluid rounded" style="max-height: 250px; object-fit: cover; border: 1px solid #dee2e6;">
                                     <div class="mt-2">
-                                        <a href="{{ asset('storage/' . $photoPath) }}" target="_blank" class="btn btn-sm btn-outline-primary">
-                                            <i class="material-icons material-symbols-rounded" style="font-size:16px;">download</i>
-                                            Download
+                                        <a href="{{ asset('storage/' . $photoPath) }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary">
+                                            <i class="material-icons material-symbols-rounded" style="font-size:16px;">visibility</i>
+                                            View
                                         </a>
                                     </div>
                                 @elseif($request->photo)
@@ -204,6 +204,24 @@
                                     <td>
                                         @if(!empty($request->date_of_birth))
                                             {{ \Carbon\Carbon::parse($request->date_of_birth)->format('d/m/Y') }}
+                                        @else
+                                            --
+                                        @endif
+                                    </td>
+                                </tr>
+                                <tr><th>Academy Joining Date</th>
+                                    <td>
+                                        @if(!empty($request->academy_joining))
+                                            @php
+                                                $ajStr = $request->academy_joining instanceof \DateTimeInterface
+                                                    ? $request->academy_joining->format('Y-m-d')
+                                                    : (string) $request->academy_joining;
+                                                try {
+                                                    echo e(\Carbon\Carbon::parse($ajStr)->format('d/m/Y'));
+                                                } catch (\Exception $e) {
+                                                    echo e($ajStr);
+                                                }
+                                            @endphp
                                         @else
                                             --
                                         @endif

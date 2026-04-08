@@ -93,7 +93,7 @@
                             <label for="request_for_perm" class="form-label">Request For <span class="text-danger">*</span></label>
                             <select name="request_for" id="request_for_perm" class="form-select idcard-perm-field idcard-step-field" data-field="request_for" required>
                                 <option value="">Select Request</option>
-                                <option value="Others ID Card" {{ $oldRequestFor == 'Others ID Card' ? 'selected' : '' }}>Own ID Card</option>
+                                <option value="Own ID Card" {{ $oldRequestFor == 'Own ID Card' ? 'selected' : '' }}>Own ID Card</option>
                                 {{--<option value="Replacement" {{ $oldRequestFor == 'Replacement' ? 'selected' : '' }}>Replacement</option>
                                 <option value="Duplication" {{ $oldRequestFor == 'Duplication' ? 'selected' : '' }}>Duplication</option>
                                 <option value="Extension" {{ $oldRequestFor == 'Extension' ? 'selected' : '' }}>Extension</option> --}}
@@ -726,6 +726,20 @@
                 step.subType.disabled = false;
                 step.subType.value = '';
                 step.requestFor.disabled = true;
+                if (step.isPerm && permanentView.style.display !== 'none') {
+                    var oldSubPerm = @json(old('sub_type', ''));
+                    var oldRfPerm = @json(old('request_for', ''));
+                    if (oldSubPerm) {
+                        step.subType.value = oldSubPerm;
+                        step.requestFor.disabled = !step.subType.value;
+                    }
+                    if (oldRfPerm) {
+                        step.requestFor.value = oldRfPerm;
+                    }
+                    if (step.requestFor.value === 'Own ID Card' && step.subType.value) {
+                        idcardLoadMe();
+                    }
+                }
                 if (!step.isPerm && contractualView.style.display !== 'none') {
                     var oldSub = @json(old('sub_type', ''));
                     var oldRf = @json(old('request_for', ''));
@@ -752,9 +766,6 @@
     function idcardLoadMe() {
         var step = idcardGetStepFields();
         var rf = step.requestFor.value;
-        if (step.isPerm) {
-            return;
-        }
         if (rf !== 'Own ID Card') return;
         fetch(meUrl)
             .then(function(r) { return r.json(); })
@@ -785,7 +796,7 @@
                     set('mobile_number_cont', emp.mobile_number);
                     set('id_card_valid_upto_cont', emp.id_card_valid_upto);
                 }
-                idcardEnableOnlyPhotoAndBlood(step.isPerm);
+                idcardEnableOnlyPhotoAndBlood(!!step.isPerm);
             })
             .catch(function() {});
     }
@@ -798,7 +809,11 @@
     });
     document.getElementById('sub_type_perm').addEventListener('change', function() {
         if (permanentView.style.display !== 'none') {
-            document.getElementById('request_for_perm').disabled = !document.getElementById('sub_type_perm').value;
+            var rf = document.getElementById('request_for_perm');
+            rf.disabled = !document.getElementById('sub_type_perm').value;
+            if (!rf.disabled && rf.value === 'Own ID Card') {
+                idcardLoadMe();
+            }
         }
     });
     document.getElementById('sub_type_cont').addEventListener('change', function() {
@@ -853,6 +868,11 @@
         document.getElementById('sub_type_perm').disabled = true;
         document.getElementById('request_for_perm').disabled = true;
         if (document.getElementById('card_type_perm').value) idcardLoadSubTypes();
+        var sfpInit = document.getElementById('request_for_perm');
+        var stpInit = document.getElementById('sub_type_perm');
+        if (sfpInit && stpInit && stpInit.value && sfpInit.value === 'Own ID Card') {
+            idcardLoadMe();
+        }
     } else {
         document.getElementById('sub_type_cont').disabled = true;
         document.getElementById('request_for_cont').disabled = true;
