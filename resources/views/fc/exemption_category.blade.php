@@ -2,7 +2,7 @@
 
 @section('title', 'Exemption Category - Foundation Course | Lal Bahadur Shastri National Academy of Administration')
 
-@section('setup_content')
+@section('content')
     <main style="flex: 1;">
         <div class="container mt-5">
             <nav aria-label="breadcrumb">
