@@ -18,6 +18,7 @@ class SidebarCategory extends Model
 {
     use HasFactory,SoftDeletes;
     protected $guarded = [];
+    protected $dates = ['deleted_at'];
 
     public function groups()
     {
