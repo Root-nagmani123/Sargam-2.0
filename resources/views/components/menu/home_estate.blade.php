@@ -10,15 +10,6 @@
                     style="height: 100%; overflow: hidden scroll;">
                     <div class="simplebar-content" style="padding: 20px 0px 24px 20px;">
                         <ul class="sidebar-menu" id="sidebarnav">
-                            <li class="sidebar-item" style="background: #4077ad;
-                                border-radius: 30px 0px 0px 30px;
-                                width: 100%;
-                                box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
-                                min-width: 250px;">
-                                <span class="sidebar-link d-flex align-items-center text-white py-2 px-3">
-                                    <span class="hide-menu fw-bold small small-sm-normal text-nowrap">Estate Management</span>
-                                </span>
-                            </li>
                             <li class="sidebar-item mt-2">
                                 <a class="sidebar-link {{ request()->routeIs('admin.estate.request-for-estate') && request('scope') === 'self' ? 'active' : '' }}"
                                     href="{{ route('admin.estate.request-for-estate', ['scope' => 'self']) }}">

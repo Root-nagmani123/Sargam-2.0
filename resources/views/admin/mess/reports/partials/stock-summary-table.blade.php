@@ -7,11 +7,11 @@
             </div>
             <div class="min-w-0">
                 <p class="ssr-toolbar-title mb-0 text-truncate">Stock movement summary</p>
-                <p class="ssr-toolbar-sub mb-0 small text-muted">Opening, purchase, sale and closing by item</p>
+                <p class="ssr-toolbar-sub mb-0 small text-body-secondary">Opening, purchase, sale and closing by item</p>
             </div>
         </div>
         <div class="d-flex align-items-center gap-2 flex-shrink-0">
-            <span class="ssr-count-badge">
+            <span class="ssr-count-badge" title="Total items in this report">
                 <span class="material-symbols-rounded ssr-count-badge-icon" aria-hidden="true">inventory_2</span>
                 <span class="ssr-count-badge-label">{{ isset($reportPage) ? $reportPage->total() : (isset($reportData) ? count($reportData) : 0) }}</span>
                 <span class="ssr-count-badge-text">items</span>
@@ -33,6 +33,23 @@
         tabindex="0"
     >
         <table class="table table-fit align-middle mb-0 w-100 stock-summary-data-table ssr-table">
+            <colgroup>
+                <col style="width: 52px;">  {{-- SR. No. --}}
+                <col style="width: 180px;"> {{-- Item Name --}}
+                <col style="width: 56px;">  {{-- Unit --}}
+                <col style="width: 72px;">  {{-- Opening Qty --}}
+                <col style="width: 76px;">  {{-- Opening Rate --}}
+                <col style="width: 100px;"> {{-- Opening Amount --}}
+                <col style="width: 72px;">  {{-- Purchase Qty --}}
+                <col style="width: 76px;">  {{-- Purchase Rate --}}
+                <col style="width: 100px;"> {{-- Purchase Amount --}}
+                <col style="width: 72px;">  {{-- Sale Qty --}}
+                <col style="width: 76px;">  {{-- Sale Rate --}}
+                <col style="width: 100px;"> {{-- Sale Amount --}}
+                <col style="width: 72px;">  {{-- Closing Qty --}}
+                <col style="width: 76px;">  {{-- Closing Rate --}}
+                <col style="width: 100px;"> {{-- Closing Amount --}}
+            </colgroup>
             <thead class="ssr-thead">
                 <tr>
                     <th rowspan="2" class="sss-th-fixed text-center align-middle text-nowrap">SR.<br>No.</th>
@@ -71,26 +88,30 @@
                         <td class="text-center text-nowrap ssr-num ssr-cell-fixed">{{ $serialStart + $index }}</td>
                         <td class="text-start fw-medium ssr-item-name ssr-cell-fixed">{{ $item['item_name'] }}</td>
                         <td class="text-center text-nowrap ssr-num ssr-cell-fixed">{{ $item['unit'] ?? '—' }}</td>
-                        <td class="text-end text-nowrap ssr-num ssr-grp-opening">{{ number_format($item['opening_qty'], 2) }}</td>
+                        <td class="text-end text-nowrap ssr-num ssr-grp-opening {{ $item['opening_qty'] < 0 ? 'ssr-negative' : '' }}">{{ number_format($item['opening_qty'], 2) }}</td>
                         <td class="text-end text-nowrap ssr-num ssr-grp-opening">₹{{ number_format($item['opening_rate'], 2) }}</td>
-                        <td class="text-end text-nowrap ssr-num ssr-grp-opening ssr-amt">₹{{ number_format($item['opening_amount'], 2) }}</td>
-                        <td class="text-end text-nowrap ssr-num ssr-grp-purchase">{{ number_format($item['purchase_qty'], 2) }}</td>
+                        <td class="text-end text-nowrap ssr-num ssr-grp-opening ssr-amt {{ $item['opening_amount'] < 0 ? 'ssr-negative' : '' }}">₹{{ number_format($item['opening_amount'], 2) }}</td>
+                        <td class="text-end text-nowrap ssr-num ssr-grp-purchase {{ $item['purchase_qty'] < 0 ? 'ssr-negative' : '' }}">{{ number_format($item['purchase_qty'], 2) }}</td>
                         <td class="text-end text-nowrap ssr-num ssr-grp-purchase">₹{{ number_format($item['purchase_rate'], 2) }}</td>
-                        <td class="text-end text-nowrap ssr-num ssr-grp-purchase ssr-amt">₹{{ number_format($item['purchase_amount'], 2) }}</td>
-                        <td class="text-end text-nowrap ssr-num ssr-grp-sale">{{ number_format($item['sale_qty'], 2) }}</td>
+                        <td class="text-end text-nowrap ssr-num ssr-grp-purchase ssr-amt {{ $item['purchase_amount'] < 0 ? 'ssr-negative' : '' }}">₹{{ number_format($item['purchase_amount'], 2) }}</td>
+                        <td class="text-end text-nowrap ssr-num ssr-grp-sale {{ $item['sale_qty'] < 0 ? 'ssr-negative' : '' }}">{{ number_format($item['sale_qty'], 2) }}</td>
                         <td class="text-end text-nowrap ssr-num ssr-grp-sale">₹{{ number_format($item['sale_rate'], 2) }}</td>
-                        <td class="text-end text-nowrap ssr-num ssr-grp-sale ssr-amt">₹{{ number_format($item['sale_amount'], 2) }}</td>
-                        <td class="text-end text-nowrap ssr-num ssr-grp-closing">{{ number_format($item['closing_qty'], 2) }}</td>
+                        <td class="text-end text-nowrap ssr-num ssr-grp-sale ssr-amt {{ $item['sale_amount'] < 0 ? 'ssr-negative' : '' }}">₹{{ number_format($item['sale_amount'], 2) }}</td>
+                        <td class="text-end text-nowrap ssr-num ssr-grp-closing {{ $item['closing_qty'] < 0 ? 'ssr-negative' : '' }}">{{ number_format($item['closing_qty'], 2) }}</td>
                         <td class="text-end text-nowrap ssr-num ssr-grp-closing">₹{{ number_format($item['closing_rate'], 2) }}</td>
-                        <td class="text-end text-nowrap ssr-num ssr-grp-closing ssr-amt">₹{{ number_format($item['closing_amount'], 2) }}</td>
+                        <td class="text-end text-nowrap ssr-num ssr-grp-closing ssr-amt {{ $item['closing_amount'] < 0 ? 'ssr-negative' : '' }}">₹{{ number_format($item['closing_amount'], 2) }}</td>
                     </tr>
                 @empty
                     <tr>
                         <td colspan="15" class="p-0 border-0">
                             <div class="ssr-empty-state text-center py-5 px-3">
                                 <span class="material-symbols-rounded ssr-empty-icon" aria-hidden="true">inventory</span>
-                                <h6 class="ssr-empty-title mb-1">No stock movement</h6>
-                                <p class="ssr-empty-text small text-muted mb-0">Nothing recorded for this period and filters.</p>
+                                <h6 class="ssr-empty-title mb-2">No stock movement found</h6>
+                                <p class="ssr-empty-text small text-body-secondary mb-3">No records match the selected period and filters.</p>
+                                <span class="badge bg-body-secondary text-body-emphasis rounded-pill px-3 py-2 fw-normal">
+                                    <span class="material-symbols-rounded align-middle me-1" style="font-size:0.875rem;" aria-hidden="true">lightbulb</span>
+                                    Try adjusting dates or store selection
+                                </span>
                             </div>
                         </td>
                     </tr>
@@ -105,16 +126,16 @@
                         </td>
                         <td class="text-end text-nowrap ssr-num ssr-grp-opening ssr-totals-dash">—</td>
                         <td class="text-end text-nowrap ssr-num ssr-grp-opening ssr-totals-dash">—</td>
-                        <td class="text-end text-nowrap fw-bold ssr-num ssr-grp-opening ssr-amt">₹{{ number_format(($reportTotals['opening_amount'] ?? 0), 2) }}</td>
+                        <td class="text-end text-nowrap fw-bold ssr-num ssr-grp-opening ssr-amt {{ ($reportTotals['opening_amount'] ?? 0) < 0 ? 'ssr-negative' : '' }}">₹{{ number_format(($reportTotals['opening_amount'] ?? 0), 2) }}</td>
                         <td class="text-end text-nowrap ssr-num ssr-grp-purchase ssr-totals-dash">—</td>
                         <td class="text-end text-nowrap ssr-num ssr-grp-purchase ssr-totals-dash">—</td>
-                        <td class="text-end text-nowrap fw-bold ssr-num ssr-grp-purchase ssr-amt">₹{{ number_format(($reportTotals['purchase_amount'] ?? 0), 2) }}</td>
+                        <td class="text-end text-nowrap fw-bold ssr-num ssr-grp-purchase ssr-amt {{ ($reportTotals['purchase_amount'] ?? 0) < 0 ? 'ssr-negative' : '' }}">₹{{ number_format(($reportTotals['purchase_amount'] ?? 0), 2) }}</td>
                         <td class="text-end text-nowrap ssr-num ssr-grp-sale ssr-totals-dash">—</td>
                         <td class="text-end text-nowrap ssr-num ssr-grp-sale ssr-totals-dash">—</td>
-                        <td class="text-end text-nowrap fw-bold ssr-num ssr-grp-sale ssr-amt">₹{{ number_format(($reportTotals['sale_amount'] ?? 0), 2) }}</td>
+                        <td class="text-end text-nowrap fw-bold ssr-num ssr-grp-sale ssr-amt {{ ($reportTotals['sale_amount'] ?? 0) < 0 ? 'ssr-negative' : '' }}">₹{{ number_format(($reportTotals['sale_amount'] ?? 0), 2) }}</td>
                         <td class="text-end text-nowrap ssr-num ssr-grp-closing ssr-totals-dash">—</td>
                         <td class="text-end text-nowrap ssr-num ssr-grp-closing ssr-totals-dash">—</td>
-                        <td class="text-end text-nowrap fw-bold ssr-num ssr-grp-closing ssr-amt">₹{{ number_format(($reportTotals['closing_amount'] ?? 0), 2) }}</td>
+                        <td class="text-end text-nowrap fw-bold ssr-num ssr-grp-closing ssr-amt {{ ($reportTotals['closing_amount'] ?? 0) < 0 ? 'ssr-negative' : '' }}">₹{{ number_format(($reportTotals['closing_amount'] ?? 0), 2) }}</td>
                     </tr>
                 @endif
             </tbody>
@@ -122,8 +143,9 @@
     </div>
     @if(isset($reportPage) && $reportPage->hasPages())
         <div class="ssr-pagination-bar px-3 px-lg-4 py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <div class="text-muted small">
-                Showing {{ $reportPage->firstItem() }}–{{ $reportPage->lastItem() }} of {{ $reportPage->total() }}
+            <div class="text-body-secondary small d-flex align-items-center gap-1">
+                <span class="material-symbols-rounded" style="font-size:1rem;" aria-hidden="true">format_list_numbered</span>
+                Showing <span class="fw-semibold text-body">{{ $reportPage->firstItem() }}–{{ $reportPage->lastItem() }}</span> of <span class="fw-semibold text-body">{{ $reportPage->total() }}</span>
             </div>
             <div class="ssr-pagination-links">
                 {{ $reportPage->appends(request()->query())->links() }}

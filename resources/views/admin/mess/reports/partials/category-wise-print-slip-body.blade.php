@@ -2,11 +2,13 @@
     Shared markup for Sale Voucher Report (category-wise print slip).
     Used by: main report view, PDF export, standalone print view.
     Expects: $sectionsToShow, $fromDateFormatted, $toDateFormatted, $otCourses, $grandTotal, $filtersApplied (optional),
-    $printPageBreakPerBuyer (bool).
+    $printPageBreakPerBuyer (bool), $freezeSaleVoucherTableHeader (optional, screen-only split header).
 --}}
 @php
     $showBrandingHeader = (bool) ($showBrandingHeader ?? false);
     $dompdfSafeTables = (bool) ($dompdfSafeTables ?? false);
+    $freezeSaleVoucherTableHeader = (bool) ($freezeSaleVoucherTableHeader ?? false);
+    $cwSlipUseSplitTable = $freezeSaleVoucherTableHeader && ! $dompdfSafeTables;
     $emblemSrc = $emblemSrc ?? 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
     $lbsnaaLogoSrc = $lbsnaaLogoSrc ?? 'https://www.lbsnaa.gov.in/admin_assets/images/logo.png';
 @endphp
@@ -113,101 +115,61 @@
                             </td>
                         </tr>
                     </table>
-                    <div class="table-responsive">
-                        <table class="table table-sm mb-0 print-slip-table align-middle">
-                            <thead>
-                                <tr>
-                                    <th class="th-slip-no">Slip No.</th>
-                                    {{-- Temporarily hide Buyer Name column in table (still in header bar above). --}}
-                                    {{-- <th class="th-buyer">Buyer Name</th> --}}
-                                    <th class="th-remark">Remark</th>
-                                    <th class="th-item">Item Name</th>
-                                    <th class="th-date">Request Date</th>
-                                    <th class="th-qty">Quantity</th>
-                                    <th class="th-price">Price</th>
-                                    <th class="th-amount">Amount</th>
-                                    <th class="th-remark">Remark</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @php $sectionTotal = 0; @endphp
-                                @foreach($sectionVouchers as $voucher)
-                                    @php
-                                        $requestNo = $voucher->request_no ?? ('SV-' . str_pad($voucher->id ?? $voucher->pk ?? 0, 6, '0', STR_PAD_LEFT));
-                                        $requestDate = $voucher->issue_date ? $voucher->issue_date->format('d-m-Y') : 'N/A';
-                                        $rowCount = max(1, $voucher->items->count());
-                                    @endphp
-                                    @if($voucher->items->isEmpty())
+                    @if($cwSlipUseSplitTable)
+                        <div class="cw-slip-table-split">
+                            <div class="cw-slip-table-head-wrap">
+                                <table class="table table-sm mb-0 print-slip-table align-middle cw-slip-col-sync">
+                                    @include('admin.mess.reports.partials.category-wise-print-slip-colgroup')
+                                    <thead>
                                         <tr>
-                                            <td class="text-center">{{ $requestNo }}</td>
-                                            {{-- <td class="buyer-name-cell">{{ $buyerName }}</td> --}}
-                                            <td>{{ $voucher->remarks ?? '—' }}</td>
+                                            <th class="th-slip-no">Slip No.</th>
+                                            <th class="th-remark">Remark</th>
+                                            <th class="th-item">Item Name</th>
+                                            <th class="th-date">Request Date</th>
+                                            <th class="th-qty">Quantity</th>
+                                            <th class="th-price">Price</th>
+                                            <th class="th-amount">Amount</th>
+                                            <th class="th-remark">Remark</th>
                                         </tr>
-                                    @else
-                                        @foreach($voucher->items as $itemIndex => $item)
-                                            @php
-                                                $issueQty = (float) ($item->quantity ?? 0);
-                                                $returnQty = (float) ($item->return_quantity ?? 0);
-                                                $netQty = max(0, $issueQty - $returnQty);
-                                                $rate = (float) ($item->rate ?? 0);
-                                                $itemAmount = $netQty * $rate;
-                                                $sectionTotal += $itemAmount;
-                                                $itemName = $item->item_name ?? ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? 'N/A');
-                                                $itemIssueDate = $item->issue_date ?? null;
-                                                $itemIssueDateFormatted = $itemIssueDate
-                                                    ? ($itemIssueDate instanceof \Carbon\Carbon
-                                                        ? $itemIssueDate->format('d-m-Y')
-                                                        : \Carbon\Carbon::parse($itemIssueDate)->format('d-m-Y'))
-                                                    : $requestDate;
-                                            @endphp
-                                            <tr>
-                                                @if($dompdfSafeTables)
-                                                    <td class="text-center align-middle">{{ $requestNo }}</td>
-                                                    {{-- <td class="align-middle buyer-name-cell">{{ $buyerName }}</td> --}}
-                                                    <td class="align-middle">{{ $voucher->remarks ?? '—' }}</td>
-                                                    <td>{{ $itemName }}</td>
-                                                    <td class="text-center">{{ $itemIssueDateFormatted }}</td>
-                                                    <td class="text-end">{{ number_format($netQty, 2) }}</td>
-                                                    <td class="text-end">{{ number_format($rate, 2) }}</td>
-                                                    <td class="text-end">{{ number_format($itemAmount, 2) }}</td>
-                                                    @if($itemIndex === 0)
-                                                        <td class="align-middle" rowspan="{{ $rowCount }}">{{ $voucher->remarks ?? '—' }}</td>
-                                                    @endif
-                                                @else
-                                                    @if($itemIndex === 0)
-                                                        <td class="text-center align-middle" rowspan="{{ $rowCount }}">{{ $requestNo }}</td>
-                                                        {{-- <td class="align-middle buyer-name-cell" rowspan="{{ $rowCount }}">{{ $buyerName }}</td> --}}
-                                                        <td class="align-middle" rowspan="{{ $rowCount }}">{{ $voucher->remarks ?? '—' }}</td>
-                                                    @endif
-                                                    <td>{{ $itemName }}</td>
-                                                    <td class="text-center">{{ $itemIssueDateFormatted }}</td>
-                                                    <td class="text-end">{{ number_format($netQty, 2) }}</td>
-                                                    <td class="text-end">{{ number_format($rate, 2) }}</td>
-                                                    <td class="text-end">{{ number_format($itemAmount, 2) }}</td>
-                                                    @if($itemIndex === 0)
-                                                        <td class="align-middle" rowspan="{{ $rowCount }}">{{ $voucher->remarks ?? '—' }}</td>
-                                                    @endif
-                                                @endif
-                                            </tr>
-                                        @endforeach
-                                    @endif
-                                @endforeach
-                                <tr class="total-row">
-                                    @if($dompdfSafeTables)
-                                        <td></td><td></td><td></td><td></td><td></td>
-                                        <td class="text-end"><strong>TOTAL</strong></td>
-                                        <td class="text-end"><strong>{{ number_format($sectionTotal, 2) }}</strong></td>
-                                        <td></td>
-                                    @else
-                                        <td colspan="5"></td>
-                                        <td class="text-end"><strong>TOTAL</strong></td>
-                                        <td class="text-end"><strong>{{ number_format($sectionTotal, 2) }}</strong></td>
-                                        <td></td>
-                                    @endif
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                                    </thead>
+                                </table>
+                            </div>
+                            <div class="cw-slip-table-body-scroll">
+                                <table class="table table-sm mb-0 print-slip-table align-middle cw-slip-col-sync">
+                                    @include('admin.mess.reports.partials.category-wise-print-slip-colgroup')
+                                    <tbody>
+                                        @include('admin.mess.reports.partials.category-wise-print-slip-section-tbody', [
+                                            'sectionVouchers' => $sectionVouchers,
+                                            'dompdfSafeTables' => $dompdfSafeTables,
+                                        ])
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    @else
+                        <div class="table-responsive cw-slip-table-scroll">
+                            <table class="table table-sm mb-0 print-slip-table align-middle">
+                                <thead>
+                                    <tr>
+                                        <th class="th-slip-no">Slip No.</th>
+                                        <th class="th-remark">Remark</th>
+                                        <th class="th-item">Item Name</th>
+                                        <th class="th-date">Request Date</th>
+                                        <th class="th-qty">Quantity</th>
+                                        <th class="th-price">Price</th>
+                                        <th class="th-amount">Amount</th>
+                                        <th class="th-remark">Remark</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @include('admin.mess.reports.partials.category-wise-print-slip-section-tbody', [
+                                        'sectionVouchers' => $sectionVouchers,
+                                        'dompdfSafeTables' => $dompdfSafeTables,
+                                    ])
+                                </tbody>
+                            </table>
+                        </div>
+                    @endif
                 </div>
             @empty
                 <div class="alert alert-info">No selling vouchers found for the selected filters.</div>
@@ -221,12 +183,12 @@
                 <tbody>
                     <tr class="grand-total-row">
                         @if($dompdfSafeTables)
-                            <td></td><td></td><td></td><td></td><td></td>
+                            <td></td><td></td><td></td><td></td>
                             <td class="text-end"><strong>GRAND TOTAL</strong></td>
                             <td class="text-end"><strong>{{ number_format($grandTotal ?? 0, 2) }}</strong></td>
                             <td></td>
                         @else
-                            <td colspan="5"></td>
+                            <td colspan="4"></td>
                             <td class="text-end"><strong>GRAND TOTAL</strong></td>
                             <td class="text-end"><strong>{{ number_format($grandTotal ?? 0, 2) }}</strong></td>
                             <td></td>

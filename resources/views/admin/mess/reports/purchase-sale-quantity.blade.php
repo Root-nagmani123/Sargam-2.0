@@ -8,6 +8,8 @@
     $itemIds = isset($itemIds) ? $itemIds : [];
     /** @var array<int, string> $viewTypes */
     $viewTypes = isset($viewTypes) ? $viewTypes : ['item_wise'];
+    /** @var int $perPage */
+    $perPage = isset($perPage) ? (int) $perPage : 25;
 
     $messEmblemSrc = 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
     // Print opens about:blank; remote URLs often fail. Raster: data URI on <img>. SVG: must be inlined in HTML — <img src="data:image/svg+xml;base64,…"> often stays blank when the SVG embeds raster (xlink:data PNG), which is how admin logo.svg is built.
@@ -138,6 +140,14 @@
                     </div>
                 </div>
                 <div class="row g-3 g-md-4">
+                    <div class="col-12 col-sm-6 col-md-4 col-lg-2">
+                        <label class="form-label" for="purchase_sale_per_page">Rows per page</label>
+                        <select name="per_page" id="purchase_sale_per_page" class="form-select">
+                            @foreach([10, 25, 50, 100] as $n)
+                                <option value="{{ $n }}" @selected((int) $perPage === (int) $n)>{{ $n }}</option>
+                            @endforeach
+                        </select>
+                    </div>
                     <div class="col-12 col-md-6 col-lg-4">
                         <label for="purchase_sale_store_id" class="form-label">Store</label>
                         <div class="input-group">
@@ -191,7 +201,7 @@
     </div>
 
     {{-- Report card --}}
-    <div class="card border-0 rounded-3 shadow-sm overflow-hidden">
+    <div class="card border-0 rounded-3 shadow-sm">
         <div class="card-header bg-primary bg-opacity-10 border-0 py-3 text-center report-header">
             <h4 class="fw-bold mb-1 text-primary">Item Report</h4>
             <p class="mb-0 text-body-secondary small">
@@ -207,7 +217,7 @@
                 Items: {{ ($selectedItemNamesLabel !== null && $selectedItemNamesLabel !== '') ? $selectedItemNamesLabel : 'All Items' }}
             </p>
         </div>
-        <div id="purchaseSaleReportCardBody" class="card-body p-0" data-view-types='@json($viewTypes)'>
+        <div id="purchaseSaleReportCardBody" class="card-body p-0 psq-scroll-wrapper" data-view-types='@json($viewTypes)'>
             @php $viewTypeSections = $viewTypeSections ?? []; $multiView = count($viewTypeSections) > 1; @endphp
             @forelse($viewTypeSections as $section)
                 <div class="purchase-sale-view-section border-bottom border-secondary border-opacity-25" data-view-type="{{ $section['viewType'] }}">
@@ -221,7 +231,7 @@
                     @endif
                     @if($section['viewType'] === 'item_wise')
                         <div class="table-responsive">
-                            <table class="table align-middle mb-0">
+                            <table class="table align-middle mb-0 psq-table">
                                 <thead>
                                     <tr>
                                         <th class="border-0 bg-body-secondary py-3">S. No.</th>
@@ -234,9 +244,10 @@
                                     </tr>
                                 </thead>
                                 <tbody class="table-group-divider">
+                                    @php $psqItemPaginator = $section['paginator'] ?? null; @endphp
                                     @forelse($section['reportData'] as $index => $row)
                                         <tr>
-                                            <td class="text-center">{{ $index + 1 }}</td>
+                                            <td class="text-center">{{ $psqItemPaginator && $psqItemPaginator->firstItem() !== null ? $psqItemPaginator->firstItem() + $index : $index + 1 }}</td>
                                             <td>{{ $row['item_name'] }}</td>
                                             <td>{{ $row['unit'] }}</td>
                                             <td class="text-end">{{ number_format($row['purchase_qty'], 2) }}</td>
@@ -266,7 +277,7 @@
                                     </h6>
                                 </div>
                                 <div class="table-responsive">
-                                    <table class="table table-hover table-striped align-middle mb-0">
+                                    <table class="table table-hover table-striped align-middle mb-0 psq-table">
                                         <thead class="table-primary">
                                             <tr>
                                                 <th class="border-0 py-3" style="width: 60px;">S. No.</th>
@@ -281,7 +292,13 @@
                                         <tbody class="table-group-divider">
                                             @foreach($group['items'] as $idx => $row)
                                                 <tr>
-                                                    <td class="text-center">{{ $idx + 1 }}</td>
+                                                    <td class="text-center">
+                                                        @if(($section['viewType'] ?? '') === 'category_wise' && ! empty($section['paginator']))
+                                                            {{ $section['paginator']->firstItem() !== null ? $section['paginator']->firstItem() + $idx : $idx + 1 }}
+                                                        @else
+                                                            {{ $idx + 1 }}
+                                                        @endif
+                                                    </td>
                                                     <td>{{ $row['item_name'] }}</td>
                                                     <td>{{ $row['unit'] }}</td>
                                                     <td class="text-end">{{ number_format($row['purchase_qty'], 2) }}</td>
@@ -305,6 +322,11 @@
                             </div>
                         @endforelse
                     @endif
+                    @if(! empty($section['paginator']) && $section['paginator']->hasPages())
+                        <div class="d-flex justify-content-center py-3 px-2 border-top border-secondary border-opacity-25 bg-body-secondary bg-opacity-10 no-print">
+                            {{ $section['paginator']->withQueryString()->links() }}
+                        </div>
+                    @endif
                 </div>
             @empty
                 <div class="alert alert-info fade show rounded-0 border-0 mb-0 d-flex align-items-center gap-2" role="alert">
@@ -321,9 +343,96 @@
 <link rel="stylesheet" href="{{ asset('admin_assets/css/material-icons-local.css') }}" />
 
 <style>
+    /* ── Scrollable table body with sticky header ── */
+    @media screen {
+        /* Fix: .page-wrapper has overflow-x:hidden which implicitly creates
+           overflow-y:auto (CSS spec), forming a scroll container that breaks
+           position:sticky inside nested scroll wrappers. Use overflow-x:clip
+           which clips without creating a scroll container. */
+        .purchase-sale-quantity-report {
+            /* Ensure ancestors don't interfere */
+        }
+        .page-wrapper:has(.purchase-sale-quantity-report) {
+            overflow-x: clip !important;
+        }
+        .purchase-sale-quantity-report .psq-scroll-wrapper {
+            max-height: min(72vh, 760px);
+            overflow: auto !important;
+            display: block !important;
+            position: relative;
+        }
+        /* Override Bootstrap .table-responsive overflow so sticky thead works
+           within the psq-scroll-wrapper scroll container.
+           Also force overflow visible on ALL intermediate ancestors between
+           the scroll wrapper and the sticky th elements. */
+        .purchase-sale-quantity-report .psq-scroll-wrapper .table-responsive {
+            overflow: visible !important;
+            overflow-x: visible !important;
+            overflow-y: visible !important;
+            -webkit-overflow-scrolling: unset !important;
+        }
+        .purchase-sale-quantity-report .psq-scroll-wrapper .purchase-sale-view-section {
+            overflow: visible !important;
+        }
+        .purchase-sale-quantity-report .psq-scroll-wrapper .purchase-sale-group-block {
+            overflow: visible !important;
+        }
+        .purchase-sale-quantity-report .psq-table {
+            border-collapse: separate !important;
+            border-spacing: 0;
+        }
+        .purchase-sale-quantity-report .psq-table > thead > tr > th {
+            position: sticky !important;
+            top: 0;
+            z-index: 10;
+            background: #0b4a7e !important;
+            color: #fff !important;
+            font-weight: 600;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-bottom: 2px solid #004a93 !important;
+            border-top: none !important;
+            border-left: 1px solid rgba(255,255,255,0.15) !important;
+            border-right: 1px solid rgba(255,255,255,0.15) !important;
+            padding: 0.6rem 0.75rem;
+            font-size: 0.8125rem;
+            white-space: nowrap;
+        }
+        .purchase-sale-quantity-report .psq-table > thead > tr > th:first-child {
+            border-left: none !important;
+        }
+        .purchase-sale-quantity-report .psq-table > thead > tr > th:last-child {
+            border-right: none !important;
+        }
+        .purchase-sale-quantity-report .psq-table > thead > tr > th.text-end {
+            text-align: right !important;
+        }
+        /* Section headings should stick below the table header when scrolling */
+        .purchase-sale-quantity-report .purchase-sale-section-heading {
+            position: sticky;
+            top: 0;
+            z-index: 5;
+            background: #fff;
+            padding-top: 0.75rem !important;
+            padding-bottom: 0.5rem !important;
+        }
+        .purchase-sale-quantity-report .purchase-sale-group-block h6 {
+            position: sticky;
+            top: 0;
+            z-index: 5;
+            background: #fff;
+        }
+        /* Scrollbar styling */
+        .purchase-sale-quantity-report .psq-scroll-wrapper::-webkit-scrollbar { height: 10px; width: 10px; }
+        .purchase-sale-quantity-report .psq-scroll-wrapper::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 8px; }
+        .purchase-sale-quantity-report .psq-scroll-wrapper::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
+        .purchase-sale-quantity-report .psq-scroll-wrapper::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    }
+
     @media print {
         .no-print { display: none !important; }
         .report-header { display: block !important; }
+        .purchase-sale-quantity-report .psq-scroll-wrapper { max-height: none !important; overflow: visible !important; }
+        .purchase-sale-quantity-report .psq-table > thead > tr > th { position: static !important; box-shadow: none !important; }
     }
 
     .purchase-sale-quantity-report .card-footer .btn {
@@ -562,7 +671,6 @@ function printPurchaseSaleQuantity() {
     var printImages = (typeof window.__purchaseSalePrintImages === 'object' && window.__purchaseSalePrintImages) ? window.__purchaseSalePrintImages : {};
     var emblemSrc = printImages.emblemSrc || '';
     var lbsnaaLogoSrc = printImages.lbsnaaLogoSrc || '';
-    var lbsnaaLogoSvgInline = printImages.lbsnaaLogoSvgInline || '';
     var periodBar = printCfg.periodBar || '';
     var storeLabel = printCfg.storeLabel || 'All Stores';
     var itemsLabel = printCfg.itemsLabel || 'All Items';
@@ -584,7 +692,7 @@ function printPurchaseSaleQuantity() {
         var headHtml = thead ? thead.innerHTML : '';
         var bodyHtml = tbody ? tbody.innerHTML : '';
         return (
-            '<table class="purchase-sale-data">' +
+            '<table class="data-table">' +
             '<thead>' + headHtml + '</thead>' +
             '<tbody>' + bodyHtml + '</tbody>' +
             '</table>'
@@ -597,7 +705,7 @@ function printPurchaseSaleQuantity() {
         if (multiView) {
             var secTitle = sec.querySelector('h6.purchase-sale-section-heading');
             if (secTitle) {
-                tablesHtml += '<div class="group-title">' + escapeHtml(secTitle.textContent.trim()) + '</div>';
+                tablesHtml += '<div class="view-section-heading">' + escapeHtml(secTitle.textContent.trim()) + '</div>';
             }
         }
         if (vt === 'item_wise') {
@@ -624,192 +732,100 @@ function printPurchaseSaleQuantity() {
         tablesHtml = '<p class="no-data">No data found for the selected filters.</p>';
     }
 
-    var lbsnaaLogoCell = '';
-    if (lbsnaaLogoSvgInline) {
-        lbsnaaLogoCell = '<td class="branding-logo-svg-td"><div class="lbsnaa-inline-svg-wrap">' + lbsnaaLogoSvgInline + '</div></td>';
-    } else if (lbsnaaLogoSrc) {
-        lbsnaaLogoCell = '<td style="width:48px;"><img src="' + escapeHtml(lbsnaaLogoSrc) + '" alt="LBSNAA" class="header-img-right-seal"></td>';
-    } else {
-        lbsnaaLogoCell = '<td style="width:48px;"></td>';
-    }
-
-    var docTitle = 'Item Report - OFFICER\'S MESS LBSNAA MUSSOORIE';
+    var lbsnaaLogoImg = lbsnaaLogoSrc
+        ? '<img src="' + escapeHtml(lbsnaaLogoSrc) + '" alt="LBSNAA Logo" style="width:40px;height:40px;" onerror="this.style.display=\'none\'">'
+        : '';
 
     var printWindow = window.open('about:blank', '_blank', 'width=1200,height=900');
     if (!printWindow) {
         window.print();
         return;
     }
-    try {
-        printWindow.opener = null;
-    } catch (ignore) {}
+    try { printWindow.opener = null; } catch (ignore) {}
 
     printWindow.document.open();
     printWindow.document.write('<!doctype html>\n' +
 '<html lang="en">\n' +
 '<head>\n' +
 '  <meta charset="utf-8">\n' +
-'  <meta name="viewport" content="width=device-width, initial-scale=1">\n' +
-'  <title>' + docTitle + '</title>\n' +
+'  <title>Item Report - OFFICER\'S MESS LBSNAA MUSSOORIE</title>\n' +
 '  <style>\n' +
 '    * { box-sizing: border-box; }\n' +
+'    @page { size: A4 landscape; margin: 12mm 10mm; }\n' +
 '    body {\n' +
-'      font-family: "DejaVu Sans", "Noto Sans Devanagari", "Segoe UI", Arial, sans-serif;\n' +
-'      font-size: 9pt;\n' +
-'      margin: 0;\n' +
-'      padding: 10mm 12mm;\n' +
-'      color: #222;\n' +
-'      background: #fff;\n' +
-'      -webkit-print-color-adjust: exact;\n' +
-'      print-color-adjust: exact;\n' +
+'      font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif;\n' +
+'      font-size: 9pt; margin: 0; padding: 12mm 10mm;\n' +
+'      color: #212529; background: #fff; line-height: 1.4;\n' +
+'      -webkit-print-color-adjust: exact; print-color-adjust: exact;\n' +
 '    }\n' +
-'    @page { size: A4 landscape; margin: 10mm 12mm; }\n' +
-'    .lbsnaa-header-wrap {\n' +
-'      border-bottom: 3px solid #003366;\n' +
-'      margin-bottom: 10px;\n' +
-'      padding: 4px 0 10px;\n' +
-'    }\n' +
-'    .branding-table { width: 100%; border-collapse: collapse; margin: 0; }\n' +
-'    .branding-table td { border: 0; padding: 0; vertical-align: middle; }\n' +
-'    .branding-logo-left { width: 48px; }\n' +
-'    .branding-text { text-align: center; padding: 0 12px; line-height: 1.25; }\n' +
-'    .branding-logo-right { width: 220px; }\n' +
-'    .branding-right-inner { width: 100%; border-collapse: collapse; }\n' +
-'    .branding-right-inner td { border: 0; vertical-align: middle; padding: 0; }\n' +
-'    .lbsnaa-brand-line-1 {\n' +
-'      font-size: 8pt;\n' +
-'      color: #0070c0;\n' +
-'      text-transform: uppercase;\n' +
-'      letter-spacing: 0.06em;\n' +
-'      font-weight: 600;\n' +
-'    }\n' +
-'    .lbsnaa-brand-line-2 {\n' +
-'      font-size: 12pt;\n' +
-'      color: #111;\n' +
-'      font-weight: 700;\n' +
-'      text-transform: uppercase;\n' +
-'      margin-top: 3px;\n' +
-'    }\n' +
-'    .lbsnaa-brand-line-3 {\n' +
-'      font-size: 9pt;\n' +
-'      color: #4a5a6a;\n' +
-'      margin-top: 3px;\n' +
-'    }\n' +
-'    .header-img-left { width: 40px; height: 40px; object-fit: contain; display: block; }\n' +
-'    .header-img-right-seal { width: 44px; height: 44px; object-fit: contain; display: block; }\n' +
-'    .branding-logo-svg-td { width: 140px; vertical-align: middle; }\n' +
-'    .lbsnaa-inline-svg-wrap { line-height: 0; }\n' +
-'    .lbsnaa-inline-svg-wrap svg { width: 130px; max-width: 100%; height: auto; max-height: 44px; display: block; }\n' +
-'    .branding-right-text { text-align: left; padding-left: 8px; line-height: 1.2; }\n' +
-'    .branding-hindi { font-size: 8pt; color: #7b2d26; font-weight: 600; }\n' +
-'    .branding-en-side { font-size: 7pt; color: #7b2d26; margin-top: 2px; }\n' +
-'    .report-header-block {\n' +
-'      text-align: center;\n' +
-'      margin-bottom: 10px;\n' +
-'      padding-bottom: 8px;\n' +
-'      border-bottom: 1px solid #dee2e6;\n' +
-'    }\n' +
-'    .report-title-center {\n' +
-'      font-size: 13pt;\n' +
-'      font-weight: 700;\n' +
-'      text-transform: uppercase;\n' +
-'      margin: 0 0 6px;\n' +
-'      color: #212529;\n' +
-'    }\n' +
-'    .report-date-bar {\n' +
-'      background: #003366;\n' +
-'      color: #fff;\n' +
-'      padding: 6px 12px;\n' +
-'      text-align: center;\n' +
-'      font-weight: 600;\n' +
-'      font-size: 9pt;\n' +
-'      display: inline-block;\n' +
-'    }\n' +
-'    .report-meta-print { font-size: 8pt; margin: 8px 0 10px; line-height: 1.45; }\n' +
-'    .report-meta-print .meta-line { margin-bottom: 3px; word-wrap: break-word; }\n' +
-'    table.purchase-sale-data {\n' +
-'      width: 100%;\n' +
-'      border-collapse: collapse;\n' +
-'      font-size: 8pt;\n' +
-'      margin-bottom: 8px;\n' +
-'    }\n' +
-'    table.purchase-sale-data thead { display: table-header-group; }\n' +
-'    table.purchase-sale-data th,\n' +
-'    table.purchase-sale-data td { padding: 4px 6px; border: 1px solid #dee2e6; vertical-align: middle; }\n' +
-'    table.purchase-sale-data thead th {\n' +
-'      background: #d3d6d9;\n' +
-'      font-weight: 600;\n' +
-'      text-align: left;\n' +
-'    }\n' +
-'    table.purchase-sale-data thead th.text-end,\n' +
-'    table.purchase-sale-data thead th[style*="text-align: right"] { text-align: right; }\n' +
-'    table.purchase-sale-data thead th.text-center,\n' +
-'    table.purchase-sale-data thead th[style*="text-align: center"] { text-align: center; }\n' +
-'    table.purchase-sale-data .text-end { text-align: right; }\n' +
-'    table.purchase-sale-data .text-center { text-align: center; }\n' +
-'    table.purchase-sale-data tbody tr:nth-child(even) td { background: #fafbfc; }\n' +
-'    .group-title {\n' +
-'      margin-top: 8px;\n' +
-'      margin-bottom: 4px;\n' +
-'      font-weight: 700;\n' +
-'      font-size: 9pt;\n' +
-'      color: #003366;\n' +
-'    }\n' +
-'    .no-data { font-size: 9pt; margin: 10px 0; color: #555; }\n' +
-'    .footer {\n' +
-'      border-top: 1px solid #dee2e6;\n' +
-'      font-size: 7pt;\n' +
-'      color: #666;\n' +
-'      text-align: center;\n' +
-'      padding-top: 5px;\n' +
-'      margin-top: 6px;\n' +
-'    }\n' +
+'    .pdf-header { border-bottom: 2.5px solid #0b4a7e; padding-bottom: 8px; margin-bottom: 10px; }\n' +
+'    .pdf-header table { width: 100%; border-collapse: collapse; }\n' +
+'    .pdf-header td { border: 0; padding: 0; vertical-align: middle; }\n' +
+'    .pdf-header .hdr-left { width: 50px; }\n' +
+'    .pdf-header .hdr-left img { width: 40px; height: 40px; }\n' +
+'    .pdf-header .hdr-center { padding-left: 10px; }\n' +
+'    .pdf-header .hdr-right { width: 50px; text-align: right; }\n' +
+'    .pdf-header .hdr-right img { width: 40px; height: 40px; }\n' +
+'    .brand-1 { font-size: 7pt; text-transform: uppercase; letter-spacing: 0.06em; color: #0b4a7e; font-weight: 600; }\n' +
+'    .brand-2 { font-size: 9.5pt; font-weight: 700; text-transform: uppercase; color: #111; margin-top: 2px; }\n' +
+'    .brand-3 { font-size: 7.5pt; color: #555; margin-top: 2px; }\n' +
+'    .report-title-block { text-align: center; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #dee2e6; }\n' +
+'    .report-title { font-size: 10pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #0f172a; margin: 0 0 5px; }\n' +
+'    .report-date-pill { display: inline-block; background: #0b4a7e; color: #fff; font-weight: 600; font-size: 8pt; padding: 3px 12px; border-radius: 10px; }\n' +
+'    .report-meta { font-size: 8pt; margin-bottom: 8px; line-height: 1.5; color: #334155; }\n' +
+'    .report-meta .meta-label { font-weight: 700; color: #0f172a; }\n' +
+'    .data-table { width: 100%; border-collapse: collapse; font-size: 8pt; margin-bottom: 10px; }\n' +
+'    .data-table th, .data-table td { padding: 4px 6px; border: 1px solid #d1d5db; vertical-align: middle; }\n' +
+'    .data-table thead { display: table-header-group; }\n' +
+'    .data-table thead th { background: #0b4a7e !important; color: #fff !important; font-weight: 600; font-size: 8pt; text-align: left; white-space: nowrap; }\n' +
+'    .data-table thead th.text-end { text-align: right !important; }\n' +
+'    .data-table thead th.text-center { text-align: center !important; }\n' +
+'    .data-table .text-end { text-align: right; }\n' +
+'    .data-table .text-center { text-align: center; }\n' +
+'    .data-table tbody tr:nth-child(even) td { background: #f9fafb; }\n' +
+'    .data-table thead th.border-0 { border: 1px solid rgba(255,255,255,0.15) !important; }\n' +
+'    .data-table thead th.bg-body-secondary { background: #0b4a7e !important; }\n' +
+'    .data-table thead th.table-primary { background: #0b4a7e !important; }\n' +
+'    .view-section-heading { margin-top: 12px; margin-bottom: 6px; font-weight: 700; font-size: 9pt; color: #0b4a7e; border-bottom: 2px solid #0b4a7e; padding-bottom: 3px; text-transform: uppercase; letter-spacing: 0.03em; }\n' +
+'    .group-title { margin-top: 10px; margin-bottom: 4px; font-weight: 700; font-size: 9pt; color: #0b4a7e; background: #eef2f6; padding: 5px 8px; border-left: 3px solid #0b4a7e; }\n' +
+'    .no-data { font-size: 8pt; margin: 10px 0; color: #64748b; padding: 12px; background: #f8fafc; border: 1px dashed #cbd5e1; text-align: center; }\n' +
+'    .footer { border-top: 1px solid #dee2e6; font-size: 7pt; color: #64748b; text-align: center; padding-top: 5px; margin-top: 10px; }\n' +
+'    tr { page-break-inside: avoid; }\n' +
+'    @media print { body { margin: 0; padding: 0; } }\n' +
 '  </style>\n' +
 '</head>\n' +
 '<body>\n' +
-'<div class="lbsnaa-header-wrap">\n' +
-'  <table class="branding-table">\n' +
+'<div class="pdf-header">\n' +
+'  <table>\n' +
 '    <tr>\n' +
-'      <td class="branding-logo-left">\n' +
-'        <img src="' + escapeHtml(emblemSrc) + '" alt="Emblem of India" class="header-img-left">\n' +
+'      <td class="hdr-left"><img src="' + escapeHtml(emblemSrc) + '" alt="Emblem of India"></td>\n' +
+'      <td class="hdr-center">\n' +
+'        <div class="brand-1">Government of India</div>\n' +
+'        <div class="brand-2">OFFICER\'S MESS LBSNAA MUSSOORIE</div>\n' +
+'        <div class="brand-3">Lal Bahadur Shastri National Academy of Administration</div>\n' +
 '      </td>\n' +
-'      <td class="branding-text">\n' +
-'        <div class="lbsnaa-brand-line-1">Government of India</div>\n' +
-'        <div class="lbsnaa-brand-line-2">OFFICER\'S MESS LBSNAA MUSSOORIE</div>\n' +
-'        <div class="lbsnaa-brand-line-3">Lal Bahadur Shastri National Academy of Administration</div>\n' +
-'      </td>\n' +
-'      <td class="branding-logo-right">\n' +
-'        <table class="branding-right-inner">\n' +
-'          <tr>\n' +
-'            ' + lbsnaaLogoCell + '\n' +
-'            <td class="branding-right-text">\n' +
-'              <div class="branding-hindi">लाल बहादुर शास्त्री राष्ट्रीय प्रशासन अकादमी</div>\n' +
-'              <div class="branding-en-side">Lal Bahadur Shastri National Academy of Administration</div>\n' +
-'            </td>\n' +
-'          </tr>\n' +
-'        </table>\n' +
-'      </td>\n' +
+'      <td class="hdr-right">' + lbsnaaLogoImg + '</td>\n' +
 '    </tr>\n' +
 '  </table>\n' +
 '</div>\n' +
-'<div class="report-header-block">\n' +
-'  <h1 class="report-title-center">Item Report</h1>\n' +
-'  <div class="report-date-bar">' + escapeHtml(periodBar) + '</div>\n' +
+'<div class="report-title-block">\n' +
+'  <h1 class="report-title">Item Report</h1>\n' +
+'  <div class="report-date-pill">' + escapeHtml(periodBar) + '</div>\n' +
 '</div>\n' +
-'<div class="report-meta-print">\n' +
-'  <div class="meta-line"><strong>View:</strong> ' + escapeHtml(viewLabel) + '</div>\n' +
-'  <div class="meta-line"><strong>Store:</strong> ' + escapeHtml(storeLabel) + '</div>\n' +
-'  <div class="meta-line"><strong>Items:</strong> ' + escapeHtml(itemsLabel) + '</div>\n' +
-'  <div class="meta-line"><strong>Printed on:</strong> ' + escapeHtml(printedOn) + '</div>\n' +
+'<div class="report-meta">\n' +
+'  <span class="meta-label">View:</span> ' + escapeHtml(viewLabel) + '<br>\n' +
+'  <span class="meta-label">Store:</span> ' + escapeHtml(storeLabel) + '<br>\n' +
+'  <span class="meta-label">Items:</span> ' + escapeHtml(itemsLabel) + '<br>\n' +
+'  <span class="meta-label">Printed on:</span> ' + escapeHtml(printedOn) + '\n' +
 '</div>\n' +
 tablesHtml +
 '<div class="footer">\n' +
-'  <small>Officer\'s Mess LBSNAA Mussoorie — Item Report (Purchase / Sale Quantity)</small>\n' +
+'  <small>Officer\'s Mess LBSNAA Mussoorie \u2014 Item Report (Purchase / Sale Quantity)</small>\n' +
 '</div>\n' +
-'<script>(function(){function runPrint(){window.print();}function afterImages(){var imgs=document.querySelectorAll("img");var n=imgs.length;if(!n){setTimeout(runPrint,100);return;}var left=n;function one(){if(--left<=0)setTimeout(runPrint,150);}for(var i=0;i<imgs.length;i++){var img=imgs[i];if(img.complete){one();}else{img.addEventListener("load",one);img.addEventListener("error",one);}}}window.addEventListener("load",afterImages);})();<\\/script>\n' +
+'<script>(function(){var imgs=document.querySelectorAll("img");var n=imgs.length;if(!n){setTimeout(function(){window.print();},100);return;}var left=n;function done(){if(--left<=0)setTimeout(function(){window.print();},150);}for(var i=0;i<imgs.length;i++){var img=imgs[i];if(img.complete){done();}else{img.addEventListener("load",done);img.addEventListener("error",done);}}})();<\\/script>\n' +
 '</body>\n' +
 '</html>');
-    printWindow.document.close()
+    printWindow.document.close();
 }
 </script>
 @endsection

@@ -65,63 +65,138 @@
         @endif
     </div>
 
-    @if(!empty($chartData['summary']) && ($chartData['summary']['total_participants'] > 0 ||
-    $chartData['summary']['states_count'] > 0))
-    {{-- Summary strip --}}
-    <div class="row g-3 mb-4">
-        <div class="col-6 col-md-4 col-lg-2">
-            <div class="card border-0 shadow-sm h-100 rounded-3 overflow-hidden bg-primary bg-opacity-10">
-                <div class="card-body py-3 text-center">
-                    <div class="fw-bold text-primary fs-4 lh-1">
-                        {{ number_format($chartData['summary']['total_participants']) }}</div>
-                    <small class="text-muted d-block mt-1">Total Participants</small>
+    @php
+        $totalParticipants = $chartData['summary']['total_participants'] ?? 0;
+        $femaleCount = $chartData['summary']['female_count'] ?? 0;
+        $maleCount = $chartData['summary']['male_count'] ?? 0;
+        $femalePct = $totalParticipants > 0 ? round(($femaleCount / $totalParticipants) * 100) : 0;
+        $malePct = $totalParticipants > 0 ? round(($maleCount / $totalParticipants) * 100) : 0;
+        $courseName = (isset($course) && $course) ? $course->course_name : 'Batch Profile';
+        $courseYear = (isset($course) && $course && !empty($course->start_date)) ? \Carbon\Carbon::parse($course->start_date)->format('Y') : date('Y');
+    @endphp
+
+    {{-- ═══════════ MAIN BATCH PROFILE CARD (teal border like image) ═══════════ --}}
+    <div class="card border-0 shadow rounded-3 overflow-hidden mb-4" style="border: 3px solid #1a8a7d;">
+        {{-- Header bar --}}
+        <div class="px-4 py-3 d-flex align-items-center justify-content-between" style="background: linear-gradient(135deg, #e8f4f2 0%, #f0faf8 100%);">
+            <div class="d-flex align-items-center gap-3">
+                <img src="{{ asset('images/lbsnaa_logo.jpg') }}" alt="LBSNAA" style="height: 50px;" onerror="this.style.display='none'">
+                <div>
+                    <h4 class="mb-0 fw-bold" style="color: #d32f2f; font-family: 'Georgia', serif;">Batch Profile {{ $courseYear }}</h4>
+                    <small class="text-muted">{{ $courseName }}</small>
                 </div>
             </div>
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png"
+                 alt="Emblem of India" style="height: 50px;" onerror="this.style.display='none'">
         </div>
-        <div class="col-6 col-md-4 col-lg-2">
-            <div class="card border-0 shadow-sm h-100 rounded-3 overflow-hidden">
-                <div class="card-body py-3 text-center">
-                    <div class="fw-bold text-danger lh-1">
-                        {{ number_format($chartData['summary']['female_count'] ?? 0) }}</div>
-                    <small class="text-muted d-block mt-1">Female</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-6 col-md-4 col-lg-2">
-            <div class="card border-0 shadow-sm h-100 rounded-3 overflow-hidden">
-                <div class="card-body py-3 text-center">
-                    <div class="fw-bold text-primary lh-1">{{ number_format($chartData['summary']['male_count'] ?? 0) }}
+
+        <div class="card-body px-4 py-3">
+            <div class="row g-3">
+                {{-- LEFT: Summary stats + Gender visual + Stream chart --}}
+                <div class="col-12 col-lg-5">
+                    {{-- Summary badges --}}
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        <span class="badge rounded-pill px-3 py-2 fs-6" style="background: #1a8a7d;">
+                            {{ $totalParticipants }} Officer Trainees
+                        </span>
+                        <span class="badge rounded-pill bg-primary px-3 py-2 fs-6">{{ $maleCount }}</span>
+                        <span class="badge rounded-pill px-3 py-2 fs-6" style="background: #e91e90;">{{ $femaleCount }}</span>
+                        <span class="badge rounded-pill bg-secondary px-3 py-2 fs-6">Total: {{ $totalParticipants }}</span>
                     </div>
-                    <small class="text-muted d-block mt-1">Male</small>
+
+                    {{-- Gender icons --}}
+                    <div class="d-flex align-items-end justify-content-center gap-4 mb-3 py-3 rounded-3" style="background: #f8fffe;">
+                        {{-- Female --}}
+                        <div class="text-center">
+                            <div style="font-size: 3.5rem; color: #e91e90;">
+                                <i class="bi bi-person-standing-dress"></i>
+                            </div>
+                            <div class="fw-bold fs-5" style="color: #e91e90;">{{ $femaleCount }}</div>
+                            <div class="text-muted small fw-semibold">{{ $femalePct }}%</div>
+                        </div>
+                        {{-- Male --}}
+                        <div class="text-center">
+                            <div style="font-size: 3.5rem; color: #1565c0;">
+                                <i class="bi bi-person-standing"></i>
+                            </div>
+                            <div class="fw-bold fs-5" style="color: #1565c0;">{{ $maleCount }}</div>
+                            <div class="text-muted small fw-semibold">{{ $malePct }}%</div>
+                        </div>
+                    </div>
+
+                    {{-- Gender donut (Average Age) --}}
+                    <div class="card border rounded-3 mb-3">
+                        <div class="card-header bg-transparent border-0 pb-0 text-center">
+                            <h6 class="mb-0 fw-bold">Average Age</h6>
+                        </div>
+                        <div class="card-body pt-1 pb-2">
+                            <div id="chart-age-donut" style="min-height: 200px;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- RIGHT: Stream distribution --}}
+                <div class="col-12 col-lg-7">
+                    <div class="card border rounded-3 h-100">
+                        <div class="card-header bg-transparent border-0 pb-0 text-center">
+                            <h6 class="mb-0 fw-bold">Highest Stream Wise Distribution</h6>
+                        </div>
+                        <div class="card-body pt-1">
+                            <div id="chart-stream-bar" style="min-height: 280px;"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="col-6 col-md-4 col-lg-2">
-            <div class="card border-0 shadow-sm h-100 rounded-3 overflow-hidden">
-                <div class="card-body py-3 text-center">
-                    <div class="fw-bold text-dark lh-1">{{ $chartData['summary']['states_count'] ?? 0 }}</div>
-                    <small class="text-muted d-block mt-1">States / UTs</small>
+
+            {{-- Social Group wise Distribution --}}
+            <div class="card border rounded-3 mt-3">
+                <div class="card-header bg-transparent border-0 pb-0 text-center">
+                    <h6 class="mb-0 fw-bold">Social Group wise Distribution</h6>
+                </div>
+                <div class="card-body pt-1">
+                    <div id="chart-social-by-age" style="min-height: 280px;"></div>
                 </div>
             </div>
-        </div>
-        <div class="col-6 col-md-4 col-lg-2">
-            <div class="card border-0 shadow-sm h-100 rounded-3 overflow-hidden">
-                <div class="card-body py-3 text-center">
-                    <div class="fw-bold text-dark lh-1">{{ $chartData['summary']['cadres_count'] ?? 0 }}</div>
-                    <small class="text-muted d-block mt-1">Cadres</small>
+
+            {{-- Age Distribution --}}
+            <div class="card border rounded-3 mt-3">
+                <div class="card-header bg-transparent border-0 pb-0 text-center">
+                    <h6 class="mb-0 fw-bold">Age Distribution</h6>
                 </div>
-            </div>
-        </div>
-        <div class="col-6 col-md-4 col-lg-2">
-            <div class="card border-0 shadow-sm h-100 rounded-3 overflow-hidden">
-                <div class="card-body py-3 text-center">
-                    <div class="fw-bold text-dark lh-1">{{ $chartData['summary']['streams_count'] ?? 0 }}</div>
-                    <small class="text-muted d-block mt-1">Streams</small>
+                <div class="card-body pt-1">
+                    <div id="chart-age-distribution" style="min-height: 300px;"></div>
                 </div>
             </div>
         </div>
     </div>
-    @endif
+
+    {{-- ═══════════ CADRE WISE DISTRIBUTION ═══════════ --}}
+    <div class="card border-0 shadow rounded-3 overflow-hidden mb-4" style="border: 3px solid #1a8a7d;">
+        <div class="card-body px-4 py-3">
+            <div class="card border rounded-3">
+                <div class="card-header bg-transparent border-0 pb-0 text-center">
+                    <h6 class="mb-0 fw-bold">Cadre Wise Distribution</h6>
+                </div>
+                <div class="card-body pt-1">
+                    <div id="chart-cadre" style="min-height: 320px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- ═══════════ DOMICILE STATE DISTRIBUTION ═══════════ --}}
+    <div class="card border-0 shadow rounded-3 overflow-hidden mb-4" style="border: 3px solid #1a8a7d;">
+        <div class="card-body px-4 py-3">
+            <div class="card border rounded-3">
+                <div class="card-header bg-transparent border-0 pb-0 text-center">
+                    <h6 class="mb-0 fw-bold">Domicile State Distribution</h6>
+                </div>
+                <div class="card-body pt-1">
+                    <div id="chart-domicile" style="min-height: 320px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     @if(isset($course) && $course)
     {{-- Save batch profile as snapshot --}}
@@ -163,71 +238,6 @@
         </div>
     </div>
     @endif
-
-    <div class="row g-3">
-        <div class="col-12 col-xl-6">
-            <div class="card border-0 shadow-sm rounded-3 h-100">
-                <div class="card-header bg-transparent border-0 pb-0">
-                    <h6 class="mb-0 fw-bold">Total Age Distribution</h6>
-                </div>
-                <div class="card-body pt-2">
-                    <div id="chart-age-donut" style="min-height: 220px;"></div>
-                </div>
-            </div>
-        </div>
-        <div class="col-12 col-xl-6">
-            <div class="card border-0 shadow-sm rounded-3 h-100">
-                <div class="card-header bg-transparent border-0 pb-0">
-                    <h6 class="mb-0 fw-bold">Social Groups by Age</h6>
-                </div>
-                <div class="card-body pt-2">
-                    <div id="chart-social-by-age" style="min-height: 220px;"></div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-12 col-xl-6">
-            <div class="card border-0 shadow-sm rounded-3 h-100">
-                <div class="card-header bg-transparent border-0 pb-0">
-                    <h6 class="mb-0 fw-bold">Highest Stream by Age</h6>
-                </div>
-                <div class="card-body pt-2">
-                    <div id="chart-stream-radar" style="min-height: 220px;"></div>
-                </div>
-            </div>
-        </div>
-        <div class="col-12 col-xl-6">
-            <div class="card border-0 shadow-sm rounded-3 h-100">
-                <div class="card-header bg-transparent border-0 pb-0">
-                    <h6 class="mb-0 fw-bold">Age Shift Across Selected Courses</h6>
-                </div>
-                <div class="card-body pt-2">
-                    <div id="chart-age-shift" style="min-height: 220px;"></div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-12 col-xl-6">
-            <div class="card border-0 shadow-sm rounded-3 h-100">
-                <div class="card-header bg-transparent border-0 pb-0">
-                    <h6 class="mb-0 fw-bold">Cadre by Age Group</h6>
-                </div>
-                <div class="card-body pt-2">
-                    <div id="chart-cadre-age" style="min-height: 220px;"></div>
-                </div>
-            </div>
-        </div>
-        <div class="col-12 col-xl-6">
-            <div class="card border-0 shadow-sm rounded-3 h-100">
-                <div class="card-header bg-transparent border-0 pb-0">
-                    <h6 class="mb-0 fw-bold">Domicile State by Age Group</h6>
-                </div>
-                <div class="card-body pt-2">
-                    <div id="chart-domicile-age" style="min-height: 220px;"></div>
-                </div>
-            </div>
-        </div>
-    </div>
     @endif
 </div>
 @endsection
@@ -238,49 +248,41 @@
 document.addEventListener('DOMContentLoaded', function() {
     var chartData = @json($chartData ?? []);
     var chartInstances = [];
-    var agePalette = ["#8ec5ff", "#4f91ff", "#245ecf", "#193f9f", "#102a70", "#7a8ba8"];
-
-    console.log('Chart Data:', chartData);
 
     if (!chartData || typeof chartData !== 'object' || Object.keys(chartData).length === 0) {
-        console.log('No chart data available');
         return;
     }
 
     function toNumberArray(arr) {
-        return Array.isArray(arr) ? arr.map(function(v) {
-            var n = Number(v);
-            return Number.isFinite(n) ? n : 0;
-        }) : [];
+        if (Array.isArray(arr)) {
+            return arr.map(function(v) { var n = Number(v); return Number.isFinite(n) ? n : 0; });
+        }
+        if (arr && typeof arr === 'object') {
+            return Object.values(arr).map(function(v) { var n = Number(v); return Number.isFinite(n) ? n : 0; });
+        }
+        return [];
+    }
+
+    function toStringArray(arr) {
+        if (Array.isArray(arr)) return arr.map(String);
+        if (arr && typeof arr === 'object') return Object.values(arr).map(String);
+        return [];
     }
 
     function sumArrays(a, b) {
         var len = Math.max(a.length, b.length);
         var out = [];
-        for (var i = 0; i < len; i++) {
-            out.push((a[i] || 0) + (b[i] || 0));
-        }
+        for (var i = 0; i < len; i++) out.push((a[i] || 0) + (b[i] || 0));
         return out;
     }
 
     function limitTop(labels, values, maxItems) {
-        var pairs = labels.map(function(label, idx) {
-            return {
-                label: label,
-                value: values[idx] || 0
-            };
-        });
-        pairs.sort(function(a, b) {
-            return b.value - a.value;
-        });
+        var pairs = labels.map(function(label, idx) { return { label: label, value: values[idx] || 0 }; });
+        pairs.sort(function(a, b) { return b.value - a.value; });
         pairs = pairs.slice(0, maxItems);
         return {
-            labels: pairs.map(function(p) {
-                return p.label;
-            }),
-            values: pairs.map(function(p) {
-                return p.value;
-            })
+            labels: pairs.map(function(p) { return p.label; }),
+            values: pairs.map(function(p) { return p.value; })
         };
     }
 
@@ -296,237 +298,136 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    var ageCategories = (chartData.age && chartData.age.categories) ? chartData.age.categories : [];
+    // ── Colors matching the reference image ──
+    var colFemale = '#e91e90';
+    var colMale = '#1565c0';
+    var colGreen = '#8bc34a';
+    var colOrange = '#ff9800';
+    var streamColors = ['#d32f2f', '#1565c0', '#2e7d32', '#e65100', '#6a1b9a', '#00838f', '#ff6f00', '#4527a0', '#1b5e20', '#b71c1c'];
+
+    // ── Age data ──
+    var ageCategories = toStringArray(chartData.age && chartData.age.categories ? chartData.age.categories : []);
     var ageFemale = toNumberArray(chartData.age && chartData.age.female ? chartData.age.female : []);
     var ageMale = toNumberArray(chartData.age && chartData.age.male ? chartData.age.male : []);
     var ageTotals = sumArrays(ageFemale, ageMale);
-    var hasAgeData = ageTotals.some(function(v) {
-        return v > 0;
-    });
+    var hasAgeData = ageTotals.some(function(v) { return v > 0; });
 
+    // ═══ 1. Average Age — Pie chart ═══
     safeRender("#chart-age-donut", {
         series: hasAgeData ? ageTotals : [1],
-        chart: {
-            type: "donut",
-            height: 220,
-            toolbar: {
-                show: false
-            }
-        },
+        chart: { type: "pie", height: 200, toolbar: { show: false } },
         labels: hasAgeData ? ageCategories : ['No data'],
-        colors: agePalette.slice(0, hasAgeData ? ageTotals.length : 1),
-        plotOptions: {
-            pie: {
-                donut: {
-                    size: "65%"
-                }
-            }
-        },
-        dataLabels: {
-            enabled: false
-        },
-        legend: {
-            position: "bottom",
-            fontSize: "11px"
-        }
-    }, "Total Age Distribution");
+        colors: ['#1565c0', '#e91e90', '#ff9800', '#4caf50', '#9c27b0', '#607d8b'],
+        dataLabels: { enabled: true, style: { fontSize: '11px' } },
+        legend: { position: "right", fontSize: "11px" }
+    }, "Average Age");
 
-    var socialLabels = (chartData.social_groups && chartData.social_groups.categories) ? chartData.social_groups.categories : [];
+    // ═══ 2. Highest Stream Wise Distribution — Vertical bar ═══
+    var streamLabels = toStringArray(chartData.stream && chartData.stream.categories ? chartData.stream.categories : []);
+    var streamValues = toNumberArray(chartData.stream && chartData.stream.values ? chartData.stream.values : []);
+    var streamTop = limitTop(streamLabels, streamValues, 12);
+    safeRender("#chart-stream-bar", {
+        series: [{ name: "Count", data: streamTop.values.length ? streamTop.values : [0] }],
+        chart: { type: "bar", height: 280, toolbar: { show: false } },
+        colors: streamColors,
+        plotOptions: {
+            bar: { distributed: true, columnWidth: "55%", borderRadius: 2 }
+        },
+        xaxis: {
+            categories: streamTop.labels.length ? streamTop.labels : ['No data'],
+            labels: { rotate: -35, style: { fontSize: '10px' }, trim: true, maxHeight: 80 }
+        },
+        dataLabels: { enabled: true, offsetY: -15, style: { fontSize: '10px', colors: ['#333'] } },
+        legend: { show: false },
+        grid: { borderColor: "#eef1f5" }
+    }, "Highest Stream Wise Distribution");
+
+    // ═══ 3. Social Group wise Distribution — Grouped bar (Female / Male) ═══
+    var socialLabels = toStringArray(chartData.social_groups && chartData.social_groups.categories ? chartData.social_groups.categories : []);
     var socialFemale = toNumberArray(chartData.social_groups && chartData.social_groups.female ? chartData.social_groups.female : []);
     var socialMale = toNumberArray(chartData.social_groups && chartData.social_groups.male ? chartData.social_groups.male : []);
-    var socialTop = limitTop(socialLabels, sumArrays(socialFemale, socialMale), 8);
     safeRender("#chart-social-by-age", {
-        series: [{
-            name: "Count",
-            data: socialTop.values.length ? socialTop.values : [0]
-        }],
-        chart: {
-            type: "bar",
-            height: 220,
-            toolbar: {
-                show: false
-            }
-        },
-        colors: ["#245ecf"],
-        plotOptions: {
-            bar: {
-                horizontal: false,
-                columnWidth: "40%",
-                borderRadius: 3
-            }
-        },
+        series: [
+            { name: "Female", data: socialFemale.length ? socialFemale : [0] },
+            { name: "Male", data: socialMale.length ? socialMale : [0] }
+        ],
+        chart: { type: "bar", height: 280, toolbar: { show: false } },
+        colors: [colFemale, colMale],
+        plotOptions: { bar: { columnWidth: "50%", borderRadius: 2 } },
         xaxis: {
-            categories: socialTop.labels.length ? socialTop.labels : ['No data'],
-            labels: {
-                style: {
-                    fontSize: '11px'
-                }
-            }
+            categories: socialLabels.length ? socialLabels : ['No data'],
+            labels: { style: { fontSize: '11px' } }
         },
-        dataLabels: {
-            enabled: false
-        },
-        grid: {
-            borderColor: "#eef1f5"
-        }
-    }, "Social Groups by Age");
+        dataLabels: { enabled: true, style: { fontSize: '10px' } },
+        legend: { position: "bottom", fontSize: "12px" },
+        grid: { borderColor: "#eef1f5" }
+    }, "Social Group wise Distribution");
 
-    var streamLabels = (chartData.stream && chartData.stream.categories) ? chartData.stream.categories : [];
-    var streamValues = toNumberArray(chartData.stream && chartData.stream.values ? chartData.stream.values : []);
-    var streamTop = limitTop(streamLabels, streamValues, 6);
-    safeRender("#chart-stream-radar", {
-        series: [{
-            name: "Count",
-            data: streamTop.values.length ? streamTop.values : [0]
-        }],
-        chart: {
-            type: "radar",
-            height: 220,
-            toolbar: {
-                show: false
-            }
-        },
-        labels: streamTop.labels.length ? streamTop.labels : ['No data'],
-        colors: ["#245ecf"],
-        stroke: {
-            width: 2
-        },
-        fill: {
-            opacity: 0.25
-        },
-        markers: {
-            size: 3
-        }
-    }, "Highest Stream by Age");
-
-    safeRender("#chart-age-shift", {
-        series: [{
-            name: "Participants",
-            data: hasAgeData ? ageTotals : [0]
-        }],
-        chart: {
-            type: "line",
-            height: 220,
-            toolbar: {
-                show: false
-            }
-        },
-        stroke: {
-            curve: "smooth",
-            width: 2
-        },
-        colors: ["#245ecf"],
-        markers: {
-            size: 3
-        },
+    // ═══ 4. Age Distribution — Grouped bar (Female / Male) ═══
+    safeRender("#chart-age-distribution", {
+        series: [
+            { name: "Female", data: ageFemale.length ? ageFemale : [0] },
+            { name: "Male", data: ageMale.length ? ageMale : [0] }
+        ],
+        chart: { type: "bar", height: 300, toolbar: { show: false } },
+        colors: [colFemale, colMale],
+        plotOptions: { bar: { columnWidth: "45%", borderRadius: 3 } },
         xaxis: {
-            categories: hasAgeData ? ageCategories : ['No data']
+            categories: ageCategories.length ? ageCategories : ['No data'],
+            labels: { style: { fontSize: '12px', fontWeight: 600 } }
         },
-        dataLabels: {
-            enabled: false
-        },
-        grid: {
-            borderColor: "#eef1f5"
-        }
-    }, "Age Shift Across Selected Courses");
+        dataLabels: { enabled: true, style: { fontSize: '11px' } },
+        legend: { position: "bottom", fontSize: "12px" },
+        grid: { borderColor: "#eef1f5" }
+    }, "Age Distribution");
 
-    var cadreLabels = (chartData.cadre && chartData.cadre.categories) ? chartData.cadre.categories : [];
+    // ═══ 5. Cadre Wise Distribution — Vertical bar ═══
+    var cadreLabels = toStringArray(chartData.cadre && chartData.cadre.categories ? chartData.cadre.categories : []);
     var cadreFemale = toNumberArray(chartData.cadre && chartData.cadre.female ? chartData.cadre.female : []);
     var cadreMale = toNumberArray(chartData.cadre && chartData.cadre.male ? chartData.cadre.male : []);
-    var cadreTop = limitTop(cadreLabels, sumArrays(cadreFemale, cadreMale), 8);
-    safeRender("#chart-cadre-age", {
-        series: [{
-            name: "Count",
-            data: cadreTop.values.length ? cadreTop.values : [0]
-        }],
-        chart: {
-            type: "bar",
-            height: 220,
-            toolbar: {
-                show: false
-            }
-        },
-        colors: ["#245ecf"],
-        plotOptions: {
-            bar: {
-                horizontal: false,
-                columnWidth: "45%",
-                borderRadius: 3
-            }
-        },
+    var cadreTotals = sumArrays(cadreFemale, cadreMale);
+    var cadreTop = limitTop(cadreLabels, cadreTotals, 20);
+    safeRender("#chart-cadre", {
+        series: [{ name: "Count", data: cadreTop.values.length ? cadreTop.values : [0] }],
+        chart: { type: "bar", height: 320, toolbar: { show: false } },
+        colors: [colGreen],
+        plotOptions: { bar: { columnWidth: "50%", borderRadius: 2 } },
         xaxis: {
             categories: cadreTop.labels.length ? cadreTop.labels : ['No data'],
-            labels: {
-                rotate: -25,
-                style: {
-                    fontSize: '11px'
-                }
-            }
+            labels: { rotate: -40, style: { fontSize: '10px' }, trim: true, maxHeight: 90 }
         },
-        dataLabels: {
-            enabled: false
-        },
-        grid: {
-            borderColor: "#eef1f5"
-        }
-    }, "Cadre by Age Group");
+        dataLabels: { enabled: true, offsetY: -15, style: { fontSize: '10px', colors: ['#333'] } },
+        grid: { borderColor: "#eef1f5" }
+    }, "Cadre Wise Distribution");
 
-    var domicileLabels = (chartData.domicile && chartData.domicile.categories) ? chartData.domicile.categories : [];
+    // ═══ 6. Domicile State Distribution — Vertical bar ═══
+    var domicileLabels = toStringArray(chartData.domicile && chartData.domicile.categories ? chartData.domicile.categories : []);
     var domicileValues = toNumberArray(chartData.domicile && chartData.domicile.values ? chartData.domicile.values : []);
-    var domicileTop = limitTop(domicileLabels, domicileValues, 8);
-    safeRender("#chart-domicile-age", {
-        series: [{
-            name: "Count",
-            data: domicileTop.values.length ? domicileTop.values : [0]
-        }],
-        chart: {
-            type: "bar",
-            height: 220,
-            toolbar: {
-                show: false
-            }
-        },
-        plotOptions: {
-            bar: {
-                horizontal: true,
-                barHeight: "45%",
-                borderRadius: 2
-            }
-        },
-        colors: ["#245ecf"],
+    var domicileTop = limitTop(domicileLabels, domicileValues, 20);
+    safeRender("#chart-domicile", {
+        series: [{ name: "Count", data: domicileTop.values.length ? domicileTop.values : [0] }],
+        chart: { type: "bar", height: 320, toolbar: { show: false } },
+        colors: [colOrange],
+        plotOptions: { bar: { columnWidth: "50%", borderRadius: 2 } },
         xaxis: {
-            categories: domicileTop.labels.length ? domicileTop.labels : ['No data']
+            categories: domicileTop.labels.length ? domicileTop.labels : ['No data'],
+            labels: { rotate: -40, style: { fontSize: '10px' }, trim: true, maxHeight: 90 }
         },
-        dataLabels: {
-            enabled: false
-        },
-        grid: {
-            borderColor: "#eef1f5"
-        }
-    }, "Domicile State by Age Group");
+        dataLabels: { enabled: true, offsetY: -15, style: { fontSize: '10px', colors: ['#333'] } },
+        grid: { borderColor: "#eef1f5" }
+    }, "Domicile State Distribution");
 
-    // Handle Bootstrap tab shown event - resize charts when tab becomes visible
+    // ── Resize / tab switch handling ──
     document.addEventListener('shown.bs.tab', function() {
-        console.log('Tab switched, resizing charts');
         setTimeout(function() {
-            chartInstances.forEach(function(chart) {
-                if (chart && chart.windowResizeHandler) {
-                    chart.windowResizeHandler();
-                }
-            });
+            chartInstances.forEach(function(chart) { try { chart.updateOptions({}, false, false); } catch (e) {} });
         }, 100);
     });
-
-    // Handle window resize
     var resizeTimeout;
     window.addEventListener('resize', function() {
         clearTimeout(resizeTimeout);
         resizeTimeout = setTimeout(function() {
-            chartInstances.forEach(function(chart) {
-                if (chart && chart.windowResizeHandler) {
-                    chart.windowResizeHandler();
-                }
-            });
+            chartInstances.forEach(function(chart) { try { chart.updateOptions({}, false, false); } catch (e) {} });
         }, 250);
     });
 });
