@@ -219,6 +219,7 @@
                     } else {
                         toastr.error(response.message);
                     }
+                    $('#sidebar-category-table').DataTable().ajax.reload();
                 },
                 error: function (xhr) {
                     toastr.error('Something went wrong');

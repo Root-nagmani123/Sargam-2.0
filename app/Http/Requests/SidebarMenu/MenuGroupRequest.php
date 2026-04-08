@@ -23,19 +23,18 @@ class MenuGroupRequest extends FormRequest
 
     public function rules()
     {
-        $menuGroup = $this->route('menu-group');
+        $menuGroup = $this->route('menu_group');
         $id = is_object($menuGroup) ? $menuGroup->id : $menuGroup;
-
         return [
             'category_id' => 'required|exists:sidebar_categories,id',
             'name' => [
                 'required',
                 'max:100',
-                Rule::unique('menu_groups', 'name')->ignore($id),
+                Rule::unique('menu_groups', 'name')->ignore($id)->where('category_id', $this->category_id),
             ],
-            'icon' => ['nullable','max:100'],
-            'order' => ['nullable','integer'],
-            'is_active' => ['required','in:0,1'],
+            'icon' => ['required', 'max:100'],
+            'order' => ['nullable', 'integer', Rule::unique('menu_groups', 'order')->ignore($id)->where('category_id', $this->category_id)],
+            'is_active' => ['required', 'in:0,1'],
         ];
     }
 }

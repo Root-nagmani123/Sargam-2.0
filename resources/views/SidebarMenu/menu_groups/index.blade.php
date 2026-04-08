@@ -63,7 +63,7 @@
                                 placeholder="Enter menu group name" value="{{old('name')}}">
                         </div>
                         <div class="form-group mb-2">
-                            <label class="form-label" for="icon">Icon</label>
+                            <label class="form-label" for="icon">Icon <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" name="icon" id="icon" placeholder="e.g. bi bi-house"
                                 value="{{old('icon')}}">
                         </div>
@@ -139,6 +139,7 @@
                         nameRegex: true,
                     },
                     icon: {
+                        required: true,
                         maxlength: 100
                     },
                     order: {
@@ -159,6 +160,7 @@
                         maxlength: "Name must be less than 100 characters"
                     },
                     icon: {
+                        required: "Please enter icon",
                         maxlength: "Icon must be less than 100 characters"
                     },
                     order: {
@@ -207,6 +209,7 @@
                         } else {
                             toastr.error(response.message);
                         }
+                        $('#sidebar-menu-group-table').DataTable().ajax.reload();
                     },
                     error: function (xhr) {
                         toastr.error('Something went wrong');

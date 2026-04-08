@@ -32,6 +32,7 @@ class MenuGroupService
 
     public function store(array $data)
     {
+        $data['order'] = $data['order'] ?? MenuGroup::max('order') + 1;
         return MenuGroup::create($data);
     }
 
@@ -50,6 +51,7 @@ class MenuGroupService
     public function update($id, array $data)
     {
         $group = $this->find($id);
+        $data['order'] = $data['order'] ?? MenuGroup::max('order') + 1;
         return $group->update($data);
     }
 
@@ -104,7 +106,7 @@ class MenuGroupService
     # @ Base Query
     protected function baseQuery(Request $request)
     {
-        return MenuGroup::query()->with('category');
+        return MenuGroup::query()->with('category')->orderBy('order', 'asc');
     }
 
     public function getDatatable(Request $request)
@@ -147,26 +149,39 @@ class MenuGroupService
     {
         $deleteUrl = route('sidebar.menu-groups.destroy', $data->id);
         $jsonData = htmlspecialchars(json_encode($data), ENT_QUOTES, 'UTF-8');
-        return '
+
+        $buttons = '
         <div class="d-inline-flex align-items-center gap-2" role="group" aria-label="Category actions">
             <!-- Edit -->
-            <a href="javascript:void(0);" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1 edit-btn" data-item="'.$jsonData.'" aria-label="Edit category">
+            <a href="javascript:void(0);" 
+            class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1 edit-btn" 
+            data-item="'.$jsonData.'" 
+            aria-label="Edit category">
                 <span class="material-symbols-rounded fs-6" aria-hidden="true">edit</span>
                 <span class="d-none d-md-inline">Edit</span>
             </a>
-            
-            <!-- Delete -->
-            <form action="'.$deleteUrl.'" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this record?\');">
+        ';
+
+        if ($data->is_active != 1) {
+            $buttons .= '
+            <form action="'.$deleteUrl.'" method="POST" class="d-inline" 
+                onsubmit="return confirm(\'Are you sure you want to delete this record?\');">
                 '.csrf_field().'
                 '.method_field('DELETE').'
-                <button type="submit" class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1" aria-label="Delete category">
+                <button type="submit" 
+                        class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1" 
+                        aria-label="Delete category">
                     <span class="material-symbols-rounded fs-6" aria-hidden="true">delete</span>
                     <span class="d-none d-md-inline">Delete</span>
                 </button>
             </form>
-        </div>';
-    }
+            ';
+        }
 
+        $buttons .= '</div>';
+
+        return $buttons;
+    }
     private function statusBadge($data)
     {
         $checked = $data->is_active ? 'checked' : '';
