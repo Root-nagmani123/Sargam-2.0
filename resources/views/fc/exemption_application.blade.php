@@ -5,6 +5,13 @@
 @section('content')
     <main id="content" class="flex-grow-1 py-4 py-md-5">
         <div class="container">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item" style="font-size:20px;">Home</li>
+                    <li class="breadcrumb-item" style="font-size:20px;">Exemption Category</li>
+                    <li class="breadcrumb-item active" aria-current="page" style="font-size:20px;">Exemption Application</li>
+                </ol>
+            </nav>
 
             <div class="card border-0 shadow-lg rounded-4 mx-auto" style="max-width: 960px;">
                 <div class="card-body p-4 p-md-5">
