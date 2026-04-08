@@ -25,6 +25,7 @@ use Illuminate\Support\Str; // Add this import
 use App\Exports\PendingFeedbackExport;
 use App\Exports\FacultyFeedback_AvgExport;
 use App\Exports\PendingFeedbackSummaryExport;
+use App\Exports\FeedbackDatabaseExport;
 
 
 
@@ -36,41 +37,15 @@ class FeedbackController extends Controller
         $this->middleware('auth');
     }
 
-    public function database()
+    public function database(Request $request)
     {
         try {
-            $userId = auth()->id(); // current logged-in user
-
-            // Get role-based course IDs if needed
-            $data_course_id = get_Role_by_course();
-
-            // Current date
-            $currentDate = now()->toDateString();
-
-            // Fetch only courses that are active and assigned to user
-            $coursesQuery = CourseMaster::where('active_inactive', 1)
-                ->where(function ($q) use ($currentDate) {
-                    // Course is active if end_date is null OR end_date >= today
-                    $q->whereNull('end_date')
-                        ->orWhere('end_date', '>=', $currentDate);
-                });
-
-            // Apply role-based filtering if exists
-            if (!empty($data_course_id)) {
-                $coursesQuery->whereIn('pk', $data_course_id);
+            $courseType = $request->get('course_type', 'current');
+            if (! in_array($courseType, ['current', 'archived'], true)) {
+                $courseType = 'current';
             }
 
-            // Optional: If user is a student, only show courses they are enrolled in
-            if (auth()->user()->role == 'student') {
-                $coursesQuery->whereHas('students', function ($q) use ($userId, $currentDate) {
-                    $q->where('student_master_pk', $userId)
-                        ->where('active_inactive', 1);
-                });
-            }
-
-            $courses = $coursesQuery->select('pk', 'course_name')
-                ->orderBy('course_name')
-                ->get();
+            $courses = $this->coursesForFeedbackDatabase($courseType);
 
             // Fetch all active faculties for dropdown
             $faculties = FacultyMaster::where('active_inactive', 1)
@@ -78,14 +53,79 @@ class FeedbackController extends Controller
                 ->orderBy('full_name')
                 ->get();
 
-            return view('admin.feedback.feedback_database', compact('courses', 'faculties'));
+            return view('admin.feedback.feedback_database', compact('courses', 'faculties', 'courseType'));
         } catch (\Exception $e) {
             \Log::error('Error in FeedbackController@database: ' . $e->getMessage());
 
             // Fallback empty collections
             $courses = collect();
             $faculties = collect();
-            return view('admin.feedback.feedback_database', compact('courses', 'faculties'));
+            $courseType = 'current';
+
+            return view('admin.feedback.feedback_database', compact('courses', 'faculties', 'courseType'));
+        }
+    }
+
+    /**
+     * Program list for Feedback Database — same rules as Faculty Feedback Average (current vs archived).
+     */
+    private function coursesForFeedbackDatabase(string $courseType)
+    {
+        $userId = auth()->id();
+        $data_course_id = get_Role_by_course();
+        $currentDate = now()->toDateString();
+
+        $coursesQuery = CourseMaster::where('active_inactive', 1)
+            ->when($courseType === 'current', function ($q) use ($currentDate) {
+                $q->where(function ($q2) use ($currentDate) {
+                    $q2->whereNull('end_date')
+                        ->orWhereDate('end_date', '>=', $currentDate);
+                });
+            })
+            ->when($courseType === 'archived', function ($q) use ($currentDate) {
+                $q->whereDate('end_date', '<', $currentDate);
+            });
+
+        if (! empty($data_course_id)) {
+            $coursesQuery->whereIn('pk', $data_course_id);
+        }
+
+        if (auth()->user()->role == 'student') {
+            $coursesQuery->whereHas('students', function ($q) use ($userId) {
+                $q->where('student_master_pk', $userId)
+                    ->where('active_inactive', 1);
+            });
+        }
+
+        return $coursesQuery->select('pk', 'course_name')
+            ->orderBy('course_name')
+            ->get();
+    }
+
+    /**
+     * JSON course options when switching Active / Archived on Feedback Database.
+     */
+    public function getDatabaseCourses(Request $request)
+    {
+        $request->validate([
+            'course_type' => 'required|string|in:current,archived',
+        ]);
+
+        try {
+            $courses = $this->coursesForFeedbackDatabase($request->course_type);
+
+            return response()->json([
+                'success' => true,
+                'course_type' => $request->course_type,
+                'courses' => $courses,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('getDatabaseCourses: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'courses' => [],
+            ], 500);
         }
     }
 
@@ -280,6 +320,134 @@ class FeedbackController extends Controller
                 'success' => false,
                 'error'   => 'Export failed. Please try again.',
             ], 500);
+        }
+    }
+
+    /**
+     * Shared payload for Feedback Database print / PDF / Excel (mess-style reports).
+     */
+    private function buildFeedbackDatabaseExportContext(Request $request): array
+    {
+        $request->validate([
+            'course_id'    => 'required|integer',
+            'search_param' => 'nullable|string|in:all,faculty,topic',
+            'faculty_id'   => 'nullable|integer',
+            'topic_value'  => 'nullable|string',
+        ]);
+
+        $data = $this->baseDatabaseQuery($request)->get();
+
+        $program = DB::table('course_master')->where('pk', $request->course_id)->value('course_name') ?? '—';
+
+        $scope = 'All records';
+        if ($request->search_param === 'faculty' && $request->filled('faculty_id')) {
+            $fname = DB::table('faculty_master')->where('pk', $request->faculty_id)->value('full_name');
+            $scope = 'Faculty: ' . ($fname ?? '—');
+        } elseif ($request->search_param === 'topic' && $request->filled('topic_value')) {
+            $scope = 'Topic contains: ' . $request->topic_value;
+        }
+
+        $rows = [];
+        foreach ($data as $index => $item) {
+            $addr = $item->faculty_address ?? 'N/A';
+            $emailLine = !empty($item->faculty_email) ? ("\n" . $item->faculty_email) : '';
+            $rows[] = [
+                's_no' => $index + 1,
+                'faculty_name' => $item->faculty_name,
+                'course_name' => $item->course_name,
+                'faculty_address' => $addr . $emailLine,
+                'topic' => $item->subject_topic ?? '—',
+                'content_pct' => number_format((float) $item->avg_content_percent, 2),
+                'presentation_pct' => number_format((float) $item->avg_presentation_percent, 2),
+                'participants' => (int) $item->participant_count,
+                'session_date' => Carbon::parse($item->session_date)->format('d-m-Y'),
+                'comments' => $item->all_comments ? str_replace(' | ', "\n", $item->all_comments) : '—',
+            ];
+        }
+
+        return [
+            'rows' => $rows,
+            'filters' => [
+                'program' => $program,
+                'scope' => $scope,
+            ],
+            'record_count' => count($rows),
+            'export_date' => now()->format('d-m-Y H:i'),
+        ];
+    }
+
+    public function printFeedbackDatabase(Request $request)
+    {
+        try {
+            $ctx = $this->buildFeedbackDatabaseExportContext($request);
+
+            return view('admin.feedback.feedback_database_export', array_merge($ctx, ['mode' => 'print']));
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->route('admin.feedback.database')->with(
+                'error',
+                'Select a program on the Feedback Database page, then use Print, PDF, or Excel.'
+            );
+        } catch (\Exception $e) {
+            \Log::error('printFeedbackDatabase: ' . $e->getMessage());
+
+            return redirect()->route('admin.feedback.database')->with('error', 'Could not open the print view.');
+        }
+    }
+
+    public function exportFeedbackDatabasePdf(Request $request)
+    {
+        try {
+            $ctx = $this->buildFeedbackDatabaseExportContext($request);
+
+            $pdf = Pdf::loadView('admin.feedback.feedback_database_export', array_merge($ctx, ['mode' => 'pdf']))
+                ->setPaper('A4', 'landscape')
+                ->setOptions([
+                    'defaultFont' => 'sans-serif',
+                    'isHtml5ParserEnabled' => true,
+                    'isRemoteEnabled' => true,
+                    'dpi' => 96,
+                    'margin_top' => 8,
+                    'margin_right' => 8,
+                    'margin_bottom' => 8,
+                    'margin_left' => 8,
+                ]);
+
+            return $pdf->download('feedback_database_' . date('Y-m-d_His') . '.pdf');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->route('admin.feedback.database')->with(
+                'error',
+                'Select a program on the Feedback Database page, then download PDF again.'
+            );
+        } catch (\Exception $e) {
+            \Log::error('exportFeedbackDatabasePdf: ' . $e->getMessage());
+
+            return redirect()->route('admin.feedback.database')->with('error', 'PDF export failed.');
+        }
+    }
+
+    public function exportFeedbackDatabaseExcel(Request $request)
+    {
+        try {
+            $ctx = $this->buildFeedbackDatabaseExportContext($request);
+
+            return Excel::download(
+                new FeedbackDatabaseExport(
+                    $ctx['rows'],
+                    $ctx['filters'],
+                    $ctx['export_date'],
+                    $ctx['record_count']
+                ),
+                'feedback_database_' . now()->format('Y-m-d_H-i') . '.xlsx'
+            );
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->route('admin.feedback.database')->with(
+                'error',
+                'Select a program on the Feedback Database page, then export Excel again.'
+            );
+        } catch (\Exception $e) {
+            \Log::error('exportFeedbackDatabaseExcel: ' . $e->getMessage());
+
+            return redirect()->route('admin.feedback.database')->with('error', 'Excel export failed.');
         }
     }
 
@@ -933,12 +1101,113 @@ class FeedbackController extends Controller
             'courseType' => $courseType,
         ];
 
-        $pdf = Pdf::loadView('admin.feedback.faculty_average_pdf', $data);
+        $pdf = Pdf::loadView('admin.feedback.faculty_average_export', $data);
         $pdf->setPaper('A4', 'landscape');
 
         $filename = 'faculty_feedback_average_' . now()->format('Y-m-d_His') . '.pdf';
 
         return $pdf->download($filename);
+    }
+
+    /**
+     * Print Faculty Feedback Average – opens LBSNAA-themed view in a new tab.
+     */
+    public function printFacultyAverage(Request $request)
+    {
+        try {
+            $data_course_id = get_Role_by_course();
+            $programName = $request->input('program_name');
+            $facultyName = $request->input('faculty_name');
+            $fromDate = $request->input('from_date');
+            $toDate = $request->input('to_date');
+            $courseType = $request->input('course_type', 'current');
+            $currentDate = now()->toDateString();
+
+            $programsQuery = DB::table('course_master')
+                ->where('active_inactive', 1)
+                ->when($courseType === 'current', fn($q) => $q->where(fn($q2) => $q2->whereNull('end_date')->orWhereDate('end_date', '>=', $currentDate)))
+                ->when($courseType === 'archived', fn($q) => $q->whereDate('end_date', '<', $currentDate))
+                ->when(!empty($data_course_id), fn($q) => $q->whereIn('pk', $data_course_id))
+                ->orderBy('course_name');
+            $programs = $programsQuery->pluck('course_name', 'pk');
+
+            $faculties = DB::table('faculty_master')->select('full_name as name', 'pk')->orderBy('full_name')->pluck('name', 'pk');
+            if ($faculties->isEmpty()) {
+                $faculties = DB::table('topic_feedback as tf')
+                    ->join('faculty_master as fm', 'tf.faculty_pk', '=', 'fm.pk')
+                    ->select('fm.full_name as name', 'fm.pk')->distinct()->orderBy('fm.full_name')->pluck('name', 'fm.pk');
+            }
+
+            $query = DB::table('topic_feedback as tf')
+                ->join('timetable as tt', 'tf.timetable_pk', '=', 'tt.pk')
+                ->join('course_master as cm', 'tt.course_master_pk', '=', 'cm.pk')
+                ->join('faculty_master as fm', 'tf.faculty_pk', '=', 'fm.pk')
+                ->select(
+                    'tf.faculty_pk', 'fm.full_name as faculty_name', 'tf.topic_name',
+                    'cm.course_name as program_name', 'tt.START_DATE as session_date', 'tt.class_session',
+                    DB::raw('COUNT(DISTINCT tf.student_master_pk) as participants'),
+                    DB::raw('SUM(CASE WHEN tf.presentation = "5" THEN 1 ELSE 0 END) as presentation_5'),
+                    DB::raw('SUM(CASE WHEN tf.presentation = "4" THEN 1 ELSE 0 END) as presentation_4'),
+                    DB::raw('SUM(CASE WHEN tf.presentation = "3" THEN 1 ELSE 0 END) as presentation_3'),
+                    DB::raw('SUM(CASE WHEN tf.presentation = "2" THEN 1 ELSE 0 END) as presentation_2'),
+                    DB::raw('SUM(CASE WHEN tf.presentation = "1" THEN 1 ELSE 0 END) as presentation_1'),
+                    DB::raw('SUM(CASE WHEN tf.content = "5" THEN 1 ELSE 0 END) as content_5'),
+                    DB::raw('SUM(CASE WHEN tf.content = "4" THEN 1 ELSE 0 END) as content_4'),
+                    DB::raw('SUM(CASE WHEN tf.content = "3" THEN 1 ELSE 0 END) as content_3'),
+                    DB::raw('SUM(CASE WHEN tf.content = "2" THEN 1 ELSE 0 END) as content_2'),
+                    DB::raw('SUM(CASE WHEN tf.content = "1" THEN 1 ELSE 0 END) as content_1')
+                )
+                ->where('tf.is_submitted', 1)->whereNotNull('tf.presentation')->whereNotNull('tf.content')
+                ->groupBy('tf.faculty_pk', 'tf.topic_name', 'cm.course_name', 'fm.full_name', 'tt.START_DATE', 'tt.class_session');
+
+            if (!empty($programName)) $query->where('cm.pk', $programName);
+            $currentProgramName = (!empty($programName) && $programs->has($programName)) ? $programs[$programName] : null;
+            if ($facultyName && $facultyName !== 'All Faculty') $query->where('tf.faculty_pk', $facultyName);
+            if ($fromDate) $query->whereDate('tf.created_date', '>=', $fromDate);
+            if ($toDate) $query->whereDate('tf.created_date', '<=', $toDate);
+            if ($courseType === 'archived') {
+                $query->whereDate('cm.end_date', '<', Carbon::today());
+            } else {
+                $query->where(fn($q) => $q->whereNull('cm.end_date')->orWhereDate('cm.end_date', '>=', Carbon::today()));
+            }
+
+            $feedbackData = $query->get();
+
+            $processedData = $feedbackData->map(function ($item) {
+                $p5=(int)$item->presentation_5; $p4=(int)$item->presentation_4; $p3=(int)$item->presentation_3;
+                $p2=(int)$item->presentation_2; $p1=(int)$item->presentation_1;
+                $c5=(int)$item->content_5; $c4=(int)$item->content_4; $c3=(int)$item->content_3;
+                $c2=(int)$item->content_2; $c1=(int)$item->content_1;
+                $pT=$p5+$p4+$p3+$p2+$p1; $pW=5*$p5+4*$p4+3*$p3+2*$p2+1*$p1;
+                $pM=$p5>0?5:($p4>0?4:($p3>0?3:($p2>0?2:($p1>0?1:0))));
+                $pP=($pT>0&&$pM>0)?round(($pW/($pT*$pM))*100,2):0;
+                $cT=$c5+$c4+$c3+$c2+$c1; $cW=5*$c5+4*$c4+3*$c3+2*$c2+1*$c1;
+                $cM=$c5>0?5:($c4>0?4:($c3>0?3:($c2>0?2:($c1>0?1:0))));
+                $cP=($cT>0&&$cM>0)?round(($cW/($cT*$cM))*100,2):0;
+                return [
+                    'faculty_name'=>$item->faculty_name, 'topic_name'=>$item->topic_name,
+                    'program_name'=>$item->program_name, 'participants'=>(int)$item->participants,
+                    'presentation_percentage'=>$pP, 'content_percentage'=>$cP,
+                    'session_date'=>$item->session_date, 'class_session'=>$item->class_session,
+                ];
+            });
+
+            return view('admin.feedback.faculty_average_export', [
+                'feedbackData' => $processedData,
+                'programs' => $programs,
+                'faculties' => $faculties,
+                'currentProgram' => $programName,
+                'currentProgramName' => $currentProgramName,
+                'currentFaculty' => $facultyName,
+                'fromDate' => $fromDate,
+                'toDate' => $toDate,
+                'courseType' => $courseType,
+                'mode' => 'print',
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Faculty Average Print Error: ' . $e->getMessage());
+            return back()->with('error', 'Error generating print view: ' . $e->getMessage());
+        }
     }
 
 
@@ -1647,7 +1916,7 @@ class FeedbackController extends Controller
                 'export_date' => now()->format('d-M-Y H:i'),
             ];
 
-            $pdf = PDF::loadView('admin.feedback.faculty_feedback_pdf', $data)
+            $pdf = PDF::loadView('admin.feedback.faculty_feedback_export', $data)
                 ->setPaper('a4', 'portrait')
                 ->setOptions([
                     'defaultFont' => 'Arial',
@@ -1665,6 +1934,165 @@ class FeedbackController extends Controller
         }
     }
 
+    /**
+     * Print Faculty Feedback – opens LBSNAA-themed view in a new tab.
+     */
+    public function printFacultyFeedback(Request $request)
+    {
+        try {
+            $programId = $request->input('program_id');
+            $facultyName = $request->input('faculty_name');
+            $fromDate = $request->input('from_date');
+            $toDate = $request->input('to_date');
+            $courseType = $request->input('course_type', 'current');
+            $facultyType = $request->input('faculty_type', []);
+            if (is_string($facultyType)) {
+                $facultyType = [$facultyType];
+            }
+            $data_course_id = get_Role_by_course();
+            $facultyTypeMap = ['1' => 'Internal', '2' => 'Guest'];
+
+            $query = DB::table('topic_feedback as tf')
+                ->join('timetable as tt', 'tf.timetable_pk', '=', 'tt.pk')
+                ->join('course_master as cm', 'tt.course_master_pk', '=', 'cm.pk')
+                ->join('faculty_master as fm', 'tf.faculty_pk', '=', 'fm.pk')
+                ->select(
+                    'tf.topic_name',
+                    'cm.pk as program_id',
+                    'cm.course_name as program_name',
+                    'cm.active_inactive as program_status',
+                    'cm.end_date as program_end_date',
+                    'fm.full_name as faculty_name',
+                    'fm.faculty_type',
+                    'tf.faculty_pk',
+                    'tt.START_DATE',
+                    'tt.END_DATE',
+                    'tt.class_session',
+                    'tf.timetable_pk',
+                    DB::raw('SUM(CASE WHEN tf.content = "5" THEN 1 ELSE 0 END) as content_5'),
+                    DB::raw('SUM(CASE WHEN tf.content = "4" THEN 1 ELSE 0 END) as content_4'),
+                    DB::raw('SUM(CASE WHEN tf.content = "3" THEN 1 ELSE 0 END) as content_3'),
+                    DB::raw('SUM(CASE WHEN tf.content = "2" THEN 1 ELSE 0 END) as content_2'),
+                    DB::raw('SUM(CASE WHEN tf.content = "1" THEN 1 ELSE 0 END) as content_1'),
+                    DB::raw('SUM(CASE WHEN tf.presentation = "5" THEN 1 ELSE 0 END) as presentation_5'),
+                    DB::raw('SUM(CASE WHEN tf.presentation = "4" THEN 1 ELSE 0 END) as presentation_4'),
+                    DB::raw('SUM(CASE WHEN tf.presentation = "3" THEN 1 ELSE 0 END) as presentation_3'),
+                    DB::raw('SUM(CASE WHEN tf.presentation = "2" THEN 1 ELSE 0 END) as presentation_2'),
+                    DB::raw('SUM(CASE WHEN tf.presentation = "1" THEN 1 ELSE 0 END) as presentation_1'),
+                    DB::raw('COUNT(DISTINCT tf.student_master_pk) as participants'),
+                    DB::raw('GROUP_CONCAT(DISTINCT CASE WHEN tf.remark IS NOT NULL AND TRIM(tf.remark) != "" THEN tf.remark ELSE NULL END SEPARATOR "|||") as remarks')
+                )
+                ->where('tf.is_submitted', 1);
+
+            if (!empty($data_course_id)) {
+                $query->whereIn('cm.pk', $data_course_id);
+            }
+            $query->groupBy('tf.topic_name', 'cm.pk', 'cm.course_name', 'cm.active_inactive', 'cm.end_date', 'fm.full_name', 'fm.faculty_type', 'tf.faculty_pk', 'tt.START_DATE', 'tt.END_DATE', 'tt.class_session', 'tf.timetable_pk');
+
+            if ($programId && $programId !== '') {
+                $query->where('cm.pk', $programId);
+            }
+            if ($facultyName && $facultyName !== 'All Faculty') {
+                $query->where('fm.full_name', 'LIKE', '%' . $facultyName . '%');
+            }
+            if (!empty($facultyType)) {
+                $query->whereIn('fm.faculty_type', $facultyType);
+            }
+            if ($fromDate) {
+                $query->whereDate('tt.START_DATE', '>=', $fromDate);
+            }
+            if ($toDate) {
+                $query->whereDate('tt.END_DATE', '<=', $toDate);
+            }
+            if ($courseType === 'archived') {
+                $query->where(function ($q) {
+                    $q->where('cm.active_inactive', 0)
+                        ->orWhereDate('cm.end_date', '<', Carbon::today());
+                });
+            } elseif ($courseType === 'current') {
+                $query->where('cm.active_inactive', 1)
+                    ->whereDate('cm.end_date', '>=', Carbon::today());
+            }
+            $query->orderBy('tt.START_DATE', 'asc');
+
+            DB::statement("SET SESSION group_concat_max_len = 1000000;");
+            $feedbackData = $query->get();
+
+            $processedData = $feedbackData->map(function ($item) use ($facultyTypeMap) {
+                $c5 = (int) $item->content_5; $c4 = (int) $item->content_4; $c3 = (int) $item->content_3;
+                $c2 = (int) $item->content_2; $c1 = (int) $item->content_1;
+                $p5 = (int) $item->presentation_5; $p4 = (int) $item->presentation_4; $p3 = (int) $item->presentation_3;
+                $p2 = (int) $item->presentation_2; $p1 = (int) $item->presentation_1;
+                $cTotal = $c5+$c4+$c3+$c2+$c1;
+                $cWeighted = 5*$c5 + 4*$c4 + 3*$c3 + 2*$c2 + 1*$c1;
+                $cMax = $c5 > 0 ? 5 : ($c4 > 0 ? 4 : ($c3 > 0 ? 3 : ($c2 > 0 ? 2 : ($c1 > 0 ? 1 : 0))));
+                $cPct = ($cTotal > 0 && $cMax > 0) ? round(($cWeighted / ($cTotal * $cMax)) * 100, 2) : 0;
+                $pTotal = $p5+$p4+$p3+$p2+$p1;
+                $pWeighted = 5*$p5 + 4*$p4 + 3*$p3 + 2*$p2 + 1*$p1;
+                $pMax = $p5 > 0 ? 5 : ($p4 > 0 ? 4 : ($p3 > 0 ? 3 : ($p2 > 0 ? 2 : ($p1 > 0 ? 1 : 0))));
+                $pPct = ($pTotal > 0 && $pMax > 0) ? round(($pWeighted / ($pTotal * $pMax)) * 100, 2) : 0;
+                $remarks = [];
+                if (!empty($item->remarks)) {
+                    $raw = explode('|||', $item->remarks);
+                    $remarks = array_values(array_unique(array_filter(array_map('trim', $raw), fn($r) =>
+                        !empty($r) && !in_array($r, ['.','..','...','-','--']) && strlen($r) > 1
+                    )));
+                    sort($remarks);
+                }
+                $courseStatus = ($item->program_status == 1 && Carbon::parse($item->program_end_date)->gte(Carbon::today())) ? 'Current' : 'Archived';
+                $startDate = $item->START_DATE ? Carbon::parse($item->START_DATE) : null;
+                $sessionTime = trim($item->class_session ?? '');
+                $sessionTime = str_replace(['08:00 AM - 08:00 PM','00:00 - 00:00','00:00 to 00:00'], '', $sessionTime);
+                $sessionTime = trim($sessionTime);
+                if (empty($sessionTime) || $sessionTime === '-') $sessionTime = '';
+                return [
+                    'Program Name' => $item->program_name ?? '',
+                    'Course Status' => $courseStatus,
+                    'Faculty Name' => $item->faculty_name ?? '',
+                    'Faculty Type' => $facultyTypeMap[$item->faculty_type] ?? ucfirst($item->faculty_type),
+                    'Topic' => $item->topic_name ?? '',
+                    'Lecture Date' => $startDate ? $startDate->format('d-M-Y') : '',
+                    'Time' => $sessionTime ? "({$sessionTime})" : '',
+                    'Content - Excellent' => $c5, 'Content - Very Good' => $c4, 'Content - Good' => $c3,
+                    'Content - Average' => $c2, 'Content - Below Average' => $c1,
+                    'Content Percentage' => number_format($cPct, 2) . '%',
+                    'Presentation - Excellent' => $p5, 'Presentation - Very Good' => $p4, 'Presentation - Good' => $p3,
+                    'Presentation - Average' => $p2, 'Presentation - Below Average' => $p1,
+                    'Presentation Percentage' => number_format($pPct, 2) . '%',
+                    'Remarks' => implode("\n", $remarks),
+                ];
+            })->toArray();
+
+            $facultyTypeDisplay = 'All Types';
+            if (!empty($facultyType)) {
+                $facultyTypeDisplay = count($facultyType) === 2 ? 'All Types' : (in_array('1', $facultyType) ? 'Internal' : 'Guest');
+            }
+            $programName = 'All Programs';
+            if ($programId) {
+                $prog = DB::table('course_master')->where('pk', $programId)->first();
+                $programName = $prog ? $prog->course_name : 'All Programs';
+            }
+
+            return view('admin.feedback.faculty_feedback_export', [
+                'feedbackData' => $processedData,
+                'filters' => [
+                    'program' => $programName,
+                    'faculty_name' => $facultyName ?: 'All Faculty',
+                    'date_range' => ($fromDate && $toDate)
+                        ? Carbon::parse($fromDate)->format('d-M-Y') . ' to ' . Carbon::parse($toDate)->format('d-M-Y')
+                        : 'All Dates',
+                    'course_type' => $courseType === 'current' ? 'Current Courses' : 'Archived Courses',
+                    'faculty_type' => $facultyTypeDisplay,
+                ],
+                'export_date' => now()->format('d-M-Y H:i'),
+                'mode' => 'print',
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Faculty Feedback Print Error: ' . $e->getMessage());
+            return back()->with('error', 'Error generating print view: ' . $e->getMessage());
+        }
+    }
+
     private function getProgramName($programId)
     {
         $program = DB::table('course_master')
@@ -1672,6 +2100,23 @@ class FeedbackController extends Controller
             ->first();
 
         return $program ? $program->course_name : 'Unknown Program';
+    }
+
+    /**
+     * Data-URI for PDF/DomPDF (embed Ashoka / LBSNAA logo like mess print reports).
+     */
+    private function feedbackReportBrandingImageDataUri(?string $path): ?string
+    {
+        if (!$path || !is_file($path)) {
+            return null;
+        }
+
+        $mime = @mime_content_type($path) ?: 'image/png';
+        if (str_starts_with($mime, 'image/svg')) {
+            $mime = 'image/svg+xml';
+        }
+
+        return 'data:' . $mime . ';base64,' . base64_encode((string) file_get_contents($path));
     }
 
     private function exportExcelWithDesign($data, $request)
@@ -2042,6 +2487,18 @@ class FeedbackController extends Controller
             if ($programs->isEmpty()) {
                 $programs = collect([]);
             }
+
+            // Default program to an active/current course on first full page load (non-AJAX).
+            // AJAX requests keep empty program_id so "All Programs" still works after reset.
+            if (
+                ($programId === '' || $programId === null)
+                && $courseType === 'current'
+                && $programs->isNotEmpty()
+                && ! $request->ajax()
+            ) {
+                $programId = $this->defaultProgramIdForCurrentCourseFeedbackList($programs, $data_course_id);
+            }
+
             // print_r($programs->toArray());die;
             // Define faculty types
             $facultyTypes = [
@@ -2461,83 +2918,102 @@ class FeedbackController extends Controller
         // Set default font
         $spreadsheet->getDefaultStyle()->getFont()->setName('Arial')->setSize(10);
 
-        $row = 1;
-
-        // HEADER
-        $sheet->setCellValue('A' . $row, 'Faculty Feedback Detailed Report - All Individual Responses');
-        $sheet->mergeCells('A' . $row . ':N' . $row);
-        $sheet->getStyle('A' . $row)->applyFromArray([
-            'font' => ['bold' => true, 'size' => 14, 'color' => ['rgb' => 'AF2910']],
-            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
-        ]);
-        $row++;
-
-        $sheet->setCellValue('A' . $row, 'Sargam | Lal Bahadur Shastri Institute of Management');
-        $sheet->mergeCells('A' . $row . ':N' . $row);
-        $sheet->getStyle('A' . $row)->applyFromArray([
-            'font' => ['bold' => true, 'size' => 12],
-            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
-        ]);
-        $row++;
-
-        $sheet->setCellValue('A' . $row, 'Report Generated: ' . now()->format('d-M-Y H:i'));
-        $sheet->mergeCells('A' . $row . ':N' . $row);
-        $sheet->getStyle('A' . $row)->applyFromArray([
-            'font' => ['italic' => true],
-            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
-        ]);
-        $row += 2;
-
-        // FILTERS SECTION
-        $sheet->setCellValue('A' . $row, 'Applied Filters');
-        $sheet->mergeCells('A' . $row . ':N' . $row);
-        $sheet->getStyle('A' . $row)->applyFromArray([
-            'font' => ['bold' => true, 'size' => 11, 'color' => ['rgb' => 'AF2910']],
-            'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F8F9FA']],
-            'borders' => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN]],
-            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT],
-        ]);
-        $row++;
-
-        // Get filter values
         $programId = $request->input('program_id');
         $facultyName = $request->input('faculty_name');
         $fromDate = $request->input('from_date');
         $toDate = $request->input('to_date');
         $courseType = $request->input('course_type', 'current');
         $facultyType = $request->input('faculty_type', []);
-
-        $sheet->setCellValue('A' . $row, 'Course Status:');
-        $sheet->getStyle('A' . $row)->applyFromArray(['font' => ['bold' => true]]);
-        $sheet->setCellValue('B' . $row, $courseType === 'current' ? 'Current Courses' : 'Archived Courses');
-
-        $sheet->setCellValue('E' . $row, 'Program:');
-        $sheet->getStyle('E' . $row)->applyFromArray(['font' => ['bold' => true]]);
-        $sheet->setCellValue('F' . $row, $programId ? $this->getProgramName($programId) : 'All Programs');
-        $row++;
-
-        $sheet->setCellValue('A' . $row, 'Faculty Name:');
-        $sheet->getStyle('A' . $row)->applyFromArray(['font' => ['bold' => true]]);
-        $sheet->setCellValue('B' . $row, $facultyName ?: 'All Faculty');
-
-        $sheet->setCellValue('E' . $row, 'Faculty Type:');
-        $sheet->getStyle('E' . $row)->applyFromArray(['font' => ['bold' => true]]);
         $facultyTypeText = !empty($facultyType) ?
             (count($facultyType) === 2 ? 'All Types' : (in_array('1', $facultyType) ? 'Internal' : 'Guest')) :
             'All Types';
-        $sheet->setCellValue('F' . $row, $facultyTypeText);
-        $row++;
-
-        $sheet->setCellValue('A' . $row, 'Date Range:');
-        $sheet->getStyle('A' . $row)->applyFromArray(['font' => ['bold' => true]]);
         $dateRange = ($fromDate && $toDate) ?
             Carbon::parse($fromDate)->format('d-M-Y') . ' to ' . Carbon::parse($toDate)->format('d-M-Y') :
             'All Dates';
-        $sheet->setCellValue('B' . $row, $dateRange);
+        $programLabel = $programId ? $this->getProgramName($programId) : 'All Programs';
 
-        $sheet->setCellValue('E' . $row, 'Total Records:');
-        $sheet->getStyle('E' . $row)->applyFromArray(['font' => ['bold' => true]]);
-        $sheet->setCellValue('F' . $row, count($data));
+        $row = 1;
+        $sheet->getRowDimension(1)->setRowHeight(52);
+        $sheet->getColumnDimension('A')->setWidth(11);
+
+        $emblemPath = public_path('images/ashoka.png');
+        if (is_file($emblemPath)) {
+            $drawingEmblem = new \PhpOffice\PhpSpreadsheet\Worksheet\Drawing();
+            $drawingEmblem->setName('Emblem');
+            $drawingEmblem->setDescription('Government emblem');
+            $drawingEmblem->setPath($emblemPath);
+            $drawingEmblem->setHeight(48);
+            $drawingEmblem->setCoordinates('A1');
+            $drawingEmblem->setWorksheet($sheet);
+        }
+
+        $logoPath = public_path('admin_assets/images/logos/logo.png');
+        if (is_file($logoPath)) {
+            $drawingLogo = new \PhpOffice\PhpSpreadsheet\Worksheet\Drawing();
+            $drawingLogo->setName('LBSNAA Logo');
+            $drawingLogo->setDescription('LBSNAA');
+            $drawingLogo->setPath($logoPath);
+            $drawingLogo->setHeight(48);
+            $drawingLogo->setCoordinates('M1');
+            $drawingLogo->setWorksheet($sheet);
+        }
+
+        $sheet->mergeCells('B1:K1');
+        $sheet->setCellValue('B1', 'Government of India');
+        $sheet->getStyle('B1')->applyFromArray([
+            'font' => ['bold' => true, 'size' => 9, 'color' => ['rgb' => '004A93']],
+            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT, 'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_BOTTOM],
+        ]);
+
+        $sheet->mergeCells('B2:K2');
+        $sheet->setCellValue('B2', 'OFFICER\'S MESS LBSNAA MUSSOORIE');
+        $sheet->getStyle('B2')->applyFromArray([
+            'font' => ['bold' => true, 'size' => 12, 'color' => ['rgb' => '1A1A1A']],
+            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT, 'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER],
+        ]);
+
+        $sheet->mergeCells('B3:K3');
+        $sheet->setCellValue('B3', 'Lal Bahadur Shastri National Academy of Administration');
+        $sheet->getStyle('B3')->applyFromArray([
+            'font' => ['size' => 9, 'color' => ['rgb' => '555555']],
+            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT, 'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_TOP],
+        ]);
+
+        $sheet->getStyle('A3:N3')->applyFromArray([
+            'borders' => ['bottom' => [
+                'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_MEDIUM,
+                'color' => ['rgb' => '004A93'],
+            ]],
+        ]);
+
+        $row = 5;
+        $sheet->setCellValue('A' . $row, 'Faculty Feedback with Comments — All Details');
+        $sheet->mergeCells('A' . $row . ':N' . $row);
+        $sheet->getStyle('A' . $row)->applyFromArray([
+            'font' => ['bold' => true, 'size' => 13, 'color' => ['rgb' => '1A1A1A']],
+            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
+        ]);
+        $row++;
+
+        $printed = now()->format('d-M-Y H:i');
+        $metaLine = 'Program: ' . $programLabel
+            . '  |  Course status: ' . ($courseType === 'current' ? 'Current courses' : 'Archived courses')
+            . '  |  Dates: ' . $dateRange
+            . '  |  Faculty: ' . ($facultyName ?: '—')
+            . '  |  Faculty type: ' . $facultyTypeText
+            . '  |  Total records: ' . count($data)
+            . '  |  Printed: ' . $printed;
+
+        $sheet->setCellValue('A' . $row, $metaLine);
+        $sheet->mergeCells('A' . $row . ':N' . $row);
+        $sheet->getStyle('A' . $row)->applyFromArray([
+            'font' => ['size' => 9, 'color' => ['rgb' => '333333']],
+            'alignment' => [
+                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT,
+                'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_TOP,
+                'wrapText' => true,
+            ],
+        ]);
         $row += 2;
 
         // COLUMN HEADERS
@@ -2564,10 +3040,10 @@ class FeedbackController extends Controller
             $sheet->setCellValue($cell, $header);
         }
 
-        // Style headers
+        // Style headers (LBSNAA / print theme blue)
         $sheet->getStyle('A' . $headerRow . ':N' . $headerRow)->applyFromArray([
             'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
-            'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'AF2910']],
+            'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => '004A93']],
             'borders' => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN]],
             'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
         ]);
@@ -2645,7 +3121,7 @@ class FeedbackController extends Controller
 
         // Add footer
         $row += 2;
-        $sheet->setCellValue('A' . $row, 'Confidential - For Internal Use Only');
+        $sheet->setCellValue('A' . $row, 'Confidential — For internal use only | LBSNAA Mussoorie | Sargam Faculty Feedback');
         $sheet->mergeCells('A' . $row . ':N' . $row);
         $sheet->getStyle('A' . $row)->applyFromArray([
             'font' => ['size' => 9, 'color' => ['rgb' => '666666']],
@@ -2677,27 +3153,33 @@ class FeedbackController extends Controller
         $courseType = $request->input('course_type', 'current');
         $facultyType = $request->input('faculty_type', []);
 
+        $filters = [
+            'course_status' => $courseType === 'current' ? 'Current courses' : 'Archived courses',
+            'program' => $programId ? $this->getProgramName($programId) : 'All Programs',
+            'faculty_name' => $facultyName ?: '—',
+            'faculty_type' => !empty($facultyType) ?
+                (count($facultyType) === 2 ? 'All types' : (in_array('1', $facultyType) ? 'Internal' : 'Guest')) :
+                'All types',
+            'date_range' => ($fromDate && $toDate) ?
+                Carbon::parse($fromDate)->format('d-M-Y') . ' to ' . Carbon::parse($toDate)->format('d-M-Y') :
+                '— to —',
+            'total_records' => count($data),
+        ];
+
+        $exportDate = now()->format('d-M-Y H:i');
+
         $pdfData = [
             'data' => $data,
-            'filters' => [
-                'course_status' => $courseType === 'current' ? 'Current Courses' : 'Archived Courses',
-                'program' => $programId ? $this->getProgramName($programId) : 'All Programs',
-                'faculty_name' => $facultyName ?: 'All Faculty',
-                'faculty_type' => !empty($facultyType) ?
-                    (count($facultyType) === 2 ? 'All Types' : (in_array('1', $facultyType) ? 'Internal' : 'Guest')) :
-                    'All Types',
-                'date_range' => ($fromDate && $toDate) ?
-                    Carbon::parse($fromDate)->format('d-M-Y') . ' to ' . Carbon::parse($toDate)->format('d-M-Y') :
-                    'All Dates',
-                'total_records' => count($data),
-            ],
-            'export_date' => now()->format('d-M-Y H:i'),
+            'emblem_src' => $this->feedbackReportBrandingImageDataUri(public_path('images/ashoka.png')),
+            'logo_src' => $this->feedbackReportBrandingImageDataUri(public_path('admin_assets/images/logos/logo.png')),
+            'filters' => $filters,
+            'export_date' => $exportDate,
             'rating_colors' => [
-                '5' => '#198754', // Green
-                '4' => '#20c997', // Light green
-                '3' => '#ffc107', // Yellow
-                '2' => '#fd7e14', // Orange
-                '1' => '#dc3545', // Red
+                '5' => '#198754',
+                '4' => '#20c997',
+                '3' => '#ffc107',
+                '2' => '#fd7e14',
+                '1' => '#dc3545',
             ],
         ];
 
@@ -2723,13 +3205,28 @@ class FeedbackController extends Controller
     public function pendingStudents(PendingFeedbackDataTable $dataTable)
     {
         try {
-            // Get filter options from cache
-            $courses = Cache::remember('pending_feedback_courses', 3600, function () {
+            // Get active courses (currently running: end_date >= today)
+            $activeCourses = Cache::remember('pending_feedback_active_courses', 3600, function () {
                 return DB::table('course_master')
                     ->where('active_inactive', 1)
+                    ->whereDate('end_date', '>=', now()->toDateString())
                     ->orderBy('course_name')
                     ->pluck('course_name', 'pk');
             });
+
+            // Get archived courses (ended or deactivated)
+            $archiveCourses = Cache::remember('pending_feedback_archive_courses', 3600, function () {
+                return DB::table('course_master')
+                    ->where(function ($q) {
+                        $q->whereDate('end_date', '<', now()->toDateString())
+                          ->orWhere('active_inactive', 0);
+                    })
+                    ->orderBy('course_name')
+                    ->pluck('course_name', 'pk');
+            });
+
+            // Keep combined courses for backward compat
+            $courses = $activeCourses;
 
             $sessions = Cache::remember('pending_feedback_sessions', 3600, function () {
                 return DB::table('timetable')
@@ -2747,10 +3244,176 @@ class FeedbackController extends Controller
                     });
             });
 
-            return $dataTable->render('admin.feedback.pending_students', compact('courses', 'sessions'));
+            // Determine active course (latest course with pending feedback sessions)
+            $activeCourse = DB::table('timetable as t')
+                ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
+                ->where('t.feedback_checkbox', 1)
+                ->where('t.START_DATE', '<=', now())
+                ->where('c.active_inactive', 1)
+                ->orderBy('t.START_DATE', 'desc')
+                ->value('c.pk');
+
+            return $dataTable->render('admin.feedback.pending_students', compact('courses', 'activeCourses', 'archiveCourses', 'sessions', 'activeCourse'));
         } catch (\Exception $e) {
             \Log::error('Pending Students View Error: ' . $e->getMessage());
             return back()->with('error', 'Error loading page: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Return student-grouped pending feedback data for accordion view.
+     */
+    public function pendingStudentsGroupedData(Request $request)
+    {
+        try {
+            $feedbackSub = DB::raw("(
+                SELECT timetable_pk, student_master_pk, COUNT(*) as submitted_count
+                FROM topic_feedback
+                WHERE is_submitted = 1
+                GROUP BY timetable_pk, student_master_pk
+            ) as tf");
+
+            $query = DB::table('timetable as t')
+                ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
+                ->join('student_master_course__map as smcm', function ($join) {
+                    $join->on('smcm.course_master_pk', '=', 't.course_master_pk')
+                        ->where('smcm.active_inactive', 1);
+                })
+                ->join('student_master as sm', 'sm.pk', '=', 'smcm.student_master_pk')
+                ->join('course_student_attendance as csa', function ($join) {
+                    $join->on('csa.timetable_pk', '=', 't.pk')
+                        ->on('csa.Student_master_pk', '=', 'sm.pk')
+                        ->where('csa.status', '1');
+                })
+                ->leftJoin($feedbackSub, function ($join) {
+                    $join->on('tf.timetable_pk', '=', 't.pk')
+                        ->on('tf.student_master_pk', '=', 'sm.pk');
+                })
+                ->select([
+                    'sm.pk as student_pk',
+                    DB::raw("TRIM(CONCAT(COALESCE(sm.first_name, ''), ' ', COALESCE(sm.middle_name, ''), ' ', COALESCE(sm.last_name, ''))) as student_name"),
+                    'sm.email',
+                    'sm.generated_OT_code',
+                    't.pk as timetable_pk',
+                    't.subject_topic as session_name',
+                    't.START_DATE as date',
+                    't.class_session as time',
+                    'c.course_name',
+                    DB::raw("CASE WHEN JSON_VALID(t.faculty_master) THEN JSON_LENGTH(t.faculty_master) ELSE 1 END as faculty_count"),
+                    DB::raw("COALESCE(tf.submitted_count, 0) as submitted_count"),
+                ])
+                ->where('t.feedback_checkbox', 1)
+                ->where('t.START_DATE', '<=', now());
+
+            // Filter by course type (active/archive tab)
+            if ($request->filled('course_pk')) {
+                $query->where('t.course_master_pk', $request->course_pk);
+            } elseif ($request->input('course_type') === 'archive') {
+                $query->where(function ($q) {
+                    $q->whereDate('c.end_date', '<', now()->toDateString())
+                      ->orWhere('c.active_inactive', 0);
+                });
+            } else {
+                $query->where('c.active_inactive', 1)
+                      ->whereDate('c.end_date', '>=', now()->toDateString());
+            }
+            if ($request->filled('session_id')) {
+                $query->where('t.pk', $request->session_id);
+            }
+            if ($request->filled('from_date')) {
+                $query->whereDate('t.START_DATE', '>=', $request->from_date);
+            }
+            if ($request->filled('to_date')) {
+                $query->whereDate('t.START_DATE', '<=', $request->to_date);
+            }
+
+            $rows = $query->orderBy('student_name')->get();
+
+            // Group by student
+            $students = [];
+            foreach ($rows as $row) {
+                $key = $row->student_pk;
+                if (!isset($students[$key])) {
+                    $students[$key] = [
+                        'student_name' => $row->student_name,
+                        'email' => $row->email,
+                        'ot_code' => $row->generated_OT_code,
+                        'feedback_given' => 0,
+                        'feedback_not_given' => 0,
+                        'sessions' => [],
+                    ];
+                }
+
+                $pending = $row->faculty_count - $row->submitted_count;
+                $status = $pending > 0 ? 'not_given' : 'given';
+
+                if ($status === 'given') {
+                    $students[$key]['feedback_given']++;
+                } else {
+                    $students[$key]['feedback_not_given']++;
+                }
+
+                $students[$key]['sessions'][] = [
+                    'session_name' => $row->session_name,
+                    'date' => $row->date ? date('d-m-Y', strtotime($row->date)) : '—',
+                    'time' => $row->time ?? '—',
+                    'course_name' => $row->course_name,
+                    'feedback_status' => $status,
+                ];
+            }
+
+            // Only include students with at least one pending feedback
+            $students = array_values(array_filter($students, function ($s) {
+                return $s['feedback_not_given'] > 0;
+            }));
+
+            // Search
+            if ($request->filled('search')) {
+                $search = mb_strtolower(trim($request->search));
+                $students = array_values(array_filter($students, function ($s) use ($search) {
+                    return str_contains(mb_strtolower($s['student_name']), $search)
+                        || str_contains(mb_strtolower($s['email'] ?? ''), $search)
+                        || str_contains(mb_strtolower($s['ot_code'] ?? ''), $search);
+                }));
+            }
+
+            // Sorting
+            $sortBy = $request->input('sort_by', 'student_name');
+            $sortDir = strtolower($request->input('sort_dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+            $allowedSorts = ['student_name', 'feedback_given', 'feedback_not_given'];
+            if (in_array($sortBy, $allowedSorts)) {
+                usort($students, function ($a, $b) use ($sortBy, $sortDir) {
+                    $valA = $a[$sortBy] ?? '';
+                    $valB = $b[$sortBy] ?? '';
+                    if (is_numeric($valA) && is_numeric($valB)) {
+                        $cmp = $valA - $valB;
+                    } else {
+                        $cmp = strnatcasecmp($valA, $valB);
+                    }
+                    return $sortDir === 'desc' ? -$cmp : $cmp;
+                });
+            }
+
+            // Pagination
+            $totalStudents = count($students);
+            $perPage = (int) ($request->per_page ?: 20);
+            $perPage = max(1, min($perPage, 100));
+            $page = max(1, (int) ($request->page ?: 1));
+            $totalPages = (int) ceil($totalStudents / $perPage);
+            $page = min($page, max($totalPages, 1));
+            $offset = ($page - 1) * $perPage;
+            $paginatedStudents = array_slice($students, $offset, $perPage);
+
+            return response()->json([
+                'students' => $paginatedStudents,
+                'total' => $totalStudents,
+                'page' => $page,
+                'per_page' => $perPage,
+                'total_pages' => $totalPages,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Pending Students Grouped Data Error: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to load grouped data'], 500);
         }
     }
 
@@ -2793,100 +3456,24 @@ class FeedbackController extends Controller
     public function exportPendingStudentsPDF(Request $request)
     {
         try {
-            // Increase limits for large exports
-            set_time_limit(600); // 10 minutes for large datasets
+            set_time_limit(600);
             ini_set('memory_limit', '2048M');
 
-            // Build the query
-            $query = $this->buildExportQuery();
-            $this->applyExportFilters($query, $request);
+            $data = $this->buildGroupedExportData($request);
 
-            // Get total count efficiently
-            $totalCount = $query->count();
-
-            if ($totalCount == 0) {
+            if (empty($data['students'])) {
                 return back()->with('error', 'No pending feedback records found.');
             }
 
-            // For very large datasets, show warning and suggest filtering
-            if ($totalCount > 10000) {
-                return back()->with(
-                    'warning',
-                    "Large dataset ({$totalCount} records). PDF generation may take several minutes. " .
-                        "Consider applying more filters to reduce records. Continue anyway?"
-                )->with('force_export', true);
-            }
+            $data['mode'] = 'pdf';
 
-            // Optimize chunk size based on total records
-            $chunkSize = $totalCount > 5000 ? 1000 : ($totalCount > 2000 ? 500 : 200);
-
-            // Use lazy loading for better memory efficiency
-            $students = collect();
-            $processedCount = 0;
-            $lastLogTime = now();
-
-            // Process in chunks with progress tracking
-            $query->orderBy('t.START_DATE', 'desc')
-                ->chunk($chunkSize, function ($chunk) use (&$students, &$processedCount, $totalCount, $lastLogTime) {
-                    foreach ($chunk as $item) {
-                        // Only keep essential fields to reduce memory
-                        $students->push((object)[
-                            'student_name' => $item->student_name,
-                            'course_name' => $item->course_name,
-                            'subject_topic' => $item->subject_topic,
-                            'email' => $item->email,
-                            'contact_no' => $item->contact_no,
-                            'generated_OT_code' => $item->generated_OT_code,
-                            'faculty_name' => $item->faculty_name ?? 'N/A',
-                            'venue_name' => $item->venue_name ?? 'N/A',
-                            'from_date' => $item->from_date,
-                            'to_date' => $item->to_date,
-                            'class_session' => $item->class_session,
-                        ]);
-                    }
-
-                    $processedCount += $chunk->count();
-
-                    // Log progress every 5 seconds for large exports
-                    if (now()->diffInSeconds($lastLogTime) >= 5) {
-                        $percentage = round(($processedCount / $totalCount) * 100, 1);
-                        \Log::info("PDF Export Progress: {$processedCount}/{$totalCount} ({$percentage}%)");
-                        $lastLogTime = now();
-                    }
-
-                    // Force garbage collection after each chunk
-                    unset($chunk);
-                    if (function_exists('gc_collect_cycles')) {
-                        gc_collect_cycles();
-                    }
-                });
-
-            \Log::info('PDF Export Completed: ' . $students->count() . ' records processed');
-
-            // Prepare optimized data for PDF
-            $data = [
-                'students' => $students,
-                'course_name' => $this->getCourseName($request->course_pk),
-                'export_date' => now()->format('d-m-Y H:i:s'),
-                'total_count' => $students->count(),
-                'page_size' => $students->count() > 2000 ? 'A3' : 'A4', // Use larger paper for big datasets
-                'filters' => [
-                    'course' => $this->getCourseName($request->course_pk),
-                    'session' => $request->session_id ? $this->getSessionName($request->session_id) : 'All Sessions',
-                    'from_date' => $request->from_date ? date('d-m-Y', strtotime($request->from_date)) : 'All',
-                    'to_date' => $request->to_date ? date('d-m-Y', strtotime($request->to_date)) : 'All',
-                    'search' => $request->ot_name ?: 'None'
-                ]
-            ];
-
-            // Generate PDF with memory-efficient settings
-            $pdf = Pdf::loadView('admin.feedback.pending_students_pdf', $data)
-                ->setPaper($data['page_size'], 'landscape')
+            $pdf = Pdf::loadView('admin.feedback.pending_students_export', $data)
+                ->setPaper('A4', 'portrait')
                 ->setOptions([
                     'defaultFont' => 'sans-serif',
                     'isHtml5ParserEnabled' => true,
-                    'isRemoteEnabled' => false,
-                    'dpi' => 72, // Reduced DPI for smaller file size
+                    'isRemoteEnabled' => true,
+                    'dpi' => 96,
                     'margin_top' => 8,
                     'margin_right' => 8,
                     'margin_bottom' => 8,
@@ -2896,24 +3483,30 @@ class FeedbackController extends Controller
                     'enable_css_float' => true,
                 ]);
 
-            // Generate filename with timestamp
-            $filename = 'pending_feedback_' . date('Y-m-d_His') . '.pdf';
-
-            // Stream download (more memory efficient than direct download)
-            return $pdf->download($filename);
+            return $pdf->download('pending_feedback_' . date('Y-m-d_His') . '.pdf');
         } catch (\Exception $e) {
             \Log::error('PDF Export Error: ' . $e->getMessage());
-            \Log::error('Stack trace: ' . $e->getTraceAsString());
-
-            // Provide helpful error message
             $errorMessage = 'Failed to export PDF: ' . $e->getMessage();
             if (str_contains($e->getMessage(), 'memory')) {
                 $errorMessage = 'Memory limit exceeded. Please apply more filters to reduce the dataset size.';
-            } elseif (str_contains($e->getMessage(), 'timeout')) {
-                $errorMessage = 'Export timeout. Please try with fewer records or apply more filters.';
             }
-
             return back()->with('error', $errorMessage);
+        }
+    }
+
+    /**
+     * Print view — renders the same template in browser for printing.
+     */
+    public function printPendingStudents(Request $request)
+    {
+        try {
+            $data = $this->buildGroupedExportData($request);
+            $data['mode'] = 'print';
+
+            return view('admin.feedback.pending_students_export', $data);
+        } catch (\Exception $e) {
+            \Log::error('Print View Error: ' . $e->getMessage());
+            return back()->with('error', 'Failed to generate print view: ' . $e->getMessage());
         }
     }
 
@@ -2936,35 +3529,132 @@ class FeedbackController extends Controller
     }
 
     /**
-     * Export to Excel
+     * Export to Excel — student-grouped view with LBSNAA header
      */
     public function exportPendingStudentsExcel(Request $request)
     {
         try {
-            // Build the query
-            $query = $this->buildExportQuery();
+            $data = $this->buildGroupedExportData($request);
 
-            // Apply filters
-            $this->applyExportFilters($query, $request);
-
-            // Order the query
-            $query->orderBy('t.START_DATE', 'desc');
-
-            // Check if data exists (optional - you can let the export handle empty data)
-            $count = (clone $query)->count();
-            if ($count == 0) {
+            if (empty($data['students'])) {
                 return back()->with('error', 'No pending feedback records found.');
             }
 
-            // Download Excel with Query Builder
             return Excel::download(
-                new PendingFeedbackExport($query),
+                new PendingFeedbackExport($data['students'], $data['filters'], $data['export_date']),
                 'pending_feedback_' . now()->format('Y-m-d_H-i') . '.xlsx'
             );
         } catch (\Exception $e) {
             \Log::error('Excel Export Error: ' . $e->getMessage());
             return back()->with('error', 'Failed to export Excel: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Build student-grouped data array for PDF / Excel / Print exports.
+     */
+    private function buildGroupedExportData(Request $request): array
+    {
+        $feedbackSub = DB::raw("(
+            SELECT timetable_pk, student_master_pk, COUNT(*) as submitted_count
+            FROM topic_feedback WHERE is_submitted = 1
+            GROUP BY timetable_pk, student_master_pk
+        ) as tf");
+
+        $query = DB::table('timetable as t')
+            ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
+            ->join('student_master_course__map as smcm', function ($join) {
+                $join->on('smcm.course_master_pk', '=', 't.course_master_pk')
+                    ->where('smcm.active_inactive', 1);
+            })
+            ->join('student_master as sm', 'sm.pk', '=', 'smcm.student_master_pk')
+            ->join('course_student_attendance as csa', function ($join) {
+                $join->on('csa.timetable_pk', '=', 't.pk')
+                    ->on('csa.Student_master_pk', '=', 'sm.pk')
+                    ->where('csa.status', '1');
+            })
+            ->leftJoin($feedbackSub, function ($join) {
+                $join->on('tf.timetable_pk', '=', 't.pk')
+                    ->on('tf.student_master_pk', '=', 'sm.pk');
+            })
+            ->select([
+                'sm.pk as student_pk',
+                DB::raw("TRIM(CONCAT(COALESCE(sm.first_name,''),' ',COALESCE(sm.middle_name,''),' ',COALESCE(sm.last_name,''))) as student_name"),
+                'sm.email',
+                'sm.generated_OT_code',
+                't.pk as timetable_pk',
+                't.subject_topic as session_name',
+                't.START_DATE as date',
+                't.class_session as time',
+                'c.course_name',
+                DB::raw("CASE WHEN JSON_VALID(t.faculty_master) THEN JSON_LENGTH(t.faculty_master) ELSE 1 END as faculty_count"),
+                DB::raw("COALESCE(tf.submitted_count, 0) as submitted_count"),
+            ])
+            ->where('t.feedback_checkbox', 1)
+            ->where('t.START_DATE', '<=', now());
+
+        // Apply filters
+        if ($request->filled('course_pk')) {
+            $query->where('t.course_master_pk', $request->course_pk);
+        }
+        if ($request->filled('session_id')) {
+            $query->where('t.pk', $request->session_id);
+        }
+        if ($request->filled('from_date')) {
+            $query->whereDate('t.START_DATE', '>=', $request->from_date);
+        }
+        if ($request->filled('to_date')) {
+            $query->whereDate('t.START_DATE', '<=', $request->to_date);
+        }
+
+        $rows = $query->orderBy('student_name')->get();
+
+        // Group by student
+        $students = [];
+        foreach ($rows as $row) {
+            $key = $row->student_pk;
+            if (!isset($students[$key])) {
+                $students[$key] = [
+                    'student_name' => $row->student_name,
+                    'email' => $row->email,
+                    'ot_code' => $row->generated_OT_code,
+                    'feedback_given' => 0,
+                    'feedback_not_given' => 0,
+                    'sessions' => [],
+                ];
+            }
+
+            $pending = $row->faculty_count - $row->submitted_count;
+            $status = $pending > 0 ? 'not_given' : 'given';
+
+            if ($status === 'given') {
+                $students[$key]['feedback_given']++;
+            } else {
+                $students[$key]['feedback_not_given']++;
+            }
+
+            $students[$key]['sessions'][] = [
+                'session_name' => $row->session_name,
+                'date' => $row->date ? date('d-m-Y', strtotime($row->date)) : '—',
+                'time' => $row->time ?? '—',
+                'course_name' => $row->course_name,
+                'feedback_status' => $status,
+            ];
+        }
+
+        // Only include students with pending feedback
+        $students = array_values(array_filter($students, fn($s) => $s['feedback_not_given'] > 0));
+
+        return [
+            'students' => $students,
+            'export_date' => now()->format('d-m-Y H:i:s'),
+            'filters' => [
+                'course' => $this->getCourseName($request->course_pk),
+                'session' => $request->session_id ? $this->getSessionName($request->session_id) : 'All Sessions',
+                'from_date' => $request->from_date ? date('d-m-Y', strtotime($request->from_date)) : 'All',
+                'to_date' => $request->to_date ? date('d-m-Y', strtotime($request->to_date)) : 'All',
+            ],
+        ];
     }
 
    
@@ -3712,5 +4402,41 @@ class FeedbackController extends Controller
         });
 
         return response()->json($stats);
+    }
+
+    /**
+     * Pick a default course pk for Feedback Details when "Current courses" is selected and no program filter is set.
+     * Matches dashboard "active course" idea (active, end_date not past) and role-scoped list when possible.
+     *
+     * @param  \Illuminate\Support\Collection<string|int, mixed>  $programs
+     */
+    private function defaultProgramIdForCurrentCourseFeedbackList($programs, array $roleCourseIds): string
+    {
+        $keys = $programs->keys()->map(static fn ($k) => (string) $k)->values()->all();
+
+        if ($keys === []) {
+            return '';
+        }
+
+        if (count($roleCourseIds) === 1) {
+            $only = (string) $roleCourseIds[0];
+            if (in_array($only, $keys, true)) {
+                return $only;
+            }
+        }
+
+        if (count($keys) === 1) {
+            return $keys[0];
+        }
+
+        $preferred = DB::table('course_master')
+            ->whereIn('pk', $keys)
+            ->where('active_inactive', 1)
+            ->where('start_year', '<', now())
+            ->whereDate('end_date', '>=', Carbon::today())
+            ->orderBy('course_name')
+            ->value('pk');
+
+        return $preferred !== null ? (string) $preferred : $keys[0];
     }
 }

@@ -25,11 +25,10 @@
     <link href="{{ asset('admin_assets/css/accesibility-style_v1.css') }}?v={{ @filemtime(public_path('admin_assets/css/accesibility-style_v1.css')) ?: time() }}" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap"
-        rel="stylesheet">
+    @include('components.fonts-sargam')
     <link rel="stylesheet" href="{{ asset('admin_assets/css/material-icons-local.css') }}" />
     <link href="https://cdn.ux4g.gov.in/UX4G@2.0.8/css/ux4g-min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('css/custom.css') }}?v={{ @filemtime(public_path('css/custom.css')) ?: time() }}" />
 
     <style>
         .star-rating {
@@ -231,6 +230,107 @@
             color: #374151;
             font-weight: 500;
         }
+
+        /* Mobile: Session Feedback */
+        .session-feedback-main {
+            max-width: 100%;
+        }
+
+        .feedback-table-wrap {
+            position: relative;
+            -webkit-overflow-scrolling: touch;
+            overflow-x: auto;
+        }
+
+        .feedback-sessions-table {
+            min-width: 720px;
+        }
+
+        .feedback-nav-tabs {
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+            gap: 0.25rem;
+            scrollbar-width: thin;
+        }
+
+        .feedback-nav-tabs .nav-item {
+            flex: 1 1 auto;
+            min-width: min(100%, 11rem);
+        }
+
+        .feedback-nav-tabs .nav-link {
+            white-space: nowrap;
+            font-size: 0.875rem;
+            padding: 0.5rem 0.65rem;
+        }
+
+        @media (max-width: 767.98px) {
+            .session-feedback-header .navbar-brand img {
+                height: 44px !important;
+                width: auto !important;
+            }
+
+            .session-feedback-header .navbar .vr {
+                display: none;
+            }
+
+            .session-feedback-header .container-fluid {
+                padding-left: 0.5rem;
+                padding-right: 0.5rem;
+            }
+
+            .session-feedback-card .card-header {
+                padding-left: 0.75rem !important;
+                padding-right: 0.75rem !important;
+            }
+
+            .session-feedback-card .tab-content {
+                padding: 0.75rem !important;
+                min-height: 280px;
+            }
+
+            .session-feedback-card #date-filter {
+                max-width: 100% !important;
+            }
+
+            .session-feedback-card .col-md-6.text-end {
+                text-align: start !important;
+                margin-top: 0.5rem;
+            }
+
+            .rating-legend {
+                gap: 0.5rem !important;
+            }
+
+            .rating-legend .legend-item {
+                font-size: 0.8rem;
+                padding: 4px 8px;
+            }
+
+            .star-rating label {
+                font-size: 1.35rem;
+                padding: 0 3px;
+            }
+
+            .individual-feedback-submit-btn,
+            .bulk-feedback-submit-btn {
+                width: 100%;
+                max-width: 100%;
+                justify-content: center;
+            }
+
+            .session-feedback-card .text-end.mt-3 {
+                text-align: center !important;
+                padding-left: 0.75rem;
+                padding-right: 0.75rem;
+            }
+
+            .session-feedback-card .me-4 {
+                margin-right: 0 !important;
+            }
+        }
     </style>
 </head>
 <x-session_message />
@@ -266,15 +366,15 @@
     </div>
 
     <!-- Sticky Header -->
-    <div class="header sticky-top bg-white shadow-sm">
-        <div class="container-fluid py-3    ">
+    <div class="header sticky-top bg-white shadow-sm session-feedback-header">
+        <div class="container-fluid py-2 py-md-3">
             <nav class="navbar navbar-expand-lg">
                 <div class="container-fluid px-0">
                     <a class="navbar-brand me-2" href="#">
                         <img src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg"
                             alt="Logo 1" height="80">
                     </a>
-                    <span class="vr mx-2"></span>
+                    <span class="vr mx-2 d-none d-md-inline"></span>
                     <a class="navbar-brand" href="#">
                         <img src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png" alt="Logo 2" height="80">
                     </a>
@@ -348,10 +448,10 @@
     </div>
 
     <!-- Main Content -->
-    <div class="container-fluid my-5">
-        <div class="card border-0 shadow-sm rounded-4">
+    <div class="container-fluid session-feedback-main px-2 px-md-3 my-3 my-md-5">
+        <div class="card border-0 shadow-sm rounded-4 session-feedback-card">
             <div class="card-header text-center rounded-top-4 mb-2" style="background-color: #591512;">
-                <h4 class="mb-0 text-white" style="font-family:Inter;font-weight:700;">Session Feedbacks</h4>
+                <h4 class="mb-0 text-white fw-bold">Session Feedbacks</h4>
             </div>
 
             <!-- Date Filter -->
@@ -375,7 +475,7 @@
 
             <!-- Tabs Navigation -->
             <div class="card-header bg-light border-bottom-0">
-                <ul class="nav nav-tabs nav-fill border-0" id="feedbackTabs" role="tablist">
+                <ul class="nav nav-tabs nav-fill border-0 feedback-nav-tabs" id="feedbackTabs" role="tablist">
                     <li class="nav-item" role="presentation">
                         <button class="nav-link active" id="pending-tab" data-bs-toggle="tab"
                             data-bs-target="#pending-tab-pane" type="button" role="tab"
@@ -406,7 +506,7 @@
                         <form id="vertical-wizard" method="POST" action="{{ route('feedback.submit.feedback') }}">
                             @csrf
                             <div class="card-body mb-4 p-0">
-                                <div class="table-responsive">
+                                <div class="table-responsive feedback-table-wrap">
                                     <div class="rating-legend d-flex flex-wrap gap-3 align-items-center mt-2 mb-3">
                                         <span class="legend-item">
                                             <span class="stars">★★★★★</span>
@@ -429,7 +529,7 @@
                                             <span class="text">Below Average</span>
                                         </span>
                                     </div>
-                                    <table class="table rounded">
+                                    <table class="table rounded feedback-sessions-table">
                                         <thead class="bg-danger text-white">
                                             <tr>
                                                 <th class="text-center text-white">S.No.</th>
@@ -575,8 +675,8 @@
                 <div class="tab-pane fade" id="submitted-tab-pane" role="tabpanel" aria-labelledby="submitted-tab"
                     tabindex="0">
                     <div class="card-body mb-4 p-0">
-                        <div class="table-responsive">
-                            <table class="table rounded-3 overflow-hidden align-middle mb-0 table-bordered">
+                        <div class="table-responsive feedback-table-wrap">
+                            <table class="table rounded-3 overflow-hidden align-middle mb-0 table-bordered feedback-sessions-table">
                                 <thead class="bg-success text-white">
                                     <tr>
                                         <th class="text-center text-white">S.No.</th>
@@ -686,22 +786,22 @@
 
     <!-- Footer -->
     <footer class="mt-auto text-white py-3" style="background-color: #004a93;">
-        <div class="container">
-            <div class="row">
+        <div class="container px-3">
+            <div class="row g-2 text-center text-md-start">
                 <div class="col-md-8">
                     <p class="mb-0" style="font-size: 14px;">&copy; {{ date('Y') }} Lal Bahadur Shastri
                         National Academy
                         of Administration, Mussoorie, Uttarakhand</p>
                 </div>
-                <div class="col-md-4 text-end">
-                    <ul class="list-unstyled d-flex justify-content-end mb-0">
-                        <li class="me-3">
+                <div class="col-md-4 text-md-end">
+                    <ul class="list-unstyled d-flex justify-content-center justify-content-md-end mb-0 flex-wrap gap-2">
+                        <li>
                             <a href="#" class="text-white text-decoration-none"
-                                style="font-size: 14px; font-family: Inter;">Privacy Policy</a>
+                                style="font-size: 14px;">Privacy Policy</a>
                         </li>
                         <li>
                             <a href="#" class="text-white text-decoration-none"
-                                style="font-size: 14px; font-family: Inter;">Need Help</a>
+                                style="font-size: 14px;">Need Help</a>
                         </li>
                     </ul>
                 </div>
@@ -720,7 +820,10 @@
     $(document).ready(function() {
         // Initialize Bootstrap tabs
         const feedbackTabs = document.getElementById('feedbackTabs');
-        const tab = new bootstrap.Tab(feedbackTabs.querySelector('button[data-bs-target="#pending-tab-pane"]'));
+        const pendingTabBtn = feedbackTabs ? feedbackTabs.querySelector('button[data-bs-target="#pending-tab-pane"]') : null;
+        if (pendingTabBtn) {
+            new bootstrap.Tab(pendingTabBtn);
+        }
 
         // Add form validation - PLACE IT HERE
         $('#vertical-wizard').validate({
@@ -781,7 +884,7 @@
         {{ session('success') }}
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>`;
-            $('.container.my-5').prepend(successAlert);
+            $('.session-feedback-main').prepend(successAlert);
 
             setTimeout(function() {
                 const submittedTab = new bootstrap.Tab(document.getElementById('submitted-tab'));
@@ -799,7 +902,7 @@
         {{ session('error') }}
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>`;
-            $('.container.my-5').prepend(errorAlert);
+            $('.session-feedback-main').prepend(errorAlert);
         @endif
 
         // Prevent double form submission

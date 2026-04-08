@@ -25,9 +25,10 @@
     <link href="{{ asset('admin_assets/css/accesibility-style_v1.css') }}?v={{ @filemtime(public_path('admin_assets/css/accesibility-style_v1.css')) ?: time() }}" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
+    @include('components.fonts-sargam')
     <link rel="stylesheet" href="{{ asset('admin_assets/css/material-icons-local.css') }}" />
     <link href="https://cdn.ux4g.gov.in/UX4G@2.0.8/css/ux4g-min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('css/custom.css') }}?v={{ @filemtime(public_path('css/custom.css')) ?: time() }}" />
 </head>
 <x-session_message />
 
@@ -113,8 +114,9 @@
     </div>
 
 
-    <!-- Main Content -->
+    <!-- Main Content (OT student pages use @section('content'); calendar uses @section('setup_content')) -->
     @yield('content')
+    @yield('setup_content')
 
     <!-- Footer -->
     <footer class="mt-auto text-white py-2" style="background-color: #004a93;">
@@ -129,11 +131,11 @@
                     <ul class="list-unstyled d-flex justify-content-end mb-0">
                         <li class="me-3">
                             <a href="#" class="text-white text-decoration-none"
-                                style="font-size: 14px; font-family: Inter;">Privacy Policy</a>
+                                style="font-size: 14px;">Privacy Policy</a>
                         </li>
                         <li>
                             <a href="#" class="text-white text-decoration-none"
-                                style="font-size: 14px; font-family: Inter;">Need Help</a>
+                                style="font-size: 14px;">Need Help</a>
                         </li>
                     </ul>
                 </div>
@@ -141,6 +143,46 @@
         </div>
     </footer>
 
+    <style id="timetable-layout-mobile">
+        @media (max-width: 767.98px) {
+            .govt-header-top .row > div {
+                flex: 0 0 100%;
+                max-width: 100%;
+            }
+
+            .govt-header-top .d-flex.justify-content-end {
+                justify-content: flex-start !important;
+                flex-wrap: wrap;
+                gap: 0.5rem !important;
+                margin-top: 0.5rem;
+            }
+
+            .govt-header-top .fw-semibold {
+                font-size: 0.75rem;
+            }
+
+            .header .navbar-brand img {
+                height: 44px !important;
+                width: auto !important;
+            }
+
+            .header .navbar .vr {
+                display: none;
+            }
+
+            .header .navbar-toggler {
+                border-color: rgba(0, 74, 147, 0.35);
+            }
+
+            footer .row > div {
+                text-align: center !important;
+            }
+
+            footer .d-flex.justify-content-end {
+                justify-content: center !important;
+            }
+        }
+    </style>
     <style id="admin-timetable-light-last-resort">
         html.admin-force-light,
         body.admin-force-light,
@@ -181,7 +223,10 @@
         $(document).ready(function() {
             // Initialize Bootstrap tabs
             const feedbackTabs = document.getElementById('feedbackTabs');
-            const tab = new bootstrap.Tab(feedbackTabs.querySelector('button[data-bs-target="#pending-tab-pane"]'));
+            const pendingTabBtn = feedbackTabs ? feedbackTabs.querySelector('button[data-bs-target="#pending-tab-pane"]') : null;
+            if (pendingTabBtn) {
+                new bootstrap.Tab(pendingTabBtn);
+            }
 
             // Handle tab click events
             $('#submitted-tab').on('click', function() {
@@ -195,7 +240,7 @@
             {{ session('success') }}
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>`;
-                $('.container.my-5').prepend(successAlert);
+                $('.session-feedback-main, .container.my-5').first().prepend(successAlert);
 
                 setTimeout(function() {
                     const submittedTab = new bootstrap.Tab(document.getElementById('submitted-tab'));
@@ -213,7 +258,7 @@
             {{ session('error') }}
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>`;
-                $('.container.my-5').prepend(errorAlert);
+                $('.session-feedback-main, .container.my-5').first().prepend(errorAlert);
             @endif
 
             // Add form validation

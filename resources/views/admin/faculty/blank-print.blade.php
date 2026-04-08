@@ -7,7 +7,7 @@
 .page-wrapper {
     background: #fff;
     padding: 20px 40px;
-    font-family: "Inter", Arial, sans-serif;
+    font-family: "Noto Sans", "Noto Sans Devanagari", Arial, sans-serif;
 }
 
 .section-title {
