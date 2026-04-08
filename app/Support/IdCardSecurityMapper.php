@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\SecurityParmIdApply;
+use App\Models\SecurityParmIdApplyApproval;
 use App\Models\SecurityFamilyIdApply;
 use Illuminate\Support\Facades\DB;
 use stdClass;
@@ -51,6 +52,67 @@ class IdCardSecurityMapper
         $name = trim(($emp->first_name ?? '') . ' ' . ($emp->last_name ?? ''));
 
         return $name !== '' ? $name : null;
+    }
+
+    /**
+     * Normalize a person's full name for comparison (uppercase, collapsed spaces).
+     */
+    private static function normalizeFullNameForMatch(?string $name): string
+    {
+        $s = trim((string) $name);
+        if ($s === '') {
+            return '';
+        }
+
+        return strtoupper(preg_replace('/\s+/u', ' ', $s) ?? $s);
+    }
+
+    /**
+     * Resolve the employee_master row that the contractual ID card is for (beneficiary).
+     * Uses created_by when it matches the name on the card; otherwise exact then fuzzy name match.
+     */
+    public static function resolveContractualBeneficiaryEmployee(object $row): ?object
+    {
+        $cardName = static::normalizeFullNameForMatch($row->employee_name ?? '');
+
+        if (! empty($row->created_by)) {
+            $byCreator = DB::table('employee_master')
+                ->where(function ($q) use ($row) {
+                    $q->where('pk', $row->created_by)->orWhere('pk_old', $row->created_by);
+                })
+                ->first(['pk', 'first_name', 'last_name', 'doj']);
+            if ($byCreator) {
+                $creatorName = static::normalizeFullNameForMatch(trim(($byCreator->first_name ?? '') . ' ' . ($byCreator->last_name ?? '')));
+                if ($cardName === '' || $cardName === $creatorName) {
+                    return $byCreator;
+                }
+            }
+        }
+
+        if ($cardName !== '') {
+            $byName = DB::table('employee_master')
+                ->whereRaw(
+                    "UPPER(TRIM(CONCAT(COALESCE(TRIM(first_name),''),' ',COALESCE(TRIM(last_name),'')))) = ?",
+                    [$cardName]
+                )
+                ->orderBy('pk')
+                ->first(['pk', 'first_name', 'last_name', 'doj']);
+            if ($byName) {
+                return $byName;
+            }
+            $needle = trim((string) ($row->employee_name ?? ''));
+            if ($needle !== '') {
+                $fuzzy = DB::table('employee_master')
+                    ->where(DB::raw("CONCAT(COALESCE(first_name,''), ' ', COALESCE(last_name,''))"), 'like', '%' . $needle . '%')
+                    ->orderBy('pk')
+                    ->first(['pk', 'first_name', 'last_name', 'doj']);
+                if ($fuzzy) {
+                    return $fuzzy;
+                }
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -206,8 +268,62 @@ class IdCardSecurityMapper
         $dto->payment_receipt = null;
         $dto->documents = null;
         $dto->updated_at = $row->created_date;
+        $dto->user_may_edit_request = static::permanentEmployeeIdCardApplicantMayEdit($row);
 
         return $dto;
+    }
+
+    /**
+     * True when the applicant may still edit/delete: pending and no security approval row has progressed.
+     */
+    private static function permanentEmployeeIdCardApplicantMayEdit(SecurityParmIdApply $row): bool
+    {
+        if ((int) $row->id_status !== SecurityParmIdApply::ID_STATUS_PENDING) {
+            return false;
+        }
+        $approvals = $row->relationLoaded('approvals') ? $row->approvals : $row->approvals()->get(['status', 'recommend_status']);
+        foreach ($approvals as $a) {
+            $st = (int) ($a->status ?? 0);
+            if (in_array($st, [
+                SecurityParmIdApplyApproval::STATUS_APPROVAL_1,
+                SecurityParmIdApplyApproval::STATUS_APPROVAL_2,
+                SecurityParmIdApplyApproval::STATUS_REJECTED,
+            ], true)) {
+                return false;
+            }
+            if ((int) ($a->recommend_status ?? 0) === 1) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * True when the applicant may still edit/delete: pending, section has not forwarded (depart_approval_status≠2),
+     * and no security approval row has progressed.
+     *
+     * @param  \Illuminate\Support\Collection|\Traversable|array  $approvals
+     */
+    private static function contractualApplicantMayEditRequest(object $row, iterable $approvals, int $idStatus): bool
+    {
+        if ($idStatus !== SecurityParmIdApply::ID_STATUS_PENDING) {
+            return false;
+        }
+        if ((int) ($row->depart_approval_status ?? 0) === 2) {
+            return false;
+        }
+        foreach ($approvals as $a) {
+            $st = (int) ($a->status ?? 0);
+            if (in_array($st, [1, 2, 3], true)) {
+                return false;
+            }
+            if ((int) ($a->recommend_status ?? 0) === 1) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -229,13 +345,13 @@ class IdCardSecurityMapper
             $photoPath = 'idcard/photos/' . $photoPath;
         }
         $dto->photo = $photoPath;
-        // Contractual: supporting document is stored as doc_path (same role as joining_letter_path for permanent).
+        // Contractual: supporting document is doc_path only. Do not set joining_letter — same path caused duplicate rows in approval "Uploaded Documents".
         $docPathRaw = $row->doc_path ?? $row->joining_letter_path ?? null;
         $docPathNorm = $docPathRaw;
         if ($docPathNorm && strpos((string) $docPathNorm, '/') === false) {
             $docPathNorm = 'idcard/documents/' . $docPathNorm;
         }
-        $dto->joining_letter = $docPathNorm;
+        $dto->joining_letter = null;
         $dto->documents = $docPathNorm;
         $dto->created_at = isset($row->created_date) ? \Carbon\Carbon::parse($row->created_date) : null;
         $cardTypeName = '--';
@@ -278,6 +394,7 @@ class IdCardSecurityMapper
         $dto->approver2 = null;
         $dto->rejectedByUser = null;
 
+        $approvals = collect();
         if ($applyId) {
             $approvals = DB::table('security_con_oth_id_apply_approval')
                 ->where('security_parm_id_apply_pk', $applyId)
@@ -335,7 +452,10 @@ class IdCardSecurityMapper
         $dto->sub_type = $subTypeName;
         $dto->employee_type = 'Contractual Employee';
         $dto->father_name = $row->father_name ?? null;
-        $dto->academy_joining = null;
+        $benef = static::resolveContractualBeneficiaryEmployee($row);
+        $dto->academy_joining = ($benef && ! empty($benef->doj))
+            ? \Carbon\Carbon::parse($benef->doj)->format('Y-m-d')
+            : null;
         // section in table is bigint (department_master_pk). Resolve to department name for edit dropdown (value=name).
         $dto->section = null;
         $dto->requested_by = null;
@@ -386,6 +506,8 @@ class IdCardSecurityMapper
         $dto->fir_receipt = null;
         $dto->payment_receipt = null;
         $dto->updated_at = $dto->created_at;
+        $dto->user_may_edit_request = static::contractualApplicantMayEditRequest($row, $approvals, $idStatus);
+
         return $dto;
     }
 

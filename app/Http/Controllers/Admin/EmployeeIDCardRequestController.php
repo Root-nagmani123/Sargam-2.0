@@ -16,6 +16,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Maatwebsite\Excel\Facades\Excel;
@@ -1131,7 +1132,9 @@ class EmployeeIDCardRequestController extends Controller
                     $contRow['joining_letter_path'] = $docPath;
                 }
                 DB::table('security_con_oth_id_apply')->insert($contRow);
-             
+                if ($employeePk) {
+                    static::syncEmployeeDojIfEmpty((int) $employeePk, $validated['academy_joining'] ?? null);
+                }
 
                 // Case 3 - Request Employee ID Card (Other/Contractual): Only security_con_oth_id_apply at request time.
                 // security_con_oth_id_apply_approval rows are inserted when approvers approve (EmployeeIDCardApprovalController).
@@ -1186,19 +1189,30 @@ class EmployeeIDCardRequestController extends Controller
     }
 
     /**
-     * Approved requests are read-only in the user panel (no edit / archive).
+     * Block edit/delete once final status is not pending, or any section/security approver has acted.
      */
-    private function redirectIfApprovedIdCardLocked(mixed $routeId, array $res): ?\Illuminate\Http\RedirectResponse
+    private function redirectIfIdCardRequestNotEditableByApplicant(mixed $routeId, array $res): ?\Illuminate\Http\RedirectResponse
     {
+        $mayEdit = false;
         if ($res['type'] === 'cont') {
             $row = DB::table('security_con_oth_id_apply')->where('pk', $res['pk'])->first();
+            if ($row) {
+                $dto = IdCardSecurityMapper::toContractualRequestDto($row);
+                $mayEdit = (bool) ($dto->user_may_edit_request ?? false);
+            }
         } else {
-            $row = SecurityParmIdApply::find($res['pk']);
+            $row = SecurityParmIdApply::with(['approvals' => function ($q) {
+                $q->select(['pk', 'security_parm_id_apply_pk', 'status', 'recommend_status']);
+            }])->find($res['pk']);
+            if ($row) {
+                $dto = IdCardSecurityMapper::toEmployeeRequestDto($row);
+                $mayEdit = (bool) ($dto->user_may_edit_request ?? false);
+            }
         }
-        if ($row && (int) ($row->id_status ?? 0) === SecurityParmIdApply::ID_STATUS_APPROVED) {
+        if (! $mayEdit) {
             return redirect()
                 ->route('admin.employee_idcard.show', $routeId)
-                ->with('error', 'This ID card request is approved. Edit and delete are not allowed.');
+                ->with('error', 'This request cannot be edited or deleted: an approver has already acted or the status has changed.');
         }
 
         return null;
@@ -1228,8 +1242,8 @@ class EmployeeIDCardRequestController extends Controller
             }
         }
         $res = static::resolveId($id);
-        if ($redirectApproved = $this->redirectIfApprovedIdCardLocked($id, $res)) {
-            return $redirectApproved;
+        if ($redirectLocked = $this->redirectIfIdCardRequestNotEditableByApplicant($id, $res)) {
+            return $redirectLocked;
         }
         if ($res['type'] === 'cont') {
             $row = DB::table('security_con_oth_id_apply')->where('pk', $res['pk'])->first();
@@ -1237,13 +1251,6 @@ class EmployeeIDCardRequestController extends Controller
                 abort(404);
             }
             $request = IdCardSecurityMapper::toContractualRequestDto($row);
-            // Autofill academy_joining from employee_master when created_by links to an employee
-            if (!empty($row->created_by)) {
-                $emp = EmployeeMaster::where('pk', $row->created_by)->first(['doj']);
-                if ($emp && $emp->doj) {
-                    $request->academy_joining = \Carbon\Carbon::parse($emp->doj)->format('Y-m-d');
-                }
-            }
             $designations = DesignationMaster::active()->orderBy('designation_name')->pluck('designation_name', 'designation_name')->all();
             return view('admin.employee_idcard.edit', [
                 'request' => $request,
@@ -1258,7 +1265,7 @@ class EmployeeIDCardRequestController extends Controller
             'employee.designation:pk,designation_name',
             'creator:pk,first_name,last_name,department_master_pk',
             'creator.department:pk,department_name',
-            'approvals:pk,security_parm_id_apply_pk,status,approval_emp_pk,created_date,approval_remarks',
+            'approvals:pk,security_parm_id_apply_pk,status,recommend_status,approval_emp_pk,created_date,approval_remarks',
             'approvals.approver:pk,first_name,last_name'
         ])->findOrFail($res['pk']);
         $request = IdCardSecurityMapper::toEmployeeRequestDto($row);
@@ -1300,7 +1307,7 @@ class EmployeeIDCardRequestController extends Controller
             'joining_letter' => 'nullable|mimes:pdf,doc,docx|max:5120',
             'fir_receipt' => 'nullable|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120',
             'payment_receipt' => 'nullable|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120',
-            'documents' => 'nullable|mimes:pdf,doc,docx|max:5120',
+            'documents' => 'nullable|file|mimes:pdf,doc,docx|max:5120',
             'status' => 'nullable|in:Pending,Approved,Rejected,Issued',
             'remarks' => 'nullable|string',
         ], [
@@ -1308,8 +1315,8 @@ class EmployeeIDCardRequestController extends Controller
         ]);
 
         $res = static::resolveId($id);
-        if ($redirectApproved = $this->redirectIfApprovedIdCardLocked($id, $res)) {
-            return $redirectApproved;
+        if ($redirectLocked = $this->redirectIfIdCardRequestNotEditableByApplicant($id, $res)) {
+            return $redirectLocked;
         }
         if ($res['type'] === 'cont') {
             $row = DB::table('security_con_oth_id_apply')->where('pk', $res['pk'])->first();
@@ -1360,16 +1367,32 @@ class EmployeeIDCardRequestController extends Controller
                 $up['id_photo_path'] = $request->file('photo')->store('idcard/photos', 'public');
                 $documentsUploadedList[] = 'Photo';
             }
-            if ($request->hasFile('documents')) {
+            if ($request->hasFile('documents') && $request->file('documents')->isValid()) {
+                $oldDocPath = $row->doc_path ?? null;
+                $oldJoinLetterPath = Schema::hasColumn('security_con_oth_id_apply', 'joining_letter_path')
+                    ? ($row->joining_letter_path ?? null)
+                    : null;
                 $storedDoc = $request->file('documents')->store('idcard/documents', 'public');
                 $up['doc_path'] = $storedDoc;
                 if (Schema::hasColumn('security_con_oth_id_apply', 'joining_letter_path')) {
                     $up['joining_letter_path'] = $storedDoc;
                 }
-                $documentsUploadedList[] = 'Documents';
+                $documentsUploadedList[] = 'Supporting document';
+                foreach (array_unique(array_filter([$oldDocPath, $oldJoinLetterPath])) as $prevPath) {
+                    if ($prevPath !== '' && $prevPath !== $storedDoc && Storage::disk('public')->exists($prevPath)) {
+                        Storage::disk('public')->delete($prevPath);
+                    }
+                }
             }
             DB::table('security_con_oth_id_apply')->where('pk', $res['pk'])->update($up);
-            
+            $freshRow = DB::table('security_con_oth_id_apply')->where('pk', $res['pk'])->first();
+            if ($freshRow) {
+                $benef = IdCardSecurityMapper::resolveContractualBeneficiaryEmployee($freshRow);
+                if ($benef && ! empty($benef->pk)) {
+                    static::syncEmployeeDojIfEmpty((int) $benef->pk, $validated['academy_joining'] ?? null);
+                }
+            }
+
             $successMsg = 'Employee ID Card request updated successfully!';
             if (!empty($documentsUploadedList)) {
                 $successMsg .= ' ' . implode(' and ', $documentsUploadedList) . ' uploaded successfully.';
@@ -1449,7 +1472,7 @@ class EmployeeIDCardRequestController extends Controller
             if (array_key_exists('father_name', $validated)) {
                 $emp->father_name = $validated['father_name'];
             }
-            if (!empty($validated['academy_joining'])) {
+            if (! empty($validated['academy_joining']) && static::employeeMasterDojIsEmpty($emp->doj)) {
                 $emp->doj = \Carbon\Carbon::parse($validated['academy_joining'])->format('Y-m-d');
             }
             $emp->save();
@@ -1620,8 +1643,8 @@ class EmployeeIDCardRequestController extends Controller
     public function destroy($id)
     {
         $res = static::resolveId($id);
-        if ($redirectApproved = $this->redirectIfApprovedIdCardLocked($id, $res)) {
-            return $redirectApproved;
+        if ($redirectLocked = $this->redirectIfIdCardRequestNotEditableByApplicant($id, $res)) {
+            return $redirectLocked;
         }
         if ($res['type'] === 'cont') {
             $row = DB::table('security_con_oth_id_apply')->where('pk', $res['pk'])->first();
@@ -1701,7 +1724,7 @@ class EmployeeIDCardRequestController extends Controller
         $with = [
             'employee:pk,first_name,last_name,designation_master_pk',
             'employee.designation:pk,designation_name',
-            'approvals:pk,security_parm_id_apply_pk,status,approval_emp_pk,created_date,approval_remarks',
+            'approvals:pk,security_parm_id_apply_pk,status,recommend_status,approval_emp_pk,created_date,approval_remarks',
             'approvals.approver:pk,first_name,last_name',
         ];
         $columns = ['pk', 'emp_id_apply', 'employee_master_pk', 'id_status', 'created_date', 'card_valid_from', 'card_valid_to', 'id_card_no', 'id_photo_path', 'joining_letter_path', 'mobile_no', 'telephone_no', 'blood_group', 'card_type', 'permanent_type', 'perm_sub_type', 'remarks', 'created_by', 'employee_dob'];
@@ -1758,6 +1781,42 @@ class EmployeeIDCardRequestController extends Controller
         }
 
         return $merged;
+    }
+
+    /**
+     * True when employee_master.doj is unset or a known "empty" sentinel.
+     */
+    private static function employeeMasterDojIsEmpty($doj): bool
+    {
+        if ($doj === null) {
+            return true;
+        }
+        $s = trim((string) $doj);
+        if ($s === '') {
+            return true;
+        }
+        if ($s === '0000-00-00' || str_starts_with($s, '0000-00-00')) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Set employee_master.doj from the ID card form only when doj is currently empty.
+     */
+    private static function syncEmployeeDojIfEmpty(int $employeeMasterPk, ?string $academyJoiningInput): void
+    {
+        $ymd = static::parseDateToYmd(trim((string) ($academyJoiningInput ?? '')));
+        if ($ymd === null) {
+            return;
+        }
+        $emp = EmployeeMaster::query()->where('pk', $employeeMasterPk)->first(['pk', 'doj']);
+        if (! $emp || ! static::employeeMasterDojIsEmpty($emp->doj)) {
+            return;
+        }
+        $emp->doj = $ymd;
+        $emp->save();
     }
 
     /**

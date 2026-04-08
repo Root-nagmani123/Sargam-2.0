@@ -93,7 +93,7 @@
                             <label for="request_for_perm" class="form-label">Request For <span class="text-danger">*</span></label>
                             <select name="request_for" id="request_for_perm" class="form-select idcard-perm-field idcard-step-field" data-field="request_for" required>
                                 <option value="">Select Request</option>
-                                <option value="Others ID Card" {{ $oldRequestFor == 'Others ID Card' ? 'selected' : '' }}>Others ID Card</option>
+                                <option value="Others ID Card" {{ $oldRequestFor == 'Others ID Card' ? 'selected' : '' }}>Own ID Card</option>
                                 {{--<option value="Replacement" {{ $oldRequestFor == 'Replacement' ? 'selected' : '' }}>Replacement</option>
                                 <option value="Duplication" {{ $oldRequestFor == 'Duplication' ? 'selected' : '' }}>Duplication</option>
                                 <option value="Extension" {{ $oldRequestFor == 'Extension' ? 'selected' : '' }}>Extension</option> --}}
@@ -228,7 +228,12 @@
                             <label for="request_for_cont" class="form-label">Request For <span class="text-danger">*</span></label>
                             <select name="request_for" id="request_for_cont" class="form-select idcard-cont-field idcard-step-field" required disabled>
                                 <option value="">---Select---</option>
-                                <option value="Own ID Card" {{ $oldRequestFor == 'Own ID Card' ? 'selected' : '' }}>Own ID Card</option>
+                                @if(($lockedEmployeeType ?? null) === 'Contractual Employee')
+                                    <option value="Own ID Card" {{ $oldRequestFor == 'Own ID Card' ? 'selected' : '' }}>Own ID Card</option>
+                                @else
+                                    {{-- Permanent (or other) users choosing Contractual: request is for someone else --}}
+                                    <option value="Others ID Card" {{ $oldRequestFor == 'Others ID Card' ? 'selected' : '' }}>Others ID Card</option>
+                                @endif
                             </select>
                         </div>
                         <div class="col-12 duplication-extension-field" id="duplicationExtensionCont" style="display:none;">
@@ -562,6 +567,26 @@
         docEl.required = !dup;
     }
 
+    /** Contractual + Others ID Card: beneficiary details entered manually; keep section / vendor / approver usable. */
+    function idcardContractualOthersEnableManualEntry(clearValues) {
+        if (contractualView.style.display === 'none') return;
+        if (clearValues) {
+            document.getElementById('employee_master_pk_input').value = '';
+            contractualView.querySelectorAll('.idcard-autofill-field').forEach(function(el) {
+                el.value = '';
+            });
+        }
+        contractualView.querySelectorAll('.idcard-autofill-field').forEach(function(el) {
+            el.disabled = false;
+            el.removeAttribute('readonly');
+        });
+        ['section_cont', 'approval_authority_cont', 'vendor_organization_name_cont'].forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) el.disabled = false;
+        });
+        idcardSyncDocumentsRequired();
+    }
+
     function showPermanent() {
         permanentView.style.display = 'block';
         contractualView.style.display = 'none';
@@ -711,7 +736,9 @@
                     if (oldRf) {
                         step.requestFor.value = oldRf;
                     }
-                    if (step.requestFor.value === 'Own ID Card' && step.subType.value) {
+                    if (step.requestFor.value === 'Others ID Card' && step.subType.value) {
+                        idcardContractualOthersEnableManualEntry(false);
+                    } else if (step.requestFor.value === 'Own ID Card' && step.subType.value) {
                         idcardLoadMe();
                     }
                 }
@@ -778,8 +805,14 @@
         if (contractualView.style.display !== 'none') {
             var rf = document.getElementById('request_for_cont');
             rf.disabled = !document.getElementById('sub_type_cont').value;
+            if (!rf.disabled && !rf.value) {
+                var firstOpt = Array.from(rf.options).find(function(o) { return o.value; });
+                if (firstOpt) rf.value = firstOpt.value;
+            }
             if (rf.value === 'Own ID Card') {
                 idcardLoadMe();
+            } else if (rf.value === 'Others ID Card') {
+                idcardContractualOthersEnableManualEntry(true);
             }
         }
     });
@@ -793,12 +826,8 @@
                 var sec = document.getElementById('section_cont'); if (sec) sec.disabled = false;
                 var app = document.getElementById('approval_authority_cont'); if (app) app.disabled = false;
                 var ven = document.getElementById('vendor_organization_name_cont'); if (ven) ven.disabled = false;
-            } else {
-                contractualView.querySelectorAll('.idcard-autofill-field').forEach(function(el) { el.disabled = true; el.value = ''; });
-                document.getElementById('employee_master_pk_input').value = '';
-                var sec = document.getElementById('section_cont'); if (sec) sec.disabled = true;
-                var app = document.getElementById('approval_authority_cont'); if (app) app.disabled = true;
-                var ven = document.getElementById('vendor_organization_name_cont'); if (ven) ven.disabled = true;
+            } else if (this.value === 'Others ID Card') {
+                idcardContractualOthersEnableManualEntry(true);
             }
         }
     });
@@ -832,6 +861,9 @@
         var stcInit = document.getElementById('sub_type_cont');
         if (sfcInit && stcInit && stcInit.value && sfcInit.value === 'Own ID Card') {
             idcardLoadMe();
+        }
+        if (sfcInit && stcInit && stcInit.value && sfcInit.value === 'Others ID Card') {
+            idcardContractualOthersEnableManualEntry(false);
         }
     }
 

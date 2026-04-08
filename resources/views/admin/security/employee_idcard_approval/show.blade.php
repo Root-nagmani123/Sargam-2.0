@@ -144,6 +144,16 @@
                                         'full' => false,
                                     ];
                                 }
+                                // De-dupe by storage path (e.g. contractual doc_path exposed as both joining_letter and documents)
+                                $seenPaths = [];
+                                $docLinks = array_values(array_filter($docLinks, function ($d) use (&$seenPaths) {
+                                    $p = $d['path'] ?? '';
+                                    if ($p === '' || isset($seenPaths[$p])) {
+                                        return false;
+                                    }
+                                    $seenPaths[$p] = true;
+                                    return true;
+                                }));
                             @endphp
 
                             @if(!empty($docLinks))

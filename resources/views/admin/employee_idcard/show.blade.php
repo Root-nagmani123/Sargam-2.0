@@ -421,7 +421,7 @@
                 </div>
                 <div class="card-body p-3">
                     <div class="d-grid gap-2">
-                        @if(($request->status ?? '') !== 'Approved')
+                        @if($request->user_may_edit_request ?? false)
                         <a href="{{ route('admin.employee_idcard.edit', $request->id) }}" class="btn btn-primary rounded-2">
                             <i class="material-icons material-symbols-rounded align-middle me-2">edit</i>
                             Edit Request
@@ -431,7 +431,7 @@
                             <i class="material-icons material-symbols-rounded align-middle me-2">arrow_back</i>
                             Back to List
                         </a>
-                        @if(($request->status ?? '') !== 'Approved')
+                        @if($request->user_may_edit_request ?? false)
                         <form action="{{ route('admin.employee_idcard.destroy', $request->id) }}" method="POST" class="mt-2" onsubmit="return confirm('Are you sure you want to delete this request?');">
                             @csrf
                             @method('DELETE')

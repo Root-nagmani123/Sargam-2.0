@@ -150,12 +150,13 @@
                                             </span>
                                         </td>
                                         <td class="text-end pe-4">
+                                            @php $canApplicantEdit = $request->user_may_edit_request ?? false; @endphp
                                             <div class="btn-group btn-group-sm" role="group">
                                                 <a href="{{ route('admin.employee_idcard.show', $request->id) }}" 
-                                                   class="text-primary {{ ($request->status ?? '') === 'Approved' ? 'rounded-2' : 'rounded-start-2' }} view-details-btn d-inline-flex align-items-center gap-1 px-2 py-1" title="View Details" data-request-id="{{ $request->id }}" data-name="{{ $request->name }}" data-designation="{{ $request->designation ?? '--' }}" data-request-for="{{ $request->request_for ?? '--' }}" data-duplication="{{ $request->duplication_reason ?? '--' }}" data-extension="{{ $request->id_card_valid_upto ?? '--' }}" data-valid-from="{{ $request->id_card_valid_from ?? '' }}" data-id-number="{{ $request->id_card_number ?? '' }}" data-valid-upto="{{ $request->id_card_valid_upto ?? '--' }}" data-status="{{ $request->status ?? '--' }}" data-created="{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}" data-show-url="{{ route('admin.employee_idcard.show', $request->id) }}">
+                                                   class="text-primary {{ $canApplicantEdit ? 'rounded-start-2' : 'rounded-2' }} view-details-btn d-inline-flex align-items-center gap-1 px-2 py-1" title="View Details" data-request-id="{{ $request->id }}" data-name="{{ $request->name }}" data-designation="{{ $request->designation ?? '--' }}" data-request-for="{{ $request->request_for ?? '--' }}" data-duplication="{{ $request->duplication_reason ?? '--' }}" data-extension="{{ $request->id_card_valid_upto ?? '--' }}" data-valid-from="{{ $request->id_card_valid_from ?? '' }}" data-id-number="{{ $request->id_card_number ?? '' }}" data-valid-upto="{{ $request->id_card_valid_upto ?? '--' }}" data-status="{{ $request->status ?? '--' }}" data-created="{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}" data-show-url="{{ route('admin.employee_idcard.show', $request->id) }}">
                                                     <i class="material-icons material-symbols-rounded">visibility</i>
                                                 </a>
-                                                @if(($request->status ?? '') !== 'Approved')
+                                                @if($canApplicantEdit)
                                                 <a href="{{ route('admin.employee_idcard.edit', $request->id) }}" 
                                                    class="text-primary rounded-0 d-inline-flex align-items-center gap-1 px-2 py-1" title="Edit" data-bs-toggle="tooltip" data-bs-placement="top">
                                                     <i class="material-icons material-symbols-rounded">edit</i>
@@ -261,11 +262,12 @@
                                             </span>
                                         </td>
                                         <td class="text-end pe-4">
+                                            @php $canApplicantEditDup = $request->user_may_edit_request ?? false; @endphp
                                             <div class="btn-group btn-group-sm" role="group">
-                                                <a href="{{ route('admin.employee_idcard.show', $request->id) }}" class="btn btn-outline-primary {{ ($request->status ?? '') === 'Approved' ? 'rounded-2' : 'rounded-start-2' }} view-details-btn d-inline-flex align-items-center gap-1 px-2 py-1" title="View Details" data-name="{{ $request->name }}" data-designation="{{ $request->designation ?? '--' }}" data-request-for="{{ $request->request_for ?? '--' }}" data-duplication="{{ $request->duplication_reason ?? '--' }}" data-extension="{{ $request->request_for == 'Extension' ? ($request->id_card_valid_upto ?? '--') : '--' }}" data-valid-upto="{{ $request->id_card_valid_upto ?? '--' }}" data-status="{{ $request->status ?? '--' }}" data-created="{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}" data-show-url="{{ route('admin.employee_idcard.show', $request->id) }}">
+                                                <a href="{{ route('admin.employee_idcard.show', $request->id) }}" class="btn btn-outline-primary {{ $canApplicantEditDup ? 'rounded-start-2' : 'rounded-2' }} view-details-btn d-inline-flex align-items-center gap-1 px-2 py-1" title="View Details" data-name="{{ $request->name }}" data-designation="{{ $request->designation ?? '--' }}" data-request-for="{{ $request->request_for ?? '--' }}" data-duplication="{{ $request->duplication_reason ?? '--' }}" data-extension="{{ $request->request_for == 'Extension' ? ($request->id_card_valid_upto ?? '--') : '--' }}" data-valid-upto="{{ $request->id_card_valid_upto ?? '--' }}" data-status="{{ $request->status ?? '--' }}" data-created="{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}" data-show-url="{{ route('admin.employee_idcard.show', $request->id) }}">
                                                     <i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i>
                                                 </a>
-                                                @if(($request->status ?? '') !== 'Approved')
+                                                @if($canApplicantEditDup)
                                                 <a href="{{ route('admin.employee_idcard.edit', $request->id) }}" class="btn btn-outline-secondary rounded-0 d-inline-flex align-items-center gap-1 px-2 py-1" title="Edit">
                                                     <i class="material-icons material-symbols-rounded" style="font-size:18px;">edit</i>
                                                 </a>
