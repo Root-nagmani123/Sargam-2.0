@@ -8,7 +8,6 @@
                 <div class="simplebar-content-wrapper" tabindex="0" role="region" aria-label="scrollable content"
                     style="height: 100%; overflow: hidden scroll;">
                     <div class="simplebar-content" style="padding: 20px 0px 24px 20px;">
-                        @include('components.profile')
                         <ul class="sidebar-menu" id="sidebarnav">
                             <li class="sidebar-item comm-sidebar-section-heading">
                                 <a class="sidebar-link d-flex justify-content-between align-items-center"
