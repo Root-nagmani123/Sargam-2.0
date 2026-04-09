@@ -70,26 +70,26 @@
                                     @forelse($groups as $group)
                                         <option value="{{$group->id}}">{{$group->name}}</option>
                                     @empty
-                                        <option value="">No Menu Group Found</option>
+                                        <option value="">No Group Found</option>
                                     @endforelse
                                 @else
-                                    <option value="">No Menu Group Found</option>
+                                    <option value="">No Group Found</option>
                                 @endif
                             </select>
                         </div>
                         <div class="col-12 form-group mb-2">
-                            <label class="form-label" for="parent_id">Parent Menu <span class="text-danger">*</span></label><br>
+                            <label class="form-label" for="parent_id">Parent Menu </label><br>
                             <small class="text-muted fs-2">(If you select this, this menu will be a sub-menu of the selected parent menu)</small>
                             <select class="form-select sidebar-menu-select" name="parent_id" id="parent_id">
                                 <option value="">Select Parent Menu</option>
-                                @if(isset($parent_menus) && $parent_menus->count() > 0)
-                                    @forelse($parent_menus as $parent_menu)
-                                        <option value="{{$parent_menu->id}}">{{$parent_menu->name}}</option>
+                                @if(isset($menus) && $menus->count() > 0)
+                                    @forelse($menus as $menu)
+                                        <option value="{{$menu->id}}">{{$menu->name}}</option>
                                     @empty
-                                        <option value="">No Parent Menu Found</option>
+                                        <option value="">No Menu Found</option>
                                     @endforelse
                                 @else
-                                    <option value="">No Parent Menu Found</option>
+                                    <option value="">No Menu Found</option>
                                 @endif
                             </select>
                         </div>
@@ -98,7 +98,7 @@
                             <input type="text" class="form-control" name="name" id="name" placeholder="Enter menu name" value="{{old('name')}}">
                         </div>
                         <div class="col-12 form-group mb-2">
-                            <label class="form-label" for="route">Url</label>
+                            <label class="form-label" for="route">Url </label>
                             <small class="text-muted fs-2">(If you select parent menu, leave this empty)</small>
                             <input type="text" class="form-control" name="route" id="route" placeholder="Enter menu url" value="{{old('route')}}">
                         </div>
@@ -171,6 +171,7 @@
     function MenuGroupModal(data = null) {
         if (data) {
             $('#menuId').val(data.id);
+            $('#category_id').val(data.category_id);
             $('#group_id').val(data.group_id);
             $('#parent_id').val(data.parent_id);
             $('#name').val(data.name);
@@ -227,7 +228,7 @@
                     maxlength: 100
                 },
                 order: {
-                    required: true,
+                    required: false,
                     digits: true
                 },
                 is_active: {
@@ -330,14 +331,14 @@
                 _token: "{{ csrf_token() }}"
             },
             success: function (response) {
+                $('.sidebar-group-select').empty();
                 if (response.success) {
-                    $('.sidebar-group-select').empty();
                     $('.sidebar-group-select').append('<option value="">Select Group</option>');
                     response.groups.forEach(function (group) {
                         $('.sidebar-group-select').append('<option value="' + group.id + '">' + group.name + '</option>');
                     });
                 } else {
-                    toastr.error(response.message);
+                   $('.sidebar-group-select').append('<option value="">No Group Found</option>');
                 }
             },
             error: function (xhr) {
@@ -360,14 +361,14 @@
                 _token: "{{ csrf_token() }}"
             },
             success: function (response) {
+                $('.sidebar-menu-select').empty();
                 if (response.success) {
-                    $('.sidebar-menu-select').empty();
                     $('.sidebar-menu-select').append('<option value="">Select Menu</option>');
                     response.menus.forEach(function (menu) {
                         $('.sidebar-menu-select').append('<option value="' + menu.id + '">' + menu.name + '</option>');
                     });
                 } else {
-                    toastr.error(response.message);
+                    $('.sidebar-menu-select').append('<option value="">No Menu Found</option>');
                 }
             },
             error: function (xhr) {
@@ -375,5 +376,31 @@
             }
         });
     }
+
+    $(document).on('change', '.sidebar-menu-status-toggle', function () {
+        let id = $(this).data('id');
+        let value = $(this).is(':checked') ? 1 : 0;
+        let column = $(this).data('column');
+        
+        $.ajax({
+            url: "{{ route('sidebar.menus.status', ':id') }}".replace(':id', id),
+            type: "GET",
+            data: {
+                _token: "{{ csrf_token() }}",
+                is_active: value
+            },
+            success: function (response) {
+                if (response.success) {
+                    toastr.success(response.message);
+                } else {
+                    toastr.error(response.message);
+                }
+                $('#sidebar-menu-table').DataTable().ajax.reload();
+            },
+            error: function (xhr) {
+                toastr.error('Something went wrong');
+            }
+        });
+    });
 </script>
 @endsection

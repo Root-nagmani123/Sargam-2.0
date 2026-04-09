@@ -70,4 +70,14 @@ class MenuController extends Controller
 
         return back();
     }
+
+    public function status($id,Request $request)
+    {
+        $this->menuService->status($id, $request->is_active);
+        $status = $request->is_active == 1 ? 'Activated' : 'Deactivated';
+        return response()->json([
+            'success' => true,
+            'message' => 'Menu '.$status.' Successfully'
+        ]);
+    }
 }

@@ -70,7 +70,7 @@ class MenuGroupService
             ['title' => 'Icon', 'data' => 'icon'],
             ['title' => 'Order', 'data' => 'order'],
             ['title' => 'Created Date', 'data' => 'created_at'],
-            ['title' => 'Status', 'data' => 'status'],
+            ['title' => 'Status', 'data' => 'status','orderable' => false, 'searchable' => false],
             ['title' => 'Action', 'data' => 'action', 'orderable' => false, 'searchable' => false],
         ];
     }
