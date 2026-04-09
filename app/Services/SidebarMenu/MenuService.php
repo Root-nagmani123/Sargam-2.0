@@ -45,6 +45,7 @@ class MenuService
     {
         $permission = Str::slug($data['name'], '_');
         $data['permission_name'] = $permission;
+        $data['order'] = $data['order'] ?? Menu::max('order') + 1;
         $menu = Menu::create($data);
         Permission::firstOrCreate([
             'name' => $permission,
@@ -58,12 +59,19 @@ class MenuService
         return Menu::findOrFail($id);
     }
 
+    public function status($id, $status)
+    {
+        $menu = $this->find($id);
+        $menu->update(['is_active' => $status]);
+        return $menu;
+    }
+
     public function update($id, array $data)
     {
         $menu = $this->find($id);
         $oldPermission = $menu->permission_name;
         $newPermission = Str::slug($data['name'], '_');
-
+        $data['order'] = $data['order'] ?? Menu::max('order') + 1;
         $menu->update($data);
 
         if ($oldPermission !== $newPermission) {
@@ -105,7 +113,7 @@ class MenuService
             ['title' => 'Order', 'data' => 'order'],
             ['title' => 'Tab', 'data' => 'target'],
             ['title' => 'Created Date', 'data' => 'created_at'],
-            ['title' => 'Status', 'data' => 'status'],
+            ['title' => 'Status', 'data' => 'status','orderable' => false, 'searchable' => false],
             ['title' => 'Action', 'data' => 'action', 'orderable' => false, 'searchable' => false],
         ];
     }
@@ -190,15 +198,16 @@ class MenuService
     {
         $deleteUrl = route('sidebar.menus.destroy', $data->id);
         $jsonData = htmlspecialchars(json_encode($data), ENT_QUOTES, 'UTF-8');
-        return '
+        $buttons = '
         <div class="d-inline-flex align-items-center gap-2" role="group" aria-label="Menu actions">
             <!-- Edit -->
             <a href="javascript:void(0);" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1 edit-btn" data-item="'.$jsonData.'" aria-label="Edit menu">
                 <span class="material-symbols-rounded fs-6" aria-hidden="true">edit</span>
                 <span class="d-none d-md-inline">Edit</span>
             </a>
-            
-            <!-- Delete -->
+             ';
+            if ($data->is_active != 1) {
+            $buttons .= '
             <form action="'.$deleteUrl.'" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this record?\');">
                 '.csrf_field().'
                 '.method_field('DELETE').'
@@ -207,7 +216,10 @@ class MenuService
                     <span class="d-none d-md-inline">Delete</span>
                 </button>
             </form>
-        </div>';
+            ';
+            }
+        $buttons .= '</div>';
+        return $buttons;
     }
 
     private function statusBadge($data)
@@ -217,7 +229,7 @@ class MenuService
         return '
             <div class="form-check form-switch d-inline-block">
                 <input 
-                    class="form-check-input sidebar-menu-group-status-toggle" 
+                    class="form-check-input sidebar-menu-status-toggle" 
                     type="checkbox" 
                     role="switch"
                     '.$checked.'
