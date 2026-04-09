@@ -784,11 +784,27 @@ class EmployeeIDCardRequestController extends Controller
             $employeePk = $emp?->pk;
         }
 
+        // Beneficiary master pk when explicitly chosen (Others/Family). Do not use auth fallback — used for pending checks only.
+        $beneficiaryMasterPkFromForm = null;
+        if (! empty($validated['employee_master_pk'])) {
+            $rawBenef = (int) $validated['employee_master_pk'];
+            $benefRow = EmployeeMaster::where('pk', $rawBenef)->orWhere('pk_old', $rawBenef)->first();
+            $beneficiaryMasterPkFromForm = $benefRow ? (int) $benefRow->pk : $rawBenef;
+        }
+
         // Restrict NEW *own* ID card only when user already has an approved card.
         // Do NOT block when request is for "Others ID Card" or "Family ID Card" (applying for someone else).
         $requestFor = $validated['request_for'] ?? 'Own ID Card';
+        if ($requestFor === '') {
+            $requestFor = 'Own ID Card';
+        }
         $isDupOrExt = in_array($requestFor, ['Replacement', 'Duplication', 'Extension'], true);
-        $isForSelf = $employeePk && $authEmployeePk && $employeePk === $authEmployeePk;
+        $isApplyingForAnotherEmployee = in_array($requestFor, ['Others ID Card', 'Family ID Card'], true);
+        // Others/Family: never treat as "self" even if employee_master_pk fell back to the logged-in user.
+        $isForSelf = ! $isApplyingForAnotherEmployee
+            && $employeePk
+            && $authEmployeePk
+            && (int) $employeePk === (int) $authEmployeePk;
         $blockOwnNewCard = $isForSelf
             && $requestFor === 'Own ID Card'
             && !$isDupOrExt
@@ -800,9 +816,10 @@ class EmployeeIDCardRequestController extends Controller
         }
 
         $employeeType = $validated['employee_type'];
+        // Only block when the contractual applicant is requesting their *own* card (not Others/Family).
         $isContractualSelfRequest = $isForSelf
             && $employeeType === 'Contractual Employee'
-            && (($requestFor ?? '') === 'Others ID Card' || ($requestFor ?? '') === 'Own ID Card');
+            && ($requestFor ?? '') === 'Own ID Card';
         if ($isContractualSelfRequest && static::hasValidApprovedIdCard((int) $employeePk)) {
             throw ValidationException::withMessages([
                 'employee_type' => 'You already have a valid ID card. You can raise a new request for yourself only after expiry, or apply for another person.',
@@ -814,7 +831,11 @@ class EmployeeIDCardRequestController extends Controller
         if (! $isDupOrExt && in_array($requestForPending, ['Own ID Card', 'Others ID Card'], true)) {
             $pendingMsg = 'An Employee ID Card request is already pending for this employee. Please wait until it is approved or rejected before submitting a new one.';
             $beneficiaryName = trim((string) ($validated['name'] ?? ''));
-            $subjectPk = (int) ($employeePk ?: ($authEmployeePk ?? 0));
+            // Others/Family: do not use applicant's employee_master_pk for security_parm_id_apply pending lookup
+            // (that table row may exist from another creator and never appear in this user's list).
+            $pendingPermanentSubjectPk = $isApplyingForAnotherEmployee
+                ? (int) ($beneficiaryMasterPkFromForm ?? 0)
+                : (int) ($employeePk ?: ($authEmployeePk ?? 0));
             $rawSessionUserId = Auth::user()->user_id ?? Auth::id();
             $pendingDobYmd = ! empty($validated['date_of_birth'])
                 ? static::parseDateToYmd($validated['date_of_birth'])
@@ -822,7 +843,7 @@ class EmployeeIDCardRequestController extends Controller
             $pendingMobile = $validated['mobile_number'] ?? null;
             if ($beneficiaryName !== ''
                 && static::hasAnyPendingNewEmployeeIdCardRequest(
-                    $subjectPk,
+                    $pendingPermanentSubjectPk,
                     $beneficiaryName,
                     $authEmployeePk,
                     $rawSessionUserId,
