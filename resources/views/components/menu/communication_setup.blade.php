@@ -7,57 +7,72 @@
             <div class="simplebar-offset" style="right: 0px; bottom: 0px;">
                 <div class="simplebar-content-wrapper" tabindex="0" role="region" aria-label="scrollable content"
                     style="height: 100%; overflow: hidden scroll;">
-                    <div class="simplebar-content" style="padding: 0px 20px 24px;">
+                    <div class="simplebar-content" style="padding: 20px 0px 24px 20px;">
+                        @include('components.profile')
                         <ul class="sidebar-menu" id="sidebarnav">
-                            @include('components.profile')
-                            <!-- ---------------------------------- -->
-                            <!-- Home -->
-                            <!-- ---------------------------------- -->
-                             <li class="sidebar-item" style="background: #4077ad;border-radius: 30px 0px 0px 30px;width: 100%;box-shadow: -2px 3px rgba(251, 248, 248, 0.1);min-width: 250px;">
+                            <li class="sidebar-item comm-sidebar-section-heading">
                                 <a class="sidebar-link d-flex justify-content-between align-items-center"
-                                    data-bs-toggle="collapse" href="#generalCollapse" role="button"
-                                    aria-expanded="false" aria-controls="generalCollapse">
+                                    data-bs-toggle="collapse" href="#communicationNotificationsCollapse" role="button"
+                                    aria-expanded="false" aria-controls="communicationNotificationsCollapse">
                                     <span class="hide-menu fw-bold small small-sm-normal text-nowrap">Notifications</span>
-                                    <i class="material-icons menu-icon material-symbols-rounded"
-                                        style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
+                                    <i class="material-icons menu-icon material-symbols-rounded">keyboard_arrow_down</i>
                                 </a>
                             </li>
-                            <ul class="collapse list-unstyled ps-3" id="generalCollapse">
-                                <li class="sidebar-item"><a class="sidebar-link" href="#">
+                            <ul class="collapse list-unstyled ps-3" id="communicationNotificationsCollapse">
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link" href="#">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Notice</span>
-                                    </a></li>
-                                    <li class="sidebar-item"><a class="sidebar-link" href="#">
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link" href="#">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Campus Tweet</span>
-                                    </a></li>
-                                    <li class="sidebar-item"><a class="sidebar-link" href="{{ route('admin.birthday-wish.index') }}">
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.birthday-wish.*') ? 'active' : '' }}"
+                                        href="{{ route('admin.birthday-wish.index') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Birthday Wishes</span>
-                                    </a></li>
+                                    </a>
+                                </li>
                             </ul>
-                            <li class="sidebar-item" style="background: #4077ad;border-radius: 30px 0px 0px 30px;width: 100%;box-shadow: -2px 3px rgba(251, 248, 248, 0.1);min-width: 250px;">
+
+                            <li class="sidebar-item comm-sidebar-section-heading mt-2">
                                 <a class="sidebar-link d-flex justify-content-between align-items-center"
-                                    data-bs-toggle="collapse" href="#meetingCollapse" role="button"
-                                    aria-expanded="false" aria-controls="meetingCollapse">
-                                    <span class="hide-menu fw-bold small small-sm-normal text-nowrap">Meeting Management</span>
-                                    <i class="material-icons menu-icon material-symbols-rounded"
-                                        style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
+                                    data-bs-toggle="collapse" href="#communicationMeetingCollapse" role="button"
+                                    aria-expanded="false" aria-controls="communicationMeetingCollapse">
+                                    <span class="hide-menu fw-bold small small-sm-normal text-nowrap">Meeting
+                                        Management</span>
+                                    <i class="material-icons menu-icon material-symbols-rounded">keyboard_arrow_down</i>
                                 </a>
                             </li>
-                            <ul class="collapse list-unstyled ps-3" id="meetingCollapse">
-                                <li class="sidebar-item"><a class="sidebar-link" href="#">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Define Meeting Type</span>
-                                    </a></li>
-                                    <li class="sidebar-item"><a class="sidebar-link" href="#">
+                            <ul class="collapse list-unstyled ps-3" id="communicationMeetingCollapse">
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link" href="#">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Define Meeting
+                                            Type</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link" href="#">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Define Meeting</span>
-                                    </a></li>
-                                    <li class="sidebar-item"><a class="sidebar-link" href="#">
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link" href="#">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Define MOM</span>
-                                    </a></li>
-                                    <li class="sidebar-item"><a class="sidebar-link" href="#">
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link" href="#">
                                         <span class="hide-menu small small-sm-normal text-nowrap">View MOM</span>
-                                    </a></li>
-                                    <li class="sidebar-item"><a class="sidebar-link" href="#">
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link" href="#">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Search Agenda</span>
-                                    </a></li>
+                                    </a>
+                                </li>
                             </ul>
                         </ul>
                     </div>
