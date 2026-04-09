@@ -73,7 +73,8 @@
                                             default => 'secondary'
                                         };
                                     @endphp
-                                    <span class="badge bg-{{ $statusClass }}">{{ $req->status }}</span>
+                                    <span class="badge bg-{{ $statusClass }}"
+                                          @if(($req->status ?? '') === 'Approved') title="Please collect your ID card from security section" @endif>{{ $req->status }}</span>
                                 </td>
                                 <td>
                                     @if($req->approver1)

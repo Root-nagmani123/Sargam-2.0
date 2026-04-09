@@ -302,7 +302,39 @@
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
                     </div>
-                     <!-- Remarks - shown for both Permanent and Contractual -->
+                    @endif
+                    @if($isContractual)
+                    <div class="col-md-6">
+                        <label class="form-label">Supporting document</label>
+                        @php
+                            $editDocPath = $request->documents ?? null;
+                            $editDocExists = $editDocPath && \Storage::disk('public')->exists($editDocPath);
+                        @endphp
+                        @if($editDocExists)
+                            <div class="alert alert-success py-2 px-3 mb-2 small">
+                                <i class="material-icons material-symbols-rounded align-middle me-1" style="font-size:16px;">check_circle</i>
+                                <a href="{{ asset('storage/' . $editDocPath) }}" target="_blank" rel="noopener">View / Download</a>
+                            </div>
+                        @elseif($editDocPath)
+                            <div class="alert alert-warning py-2 px-3 mb-2 small">
+                                <i class="material-icons material-symbols-rounded align-middle me-1" style="font-size:16px;">info</i>
+                                No file available in storage
+                            </div>
+                        @endif
+                        <div class="idcard-upload-zone" id="documentsUploadAreaEdit">
+                            <input type="file" name="documents" id="documents_edit" class="d-none @error('documents') is-invalid @enderror"
+                                   accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onchange="displayFileName(this, 'documentsEditName')">
+                            <i class="material-icons material-symbols-rounded idcard-upload-icon">upload_file</i>
+                            <p class="mt-2 mb-0">Click to upload or drag and drop (replace existing)</p>
+                        </div>
+                        <small class="text-muted d-block">Allowed: PDF, DOC, DOCX. Max size: 5 MB</small>
+                        <small id="documentsEditName" class="d-block mt-2 text-body-secondary"></small>
+                        @error('documents')
+                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                        @enderror
+                    </div>
+                    @endif
+
                     <div class="col-12 mt-3 pt-3 border-top" id="remarks-section">
                         <label for="remarks" class="form-label">Remarks</label>
                         <textarea name="remarks" id="remarks" class="form-control @error('remarks') is-invalid @enderror" 
@@ -311,7 +343,6 @@
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
                     </div>
-                    @endif
 
                    
                 </div>
@@ -639,6 +670,28 @@
         if (files.length) {
             document.getElementById('joining_letter').files = files;
             displayFileName(document.getElementById('joining_letter'), 'joiningLetterName');
+        }
+        this.classList.remove('idcard-upload-zone-active');
+    });
+
+    document.getElementById('documentsUploadAreaEdit')?.addEventListener('click', function() {
+        document.getElementById('documents_edit')?.click();
+    });
+    document.getElementById('documentsUploadAreaEdit')?.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        this.classList.add('idcard-upload-zone-active');
+    });
+    document.getElementById('documentsUploadAreaEdit')?.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        this.classList.remove('idcard-upload-zone-active');
+    });
+    document.getElementById('documentsUploadAreaEdit')?.addEventListener('drop', function(e) {
+        e.preventDefault();
+        const files = e.dataTransfer.files;
+        const inp = document.getElementById('documents_edit');
+        if (files.length && inp) {
+            inp.files = files;
+            displayFileName(inp, 'documentsEditName');
         }
         this.classList.remove('idcard-upload-zone-active');
     });

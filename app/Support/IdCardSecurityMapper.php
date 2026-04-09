@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\SecurityParmIdApply;
+use App\Models\SecurityParmIdApplyApproval;
 use App\Models\SecurityFamilyIdApply;
 use Illuminate\Support\Facades\DB;
 use stdClass;
@@ -54,6 +55,67 @@ class IdCardSecurityMapper
     }
 
     /**
+     * Normalize a person's full name for comparison (uppercase, collapsed spaces).
+     */
+    private static function normalizeFullNameForMatch(?string $name): string
+    {
+        $s = trim((string) $name);
+        if ($s === '') {
+            return '';
+        }
+
+        return strtoupper(preg_replace('/\s+/u', ' ', $s) ?? $s);
+    }
+
+    /**
+     * Resolve the employee_master row that the contractual ID card is for (beneficiary).
+     * Uses created_by when it matches the name on the card; otherwise exact then fuzzy name match.
+     */
+    public static function resolveContractualBeneficiaryEmployee(object $row): ?object
+    {
+        $cardName = static::normalizeFullNameForMatch($row->employee_name ?? '');
+
+        if (! empty($row->created_by)) {
+            $byCreator = DB::table('employee_master')
+                ->where(function ($q) use ($row) {
+                    $q->where('pk', $row->created_by)->orWhere('pk_old', $row->created_by);
+                })
+                ->first(['pk', 'first_name', 'last_name', 'doj']);
+            if ($byCreator) {
+                $creatorName = static::normalizeFullNameForMatch(trim(($byCreator->first_name ?? '') . ' ' . ($byCreator->last_name ?? '')));
+                if ($cardName === '' || $cardName === $creatorName) {
+                    return $byCreator;
+                }
+            }
+        }
+
+        if ($cardName !== '') {
+            $byName = DB::table('employee_master')
+                ->whereRaw(
+                    "UPPER(TRIM(CONCAT(COALESCE(TRIM(first_name),''),' ',COALESCE(TRIM(last_name),'')))) = ?",
+                    [$cardName]
+                )
+                ->orderBy('pk')
+                ->first(['pk', 'first_name', 'last_name', 'doj']);
+            if ($byName) {
+                return $byName;
+            }
+            $needle = trim((string) ($row->employee_name ?? ''));
+            if ($needle !== '') {
+                $fuzzy = DB::table('employee_master')
+                    ->where(DB::raw("CONCAT(COALESCE(first_name,''), ' ', COALESCE(last_name,''))"), 'like', '%' . $needle . '%')
+                    ->orderBy('pk')
+                    ->first(['pk', 'first_name', 'last_name', 'doj']);
+                if ($fuzzy) {
+                    return $fuzzy;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Generate ID card number for government (Permanent) employees.
      * Format: DDMMYYYY(dob) + first 4 letters of name (uppercase).
      * Example: 20022026MAYA (20-Feb-2026, name "Maya").
@@ -84,9 +146,42 @@ class IdCardSecurityMapper
     }
 
     /**
-     * Map SecurityParmIdApply to object compatible with employee_idcard views.
+     * Batch-resolve card master / config map labels for permanent ID rows (Approval list pages).
+     *
+     * @param  iterable<int, SecurityParmIdApply>  $rows
+     * @return array{masters: array<int, string>, configs: array<int, string>}
      */
-    public static function toEmployeeRequestDto(SecurityParmIdApply $row): stdClass
+    public static function prefetchCardLookupsForPermApplies(iterable $rows): array
+    {
+        $masterPks = [];
+        $configPks = [];
+        foreach ($rows as $row) {
+            if (! empty($row->permanent_type) && (int) $row->permanent_type > 0) {
+                $masterPks[] = (int) $row->permanent_type;
+            }
+            if (! empty($row->perm_sub_type) && (int) $row->perm_sub_type > 0) {
+                $configPks[] = (int) $row->perm_sub_type;
+            }
+        }
+        $masterPks = array_values(array_unique(array_filter($masterPks)));
+        $configPks = array_values(array_unique(array_filter($configPks)));
+
+        $masters = $masterPks !== []
+            ? DB::table('sec_id_cardno_master')->whereIn('pk', $masterPks)->pluck('sec_card_name', 'pk')->all()
+            : [];
+        $configs = $configPks !== []
+            ? DB::table('sec_id_cardno_config_map')->whereIn('pk', $configPks)->pluck('config_name', 'pk')->all()
+            : [];
+
+        return ['masters' => $masters, 'configs' => $configs];
+    }
+
+    /**
+     * Map SecurityParmIdApply to object compatible with employee_idcard views.
+     *
+     * @param  array{masters?: array<int, string>, configs?: array<int, string>}|null  $cardLookups  Preloaded labels from {@see prefetchCardLookupsForPermApplies}
+     */
+    public static function toEmployeeRequestDto(SecurityParmIdApply $row, ?array $cardLookups = null): stdClass
     {
         $dto = new stdClass();
         $dto->id = $row->emp_id_apply;
@@ -100,14 +195,23 @@ class IdCardSecurityMapper
             $photoPath = 'idcard/photos/' . $photoPath;
         }
         $dto->photo = $photoPath;
-        $dto->joining_letter = $row->joining_letter_path ?? null;
+        $joiningPath = $row->joining_letter_path ?? null;
+        if ($joiningPath && strpos((string) $joiningPath, '/') === false) {
+            $joiningPath = 'idcard/joining_letters/' . $joiningPath;
+        }
+        $dto->joining_letter = $joiningPath;
         $dto->created_at = $row->created_date;
         // Card type display name from sec_id_cardno_master (permanent_type = master pk)
         $cardTypeName = '--';
-        if (!empty($row->permanent_type)) {
-            $master = DB::table('sec_id_cardno_master')->where('pk', $row->permanent_type)->value('sec_card_name');
-            if ($master) {
-                $cardTypeName = $master;
+        if (! empty($row->permanent_type)) {
+            $pt = (int) $row->permanent_type;
+            if ($cardLookups !== null && isset($cardLookups['masters'][$pt])) {
+                $cardTypeName = $cardLookups['masters'][$pt];
+            } else {
+                $master = DB::table('sec_id_cardno_master')->where('pk', $row->permanent_type)->value('sec_card_name');
+                if ($master) {
+                    $cardTypeName = $master;
+                }
             }
         }
         $dto->card_type = $cardTypeName;
@@ -150,10 +254,15 @@ class IdCardSecurityMapper
 
         // Sub type display name from sec_id_cardno_config_map (perm_sub_type = config map pk)
         $subTypeName = null;
-        if (!empty($row->perm_sub_type)) {
-            $configRow = DB::table('sec_id_cardno_config_map')->where('pk', $row->perm_sub_type)->first();
-            if ($configRow && !empty($configRow->config_name)) {
-                $subTypeName = $configRow->config_name;
+        if (! empty($row->perm_sub_type)) {
+            $pst = (int) $row->perm_sub_type;
+            if ($cardLookups !== null && isset($cardLookups['configs'][$pst])) {
+                $subTypeName = $cardLookups['configs'][$pst];
+            } else {
+                $configRow = DB::table('sec_id_cardno_config_map')->where('pk', $row->perm_sub_type)->first();
+                if ($configRow && ! empty($configRow->config_name)) {
+                    $subTypeName = $configRow->config_name;
+                }
             }
         }
         $dto->sub_type = $subTypeName;
@@ -202,8 +311,62 @@ class IdCardSecurityMapper
         $dto->payment_receipt = null;
         $dto->documents = null;
         $dto->updated_at = $row->created_date;
+        $dto->user_may_edit_request = static::permanentEmployeeIdCardApplicantMayEdit($row);
 
         return $dto;
+    }
+
+    /**
+     * True when the applicant may still edit/delete: pending and no security approval row has progressed.
+     */
+    private static function permanentEmployeeIdCardApplicantMayEdit(SecurityParmIdApply $row): bool
+    {
+        if ((int) $row->id_status !== SecurityParmIdApply::ID_STATUS_PENDING) {
+            return false;
+        }
+        $approvals = $row->relationLoaded('approvals') ? $row->approvals : $row->approvals()->get(['status', 'recommend_status']);
+        foreach ($approvals as $a) {
+            $st = (int) ($a->status ?? 0);
+            if (in_array($st, [
+                SecurityParmIdApplyApproval::STATUS_APPROVAL_1,
+                SecurityParmIdApplyApproval::STATUS_APPROVAL_2,
+                SecurityParmIdApplyApproval::STATUS_REJECTED,
+            ], true)) {
+                return false;
+            }
+            if ((int) ($a->recommend_status ?? 0) === 1) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * True when the applicant may still edit/delete: pending, section has not forwarded (depart_approval_status≠2),
+     * and no security approval row has progressed.
+     *
+     * @param  \Illuminate\Support\Collection|\Traversable|array  $approvals
+     */
+    private static function contractualApplicantMayEditRequest(object $row, iterable $approvals, int $idStatus): bool
+    {
+        if ($idStatus !== SecurityParmIdApply::ID_STATUS_PENDING) {
+            return false;
+        }
+        if ((int) ($row->depart_approval_status ?? 0) === 2) {
+            return false;
+        }
+        foreach ($approvals as $a) {
+            $st = (int) ($a->status ?? 0);
+            if (in_array($st, [1, 2, 3], true)) {
+                return false;
+            }
+            if ((int) ($a->recommend_status ?? 0) === 1) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -225,7 +388,14 @@ class IdCardSecurityMapper
             $photoPath = 'idcard/photos/' . $photoPath;
         }
         $dto->photo = $photoPath;
-        $dto->joining_letter = $row->joining_letter_path ?? null;
+        // Contractual: supporting document is doc_path only. Do not set joining_letter — same path caused duplicate rows in approval "Uploaded Documents".
+        $docPathRaw = $row->doc_path ?? $row->joining_letter_path ?? null;
+        $docPathNorm = $docPathRaw;
+        if ($docPathNorm && strpos((string) $docPathNorm, '/') === false) {
+            $docPathNorm = 'idcard/documents/' . $docPathNorm;
+        }
+        $dto->joining_letter = null;
+        $dto->documents = $docPathNorm;
         $dto->created_at = isset($row->created_date) ? \Carbon\Carbon::parse($row->created_date) : null;
         $cardTypeName = '--';
         if (!empty($row->permanent_type)) {
@@ -267,6 +437,7 @@ class IdCardSecurityMapper
         $dto->approver2 = null;
         $dto->rejectedByUser = null;
 
+        $approvals = collect();
         if ($applyId) {
             $approvals = DB::table('security_con_oth_id_apply_approval')
                 ->where('security_parm_id_apply_pk', $applyId)
@@ -324,7 +495,10 @@ class IdCardSecurityMapper
         $dto->sub_type = $subTypeName;
         $dto->employee_type = 'Contractual Employee';
         $dto->father_name = $row->father_name ?? null;
-        $dto->academy_joining = null;
+        $benef = static::resolveContractualBeneficiaryEmployee($row);
+        $dto->academy_joining = ($benef && ! empty($benef->doj))
+            ? \Carbon\Carbon::parse($benef->doj)->format('Y-m-d')
+            : null;
         // section in table is bigint (department_master_pk). Resolve to department name for edit dropdown (value=name).
         $dto->section = null;
         $dto->requested_by = null;
@@ -374,8 +548,63 @@ class IdCardSecurityMapper
         $dto->vendor_organization_name = $row->vender_name ?? null;
         $dto->fir_receipt = null;
         $dto->payment_receipt = null;
-        $dto->documents = $row->doc_path ?? null;
         $dto->updated_at = $dto->created_at;
+        $dto->user_may_edit_request = static::contractualApplicantMayEditRequest($row, $approvals, $idStatus);
+
+        return $dto;
+    }
+
+    /**
+     * Minimal contractual row mapping for approval list tables (Approval III / heavy lists).
+     * Skips per-row approval / beneficiary queries; detail pages still use {@see toContractualRequestDto}.
+     *
+     * @param  array<int, string>  $secCardNamesByPk  sec_id_cardno_master.pk => sec_card_name
+     * @param  array<int, string>  $deptNamesByPk     department_master.pk => department_name
+     */
+    public static function toContractualRequestDtoForApprovalList(object $row, array $secCardNamesByPk, array $deptNamesByPk): stdClass
+    {
+        $dto = new stdClass();
+        $pk = (int) ($row->pk ?? 0);
+        $dto->id = 'c-' . $pk;
+        $dto->pk = $pk;
+        $dto->emp_id_apply = $row->emp_id_apply ?? '';
+        $dto->name = $row->employee_name ?? '--';
+        $dto->designation = $row->designation_name ?? '--';
+        $photoPath = $row->id_photo_path ?? null;
+        if ($photoPath && strpos($photoPath, '/') === false) {
+            $photoPath = 'idcard/photos/' . $photoPath;
+        }
+        $dto->photo = $photoPath;
+        $dto->created_at = isset($row->created_date) ? \Carbon\Carbon::parse($row->created_date) : null;
+        $pt = ! empty($row->permanent_type) ? (int) $row->permanent_type : 0;
+        $dto->card_type = ($pt > 0 && isset($secCardNamesByPk[$pt]))
+            ? $secCardNamesByPk[$pt]
+            : '--';
+        $dto->request_for = 'Own ID Card';
+        $dto->id_card_number = $row->id_card_no ?? null;
+        $dto->date_of_birth = $row->employee_dob ?? null;
+        $dto->mobile_number = $row->mobile_no ?? null;
+        $dto->telephone_number = $row->telephone_no ?? null;
+        $dto->blood_group = $row->blood_group ?? null;
+        $idStatus = (int) ($row->id_status ?? 0);
+        $dto->id_status = $idStatus;
+        $dto->status = match ($idStatus) {
+            1 => 'Pending',
+            2 => 'Approved',
+            3 => 'Rejected',
+            default => 'Unknown',
+        };
+        $dto->employee_type = 'Contractual Employee';
+        $dto->request_type = null;
+        $sect = ! empty($row->section) ? (int) $row->section : 0;
+        $dto->requested_section = ($sect > 0 && isset($deptNamesByPk[$sect]))
+            ? $deptNamesByPk[$sect]
+            : null;
+        $dto->is_view_only = false;
+        $dto->final_status_hint = null;
+        $dto->sub_type = null;
+        $dto->father_name = $row->father_name ?? null;
+
         return $dto;
     }
 
