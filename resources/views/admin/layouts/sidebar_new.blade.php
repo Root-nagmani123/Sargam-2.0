@@ -29,7 +29,7 @@
                                         <div class="simplebar-content p-0" id="sidebar-groups"> 
                                             <ul class="sidebar-groups-list"> 
                                                 @foreach ($groups as $group)
-                                                    <li class="sidebar-group-item" id="{{ $group->id }}">
+                                                    <li class="sidebar-group-item py-2" id="{{ $group->id }}">
                                                         <a href="javascript:void(0)" 
                                                             class="d-flex flex-column align-items-center justify-content-center rounded-3 sidebar-group-link" data-id="{{ $group->id }}" data-name="{{ $group->name }}">
                                                             <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">

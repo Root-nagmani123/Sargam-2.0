@@ -94,7 +94,7 @@ class SidebarController extends Controller
                     foreach($menu->children as $submenu){
                         $html .= '
                         <li class="sidebar-item">
-                            <a class="sidebar-link" href="'.url($submenu->route).'" target="'.($submenu->target == 1 ? '_blank' : '_self').'">
+                            <a class="sidebar-link" href="'.($submenu->route != null ? url($submenu->route) : 'javascript:void(0)').'" target="'.($submenu->target == 1 ? '_blank' : '_self').'">
                                 <span class="hide-menu">'.$submenu->name.'</span>
                             </a>
                         </li>';
