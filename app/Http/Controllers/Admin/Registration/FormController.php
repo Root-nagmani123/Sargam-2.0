@@ -23,7 +23,7 @@ use Illuminate\Http\UploadedFile;
 
 class FormController extends Controller
 {
-    public function index(Request $request)
+     public function index(Request $request)
     {
         $query = DB::table('local_form')->where('visible', 1);
 
@@ -35,7 +35,7 @@ class FormController extends Controller
         $forms = $query
             ->orderBy('parent_id')
             ->orderBy('sortorder')
-            ->paginate(10);
+            ->get();
 
 
         // Group forms by parent_id (null or 0 for parents)
