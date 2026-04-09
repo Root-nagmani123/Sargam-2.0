@@ -3607,10 +3607,9 @@ class EstateController extends Controller
         $fromDate = $baseDate->copy()->startOfMonth()->toDateString();
         $toDate = $baseDate->copy()->endOfMonth()->toDateString();
 
+        // Always sync possession meter readings into the *latest* month-reading row only (highest pk for this possession).
         $reading = EstateMonthReadingDetailsOther::where('estate_possession_other_pk', $possessionPk)
-            ->where('bill_month', $billMonth)
-            ->where('bill_year', $billYear)
-            ->whereDate('to_date', $toDate)
+            ->orderByDesc('pk')
             ->first();
 
         if ($reading) {
@@ -3635,7 +3634,18 @@ class EstateController extends Controller
                 $update['last_month_elec_red2'] = (int) $meterReadingSecondary;
             }
 
-            $reading->update($update);
+            // Possession edit updates epo.meter_reading_oth*; keep month-reading current columns in sync (same as LBSNAA).
+            $update['curr_month_elec_red'] = ($meterReadingPrimary !== null && $meterReadingPrimary !== '')
+                ? (int) $meterReadingPrimary
+                : 0;
+            if (\Illuminate\Support\Facades\Schema::hasColumn('estate_month_reading_details_other', 'curr_month_elec_red2')) {
+                $update['curr_month_elec_red2'] = ($meterReadingSecondary !== null && $meterReadingSecondary !== '')
+                    ? (int) $meterReadingSecondary
+                    : 0;
+            }
+            $this->applyElectricChargeToMonthReadingOther((int) $reading->pk, $update);
+            DB::table('estate_month_reading_details_other')->where('pk', (int) $reading->pk)->update($update);
+
             return;
         }
 
@@ -3683,10 +3693,9 @@ class EstateController extends Controller
         $fromDate = $baseDate->copy()->startOfMonth()->toDateString();
         $toDate = $baseDate->copy()->endOfMonth()->toDateString();
 
+        // Only sync into the *latest* month-reading row (highest pk) for this possession — same rule as Other.
         $reading = EstateMonthReadingDetails::where('estate_possession_details_pk', $possessionPk)
-            ->where('bill_month', $billMonth)
-            ->where('bill_year', $billYear)
-            ->whereDate('to_date', $toDate)
+            ->orderByDesc('pk')
             ->first();
 
         if ($reading) {
@@ -3786,6 +3795,61 @@ class EstateController extends Controller
         $update['meter_two_elec_charge'] = $m2;
         $update['electricty_charges'] = $m1 + $m2;
         if (\Illuminate\Support\Facades\Schema::hasColumn('estate_month_reading_details', 'per_unit')) {
+            $update['per_unit'] = $u1 + $u2;
+        }
+    }
+
+    /**
+     * Same as applyElectricChargeToMonthReading for estate_month_reading_details_other + estate_possession_other.
+     */
+    private function applyElectricChargeToMonthReadingOther(int $emroPk, array &$update): void
+    {
+        $hasUnitTypeOnSubType = \Illuminate\Support\Facades\Schema::hasColumn('estate_unit_sub_type_master', 'estate_unit_type_master_pk');
+        $houseDerivedExpr = $hasUnitTypeOnSubType
+            ? 'eust.estate_unit_type_master_pk'
+            : 'ehm.estate_unit_master_pk';
+        $q = DB::table('estate_month_reading_details_other as emro')
+            ->join('estate_possession_other as epo', 'emro.estate_possession_other_pk', '=', 'epo.pk')
+            ->leftJoin('estate_house_master as ehm', 'epo.estate_house_master_pk', '=', 'ehm.pk')
+            ->where('emro.pk', $emroPk);
+        if ($hasUnitTypeOnSubType) {
+            $q->leftJoin('estate_unit_sub_type_master as eust', 'ehm.estate_unit_sub_type_master_pk', '=', 'eust.pk');
+        }
+        $row = $q->select(
+            'emro.last_month_elec_red',
+            'emro.curr_month_elec_red',
+            'emro.last_month_elec_red2',
+            'emro.curr_month_elec_red2',
+            DB::raw('COALESCE(epo.estate_unit_type_master_pk, ' . $houseDerivedExpr . ') as unit_type_pk')
+        )->first();
+        if (! $row) {
+            return;
+        }
+        foreach (['last_month_elec_red', 'curr_month_elec_red', 'last_month_elec_red2', 'curr_month_elec_red2'] as $meterCol) {
+            if (array_key_exists($meterCol, $update)) {
+                $row->{$meterCol} = $update[$meterCol];
+            }
+        }
+        $prev1 = (int) ($row->last_month_elec_red ?? 0);
+        $prev2 = (int) ($row->last_month_elec_red2 ?? 0);
+        $curr1 = (int) ($row->curr_month_elec_red ?? 0);
+        $curr2 = (int) ($row->curr_month_elec_red2 ?? 0);
+        $u1 = $curr1 >= $prev1 ? $curr1 - $prev1 : 0;
+        $u2 = $curr2 >= $prev2 ? $curr2 - $prev2 : 0;
+        $unitTypePk = isset($row->unit_type_pk) ? (int) $row->unit_type_pk : null;
+        $unitTypePk = $unitTypePk > 0 ? $unitTypePk : null;
+        $m1 = $u1 > 0 ? $this->calculateElectricChargeForUnits($unitTypePk, $u1) : 0.0;
+        $m2 = $u2 > 0 ? $this->calculateElectricChargeForUnits($unitTypePk, $u2) : 0.0;
+        $update['meter_one_elec_charge'] = $m1;
+        $update['meter_two_elec_charge'] = $m2;
+        $update['electricty_charges'] = $m1 + $m2;
+        if (\Illuminate\Support\Facades\Schema::hasColumn('estate_month_reading_details_other', 'meter_one_consume_unit')) {
+            $update['meter_one_consume_unit'] = $u1;
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('estate_month_reading_details_other', 'meter_two_consume_unit')) {
+            $update['meter_two_consume_unit'] = $u2;
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('estate_month_reading_details_other', 'per_unit')) {
             $update['per_unit'] = $u1 + $u2;
         }
     }
