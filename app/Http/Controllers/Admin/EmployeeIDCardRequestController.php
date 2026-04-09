@@ -272,20 +272,29 @@ class EmployeeIDCardRequestController extends Controller
     }
 
     /**
-     * Check if the given employee (pk) already has an approved ID card (Permanent or Contractual).
+     * Approved **permanent** ID card for this employee (security_parm_id_apply).
+     * Used when blocking a new Permanent "Own ID Card" — contractual approvals must not block that flow.
+     */
+    private static function hasApprovedPermanentIdCard(int $employeePk): bool
+    {
+        return SecurityParmIdApply::where('employee_master_pk', $employeePk)
+            ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
+            ->exists();
+    }
+
+    /**
+     * Check if the given employee (pk) already has an approved ID card (Permanent or Contractual row they created).
      */
     private static function hasApprovedIdCard(int $employeePk): bool
     {
-        $perm = SecurityParmIdApply::where('employee_master_pk', $employeePk)
-            ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
-            ->exists();
-        if ($perm) {
+        if (static::hasApprovedPermanentIdCard($employeePk)) {
             return true;
         }
         $cont = DB::table('security_con_oth_id_apply')
             ->where('created_by', $employeePk)
             ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
             ->exists();
+
         return $cont;
     }
 
@@ -805,17 +814,21 @@ class EmployeeIDCardRequestController extends Controller
             && $employeePk
             && $authEmployeePk
             && (int) $employeePk === (int) $authEmployeePk;
+        $employeeType = $validated['employee_type'];
+        // Permanent own fresh card: only an approved **permanent** card should block (not an approved contractual one).
+        $hasApprovedForOwnFreshBlock = $employeeType === 'Permanent Employee'
+            ? static::hasApprovedPermanentIdCard((int) $employeePk)
+            : static::hasApprovedIdCard((int) $employeePk);
         $blockOwnNewCard = $isForSelf
             && $requestFor === 'Own ID Card'
             && !$isDupOrExt
-            && static::hasApprovedIdCard($employeePk);
+            && $hasApprovedForOwnFreshBlock;
         if ($blockOwnNewCard) {
             throw ValidationException::withMessages([
                 'employee_type' => 'You already have an approved ID card. A new request for yourself cannot be created. For duplicate or extension, use the Duplicate ID Card or relevant option.',
             ]);
         }
 
-        $employeeType = $validated['employee_type'];
         // Only block when the contractual applicant is requesting their *own* card (not Others/Family).
         $isContractualSelfRequest = $isForSelf
             && $employeeType === 'Contractual Employee'
