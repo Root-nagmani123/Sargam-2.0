@@ -87,8 +87,7 @@ class CourseGroupTypeController extends Controller
         <a href="javascript:void(0)" data-id="' . $row->pk . '" data-type-name="' . $row->type_name . '" 
            class="btn btn-sm edit-btn btn-outline-primary d-inline-flex align-items-center gap-1"
            aria-label="Edit course group type">
-            <i class="material-icons material-symbols-rounded" style="font-size:18px;">edit</i>
-            <span class="d-none d-md-inline">Edit</span>
+            <i class="material-icons material-symbols-rounded bg-transparent border-0 p-0" style="font-size:18px;">edit</i>
         </a>
 
         <!-- Delete Action -->
@@ -97,8 +96,7 @@ class CourseGroupTypeController extends Controller
                 data-id="' . $row->pk . '"
                 class="btn btn-sm btn-outline-danger delete-btn d-inline-flex align-items-center gap-1 ' . $disabled . '"
                 aria-disabled="' . ($row->active_inactive == 1 ? 'true' : 'false') . '">
-                    <i class="material-icons material-symbols-rounded" style="font-size:18px;">delete</i>
-                    <span class="d-none d-md-inline">Delete</span>
+                    <i class="material-icons material-symbols-rounded bg-transparent border-0 p-0" style="font-size:18px;">delete</i>
                 </a>
     </div>';
             })

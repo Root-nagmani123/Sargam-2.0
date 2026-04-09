@@ -1,3 +1,10 @@
+@php
+    $showHomeEstateMini = hasRole('Admin') || hasRole('Super Admin') || hasRole('Estate');
+    $homeEstateMiniSelected = $showHomeEstateMini && request('scope') === 'self' && (
+        request()->routeIs('admin.estate.request-for-estate')
+        || request()->routeIs('admin.estate.generate-estate-bill*')
+    );
+@endphp
 <aside class="side-mini-panel with-vertical sidebar-google-style" id="mainSidebar">
     <div class="vh-100 d-flex flex-column overflow-hidden">
         <!-- ---------------------------------- -->
@@ -27,7 +34,7 @@
                                     <div class="simplebar-content-wrapper" tabindex="0" role="region"
                                         aria-label="scrollable content" style="height: 100%; overflow: hidden scroll;">
                                         <div class="simplebar-content" style="padding: 0px;">
-                                            <li class="mini-nav-item {{ (request()->routeIs('admin.dashboard') || request()->is('dashboard')) ? 'selected' : '' }}"
+                                            <li class="mini-nav-item {{ (request()->routeIs('admin.dashboard') || request()->is('dashboard')) && ! $homeEstateMiniSelected ? 'selected' : '' }}"
                                                 id="mini-1">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3">
@@ -37,6 +44,18 @@
                                                     <span class="mini-nav-title sidebar-google-label">General</span>
                                                 </a>
                                             </li>
+                                            @if ($showHomeEstateMini)
+                                            <li class="mini-nav-item {{ $homeEstateMiniSelected ? 'selected' : '' }}"
+                                                id="home-mini-estate">
+                                                <a href="javascript:void(0)"
+                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3">
+                                                    <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
+                                                        <i class="material-icons menu-icon material-symbols-rounded">house</i>
+                                                    </span>
+                                                    <span class="mini-nav-title sidebar-google-label">Estate</span>
+                                                </a>
+                                            </li>
+                                            @endif
 
                                         </div>
                                     </div>
@@ -61,6 +80,10 @@
                     <!-- Dashboard -->
                     <!-- ---------------------------------- -->
                     <x-menu.general />
+
+                    @if ($showHomeEstateMini)
+                    <x-menu.home_estate />
+                    @endif
 
                 </div>
             </div>

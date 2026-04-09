@@ -19,13 +19,14 @@
             padding: 14px 20px;
             position: relative;
         }
-        .bill-header-main { margin: 0; padding: 0 110px 0 8px; }
+        .bill-header-main { margin: 0; width: 100%; box-sizing: border-box; padding: 0 112px 0 16px; }
         .bill-header .org-name { font-size: 13pt; font-weight: 700; margin: 0 0 4px 0; }
         .bill-header .org-sub { font-size: 10pt; margin: 0; }
         .bill-header .bill-title { font-size: 12pt; font-weight: 700; margin: 10px 0 0 0; }
         .bill-logo {
-            width: 150px;
-            height: 40px;
+            width: 158px;
+            height: 48px;
+            max-width: 100%;
             display: block;
             margin: 0 auto 6px;
             object-fit: contain;
@@ -80,7 +81,7 @@
 </head>
 <body>
 @foreach($bills as $bill)
-    @include('admin.estate.partials._bill_doc', ['bill' => $bill])
+    @include('admin.estate.partials._bill_doc', ['bill' => $bill, 'billDocContext' => 'pdf'])
 @endforeach
 </body>
 </html>

@@ -214,6 +214,94 @@ class ReportController extends Controller
     }
 
     /**
+     * Paginate each purchase/sale quantity section independently (page query: psq_page_{viewType}).
+     *
+     * @param  array<int, array{viewType: string, viewLabel: string, reportData: array<int, array>, groupedData: array|null}>  $sections
+     * @return array<int, array{viewType: string, viewLabel: string, reportData: array<int, array>, groupedData: array|null, paginator?: LengthAwarePaginator}>
+     */
+    private function paginatePurchaseSaleQuantitySections(array $sections, Request $request, int $perPage): array
+    {
+        $path = $request->url();
+
+        return array_map(function (array $section) use ($request, $perPage, $path) {
+            $viewType = $section['viewType'];
+            $pageName = 'psq_page_' . $viewType;
+            $currentPage = max(1, (int) $request->input($pageName, 1));
+
+            if ($viewType === 'item_wise') {
+                $all = $section['reportData'];
+                $total = count($all);
+                $slice = array_slice($all, ($currentPage - 1) * $perPage, $perPage);
+                $paginator = new LengthAwarePaginator(
+                    $slice,
+                    $total,
+                    $perPage,
+                    $currentPage,
+                    [
+                        'path' => $path,
+                        'pageName' => $pageName,
+                    ]
+                );
+                $section['reportData'] = $slice;
+                $section['paginator'] = $paginator;
+
+                return $section;
+            }
+
+            if ($viewType === 'subcategory_wise') {
+                $groups = $section['groupedData'] ?? [];
+                $total = count($groups);
+                $slice = array_slice($groups, ($currentPage - 1) * $perPage, $perPage);
+                $paginator = new LengthAwarePaginator(
+                    $slice,
+                    $total,
+                    $perPage,
+                    $currentPage,
+                    [
+                        'path' => $path,
+                        'pageName' => $pageName,
+                    ]
+                );
+                $section['groupedData'] = $slice;
+                $section['paginator'] = $paginator;
+
+                return $section;
+            }
+
+            if ($viewType === 'category_wise') {
+                $groups = $section['groupedData'] ?? [];
+                if ($groups === []) {
+                    return $section;
+                }
+                // Single category block: paginate rows inside it.
+                $first = $groups[0];
+                $items = $first['items'] ?? [];
+                $total = count($items);
+                $slice = array_slice($items, ($currentPage - 1) * $perPage, $perPage);
+                $paginator = new LengthAwarePaginator(
+                    $slice,
+                    $total,
+                    $perPage,
+                    $currentPage,
+                    [
+                        'path' => $path,
+                        'pageName' => $pageName,
+                    ]
+                );
+                $section['groupedData'] = [[
+                    'category_name' => $first['category_name'] ?? 'Category',
+                    'items' => $slice,
+                ]];
+                $section['paginator'] = $paginator;
+
+                return $section;
+            }
+
+            return $section;
+        }, $sections);
+    }
+
+    /**
      * @return array<int, string>
      */
     private function categoryWiseNormalizedSlugList(Request $request): array
@@ -2090,6 +2178,13 @@ class ReportController extends Controller
         $viewTypes = $this->normalizedPurchaseSaleViewTypes($request);
         $viewTypeSections = $this->buildPurchaseSaleQuantityViewSections($viewTypes, $fromDate, $toDate, $categoryId, $itemIds, $storeIds);
 
+        $allowedPerPage = [10, 25, 50, 100];
+        $perPage = (int) $request->input('per_page', 25);
+        if (! in_array($perPage, $allowedPerPage, true)) {
+            $perPage = 25;
+        }
+        $viewTypeSections = $this->paginatePurchaseSaleQuantitySections($viewTypeSections, $request, $perPage);
+
         $categories = ItemCategory::active()->orderBy('category_name')->get();
 
         $allItems = ItemSubcategory::where('status', 'active')->orderBy('name')->get();
@@ -2110,7 +2205,8 @@ class ReportController extends Controller
             'stores',
             'storeIds',
             'selectedStoreName',
-            'selectedItemNamesLabel'
+            'selectedItemNamesLabel',
+            'perPage'
         ));
     }
 

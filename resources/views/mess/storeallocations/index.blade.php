@@ -37,7 +37,7 @@
                     <th class="store-alloc-sort" data-sort="store">Store Name <span class="sort-icon"></span></th>
                     <th class="store-alloc-sort" data-sort="item">Item Name <span class="sort-icon"></span></th>
                     <th class="store-alloc-sort" data-sort="type">Item Type <span class="sort-icon"></span></th>
-                    <th class="store-alloc-sort text-end" data-sort="quantity">Number of Items <span class="sort-icon"></span></th>
+                    <th class="store-alloc-sort" data-sort="quantity">Number of Items <span class="sort-icon"></span></th>
                     <th class="store-alloc-sort" data-sort="date">Date <span class="sort-icon"></span></th>
                     <th class="text-center">Action</th>
                 </tr>
@@ -51,21 +51,23 @@
                     <td>{{ $allocation->subStore->sub_store_name ?? 'N/A' }}</td>
                     <td>{{ $item->itemSubcategory->item_name ?? 'N/A' }}</td>
                     <td>{{ optional(optional($item->itemSubcategory)->category)->category_name ?? 'N/A' }}</td>
-                    <td class="text-end">{{ $item->quantity }}</td>
+                    <td>{{ $item->quantity }}</td>
                     <td>{{ $allocation->allocation_date ? $allocation->allocation_date->format('d-m-Y') : '—' }}</td>
-                    <td class="text-center">
-                        <button type="button" class="btn btn-sm btn-info btn-edit-allocation text-primary bg-transparent border-0 p-0" data-allocation-id="{{ $allocation->id }}" title="Edit allocation">
-                            <span class="material-symbols-rounded" style="font-size: 1.1rem;">edit</span>
-                        </button>
-                        @if($canDeleteStoreAllocation)
-                            <form action="{{ route('admin.mess.storeallocations.destroy', $allocation->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this store allocation?');">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-sm btn-outline-danger bg-transparent border-0 p-0 text-primary" title="Delete allocation">
-                                    <span class="material-symbols-rounded" style="font-size: 1.1rem;">delete</span>
-                                </button>
-                            </form>
-                        @endif
+                    <td class="text-center align-middle store-alloc-actions-cell">
+                        <div class="d-inline-flex align-items-center justify-content-center gap-2">
+                            <button type="button" class="btn btn-sm btn-info btn-edit-allocation text-primary bg-transparent border-0 p-0 d-inline-flex align-items-center justify-content-center" data-allocation-id="{{ $allocation->id }}" title="Edit allocation">
+                                <span class="material-symbols-rounded" style="font-size: 1.1rem;">edit</span>
+                            </button>
+                            @if($canDeleteStoreAllocation)
+                                <form action="{{ route('admin.mess.storeallocations.destroy', $allocation->id) }}" method="POST" class="d-inline-flex align-items-center justify-content-center m-0" onsubmit="return confirm('Are you sure you want to delete this store allocation?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-outline-danger bg-transparent border-0 p-0 text-primary d-inline-flex align-items-center justify-content-center" title="Delete allocation">
+                                        <span class="material-symbols-rounded" style="font-size: 1.1rem;">delete</span>
+                                    </button>
+                                </form>
+                            @endif
+                        </div>
                     </td>
                 </tr>
                 @endforeach
@@ -100,6 +102,8 @@
 {{-- Create Store Allocation Modal + DataTables-style --}}
 <style>
 /* DataTables-style: sortable header */
+.mess-store-allocation-page #storeAllocationTable .store-alloc-actions-cell { vertical-align: middle !important; }
+.mess-store-allocation-page #storeAllocationTable .store-alloc-actions-cell .d-inline-flex { min-height: 2rem; }
 .store-alloc-sort { cursor: pointer; user-select: none; white-space: nowrap; }
 .store-alloc-sort:hover { opacity: 0.9; }
 .store-alloc-sort .sort-icon { color: rgba(255,255,255,0.9); font-size: 0.7em; margin-left: 2px; }
@@ -128,25 +132,25 @@
 #editStoreAllocationModal .modal-body .card:has(#editAllocationItemsTable) {
     overflow: visible;
 }
-#createStoreAllocationModal #allocationItemsTable td,
-#editStoreAllocationModal #editAllocationItemsTable td { vertical-align: top; }
 #createStoreAllocationModal #allocationItemsTable td:first-child,
-#editStoreAllocationModal #editAllocationItemsTable td:first-child { position: relative; }
+#editStoreAllocationModal #editAllocationItemsTable td:first-child { position: relative; min-width: 0; }
 #createStoreAllocationModal #allocationItemsTable .choices,
 #editStoreAllocationModal #editAllocationItemsTable .choices {
     max-width: 100%;
     width: 100%;
     min-width: 0;
 }
-#createStoreAllocationModal #allocationItemsTable .choices__inner,
-#editStoreAllocationModal #editAllocationItemsTable .choices__inner {
-    min-height: 31px;
+#createStoreAllocationModal #allocationItemsTable .alloc-item-choices-outer.form-select,
+#editStoreAllocationModal #editAllocationItemsTable .alloc-item-choices-outer.form-select {
+    padding: 0;
+    background-image: none;
 }
-#createStoreAllocationModal #allocationItemsTable .choices.is-open .choices__inner,
-#editStoreAllocationModal #editAllocationItemsTable .choices.is-open .choices__inner {
-    min-height: 31px;
+#createStoreAllocationModal #allocationItemsTable .alloc-item-choices-outer.form-select:focus-within,
+#editStoreAllocationModal #editAllocationItemsTable .alloc-item-choices-outer.form-select:focus-within {
+    border-color: var(--bs-border-color);
+    outline: 0;
+    box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
 }
-/* Item row open: stack above following rows (table paints lower rows on top otherwise) */
 #createStoreAllocationModal #allocationItemsTable tbody tr:has(.choices.is-open),
 #editStoreAllocationModal #editAllocationItemsTable tbody tr:has(.choices.is-open) {
     position: relative;
@@ -156,6 +160,29 @@
 #editStoreAllocationModal #editAllocationItemsTable .choices.is-open {
     position: relative;
     z-index: 3001;
+}
+#createStoreAllocationModal #allocationItemsTable .choices__list--dropdown.alloc-item-dd-fixed,
+#editStoreAllocationModal #editAllocationItemsTable .choices__list--dropdown.alloc-item-dd-fixed {
+    z-index: 20050 !important;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    overflow: visible !important;
+}
+#createStoreAllocationModal #allocationItemsTable .choices[data-type*="select-one"] .choices__list--dropdown .choices__input,
+#editStoreAllocationModal #editAllocationItemsTable .choices[data-type*="select-one"] .choices__list--dropdown .choices__input {
+    display: block !important;
+    visibility: visible !important;
+    width: 100% !important;
+    box-sizing: border-box;
+    margin: 0 !important;
+    min-height: calc(1.5em + 0.5rem + 2px);
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--bs-body-color);
+    background-color: var(--bs-body-bg);
+    border: 0;
+    border-bottom: 1px solid var(--bs-border-color);
+    border-radius: 0;
 }
 /* Default modal Choices stacking (Store Name etc.) */
 #createStoreAllocationModal .choices,
@@ -170,19 +197,25 @@
 #editStoreAllocationModal .choices__list--dropdown {
     z-index: 20041 !important;
 }
-#createStoreAllocationModal #allocationItemsTable .choices__list--dropdown.alloc-item-dd-fixed,
-#editStoreAllocationModal #editAllocationItemsTable .choices__list--dropdown.alloc-item-dd-fixed {
-    z-index: 20050 !important;
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+/* Remove row: × perfectly centered in cell */
+#createStoreAllocationModal #allocationItemsTable td.alloc-action-cell,
+#editStoreAllocationModal #editAllocationItemsTable td.alloc-action-cell {
+    width: 52px;
+    vertical-align: middle !important;
+    text-align: center !important;
+    padding: 0.35rem 0.25rem !important;
 }
-/* Prevent item names from wrapping - single line display */
-#createStoreAllocationModal .choices__list--dropdown .choices__item,
-#editStoreAllocationModal .choices__list--dropdown .choices__item,
-#createStoreAllocationModal .choices__inner .choices__item,
-#editStoreAllocationModal .choices__inner .choices__item {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+#createStoreAllocationModal #allocationItemsTable td.alloc-action-cell .alloc-remove-row,
+#editStoreAllocationModal #editAllocationItemsTable td.alloc-action-cell .alloc-remove-row {
+    width: 2rem;
+    height: 2rem;
+    min-width: 2rem;
+    padding: 0;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    font-size: 1.15rem;
 }
 #createStoreAllocationModal #allocationItemsTable td,
 #editStoreAllocationModal #editAllocationItemsTable td {
@@ -266,19 +299,19 @@
                                     </thead>
                                     <tbody id="allocationItemsBody">
                                         <tr class="allocation-item-row">
-                                            <td style="width: 280px;">
-                                                <select name="items[0][item_subcategory_id]" class="form-select form-select-sm alloc-item-select choices-select" data-placeholder="Select Item" required>
+                                            <td class="align-middle" style="width: 280px;">
+                                                <select name="items[0][item_subcategory_id]" class="form-select form-select-sm alloc-item-select choices-select w-100" data-placeholder="Select Item" required>
                                                     <option value="">Select Item</option>
                                                     @foreach($itemSubcategories as $sub)
                                                         <option value="{{ $sub['id'] }}" data-unit="{{ e($sub['unit_measurement']) }}">{{ $sub['item_name'] }}</option>
                                                     @endforeach
                                                 </select>
                                             </td>
-                                            <td><input type="number" name="items[0][quantity]" class="form-control  alloc-qty" step="0.01" min="0.01" placeholder="0" required></td>
-                                            <td><input type="text" name="items[0][unit]" class="form-control  alloc-unit" readonly placeholder="—"></td>
-                                            <td><input type="number" name="items[0][unit_price]" class="form-control  alloc-unit-price" step="0.01" min="0" placeholder="0" required></td>
-                                            <td><input type="text" class="form-control  alloc-line-total bg-light" readonly placeholder="0.00"></td>
-                                            <td class="text-center align-middle"><button type="button" class="btn btn-sm btn-outline-danger alloc-remove-row" disabled title="Remove">×</button></td>
+                                            <td class="align-middle"><input type="number" name="items[0][quantity]" class="form-control form-control-sm alloc-qty" step="0.01" min="0.01" placeholder="0" required></td>
+                                            <td class="align-middle"><input type="text" name="items[0][unit]" class="form-control form-control-sm alloc-unit" readonly placeholder="—"></td>
+                                            <td class="align-middle"><input type="number" name="items[0][unit_price]" class="form-control form-control-sm alloc-unit-price" step="0.01" min="0" placeholder="0" required></td>
+                                            <td class="align-middle"><input type="text" class="form-control form-control-sm alloc-line-total bg-light" readonly placeholder="0.00"></td>
+                                            <td class="alloc-action-cell"><button type="button" class="btn btn-sm btn-outline-danger alloc-remove-row" disabled title="Remove">×</button></td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -519,30 +552,96 @@
     let createRowIndex = 1;
     let editRowIndex = 0;
 
+    var CHOICES_DEFAULT_CLASSNAMES = {
+        containerOuter: 'choices',
+        containerInner: 'choices__inner',
+        input: 'choices__input',
+        inputCloned: 'choices__input--cloned',
+        list: 'choices__list',
+        listItems: 'choices__list--multiple',
+        listSingle: 'choices__list--single',
+        listDropdown: 'choices__list--dropdown',
+        item: 'choices__item',
+        itemSelectable: 'choices__item--selectable',
+        itemDisabled: 'choices__item--disabled',
+        itemChoice: 'choices__item--choice',
+        placeholder: 'choices__placeholder',
+        group: 'choices__group',
+        groupHeading: 'choices__heading',
+        button: 'choices__button',
+        activeState: 'is-active',
+        focusState: 'is-focused',
+        openState: 'is-open',
+        disabledState: 'is-disabled',
+        highlightedState: 'is-highlighted',
+        selectedState: 'is-selected',
+        flippedState: 'is-flipped',
+        loadingState: 'is-loading',
+        noResults: 'has-no-results',
+        noChoices: 'has-no-choices',
+    };
+
+    function buildChoicesOptions(el) {
+        var placeholder = el.getAttribute('data-placeholder') || 'Select';
+        var base = {
+            shouldSort: false,
+            position: 'bottom',
+            placeholder: true,
+            placeholderValue: placeholder,
+            searchPlaceholderValue: el.classList.contains('alloc-item-select') ? 'Search items...' : 'Search...',
+        };
+        if (el.classList.contains('alloc-item-select')) {
+            base.searchEnabled = true;
+            base.searchChoices = true;
+            base.searchFloor = 0;
+            base.searchResultLimit = 500;
+            base.classNames = Object.assign({}, CHOICES_DEFAULT_CLASSNAMES, {
+                containerOuter: 'choices form-select form-select-sm w-100 alloc-item-choices-outer',
+                containerInner: 'choices__inner d-flex align-items-center flex-nowrap overflow-hidden border-0 rounded-0 bg-transparent px-2',
+                listSingle: 'choices__list--single flex-grow-1 min-w-0 text-start',
+                listDropdown: 'choices__list--dropdown border rounded-2 shadow-sm bg-body mt-1 p-0',
+                item: 'choices__item text-truncate min-w-0',
+                itemSelectable: 'choices__item--selectable px-3 py-2 text-truncate d-block w-100',
+                itemChoice: 'choices__item--choice px-3 py-2 text-truncate d-block w-100',
+                placeholder: 'choices__placeholder text-truncate text-body-secondary mb-0 w-100 small',
+                button: 'choices__button flex-shrink-0 align-self-center',
+            });
+        }
+        return base;
+    }
+
     function positionAllocItemDropdownFixed(selectEl) {
-        const wrap = selectEl.closest('.choices');
+        var wrap = selectEl.closest('.choices');
         if (!wrap) return;
-        const inner = wrap.querySelector('.choices__inner');
-        const dd = wrap.querySelector('.choices__list--dropdown');
+        var inner = wrap.querySelector('.choices__inner');
+        var dd = wrap.querySelector('.choices__list--dropdown');
         if (!inner || !dd) return;
-        const r = inner.getBoundingClientRect();
-        const spaceBelow = window.innerHeight - r.bottom - 8;
-        const maxH = Math.min(320, Math.max(120, spaceBelow));
+        var r = inner.getBoundingClientRect();
+        var spaceBelow = window.innerHeight - r.bottom - 8;
+        var maxPanel = Math.min(320, Math.max(160, spaceBelow));
         dd.classList.add('alloc-item-dd-fixed');
         dd.style.position = 'fixed';
         dd.style.left = r.left + 'px';
         dd.style.top = (r.bottom + 2) + 'px';
         dd.style.width = Math.max(r.width, 1) + 'px';
-        dd.style.maxHeight = maxH + 'px';
-        dd.style.overflowY = 'auto';
         dd.style.zIndex = '20050';
         dd.style.boxSizing = 'border-box';
+        dd.style.maxHeight = '';
+        dd.style.overflowY = '';
+        dd.style.overflow = '';
+        var searchInput = dd.querySelector('.choices__input');
+        var innerList = dd.querySelector('.choices__list[role="listbox"]');
+        var searchH = searchInput ? Math.ceil(searchInput.getBoundingClientRect().height || 44) : 44;
+        if (innerList) {
+            innerList.style.maxHeight = Math.max(72, maxPanel - searchH - 8) + 'px';
+            innerList.style.overflowY = 'auto';
+        }
     }
 
     function clearAllocItemDropdownFixed(selectEl) {
-        const wrap = selectEl.closest('.choices');
+        var wrap = selectEl.closest('.choices');
         if (!wrap) return;
-        const dd = wrap.querySelector('.choices__list--dropdown');
+        var dd = wrap.querySelector('.choices__list--dropdown');
         if (!dd) return;
         dd.classList.remove('alloc-item-dd-fixed');
         dd.style.position = '';
@@ -551,30 +650,49 @@
         dd.style.width = '';
         dd.style.maxHeight = '';
         dd.style.overflowY = '';
+        dd.style.overflow = '';
         dd.style.zIndex = '';
         dd.style.boxSizing = '';
+        var innerList = dd.querySelector('.choices__list[role="listbox"]');
+        if (innerList) {
+            innerList.style.maxHeight = '';
+            innerList.style.overflowY = '';
+        }
     }
 
     function initChoices(root) {
         if (typeof window.Choices === 'undefined') return;
 
-        const scope = root || document;
+        var scope = root || document;
         scope.querySelectorAll('select.choices-select').forEach(function(el) {
             if (el.dataset.choicesInitialized === 'true') return;
 
-            const placeholder = el.getAttribute('data-placeholder') || 'Select';
-            const opts = {
-                shouldSort: false,
-                position: 'bottom',
-                placeholder: true,
-                placeholderValue: placeholder,
-                searchPlaceholderValue: 'Search...',
-            };
+            var opts = buildChoicesOptions(el);
             el._choices = new Choices(el, opts);
             el.dataset.choicesInitialized = 'true';
 
+            if (el.classList.contains('alloc-item-select') && el._choices && el._choices.config) {
+                el._choices.config.searchEnabled = true;
+                el._choices.config.searchChoices = true;
+                if (typeof el._choices._canSearch !== 'undefined') {
+                    el._choices._canSearch = true;
+                }
+            }
+
+            if (el.classList.contains('alloc-item-select')) {
+                var syncAllocRowFromItem = function() {
+                    var row = el.closest('.allocation-item-row');
+                    if (row) {
+                        updateUnit(row);
+                        calcLineTotal(row);
+                    }
+                };
+                el.addEventListener('addItem', syncAllocRowFromItem);
+                el.addEventListener('removeItem', syncAllocRowFromItem);
+            }
+
             function setModalBodyDropdownOpen(show) {
-                const mb = el.closest('.modal-body');
+                var mb = el.closest('.modal-body');
                 if (!mb) return;
                 if (show) {
                     mb.classList.add('alloc-dropdown-open');
@@ -591,7 +709,7 @@
                 setModalBodyDropdownOpen(true);
                 if (!el.classList.contains('alloc-item-select')) return;
                 el._allocItemReposition = function() {
-                    const w = el.closest('.choices');
+                    var w = el.closest('.choices');
                     if (!w || !w.classList.contains('is-open')) return;
                     positionAllocItemDropdownFixed(el);
                 };
@@ -600,6 +718,16 @@
                         positionAllocItemDropdownFixed(el);
                         window.addEventListener('resize', el._allocItemReposition);
                         document.addEventListener('scroll', el._allocItemReposition, true);
+                        var wrap = el.closest('.choices');
+                        var searchInp = wrap && wrap.querySelector('.choices__list--dropdown .choices__input');
+                        if (searchInp) {
+                            searchInp.removeAttribute('hidden');
+                            try {
+                                searchInp.focus({ preventScroll: true });
+                            } catch (err) {
+                                searchInp.focus();
+                            }
+                        }
                     });
                 });
             });
@@ -626,7 +754,7 @@
         }
         clearAllocItemDropdownFixed(el);
         if (el._choices) {
-            el._choices.destroy();
+            try { el._choices.destroy(); } catch (err) {}
             el._choices = null;
         }
         delete el.dataset.choicesInitialized;
@@ -643,36 +771,47 @@
         const lineTotal = editItem ? editItem.total_price : '';
         return `
         <tr class="allocation-item-row edit-alloc-item-row">
-            <td style="width: 280px;">
-                <select name="items[${index}][item_subcategory_id]" class="form-select form-select-sm alloc-item-select choices-select" data-placeholder="Select Item" required>
+            <td class="align-middle" style="width: 280px;">
+                <select name="items[${index}][item_subcategory_id]" class="form-select form-select-sm alloc-item-select choices-select w-100" data-placeholder="Select Item" required>
                     <option value="">Select Item</option>
                     ${options}
                 </select>
             </td>
-            <td><input type="number" name="items[${index}][quantity]" class="form-control  alloc-qty" step="0.01" min="0.01" placeholder="0" value="${qty}" required></td>
-            <td><input type="text" name="items[${index}][unit]" class="form-control  alloc-unit" readonly placeholder="—" value="${unit}"></td>
-            <td><input type="number" name="items[${index}][unit_price]" class="form-control  alloc-unit-price" step="0.01" min="0" placeholder="0" value="${price}" required></td>
-            <td><input type="text" class="form-control  alloc-line-total bg-light" readonly placeholder="0.00" value="${lineTotal}"></td>
-            <td class="text-center align-middle"><button type="button" class="btn btn-sm btn-outline-danger alloc-remove-row" title="Remove">×</button></td>
+            <td class="align-middle"><input type="number" name="items[${index}][quantity]" class="form-control form-control-sm alloc-qty" step="0.01" min="0.01" placeholder="0" value="${qty}" required></td>
+            <td class="align-middle"><input type="text" name="items[${index}][unit]" class="form-control form-control-sm alloc-unit" readonly placeholder="—" value="${unit}"></td>
+            <td class="align-middle"><input type="number" name="items[${index}][unit_price]" class="form-control form-control-sm alloc-unit-price" step="0.01" min="0" placeholder="0" value="${price}" required></td>
+            <td class="align-middle"><input type="text" class="form-control form-control-sm alloc-line-total bg-light" readonly placeholder="0.00" value="${lineTotal}"></td>
+            <td class="alloc-action-cell"><button type="button" class="btn btn-sm btn-outline-danger alloc-remove-row" title="Remove">×</button></td>
         </tr>`;
+    }
+
+    function allocUnitDisplay(value) {
+        if (value == null || value === '' || value === '—') {
+            return '';
+        }
+        return String(value);
     }
 
     function updateUnit(row) {
         const select = row.querySelector('.alloc-item-select');
-        if (!select) return;
+        const unitInput = row.querySelector('.alloc-unit');
+        if (!select || !unitInput) return;
         const selectedValue = select.value;
         if (!selectedValue) {
-            const unitInput = row.querySelector('.alloc-unit');
-            if (unitInput) unitInput.value = '';
+            unitInput.value = '';
             return;
         }
-        // Find the option with matching value to get data-unit attribute
-        const opt = Array.from(select.options).find(o => o.value == selectedValue);
-        const unitInput = row.querySelector('.alloc-unit');
-        if (unitInput) {
-            const unitValue = opt && opt.getAttribute('data-unit') ? opt.getAttribute('data-unit') : '';
-            unitInput.value = unitValue;
+        const sub = itemSubcategories.find(function (s) {
+            return String(s.id) === String(selectedValue);
+        });
+        if (sub) {
+            unitInput.value = allocUnitDisplay(sub.unit_measurement);
+            return;
         }
+        const opt = Array.from(select.options).find(function (o) {
+            return String(o.value) === String(selectedValue);
+        });
+        unitInput.value = allocUnitDisplay(opt && opt.getAttribute('data-unit'));
     }
 
     function calcLineTotal(row) {
@@ -753,7 +892,7 @@
             if (!sel || !String(sel.value || '').trim()) {
                 e.preventDefault();
                 alert('Please select an item on each line, or remove incomplete rows using the × button.');
-                const wrap = sel && sel.closest('.choices');
+                var wrap = sel && (sel.closest('.choices') || sel.closest('td'));
                 if (wrap && typeof wrap.scrollIntoView === 'function') {
                     wrap.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
                 }
@@ -818,7 +957,7 @@
         if (e.target.classList.contains('alloc-remove-row')) {
             const row = e.target.closest('.allocation-item-row');
             if (row && document.querySelectorAll('#allocationItemsBody .allocation-item-row').length > 1) {
-                destroyChoices(row.querySelector('select.choices-select'));
+                destroyChoices(row.querySelector('.alloc-item-select'));
                 row.remove();
                 updateCreateRemoveButtons();
             }
@@ -846,7 +985,7 @@
                 }
                 document.getElementById('editAllocationDate').value = a.allocation_date || '';
                 const tbody = document.getElementById('editAllocationItemsBody');
-                tbody.querySelectorAll('select.choices-select').forEach(destroyChoices);
+                tbody.querySelectorAll('select.alloc-item-select').forEach(destroyChoices);
                 tbody.innerHTML = '';
                 if (items.length === 0) {
                     tbody.insertAdjacentHTML('beforeend', getItemRowHtml(0, null));
@@ -858,10 +997,9 @@
                     editRowIndex = items.length;
                 }
                 initChoices(document.getElementById('editStoreAllocationModal'));
-                tbody.querySelectorAll('select.alloc-item-select').forEach(function(selectEl) {
-                    if (selectEl._choices && selectEl.value) {
-                        selectEl._choices.setChoiceByValue(String(selectEl.value));
-                    }
+                tbody.querySelectorAll('.allocation-item-row').forEach(function(row) {
+                    updateUnit(row);
+                    calcLineTotal(row);
                 });
                 updateEditRemoveButtons();
                 const editModalEl = document.getElementById('editStoreAllocationModal');
@@ -896,7 +1034,7 @@
         if (e.target.classList.contains('alloc-remove-row')) {
             const row = e.target.closest('.allocation-item-row');
             if (row && document.querySelectorAll('#editAllocationItemsBody .allocation-item-row').length > 1) {
-                destroyChoices(row.querySelector('select.choices-select'));
+                destroyChoices(row.querySelector('.alloc-item-select'));
                 row.remove();
                 updateEditRemoveButtons();
             }
@@ -914,7 +1052,6 @@
         });
     }
 
-    // Initialize Choices.js for all modal dropdowns, including dynamic rows
     document.addEventListener('DOMContentLoaded', function() {
         initChoices(document.getElementById('createStoreAllocationModal'));
         initChoices(document.getElementById('editStoreAllocationModal'));

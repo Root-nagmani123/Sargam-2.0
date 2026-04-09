@@ -2,7 +2,12 @@
 
 @section('title', ($isEdit ?? false) ? 'Edit Possession Details - Sargam' : 'Add Possession Details - Sargam')
 
-@section('setup_content')
+@php
+    $estateSelfHomeTab = request('scope') === 'self'
+        && (hasRole('Admin') || hasRole('Super Admin') || hasRole('Estate'));
+    $estateSelfQuery = $estateSelfHomeTab ? ['scope' => 'self'] : [];
+@endphp
+@section($estateSelfHomeTab ? 'content' : 'setup_content')
 <div class="container-fluid py-4">
     <x-breadcrum :title="($isEdit ?? false) ? 'Edit Possession Details' : 'Add Possession Details'"></x-breadcrum>
     <x-estate-workflow-stepper current="possession-details" />
@@ -191,7 +196,7 @@
                     <button type="submit" class="btn btn-success d-inline-flex align-items-center gap-2">
                         <i class="bi bi-save"></i> Save
                     </button>
-                    <a href="{{ route('admin.estate.possession-details') }}" class="btn btn-secondary d-inline-flex align-items-center gap-2">
+                    <a href="{{ route('admin.estate.possession-details', $estateSelfQuery) }}" class="btn btn-secondary d-inline-flex align-items-center gap-2">
                         <i class="bi bi-x-lg"></i> Cancel
                     </a>
                 </div>
@@ -541,9 +546,9 @@ $(document).ready(function() {
             } else if (res.ok) {
                 return res.json().then(function(data) {
                     if (data.redirect) window.location.href = data.redirect;
-                    else window.location.href = "{{ route('admin.estate.possession-details') }}";
+                    else window.location.href = @json(route('admin.estate.possession-details', $estateSelfQuery));
                 }).catch(function() {
-                    window.location.href = "{{ route('admin.estate.possession-details') }}";
+                    window.location.href = @json(route('admin.estate.possession-details', $estateSelfQuery));
                 });
             } else if (res.status === 302) {
                 var loc = res.headers.get('Location');

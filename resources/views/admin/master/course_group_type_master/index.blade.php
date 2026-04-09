@@ -4,14 +4,15 @@
 
 @section('setup_content')
 <style>
-    .disabled-link {
-        pointer-events: none;
-        /* click बंद */
-        opacity: 0.5;
-        /* disabled look */
-        cursor: not-allowed;
-    }
-    .dropdown-item {
+.disabled-link {
+    pointer-events: none;
+    /* click बंद */
+    opacity: 0.5;
+    /* disabled look */
+    cursor: not-allowed;
+}
+
+.dropdown-item {
     padding: 10px 14px;
     font-size: 14px;
     transition: background 0.2s ease;
@@ -24,7 +25,6 @@
 .dropdown-item i {
     font-size: 18px;
 }
-
 </style>
 <div class="container-fluid">
     <x-breadcrum title="Course Group Type"></x-breadcrum>
@@ -76,140 +76,139 @@
 @endsection
 @section('scripts')
 <script>
-    $(function() {
-        let table = $('#coursegrouptype').DataTable({
-            processing: true,
-            serverSide: true,
-            searching: true, 
-            ajax: {
-                url: "{{ route('master.course.group.type.grouptypeview') }}",
-                data: function(d) {
-                    d.pk = $('#pk').val();
-                    d.active_inactive = $('#active_inactive').val();
-                    //  console.log(d.pk);
+$(function() {
+    let table = $('#coursegrouptype').DataTable({
+        processing: true,
+        serverSide: true,
+        searching: true,
+        ajax: {
+            url: "{{ route('master.course.group.type.grouptypeview') }}",
+            data: function(d) {
+                d.pk = $('#pk').val();
+                d.active_inactive = $('#active_inactive').val();
+                //  console.log(d.pk);
 
-                }
+            }
+        },
+        columns: [{
+                data: 'DT_RowIndex',
+                name: 'DT_RowIndex',
+                orderable: false,
+                searchable: false
             },
-            columns: [{
-                    data: 'DT_RowIndex',
-                    name: 'DT_RowIndex',
-                    orderable: false,
-                    searchable: false
-                },
-                {
-                    data: 'type_name',
-                    name: 'type_name'
-                },
-                {
-                    data: 'status',
-                    name: 'status',
-                    orderable: false,
-                    searchable: false
-                },
-                {
-                    data: 'action',
-                    name: 'action',
-                    orderable: false,
-                    searchable: false
-                }
-            ]
+            {
+                data: 'type_name',
+                name: 'type_name'
+            },
+            {
+                data: 'status',
+                name: 'status',
+                orderable: false,
+                searchable: false
+            },
+            {
+                data: 'action',
+                name: 'action',
+                orderable: false,
+                searchable: false
+            }
+        ]
 
-        });
-
-        $(document).on('change', '.plain-status-toggle', function () {
-    var checkbox = $(this);
-    var previousState = !checkbox.is(':checked'); // save previous state
-    var pk = checkbox.data('id');
-    var active_inactive = checkbox.is(':checked') ? 1 : 0;
-
-    var actionText = active_inactive ? 'activate' : 'deactivate';
-    var confirmBtnText = active_inactive ? 'Yes, activate' : 'Yes, deactivate';
-    var confirmBtnColor = active_inactive ? '#28a745' : '#d33';
-
-    Swal.fire({
-        title: 'Are you sure?',
-        text: `Are you sure you want to ${actionText} this item?`,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: confirmBtnColor,
-        cancelButtonColor: '#3085d6',
-        confirmButtonText: confirmBtnText,
-        cancelButtonText: 'Cancel'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            $('#pk').val(pk);
-            $('#active_inactive').val(active_inactive);
-            table.ajax.reload(null, false);
-
-            Swal.fire({
-                icon: 'success',
-                title: 'Updated!',
-                text: 'Status has been updated successfully.',
-                timer: 1500,
-                showConfirmButton: false
-            });
-        } else {
-            // revert checkbox to previous state
-            checkbox.prop('checked', previousState);
-
-            Swal.fire({
-                icon: 'info',
-                title: 'Cancelled',
-                text: 'Status change has been cancelled.',
-                timer: 1200,
-                showConfirmButton: false
-            });
-        }
     });
-});
 
+    $(document).on('change', '.plain-status-toggle', function() {
+        var checkbox = $(this);
+        var previousState = !checkbox.is(':checked'); // save previous state
+        var pk = checkbox.data('id');
+        var active_inactive = checkbox.is(':checked') ? 1 : 0;
 
+        var actionText = active_inactive ? 'activate' : 'deactivate';
+        var confirmBtnText = active_inactive ? 'Yes, activate' : 'Yes, deactivate';
+        var confirmBtnColor = active_inactive ? '#28a745' : '#d33';
 
+        Swal.fire({
+            title: 'Are you sure?',
+            text: `Are you sure you want to ${actionText} this item?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: confirmBtnColor,
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: confirmBtnText,
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $('#pk').val(pk);
+                $('#active_inactive').val(active_inactive);
+                table.ajax.reload(null, false);
 
-        $(document).on('click', '.delete-btn', function(e) {
-            e.preventDefault();
-            let pk = $(this).data('id');
-            Swal.fire({
-                title: 'Are you sure?',
-                text: "This record will be permanently deleted!",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#3085d6',
-                confirmButtonText: 'Yes, delete it!',
-                cancelButtonText: 'Cancel'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    $('#pk').val(pk);
-                    $('#active_inactive').val(2);
-                    table.ajax.reload(null, false);
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Delete!',
-                        text: 'Delete has been successfully.',
-                        timer: 1500,
-                        showConfirmButton: false
-                    });
-                } else if (result.dismiss === Swal.DismissReason.cancel) {
-                    // Revert the checkbox state
-                    checkbox.prop('checked', !active_inactive);
-                    // Show cancel message
-                    Swal.fire({
-                        icon: 'danger',
-                        title: 'Cancelled',
-                        text: 'Delete has been cancelled.',
-                        timer: 1500,
-                        showConfirmButton: false
-                    });
-                }
-            });
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Updated!',
+                    text: 'Status has been updated successfully.',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+            } else {
+                // revert checkbox to previous state
+                checkbox.prop('checked', previousState);
+
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Cancelled',
+                    text: 'Status change has been cancelled.',
+                    timer: 1200,
+                    showConfirmButton: false
+                });
+            }
         });
+    });
 
-    }); //endclose
+
+
+
+    $(document).on('click', '.delete-btn', function(e) {
+        e.preventDefault();
+        let pk = $(this).data('id');
+        Swal.fire({
+            title: 'Are you sure?',
+            text: "This record will be permanently deleted!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, delete it!',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $('#pk').val(pk);
+                $('#active_inactive').val(2);
+                table.ajax.reload(null, false);
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Delete!',
+                    text: 'Delete has been successfully.',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+            } else if (result.dismiss === Swal.DismissReason.cancel) {
+                // Revert the checkbox state
+                checkbox.prop('checked', !active_inactive);
+                // Show cancel message
+                Swal.fire({
+                    icon: 'danger',
+                    title: 'Cancelled',
+                    text: 'Delete has been cancelled.',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+            }
+        });
+    });
+
+}); //endclose
 </script>
 <script>
-
-document.getElementById('showAlert').addEventListener('click', function () {
+document.getElementById('showAlert').addEventListener('click', function() {
 
     Swal.fire({
         title: '<strong><small>Add Course Group Type</small></strong>',
@@ -259,55 +258,52 @@ document.getElementById('showAlert').addEventListener('click', function () {
         if (result.isConfirmed) {
 
             fetch(`{{ route('master.course.group.type.store') }}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify(result.value)
-            })
-            .then(response => response.json())
-            .then(data => {
-             
-                if (data.status === true) {
-                  
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Success',
-                        text: data.message
-                    });
-                    $('#coursegrouptype').DataTable().ajax.reload();
-                } else {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(result.value)
+                })
+                .then(response => response.json())
+                .then(data => {
+
+                    if (data.status === true) {
+
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Success',
+                            text: data.message
+                        });
+                        $('#coursegrouptype').DataTable().ajax.reload();
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: data.message
+                        });
+                    }
+
+                })
+                .catch(error => {
                     Swal.fire({
                         icon: 'error',
-                        title: 'Error',
-                        text: data.message
+                        title: 'Server Error',
+                        text: 'Something went wrong!'
                     });
-                }
-
-            })
-            .catch(error => {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Server Error',
-                    text: 'Something went wrong!'
                 });
-            });
         }
     });
 });
-
-
 </script>
 
 <!-- EDIT FORM  -->
 
 <script>
-  
-$(document).on('click', '.edit-btn', function () {
+$(document).on('click', '.edit-btn', function() {
 
-    let pk = $(this).data('id');          // encrypted id
+    let pk = $(this).data('id'); // encrypted id
     let typeName = $(this).data('type-name');
 
     let url = "{{ route('master.course.group.type.store') }}";
@@ -370,7 +366,7 @@ $(document).on('click', '.edit-btn', function () {
                     id: result.value.id,
                     type_name: result.value.type_name
                 },
-                success: function (response) {
+                success: function(response) {
 
                     if (response.status === true) {
                         Swal.fire({
@@ -380,13 +376,13 @@ $(document).on('click', '.edit-btn', function () {
                         });
 
                         // 🔁 Reload DataTable if exists
-                         $('#coursegrouptype').DataTable().ajax.reload();
+                        $('#coursegrouptype').DataTable().ajax.reload();
 
                     } else {
                         Swal.fire('Error', response.message, 'error');
                     }
                 },
-                error: function (xhr) {
+                error: function(xhr) {
 
                     if (xhr.status === 422) {
                         let errors = xhr.responseJSON.errors;
@@ -399,26 +395,24 @@ $(document).on('click', '.edit-btn', function () {
         }
     });
 });
-
-
 </script>
 @if(session('success'))
 <script>
-    Swal.fire({
-        icon: 'success',
-        title: 'Success',
-        text: "{{ session('success') }}"
-    });
+Swal.fire({
+    icon: 'success',
+    title: 'Success',
+    text: "{{ session('success') }}"
+});
 </script>
 @endif
 
 @if(session('error'))
 <script>
-    Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: "{{ session('error') }}"
-    });
+Swal.fire({
+    icon: 'error',
+    title: 'Error',
+    text: "{{ session('error') }}"
+});
 </script>
 @endif
 @endsection

@@ -13,6 +13,8 @@
         "test:e2e:report": "playwright show-report"
     },
     "devDependencies": {
+        "@fontsource-variable/material-symbols-rounded": "^5.2.40",
+        "@fontsource/material-icons": "^5.2.7",
         "@playwright/test": "^1.58.2",
         "@popperjs/core": "^2.11.6",
         "axios": "^0.25",

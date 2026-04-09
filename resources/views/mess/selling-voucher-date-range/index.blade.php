@@ -884,7 +884,7 @@ $selectedStores = collect((array) request()->input('store', []))
                                         @endforeach
                                     </div>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <label class="form-label voucher-label">Payment Type <span
                                             class="text-danger">*</span></label>
                                     <select name="payment_type" class="form-select " required>
@@ -898,7 +898,7 @@ $selectedStores = collect((array) request()->input('store', []))
                                     <small class="form-text text-muted" id="drPaymentTypeHint">Cash / UPI /
                                         Credit</small>
                                 </div>
-                                <div class="col-md-6" id="drClientNameWrap" style="display:none;">
+                                <div class="col-md-4" id="drClientNameWrap" style="display:none;">
                                     <label class="form-label voucher-label">Client Name <span
                                             class="text-danger">*</span></label>
                                     <select name="client_type_pk" class="form-select " id="drClientNameSelect">
@@ -928,7 +928,7 @@ $selectedStores = collect((array) request()->input('store', []))
                                         @endforeach
                                     </select>
                                 </div>
-                                <div class="col-md-6" id="drNameFieldWrap" style="display:none;">
+                                <div class="col-md-4" id="drNameFieldWrap" style="display:none;">
                                     <label class="form-label voucher-label">Name <span
                                             class="text-danger">*</span></label>
                                     <input type="text" name="client_name" id="drClientNameInput" class="form-control "
@@ -967,7 +967,7 @@ $selectedStores = collect((array) request()->input('store', []))
                                         @endforeach
                                     </select>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <label class="form-label voucher-label">Transfer From Store <span
                                             class="text-danger">*</span></label>
                                     <select name="inve_store_master_pk" class="form-select " required>
@@ -979,7 +979,7 @@ $selectedStores = collect((array) request()->input('store', []))
                                         @endforeach
                                     </select>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <label class="form-label voucher-label">Remarks / Reference Number / Order
                                         By</label>
                                     <input type="text" name="remarks" class="form-control " value="{{ old('remarks') }}"
@@ -1209,7 +1209,7 @@ $selectedStores = collect((array) request()->input('store', []))
                     </div>
                     <div class="card-body">
                         <div class="row g-3">
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <table class="table table-borderless table-sm mb-0">
                                     <tr>
                                         <th width="40%" class="text-secondary fw-semibold">Request Date:</th>
@@ -1229,7 +1229,7 @@ $selectedStores = collect((array) request()->input('store', []))
                                     </tr>
                                 </table>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <table class="table table-borderless table-sm mb-0">
                                     <tr>
                                         <th width="40%" class="text-secondary fw-semibold">Client Type:</th>
@@ -2966,30 +2966,37 @@ $selectedStores = collect((array) request()->input('store', []))
     }
 
     // Enter key inside Item Details table triggers Add Item (and prevents form submit)
+    // Dropdown (Choices.js) me Enter/Tab apna normal behaviour rakhega
     const addReportItemsTable = document.getElementById('addReportItemsTable');
     if (addReportModalEl && addReportItemsTable) {
         addReportModalEl.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' && addReportItemsTable.contains(document.activeElement)) {
-                const activeEl = document.activeElement;
-                const isRateField = activeEl && activeEl.classList && activeEl.classList.contains(
-                    'dr-rate');
-                const activeRow = activeEl ? activeEl.closest('.dr-item-row') : null;
-                const tbody = document.getElementById('addModalItemsBody');
-                const lastRow = tbody ? tbody.querySelector('.dr-item-row:last-child') : null;
+            if (e.key !== 'Enter') return;
+            const activeEl = document.activeElement;
+            if (!activeEl || !addReportItemsTable.contains(activeEl)) return;
 
-                // Sirf last row ki rate field par Enter => append new row
-                if (isRateField && activeRow && lastRow && activeRow === lastRow) {
-                    const addBtn = document.getElementById('addModalAddItemRow');
-                    if (addBtn) {
-                        e.preventDefault();
-                        addBtn.click();
+            // Agar Choices.js dropdown open hai (input inside .choices.is-open), toh Enter ko normal rehne do
+            var choicesWrap = activeEl.closest('.choices.is-open, .ts-wrapper.is-open');
+            if (choicesWrap) return; // dropdown ka apna behaviour chalega
+
+            e.preventDefault();
+
+            // Kisi bhi input field se Enter press => new row append karo
+            const addBtn = document.getElementById('addModalAddItemRow');
+            if (addBtn) {
+                addBtn.click();
+                // Naye row ki pehli editable field pe focus
+                setTimeout(function() {
+                    const tbody = document.getElementById('addModalItemsBody');
+                    const lastRow = tbody ? tbody.querySelector('.dr-item-row:last-child') : null;
+                    if (lastRow) {
+                        const firstSelect = lastRow.querySelector('.dr-item-select');
+                        if (firstSelect && firstSelect.tomselect && firstSelect.tomselect.wrapper) {
+                            firstSelect.tomselect.wrapper.querySelector('.choices__inner')?.click();
+                        } else if (firstSelect) {
+                            firstSelect.focus();
+                        }
                     }
-                    return;
-                }
-
-                // Baaki fields par Enter => append/submit block
-                e.preventDefault();
-                if (activeEl && activeEl.blur) activeEl.blur();
+                }, 100);
             }
         });
     }
@@ -4055,14 +4062,29 @@ $selectedStores = collect((array) request()->input('store', []))
             const activeEl = document.activeElement;
             if (!activeEl || !editReportFormKeydownEl.contains(activeEl)) return;
 
+            // Agar Choices.js dropdown open hai, toh Enter ko normal rehne do
+            var choicesWrap = activeEl.closest('.choices.is-open, .ts-wrapper.is-open');
+            if (choicesWrap) return;
+
+            // Item table ke andar kisi bhi field se Enter => new row append
             const row = activeEl.closest('.edit-dr-item-row');
-            const isRateField = activeEl.classList && activeEl.classList.contains('edit-dr-rate');
-            const lastRow = editModalItemsBodyEl.querySelector('.edit-dr-item-row:last-child');
-            if (isRateField && row && lastRow && row === lastRow) {
+            if (row) {
+                e.preventDefault();
                 const addBtn = document.getElementById('editModalAddItemRow');
                 if (addBtn) {
-                    e.preventDefault();
                     addBtn.click();
+                    setTimeout(function() {
+                        const lastRow = editModalItemsBodyEl.querySelector('.edit-dr-item-row:last-child');
+                        if (lastRow) {
+                            const firstSelect = lastRow.querySelector('.edit-dr-item-select');
+                            if (firstSelect && firstSelect.tomselect && firstSelect.tomselect.wrapper) {
+                                var inner = firstSelect.tomselect.wrapper.querySelector('.choices__inner');
+                                if (inner) inner.click();
+                            } else if (firstSelect) {
+                                firstSelect.focus();
+                            }
+                        }
+                    }, 100);
                 }
                 return;
             }
@@ -4608,6 +4630,8 @@ $selectedStores = collect((array) request()->input('store', []))
             var firstRow = tbody.querySelector('.dr-item-row');
             if (firstRow) {
                 firstRow.querySelector('.dr-item-select').addEventListener('change', function() {
+                    var rateInp = firstRow.querySelector('.dr-rate');
+                    if (rateInp) rateInp.dataset.manualRate = '';
                     updateAddRowUnit(firstRow);
                 });
                 firstRow.querySelector('.dr-qty').addEventListener('input', function() {
@@ -4616,6 +4640,8 @@ $selectedStores = collect((array) request()->input('store', []))
                     updateAddGrandTotal();
                 });
                 firstRow.querySelector('.dr-rate').addEventListener('input', function() {
+                    // Must match initial row wiring: otherwise FIFO tier logic overwrites rate every keystroke.
+                    this.dataset.manualRate = '1';
                     updateAddRowTotal(firstRow);
                     updateAddGrandTotal();
                 });
@@ -4806,6 +4832,13 @@ $selectedStores = collect((array) request()->input('store', []))
                     if (res.ok && data && data.success) {
                         // Reset form for next entry but keep modal open
                         resetAddReportForm();
+                        initAddModalTomSelects();
+                        refreshAllAvailable();
+                        document.querySelectorAll('#addModalItemsBody .dr-item-row').forEach(
+                            function(row) {
+                                updateAddRowTotal(row);
+                            });
+                        updateAddGrandTotal();
                         refreshSellingVoucherDateRangeTable();
 
                         if (window.toastr && data.message) {

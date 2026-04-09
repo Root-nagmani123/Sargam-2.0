@@ -110,56 +110,80 @@
         </div>
 
         <!-- Report Table -->
-        <div class="card border-0 shadow-none flex-grow-1 d-flex flex-column min-h-0">
+        <div class="card flex-grow-1 d-flex flex-column min-h-0">
             <div class="card-header bg-light d-flex justify-content-between align-items-center py-2 flex-shrink-0">
                 <span class="fw-semibold text-dark">Stock Balance Details</span>
                 <span class="text-muted small">
                     Total items: {{ count($reportData) }}
                 </span>
             </div>
-            <div class="table-responsive flex-grow-1 overflow-auto">
-                <table class="table table-hover align-middle mb-0 stock-balance-table">
-                    <thead>
-                        <tr>
-                            <th>S. No.</th>
-                            <th>Item Code</th>
-                            <th>Item Name</th>
-                            <th class="text-end">Remaining Quantity</th>
-                            <th>Unit</th>
-                            <th class="text-end">Avg rate</th>
-                            <th class="text-end">Amount</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @php
-                            $totalAmount = 0;
-                        @endphp
-                        @forelse($reportData as $index => $item)
+            <div class="stock-balance-table-split flex-grow-1 d-flex flex-column min-h-0">
+                <div class="stock-balance-table-head-wrap flex-shrink-0">
+                    <table class="table table-hover align-middle mb-0 stock-balance-table stock-balance-col-sync">
+                        <colgroup>
+                            <col class="sb-col-sn" />
+                            <col class="sb-col-code" />
+                            <col class="sb-col-name" />
+                            <col class="sb-col-qty" />
+                            <col class="sb-col-unit" />
+                            <col class="sb-col-rate" />
+                            <col class="sb-col-amt" />
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th>S. No.</th>
+                                <th>Item Code</th>
+                                <th>Item Name</th>
+                                <th class="text-end">Remaining Quantity</th>
+                                <th>Unit</th>
+                                <th class="text-end">Avg rate</th>
+                                <th class="text-end">Amount</th>
+                            </tr>
+                        </thead>
+                    </table>
+                </div>
+                <div class="stock-balance-table-body-scroll flex-grow-1 min-h-0">
+                    <table class="table align-middle mb-0 stock-balance-table stock-balance-col-sync">
+                        <colgroup>
+                            <col class="sb-col-sn" />
+                            <col class="sb-col-code" />
+                            <col class="sb-col-name" />
+                            <col class="sb-col-qty" />
+                            <col class="sb-col-unit" />
+                            <col class="sb-col-rate" />
+                            <col class="sb-col-amt" />
+                        </colgroup>
+                        <tbody>
                             @php
-                                $totalAmount += $item['amount'];
+                                $totalAmount = 0;
                             @endphp
-                            <tr>
-                                <td class="text-center">{{ $index + 1 }}</td>
-                                <td>{{ $item['item_code'] ?? '—' }}</td>
-                                <td>{{ $item['item_name'] }}</td>
-                                <td class="text-end">{{ number_format($item['remaining_qty'], 2) }}</td>
-                                <td>{{ $item['unit'] ?? 'Unit' }}</td>
-                                <td class="text-end">₹{{ number_format($item['rate'], 2) }}</td>
-                                <td class="text-end">₹{{ number_format($item['amount'], 2) }}</td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="7" class="text-center text-muted py-4">No stock balance found</td>
-                            </tr>
-                        @endforelse
-                        @if(count($reportData) > 0)
-                            <tr class="table-light fw-bold">
-                                <td colspan="6" class="text-end">Total Amount:</td>
-                                <td class="text-end">₹{{ number_format($totalAmount, 2) }}</td>
-                            </tr>
-                        @endif
-                    </tbody>
-                </table>
+                            @forelse($reportData as $index => $item)
+                                @php
+                                    $totalAmount += $item['amount'];
+                                @endphp
+                                <tr>
+                                    <td class="text-center">{{ $index + 1 }}</td>
+                                    <td>{{ $item['item_code'] ?? '—' }}</td>
+                                    <td>{{ $item['item_name'] }}</td>
+                                    <td class="text-end">{{ number_format($item['remaining_qty'], 2) }}</td>
+                                    <td>{{ $item['unit'] ?? 'Unit' }}</td>
+                                    <td class="text-end">₹{{ number_format($item['rate'], 2) }}</td>
+                                    <td class="text-end">₹{{ number_format($item['amount'], 2) }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted py-4">No stock balance found</td>
+                                </tr>
+                            @endforelse
+                            @if(count($reportData) > 0)
+                                <tr class="table-light fw-bold">
+                                    <td colspan="6" class="text-end">Total Amount:</td>
+                                    <td class="text-end">₹{{ number_format($totalAmount, 2) }}</td>
+                                </tr>
+                            @endif
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -179,29 +203,45 @@
         min-height: 0;
     }
 
-    .stock-balance-report .table-responsive {
-        min-height: 200px;
+    .stock-balance-report .stock-balance-table-body-scroll {
+        min-height: 100%;
         max-height: calc(100vh - 320px);
         -webkit-overflow-scrolling: touch;
-        overflow-x: auto;
-        overflow-y: auto;
+        overflow: auto;
     }
 
-    .stock-balance-report .stock-balance-table {
+    .stock-balance-report .stock-balance-table-head-wrap .stock-balance-table {
+        margin-bottom: 0 !important;
+    }
+
+    .stock-balance-report .stock-balance-table-body-scroll .stock-balance-table {
+        margin-bottom: 0 !important;
+    }
+
+    .stock-balance-report .stock-balance-table-body-scroll tbody tr:first-child td {
+        border-top: 0 !important;
+    }
+
+    .stock-balance-report .stock-balance-table.stock-balance-col-sync {
+        table-layout: fixed;
         width: 100%;
         min-width: 700px;
-        table-layout: auto;
     }
+
+    .stock-balance-report .stock-balance-col-sync col.sb-col-sn { width: 5%; }
+    .stock-balance-report .stock-balance-col-sync col.sb-col-code { width: 12%; }
+    .stock-balance-report .stock-balance-col-sync col.sb-col-name { width: 28%; }
+    .stock-balance-report .stock-balance-col-sync col.sb-col-qty { width: 14%; }
+    .stock-balance-report .stock-balance-col-sync col.sb-col-unit { width: 8%; }
+    .stock-balance-report .stock-balance-col-sync col.sb-col-rate { width: 14%; }
+    .stock-balance-report .stock-balance-col-sync col.sb-col-amt { width: 19%; }
 
     .stock-balance-report .stock-balance-table thead th {
         font-weight: 600;
         white-space: nowrap;
-        position: sticky;
-        top: 0;
         background: #f8f9fa;
-        z-index: 1;
-        box-shadow: 0 1px 0 #dee2e6;
         padding: 0.75rem;
+        border-bottom: 1px solid #dee2e6;
     }
 
     .stock-balance-report .stock-balance-table tbody td {
@@ -236,12 +276,15 @@
         th, td {
             padding: 8px !important;
         }
-        .stock-balance-report .table-responsive {
+        .stock-balance-report .stock-balance-table-body-scroll {
             max-height: none !important;
             overflow: visible !important;
+            min-height: 0 !important;
         }
-        .stock-balance-report .stock-balance-table thead th {
-            position: static;
+        .stock-balance-report .stock-balance-table-split {
+            display: block !important;
+            border: none !important;
+            overflow: visible !important;
         }
     }
 
@@ -285,7 +328,11 @@
 </script>
 <script>
 function printStockBalance() {
-    const table = document.querySelector('.stock-balance-report .table-responsive table');
+    const headTable = document.querySelector('.stock-balance-report .stock-balance-table-head-wrap table');
+    const bodyTable = document.querySelector('.stock-balance-report .stock-balance-table-body-scroll table');
+    const fallbackTable = document.querySelector('.stock-balance-report .stock-balance-table-split table')
+        || document.querySelector('.stock-balance-report table.stock-balance-table');
+    const table = bodyTable || fallbackTable;
     if (!table) {
         window.print();
         return;
@@ -297,8 +344,8 @@ function printStockBalance() {
 
     // Build a new table so the header (with logos + meta + column headings)
     // lives inside <thead> and repeats on every printed page.
-    const originalThead = table.querySelector('thead');
-    const originalTbody = table.querySelector('tbody');
+    const originalThead = headTable ? headTable.querySelector('thead') : table.querySelector('thead');
+    const originalTbody = bodyTable ? bodyTable.querySelector('tbody') : table.querySelector('tbody');
     const columnsCount  = 7; // current number of visible columns in the report
 
     const columnHeadHtml = originalThead ? originalThead.innerHTML : '';

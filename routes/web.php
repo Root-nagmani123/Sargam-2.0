@@ -244,13 +244,13 @@ Route::middleware(['auth'])->group(function () {
                         ],
                         'social_groups' => [
                             'categories' => array_keys($socialCounts),
-                            'female' => array_map(fn($r) => $r['Female'] ?? 0, $socialCounts),
-                            'male' => array_map(fn($r) => $r['Male'] ?? 0, $socialCounts),
+                            'female' => array_values(array_map(fn($r) => $r['Female'] ?? 0, $socialCounts)),
+                            'male' => array_values(array_map(fn($r) => $r['Male'] ?? 0, $socialCounts)),
                         ],
                         'age' => [
                             'categories' => array_keys($ageCounts),
-                            'female' => array_map(fn($r) => $r['Female'] ?? 0, $ageCounts),
-                            'male' => array_map(fn($r) => $r['Male'] ?? 0, $ageCounts),
+                            'female' => array_values(array_map(fn($r) => $r['Female'] ?? 0, $ageCounts)),
+                            'male' => array_values(array_map(fn($r) => $r['Male'] ?? 0, $ageCounts)),
                         ],
                         'stream' => [
                             'categories' => array_keys($streamCounts),
@@ -258,8 +258,8 @@ Route::middleware(['auth'])->group(function () {
                         ],
                         'cadre' => [
                             'categories' => array_keys($cadreCounts),
-                            'female' => array_map(fn($r) => $r['Female'] ?? 0, $cadreCounts),
-                            'male' => array_map(fn($r) => $r['Male'] ?? 0, $cadreCounts),
+                            'female' => array_values(array_map(fn($r) => $r['Female'] ?? 0, $cadreCounts)),
+                            'male' => array_values(array_map(fn($r) => $r['Male'] ?? 0, $cadreCounts)),
                         ],
                         'domicile' => [
                             'categories' => array_keys($domicileCounts),

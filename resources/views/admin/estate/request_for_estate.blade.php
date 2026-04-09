@@ -2,7 +2,15 @@
 
 @section('title', 'Request For Estate - Sargam')
 
-@section('setup_content')
+@php
+    $estateSelfHomeTab = request('scope') === 'self'
+        && (hasRole('Admin') || hasRole('Super Admin') || hasRole('Estate'));
+    $requestForEstateEmployeesListUrl = route('admin.estate.request-for-estate.employees');
+    if (request('scope') === 'self') {
+        $requestForEstateEmployeesListUrl .= (str_contains($requestForEstateEmployeesListUrl, '?') ? '&' : '?') . 'scope=self';
+    }
+@endphp
+@section($estateSelfHomeTab ? 'content' : 'setup_content')
 <div class="container-fluid px-2 px-sm-3 px-md-4">
    <x-breadcrum title="Request For Estate" />
    <x-estate-workflow-stepper current="request-for-estate" />
@@ -25,7 +33,7 @@
 
             <div id="request-for-estate-card-body">
             @php
-                $showUserActionHelp = !(
+                $showUserActionHelp = request('scope') === 'self' || ! (
                     hasRole('Estate') ||
                     hasRole('Admin') ||
                     hasRole('Super Admin')
@@ -153,6 +161,7 @@
                             </select>
                             <input type="hidden" id="modal_eligibility_type_pk_hidden" value="">
                             <div class="text-danger small field-error" data-field="eligibility_type_pk" role="alert"></div>
+                            
                         </div>
                         <div class="col-md-12">
                             <label for="modal_remarks" class="form-label">Remarks</label>
@@ -278,6 +287,7 @@
     <script>
         window.requestEstateSelfEmployeePk = @json($selfEmployeePk ?? null);
         window.requestEstateCanChooseEligibilityOnAdd = @json(hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'));
+        window.requestEstateLockEligibilityOnSelfScopeAdd = @json(request('scope') === 'self');
     </script>
     {!! $dataTable->scripts() !!}
     <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
@@ -328,8 +338,10 @@
         }
 
         function loadRequestEstateEmployees(includePk, thenSelectPk, onDone) {
-            var url = '{{ route("admin.estate.request-for-estate.employees") }}';
-            if (includePk) url += '?include_pk=' + includePk;
+            var url = @json($requestForEstateEmployeesListUrl);
+            if (includePk) {
+                url += (url.indexOf('?') >= 0 ? '&' : '?') + 'include_pk=' + encodeURIComponent(includePk);
+            }
             var selEl = document.getElementById('modal_employee_pk');
             var $sel = $('#modal_employee_pk');
             if (selEl && selEl.tomselect) { try { selEl.tomselect.destroy(); } catch (e) {} tsModalEmployee = null; }
@@ -419,7 +431,8 @@
             $('#modal_req_date').val(new Date().toISOString().slice(0, 10));
             $('#modal_status_wrap').addClass('d-none');
             $('#modal_status').removeAttr('required');
-            setEligibilityLock(!window.requestEstateCanChooseEligibilityOnAdd);
+            setEligibilityLock(!window.requestEstateCanChooseEligibilityOnAdd || window.requestEstateLockEligibilityOnSelfScopeAdd);
+            $('#modal_eligibility_self_scope_hint').removeClass('d-none');
             clearEmployeeDerivedFields();
             $('#addEditRequestEstateFormErrors').addClass('d-none').find('#addEditRequestEstateFormErrorsText').empty();
             $('#formAddEditRequestEstate').find('.field-error').empty().end().find('.is-invalid').removeClass('is-invalid');
@@ -458,6 +471,7 @@
             var eligPk = $btn.data('eligibility_type_pk');
             var eligLabel = $btn.data('eligibility_type_label');
             setEligibilityLock(true);
+            $('#modal_eligibility_self_scope_hint').addClass('d-none');
             ensureEligibilityOptionAndSetVal(eligPk, eligLabel, true);
             var statusVal = $btn.data('status') !== undefined ? String($btn.data('status')) : '0';
             $('#modal_status').val(statusVal);
