@@ -1,8 +1,8 @@
 @extends('admin.layouts.master')
-@section('title', 'Generate New Vehicle Card Pass - Sargam')
+@section('title', 'Request for Vehicle Pass - Sargam')
 @section('content')
 <div class="container-fluid vehicle-pass-create-page">
-    <x-breadcrum title="Generate New Vehicle Card Pass"></x-breadcrum>
+    <x-breadcrum title="Request for Vehicle Pass"></x-breadcrum>
 
     <form action="{{ route('admin.security.vehicle_pass.store') }}" method="POST" enctype="multipart/form-data" class="needs-validation" id="vehiclePassForm" novalidate>
         @csrf
@@ -83,7 +83,8 @@
                 <div class="row g-3 mb-4">
                     <div class="col-md-6">
                         <label for="employee_id_card" class="form-label">ID Card Number <span class="text-danger">*</span></label>
-                        <input type="text" name="employee_id_card" id="employee_id_card" class="form-control" value="{{ $oldIdCard }}" placeholder="Enter ID Card Number">
+                        <input type="text" name="employee_id_card" id="employee_id_card" class="form-control" value="{{ $oldIdCard }}" placeholder="Enter ID Card Number" autocomplete="off">
+                        <div id="othersIdCardLookupHint" class="small mt-1 d-none" role="status"></div>
                         @error('employee_id_card')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-md-6">
@@ -290,15 +291,6 @@
 .btn-outline-primary:hover { background-color: #004a93; color: #fff; }
 </style>
 
-@php
-    $empDataForJs = [];
-    foreach ($employees ?? [] as $e) {
-        $name = trim(($e->first_name ?? '') . ' ' . ($e->last_name ?? ''));
-        $des = (isset($e->designation) && $e->designation) ? ($e->designation->designation_name ?? '') : '';
-        $dept = (isset($e->department) && $e->department) ? ($e->department->department_name ?? '') : '';
-        $empDataForJs[(string) $e->pk] = ['name' => $name, 'designation' => $des, 'department' => $dept, 'emp_id' => $e->emp_id ?? ''];
-    }
-@endphp
 @push('scripts')
 <script>
 (function() {
@@ -379,6 +371,81 @@
     var currentUserIdCard = @json($currentUserIdCard ?? null);
     var idCardInfoAlert = document.getElementById('idCardInfoAlert');
     var idCardWarningAlert = document.getElementById('idCardWarningAlert');
+    var idCardInput = document.getElementById('employee_id_card');
+    var othersLookupHint = document.getElementById('othersIdCardLookupHint');
+    var othersLookupAbort = null;
+
+    function setOthersLookupHint(message, kind) {
+        if (!othersLookupHint) return;
+        if (!message) {
+            othersLookupHint.classList.add('d-none');
+            othersLookupHint.textContent = '';
+            othersLookupHint.classList.remove('text-success', 'text-danger', 'text-muted');
+            return;
+        }
+        othersLookupHint.classList.remove('d-none', 'text-success', 'text-danger', 'text-muted');
+        othersLookupHint.classList.add(kind === 'error' ? 'text-danger' : (kind === 'success' ? 'text-success' : 'text-muted'));
+        othersLookupHint.textContent = message;
+    }
+
+    function applyOthersIdCardLookup() {
+        if (!applicantTypeOthers || !applicantTypeOthers.checked) return;
+        if (!idCardInput) return;
+        var idVal = (idCardInput.value || '').trim();
+        var validToInput = document.getElementById('vech_card_valid_to');
+        if (!idVal) {
+            setOthersLookupHint('', '');
+            if (validToInput) validToInput.removeAttribute('max');
+            return;
+        }
+        if (othersLookupAbort) {
+            try { othersLookupAbort.abort(); } catch (e) {}
+        }
+        othersLookupAbort = new AbortController();
+        setOthersLookupHint('Looking up ID card…', 'muted');
+        var url = '{{ route("admin.security.vehicle_pass.lookup.by_id_card") }}' + '?id_card_number=' + encodeURIComponent(idVal);
+        fetch(url, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+            signal: othersLookupAbort.signal
+        }).then(function (r) { return r.json().then(function (body) { return { ok: r.ok, body: body }; }); })
+ .then(function (res) {
+            if (!res.ok || !res.body.success || !res.body.data) {
+                var msg = (res.body && res.body.message) ? res.body.message : 'Could not load details for this ID card.';
+                setOthersLookupHint(msg, 'error');
+                if (validToInput) validToInput.removeAttribute('max');
+                return;
+            }
+            var d = res.body.data;
+            idCardInput.value = d.employee_id_card || idVal;
+            var nameEl = document.getElementById('applicant_name');
+            var desEl = document.getElementById('designation');
+            var deptEl = document.getElementById('department');
+            if (nameEl) nameEl.value = d.applicant_name || '';
+            if (desEl) desEl.value = d.designation || '';
+            if (deptEl) deptEl.value = d.department || '';
+            if (empMasterPkInput && d.emp_master_pk) {
+                empMasterPkInput.value = String(d.emp_master_pk);
+            }
+            if (validToInput && d.id_card_valid_to) {
+                validToInput.setAttribute('max', d.id_card_valid_to);
+                if (validToInput.value && validToInput.value > d.id_card_valid_to) {
+                    validToInput.value = d.id_card_valid_to;
+                }
+            } else if (validToInput) {
+                validToInput.removeAttribute('max');
+            }
+            syncVehicleDateConstraints();
+            setOthersLookupHint(
+                d.id_card_valid_to
+                    ? 'Details loaded. Vehicle pass end date cannot exceed ID card validity.'
+                    : 'Name, designation and department loaded from employee master.',
+                'success'
+            );
+        }).catch(function (err) {
+            if (err && err.name === 'AbortError') return;
+            setOthersLookupHint('Request failed. Please try again.', 'error');
+        });
+    }
 
     function isEmployeeOrGovVehicle() {
         return (applicantTypeEmployee && applicantTypeEmployee.checked) || (applicantTypeGovernment && applicantTypeGovernment.checked);
@@ -431,6 +498,7 @@
 
     function updateApplicantTypeFields() {
         if (isEmployeeOrGovVehicle()) {
+            setOthersLookupHint('', '');
             if (currentUserEmployee && empMasterPkInput) {
                 empMasterPkInput.value = currentUserEmployee.pk;
                 setApplicantFields(
@@ -448,6 +516,7 @@
             if (empMasterPkInput) empMasterPkInput.value = '';
             // For "Others" keep fields editable; do not force-readonly
             setApplicantFields('', '', '', '', false);
+            setOthersLookupHint('', '');
         }
         toggleIdCardAlerts();
     }
@@ -457,28 +526,18 @@
     if (applicantTypeGovernment) applicantTypeGovernment.addEventListener('change', updateApplicantTypeFields);
     updateApplicantTypeFields();
 
-    // Auto-fill "Others" applicant details when a known ID Card Number is entered
-    var idCardInput = document.getElementById('employee_id_card');
     if (idCardInput) {
         idCardInput.addEventListener('blur', function () {
-            if (!applicantTypeOthers || !applicantTypeOthers.checked) return;
-            var idVal = (this.value || '').trim();
-            if (!idVal) return;
-            // Use preloaded employee data (by emp_id) if available
-            var empMap = @json($empDataForJs);
-            var match = null;
-            Object.keys(empMap || {}).forEach(function (pk) {
-                if (!match && empMap[pk].emp_id === idVal) {
-                    match = empMap[pk];
-                }
-            });
-            if (match) {
-                var nameEl = document.getElementById('applicant_name');
-                var desEl = document.getElementById('designation');
-                var deptEl = document.getElementById('department');
-                if (nameEl && !nameEl.value) nameEl.value = match.name || '';
-                if (desEl && !desEl.value) desEl.value = match.designation || '';
-                if (deptEl && !deptEl.value) deptEl.value = match.department || '';
+            if (!applicantTypeOthers || !applicantTypeOthers.checked) {
+                setOthersLookupHint('', '');
+                return;
+            }
+            applyOthersIdCardLookup();
+        });
+        idCardInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (applicantTypeOthers && applicantTypeOthers.checked) applyOthersIdCardLookup();
             }
         });
     }

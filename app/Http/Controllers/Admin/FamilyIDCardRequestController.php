@@ -245,6 +245,64 @@ class FamilyIDCardRequestController extends Controller
         ]);
     }
 
+    /**
+     * Create page only: resolve employee name, designation, department from employee_master (by emp_id / pk / pk_old).
+     * Does not change store behaviour; used for contractual Employee ID autofill in the browser.
+     */
+    public function lookupEmployeeByIdForCreate(Request $request)
+    {
+        $lookup = trim((string) $request->get('employee_id', ''));
+        if ($lookup === '') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Employee ID is required.',
+            ], 422);
+        }
+
+        $em = DB::table('employee_master as em')
+            ->leftJoin('designation_master as dm', 'dm.pk', '=', 'em.designation_master_pk')
+            ->leftJoin('department_master as dept', 'dept.pk', '=', 'em.department_master_pk')
+            ->where(function ($q) use ($lookup) {
+                $q->where('em.emp_id', $lookup)
+                    ->orWhereRaw('TRIM(em.emp_id) = ?', [trim($lookup)]);
+                if (ctype_digit($lookup)) {
+                    $q->orWhere('em.pk', $lookup);
+                    if (Schema::hasColumn('employee_master', 'pk_old')) {
+                        $q->orWhere('em.pk_old', $lookup);
+                    }
+                }
+            })
+            ->orderBy('em.pk')
+            ->select([
+                'em.pk',
+                'em.first_name',
+                'em.last_name',
+                'em.emp_id',
+                'dm.designation_name',
+                'dept.department_name',
+            ])
+            ->first();
+
+        if (! $em) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No employee found for this ID.',
+            ], 404);
+        }
+
+        $name = trim(($em->first_name ?? '') . ' ' . ($em->last_name ?? ''));
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'employee_name' => $name,
+                'designation' => (string) ($em->designation_name ?? ''),
+                'department' => (string) ($em->department_name ?? ''),
+                'emp_id' => $em->emp_id !== null && (string) $em->emp_id !== '' ? (string) $em->emp_id : null,
+            ],
+        ]);
+    }
+
     public function store(Request $request)
     {
         $rules = [

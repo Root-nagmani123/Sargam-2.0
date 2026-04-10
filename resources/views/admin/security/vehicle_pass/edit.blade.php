@@ -27,14 +27,19 @@
             @endif
 
             @php
-                $editApplicantType = old('applicant_type', $vehiclePass->gov_veh == 1 ? 'government_vehicle' : ($vehiclePass->emp_master_pk ? 'employee' : 'others'));
-                $editName = $vehiclePass->employee ? trim($vehiclePass->employee->first_name . ' ' . ($vehiclePass->employee->last_name ?? '')) : '';
-                $editDesignation = $vehiclePass->employee && $vehiclePass->employee->designation ? $vehiclePass->employee->designation->designation_name : '';
-                $editDepartment = $vehiclePass->employee && $vehiclePass->employee->department ? $vehiclePass->employee->department->department_name : '';
+                $storedApplicantType = $vehiclePass->applicant_type ?? null;
+                if (! in_array($storedApplicantType, ['employee', 'others', 'government_vehicle'], true)) {
+                    $storedApplicantType = $vehiclePass->gov_veh == 1 ? 'government_vehicle' : ($vehiclePass->emp_master_pk ? 'employee' : 'others');
+                }
+                $editApplicantType = old('applicant_type', $storedApplicantType);
+                $editName = old('applicant_name', $editApplicantDisplay['name'] ?? '');
+                $editDesignation = old('designation', $editApplicantDisplay['designation'] ?? '');
+                $editDepartment = old('department', $editApplicantDisplay['department'] ?? '');
             @endphp
 
             <form action="{{ route('admin.security.vehicle_pass.update', encrypt($vehiclePass->vehicle_tw_pk)) }}" method="POST" enctype="multipart/form-data" id="vehiclePassForm">
                 @csrf
+                <input type="hidden" name="emp_master_pk" value="{{ old('emp_master_pk', $vehiclePass->emp_master_pk) }}">
 
                 <div class="card border-0 shadow-sm mb-4">
                     <div class="card-body p-4">
@@ -75,21 +80,21 @@
                         <div class="mb-3">
                             <label for="applicant_name" class="form-label">Name</label>
                             <input type="text" name="applicant_name" id="applicant_name" class="form-control" readonly
-                                value="{{ old('applicant_name', $editName) }}" placeholder="From employee (display only)">
+                                value="{{ $editName }}" placeholder="—">
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="mb-3">
                             <label for="designation" class="form-label">Designation</label>
                             <input type="text" name="designation" id="designation" class="form-control" readonly
-                                value="{{ old('designation', $editDesignation) }}" placeholder="From employee (display only)">
+                                value="{{ $editDesignation }}" placeholder="—">
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="mb-3">
                             <label for="department" class="form-label">Department</label>
                             <input type="text" name="department" id="department" class="form-control" readonly
-                                value="{{ old('department', $editDepartment) }}" placeholder="From employee (display only)">
+                                value="{{ $editDepartment }}" placeholder="—">
                         </div>
                     </div>
                     <div class="col-md-6">

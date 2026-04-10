@@ -112,14 +112,34 @@ class VehiclePassTWApply extends Model
         }
         $name = null;
         if (Schema::hasColumn((new EmployeeMaster)->getTable(), 'emp_id')) {
-            $emp = EmployeeMaster::where('emp_id', $key)->first(['pk', 'first_name', 'last_name']);
+            $emp = EmployeeMaster::query()
+                ->where(function ($q) use ($key) {
+                    $q->where('emp_id', $key)->orWhereRaw('TRIM(emp_id) = ?', [trim($key)]);
+                })
+                ->orderBy('pk')
+                ->first(['pk', 'first_name', 'last_name']);
+            if ($emp) {
+                $name = trim(($emp->first_name ?? '') . ' ' . ($emp->last_name ?? ''));
+            }
+        }
+        if (($name === null || $name === '') && ctype_digit($key)) {
+            $emp = EmployeeMaster::query()
+                ->where(function ($q) use ($key) {
+                    $q->where('pk', $key);
+                    if (Schema::hasColumn((new EmployeeMaster)->getTable(), 'pk_old')) {
+                        $q->orWhere('pk_old', $key);
+                    }
+                })
+                ->first(['pk', 'first_name', 'last_name']);
             if ($emp) {
                 $name = trim(($emp->first_name ?? '') . ' ' . ($emp->last_name ?? ''));
             }
         }
         if (($name === null || $name === '') && Schema::hasTable('security_parm_id_apply')) {
             $row = DB::table('security_parm_id_apply')
-                ->where('id_card_no', $key)
+                ->where(function ($q) use ($key) {
+                    $q->where('id_card_no', $key)->orWhereRaw('TRIM(id_card_no) = ?', [trim($key)]);
+                })
                 ->value('employee_master_pk');
             if ($row) {
                 $emp = EmployeeMaster::find($row, ['pk', 'first_name', 'last_name']);
@@ -130,7 +150,9 @@ class VehiclePassTWApply extends Model
         }
         if (($name === null || $name === '') && Schema::hasTable('security_con_oth_id_apply')) {
             $row = DB::table('security_con_oth_id_apply')
-                ->where('id_card_no', $key)
+                ->where(function ($q) use ($key) {
+                    $q->where('id_card_no', $key)->orWhereRaw('TRIM(COALESCE(id_card_no, "")) = ?', [trim($key)]);
+                })
                 ->value('created_by');
             if ($row) {
                 $emp = EmployeeMaster::find($row, ['pk', 'first_name', 'last_name']);

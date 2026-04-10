@@ -94,24 +94,10 @@
             </div>
             <a href="{{ route('admin.security.vehicle_pass.create') }}" class="btn btn-primary px-4 py-2 rounded-1 shadow-sm">
                
-                Generate New Vehicle Pass
+                Request for Vehicle Pass
             </a>
         </div>
     </div>
-
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    @endif
-
-    @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            {{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    @endif
 
     <div class="card border-0 shadow-sm">
         <div class="card-body p-0">
@@ -188,10 +174,10 @@
                                         <td colspan="10" class="text-center py-5 text-muted">
                                             <i class="material-icons material-symbols-rounded d-block mb-2" style="font-size:48px; opacity:0.4;">directions_car</i>
                                             <p class="mb-1">No active vehicle pass requests found.</p>
-                                            <small>Click "Generate New Vehicle Pass" to create one.</small>
+                                            <small>Click "Request for Vehicle Pass" to create one.</small>
                                             <a href="{{ route('admin.security.vehicle_pass.create') }}" class="btn btn-primary  mt-2 rounded-1 px-3">
                                                 <i class="material-icons material-symbols-rounded align-middle me-1" style="font-size:16px;">add</i>
-                                                Generate New Vehicle Pass
+                                                Request for Vehicle Pass
                                             </a>
                                         </td>
                                     </tr>

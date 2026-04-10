@@ -62,6 +62,17 @@
                                placeholder="Enter your ID Card No."
                                required
                                @if($isPermanent) readonly @endif>
+                        <div id="fmlContractualLookupHint" class="small mt-1 d-none" role="status"></div>
+                        <div class="mt-2 {{ $isPermanent ? 'd-none' : '' }}" id="fmlContractualNameWrap">
+                            <label class="form-label small fw-semibold text-muted mb-1">Employee name <span class="fw-normal">(from master, not submitted)</span></label>
+                            <input type="text"
+                                   class="form-control form-control-sm bg-light"
+                                   id="fml_contractual_employee_display_name"
+                                   readonly
+                                   autocomplete="off"
+                                   tabindex="-1"
+                                   placeholder="Enter Employee ID above — autofill on blur / Enter">
+                        </div>
                         @error('employee_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-md-6">
@@ -367,6 +378,9 @@
         var empIdInp = document.getElementById('employee_id');
         var desigInp = document.getElementById('designation');
         var sectionInp = document.getElementById('section');
+        var nameWrap = document.getElementById('fmlContractualNameWrap');
+        var nameDisp = document.getElementById('fml_contractual_employee_display_name');
+        var hint = document.getElementById('fmlContractualLookupHint');
 
         if (contRad.checked) {
             wrap.style.display = 'block';
@@ -376,6 +390,7 @@
             if (empIdInp) { empIdInp.readOnly = false; empIdInp.classList.remove('bg-light'); }
             if (desigInp) { desigInp.readOnly = false; desigInp.classList.remove('bg-light'); }
             if (sectionInp) { sectionInp.readOnly = false; sectionInp.classList.remove('bg-light'); }
+            if (nameWrap) nameWrap.classList.remove('d-none');
         } else {
             wrap.style.display = 'none';
             sel.disabled = true;
@@ -385,6 +400,13 @@
             if (empIdInp) { empIdInp.readOnly = true; empIdInp.classList.add('bg-light'); }
             if (desigInp) { desigInp.readOnly = true; desigInp.classList.add('bg-light'); }
             if (sectionInp) { sectionInp.readOnly = true; sectionInp.classList.add('bg-light'); }
+            if (nameWrap) nameWrap.classList.add('d-none');
+            if (nameDisp) nameDisp.value = '';
+            if (hint) {
+                hint.textContent = '';
+                hint.classList.add('d-none');
+                hint.classList.remove('text-success', 'text-danger', 'text-muted');
+            }
         }
         var row = document.querySelector('.row.g-3.mb-4[data-employee-id-permanent]');
         if (row && empIdInp && desigInp) {
@@ -403,6 +425,85 @@
     document.getElementById('emp_type_govt')?.addEventListener('change', toggleFmlApprovalAuthority);
     document.getElementById('emp_type_cont')?.addEventListener('change', toggleFmlApprovalAuthority);
     toggleFmlApprovalAuthority();
+
+    // Contractual: autofill designation, section (department), display name from employee_master (create page only)
+    var fmlLookupAbort = null;
+    var fmlLookupUrl = @json(route('admin.family_idcard.lookup.employee_by_id'));
+
+    function setFmlLookupHint(message, kind) {
+        var el = document.getElementById('fmlContractualLookupHint');
+        if (!el) return;
+        if (!message) {
+            el.textContent = '';
+            el.classList.add('d-none');
+            el.classList.remove('text-success', 'text-danger', 'text-muted');
+            return;
+        }
+        el.classList.remove('d-none', 'text-success', 'text-danger', 'text-muted');
+        el.classList.add(kind === 'error' ? 'text-danger' : (kind === 'success' ? 'text-success' : 'text-muted'));
+        el.textContent = message;
+    }
+
+    function applyFmlContractualEmployeeLookup() {
+        var cont = document.getElementById('emp_type_cont');
+        if (!cont || !cont.checked) return;
+        var idInp = document.getElementById('employee_id');
+        var desig = document.getElementById('designation');
+        var section = document.getElementById('section');
+        var nameDisp = document.getElementById('fml_contractual_employee_display_name');
+        if (!idInp) return;
+        var idVal = (idInp.value || '').trim();
+        if (!idVal) {
+            setFmlLookupHint('', '');
+            if (nameDisp) nameDisp.value = '';
+            return;
+        }
+        if (fmlLookupAbort) {
+            try { fmlLookupAbort.abort(); } catch (e) {}
+        }
+        fmlLookupAbort = new AbortController();
+        setFmlLookupHint('Looking up employee…', 'muted');
+        var url = fmlLookupUrl + (fmlLookupUrl.indexOf('?') >= 0 ? '&' : '?') + 'employee_id=' + encodeURIComponent(idVal);
+        fetch(url, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+            signal: fmlLookupAbort.signal
+        }).then(function (r) {
+            return r.json().then(function (body) { return { ok: r.ok, body: body }; });
+        }).then(function (res) {
+            if (!res.ok || !res.body.success || !res.body.data) {
+                var msg = (res.body && res.body.message) ? res.body.message : 'No match in employee master.';
+                setFmlLookupHint(msg, 'error');
+                if (nameDisp) nameDisp.value = '';
+                return;
+            }
+            var d = res.body.data;
+            if (nameDisp) nameDisp.value = d.employee_name || '';
+            if (desig) desig.value = d.designation || '';
+            if (section && d.department) section.value = d.department;
+            if (d.emp_id && idInp) idInp.value = d.emp_id;
+            setFmlLookupHint('Name and designation loaded from employee master. You can edit before save.', 'success');
+        }).catch(function (err) {
+            if (err && err.name === 'AbortError') return;
+            setFmlLookupHint('Lookup failed. Try again.', 'error');
+        });
+    }
+
+    var empIdForLookup = document.getElementById('employee_id');
+    if (empIdForLookup) {
+        empIdForLookup.addEventListener('blur', function () {
+            if (document.getElementById('emp_type_cont') && document.getElementById('emp_type_cont').checked) {
+                applyFmlContractualEmployeeLookup();
+            }
+        });
+        empIdForLookup.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (document.getElementById('emp_type_cont') && document.getElementById('emp_type_cont').checked) {
+                    applyFmlContractualEmployeeLookup();
+                }
+            }
+        });
+    }
 
     var tbody = document.getElementById('familyMembersBody');
     var addBtn = document.getElementById('addFamilyMemberBtn');

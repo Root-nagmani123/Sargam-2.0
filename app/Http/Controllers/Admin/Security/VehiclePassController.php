@@ -12,6 +12,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Maatwebsite\Excel\Facades\Excel;
@@ -103,14 +104,18 @@ class VehiclePassController extends Controller
     public function create()
     {
         $vehicleTypes = SecVehicleType::active()->get();
-        $employees = EmployeeMaster::with(['designation', 'department'])->where('status', 1)->get();
 
         $currentUserEmployee = null;
         $currentUserIdCard = null;
         $user = Auth::user();
         $employeePk = $user->user_id ?? null;
         if ($employeePk) {
-            $emp = $employees->firstWhere('pk', $employeePk);
+            $emp = EmployeeMaster::with(['designation', 'department'])
+                ->where('status', 1)
+                ->where(function ($q) use ($employeePk) {
+                    $q->where('pk', $employeePk)->orWhere('pk_old', $employeePk);
+                })
+                ->first();
             if ($emp) {
                 $currentUserEmployee = (object) [
                     'pk' => $emp->pk,
@@ -122,7 +127,7 @@ class VehiclePassController extends Controller
 
                 // Check for valid ID card (permanent or contractual)
                 $permIdCard = DB::table('security_parm_id_apply')
-                    ->where('employee_master_pk', $employeePk)
+                    ->where('employee_master_pk', $emp->pk)
                     ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
                     ->whereNotNull('card_valid_to')
                     ->where('card_valid_to', '>=', now()->format('Y-m-d'))
@@ -148,7 +153,70 @@ class VehiclePassController extends Controller
             }
         }
 
-        return view('admin.security.vehicle_pass.create', compact('vehicleTypes', 'employees', 'currentUserEmployee', 'currentUserIdCard'));
+        return view('admin.security.vehicle_pass.create', compact('vehicleTypes', 'currentUserEmployee', 'currentUserIdCard'));
+    }
+
+    /**
+     * Others applicant: resolve Name, Designation, Department from employee_master only.
+     * Match by employee code (emp_id), or numeric primary key (pk / pk_old).
+     */
+    public function lookupByIdCard(Request $request)
+    {
+        $lookup = trim((string) $request->get('id_card_number', ''));
+        if ($lookup === '') {
+            return response()->json([
+                'success' => false,
+                'message' => 'ID Card Number is required.',
+            ], 422);
+        }
+
+        $em = DB::table('employee_master as em')
+            ->leftJoin('designation_master as dm', 'dm.pk', '=', 'em.designation_master_pk')
+            ->leftJoin('department_master as dept', 'dept.pk', '=', 'em.department_master_pk')
+            ->where(function ($q) use ($lookup) {
+                $q->where('em.emp_id', $lookup)
+                    ->orWhereRaw('TRIM(em.emp_id) = ?', [trim($lookup)]);
+                if (ctype_digit($lookup)) {
+                    $q->orWhere('em.pk', $lookup);
+                    if (Schema::hasColumn('employee_master', 'pk_old')) {
+                        $q->orWhere('em.pk_old', $lookup);
+                    }
+                }
+            })
+            ->orderBy('em.pk')
+            ->select([
+                'em.pk',
+                'em.first_name',
+                'em.last_name',
+                'em.emp_id',
+                'dm.designation_name',
+                'dept.department_name',
+            ])
+            ->first();
+
+        if (! $em) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No employee found for this ID / employee code.',
+            ], 404);
+        }
+
+        $name = trim(($em->first_name ?? '') . ' ' . ($em->last_name ?? ''));
+        $empCode = $em->emp_id !== null && (string) $em->emp_id !== ''
+            ? (string) $em->emp_id
+            : (string) $lookup;
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'employee_id_card' => $empCode,
+                'applicant_name' => $name,
+                'designation' => (string) ($em->designation_name ?? ''),
+                'department' => (string) ($em->department_name ?? ''),
+                'emp_master_pk' => (int) $em->pk,
+                'emp_id' => $em->emp_id !== null && (string) $em->emp_id !== '' ? (string) $em->emp_id : null,
+            ],
+        ]);
     }
 
     public function store(Request $request)
@@ -181,11 +249,12 @@ class VehiclePassController extends Controller
         $employeeIdCard = $validated['employee_id_card'] ?? null;
         $empMasterPk = $validated['emp_master_pk'] ?? null;
 
-        // Employee / Government Vehicle: always use logged-in user's employee (no selection from request). Others: no employee.
+        // Employee / Government Vehicle: always use logged-in user's employee (no selection from request).
+        // Others: optional emp_master_pk from employee lookup (stored for correct name on show / list).
         if (in_array($applicantType, ['employee', 'government_vehicle'])) {
             $empMasterPk = $employeePk;
         } elseif ($applicantType === 'others') {
-            $empMasterPk = null;
+            $empMasterPk = $validated['emp_master_pk'] ?? null;
         }
 
         if (in_array($applicantType, ['employee', 'government_vehicle']) && $empMasterPk) {
@@ -199,7 +268,7 @@ class VehiclePassController extends Controller
 
             // Check for valid ID card (permanent or contractual)
             $validIdCard = null;
-            
+
             // First check permanent employee ID card
             $permIdCard = DB::table('security_parm_id_apply')
                 ->where('employee_master_pk', $empMasterPk)
@@ -220,7 +289,7 @@ class VehiclePassController extends Controller
                     })
                     ->orderByDesc('card_valid_to')
                     ->first(['card_valid_to', 'id_card_no']);
-                
+
                 $validIdCard = $contIdCard;
             } else {
                 $validIdCard = $permIdCard;
@@ -236,11 +305,11 @@ class VehiclePassController extends Controller
             if ($validIdCard->card_valid_to) {
                 $idCardValidTo = \Carbon\Carbon::parse($validIdCard->card_valid_to);
                 $vehiclePassValidTo = \Carbon\Carbon::parse($validated['vech_card_valid_to']);
-                
+
                 if ($vehiclePassValidTo->greaterThan($idCardValidTo)) {
                     throw ValidationException::withMessages([
                         'vech_card_valid_to' => [
-                            'Vehicle Pass validity cannot exceed your ID Card validity. Your ID Card is valid until ' 
+                            'Vehicle Pass validity cannot exceed your ID Card validity. Your ID Card is valid until '
                             . $idCardValidTo->format('d/m/Y') . '.'
                         ],
                     ]);
@@ -266,7 +335,11 @@ class VehiclePassController extends Controller
         $vehiclePass->vehicle_tw_pk = $vehicleTwPk;
         $vehiclePass->employee_id_card = $employeeIdCard ?? '';
         $vehiclePass->emp_master_pk = $empMasterPk;
-       
+        $vehiclePass->applicant_type = $applicantType;
+        $vehiclePass->applicant_name = $applicantName;
+        $vehiclePass->designation = $designation;
+        $vehiclePass->department = $department;
+
         $vehiclePass->vehicle_type = $validated['vehicle_type'];
         $vehiclePass->vehicle_no = $validated['vehicle_no'];
         $vehiclePass->vehicle_req_id = $vehicleReqId;
@@ -318,8 +391,107 @@ class VehiclePassController extends Controller
         }
 
         $vehicleTypes = SecVehicleType::active()->get();
+        $editApplicantDisplay = $this->resolveVehiclePassApplicantDisplayForEdit($vehiclePass);
 
-        return view('admin.security.vehicle_pass.edit', compact('vehiclePass', 'vehicleTypes'));
+        return view('admin.security.vehicle_pass.edit', compact('vehiclePass', 'vehicleTypes', 'editApplicantDisplay'));
+    }
+
+    /**
+     * @return array{name: string, designation: string, department: string}
+     */
+    private function resolveVehiclePassApplicantDisplayForEdit(VehiclePassTWApply $vehiclePass): array
+    {
+        $name = '';
+        $designation = '';
+        $department = '';
+
+        if ($vehiclePass->employee) {
+            $emp = $vehiclePass->employee;
+            $name = trim(($emp->first_name ?? '') . ' ' . ($emp->last_name ?? ''));
+            if ($emp->relationLoaded('designation') && $emp->designation) {
+                $designation = (string) ($emp->designation->designation_name ?? '');
+            }
+            if ($emp->relationLoaded('department') && $emp->department) {
+                $department = (string) ($emp->department->department_name ?? '');
+            }
+        }
+
+        if ($name === '') {
+            $name = trim((string) ($vehiclePass->applicant_name ?? ''));
+        }
+        if ($name === '') {
+            $name = (string) (VehiclePassTWApply::resolveNameByEmployeeIdCard($vehiclePass->employee_id_card) ?? '');
+        }
+
+        if ($designation === '') {
+            $designation = trim((string) ($vehiclePass->designation ?? ''));
+        }
+        if ($department === '') {
+            $department = trim((string) ($vehiclePass->department ?? ''));
+        }
+
+        if ($name === '' || $designation === '' || $department === '') {
+            $row = $this->fetchEmployeeMasterDisplayRowForVehiclePass($vehiclePass);
+            if ($row) {
+                if ($name === '') {
+                    $name = trim(($row->first_name ?? '') . ' ' . ($row->last_name ?? ''));
+                }
+                if ($designation === '') {
+                    $designation = (string) ($row->designation_name ?? '');
+                }
+                if ($department === '') {
+                    $department = (string) ($row->department_name ?? '');
+                }
+            }
+        }
+
+        return [
+            'name' => $name,
+            'designation' => $designation,
+            'department' => $department,
+        ];
+    }
+
+    private function fetchEmployeeMasterDisplayRowForVehiclePass(VehiclePassTWApply $vehiclePass): ?object
+    {
+        $select = [
+            'em.first_name',
+            'em.last_name',
+            'em.emp_id',
+            'dm.designation_name',
+            'dept.department_name',
+        ];
+
+        $baseQuery = fn () => DB::table('employee_master as em')
+            ->leftJoin('designation_master as dm', 'dm.pk', '=', 'em.designation_master_pk')
+            ->leftJoin('department_master as dept', 'dept.pk', '=', 'em.department_master_pk')
+            ->select($select);
+
+        if ($vehiclePass->emp_master_pk) {
+            $row = $baseQuery()->where('em.pk', $vehiclePass->emp_master_pk)->first();
+            if ($row) {
+                return $row;
+            }
+        }
+
+        $card = trim((string) ($vehiclePass->employee_id_card ?? ''));
+        if ($card === '') {
+            return null;
+        }
+
+        return $baseQuery()
+            ->where(function ($w) use ($card) {
+                $w->where('em.emp_id', $card)
+                    ->orWhereRaw('TRIM(em.emp_id) = ?', [trim($card)]);
+                if (ctype_digit($card)) {
+                    $w->orWhere('em.pk', $card);
+                    if (Schema::hasColumn('employee_master', 'pk_old')) {
+                        $w->orWhere('em.pk_old', $card);
+                    }
+                }
+            })
+            ->orderBy('em.pk')
+            ->first();
     }
 
     public function update(Request $request, $id)
@@ -365,11 +537,11 @@ class VehiclePassController extends Controller
         $employeeIdCard = $validated['employee_id_card'] ?? null;
         $empMasterPk = $validated['emp_master_pk'] ?? null;
 
-        // Employee / Government Vehicle: always use logged-in user's employee (no selection from request). Others: no employee.
+        // Employee / Government Vehicle: always use logged-in user's employee (no selection from request).
         if (in_array($applicantType, ['employee', 'government_vehicle'])) {
             $empMasterPk = $employeePk;
         } elseif ($applicantType === 'others') {
-            $empMasterPk = null;
+            $empMasterPk = $validated['emp_master_pk'] ?? $vehiclePass->emp_master_pk;
         }
 
         if (in_array($applicantType, ['employee', 'government_vehicle']) && $empMasterPk) {
@@ -383,7 +555,7 @@ class VehiclePassController extends Controller
 
             // Check for valid ID card (permanent or contractual)
             $validIdCard = null;
-            
+
             // First check permanent employee ID card
             $permIdCard = DB::table('security_parm_id_apply')
                 ->where('employee_master_pk', $empMasterPk)
@@ -404,7 +576,7 @@ class VehiclePassController extends Controller
                     })
                     ->orderByDesc('card_valid_to')
                     ->first(['card_valid_to', 'id_card_no']);
-                
+
                 $validIdCard = $contIdCard;
             } else {
                 $validIdCard = $permIdCard;
@@ -420,11 +592,11 @@ class VehiclePassController extends Controller
             if ($validIdCard->card_valid_to) {
                 $idCardValidTo = \Carbon\Carbon::parse($validIdCard->card_valid_to);
                 $vehiclePassValidTo = \Carbon\Carbon::parse($validated['vech_card_valid_to']);
-                
+
                 if ($vehiclePassValidTo->greaterThan($idCardValidTo)) {
                     throw ValidationException::withMessages([
                         'vech_card_valid_to' => [
-                            'Vehicle Pass validity cannot exceed your ID Card validity. Your ID Card is valid until ' 
+                            'Vehicle Pass validity cannot exceed your ID Card validity. Your ID Card is valid until '
                             . $idCardValidTo->format('d/m/Y') . '.'
                         ],
                     ]);
@@ -444,8 +616,11 @@ class VehiclePassController extends Controller
 
         $vehiclePass->employee_id_card = $employeeIdCard ?? $vehiclePass->employee_id_card;
         $vehiclePass->emp_master_pk = $empMasterPk;
-       
-       
+        $vehiclePass->applicant_type = $applicantType;
+        $vehiclePass->applicant_name = $applicantName;
+        $vehiclePass->designation = $designation;
+        $vehiclePass->department = $department;
+
         $vehiclePass->vehicle_type = $validated['vehicle_type'];
         $vehiclePass->vehicle_no = $validated['vehicle_no'];
         $vehiclePass->veh_card_valid_from = $validated['veh_card_valid_from'];
