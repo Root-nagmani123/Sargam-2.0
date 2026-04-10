@@ -926,6 +926,7 @@
 }
 
 .institution-name.english-text {
+    font-family: 'Montserrat', 'Noto Sans', 'Noto Sans Devanagari', system-ui, sans-serif;
     font-weight: 600;
     font-size: 1.1rem;
 }
@@ -1012,7 +1013,6 @@
     border: 1px solid rgba(0, 74, 147, 0.1) !important;
     overflow: visible !important;
     position: relative;
-    z-index: 20;
 }
 
 .bg-gradient {
@@ -1502,6 +1502,16 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
         padding: 1rem !important;
     }
 
+    .calendar-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-x: contain;
+    }
+
+    #calendar .fc-view-harness {
+        min-height: 320px;
+    }
+
     /* FullCalendar Adjustments */
     .fc {
         font-size: 0.8rem;
@@ -1620,7 +1630,8 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
     }
 
     .week-cards .row > * {
-        flex: 0 0 calc(33.333% - 0.5rem);
+        flex: 0 0 100%;
+        max-width: 100%;
     }
 
     .week-card {
@@ -1639,6 +1650,12 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
     .timetable-container {
         border-radius: 0.5rem;
         overflow: hidden;
+    }
+
+    .timetable-container .table-responsive {
+        -webkit-overflow-scrolling: touch;
+        overflow-x: auto;
+        overscroll-behavior-x: contain;
     }
 
     .table-responsive {
@@ -1904,6 +1921,17 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
 
     .timetable-grid .time-column {
         min-width: 90px;
+    }
+
+    .timetable-container .table-responsive {
+        -webkit-overflow-scrolling: touch;
+        overflow-x: auto;
+        overscroll-behavior-x: contain;
+    }
+
+    .calendar-container {
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-x: contain;
     }
 
     .list-event-card {

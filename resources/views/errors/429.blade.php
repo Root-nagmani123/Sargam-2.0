@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>429 - Too Many Requests</title>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Noto+Sans+Devanagari:wght@400;500;600;700&family=Noto+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -13,13 +13,17 @@
         }
 
         body {
-            font-family: 'Montserrat', 'Segoe UI', sans-serif;
+            font-family: 'Noto Sans', 'Noto Sans Devanagari', 'Segoe UI', sans-serif;
             background: linear-gradient(135deg, #ffc107 0%, #004a93 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 20px;
+        }
+
+        h1, .error-code, .error-title {
+            font-family: 'Montserrat', 'Noto Sans', 'Noto Sans Devanagari', sans-serif;
         }
 
         .error-container {

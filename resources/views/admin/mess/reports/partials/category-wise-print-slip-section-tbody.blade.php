@@ -30,7 +30,6 @@
             <tr>
                 @if($dompdfSafeTables)
                     <td class="text-center align-middle">{{ $requestNo }}</td>
-                    <td class="align-middle">{{ $voucher->remarks ?? '—' }}</td>
                     <td>{{ $itemName }}</td>
                     <td class="text-center">{{ $itemIssueDateFormatted }}</td>
                     <td class="text-end">{{ number_format($netQty, 2) }}</td>
@@ -42,7 +41,6 @@
                 @else
                     @if($itemIndex === 0)
                         <td class="text-center align-middle" rowspan="{{ $rowCount }}">{{ $requestNo }}</td>
-                        <td class="align-middle" rowspan="{{ $rowCount }}">{{ $voucher->remarks ?? '—' }}</td>
                     @endif
                     <td>{{ $itemName }}</td>
                     <td class="text-center">{{ $itemIssueDateFormatted }}</td>
@@ -59,12 +57,12 @@
 @endforeach
 <tr class="total-row">
     @if($dompdfSafeTables)
-        <td></td><td></td><td></td><td></td><td></td>
+        <td></td><td></td><td></td><td></td>
         <td class="text-end"><strong>TOTAL</strong></td>
         <td class="text-end"><strong>{{ number_format($sectionTotal, 2) }}</strong></td>
         <td></td>
     @else
-        <td colspan="5"></td>
+        <td colspan="4"></td>
         <td class="text-end"><strong>TOTAL</strong></td>
         <td class="text-end"><strong>{{ number_format($sectionTotal, 2) }}</strong></td>
         <td></td>

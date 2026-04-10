@@ -37,26 +37,6 @@ class FacultyDataTable extends DataTable
             ->addColumn('mobile_number', function($row) {
                 return $row->mobile_no ?? '';
             })
-            // ->addColumn('faculty_type', function($row) {
-            //     return match((int)$row->faculty_type) {
-            //         1 => '<span class="badge bg-success-subtle text-success">Internal</span>',
-            //         2 => '<span class="badge bg-warning-subtle text-warning">Guest</span>',
-            //         3 => '<span class="badge bg-info-subtle text-info">Research</span>',
-            //         default => null,
-            //     };
-            // })
-            // ->addColumn('designation', function($row) {
-            //     return $row->designation ?? '';
-            // })
-            // ->addColumn('current_sector', function($row) {
-            //     $sector = $row->faculty_sector ?? $row->current_sector;
-            //     $sector = empty($sector) ? 1 : (int)$sector;
-            //     return match($sector) {
-            //         1 => '<span class="badge bg-success-subtle text-success">Government</span>',
-            //         2 => '<span class="badge bg-danger-subtle text-danger">Private</span>',
-            //         default => '<span class="badge bg-success-subtle text-success">Government</span>',
-            //     };
-            // })
             ->addColumn('action', function ($row) {
                 $id = encrypt($row->pk);
                 $csrf = csrf_token();
@@ -66,18 +46,18 @@ class FacultyDataTable extends DataTable
                 $deleteUrl = route('faculty.destroy', ['id' => $id]);
 
                 return '
-                    <a href="'.$editUrl.'" class="btn btn-primary btn-sm" title="Edit">
-                        <i class="material-icons" style="font-size:14px;">edit</i>
+                    <a href="'.$editUrl.'" class="btn btn-primary bg-transparent border-0 p-0 text-primary" title="Edit">
+                        <i class="material-icons">edit</i>
                     </a>
-                    <a href="'.$viewUrl.'" class="btn btn-info btn-sm" title="View">
-                        <i class="material-icons" style="font-size:14px;">visibility</i>
+                    <a href="'.$viewUrl.'" class="btn btn-info bg-transparent border-0 p-0 text-primary" title="View">
+                        <i class="material-icons">visibility</i>
                     </a>
-                    <button type="button" class="btn btn-danger btn-sm delete-faculty-btn" 
+                    <button type="button" class="btn btn-danger delete-faculty-btn bg-transparent border-0 p-0 text-primary" 
                         data-url="'.$deleteUrl.'" 
                         data-name="'.htmlspecialchars($row->full_name, ENT_QUOTES).'" 
                         data-token="'.$csrf.'" 
                         title="Delete">
-                        <i class="material-icons" style="font-size:14px;">delete</i>
+                        <i class="material-icons">delete</i>
                     </button>
                 ';
             })
@@ -178,48 +158,27 @@ class FacultyDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center'),
+            Column::computed('DT_RowIndex')->title('S.No.'),
             Column::make('faculty_code')
                 ->title('Faculty Code')
-                ->addClass('text-center')
                 ->searchable(true)
                 ->orderable(false),
             Column::make('full_name')
                 ->title('Faculty Name')
-                ->addClass('text-center')
                 ->searchable(true)
                 ->orderable(false),
             Column::make('faculty_email')
                 ->title('Faculty Email')
-                ->addClass('text-center')
                 ->searchable(true)
                 ->orderable(false),
             Column::make('mobile_number')
                 ->title('Mobile Number')
-                ->addClass('text-center')
                 ->searchable(true)
                 ->orderable(false),
-            // Column::make('faculty_type')
-            //     ->title('Faculty Type')
-            //     ->addClass('text-center')
-            //     ->searchable(false)
-            //     ->orderable(false),
-            // Column::make('designation')
-            //     ->title('Designation')
-            //     ->addClass('text-center')
-            //     ->searchable(false)
-            //     ->orderable(false),
-            // Column::make('current_sector')
-            //     ->title('Current Sector')
-            //     ->addClass('text-center')
-            //     ->searchable(false)
-            //     ->orderable(false),
-           Column::computed('action')
-                ->addClass('text-center')
+            Column::computed('status')
                 ->exportable(false)
                 ->printable(false),
-            Column::computed('status')
-                ->addClass('text-center')
+                Column::computed('action')
                 ->exportable(false)
                 ->printable(false)
         ];

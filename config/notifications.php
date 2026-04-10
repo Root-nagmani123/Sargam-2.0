@@ -103,6 +103,14 @@ return [
         ],
     ],
 
+    // Birthday Wish Notifications
+    'birthday' => [
+        'BirthdayWish' => [
+            'route' => 'admin.dashboard',
+            'params' => [],
+        ],
+    ],
+
     // Faculty Notifications
     'faculty' => [
         'Faculty' => [
