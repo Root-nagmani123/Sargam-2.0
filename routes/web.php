@@ -1133,6 +1133,9 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::post('/feedback/pending-students/export/excel', [FeedbackController::class, 'exportPendingStudentsExcel'])
         ->name('feedback.export.excel');
 
+    Route::post('/feedback/pending-students/export/excel-detailed', [FeedbackController::class, 'exportPendingStudentsExcelDetailed'])
+        ->name('feedback.export.excel.detailed');
+
     // Print Route
     Route::get('/feedback/pending-students/print', [FeedbackController::class, 'printPendingStudents'])
         ->name('feedback.print');
@@ -1153,6 +1156,9 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
 
     Route::post('/feedback/pending-summary/export/excel', [FeedbackController::class, 'exportPendingSummaryExcel'])
         ->name('feedback.summary.export.excel');
+
+    Route::post('/feedback/pending-summary/export/excel-detailed', [FeedbackController::class, 'exportPendingSummaryExcelDetailed'])
+        ->name('feedback.summary.export.excel.detailed');
 });
 // For getting sessions by course (reuse the existing one)
 Route::get('/get-sessions-by-course', [FeedbackController::class, 'getSessionsByCourse'])

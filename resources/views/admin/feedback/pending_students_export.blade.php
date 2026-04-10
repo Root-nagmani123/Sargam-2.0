@@ -338,6 +338,8 @@
 
 <!-- ── Filter Details ── -->
 <div class="report-details-row">
+    <span><strong>Scope:</strong> {{ $filters['course_scope'] ?? 'Active' }} programs</span>
+    <span><strong>{{ $filters['feedback_state'] ?? 'Feedback: Not given (has pending)' }}</strong></span>
     <span><strong>Course:</strong> {{ $filters['course'] ?? 'All Courses' }}</span>
     <span><strong>Session:</strong> {{ $filters['session'] ?? 'All Sessions' }}</span>
     <span><strong>Period:</strong> {{ $filters['from_date'] ?? 'All' }} — {{ $filters['to_date'] ?? 'All' }}</span>
@@ -363,14 +365,16 @@
 <table class="data-table">
     <thead>
         <tr>
-            <th class="text-center" width="5%">#</th>
-            <th width="22%">Student Name</th>
-            <th class="text-center" width="8%">Given</th>
-            <th class="text-center" width="8%">Not Given</th>
-            <th width="25%">Session Name</th>
-            <th class="text-center" width="10%">Date</th>
-            <th class="text-center" width="10%">Time</th>
-            <th class="text-center" width="12%">Status</th>
+            <th class="text-center" width="3%">#</th>
+            <th width="15%">Student Name</th>
+            <th width="13%">Course</th>
+            <th class="text-center" width="6%">Given</th>
+            <th class="text-center" width="6%">Not Given</th>
+            <th width="12%">Program</th>
+            <th width="14%">Session</th>
+            <th class="text-center" width="8%">Date</th>
+            <th class="text-center" width="8%">Time</th>
+            <th class="text-center" width="8%">Status</th>
         </tr>
     </thead>
     <tbody>
@@ -386,9 +390,10 @@
                         <br><span style="font-size:7px; color:#666; font-weight:normal;">{{ $student['email'] }}</span>
                     @endif
                 </td>
+                <td style="font-size:8px; font-weight:normal;">{{ $student['course_summary'] ?? '—' }}</td>
                 <td class="text-center"><span class="badge-given">{{ $student['feedback_given'] }}</span></td>
                 <td class="text-center"><span class="badge-not-given">{{ $student['feedback_not_given'] }}</span></td>
-                <td colspan="4" style="font-size:8px; color:#555; font-weight:normal;">
+                <td colspan="5" style="font-size:8px; color:#555; font-weight:normal;">
                     {{ $sessionCount }} session(s) attended
                 </td>
             </tr>
@@ -400,6 +405,8 @@
                 <td></td>
                 <td></td>
                 <td></td>
+                <td></td>
+                <td class="session-indent">{{ $session['course_name'] ?? '—' }}</td>
                 <td class="session-indent">{{ $session['session_name'] ?? '—' }}</td>
                 <td class="text-center">{{ $session['date'] ?? '—' }}</td>
                 <td class="text-center">{{ $session['time'] ?? '—' }}</td>

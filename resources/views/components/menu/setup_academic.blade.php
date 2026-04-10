@@ -216,12 +216,12 @@
                                             Details (Course Wise)</span>
                                     </a>
                                 </li>
-                                <li class="sidebar-item">
+                               {{-- <li class="sidebar-item">
                                     <a class="sidebar-link" href="{{ route('admin.feedback.pending.summary') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Pending Feedback
                                             Summary (Student Count Wise)</span>
                                     </a>
-                                </li>
+                                </li> --}}
 
                                 {{-- <li class="sidebar-item">
                                         <a class="sidebar-link" href="{{ route('admin.feedback.pending') }}">

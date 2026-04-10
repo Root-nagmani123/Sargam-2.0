@@ -3,44 +3,66 @@
 @section('title', 'Pending Feedback - Students')
 
 @section('setup_content')
-    <div class="container-fluid px-2 px-sm-3 px-md-4">
+    <div class="container-fluid px-2 px-sm-3 px-md-4 pb-4 pb-lg-5 pending-feedback-page">
         <x-breadcrum title="Pending Feedback – Students"></x-breadcrum>
 
         <x-session_message />
 
-        <!-- Active / Archive Tabs -->
-        <ul class="nav nav-pills nav-fill gap-2 mb-4 p-1 bg-body-tertiary rounded-3" id="courseTypeTabs" role="tablist">
-            <li class="nav-item" role="presentation">
-                <button class="nav-link active rounded-2 d-inline-flex align-items-center justify-content-center gap-2 px-4 py-2" id="tab-active" data-bs-toggle="tab"
-                    data-bs-target="#pane-active" type="button" role="tab" aria-controls="pane-active" aria-selected="true">
-                    <i class="material-symbols-rounded" style="font-size:1.15rem">school</i>
-                    Active Courses
-                    <span class="badge rounded-pill bg-white text-primary shadow-sm" id="activeCourseBadge">{{ count($activeCourses ?? []) }}</span>
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link rounded-2 d-inline-flex align-items-center justify-content-center gap-2 px-4 py-2" id="tab-archive" data-bs-toggle="tab"
-                    data-bs-target="#pane-archive" type="button" role="tab" aria-controls="pane-archive" aria-selected="false">
-                    <i class="material-symbols-rounded" style="font-size:1.15rem">inventory_2</i>
-                    Archive Courses
-                    <span class="badge rounded-pill bg-body-secondary text-body" id="archiveCourseBadge">{{ count($archiveCourses ?? []) }}</span>
-                </button>
-            </li>
-        </ul>
-
-        <!-- Filters Card -->
-        <div class="card shadow-sm border-0 rounded-4 mb-4">
-            <div class="card-header bg-body-tertiary border-0 rounded-top-4 py-3 px-4">
-                <h2 class="h6 fw-semibold text-body mb-0 d-flex align-items-center gap-2">
-                    <i class="material-symbols-rounded fs-5 text-primary">filter_list</i>
-                    Filters
-                </h2>
+        <!-- Filters -->
+        <div class="card border-0 shadow-sm rounded-4 mb-4">
+            <div class="card-header bg-white border-bottom py-3 px-4 d-flex flex-wrap align-items-center gap-3">
+                <div class="d-flex align-items-center gap-3 min-w-0">
+                    <div class="flex-shrink-0 rounded-3 bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center pending-fb-filter-icon" aria-hidden="true">
+                        <i class="material-symbols-rounded">tune</i>
+                    </div>
+                    <div class="min-w-0">
+                        <h2 class="h6 fw-semibold text-body mb-0">Filters</h2>
+                        <p class="small text-body-secondary mb-0 text-truncate">Choose program scope, then refine by course, session, dates, and feedback status</p>
+                    </div>
+                </div>
             </div>
             <div class="card-body p-4">
-                <div class="row g-3 g-md-4 align-items-end">
-                    <div class="col-12 col-sm-6 col-md-4 col-lg-3">
-                        <label for="filter_course_pk" class="form-label fw-medium">Course</label>
-                        <select class="form-select select2-course" id="filter_course_pk">
+                <div class="row g-3 g-lg-4 align-items-end">
+                    <!-- Active / Archive: before Course -->
+                    <div class="col-12 col-lg-6 col-xl-5 col-xxl-4">
+                        <fieldset class="border-0 m-0 p-0 course-scope-in-filters h-100" id="courseScopeFieldset">
+                            <legend class="form-label small fw-semibold text-body-secondary text-uppercase letter-spacing-tight mb-2 float-none w-100">Program scope</legend>
+                            <div class="d-flex flex-row flex-nowrap gap-2 align-items-stretch" id="courseTypeTabs" role="radiogroup" aria-label="Program scope">
+                                <div class="course-scope-option flex-fill rounded-3 border bg-body shadow-sm min-w-0">
+                                    <div class="form-check m-0 p-2 ps-2 d-flex align-items-center gap-1 h-100">
+                                        <input class="form-check-input flex-shrink-0 ms-1 mt-0" type="radio" name="course_type_scope" id="course_scope_active" value="active" checked>
+                                        <label class="form-check-label flex-grow-1 cursor-pointer mb-0 small text-truncate" for="course_scope_active">
+                                            <span class="d-flex align-items-center justify-content-between gap-1 min-w-0">
+                                                <span class="d-inline-flex align-items-center gap-1 fw-semibold text-body text-truncate">
+                                                    <i class="material-symbols-rounded fs-6 text-primary flex-shrink-0" aria-hidden="true">school</i>
+                                                    <span class="text-truncate">Active</span>
+                                                </span>
+                                                <span class="badge rounded-pill bg-primary-subtle text-primary border border-primary border-opacity-25 flex-shrink-0" id="activeCourseBadge">{{ count($activeCourses ?? []) }}</span>
+                                            </span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="course-scope-option flex-fill rounded-3 border bg-body shadow-sm min-w-0">
+                                    <div class="form-check m-0 p-2 ps-2 d-flex align-items-center gap-1 h-100">
+                                        <input class="form-check-input flex-shrink-0 ms-1 mt-0" type="radio" name="course_type_scope" id="course_scope_archive" value="archive">
+                                        <label class="form-check-label flex-grow-1 cursor-pointer mb-0 small text-truncate" for="course_scope_archive">
+                                            <span class="d-flex align-items-center justify-content-between gap-1 min-w-0">
+                                                <span class="d-inline-flex align-items-center gap-1 fw-semibold text-body text-truncate">
+                                                    <i class="material-symbols-rounded fs-6 text-body-secondary flex-shrink-0" aria-hidden="true">inventory_2</i>
+                                                    <span class="text-truncate">Archive</span>
+                                                </span>
+                                                <span class="badge rounded-pill bg-body-secondary text-body border flex-shrink-0" id="archiveCourseBadge">{{ count($archiveCourses ?? []) }}</span>
+                                            </span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </fieldset>
+                    </div>
+
+                    <div class="col-12 col-sm-6 col-xl-3">
+                        <label for="filter_course_pk" class="form-label small fw-semibold text-body-secondary text-uppercase letter-spacing-tight mb-2">Course</label>
+                        <select class="form-select select2-course shadow-sm" id="filter_course_pk" aria-describedby="hint-filter-course">
                             <option value="">— All Courses —</option>
                             @foreach ($courses ?? [] as $id => $name)
                                 <option value="{{ $id }}" {{ isset($activeCourse) && $activeCourse == $id ? 'selected' : '' }}>{{ $name }}</option>
@@ -48,9 +70,9 @@
                         </select>
                     </div>
 
-                    <div class="col-12 col-sm-6 col-md-4 col-lg-3">
-                        <label for="filter_session_id" class="form-label fw-medium">Session</label>
-                        <select class="form-select select2-session" id="filter_session_id">
+                    <div class="col-12 col-sm-6 col-xl-3">
+                        <label for="filter_session_id" class="form-label small fw-semibold text-body-secondary text-uppercase letter-spacing-tight mb-2">Session</label>
+                        <select class="form-select select2-session shadow-sm" id="filter_session_id">
                             <option value="">— All Sessions —</option>
                             @foreach ($sessions ?? [] as $id => $name)
                                 <option value="{{ $id }}">{{ $name }}</option>
@@ -58,88 +80,132 @@
                         </select>
                     </div>
 
-                    <div class="col-12 col-sm-6 col-md-4 col-lg-2">
-                        <label for="filter_from_date" class="form-label fw-medium">From Date</label>
-                        <input type="date" class="form-control" id="filter_from_date">
+                    <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                        <label for="filter_from_date" class="form-label small fw-semibold text-body-secondary text-uppercase letter-spacing-tight mb-2">From date</label>
+                        <input type="date" class="form-control shadow-sm" id="filter_from_date" autocomplete="off">
                     </div>
 
-                    <div class="col-12 col-sm-6 col-md-4 col-lg-2">
-                        <label for="filter_to_date" class="form-label fw-medium">To Date</label>
-                        <input type="date" class="form-control" id="filter_to_date">
+                    <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                        <label for="filter_to_date" class="form-label small fw-semibold text-body-secondary text-uppercase letter-spacing-tight mb-2">To date</label>
+                        <input type="date" class="form-control shadow-sm" id="filter_to_date" autocomplete="off">
                     </div>
 
-                    <div class="col-12 col-sm-12 col-md-12 col-lg-2 d-flex flex-wrap gap-2 align-items-end">
+                    <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                        <label for="filter_feedback_state" class="form-label small fw-semibold text-body-secondary text-uppercase letter-spacing-tight mb-2">Feedback</label>
+                        <select class="form-select shadow-sm" id="filter_feedback_state">
+                            <option value="not_given" selected>Not given</option>
+                            <option value="given">Given</option>
+                        </select>
+                    </div>
+
+                    <div class="col-12 col-xl-12 col-xxl-auto d-flex flex-wrap gap-2 align-items-end pt-xl-2 pt-xxl-0">
                         <button type="button" id="btnApplyFilters"
-                            class="btn btn-primary d-inline-flex align-items-center gap-1 rounded-pill px-3">
-                            <i class="material-symbols-rounded" style="font-size:1rem">search</i>
-                            Apply
+                            class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-3 shadow-sm">
+                            <i class="material-symbols-rounded fs-6" aria-hidden="true">search</i>
+                            <span>Apply filters</span>
                         </button>
                         <button type="button" id="btnResetFilters"
-                            class="btn btn-outline-secondary d-inline-flex align-items-center gap-1 rounded-pill px-3">
-                            <i class="material-symbols-rounded" style="font-size:1rem">refresh</i>
-                            Reset
+                            class="btn btn-outline-secondary d-inline-flex align-items-center gap-2 px-4 rounded-3">
+                            <i class="material-symbols-rounded fs-6" aria-hidden="true">refresh</i>
+                            <span>Reset</span>
                         </button>
                     </div>
                 </div>
-                <!-- Total Records + Export Actions -->
-                <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mt-4 pt-3 border-top">
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="text-body-secondary fw-medium small">Total Students:</span>
-                        <span id="totalRecordsCount" class="badge rounded-pill bg-primary fs-6 px-3">0</span>
-                    </div>
-                    <div class="d-flex flex-wrap gap-2">
-                        <button type="button" id="exportPDF" class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1 rounded-pill px-3">
-                            <i class="material-symbols-rounded" style="font-size:1rem">picture_as_pdf</i>
-                            PDF
-                        </button>
-                        <button type="button" id="exportExcel"
-                            class="btn btn-outline-success btn-sm d-inline-flex align-items-center gap-1 rounded-pill px-3">
-                            <i class="material-symbols-rounded" style="font-size:1rem">table_view</i>
-                            Excel
-                        </button>
-                        <button type="button" id="btnPrint"
-                            class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1 rounded-pill px-3">
-                            <i class="material-symbols-rounded" style="font-size:1rem">print</i>
-                            Print
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
 
-        <!-- Student Grouped Accordion Card -->
-        <div class="card shadow-sm border-0 rounded-4">
-            <div class="card-header bg-body-tertiary border-0 rounded-top-4 py-3 px-4">
-                <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
-                    <div>
-                        <h2 class="h5 fw-bold text-body mb-1 d-flex align-items-center gap-2">
-                            <i class="material-symbols-rounded text-primary" style="font-size:1.4rem">assignment_late</i>
-                            Pending Feedback
-                        </h2>
-                        <p class="text-body-secondary small mb-0">Click on a student row to expand session-level details.</p>
+                <hr class="border-secondary border-opacity-25 my-4">
+
+                <!-- Summary + exports -->
+                <div class="row g-3 align-items-stretch align-items-lg-center">
+                    <div class="col-12 col-lg-5 col-xl-4">
+                        <div class="d-flex align-items-center gap-3 p-3 rounded-4 bg-primary bg-opacity-10 border border-primary border-opacity-25 h-100">
+                            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center flex-shrink-0 pending-fb-stat-dot" aria-hidden="true">
+                                <i class="material-symbols-rounded fs-5">groups</i>
+                            </div>
+                            <div>
+                                <p class="small text-body-secondary text-uppercase fw-semibold mb-1 letter-spacing-tight">Total students</p>
+                                <p class="mb-0 d-flex align-items-baseline gap-2 flex-wrap">
+                                    <span id="totalRecordsCount" class="badge bg-primary fs-5 px-3 py-2 rounded-pill">0</span>
+                                    <span class="small text-body-secondary">in current view</span>
+                                </p>
+                            </div>
+                        </div>
                     </div>
-                    <div class="flex-shrink-0" style="min-width:260px; max-width:320px; width:100%">
-                        <div class="input-group">
-                            <span class="input-group-text bg-white border-end-0 text-body-tertiary">
-                                <i class="material-symbols-rounded" style="font-size:1.15rem">search</i>
-                            </span>
-                            <input type="text" class="form-control border-start-0 ps-0" id="studentSearch"
-                                placeholder="Search by name, email or OT code..." autocomplete="off">
-                            <button class="btn btn-light border" type="button" id="clearSearch"
-                                title="Clear search" style="display:none">
-                                <i class="material-symbols-rounded" style="font-size:1rem">close</i>
+                    <div class="col-12 col-lg-7 col-xl-8">
+                        <p class="small text-body-secondary fw-semibold text-uppercase letter-spacing-tight mb-2">Export</p>
+                        <div class="d-flex flex-wrap gap-2">
+                            <button type="button" id="exportPDF" class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-2 rounded-3 px-3 shadow-sm">
+                                <i class="material-symbols-rounded fs-6" aria-hidden="true">picture_as_pdf</i>
+                                PDF
+                            </button>
+                            <button type="button" id="exportExcelSummary"
+                                class="btn btn-outline-success btn-sm d-inline-flex align-items-center gap-2 rounded-3 px-3 shadow-sm">
+                                <i class="material-symbols-rounded fs-6" aria-hidden="true">table_view</i>
+                                Not given feedback count
+                            </button>
+                            <button type="button" id="exportExcelDetailed"
+                                class="btn btn-outline-success btn-sm d-inline-flex align-items-center gap-2 rounded-3 px-3">
+                                <i class="material-symbols-rounded fs-6" aria-hidden="true">view_list</i>
+                               Not givern Feedback details
+                            </button>
+                            <button type="button" id="btnPrint"
+                                class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-2 rounded-3 px-3">
+                                <i class="material-symbols-rounded fs-6" aria-hidden="true">print</i>
+                                Print
                             </button>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="card-body p-0">
-                <div id="studentAccordionContainer" class="px-3 px-lg-4 py-3">
-                    <div class="text-center py-5">
-                        <div class="spinner-border text-primary" role="status">
+        </div>
+
+        <!-- Results -->
+        <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-2">
+            <div class="card-header bg-white border-bottom py-3 px-4">
+                <div class="d-flex flex-column flex-lg-row align-items-stretch align-items-lg-center justify-content-between gap-3">
+                    <div class="d-flex align-items-start gap-3 min-w-0">
+                        <div class="flex-shrink-0 rounded-3 bg-warning bg-opacity-15 text-warning d-flex align-items-center justify-content-center pending-fb-results-icon text-white" aria-hidden="true">
+                            <i class="material-symbols-rounded">assignment_late</i>
+                        </div>
+                        <div class="min-w-0">
+                            <h2 class="h5 fw-bold text-body mb-1">Pending feedback</h2>
+                            <p class="text-body-secondary small mb-0">Expand a row for session-level detail, or use Expand all for this page. Column headers sort the list.</p>
+                        </div>
+                    </div>
+                    <div class="d-flex flex-column flex-sm-row align-items-stretch align-items-sm-center gap-2 w-100 flex-lg-grow-0" style="max-width: 36rem;">
+                        <div class="btn-group shadow-sm rounded-3 overflow-hidden border flex-shrink-0" role="group" aria-label="Expand or collapse all student rows">
+                            <button type="button" class="btn btn-sm btn-light px-3 d-inline-flex align-items-center gap-1" id="btnExpandAllStudents" title="Open every row on this page">
+                                <i class="material-symbols-rounded fs-6" aria-hidden="true">unfold_more</i>
+                                <span>Expand all</span>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-light px-3 border-start d-inline-flex align-items-center gap-1" id="btnCollapseAllStudents" title="Close every row on this page">
+                                <i class="material-symbols-rounded fs-6" aria-hidden="true">unfold_less</i>
+                                <span>Collapse all</span>
+                            </button>
+                        </div>
+                        <div class="flex-grow-1" style="min-width: 12rem;">
+                            <label for="studentSearch" class="visually-hidden">Search students</label>
+                            <div class="input-group shadow-sm rounded-3 overflow-hidden border">
+                                <span class="input-group-text bg-body-secondary bg-opacity-25 border-0 text-body-secondary">
+                                    <i class="material-symbols-rounded" aria-hidden="true">search</i>
+                                </span>
+                                <input type="search" class="form-control border-0 shadow-none" id="studentSearch"
+                                    placeholder="Name, email, or OT code…" autocomplete="off" enterkeyhint="search">
+                                <button class="btn btn-light border-0 border-start px-3" type="button" id="clearSearch"
+                                    title="Clear search" aria-label="Clear search" style="display:none">
+                                    <i class="material-symbols-rounded fs-6" aria-hidden="true">close</i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0 bg-body-tertiary bg-opacity-25">
+                <div id="studentAccordionContainer" class="px-2 px-sm-3 px-lg-4 py-3 py-lg-4">
+                    <div class="text-center py-5 px-3 rounded-4 bg-body-secondary bg-opacity-25 border border-secondary border-opacity-10">
+                        <div class="spinner-border text-primary" role="status" aria-label="Loading">
                             <span class="visually-hidden">Loading...</span>
                         </div>
-                        <p class="mt-2 text-body-secondary small">Loading student data...</p>
+                        <p class="mt-3 mb-0 text-body-secondary small fw-medium">Loading student data…</p>
                     </div>
                 </div>
             </div>
@@ -153,6 +219,29 @@
         rel="stylesheet" />
 
     <style>
+        /* ── Page utilities ── */
+        .pending-feedback-page .letter-spacing-tight { letter-spacing: 0.04em; }
+        .pending-fb-filter-icon,
+        .pending-fb-results-icon {
+            width: 2.75rem;
+            height: 2.75rem;
+            font-size: 1.35rem;
+        }
+        .pending-fb-stat-dot { width: 3rem; height: 3rem; }
+
+        #studentSearch:focus {
+            box-shadow: none;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .accordion-toggle,
+            .accordion-toggle .accordion-icon,
+            .sortable-header,
+            .sortable-header .sort-icon {
+                transition: none !important;
+            }
+        }
+
         /* ── Select2 ── */
         .select2-container { width: 100% !important; display: block !important; }
         .select2-container--open { z-index: 9999 !important; }
@@ -201,13 +290,13 @@
 
         .student-table thead th {
             font-weight: 600;
-            border-bottom: 2px solid var(--bs-primary-border-subtle);
+            border-bottom: 1px solid var(--bs-border-color);
             white-space: nowrap;
-            padding: 0.65rem 0.75rem;
-            font-size: 0.8rem;
+            padding: 0.75rem 0.85rem;
+            font-size: 0.75rem;
             text-transform: uppercase;
-            letter-spacing: 0.04em;
-            color: var(--bs-primary-color);
+            letter-spacing: 0.05em;
+            color: var(--bs-secondary-color);
         }
 
         .student-table tbody td {
@@ -260,12 +349,12 @@
         .collapse-cell { padding: 0 !important; border-top: 0 !important; }
 
         .collapse-inner {
-            padding: 0.875rem 1.25rem;
-            background: linear-gradient(180deg, #f8f9fb 0%, #fff 100%);
+            padding: 1rem 1.25rem;
+            background: linear-gradient(180deg, var(--bs-tertiary-bg) 0%, var(--bs-body-bg) 100%);
             border-top: 1px dashed var(--bs-border-color);
             border-left: 3px solid var(--bs-primary);
-            margin-left: 1rem;
-            border-radius: 0 0 0.5rem 0;
+            margin-left: 0.75rem;
+            border-radius: 0 0 var(--bs-border-radius-lg) 0;
         }
 
         /* ── Badges (feedback counts) ── */
@@ -338,33 +427,29 @@
         #studentSearch:focus { box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.12); border-color: var(--bs-primary); }
         #studentSearch::placeholder { color: var(--bs-tertiary-color); }
 
-        /* ── Pill Tabs ── */
-        #courseTypeTabs { max-width: 480px; }
-
-        #courseTypeTabs .nav-link {
-            font-size: 0.85rem;
-            font-weight: 500;
-            color: var(--bs-secondary-color);
-            border: none;
-            padding: 0.5rem 1.25rem;
-            transition: all 0.2s ease;
+        /* ── Program scope (radio cards) ── */
+        .pending-feedback-page #courseTypeTabs .course-scope-option {
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+            border-color: var(--bs-border-color) !important;
         }
 
-        #courseTypeTabs .nav-link.active {
-            font-weight: 600;
-            color: #fff;
-            background-color: var(--bs-primary);
-            box-shadow: 0 2px 8px rgba(var(--bs-primary-rgb), 0.25);
-        }
-
-        #courseTypeTabs .nav-link:not(.active):hover {
-            color: var(--bs-primary);
+        .pending-feedback-page #courseTypeTabs .course-scope-option:has(.form-check-input:checked) {
+            border-color: var(--bs-primary) !important;
+            box-shadow: 0 0.25rem 0.75rem rgba(var(--bs-primary-rgb), 0.2);
             background-color: rgba(var(--bs-primary-rgb), 0.06);
         }
 
-        /* ── Empty / Loading States ── */
-        .state-empty { padding: 3rem 1rem; text-align: center; }
-        .state-empty .material-symbols-rounded { font-size: 2.5rem; color: var(--bs-secondary-color); opacity: 0.5; }
+        .pending-feedback-page #courseTypeTabs .course-scope-option .form-check-input:focus {
+            box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.25);
+        }
+
+        .pending-feedback-page #courseTypeTabs label.cursor-pointer {
+            cursor: pointer;
+        }
+
+        /* ── Empty / loading (dynamic) ── */
+        .state-empty { text-align: center; max-width: 28rem; margin-inline: auto; }
+        .state-empty .material-symbols-rounded { font-size: 2.75rem; color: var(--bs-secondary-color); opacity: 0.55; }
 
         /* ── Misc ── */
         .per-page-ctrl { max-width: 72px; }
@@ -392,9 +477,17 @@
                 return div.innerHTML;
             }
 
-            // Initialize Select2 for Course filter
+            function destroySelect2IfAny($el) {
+                if ($el && $el.length && $el.data('select2')) {
+                    $el.select2('destroy');
+                }
+            }
+
+            // Initialize Select2 for Course filter (safe if already initialized)
             function initCourseSelect2() {
-                $('#filter_course_pk').select2({
+                var $el = $('#filter_course_pk');
+                destroySelect2IfAny($el);
+                $el.select2({
                     placeholder: "— All Courses —",
                     allowClear: true,
                     width: '100%',
@@ -410,7 +503,9 @@
 
             // Initialize Select2 for Session filter
             function initSessionSelect2() {
-                $('#filter_session_id').select2({
+                var $el = $('#filter_session_id');
+                destroySelect2IfAny($el);
+                $el.select2({
                     placeholder: "— All Sessions —",
                     allowClear: true,
                     width: '100%',
@@ -424,13 +519,12 @@
                 });
             }
 
-            // Initialize both Select2
-            initCourseSelect2();
-            initSessionSelect2();
-
-            // Store original sessions for reset
+            // Snapshot server-rendered options before Select2 wraps the selects
             var originalSessions = $('#filter_session_id').html();
             var originalCourses = $('#filter_course_pk').html();
+
+            initCourseSelect2();
+            initSessionSelect2();
 
             // ── Course lists by tab ──
             var activeCoursesData = @json($activeCourses ?? []);
@@ -450,19 +544,28 @@
                 currentTab = tab;
                 var courseMap = (tab === 'active') ? activeCoursesData : archiveCoursesData;
                 var opts = buildCourseOptions(courseMap, preselectPk || null);
-                $('#filter_course_pk').html(opts).trigger('change.select2');
-                // Update stored originals for reset
-                originalCourses = opts;
+                var $course = $('#filter_course_pk');
+                destroySelect2IfAny($course);
+                $course.html(opts);
+                initCourseSelect2();
+                var pk = preselectPk != null && preselectPk !== '' ? String(preselectPk) : '';
+                var toSelect = (pk && courseMap[pk] !== undefined) ? pk : '';
+                $course.val(toSelect).trigger('change');
+                originalCourses = $course.html();
             }
 
-            // Tab switch handler
-            $('#courseTypeTabs button[data-bs-toggle="tab"]').on('shown.bs.tab', function(e) {
-                var tab = $(e.target).attr('id') === 'tab-active' ? 'active' : 'archive';
+            // Active / archive radio (same behavior as former tabs)
+            $('input[name="course_type_scope"]').on('change', function() {
+                var tab = $(this).val() === 'archive' ? 'archive' : 'active';
                 switchCourseList(tab);
-                // Reset session & dates
-                $('#filter_session_id').html('<option value="">— All Sessions —</option>').val('').trigger('change.select2');
-                originalSessions = $('#filter_session_id').html();
+                var $sess = $('#filter_session_id');
+                destroySelect2IfAny($sess);
+                $sess.html('<option value="">— All Sessions —</option>');
+                initSessionSelect2();
+                $sess.val('').trigger('change');
+                originalSessions = $sess.html();
                 $('#filter_from_date, #filter_to_date').val('');
+                $('#filter_feedback_state').val('not_given');
                 loadGroupedData();
             });
 
@@ -483,6 +586,7 @@
                     from_date: $('#filter_from_date').val(),
                     to_date: $('#filter_to_date').val(),
                     course_type: currentTab,
+                    filter_feedback_state: $('#filter_feedback_state').val(),
                     page: page,
                     per_page: perPage,
                     sort_by: sortBy,
@@ -491,9 +595,9 @@
                 };
 
                 $('#studentAccordionContainer').html(
-                    '<div class="text-center py-5">' +
-                    '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>' +
-                    '<p class="mt-2 text-body-secondary small">Loading student data...</p></div>'
+                    '<div class="text-center py-5 px-3 rounded-4 bg-body-secondary bg-opacity-25 border border-secondary border-opacity-10">' +
+                    '<div class="spinner-border text-primary" role="status" aria-label="Loading"><span class="visually-hidden">Loading...</span></div>' +
+                    '<p class="mt-3 mb-0 text-body-secondary small fw-medium">Loading student data…</p></div>'
                 );
 
                 $.ajax({
@@ -509,10 +613,10 @@
                     error: function(xhr, status, error) {
                         console.error('Grouped data error:', error);
                         $('#studentAccordionContainer').html(
-                            '<div class="state-empty">' +
-                            '<i class="material-symbols-rounded d-block mb-2 text-danger" style="font-size:2.5rem">error_outline</i>' +
-                            '<p class="fw-medium text-body-secondary mb-1">Failed to load data</p>' +
-                            '<p class="text-body-tertiary small">Please try again or adjust your filters.</p></div>'
+                            '<div class="state-empty rounded-4 border border-danger border-opacity-25 bg-danger bg-opacity-10 p-4 p-md-5">' +
+                            '<i class="material-symbols-rounded d-block mb-3 text-danger" style="font-size:2.75rem">error_outline</i>' +
+                            '<p class="fw-semibold text-body mb-1">Failed to load data</p>' +
+                            '<p class="text-body-secondary small mb-0">Please try again or adjust your filters.</p></div>'
                         );
                         updateTotalCount(0);
                     }
@@ -522,18 +626,19 @@
             function renderAccordion(data) {
                 if (!data.students || data.students.length === 0) {
                     $('#studentAccordionContainer').html(
-                        '<div class="state-empty">' +
-                        '<i class="material-symbols-rounded d-block mb-2">search_off</i>' +
-                        '<p class="fw-medium text-body-secondary mb-1">No records found</p>' +
-                        '<p class="text-body-tertiary small">Try adjusting your filters or search term.</p></div>'
+                        '<div class="state-empty rounded-4 border border-secondary border-opacity-25 bg-body-secondary bg-opacity-25 p-4 p-md-5">' +
+                        '<i class="material-symbols-rounded d-block mb-3 text-body-secondary">search_off</i>' +
+                        '<p class="fw-semibold text-body mb-1">No records found</p>' +
+                        '<p class="text-body-secondary small mb-0">Try adjusting your filters or search.</p></div>'
                     );
                     return;
                 }
 
-                var html = '<div class="table-responsive"><table class="table student-table align-middle mb-0">';
-                html += '<thead><tr>';
+                var html = '<div class="table-responsive rounded-3 border shadow-sm bg-body"><table class="table table-hover student-table align-middle mb-0">';
+                html += '<thead class="table-light"><tr>';
                 html += '<th class="text-center" style="width:50px">#</th>';
                 html += buildSortHeader('Student Name', 'student_name');
+                html += buildSortHeader('Course', 'course_summary');
                 html += buildSortHeader('Feedback Given', 'feedback_given', true);
                 html += buildSortHeader('Feedback Not Given', 'feedback_not_given', true);
                 html += '<th class="text-center" style="width:60px">Details</th>';
@@ -553,16 +658,18 @@
                         html += '<br><small class="text-body-secondary">' + escapeHtml(student.email) + '</small>';
                     }
                     html += '</td>';
+                    html += '<td><small class="text-body">' + escapeHtml(student.course_summary || '—') + '</small></td>';
                     html += '<td class="text-center"><span class="badge rounded-pill bg-success-subtle text-success badge-count">' + student.feedback_given + '</span></td>';
                     html += '<td class="text-center"><span class="badge rounded-pill bg-danger-subtle text-danger badge-count">' + student.feedback_not_given + '</span></td>';
-                    html += '<td class="text-center"><i class="material-symbols-rounded accordion-icon">expand_more</i></td>';
+                    html += '<td class="text-center"><i class="material-symbols-rounded accordion-icon" aria-hidden="true">expand_more</i></td>';
                     html += '</tr>';
 
                     // Collapsible session details row
-                    html += '<tr><td colspan="5" class="collapse-cell"><div class="collapse" id="' + collapseId + '">';
+                    html += '<tr><td colspan="6" class="collapse-cell"><div class="collapse" id="' + collapseId + '">';
                     html += '<div class="collapse-inner">';
-                    html += '<table class="table table-sm table-bordered session-detail-table mb-0">';
+                    html += '<table class="table table-sm table-bordered table-striped session-detail-table mb-0">';
                     html += '<thead><tr>';
+                    html += '<th>Course</th>';
                     html += '<th>Session Name</th>';
                     html += '<th>Date</th>';
                     html += '<th>Time</th>';
@@ -571,6 +678,7 @@
 
                     $.each(student.sessions, function(si, session) {
                         html += '<tr>';
+                        html += '<td>' + escapeHtml(session.course_name || '—') + '</td>';
                         html += '<td>' + escapeHtml(session.session_name) + '</td>';
                         html += '<td>' + escapeHtml(session.date) + '</td>';
                         html += '<td>' + escapeHtml(session.time) + '</td>';
@@ -653,6 +761,21 @@
                 $('#studentSearch').val('').trigger('input');
             });
 
+            // Expand / collapse all rows on the current page (data already loaded; no extra requests)
+            function forEachStudentCollapse(fn) {
+                document.querySelectorAll('#studentAccordionContainer .collapse').forEach(function(el) {
+                    if (typeof bootstrap !== 'undefined' && bootstrap.Collapse) {
+                        fn(bootstrap.Collapse.getOrCreateInstance(el, { toggle: false }));
+                    }
+                });
+            }
+            $('#btnExpandAllStudents').on('click', function() {
+                forEachStudentCollapse(function(c) { c.show(); });
+            });
+            $('#btnCollapseAllStudents').on('click', function() {
+                forEachStudentCollapse(function(c) { c.hide(); });
+            });
+
             function renderPagination(data) {
                 var totalPages = data.total_pages || 1;
                 var page = data.page || 1;
@@ -667,7 +790,7 @@
                 var from = ((page - 1) * pp) + 1;
                 var to = Math.min(page * pp, total);
 
-                var html = '<div class="pagination-wrap d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2 mt-3 px-1">';
+                var html = '<div class="pagination-wrap d-flex flex-column flex-sm-row justify-content-between align-items-center gap-3 mt-3 pt-3 px-2 border-top border-secondary border-opacity-10">';
 
                 // Info text
                 html += '<div class="pagination-info">Showing <strong>' + from + '</strong> to <strong>' + to + '</strong> of <strong>' + total.toLocaleString() + '</strong> students</div>';
@@ -740,13 +863,20 @@
 
             // Reset filters button
             $('#btnResetFilters').on('click', function() {
-                $('#filter_course_pk').html(originalCourses);
-                $('#filter_course_pk').val('').trigger('change.select2');
+                var $course = $('#filter_course_pk');
+                destroySelect2IfAny($course);
+                $course.html(originalCourses);
+                initCourseSelect2();
+                $course.val('').trigger('change');
 
-                $('#filter_session_id').html(originalSessions);
-                $('#filter_session_id').val('').trigger('change.select2');
+                var $sess = $('#filter_session_id');
+                destroySelect2IfAny($sess);
+                $sess.html(originalSessions);
+                initSessionSelect2();
+                $sess.val('').trigger('change');
 
                 $('#filter_from_date, #filter_to_date').val('');
+                $('#filter_feedback_state').val('not_given');
 
                 loadGroupedData();
             });
@@ -757,14 +887,18 @@
                 var $sessionSelect = $('#filter_session_id');
 
                 if (!courseId) {
+                    destroySelect2IfAny($sessionSelect);
                     $sessionSelect.html(originalSessions);
-                    $sessionSelect.val('').trigger('change.select2');
+                    initSessionSelect2();
+                    $sessionSelect.val('').trigger('change');
                     loadGroupedData();
                     return;
                 }
 
+                destroySelect2IfAny($sessionSelect);
                 $sessionSelect.html('<option value="">Loading sessions...</option>');
-                $sessionSelect.val('').trigger('change.select2');
+                initSessionSelect2();
+                $sessionSelect.val('').trigger('change');
 
                 $.ajax({
                     url: "{{ route('admin.get.sessions.by.course') }}",
@@ -784,14 +918,18 @@
                         } else {
                             options = '<option value="">No sessions found</option>';
                         }
+                        destroySelect2IfAny($sessionSelect);
                         $sessionSelect.html(options);
-                        $sessionSelect.val('').trigger('change.select2');
+                        initSessionSelect2();
+                        $sessionSelect.val('').trigger('change');
                         loadGroupedData();
                     },
                     error: function(xhr, status, error) {
                         console.error('AJAX Error:', error);
+                        destroySelect2IfAny($sessionSelect);
                         $sessionSelect.html('<option value="">Error loading sessions</option>');
-                        $sessionSelect.val('').trigger('change.select2');
+                        initSessionSelect2();
+                        $sessionSelect.val('').trigger('change');
                         loadGroupedData();
                     }
                 });
@@ -811,6 +949,10 @@
                 }, 500);
             });
 
+            $('#filter_feedback_state').on('change', function() {
+                loadGroupedData(1);
+            });
+
             // ── Export Handlers ──
 
             function submitExportForm(actionUrl) {
@@ -826,11 +968,13 @@
                     course_pk: $('#filter_course_pk').val(),
                     session_id: $('#filter_session_id').val(),
                     from_date: $('#filter_from_date').val(),
-                    to_date: $('#filter_to_date').val()
+                    to_date: $('#filter_to_date').val(),
+                    course_type: currentTab,
+                    filter_feedback_state: $('#filter_feedback_state').val()
                 };
 
                 $.each(filters, function(key, value) {
-                    if (value && value !== '') {
+                    if (value !== undefined && value !== null && value !== '') {
                         $('<input>').attr({ type: 'hidden', name: key, value: value }).appendTo(form);
                     }
                 });
@@ -845,9 +989,14 @@
                 submitExportForm("{{ route('admin.feedback.export.pdf') }}");
             });
 
-            $('#exportExcel').on('click', function(e) {
+            $('#exportExcelSummary').on('click', function(e) {
                 e.preventDefault();
                 submitExportForm("{{ route('admin.feedback.export.excel') }}");
+            });
+
+            $('#exportExcelDetailed').on('click', function(e) {
+                e.preventDefault();
+                submitExportForm("{{ route('admin.feedback.export.excel.detailed') }}");
             });
 
             // Print — opens the same template in a new window
@@ -857,47 +1006,19 @@
                     course_pk: $('#filter_course_pk').val(),
                     session_id: $('#filter_session_id').val(),
                     from_date: $('#filter_from_date').val(),
-                    to_date: $('#filter_to_date').val()
+                    to_date: $('#filter_to_date').val(),
+                    course_type: currentTab,
+                    filter_feedback_state: $('#filter_feedback_state').val()
                 });
                 window.open("{{ route('admin.feedback.print') }}?" + params, '_blank');
             });
 
             // ── Initial Load ──
-            // Active tab is default; set course list for active courses with pre-selected active course
+            // Active tab + course list; pre-selected course triggers change → loads sessions + data
             var activeCourseId = '{{ $activeCourse ?? '' }}';
             switchCourseList('active', activeCourseId);
 
-            if (activeCourseId) {
-                // Load sessions for active course, then load grouped data
-                var $sessionSelect = $('#filter_session_id');
-                $sessionSelect.html('<option value="">Loading sessions...</option>');
-                $.ajax({
-                    url: "{{ route('admin.get.sessions.by.course') }}",
-                    type: "GET",
-                    data: { course_pk: activeCourseId },
-                    dataType: 'json',
-                    success: function(response) {
-                        var options = '<option value="">— All Sessions —</option>';
-                        if (response && response.length > 0) {
-                            $.each(response, function(index, session) {
-                                var label = session.subject_topic;
-                                if (session.START_DATE) {
-                                    label += ' (' + session.START_DATE + ')';
-                                }
-                                options += '<option value="' + session.pk + '">' + $('<span>').text(label).html() + '</option>';
-                            });
-                        }
-                        $sessionSelect.html(options);
-                        $sessionSelect.val('').trigger('change.select2');
-                        originalSessions = options;
-                        loadGroupedData();
-                    },
-                    error: function() {
-                        $sessionSelect.html('<option value="">— All Sessions —</option>');
-                        loadGroupedData();
-                    }
-                });
-            } else {
+            if (!activeCourseId) {
                 loadGroupedData();
             }
 

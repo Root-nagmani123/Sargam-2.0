@@ -3202,7 +3202,7 @@ class FeedbackController extends Controller
     }
 
 
-    public function pendingStudents(PendingFeedbackDataTable $dataTable)
+    public function pendingStudents()
     {
         try {
             // Get active courses (currently running: end_date >= today)
@@ -3253,7 +3253,7 @@ class FeedbackController extends Controller
                 ->orderBy('t.START_DATE', 'desc')
                 ->value('c.pk');
 
-            return $dataTable->render('admin.feedback.pending_students', compact('courses', 'activeCourses', 'archiveCourses', 'sessions', 'activeCourse'));
+            return view('admin.feedback.pending_students', compact('courses', 'activeCourses', 'archiveCourses', 'sessions', 'activeCourse'));
         } catch (\Exception $e) {
             \Log::error('Pending Students View Error: ' . $e->getMessage());
             return back()->with('error', 'Error loading page: ' . $e->getMessage());
@@ -3261,148 +3261,216 @@ class FeedbackController extends Controller
     }
 
     /**
+     * Pending rows per timetable row (faculty slots minus submitted feedback).
+     */
+    private function pendingStudentsPendingExpressionSql(): string
+    {
+        return '(CASE WHEN JSON_VALID(t.faculty_master) THEN JSON_LENGTH(t.faculty_master) ELSE 1 END - COALESCE(tf.submitted_count, 0))';
+    }
+
+    /**
+     * Base join for pending-feedback-by-student (one row per student × session with attendance).
+     */
+    private function buildPendingStudentsGroupedBaseQuery(Request $request): \Illuminate\Database\Query\Builder
+    {
+        $feedbackSub = DB::raw("(
+            SELECT timetable_pk, student_master_pk, COUNT(*) as submitted_count
+            FROM topic_feedback
+            WHERE is_submitted = 1
+            GROUP BY timetable_pk, student_master_pk
+        ) as tf");
+
+        $query = DB::table('timetable as t')
+            ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
+            ->join('student_master_course__map as smcm', function ($join) {
+                $join->on('smcm.course_master_pk', '=', 't.course_master_pk')
+                    ->where('smcm.active_inactive', 1);
+            })
+            ->join('student_master as sm', 'sm.pk', '=', 'smcm.student_master_pk')
+            ->join('course_student_attendance as csa', function ($join) {
+                $join->on('csa.timetable_pk', '=', 't.pk')
+                    ->on('csa.Student_master_pk', '=', 'sm.pk')
+                    ->where('csa.status', '1');
+            })
+            ->leftJoin($feedbackSub, function ($join) {
+                $join->on('tf.timetable_pk', '=', 't.pk')
+                    ->on('tf.student_master_pk', '=', 'sm.pk');
+            })
+            ->where('t.feedback_checkbox', 1)
+            ->where('t.START_DATE', '<=', now());
+
+        if ($request->filled('course_pk')) {
+            $query->where('t.course_master_pk', $request->course_pk);
+        } elseif ($request->input('course_type') === 'archive') {
+            $query->where(function ($q) {
+                $q->whereDate('c.end_date', '<', now()->toDateString())
+                    ->orWhere('c.active_inactive', 0);
+            });
+        } else {
+            $query->where('c.active_inactive', 1)
+                ->whereDate('c.end_date', '>=', now()->toDateString());
+        }
+
+        if ($request->filled('session_id')) {
+            $query->where('t.pk', $request->session_id);
+        }
+        if ($request->filled('from_date')) {
+            $query->whereDate('t.START_DATE', '>=', $request->from_date);
+        }
+        if ($request->filled('to_date')) {
+            $query->whereDate('t.START_DATE', '<=', $request->to_date);
+        }
+
+        return $query;
+    }
+
+    /**
+     * One row per student with aggregate counts and course list (for HAVING / pagination).
+     */
+    private function buildPendingStudentsAggregateSubquery(Request $request): \Illuminate\Database\Query\Builder
+    {
+        $pExpr = $this->pendingStudentsPendingExpressionSql();
+
+        $aggSub = (clone $this->buildPendingStudentsGroupedBaseQuery($request))
+            ->select([
+                'sm.pk as student_pk',
+                DB::raw("TRIM(CONCAT(COALESCE(sm.first_name,''),' ',COALESCE(sm.middle_name,''),' ',COALESCE(sm.last_name,''))) as student_name"),
+                'sm.email',
+                'sm.generated_OT_code',
+                DB::raw("SUM(CASE WHEN {$pExpr} > 0 THEN 1 ELSE 0 END) as feedback_not_given"),
+                DB::raw("SUM(CASE WHEN {$pExpr} <= 0 THEN 1 ELSE 0 END) as feedback_given"),
+                DB::raw("GROUP_CONCAT(DISTINCT c.course_name ORDER BY c.course_name SEPARATOR ', ') as course_summary_build"),
+            ])
+            ->groupBy('sm.pk', 'sm.first_name', 'sm.middle_name', 'sm.last_name', 'sm.email', 'sm.generated_OT_code');
+
+        $state = $request->input('filter_feedback_state', 'not_given');
+        if ($state === 'given') {
+            $aggSub->havingRaw("SUM(CASE WHEN {$pExpr} > 0 THEN 1 ELSE 0 END) = 0")
+                ->havingRaw("SUM(CASE WHEN {$pExpr} <= 0 THEN 1 ELSE 0 END) >= 1");
+        } else {
+            $aggSub->havingRaw("SUM(CASE WHEN {$pExpr} > 0 THEN 1 ELSE 0 END) >= 1");
+        }
+
+        return $aggSub;
+    }
+
+    /**
+     * Attach session rows for each aggregate row (same order as $aggRows).
+     *
+     * @param  \Illuminate\Support\Collection<int, object>  $aggRows
+     */
+    private function mergePendingGroupedAggregatesWithDetailRows(Request $request, $aggRows): array
+    {
+        if ($aggRows->isEmpty()) {
+            return [];
+        }
+
+        $pks = $aggRows->pluck('student_pk')->all();
+
+        $detailRows = $this->buildPendingStudentsGroupedBaseQuery($request)
+            ->whereIn('sm.pk', $pks)
+            ->select([
+                'sm.pk as student_pk',
+                't.pk as timetable_pk',
+                't.subject_topic as session_name',
+                't.START_DATE as date',
+                't.class_session as time',
+                'c.course_name',
+                DB::raw('CASE WHEN JSON_VALID(t.faculty_master) THEN JSON_LENGTH(t.faculty_master) ELSE 1 END as faculty_count'),
+                DB::raw('COALESCE(tf.submitted_count, 0) as submitted_count'),
+            ])
+            ->orderByRaw("TRIM(CONCAT(COALESCE(sm.first_name,''),' ',COALESCE(sm.middle_name,''),' ',COALESCE(sm.last_name,'')))")
+            ->orderBy('t.START_DATE')
+            ->get();
+
+        $studentsByPk = [];
+        foreach ($aggRows as $r) {
+            $studentsByPk[$r->student_pk] = [
+                'student_name' => $r->student_name,
+                'email' => $r->email,
+                'ot_code' => $r->generated_OT_code,
+                'feedback_given' => (int) $r->feedback_given,
+                'feedback_not_given' => (int) $r->feedback_not_given,
+                'sessions' => [],
+            ];
+        }
+
+        foreach ($detailRows as $row) {
+            $pending = (int) $row->faculty_count - (int) $row->submitted_count;
+            $status = $pending > 0 ? 'not_given' : 'given';
+            $pk = $row->student_pk;
+            if (!isset($studentsByPk[$pk])) {
+                continue;
+            }
+            $studentsByPk[$pk]['sessions'][] = [
+                'session_name' => $row->session_name,
+                'date' => $row->date ? date('d-m-Y', strtotime($row->date)) : '—',
+                'time' => $row->time ?? '—',
+                'course_name' => $row->course_name,
+                'feedback_status' => $status,
+            ];
+        }
+
+        $ordered = [];
+        foreach ($aggRows as $r) {
+            $ordered[] = $studentsByPk[$r->student_pk];
+        }
+
+        return $this->enrichGroupedStudentsWithCourseSummary($ordered);
+    }
+
+    /**
      * Return student-grouped pending feedback data for accordion view.
+     * Uses SQL aggregation + pagination (no full scan into PHP).
      */
     public function pendingStudentsGroupedData(Request $request)
     {
         try {
-            $feedbackSub = DB::raw("(
-                SELECT timetable_pk, student_master_pk, COUNT(*) as submitted_count
-                FROM topic_feedback
-                WHERE is_submitted = 1
-                GROUP BY timetable_pk, student_master_pk
-            ) as tf");
+            $aggSub = $this->buildPendingStudentsAggregateSubquery($request);
 
-            $query = DB::table('timetable as t')
-                ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
-                ->join('student_master_course__map as smcm', function ($join) {
-                    $join->on('smcm.course_master_pk', '=', 't.course_master_pk')
-                        ->where('smcm.active_inactive', 1);
-                })
-                ->join('student_master as sm', 'sm.pk', '=', 'smcm.student_master_pk')
-                ->join('course_student_attendance as csa', function ($join) {
-                    $join->on('csa.timetable_pk', '=', 't.pk')
-                        ->on('csa.Student_master_pk', '=', 'sm.pk')
-                        ->where('csa.status', '1');
-                })
-                ->leftJoin($feedbackSub, function ($join) {
-                    $join->on('tf.timetable_pk', '=', 't.pk')
-                        ->on('tf.student_master_pk', '=', 'sm.pk');
-                })
-                ->select([
-                    'sm.pk as student_pk',
-                    DB::raw("TRIM(CONCAT(COALESCE(sm.first_name, ''), ' ', COALESCE(sm.middle_name, ''), ' ', COALESCE(sm.last_name, ''))) as student_name"),
-                    'sm.email',
-                    'sm.generated_OT_code',
-                    't.pk as timetable_pk',
-                    't.subject_topic as session_name',
-                    't.START_DATE as date',
-                    't.class_session as time',
-                    'c.course_name',
-                    DB::raw("CASE WHEN JSON_VALID(t.faculty_master) THEN JSON_LENGTH(t.faculty_master) ELSE 1 END as faculty_count"),
-                    DB::raw("COALESCE(tf.submitted_count, 0) as submitted_count"),
-                ])
-                ->where('t.feedback_checkbox', 1)
-                ->where('t.START_DATE', '<=', now());
+            $outer = DB::query()->fromSub($aggSub, 'agg_students');
 
-            // Filter by course type (active/archive tab)
-            if ($request->filled('course_pk')) {
-                $query->where('t.course_master_pk', $request->course_pk);
-            } elseif ($request->input('course_type') === 'archive') {
-                $query->where(function ($q) {
-                    $q->whereDate('c.end_date', '<', now()->toDateString())
-                      ->orWhere('c.active_inactive', 0);
-                });
-            } else {
-                $query->where('c.active_inactive', 1)
-                      ->whereDate('c.end_date', '>=', now()->toDateString());
-            }
-            if ($request->filled('session_id')) {
-                $query->where('t.pk', $request->session_id);
-            }
-            if ($request->filled('from_date')) {
-                $query->whereDate('t.START_DATE', '>=', $request->from_date);
-            }
-            if ($request->filled('to_date')) {
-                $query->whereDate('t.START_DATE', '<=', $request->to_date);
-            }
-
-            $rows = $query->orderBy('student_name')->get();
-
-            // Group by student
-            $students = [];
-            foreach ($rows as $row) {
-                $key = $row->student_pk;
-                if (!isset($students[$key])) {
-                    $students[$key] = [
-                        'student_name' => $row->student_name,
-                        'email' => $row->email,
-                        'ot_code' => $row->generated_OT_code,
-                        'feedback_given' => 0,
-                        'feedback_not_given' => 0,
-                        'sessions' => [],
-                    ];
-                }
-
-                $pending = $row->faculty_count - $row->submitted_count;
-                $status = $pending > 0 ? 'not_given' : 'given';
-
-                if ($status === 'given') {
-                    $students[$key]['feedback_given']++;
-                } else {
-                    $students[$key]['feedback_not_given']++;
-                }
-
-                $students[$key]['sessions'][] = [
-                    'session_name' => $row->session_name,
-                    'date' => $row->date ? date('d-m-Y', strtotime($row->date)) : '—',
-                    'time' => $row->time ?? '—',
-                    'course_name' => $row->course_name,
-                    'feedback_status' => $status,
-                ];
-            }
-
-            // Only include students with at least one pending feedback
-            $students = array_values(array_filter($students, function ($s) {
-                return $s['feedback_not_given'] > 0;
-            }));
-
-            // Search
             if ($request->filled('search')) {
-                $search = mb_strtolower(trim($request->search));
-                $students = array_values(array_filter($students, function ($s) use ($search) {
-                    return str_contains(mb_strtolower($s['student_name']), $search)
-                        || str_contains(mb_strtolower($s['email'] ?? ''), $search)
-                        || str_contains(mb_strtolower($s['ot_code'] ?? ''), $search);
-                }));
+                $raw = '%' . addcslashes(mb_strtolower(trim($request->search)), '%_\\') . '%';
+                $outer->where(function ($q) use ($raw) {
+                    $q->whereRaw('LOWER(agg_students.student_name) LIKE ?', [$raw])
+                        ->orWhereRaw('LOWER(agg_students.email) LIKE ?', [$raw])
+                        ->orWhereRaw('LOWER(agg_students.generated_OT_code) LIKE ?', [$raw])
+                        ->orWhereRaw('LOWER(COALESCE(agg_students.course_summary_build, "")) LIKE ?', [$raw]);
+                });
             }
 
-            // Sorting
+            $totalStudents = (clone $outer)->count();
+
             $sortBy = $request->input('sort_by', 'student_name');
             $sortDir = strtolower($request->input('sort_dir', 'asc')) === 'desc' ? 'desc' : 'asc';
-            $allowedSorts = ['student_name', 'feedback_given', 'feedback_not_given'];
-            if (in_array($sortBy, $allowedSorts)) {
-                usort($students, function ($a, $b) use ($sortBy, $sortDir) {
-                    $valA = $a[$sortBy] ?? '';
-                    $valB = $b[$sortBy] ?? '';
-                    if (is_numeric($valA) && is_numeric($valB)) {
-                        $cmp = $valA - $valB;
-                    } else {
-                        $cmp = strnatcasecmp($valA, $valB);
-                    }
-                    return $sortDir === 'desc' ? -$cmp : $cmp;
-                });
-            }
+            $sortMap = [
+                'student_name' => 'student_name',
+                'course_summary' => 'course_summary_build',
+                'feedback_given' => 'feedback_given',
+                'feedback_not_given' => 'feedback_not_given',
+            ];
+            $sortCol = $sortMap[$sortBy] ?? 'student_name';
 
-            // Pagination
-            $totalStudents = count($students);
-            $perPage = (int) ($request->per_page ?: 20);
-            $perPage = max(1, min($perPage, 100));
+            $perPage = max(1, min((int) ($request->per_page ?: 20), 100));
             $page = max(1, (int) ($request->page ?: 1));
-            $totalPages = (int) ceil($totalStudents / $perPage);
+            $totalPages = $totalStudents > 0 ? (int) ceil($totalStudents / $perPage) : 1;
             $page = min($page, max($totalPages, 1));
             $offset = ($page - 1) * $perPage;
-            $paginatedStudents = array_slice($students, $offset, $perPage);
+
+            $pageRows = (clone $outer)->orderBy($sortCol, $sortDir)->offset($offset)->limit($perPage)->get();
+
+            if ($pageRows->isEmpty()) {
+                return response()->json([
+                    'students' => [],
+                    'total' => $totalStudents,
+                    'page' => $page,
+                    'per_page' => $perPage,
+                    'total_pages' => $totalPages,
+                ]);
+            }
+
+            $paginatedStudents = $this->mergePendingGroupedAggregatesWithDetailRows($request, $pageRows);
 
             return response()->json([
                 'students' => $paginatedStudents,
@@ -3541,11 +3609,33 @@ class FeedbackController extends Controller
             }
 
             return Excel::download(
-                new PendingFeedbackExport($data['students'], $data['filters'], $data['export_date']),
-                'pending_feedback_' . now()->format('Y-m-d_H-i') . '.xlsx'
+                new PendingFeedbackExport($data['students'], $data['filters'], $data['export_date'], false),
+                'pending_feedback_summary_' . now()->format('Y-m-d_H-i') . '.xlsx'
             );
         } catch (\Exception $e) {
             \Log::error('Excel Export Error: ' . $e->getMessage());
+            return back()->with('error', 'Failed to export Excel: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Excel export with per-session rows under each student (accordion-style detail).
+     */
+    public function exportPendingStudentsExcelDetailed(Request $request)
+    {
+        try {
+            $data = $this->buildGroupedExportData($request);
+
+            if (empty($data['students'])) {
+                return back()->with('error', 'No pending feedback records found.');
+            }
+
+            return Excel::download(
+                new PendingFeedbackExport($data['students'], $data['filters'], $data['export_date'], true),
+                'pending_feedback_with_details_' . now()->format('Y-m-d_H-i') . '.xlsx'
+            );
+        } catch (\Exception $e) {
+            \Log::error('Excel Detailed Export Error: ' . $e->getMessage());
             return back()->with('error', 'Failed to export Excel: ' . $e->getMessage());
         }
     }
@@ -3555,95 +3645,9 @@ class FeedbackController extends Controller
      */
     private function buildGroupedExportData(Request $request): array
     {
-        $feedbackSub = DB::raw("(
-            SELECT timetable_pk, student_master_pk, COUNT(*) as submitted_count
-            FROM topic_feedback WHERE is_submitted = 1
-            GROUP BY timetable_pk, student_master_pk
-        ) as tf");
-
-        $query = DB::table('timetable as t')
-            ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
-            ->join('student_master_course__map as smcm', function ($join) {
-                $join->on('smcm.course_master_pk', '=', 't.course_master_pk')
-                    ->where('smcm.active_inactive', 1);
-            })
-            ->join('student_master as sm', 'sm.pk', '=', 'smcm.student_master_pk')
-            ->join('course_student_attendance as csa', function ($join) {
-                $join->on('csa.timetable_pk', '=', 't.pk')
-                    ->on('csa.Student_master_pk', '=', 'sm.pk')
-                    ->where('csa.status', '1');
-            })
-            ->leftJoin($feedbackSub, function ($join) {
-                $join->on('tf.timetable_pk', '=', 't.pk')
-                    ->on('tf.student_master_pk', '=', 'sm.pk');
-            })
-            ->select([
-                'sm.pk as student_pk',
-                DB::raw("TRIM(CONCAT(COALESCE(sm.first_name,''),' ',COALESCE(sm.middle_name,''),' ',COALESCE(sm.last_name,''))) as student_name"),
-                'sm.email',
-                'sm.generated_OT_code',
-                't.pk as timetable_pk',
-                't.subject_topic as session_name',
-                't.START_DATE as date',
-                't.class_session as time',
-                'c.course_name',
-                DB::raw("CASE WHEN JSON_VALID(t.faculty_master) THEN JSON_LENGTH(t.faculty_master) ELSE 1 END as faculty_count"),
-                DB::raw("COALESCE(tf.submitted_count, 0) as submitted_count"),
-            ])
-            ->where('t.feedback_checkbox', 1)
-            ->where('t.START_DATE', '<=', now());
-
-        // Apply filters
-        if ($request->filled('course_pk')) {
-            $query->where('t.course_master_pk', $request->course_pk);
-        }
-        if ($request->filled('session_id')) {
-            $query->where('t.pk', $request->session_id);
-        }
-        if ($request->filled('from_date')) {
-            $query->whereDate('t.START_DATE', '>=', $request->from_date);
-        }
-        if ($request->filled('to_date')) {
-            $query->whereDate('t.START_DATE', '<=', $request->to_date);
-        }
-
-        $rows = $query->orderBy('student_name')->get();
-
-        // Group by student
-        $students = [];
-        foreach ($rows as $row) {
-            $key = $row->student_pk;
-            if (!isset($students[$key])) {
-                $students[$key] = [
-                    'student_name' => $row->student_name,
-                    'email' => $row->email,
-                    'ot_code' => $row->generated_OT_code,
-                    'feedback_given' => 0,
-                    'feedback_not_given' => 0,
-                    'sessions' => [],
-                ];
-            }
-
-            $pending = $row->faculty_count - $row->submitted_count;
-            $status = $pending > 0 ? 'not_given' : 'given';
-
-            if ($status === 'given') {
-                $students[$key]['feedback_given']++;
-            } else {
-                $students[$key]['feedback_not_given']++;
-            }
-
-            $students[$key]['sessions'][] = [
-                'session_name' => $row->session_name,
-                'date' => $row->date ? date('d-m-Y', strtotime($row->date)) : '—',
-                'time' => $row->time ?? '—',
-                'course_name' => $row->course_name,
-                'feedback_status' => $status,
-            ];
-        }
-
-        // Only include students with pending feedback
-        $students = array_values(array_filter($students, fn($s) => $s['feedback_not_given'] > 0));
+        $aggSub = $this->buildPendingStudentsAggregateSubquery($request);
+        $rows = $aggSub->orderBy('student_name')->get();
+        $students = $this->mergePendingGroupedAggregatesWithDetailRows($request, $rows);
 
         return [
             'students' => $students,
@@ -3653,8 +3657,37 @@ class FeedbackController extends Controller
                 'session' => $request->session_id ? $this->getSessionName($request->session_id) : 'All Sessions',
                 'from_date' => $request->from_date ? date('d-m-Y', strtotime($request->from_date)) : 'All',
                 'to_date' => $request->to_date ? date('d-m-Y', strtotime($request->to_date)) : 'All',
+                'course_scope' => $request->input('course_type') === 'archive' ? 'Archive' : 'Active',
+                'feedback_state' => $this->formatFeedbackStateFilterLabel($request->input('filter_feedback_state', 'not_given')),
             ],
         ];
+    }
+
+    private function formatFeedbackStateFilterLabel(?string $value): string
+    {
+        return match ($value) {
+            'given' => 'Feedback: Given (all completed in scope)',
+            default => 'Feedback: Not given (has pending)',
+        };
+    }
+
+    /**
+     * Unique course names per student (for table, Excel, PDF).
+     */
+    private function enrichGroupedStudentsWithCourseSummary(array $students): array
+    {
+        foreach ($students as &$s) {
+            $uniq = [];
+            foreach ($s['sessions'] ?? [] as $sess) {
+                if (!empty($sess['course_name'])) {
+                    $uniq[$sess['course_name']] = true;
+                }
+            }
+            $s['course_summary'] = empty($uniq) ? '—' : implode(', ', array_keys($uniq));
+        }
+        unset($s);
+
+        return $students;
     }
 
    
@@ -3846,13 +3879,48 @@ class FeedbackController extends Controller
     public function pendingFeedbackSummary(PendingFeedbackSummaryDataTable $dataTable)
     {
         try {
-            // Get filter options from cache (same as pending students)
-            $courses = Cache::remember('pending_feedback_courses', 3600, function () {
-                return DB::table('course_master')
-                    ->where('active_inactive', 1)
-                    ->orderBy('course_name')
-                    ->pluck('course_name', 'pk');
-            });
+            $currentDate = Carbon::now()->format('Y-m-d');
+            $roleCourseIds = get_Role_by_course();
+
+            $coursesActive = Cache::remember(
+                'pending_feedback_courses_active_' . md5($currentDate . json_encode($roleCourseIds)),
+                3600,
+                function () use ($currentDate, $roleCourseIds) {
+                    $q = DB::table('course_master')
+                        ->where('active_inactive', 1)
+                        ->where(function ($sub) use ($currentDate) {
+                            $sub->whereNull('end_date')
+                                ->orWhere('end_date', '>=', $currentDate);
+                        })
+                        ->orderBy('course_name');
+
+                    if (!empty($roleCourseIds)) {
+                        $q->whereIn('pk', $roleCourseIds);
+                    }
+
+                    return $q->pluck('course_name', 'pk');
+                }
+            );
+
+            $coursesArchive = Cache::remember(
+                'pending_feedback_courses_archive_' . md5($currentDate . json_encode($roleCourseIds)),
+                3600,
+                function () use ($currentDate, $roleCourseIds) {
+                    $q = DB::table('course_master')
+                        ->where('active_inactive', 1)
+                        ->whereNotNull('end_date')
+                        ->where('end_date', '<', $currentDate)
+                        ->orderBy('course_name');
+
+                    if (!empty($roleCourseIds)) {
+                        $q->whereIn('pk', $roleCourseIds);
+                    }
+
+                    return $q->pluck('course_name', 'pk');
+                }
+            );
+
+            $defaultCoursePk = $coursesActive->keys()->first();
 
             $sessions = Cache::remember('pending_feedback_sessions', 3600, function () {
                 return DB::table('timetable')
@@ -3870,7 +3938,12 @@ class FeedbackController extends Controller
                     });
             });
 
-            return $dataTable->render('admin.feedback.pending_feedback_summary', compact('courses', 'sessions'));
+            return $dataTable->render('admin.feedback.pending_feedback_summary', [
+                'coursesActive' => $coursesActive,
+                'coursesArchive' => $coursesArchive,
+                'defaultCoursePk' => $defaultCoursePk,
+                'sessions' => $sessions,
+            ]);
         } catch (\Exception $e) {
             \Log::error('Pending Feedback Summary View Error: ' . $e->getMessage());
             return back()->with('error', 'Error loading page: ' . $e->getMessage());
@@ -3948,6 +4021,37 @@ class FeedbackController extends Controller
             );
         } catch (\Exception $e) {
             \Log::error('Summary Excel Export Error: ' . $e->getMessage());
+            return back()->with('error', 'Failed to export Excel: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Export summary to Excel with one row per session (pending breakdown).
+     */
+    public function exportPendingSummaryExcelDetailed(Request $request)
+    {
+        try {
+            $query = $this->buildSummaryDetailExportQuery();
+            $this->applySummaryExportFilters($query, $request);
+
+            $students = $query
+                ->orderBy('sm.first_name')
+                ->orderBy('sm.last_name')
+                ->orderBy('c.course_name')
+                ->orderBy('t.START_DATE')
+                ->orderBy('t.pk')
+                ->get();
+
+            if ($students->isEmpty()) {
+                return back()->with('error', 'No pending feedback records found.');
+            }
+
+            return Excel::download(
+                new PendingFeedbackSummaryExport($students, $request->all(), true),
+                'pending_feedback_summary_with_details_' . now()->format('Y-m-d_H-i') . '.xlsx'
+            );
+        } catch (\Exception $e) {
+            \Log::error('Summary Excel Detailed Export Error: ' . $e->getMessage());
             return back()->with('error', 'Failed to export Excel: ' . $e->getMessage());
         }
     }
@@ -4115,6 +4219,131 @@ class FeedbackController extends Controller
     }
 
     /**
+     * Per-session rows for detailed Excel export (same filters as summary, no student+course aggregation).
+     */
+    private function buildSummaryDetailExportQuery()
+    {
+        $feedbackSub = DB::raw("
+        (
+            SELECT 
+                timetable_pk,
+                student_master_pk,
+                COUNT(*) as submitted_count
+            FROM topic_feedback
+            WHERE is_submitted = 1
+            GROUP BY timetable_pk, student_master_pk
+        ) as tf
+    ");
+
+        return DB::table('timetable as t')
+
+            ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
+
+            ->join('student_master_course__map as smcm', function ($join) {
+                $join->on('smcm.course_master_pk', '=', 't.course_master_pk')
+                    ->where('smcm.active_inactive', 1);
+            })
+
+            ->join('student_master as sm', 'sm.pk', '=', 'smcm.student_master_pk')
+
+            ->join('course_student_attendance as csa', function ($join) {
+                $join->on('csa.timetable_pk', '=', 't.pk')
+                    ->on('csa.Student_master_pk', '=', 'sm.pk')
+                    ->where('csa.status', '1');
+            })
+
+            ->leftJoin($feedbackSub, function ($join) {
+                $join->on('tf.timetable_pk', '=', 't.pk')
+                    ->on('tf.student_master_pk', '=', 'sm.pk');
+            })
+
+            ->select([
+                DB::raw("CONCAT(
+                COALESCE(sm.first_name, ''),
+                ' ',
+                COALESCE(sm.middle_name, ''),
+                ' ',
+                COALESCE(sm.last_name, '')
+            ) as user_name"),
+
+                'sm.email',
+                'sm.contact_no',
+                'c.course_name',
+
+                DB::raw("
+                CONCAT(
+                    COALESCE(t.subject_topic, 'Session'),
+                    ' (',
+                    DATE_FORMAT(t.START_DATE, '%d-%m-%Y'),
+                    ')'
+                ) as session_info
+            "),
+
+                DB::raw("DATE_FORMAT(t.START_DATE, '%d-%m-%Y') as date_range"),
+
+                DB::raw("
+                (
+                    CASE 
+                        WHEN JSON_VALID(t.faculty_master) 
+                        THEN JSON_LENGTH(t.faculty_master)
+                        ELSE 1
+                    END
+                )
+                -
+                COALESCE(tf.submitted_count, 0)
+                as pending_count
+            "),
+
+                't.class_session',
+                't.pk as timetable_pk',
+            ])
+
+            ->where('t.feedback_checkbox', 1)
+
+            ->whereRaw("
+            TIMESTAMP(
+                t.END_DATE,
+                STR_TO_DATE(
+                    TRIM(SUBSTRING_INDEX(t.class_session, '-', -1)),
+                    '%h:%i %p'
+                )
+            ) <= NOW()
+        ")
+
+            ->whereRaw("
+            (
+                (
+                    CASE 
+                        WHEN JSON_VALID(t.faculty_master) 
+                        THEN JSON_LENGTH(t.faculty_master)
+                        ELSE 1
+                    END
+                )
+                - COALESCE(tf.submitted_count, 0)
+            ) > 0
+        ");
+    }
+
+    /**
+     * Restrict summary data to active (current/ongoing) or archive programs when no specific course is chosen.
+     */
+    private function applySummaryProgramScopeToQuery($query, Request $request): void
+    {
+        $scope = $request->input('filter_course_scope', 'active');
+        $currentDate = Carbon::now()->format('Y-m-d');
+
+        if ($scope === 'archive') {
+            $query->whereNotNull('c.end_date')
+                ->where('c.end_date', '<', $currentDate);
+        } else {
+            $query->where(function ($q) use ($currentDate) {
+                $q->whereNull('c.end_date')
+                    ->orWhere('c.end_date', '>=', $currentDate);
+            });
+        }
+    }
+
+    /**
      * Apply filters to summary export query
      */
     /**
@@ -4125,6 +4354,8 @@ class FeedbackController extends Controller
         // Apply course filter
         if ($request->filled('filter_course_pk')) {
             $query->where('t.course_master_pk', $request->filter_course_pk);
+        } elseif (!$request->filled('filter_session_id')) {
+            $this->applySummaryProgramScopeToQuery($query, $request);
         }
 
         // Apply session filter
