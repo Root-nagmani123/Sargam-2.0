@@ -113,7 +113,8 @@
                                         default => 'bg-secondary',
                                     };
                                 @endphp
-                                <span class="badge {{ $statusBadgeClass }}">{{ $statusLabel }}</span>
+                                <span class="badge {{ $statusBadgeClass }}"
+                                      @if($statusLabel === 'Approved') title="Please collect your ID card from security section" @endif>{{ $statusLabel }}</span>
                                 <small class="text-muted">No further actions available</small>
                                 @if($approvalStage === 2 && $statusLabel === 'Approved')
                                     <form action="{{ route('admin.security.employee_idcard_approval.markGenerated', $encryptedId) }}" method="POST" class="d-inline mt-1 archive-check-form">
