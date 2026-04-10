@@ -4,7 +4,9 @@
     $activeCategoryId = request()->get('category') ?? ($sidebarMenus->first()->id ?? null);
     $activeCategory = $sidebarMenus->find($activeCategoryId);
     $groups = $activeCategory ? $activeCategory->groups : collect([]);
+    
 @endphp
+
 
 <head>
     <!-- Set initial theme from localStorage before paint (avoids flash) -->
