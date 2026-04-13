@@ -155,6 +155,18 @@ return [
         ],
     ],
 
+    // Estate: staff self-service request submitted (notify Super Admin / Admin / Estate)
+    'estate_request' => [
+        'Estate' => [
+            'route' => 'admin.estate.request-for-estate',
+            'params' => [],
+        ],
+        'EstateHac' => [
+            'route' => 'admin.estate.put-in-hac',
+            'params' => [],
+        ],
+    ],
+
     // Default fallback route
     'default' => [
         'route' => 'admin.dashboard',

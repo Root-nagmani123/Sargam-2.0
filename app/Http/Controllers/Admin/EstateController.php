@@ -27,6 +27,7 @@ use App\Models\EstateMonthReadingDetails;
 use Illuminate\Support\Collection;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use App\Services\NotificationReceiverService;
 use App\Services\NotificationService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -797,8 +798,74 @@ class EstateController extends Controller
             $message = 'Estate request updated successfully.';
         } else {
             $data['employee_pk'] = $data['employee_pk'] ?: 0;
-            EstateHomeRequestDetails::create($data);
+            $record = EstateHomeRequestDetails::create($data);
             $message = 'Estate request created successfully.';
+
+            if ($user && ! $isEstateAuthority) {
+                try {
+                    $notificationService = app(NotificationService::class);
+                    $receiverService = app(NotificationReceiverService::class);
+                    $approverUserIds = $receiverService->getEstateRequestApproverUserIds();
+                    $hacUserIds = $receiverService->getEstateHacPersonUserIds();
+                    $empLabel = trim((string) ($validated['emp_name'] ?? ''));
+                    $idLabel = trim((string) ($validated['employee_id'] ?? ''));
+                    $who = $empLabel !== '' || $idLabel !== ''
+                        ? trim($empLabel . ($idLabel !== '' ? ' (' . $idLabel . ')' : ''))
+                        : 'An employee';
+                    $senderId = (int) ($user->user_id ?? 0);
+
+                    $hacSet = [];
+                    foreach ($hacUserIds as $rid) {
+                        $hacSet[(int) $rid] = true;
+                    }
+
+                    $titleApprove = 'New estate request';
+                    $bodyApprove = "{$who} has submitted an estate request. Please review and approve.";
+                    $titleHac = 'Estate request — Put in HAC';
+                    $bodyHac = "{$who} has submitted an estate request. Please put it in HAC and complete HAC approval.";
+                    $bodyBoth = "{$who} has submitted an estate request. Please review and approve, put it in HAC, and complete HAC approval.";
+
+                    $sent = [];
+                    foreach ($approverUserIds as $rid) {
+                        $rid = (int) $rid;
+                        if ($senderId > 0 && $rid === $senderId) {
+                            continue;
+                        }
+                        $inHac = isset($hacSet[$rid]);
+                        $body = $inHac ? $bodyBoth : $bodyApprove;
+                        $title = $inHac ? 'New estate request (approve / HAC)' : $titleApprove;
+                        $notificationService->create(
+                            $rid,
+                            'estate_request',
+                            'Estate',
+                            (int) $record->pk,
+                            $title,
+                            $body
+                        );
+                        $sent[$rid] = true;
+                    }
+
+                    foreach ($hacUserIds as $rid) {
+                        $rid = (int) $rid;
+                        if ($senderId > 0 && $rid === $senderId) {
+                            continue;
+                        }
+                        if (isset($sent[$rid])) {
+                            continue;
+                        }
+                        $notificationService->create(
+                            $rid,
+                            'estate_request',
+                            'EstateHac',
+                            (int) $record->pk,
+                            $titleHac,
+                            $bodyHac
+                        );
+                    }
+                } catch (\Throwable $e) {
+                    Log::error('Failed to send estate request approver notifications: ' . $e->getMessage());
+                }
+            }
         }
 
         if ($request->ajax() || $request->wantsJson()) {
