@@ -93,7 +93,7 @@
                         <label for="meter_reading_date" class="form-label">Meter Reading Date</label>
                         <input type="date" class="form-control @error('reading_meter_reading_date') is-invalid @enderror" id="meter_reading_date" name="reading_meter_reading_date" placeholder="Select date" value="{{ old('reading_meter_reading_date') }}" autocomplete="off">
                         <small class="text-muted">
-                            <i class="bi bi-info-circle"></i> Optional for Load Data; required when you click Save.
+                            <i class="bi bi-info-circle"></i> Select Meter Reading Date
                         </small>
                     </div>
                 </div>
@@ -285,6 +285,9 @@ $(document).ready(function() {
         };
         if (possessionPks && String(possessionPks).trim() !== '') {
             params.possession_pks = String(possessionPks).trim();
+        }
+        if (prefill && prefill.reading_pk) {
+            params.reading_pk = String(prefill.reading_pk);
         }
         // Load grid by meter-change month + estate filters (meter reading date is for Save, not list).
         $.get(listUrl, params, function(res) {

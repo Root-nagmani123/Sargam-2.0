@@ -40,6 +40,7 @@ use App\Http\Controllers\Admin\{
     WhosWhoController,
     EstateController,
     QuickLinkController,
+    TimetableReportController,
 };
 use App\Http\Controllers\Dashboard\Calendar1Controller;
 use App\Http\Controllers\Admin\MemoNoticeController;
@@ -422,6 +423,14 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/event-delete/{id}', [CalendarController::class, 'delete_event'])->name('calendar.event.delete');
 
         Route::get('/get-week', [CalendarController::class, 'weeklyTimetable'])->name('getWeek');
+    });
+
+    // Timetable Report
+    Route::prefix('timetable-report')->name('timetable-report.')->group(function () {
+        Route::get('/', [TimetableReportController::class, 'index'])->name('index');
+        Route::get('/data', [TimetableReportController::class, 'data'])->name('data');
+        Route::get('/export-pdf', [TimetableReportController::class, 'exportPdf'])->name('pdf');
+        Route::get('/export-excel', [TimetableReportController::class, 'exportExcel'])->name('excel');
     });
 
     // Area of Expertise

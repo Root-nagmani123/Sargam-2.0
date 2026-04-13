@@ -56,6 +56,7 @@
                 'memo.notice.management.*',
                 'memo.discipline.*',
                 'admin.memo-notice.*',
+                'timetable-report.*',
                 'feedback.get.*',
                 'subject.*',
                 'subject-module.*',
