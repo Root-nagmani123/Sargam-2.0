@@ -190,11 +190,14 @@
                                             class="hide-menu small small-sm-normal text-nowrap">Student Feedback</span>
                                     </a></li>
                             </ul>
-                          
+
 
                             <!-- faculty menu start -->
                                 <li class="sidebar-item"><a class="sidebar-link" href="{{ route('calendar.index') }}">
                                     <span class="hide-menu small small-sm-normal text-nowrap">My Time Table</span>
+                                </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('timetable-report.index') }}">
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Timetable Session Report</span>
                                 </a></li>
                                   <li class="sidebar-item"><a class="sidebar-link" href="{{ route('attendance.user_attendance.index') }}">
                                     <span class="hide-menu small small-sm-normal text-nowrap">OT - Attendance</span>
