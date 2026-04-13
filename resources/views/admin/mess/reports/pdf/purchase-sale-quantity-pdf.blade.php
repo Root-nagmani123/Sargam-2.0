@@ -287,6 +287,14 @@
                         </td>
                     </tr>
                 @endforeach
+                <tr>
+                    <td class="text-center">—</td>
+                    <td colspan="2" style="font-weight: 700;">Grand Total</td>
+                    <td class="text-end" style="font-weight: 700;">{{ number_format(collect($section['reportData'])->sum('purchase_qty'), 2) }}</td>
+                    <td class="text-end">—</td>
+                    <td class="text-end" style="font-weight: 700;">{{ number_format(collect($section['reportData'])->sum('sale_qty'), 2) }}</td>
+                    <td class="text-end">—</td>
+                </tr>
                 </tbody>
             </table>
         @endif
@@ -328,6 +336,20 @@
                     </tbody>
                 </table>
             @endforeach
+            @if(! empty($section['reportData']))
+                <table class="purchase-sale-data">
+                    <tbody>
+                    <tr>
+                        <td class="text-center">—</td>
+                        <td colspan="2" style="font-weight: 700;">Grand Total</td>
+                        <td class="text-end" style="font-weight: 700;">{{ number_format(collect($section['reportData'])->sum('purchase_qty'), 2) }}</td>
+                        <td class="text-end">—</td>
+                        <td class="text-end" style="font-weight: 700;">{{ number_format(collect($section['reportData'])->sum('sale_qty'), 2) }}</td>
+                        <td class="text-end">—</td>
+                    </tr>
+                    </tbody>
+                </table>
+            @endif
         @endif
     @endif
 @empty
