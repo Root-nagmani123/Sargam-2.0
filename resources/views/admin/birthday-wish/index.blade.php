@@ -180,6 +180,11 @@ $senderName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                     {{-- Channel Selection --}}
                     <label class="form-label fw-semibold small mb-2">Send via</label>
                     <div class="d-flex gap-3 mb-4 flex-wrap">
+                        <label class="channel-btn d-flex align-items-center gap-2 active" id="channel-email-btn">
+                            <input type="checkbox" class="form-check-input" id="compose-via-email" checked>
+                            <span class="material-icons material-symbols-rounded text-primary" style="font-size:20px;">mail</span>
+                            <span class="fw-semibold small">Email</span>
+                        </label>
                         <label class="channel-btn d-flex align-items-center gap-2" id="channel-whatsapp-btn">
                             <input type="checkbox" class="form-check-input" id="compose-via-whatsapp">
                             <span class="material-icons material-symbols-rounded text-success" style="font-size:20px;">chat</span>
@@ -303,8 +308,10 @@ function birthdayWishParseJsonResponse(response) {
 
             var message = document.getElementById('compose-message').value.trim();
             var subject = document.getElementById('compose-subject').value.trim();
-            var sendEmail = document.getElementById('compose-via-email').checked;
-            var sendWhatsapp = document.getElementById('compose-via-whatsapp').checked;
+            var emailCh = document.getElementById('compose-via-email');
+            var waCh = document.getElementById('compose-via-whatsapp');
+            var sendEmail = emailCh ? emailCh.checked : false;
+            var sendWhatsapp = waCh ? waCh.checked : false;
 
             if (!message) { alert('Please enter a message.'); return; }
             if (!sendEmail && !sendWhatsapp) { alert('Please select at least one channel.'); return; }
@@ -347,7 +354,8 @@ function birthdayWishParseJsonResponse(response) {
                     .catch(function(err) { alert('Error: ' + err.message); })
                     .finally(function() {
                         sendBtn.disabled = false;
-                        sendBtn.innerHTML = '<span class="material-icons material-symbols-rounded" style="font-size:18px;">send</span> Send to Selected (<span id="selected-count">' + recipients.length + '</span>)';
+                        sendBtn.innerHTML = '<span class="material-icons material-symbols-rounded" style="font-size:18px;">send</span> Send to Selected (<span id="selected-count">0</span>)';
+                        updateSelectedCount();
                     });
                 }
             }
