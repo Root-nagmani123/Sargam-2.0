@@ -93,13 +93,36 @@
 }
 
 .dashboard-birthday-item {
-    border: 1px solid #b7cdf9;
-    background: #f7f9ff;
-    border-radius: 0.5rem;
+    transition: box-shadow 0.22s ease, transform 0.18s ease, border-color 0.2s ease;
 }
-
-.dashboard-birthday-item .card-body {
-    padding: 0.8rem !important;
+.dashboard-birthday-item:hover {
+    box-shadow: 0 0.5rem 1.25rem rgba(var(--bs-primary-rgb), 0.14) !important;
+    transform: translateY(-2px);
+}
+.dashboard-panel-birthday .card-header {
+    background: linear-gradient(125deg, rgba(var(--bs-primary-rgb), 0.1) 0%, rgba(var(--bs-primary-rgb), 0.03) 42%, transparent 100%);
+}
+.dashboard-birthday-item .dashboard-avatar {
+    width: 2.75rem;
+    height: 2.75rem;
+    font-size: 0.95rem;
+}
+.dashboard-birthday-item .dashboard-birthday-contact .material-icons.material-symbols-rounded {
+    width: 1.85rem;
+    height: 1.85rem;
+    border-radius: 0.45rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(var(--bs-primary-rgb), 0.1);
+    color: var(--bs-primary);
+    font-size: 1rem !important;
+}
+.dashboard-panel-birthday .dashboard-empty-state {
+    padding: 2.5rem 1.5rem;
+}
+.dashboard-panel-birthday .btn:focus-visible {
+    box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.28);
 }
 
 .dashboard-avatar {
@@ -945,32 +968,46 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
         </div>
 
         <div class="col-lg-5">
-            <div class="card dashboard-panel shadow-sm rounded-4 mb-4">
-                <div class="card-header py-3 px-4 d-flex align-items-center gap-2">
-                    <span class="material-icons material-symbols-rounded text-primary">cake</span>
-                    <h4 class="mb-0 fw-semibold text-primary">Today's Birthday</h4>
-                    <span class="ms-auto badge rounded-pill text-bg-primary-subtle text-primary border border-primary-subtle">
-                        {{ $emp_dob_data->count() }}
-                    </span>
-                    @if($emp_dob_data->isNotEmpty())
-                    <a href="{{ route('admin.birthday-wish.index') }}" class="btn btn-sm btn-primary rounded-pill ms-2 d-inline-flex align-items-center gap-1" title="Send wishes to all">
-                        <span class="material-icons material-symbols-rounded" style="font-size:14px;">send</span>
-                        <span style="font-size:0.75rem;">Send Wishes</span>
-                    </a>
-                    <button type="button" class="btn btn-sm btn-success rounded-pill ms-1 d-inline-flex align-items-center gap-1" id="btn-quick-wish-all" title="Quick wish everyone at once">
-                        <span class="material-icons material-symbols-rounded" style="font-size:14px;">celebration</span>
-                        <span style="font-size:0.75rem;">Wish All</span>
-                    </button>
-                    @endif
+            <div class="card dashboard-panel dashboard-panel-birthday shadow-sm rounded-4 mb-4 overflow-hidden">
+                <div class="card-header py-3 px-3 px-md-4 border-bottom border-primary-subtle border-opacity-25 bg-body-secondary bg-opacity-25">
+                    <div class="d-flex flex-wrap align-items-center gap-3">
+                        <div class="d-flex align-items-center gap-3 min-w-0 flex-grow-1">
+                            <span class="material-icons material-symbols-rounded text-primary flex-shrink-0 rounded-3 p-2 bg-primary-subtle" style="font-size: 1.35rem;" aria-hidden="true">cake</span>
+                            <div class="min-w-0 vstack gap-0 lh-sm">
+                                <h4 class="mb-0 fw-semibold text-primary-emphasis fs-5 text-truncate">Today's Birthday</h4>
+                                <span class="small text-body-secondary text-truncate d-none d-sm-block">Colleagues celebrating today</span>
+                            </div>
+                        </div>
+                        <div class="d-flex flex-wrap align-items-center gap-2 w-100 w-md-auto justify-content-md-end">
+                            <span class="badge rounded-pill px-3 py-2 text-bg-primary-subtle text-primary-emphasis border border-primary-subtle fw-semibold lh-1">
+                                {{ $emp_dob_data->count() }}
+                            </span>
+                            @if($emp_dob_data->isNotEmpty())
+                            <div class="d-flex flex-wrap gap-2">
+                            <a href="{{ route('admin.birthday-wish.index') }}" class="btn btn-sm btn-primary rounded-pill d-inline-flex align-items-center gap-2 px-3 fw-semibold shadow-sm" title="Send wishes to all">
+                                <span class="material-icons material-symbols-rounded" style="font-size:15px;" aria-hidden="true">send</span>
+                                <span class="small">Send Wishes</span>
+                            </a>
+                            <button type="button" class="btn btn-sm btn-success rounded-pill d-inline-flex align-items-center gap-2 px-3 fw-semibold shadow-sm" id="btn-quick-wish-all" title="Quick wish everyone at once">
+                                <span class="material-icons material-symbols-rounded" style="font-size:15px;" aria-hidden="true">celebration</span>
+                                <span class="small">Wish All</span>
+                            </button>
+                            </div>
+                            @endif
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body p-3 dashboard-list-scroll">
+                <div class="card-body p-3 p-md-4 pe-2 dashboard-list-scroll bg-body-tertiary bg-opacity-25">
                     @if($emp_dob_data->isEmpty())
-                    <div class="dashboard-empty-state">
-                        <span class="material-icons material-symbols-rounded">card_giftcard</span>
-                        <p class="mb-0 small">No birthdays today.</p>
+                    <div class="dashboard-empty-state rounded-4 border border-dashed border-secondary-subtle bg-body-secondary bg-opacity-10 mb-0">
+                        <span class="material-icons material-symbols-rounded text-secondary-emphasis" aria-hidden="true">card_giftcard</span>
+                        <p class="mb-0 small text-body-secondary fw-medium">No birthdays today.</p>
+                        @if(($upcomingBirthdays ?? collect())->isNotEmpty())
+                        <p class="mb-0 mt-2 small text-body-secondary opacity-75">See upcoming birthdays below.</p>
+                        @endif
                     </div>
                     @else
-                    <div class="d-grid gap-2">
+                    <ul class="list-unstyled vstack gap-3 mb-0 pe-1" role="list">
                         @foreach($emp_dob_data as $employee)
                         @php
                         $avClasses = ['text-bg-primary', 'text-bg-info', 'text-bg-success', 'text-bg-warning', 'text-bg-danger', 'text-bg-secondary'];
@@ -981,64 +1018,69 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                         $subject = rawurlencode('Happy Birthday ' . ($fullName ?: ''));
                         $body = rawurlencode("Dear " . ($fullName ?: '') . ",\n\nWishing you a very Happy Birthday!\n\nRegards,");
                         @endphp
-                        <div class="card dashboard-birthday-item border-0 shadow-sm rounded-4">
-                            <div class="card-body p-3">
+                        <li role="listitem">
+                        <div class="card dashboard-birthday-item border-0 border-start border-4 border-primary bg-body shadow-sm rounded-4 overflow-hidden">
+                            <div class="card-body p-3 p-sm-4 bg-primary-subtle bg-opacity-10">
                                 <div class="d-flex align-items-start gap-3">
+                                    <div class="flex-shrink-0 pt-0">
                                     @if($photo)
-                                        <img src="{{ $photo }}" alt="" class="rounded-circle object-fit-cover flex-shrink-0 dashboard-avatar">
+                                        <img src="{{ $photo }}" alt="" class="rounded-circle object-fit-cover dashboard-avatar border border-3 border-white shadow">
                                     @else
-                                        <div class="rounded-circle {{ $avClass }} fw-semibold d-inline-flex align-items-center justify-content-center flex-shrink-0 dashboard-avatar">
+                                        <div class="rounded-circle {{ $avClass }} fw-semibold d-inline-flex align-items-center justify-content-center dashboard-avatar border border-3 border-white shadow user-select-none">
                                             {{ strtoupper(substr($employee->first_name, 0, 1)) }}
                                         </div>
                                     @endif
+                                    </div>
 
-                                    <div class="flex-grow-1 min-w-0">
-                                        <div class="d-flex align-items-start justify-content-between gap-2">
-                                            <div class="min-w-0">
-                                                <div class="dashboard-birthday-name text-truncate">{{ $fullName }}</div>
-                                                <div class="dashboard-birthday-designation text-truncate">{{ $employee->designation_name }}</div>
+                                    <div class="flex-grow-1 min-w-0 vstack gap-2 gap-sm-3">
+                                        <div class="d-flex flex-wrap align-items-start justify-content-between column-gap-2 row-gap-2">
+                                            <div class="min-w-0 flex-grow-1 order-1">
+                                                <div class="dashboard-birthday-name fw-semibold fs-6 text-body text-truncate mb-0 lh-sm">{{ $fullName }}</div>
+                                                <div class="dashboard-birthday-designation small text-body-secondary text-truncate mb-0 mt-1 opacity-90">{{ $employee->designation_name }}</div>
                                             </div>
 
-                                            <div class="dashboard-birthday-badge" title="Wish them">
-                                                <span class="material-icons material-symbols-rounded" style="font-size: 16px;">cake</span>
-                                                Birthday
+                                            <div class="d-flex flex-wrap align-items-center gap-2 ms-sm-auto order-2">
+                                            <div class="dashboard-birthday-badge d-inline-flex align-items-center gap-1 text-uppercase small fw-semibold text-primary-emphasis bg-primary-subtle border border-primary-subtle rounded-pill px-2 py-1" style="font-size: 0.65rem; letter-spacing: 0.05em;" title="Wish them">
+                                                <span class="material-icons material-symbols-rounded flex-shrink-0" style="font-size: 14px;" aria-hidden="true">cake</span>
+                                                <span>Birthday</span>
                                             </div>
                                             @php $wishCount = $birthdayWishCounts[$employee->pk] ?? 0; @endphp
                                             @if($wishCount > 0)
-                                            <span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle" style="font-size:0.65rem;" title="{{ $wishCount }} wishes sent">
+                                            <span class="badge rounded-pill bg-success-subtle text-success-emphasis border border-success-subtle small fw-medium px-2 py-2" title="{{ $wishCount }} wishes sent">
                                                 🎁 {{ $wishCount }} {{ $wishCount === 1 ? 'wish' : 'wishes' }}
                                             </span>
                                             @endif
+                                            </div>
                                         </div>
 
-                                        <div class="dashboard-birthday-contact">
+                                        <div class="dashboard-birthday-contact vstack gap-2 small text-body-secondary pt-2 mt-1 border-top border-secondary border-opacity-10">
                                             @if($email !== '')
-                                                <span class="text-truncate">
-                                                    <span class="material-icons material-symbols-rounded align-middle">mail</span>
-                                                    {{ $email }}
+                                                <span class="d-flex align-items-center gap-2 min-w-0">
+                                                    <span class="material-icons material-symbols-rounded flex-shrink-0" aria-hidden="true">mail</span>
+                                                    <span class="text-truncate">{{ $email }}</span>
                                                 </span>
                                             @endif
                                             @if(!empty($employee->mobile))
-                                                <span class="text-truncate">
-                                                    <span class="material-icons material-symbols-rounded align-middle">call</span>
-                                                    {{ $employee->mobile }}
+                                                <span class="d-flex align-items-center gap-2 min-w-0">
+                                                    <span class="material-icons material-symbols-rounded flex-shrink-0" aria-hidden="true">call</span>
+                                                    <span class="text-truncate">{{ $employee->mobile }}</span>
                                                 </span>
                                             @endif
                                             @if(!empty($employee->office_extension_no))
-                                                <span class="text-truncate">
-                                                    <span class="material-icons material-symbols-rounded align-middle">local_phone</span>
-                                                    Ext {{ $employee->office_extension_no }}
+                                                <span class="d-flex align-items-center gap-2 min-w-0">
+                                                    <span class="material-icons material-symbols-rounded flex-shrink-0" aria-hidden="true">local_phone</span>
+                                                    <span class="text-truncate">Ext {{ $employee->office_extension_no }}</span>
                                                 </span>
                                             @endif
                                         </div>
 
-                                        <div class="d-flex gap-2 mt-2 flex-wrap">
+                                        <div class="d-flex gap-2 flex-wrap pt-2 mt-1 border-top border-secondary border-opacity-10">
                                             @if($email !== '')
                                             <a href="mailto:{{ $email }}?subject={{ $subject }}&body={{ $body }}"
-                                               class="btn btn-sm btn-outline-primary rounded-pill d-inline-flex align-items-center gap-1"
+                                               class="btn btn-sm btn-outline-primary rounded-pill d-inline-flex align-items-center gap-2 px-3 fw-semibold"
                                                title="Send Birthday Email">
-                                                <span class="material-icons material-symbols-rounded" style="font-size:14px;">mail</span>
-                                                <span style="font-size:0.75rem;">Email</span>
+                                                <span class="material-icons material-symbols-rounded" style="font-size:15px;" aria-hidden="true">mail</span>
+                                                <span class="small">Email</span>
                                             </a>
                                             @endif
                                             @if(!empty($employee->mobile))
@@ -1049,29 +1091,31 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                                             @endphp
                                             <a href="https://wa.me/{{ $whatsappPhone }}?text={{ $whatsappMsg }}"
                                                target="_blank"
-                                               class="btn btn-sm btn-outline-success rounded-pill d-inline-flex align-items-center gap-1"
+                                               rel="noopener noreferrer"
+                                               class="btn btn-sm btn-outline-success rounded-pill d-inline-flex align-items-center gap-2 px-3 fw-semibold"
                                                title="Send Birthday WhatsApp">
-                                                <span class="material-icons material-symbols-rounded" style="font-size:14px;">chat</span>
-                                                <span style="font-size:0.75rem;">WhatsApp</span>
+                                                <span class="material-icons material-symbols-rounded" style="font-size:15px;" aria-hidden="true">chat</span>
+                                                <span class="small">WhatsApp</span>
                                             </a>
                                             @endif
                                             <button type="button"
-                                                class="btn btn-sm btn-outline-secondary rounded-pill d-inline-flex align-items-center gap-1 btn-custom-wish"
+                                                class="btn btn-sm btn-outline-secondary rounded-pill d-inline-flex align-items-center gap-2 px-3 fw-semibold btn-custom-wish"
                                                 data-name="{{ $fullName }}"
                                                 data-email="{{ $email }}"
                                                 data-mobile="{{ $employee->mobile ?? '' }}"
                                                 data-pk="{{ $employee->pk }}"
                                                 title="Send Custom Message">
-                                                <span class="material-icons material-symbols-rounded" style="font-size:14px;">edit</span>
-                                                <span style="font-size:0.75rem;">Custom</span>
+                                                <span class="material-icons material-symbols-rounded" style="font-size:15px;" aria-hidden="true">edit</span>
+                                                <span class="small">Custom</span>
                                             </button>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
+                        </li>
                         @endforeach
-                    </div>
+                    </ul>
                     @endif
                 </div>
             </div>

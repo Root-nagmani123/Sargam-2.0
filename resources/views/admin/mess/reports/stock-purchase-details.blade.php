@@ -42,8 +42,8 @@
     <x-breadcrum title="Stock Purchase Details Report"></x-breadcrum>
     <!-- Filters Section (Top - same pattern as other report pages) -->
 
-    <div class="card mb-4 border-0 shadow-sm rounded-3 overflow-hidden no-print">
-        <div style="height:3px;background:linear-gradient(90deg,#0b4a7e 0%,#2980b9 50%,#0b4a7e 100%);" aria-hidden="true"></div>
+    <div class="card mb-4 border-0 shadow-sm rounded-3 stock-purchase-filters-card overflow-visible no-print">
+        <div class="rounded-top-3 overflow-hidden" style="height:3px;background:linear-gradient(90deg,#0b4a7e 0%,#2980b9 50%,#0b4a7e 100%);" aria-hidden="true"></div>
         <div class="card-header bg-body-tertiary border-0 py-3 px-3 px-lg-4">
             <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2">
                 <div class="d-flex align-items-start gap-3">
@@ -278,6 +278,7 @@
                         placeholder: placeholder,
                         maxItems: null,
                         maxOptions: 500,
+                        dropdownParent: 'body',
                         plugins: ['remove_button', 'dropdown_input'],
                         sortField: {
                             field: 'text',
@@ -559,6 +560,21 @@ function printStockPurchaseTable() {
 </script>
 
 <style>
+/* Tom Select: render dropdown on body + stack above sticky table / cards */
+.stock-purchase-report .ts-dropdown,
+body > .ts-dropdown {
+    z-index: 2000 !important;
+}
+.stock-purchase-report .ts-wrapper.multi .ts-control,
+.stock-purchase-report .ts-wrapper {
+    position: relative;
+    z-index: 1;
+}
+.stock-purchase-filters-card,
+.stock-purchase-filters-card .card-body {
+    overflow: visible !important;
+}
+
 /* Auto height and width for report container and content */
 .stock-purchase-report {
     width: 100%;

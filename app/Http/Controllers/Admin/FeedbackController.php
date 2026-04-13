@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Admin;
 
 use App\DataTables\FC\PendingFeedbackDataTable;
 use App\DataTables\FC\PendingFeedbackSummaryDataTable;
+use App\DataTables\FC\SessionTimetableReportDataTable;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Models\CourseMaster;
 use App\Models\FacultyMaster;
+use App\Models\VenueMaster;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use Maatwebsite\Excel\Facades\Excel;
@@ -26,6 +28,7 @@ use App\Exports\PendingFeedbackExport;
 use App\Exports\FacultyFeedback_AvgExport;
 use App\Exports\PendingFeedbackSummaryExport;
 use App\Exports\FeedbackDatabaseExport;
+use App\Exports\SessionTimetableReportExport;
 
 
 
@@ -129,6 +132,427 @@ class FeedbackController extends Controller
         }
     }
 
+    /**
+     * Timetable session listing (faculty JSON, groups, venue) — DataTables server-side.
+     */
+    public function sessionTimetableReport(Request $request, SessionTimetableReportDataTable $dataTable)
+    {
+        try {
+            $courseType = $request->get('course_type', 'current');
+            if (! in_array($courseType, ['current', 'archived'], true)) {
+                $courseType = 'current';
+            }
+
+            $courses = $this->coursesForFeedbackDatabase($courseType);
+
+            $faculties = FacultyMaster::where('active_inactive', 1)
+                ->select('pk', 'full_name')
+                ->orderBy('full_name')
+                ->get();
+
+            $venues = VenueMaster::where('active_inactive', 1)
+                ->select('venue_id', 'venue_name')
+                ->orderBy('venue_name')
+                ->get();
+
+            $defaultCourseId = $courses->isNotEmpty() ? (int) $courses->first()->pk : null;
+
+            return $dataTable->render('admin.feedback.session_timetable_report', compact(
+                'courses',
+                'faculties',
+                'venues',
+                'courseType',
+                'defaultCourseId'
+            ));
+        } catch (\Exception $e) {
+            \Log::error('sessionTimetableReport: ' . $e->getMessage());
+
+            return $dataTable->render('admin.feedback.session_timetable_report', [
+                'courses' => collect(),
+                'faculties' => collect(),
+                'venues' => collect(),
+                'courseType' => 'current',
+                'defaultCourseId' => null,
+            ]);
+        }
+    }
+
+    public function sessionTimetableReportDatatable(SessionTimetableReportDataTable $dataTable)
+    {
+        try {
+            return $dataTable->ajax();
+        } catch (\Exception $e) {
+            \Log::error('sessionTimetableReportDatatable: ' . $e->getMessage());
+
+            return response()->json([
+                'draw' => (int) request()->input('draw', 0),
+                'recordsTotal' => 0,
+                'recordsFiltered' => 0,
+                'data' => [],
+                'error' => config('app.debug') ? $e->getMessage() : 'Could not load data.',
+            ], 500);
+        }
+    }
+
+    /**
+     * Base query for session timetable report (DataTables AJAX sends filter_* params).
+     */
+    public function makeSessionTimetableReportQueryBuilder(Request $request): \Illuminate\Database\Query\Builder
+    {
+        $courseType = $request->input('filter_course_type', $request->input('course_type', 'current'));
+        if (! in_array($courseType, ['current', 'archived'], true)) {
+            $courseType = 'current';
+        }
+
+        $filters = [
+            'course_type' => $courseType,
+            'course_id' => $request->filled('filter_course_id') ? (int) $request->input('filter_course_id') : 0,
+        ];
+
+        if ($request->filled('filter_faculty_id')) {
+            $filters['faculty_id'] = (int) $request->input('filter_faculty_id');
+        }
+
+        $ft = $request->input('filter_faculty_type');
+        if ($ft !== null && $ft !== '' && in_array((string) $ft, ['1', '2', '3'], true)) {
+            $filters['faculty_type'] = (string) $ft;
+        }
+
+        if ($request->filled('filter_venue_id')) {
+            $filters['venue_id'] = (string) $request->input('filter_venue_id');
+        }
+
+        $topic = $request->input('filter_subject_topic');
+        if (is_string($topic) && trim($topic) !== '') {
+            $filters['subject_topic'] = Str::limit(trim($topic), 500, '');
+        }
+
+        $mod = $request->input('filter_subject_module');
+        if (is_string($mod) && trim($mod) !== '') {
+            $filters['subject_module'] = Str::limit(trim($mod), 500, '');
+        }
+
+        if ($request->filled('filter_date_from')) {
+            $filters['date_from'] = $request->input('filter_date_from');
+        }
+
+        if ($request->filled('filter_date_to')) {
+            $filters['date_to'] = $request->input('filter_date_to');
+        }
+
+        $accessibleCourseIds = $this->coursesForFeedbackDatabase($courseType)
+            ->pluck('pk')
+            ->map(fn ($pk) => (int) $pk)
+            ->filter()
+            ->values()
+            ->all();
+
+        if ($accessibleCourseIds === []) {
+            return DB::table('timetable as t')->whereRaw('1 = 0');
+        }
+
+        return $this->buildSessionTimetableReportQuery($filters, $accessibleCourseIds);
+    }
+
+    /**
+     * Human-readable filter lines for print / PDF / Excel (LBSNAA reports).
+     *
+     * @return array{lines: array<int, string>, summary: string}
+     */
+    private function sessionTimetableExportFilterDescriptions(Request $request): array
+    {
+        $lines = [];
+        $ct = $request->input('filter_course_type', $request->input('course_type', 'current'));
+        if (! in_array($ct, ['current', 'archived'], true)) {
+            $ct = 'current';
+        }
+        $lines[] = $ct === 'archived'
+            ? 'Program scope: Archived courses'
+            : 'Program scope: Active (current) courses';
+
+        if ($request->filled('filter_course_id')) {
+            $name = DB::table('course_master')->where('pk', (int) $request->input('filter_course_id'))->value('course_name');
+            $lines[] = 'Course: '.($name ?? '—');
+        } else {
+            $lines[] = 'Course: All programs in list';
+        }
+
+        if ($request->filled('filter_faculty_id')) {
+            $name = DB::table('faculty_master')->where('pk', (int) $request->input('filter_faculty_id'))->value('full_name');
+            $lines[] = 'Faculty: '.($name ?? '—');
+        }
+
+        if ($request->filled('filter_faculty_type')) {
+            $map = ['1' => 'Internal', '2' => 'Guest', '3' => 'Research'];
+            $ft = (string) $request->input('filter_faculty_type');
+            $lines[] = 'Faculty type: '.($map[$ft] ?? $ft);
+        }
+
+        if ($request->filled('filter_venue_id')) {
+            $name = DB::table('venue_master')->where('venue_id', $request->input('filter_venue_id'))->value('venue_name');
+            $lines[] = 'Venue: '.($name ?? $request->input('filter_venue_id'));
+        }
+
+        if ($request->filled('filter_date_from')) {
+            $lines[] = 'Date from: '.$request->input('filter_date_from');
+        }
+        if ($request->filled('filter_date_to')) {
+            $lines[] = 'Date to: '.$request->input('filter_date_to');
+        }
+        if ($request->filled('filter_subject_topic')) {
+            $lines[] = 'Topic contains: '.Str::limit((string) $request->input('filter_subject_topic'), 100);
+        }
+        if ($request->filled('filter_subject_module')) {
+            $lines[] = 'Module contains: '.Str::limit((string) $request->input('filter_subject_module'), 100);
+        }
+
+        return [
+            'lines' => $lines,
+            'summary' => implode('  |  ', $lines),
+        ];
+    }
+
+    /**
+     * @return array{rows: array<int, array<string, mixed>>, filter_lines: array<int, string>, filter_summary: string, record_count: int, export_date: string}
+     */
+    private function buildSessionTimetableExportContext(Request $request): array
+    {
+        $request->validate([
+            'filter_course_type' => 'nullable|string|in:current,archived',
+            'filter_course_id' => 'nullable|integer',
+            'filter_faculty_id' => 'nullable|integer',
+            'filter_faculty_type' => 'nullable|string|in:1,2,3',
+            'filter_venue_id' => 'nullable|string|max:64',
+            'filter_subject_topic' => 'nullable|string|max:500',
+            'filter_subject_module' => 'nullable|string|max:500',
+            'filter_date_from' => 'nullable|date',
+            'filter_date_to' => 'nullable|date',
+        ]);
+
+        $filterMeta = $this->sessionTimetableExportFilterDescriptions($request);
+        $data = $this->makeSessionTimetableReportQueryBuilder($request)
+            ->orderByDesc('t.START_DATE')
+            ->get();
+
+        $rows = [];
+        foreach ($data as $i => $item) {
+            $rows[] = [
+                's_no' => $i + 1,
+                'start_date' => ! empty($item->start_date) ? Carbon::parse($item->start_date)->format('d-m-Y H:i') : '—',
+                'end_date' => ! empty($item->end_date) ? Carbon::parse($item->end_date)->format('d-m-Y H:i') : '—',
+                'subject_topic' => $item->subject_topic ?? '—',
+                'faculty_name' => $item->faculty_name ?? '—',
+                'faculty_code' => $item->faculty_code ?? '—',
+                'faculty_type' => $item->faculty_type ?? '—',
+                'course_name' => $item->course_name ?? '—',
+                'course_short' => $item->couse_short_name ?? '—',
+                'prog_type' => $item->course_group_type_master ?? '—',
+                'groups' => $item->group_name ?? '—',
+                'class_session' => $item->class_session ?? '—',
+                'venue' => $item->venue_name ?? '—',
+                'subject' => $item->subject_master_name ?? '—',
+                'module' => $item->subject_module_name ?? '—',
+            ];
+        }
+
+        return [
+            'rows' => $rows,
+            'filter_lines' => $filterMeta['lines'],
+            'filter_summary' => $filterMeta['summary'],
+            'record_count' => count($rows),
+            'export_date' => now()->format('d-m-Y H:i'),
+        ];
+    }
+
+    public function printSessionTimetableReport(Request $request)
+    {
+        try {
+            $ctx = $this->buildSessionTimetableExportContext($request);
+
+            return view('admin.feedback.session_timetable_report_export', array_merge($ctx, ['mode' => 'print']));
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->route('admin.feedback.session_timetable_report')->with('error', 'Invalid export parameters.');
+        } catch (\Exception $e) {
+            \Log::error('printSessionTimetableReport: '.$e->getMessage());
+
+            return redirect()->route('admin.feedback.session_timetable_report')->with('error', 'Could not open print view.');
+        }
+    }
+
+    public function exportSessionTimetableReportPdf(Request $request)
+    {
+        try {
+            $ctx = $this->buildSessionTimetableExportContext($request);
+
+            $pdf = Pdf::loadView('admin.feedback.session_timetable_report_export', array_merge($ctx, ['mode' => 'pdf']))
+                ->setPaper('A4', 'landscape')
+                ->setOptions([
+                    'defaultFont' => 'sans-serif',
+                    'isHtml5ParserEnabled' => true,
+                    'isRemoteEnabled' => true,
+                    'dpi' => 96,
+                    'margin_top' => 6,
+                    'margin_right' => 6,
+                    'margin_bottom' => 6,
+                    'margin_left' => 6,
+                ]);
+
+            return $pdf->download('timetable_sessions_'.date('Y-m-d_His').'.pdf');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->route('admin.feedback.session_timetable_report')->with('error', 'Invalid export parameters.');
+        } catch (\Exception $e) {
+            \Log::error('exportSessionTimetableReportPdf: '.$e->getMessage());
+
+            return redirect()->route('admin.feedback.session_timetable_report')->with('error', 'PDF export failed.');
+        }
+    }
+
+    public function exportSessionTimetableReportExcel(Request $request)
+    {
+        try {
+            $ctx = $this->buildSessionTimetableExportContext($request);
+
+            return Excel::download(
+                new SessionTimetableReportExport(
+                    $ctx['rows'],
+                    $ctx['filter_summary'],
+                    $ctx['export_date'],
+                    $ctx['record_count']
+                ),
+                'timetable_sessions_'.now()->format('Y-m-d_H-i').'.xlsx'
+            );
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->route('admin.feedback.session_timetable_report')->with('error', 'Invalid export parameters.');
+        } catch (\Exception $e) {
+            \Log::error('exportSessionTimetableReportExcel: '.$e->getMessage());
+
+            return redirect()->route('admin.feedback.session_timetable_report')->with('error', 'Excel export failed.');
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters
+     * @param  array<int, int>  $accessibleCourseIds
+     */
+    private function buildSessionTimetableReportQuery(array $filters, array $accessibleCourseIds)
+    {
+        $courseId = isset($filters['course_id']) ? (int) $filters['course_id'] : 0;
+
+        // Faculty / group expansion: JSON arrays (new) or plain numeric pk (legacy).
+        // MariaDB does not support CAST(x AS JSON); use CAST(pk AS CHAR) as JSON_CONTAINS needle (numeric JSON).
+        $facultyMatchSql = '(JSON_VALID(t.faculty_master) AND JSON_CONTAINS(t.faculty_master, CAST(fm.pk AS CHAR), \'$\')) OR (NOT JSON_VALID(t.faculty_master) AND TRIM(COALESCE(t.faculty_master, \'\')) <> \'\' AND CAST(t.faculty_master AS UNSIGNED) = fm.pk)';
+        $groupMatchSql = '(JSON_VALID(t.group_name) AND JSON_CONTAINS(t.group_name, CAST(gcm.pk AS CHAR), \'$\')) OR (NOT JSON_VALID(t.group_name) AND TRIM(COALESCE(t.group_name, \'\')) <> \'\' AND CAST(t.group_name AS UNSIGNED) = gcm.pk)';
+
+        $query = DB::table('timetable as t')
+            ->leftJoin('course_master as c', 't.course_master_pk', '=', 'c.pk')
+            ->leftJoin('course_group_type_master as cgtm', 't.course_group_type_master', '=', 'cgtm.pk')
+            ->leftJoin('venue_master as vm', 't.venue_id', '=', 'vm.venue_id')
+            ->leftJoin('subject_master as sm', 't.subject_master_pk', '=', 'sm.pk')
+            ->leftJoin('subject_module_master as smm', 't.subject_module_master_pk', '=', 'smm.pk')
+            ->select([
+                't.pk',
+                DB::raw('t.START_DATE AS start_date'),
+                DB::raw('t.END_DATE AS end_date'),
+                't.subject_topic',
+                DB::raw('COALESCE(
+                    (SELECT GROUP_CONCAT(fm.full_name ORDER BY fm.full_name SEPARATOR \', \')
+                     FROM faculty_master fm
+                     WHERE '.$facultyMatchSql.'),
+                    \'No Faculty Assigned\'
+                ) AS faculty_name'),
+                DB::raw('COALESCE(
+                    (SELECT GROUP_CONCAT(fm.faculty_code ORDER BY fm.faculty_code SEPARATOR \', \')
+                     FROM faculty_master fm
+                     WHERE '.$facultyMatchSql.'),
+                    \'No Faculty Code\'
+                ) AS faculty_code'),
+                DB::raw('COALESCE(
+                    (SELECT GROUP_CONCAT(
+                        CASE fm.faculty_type
+                            WHEN 1 THEN \'Internal\'
+                            WHEN 2 THEN \'Guest\'
+                            WHEN 3 THEN \'Research\'
+                            ELSE \'Unknown\'
+                        END ORDER BY fm.pk SEPARATOR \', \')
+                     FROM faculty_master fm
+                     WHERE '.$facultyMatchSql.'),
+                    \'No Faculty Type\'
+                ) AS faculty_type'),
+                'c.course_name',
+                'c.couse_short_name',
+                'cgtm.type_name as course_group_type_master',
+                DB::raw('COALESCE(
+                    (SELECT GROUP_CONCAT(gcm.group_name ORDER BY gcm.group_name SEPARATOR \', \')
+                     FROM group_type_master_course_master_map gcm
+                     WHERE '.$groupMatchSql.'),
+                    \'No Group Assigned\'
+                ) AS group_name'),
+                't.class_session',
+                'vm.venue_name as venue_name',
+                'sm.subject_name as subject_master_name',
+                'smm.module_name as subject_module_name',
+            ]);
+
+        if ($courseId > 0) {
+            if (! in_array($courseId, $accessibleCourseIds, true)) {
+                $query->whereRaw('1 = 0');
+            } else {
+                $query->where('t.course_master_pk', $courseId);
+            }
+        } else {
+            $query->whereIn('t.course_master_pk', $accessibleCourseIds);
+        }
+
+        if (! empty($filters['faculty_id'])) {
+            $fid = (int) $filters['faculty_id'];
+            $query->whereRaw(
+                '((JSON_VALID(t.faculty_master) AND JSON_CONTAINS(t.faculty_master, ?, \'$\'))
+                OR (NOT JSON_VALID(t.faculty_master) AND TRIM(COALESCE(t.faculty_master, \'\')) <> \'\' AND CAST(t.faculty_master AS UNSIGNED) = ?))',
+                [json_encode((int) $fid), $fid]
+            );
+        }
+
+        if (! empty($filters['faculty_type'])) {
+            $ftype = (int) $filters['faculty_type'];
+            $query->whereRaw(
+                'EXISTS (
+                    SELECT 1 FROM faculty_master fmft
+                    WHERE fmft.faculty_type = ?
+                    AND (
+                        (JSON_VALID(t.faculty_master) AND JSON_CONTAINS(t.faculty_master, CAST(fmft.pk AS CHAR), \'$\'))
+                        OR (NOT JSON_VALID(t.faculty_master) AND TRIM(COALESCE(t.faculty_master, \'\')) <> \'\' AND CAST(t.faculty_master AS UNSIGNED) = fmft.pk)
+                    )
+                )',
+                [$ftype]
+            );
+        }
+
+        if (isset($filters['venue_id']) && $filters['venue_id'] !== '' && $filters['venue_id'] !== null) {
+            $query->where('t.venue_id', $filters['venue_id']);
+        }
+
+        $topic = isset($filters['subject_topic']) ? trim((string) $filters['subject_topic']) : '';
+        if ($topic !== '') {
+            $like = '%' . addcslashes($topic, '%_\\') . '%';
+            $query->where('t.subject_topic', 'like', $like);
+        }
+
+        $mod = isset($filters['subject_module']) ? trim((string) $filters['subject_module']) : '';
+        if ($mod !== '') {
+            $likeMod = '%' . addcslashes($mod, '%_\\') . '%';
+            $query->where('smm.module_name', 'like', $likeMod);
+        }
+
+        if (! empty($filters['date_from'])) {
+            $query->whereDate('t.START_DATE', '>=', $filters['date_from']);
+        }
+
+        if (! empty($filters['date_to'])) {
+            $query->whereDate('t.START_DATE', '<=', $filters['date_to']);
+        }
+
+        return $query;
+    }
 
     private function baseDatabaseQuery(Request $request)
     {
