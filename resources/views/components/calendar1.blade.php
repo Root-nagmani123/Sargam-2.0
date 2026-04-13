@@ -21,7 +21,7 @@
 
 /* Calendar styling with improved accessibility */
 .fc {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: 'Noto Sans', 'Noto Sans Devanagari', system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
 .fc .fc-toolbar {

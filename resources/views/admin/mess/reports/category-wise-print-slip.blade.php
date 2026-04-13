@@ -221,14 +221,13 @@
         width: 100%;
     }
     /* Split header/body tables: shared column widths (no sticky bugs from border-collapse) */
-    .print-slip-table.cw-slip-col-sync col.cw-slip-col-slip { width: 9%; }
-    .print-slip-table.cw-slip-col-sync col.cw-slip-col-remark { width: 13%; }
-    .print-slip-table.cw-slip-col-sync col.cw-slip-col-item { width: 22%; }
-    .print-slip-table.cw-slip-col-sync col.cw-slip-col-date { width: 11%; }
-    .print-slip-table.cw-slip-col-sync col.cw-slip-col-qty { width: 9%; }
-    .print-slip-table.cw-slip-col-sync col.cw-slip-col-price { width: 9%; }
-    .print-slip-table.cw-slip-col-sync col.cw-slip-col-amount { width: 10%; }
-    .print-slip-table.cw-slip-col-sync col.cw-slip-col-remark2 { width: 14%; }
+    .print-slip-table.cw-slip-col-sync col.cw-slip-col-slip { width: 10%; }
+    .print-slip-table.cw-slip-col-sync col.cw-slip-col-item { width: 25%; }
+    .print-slip-table.cw-slip-col-sync col.cw-slip-col-date { width: 13%; }
+    .print-slip-table.cw-slip-col-sync col.cw-slip-col-qty { width: 10%; }
+    .print-slip-table.cw-slip-col-sync col.cw-slip-col-price { width: 10%; }
+    .print-slip-table.cw-slip-col-sync col.cw-slip-col-amount { width: 12%; }
+    .print-slip-table.cw-slip-col-sync col.cw-slip-col-remark2 { width: 28%; }
 
     /* Screen: frozen header = separate head table; body scrolls in sibling pane */
     @media screen {

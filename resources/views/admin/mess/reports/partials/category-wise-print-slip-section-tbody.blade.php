@@ -97,12 +97,12 @@
 @endforeach
 <tr class="total-row">
     @if($dompdfSafeTables)
-        <td></td><td></td><td></td><td></td><td></td>
+        <td></td><td></td><td></td><td></td>
         <td class="text-end"><strong>TOTAL</strong></td>
         <td class="text-end"><strong>{{ number_format($sectionTotal, 2) }}</strong></td>
         <td></td>
     @else
-        <td colspan="5"></td>
+        <td colspan="4"></td>
         <td class="text-end"><strong>TOTAL</strong></td>
         <td class="text-end"><strong>{{ number_format($sectionTotal, 2) }}</strong></td>
         <td></td>

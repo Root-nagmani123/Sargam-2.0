@@ -510,7 +510,7 @@ function printStockPurchaseTable() {
 '        .data-table .spr-item-row:nth-child(even) td { background: #f9fafb; }\n' +
 '\n' +
 '        /* ── Print-specific ── */\n' +
-'        @page { size: A4 landscape; margin: 8mm; }\n' +
+'        @page { size: A4 portrait; margin: 8mm; }\n' +
 '        @media print {\n' +
 '            body { padding: 0; }\n' +
 '            thead { display: table-header-group; }\n' +

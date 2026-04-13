@@ -73,15 +73,6 @@ function mess_category_wise_client_type_line_base(
     $cat = $cat === '' ? null : $cat;
 
     if ($slug === 'employee') {
-        $coreBuyer = mess_buyer_core_name_for_client_type($buyerName);
-        if ($coreBuyer !== '') {
-            $parts = [$coreBuyer];
-            if ($cat !== null && strcasecmp($cat, $coreBuyer) !== 0) {
-                $parts[] = $cat;
-            }
-
-            return $clientTypeLabel . ' (' . implode(', ', $parts) . ')';
-        }
         if ($cat !== null) {
             return $clientTypeLabel . ' (' . $cat . ')';
         }

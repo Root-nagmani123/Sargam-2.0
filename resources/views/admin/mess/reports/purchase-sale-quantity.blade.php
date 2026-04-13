@@ -74,7 +74,7 @@
         'lbsnaaLogoSvgInline' => $messLbsnaaLogoSvgInline,
     ];
 @endphp
-<div class="container-fluid purchase-sale-quantity-report py-3">
+<div class="container-fluid purchase-sale-quantity-report py-3 py-md-4">
     <script>
         window.__purchaseSalePrintConfig = @json($purchaseSalePrintConfig);
         window.__purchaseSalePrintImages = @json($purchaseSalePrintImages);
@@ -82,29 +82,37 @@
     <x-breadcrum title="Item Report"></x-breadcrum>
 
     {{-- Filter card --}}
-    <div class="card mb-4 border-0 rounded-3 shadow-sm no-print">
-        <div class="card-header bg-white border-0 py-3">
+    <div class="card mb-4 border-0 rounded-4 shadow-sm no-print psq-filter-card">
+        <div class="card-header bg-white border-0 py-3 px-4 psq-filter-header">
             <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
                 <div class="d-flex align-items-center gap-2">
-                    <span class="material-symbols-rounded text-primary fs-4">filter_list</span>
-                    <h5 class="mb-0 fw-semibold text-dark">Filter Item Report</h5>
+                    <div class="psq-icon-circle bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width:38px;height:38px;">
+                        <span class="material-symbols-rounded text-primary" style="font-size:1.25rem;">filter_list</span>
+                    </div>
+                    <div>
+                        <h5 class="mb-0 fw-semibold text-dark lh-sm">Filter Item Report</h5>
+                        <span class="text-body-tertiary small">Refine results by date range, view type, category, items &amp; store</span>
+                    </div>
                 </div>
-                <span class="text-muted small">Refine results by date range, view type, category, items &amp; store</span>
+                <span class="badge bg-primary bg-opacity-10 text-primary fw-medium px-3 py-2 rounded-1 d-none d-md-inline-flex align-items-center gap-1">
+                    <span class="material-symbols-rounded" style="font-size:0.875rem;">tune</span>
+                    Smart Filters
+                </span>
             </div>
         </div>
-        <div class="card-body pt-0 pb-3">
+        <div class="card-body pt-2 pb-3 px-4">
             <form id="purchaseSaleQuantityFilterForm" method="GET" action="{{ route('admin.mess.reports.purchase-sale-quantity') }}">
-                <div class="row g-3 g-md-4">
+                <div class="row g-3">
                     <div class="col-12 col-sm-6 col-md-6 col-lg-2">
-                        <label class="form-label">From Date</label>
-                        <input type="date" name="from_date" class="form-select" value="{{ $fromDate }}">
+                        <label class="form-label fw-medium small text-uppercase text-body-secondary mb-1">From Date</label>
+                        <input type="date" name="from_date" class="form-control" value="{{ $fromDate }}">
                     </div>
                     <div class="col-12 col-sm-6 col-md-6 col-lg-2">
-                        <label class="form-label">To Date</label>
-                        <input type="date" name="to_date" class="form-select" value="{{ $toDate }}">
+                        <label class="form-label fw-medium small text-uppercase text-body-secondary mb-1">To Date</label>
+                        <input type="date" name="to_date" class="form-control" value="{{ $toDate }}">
                     </div>
                     <div class="col-12 col-sm-6 col-md-4 col-lg-2">
-                        <label class="form-label" for="viewType">View</label>
+                        <label class="form-label fw-medium small text-uppercase text-body-secondary mb-1" for="viewType">View</label>
                         <select name="view_type[]" id="viewType" class="form-select purchase-sale-view-tomselect" multiple data-placeholder="Select view type(s)">
                             <option value="item_wise" @selected(in_array('item_wise', $viewTypes, true))>Item-wise</option>
                             <option value="subcategory_wise" @selected(in_array('subcategory_wise', $viewTypes, true))>Subcategory-wise</option>
@@ -112,7 +120,7 @@
                         </select>
                     </div>
                     <div class="col-12 col-sm-6 col-md-4 col-lg-3{{ in_array('category_wise', $viewTypes, true) ? '' : ' d-none' }}" id="categoryIdWrap">
-                        <label class="form-label" for="categoryId">Category</label>
+                        <label class="form-label fw-medium small text-uppercase text-body-secondary mb-1" for="categoryId">Category</label>
                         <select name="category_id" id="categoryId" class="form-select purchase-sale-category-tomselect" data-placeholder="All categories">
                             <option value="">All Categories</option>
                             @foreach($categories as $cat)
@@ -121,7 +129,7 @@
                         </select>
                     </div>
                     <div class="col-12 col-sm-6 col-md-4 col-lg-3">
-                        <label for="purchase_sale_item_id" class="form-label">Item</label>
+                        <label for="purchase_sale_item_id" class="form-label fw-medium small text-uppercase text-body-secondary mb-1">Item</label>
                         <select name="item_id[]"
                                 id="purchase_sale_item_id"
                                 class="form-select purchase-sale-item-multiselect"
@@ -139,9 +147,9 @@
                         </select>
                     </div>
                 </div>
-                <div class="row g-3 g-md-4">
+                <div class="row g-3 mt-1">
                     <div class="col-12 col-sm-6 col-md-4 col-lg-2">
-                        <label class="form-label" for="purchase_sale_per_page">Rows per page</label>
+                        <label class="form-label fw-medium small text-uppercase text-body-secondary mb-1" for="purchase_sale_per_page">Rows per page</label>
                         <select name="per_page" id="purchase_sale_per_page" class="form-select">
                             @foreach([10, 25, 50, 100] as $n)
                                 <option value="{{ $n }}" @selected((int) $perPage === (int) $n)>{{ $n }}</option>
@@ -149,9 +157,9 @@
                         </select>
                     </div>
                     <div class="col-12 col-md-6 col-lg-4">
-                        <label for="purchase_sale_store_id" class="form-label">Store</label>
+                        <label for="purchase_sale_store_id" class="form-label fw-medium small text-uppercase text-body-secondary mb-1">Store</label>
                         <div class="input-group">
-                            <span class="input-group-text bg-body-secondary" id="store_id_addon">
+                            <span class="input-group-text bg-body-secondary border-end-0" id="store_id_addon">
                                 <span class="material-symbols-rounded" style="font-size: 1.1rem;" aria-hidden="true">storefront</span>
                             </span>
                             <select name="store_id[]"
@@ -171,28 +179,28 @@
                 </div>
             </form>
         </div>
-        <div class="card-footer bg-body-secondary bg-opacity-10 border-0 py-3 d-flex flex-wrap gap-2 align-items-center justify-content-between">
+        <div class="card-footer bg-body-tertiary bg-opacity-50 border-top py-3 px-4 d-flex flex-wrap gap-2 align-items-center justify-content-between">
             <div class="d-flex flex-wrap gap-2">
                 <button type="submit" form="purchaseSaleQuantityFilterForm"
-                        class="btn btn-primary d-inline-flex align-items-center gap-1">
+                        class="btn btn-primary rounded-1 px-4 d-inline-flex align-items-center gap-1 shadow-sm">
                     <span class="material-symbols-rounded" style="font-size: 1.1rem;">filter_list</span>
                     <span>Apply Filters</span>
                 </button>
-                <a href="{{ route('admin.mess.reports.purchase-sale-quantity') }}" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1">
+                <a href="{{ route('admin.mess.reports.purchase-sale-quantity') }}" class="btn btn-outline-secondary rounded-1 px-3 d-inline-flex align-items-center gap-1">
                     <span class="material-symbols-rounded" style="font-size: 1.1rem;">refresh</span>
                     <span>Reset</span>
                 </a>
             </div>
             <div class="d-flex flex-wrap gap-2">
-                <button type="button" class="btn btn-outline-primary d-inline-flex align-items-center gap-1" onclick="printPurchaseSaleQuantity()" title="Print or Save as PDF">
+                <button type="button" class="btn btn-outline-primary rounded-1 px-3 d-inline-flex align-items-center gap-1" onclick="printPurchaseSaleQuantity()" title="Print or Save as PDF">
                     <span class="material-symbols-rounded" style="font-size: 1.1rem;">print</span>
                     <span>Print</span>
                 </button>
-                <a href="{{ route('admin.mess.reports.purchase-sale-quantity.pdf', request()->query()) }}" target="_blank" rel="noopener" class="btn btn-outline-danger d-inline-flex align-items-center gap-1" title="Download PDF">
+                <a href="{{ route('admin.mess.reports.purchase-sale-quantity.pdf', request()->query()) }}" target="_blank" rel="noopener" class="btn btn-outline-danger rounded-1 px-3 d-inline-flex align-items-center gap-1" title="Download PDF">
                     <span class="material-symbols-rounded" style="font-size: 1.1rem;">picture_as_pdf</span>
                     <span>PDF</span>
                 </a>
-                <a href="{{ route('admin.mess.reports.purchase-sale-quantity.excel', request()->query()) }}" class="btn btn-success d-inline-flex align-items-center gap-1" title="Export to Excel">
+                <a href="{{ route('admin.mess.reports.purchase-sale-quantity.excel', request()->query()) }}" class="btn btn-success rounded-1 px-3 d-inline-flex align-items-center gap-1 shadow-sm" title="Export to Excel">
                     <span class="material-symbols-rounded" style="font-size: 1.1rem;">table_view</span>
                     <span>Export Excel</span>
                 </a>
@@ -201,21 +209,27 @@
     </div>
 
     {{-- Report card --}}
-    <div class="card border-0 rounded-3 shadow-sm">
-        <div class="card-header bg-primary bg-opacity-10 border-0 py-3 text-center report-header">
-            <h4 class="fw-bold mb-1 text-primary">Item Report</h4>
-            <p class="mb-0 text-body-secondary small">
+    <div class="card border-0 rounded-4 shadow-sm overflow-hidden">
+        <div class="card-header border-0 py-4 text-center report-header psq-report-header">
+            <h4 class="fw-bold mb-2 text-white lh-sm">Item Report</h4>
+            <span class="badge bg-white bg-opacity-25 rounded-1 px-3 py-2 mb-2 d-inline-flex align-items-center gap-1 text-white">
+                <span class="material-symbols-rounded" style="font-size:0.9rem;">date_range</span>
                 From {{ $purchaseSalePeriodFromLabel }} to {{ $purchaseSalePeriodToLabel }}
-            </p>
-            <p class="mb-0 text-body-secondary small">
-                View: {{ $messViewLabel }}
-            </p>
-            <p class="mb-0 text-body-secondary small">
-                Store: {{ ($selectedStoreName !== null && $selectedStoreName !== '') ? $selectedStoreName : 'All Stores' }}
-            </p>
-            <p class="mb-0 text-body-secondary small">
-                Items: {{ ($selectedItemNamesLabel !== null && $selectedItemNamesLabel !== '') ? $selectedItemNamesLabel : 'All Items' }}
-            </p>
+            </span>
+            <div class="d-flex flex-wrap justify-content-center gap-2 mt-2">
+                <span class="badge bg-white bg-opacity-15 rounded-1 px-2 py-1 small d-inline-flex align-items-center gap-1 text-primary">
+                    <span class="material-symbols-rounded" style="font-size:0.8rem;">visibility</span>
+                    {{ $messViewLabel }}
+                </span>
+                <span class="badge bg-white bg-opacity-15 rounded-1 px-2 py-1 small d-inline-flex align-items-center gap-1 text-primary">
+                    <span class="material-symbols-rounded" style="font-size:0.8rem;">storefront</span>
+                    {{ ($selectedStoreName !== null && $selectedStoreName !== '') ? $selectedStoreName : 'All Stores' }}
+                </span>
+                <span class="badge bg-white bg-opacity-15 rounded-1 px-2 py-1 small d-inline-flex align-items-center gap-1 text-primary">
+                    <span class="material-symbols-rounded" style="font-size:0.8rem;">inventory_2</span>
+                    {{ ($selectedItemNamesLabel !== null && $selectedItemNamesLabel !== '') ? $selectedItemNamesLabel : 'All Items' }}
+                </span>
+            </div>
         </div>
         <div id="purchaseSaleReportCardBody" class="card-body p-0 psq-scroll-wrapper" data-view-types='@json($viewTypes)'>
             @php $viewTypeSections = $viewTypeSections ?? []; $multiView = count($viewTypeSections) > 1; @endphp
@@ -234,22 +248,22 @@
                             <table class="table align-middle mb-0 psq-table">
                                 <thead>
                                     <tr>
-                                        <th class="border-0 bg-body-secondary py-3">S. No.</th>
-                                        <th class="border-0 bg-body-secondary py-3">Item Name</th>
-                                        <th class="border-0 bg-body-secondary py-3">Unit</th>
-                                        <th class="text-end border-0 bg-body-secondary py-3">Total Purchase Qty</th>
-                                        <th class="text-end border-0 bg-body-secondary py-3">Avg Purchase Price</th>
-                                        <th class="text-end border-0 bg-body-secondary py-3">Total Sale Qty</th>
-                                        <th class="text-end border-0 bg-body-secondary py-3">Avg Sale Price</th>
+                                        <th class="border-0 py-3 text-center" style="width:60px;">S. No.</th>
+                                        <th class="border-0 py-3">Item Name</th>
+                                        <th class="border-0 py-3" style="width:80px;">Unit</th>
+                                        <th class="text-end border-0 py-3">Total Purchase Qty</th>
+                                        <th class="text-end border-0 py-3">Avg Purchase Price</th>
+                                        <th class="text-end border-0 py-3">Total Sale Qty</th>
+                                        <th class="text-end border-0 py-3">Avg Sale Price</th>
                                     </tr>
                                 </thead>
-                                <tbody class="table-group-divider">
+                                <tbody>
                                     @php $psqItemPaginator = $section['paginator'] ?? null; @endphp
                                     @forelse($section['reportData'] as $index => $row)
-                                        <tr>
-                                            <td class="text-center">{{ $psqItemPaginator && $psqItemPaginator->firstItem() !== null ? $psqItemPaginator->firstItem() + $index : $index + 1 }}</td>
-                                            <td>{{ $row['item_name'] }}</td>
-                                            <td>{{ $row['unit'] }}</td>
+                                        <tr class="psq-data-row">
+                                            <td class="text-center text-body-secondary small fw-medium">{{ $psqItemPaginator && $psqItemPaginator->firstItem() !== null ? $psqItemPaginator->firstItem() + $index : $index + 1 }}</td>
+                                            <td class="fw-medium">{{ $row['item_name'] }}</td>
+                                            <td><span class="badge bg-body-secondary text-body-emphasis rounded-1 px-2">{{ $row['unit'] }}</span></td>
                                             <td class="text-end">{{ number_format($row['purchase_qty'], 2) }}</td>
                                             <td class="text-end">{{ $row['avg_purchase_price'] !== null ? '₹' . number_format($row['avg_purchase_price'], 2) : '—' }}</td>
                                             <td class="text-end">{{ number_format($row['sale_qty'], 2) }}</td>
@@ -258,8 +272,11 @@
                                     @empty
                                         <tr>
                                             <td colspan="7" class="text-center text-body-secondary py-5">
-                                                <span class="material-symbols-rounded text-muted d-block mb-2" style="font-size: 2.5rem;">inbox</span>
-                                                No data found for the selected date range
+                                                <div class="d-flex flex-column align-items-center gap-2">
+                                                    <span class="material-symbols-rounded text-body-tertiary" style="font-size: 3rem;">inbox</span>
+                                                    <span class="fw-medium">No data found</span>
+                                                    <span class="small text-body-tertiary">Try adjusting your date range or filters</span>
+                                                </div>
                                             </td>
                                         </tr>
                                     @endforelse
@@ -292,30 +309,30 @@
                                     </h6>
                                 </div>
                                 <div class="table-responsive">
-                                    <table class="table table-hover table-striped align-middle mb-0 psq-table">
-                                        <thead class="table-primary">
+                                    <table class="table table-hover align-middle mb-0 psq-table">
+                                        <thead>
                                             <tr>
-                                                <th class="border-0 py-3" style="width: 60px;">S. No.</th>
+                                                <th class="border-0 py-3 text-center" style="width: 60px;">S. No.</th>
                                                 <th class="border-0 py-3">Item Name</th>
-                                                <th class="border-0 py-3">Unit</th>
+                                                <th class="border-0 py-3" style="width:80px;">Unit</th>
                                                 <th class="text-end border-0 py-3">Total Purchase Qty</th>
                                                 <th class="text-end border-0 py-3">Avg Purchase Price</th>
                                                 <th class="text-end border-0 py-3">Total Sale Qty</th>
                                                 <th class="text-end border-0 py-3">Avg Sale Price</th>
                                             </tr>
                                         </thead>
-                                        <tbody class="table-group-divider">
+                                        <tbody>
                                             @foreach($group['items'] as $idx => $row)
-                                                <tr>
-                                                    <td class="text-center">
+                                                <tr class="psq-data-row">
+                                                    <td class="text-center text-body-secondary small fw-medium">
                                                         @if(($section['viewType'] ?? '') === 'category_wise' && ! empty($section['paginator']))
                                                             {{ $section['paginator']->firstItem() !== null ? $section['paginator']->firstItem() + $idx : $idx + 1 }}
                                                         @else
                                                             {{ $idx + 1 }}
                                                         @endif
                                                     </td>
-                                                    <td>{{ $row['item_name'] }}</td>
-                                                    <td>{{ $row['unit'] }}</td>
+                                                    <td class="fw-medium">{{ $row['item_name'] }}</td>
+                                                    <td><span class="badge bg-body-secondary text-body-emphasis rounded-1 px-2">{{ $row['unit'] }}</span></td>
                                                     <td class="text-end">{{ number_format($row['purchase_qty'], 2) }}</td>
                                                     <td class="text-end">
                                                         {{ isset($row['avg_purchase_price']) && $row['avg_purchase_price'] !== null ? '₹' . number_format($row['avg_purchase_price'], 2) : '—' }}
@@ -331,9 +348,10 @@
                                 </div>
                             </div>
                         @empty
-                            <div class="alert alert-info fade show rounded-0 border-0 mb-0 d-flex align-items-center gap-2" role="alert">
-                                <span class="material-symbols-rounded">info</span>
-                                <span>No data found for the selected filters.</span>
+                            <div class="text-center py-5">
+                                <span class="material-symbols-rounded text-body-tertiary d-block mb-2" style="font-size:3rem;">search_off</span>
+                                <p class="fw-medium mb-1">No data found</p>
+                                <span class="small text-body-tertiary">Try adjusting your filters</span>
                             </div>
                         @endforelse
                         @if(! empty($groupedData ?? []) && ! empty($section['reportData']))
@@ -358,15 +376,16 @@
                         @endif
                     @endif
                     @if(! empty($section['paginator']) && $section['paginator']->hasPages())
-                        <div class="d-flex justify-content-center py-3 px-2 border-top border-secondary border-opacity-25 bg-body-secondary bg-opacity-10 no-print">
+                        <div class="d-flex justify-content-center py-3 px-2 border-top bg-body-tertiary bg-opacity-25 no-print">
                             {{ $section['paginator']->withQueryString()->links() }}
                         </div>
                     @endif
                 </div>
             @empty
-                <div class="alert alert-info fade show rounded-0 border-0 mb-0 d-flex align-items-center gap-2" role="alert">
-                    <span class="material-symbols-rounded">info</span>
-                    <span>No data found for the selected filters.</span>
+                <div class="text-center py-5">
+                    <span class="material-symbols-rounded text-body-tertiary d-block mb-2" style="font-size:3rem;">search_off</span>
+                    <p class="fw-medium mb-1">No data found</p>
+                    <span class="small text-body-tertiary">Apply filters to view report data</span>
                 </div>
             @endforelse
         </div>
@@ -378,15 +397,32 @@
 <link rel="stylesheet" href="{{ asset('admin_assets/css/material-icons-local.css') }}" />
 
 <style>
+    /* ── Filter card polish ── */
+    .purchase-sale-quantity-report .psq-filter-card {
+        border-top: 3px solid var(--bs-primary, #0d6efd) !important;
+    }
+    .purchase-sale-quantity-report .psq-filter-header {
+        border-bottom: 1px solid rgba(0,0,0,0.06);
+    }
+    .purchase-sale-quantity-report .psq-filter-card .form-control,
+    .purchase-sale-quantity-report .psq-filter-card .form-select {
+        border-radius: 0.5rem;
+        border-color: #dee2e6;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .purchase-sale-quantity-report .psq-filter-card .form-control:focus,
+    .purchase-sale-quantity-report .psq-filter-card .form-select:focus {
+        border-color: var(--bs-primary, #0d6efd);
+        box-shadow: 0 0 0 0.2rem rgba(13,110,253,0.15);
+    }
+
+    /* ── Report header gradient ── */
+    .purchase-sale-quantity-report .psq-report-header {
+        background: linear-gradient(135deg, #0b4a7e 0%, #1565c0 50%, #1976d2 100%) !important;
+    }
+
     /* ── Scrollable table body with sticky header ── */
     @media screen {
-        /* Fix: .page-wrapper has overflow-x:hidden which implicitly creates
-           overflow-y:auto (CSS spec), forming a scroll container that breaks
-           position:sticky inside nested scroll wrappers. Use overflow-x:clip
-           which clips without creating a scroll container. */
-        .purchase-sale-quantity-report {
-            /* Ensure ancestors don't interfere */
-        }
         .page-wrapper:has(.purchase-sale-quantity-report) {
             overflow-x: clip !important;
         }
@@ -396,10 +432,6 @@
             display: block !important;
             position: relative;
         }
-        /* Override Bootstrap .table-responsive overflow so sticky thead works
-           within the psq-scroll-wrapper scroll container.
-           Also force overflow visible on ALL intermediate ancestors between
-           the scroll wrapper and the sticky th elements. */
         .purchase-sale-quantity-report .psq-scroll-wrapper .table-responsive {
             overflow: visible !important;
             overflow-x: visible !important;
@@ -423,14 +455,16 @@
             background: #0b4a7e !important;
             color: #fff !important;
             font-weight: 600;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.12);
             border-bottom: 2px solid #004a93 !important;
             border-top: none !important;
-            border-left: 1px solid rgba(255,255,255,0.15) !important;
-            border-right: 1px solid rgba(255,255,255,0.15) !important;
-            padding: 0.6rem 0.75rem;
+            border-left: 1px solid rgba(255,255,255,0.12) !important;
+            border-right: 1px solid rgba(255,255,255,0.12) !important;
+            padding: 0.65rem 0.75rem;
             font-size: 0.8125rem;
             white-space: nowrap;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
         }
         .purchase-sale-quantity-report .psq-table > thead > tr > th:first-child {
             border-left: none !important;
@@ -440,6 +474,25 @@
         }
         .purchase-sale-quantity-report .psq-table > thead > tr > th.text-end {
             text-align: right !important;
+        }
+        .purchase-sale-quantity-report .psq-table > thead > tr > th.text-center {
+            text-align: center !important;
+        }
+        /* Data rows */
+        .purchase-sale-quantity-report .psq-table > tbody > tr.psq-data-row > td {
+            padding: 0.6rem 0.75rem;
+            font-size: 0.875rem;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            transition: background-color 0.15s ease;
+        }
+        .purchase-sale-quantity-report .psq-table > tbody > tr.psq-data-row:hover > td {
+            background-color: rgba(13,110,253,0.04) !important;
+        }
+        .purchase-sale-quantity-report .psq-table > tbody > tr.psq-data-row:nth-child(even) > td {
+            background-color: rgba(0,0,0,0.015);
+        }
+        .purchase-sale-quantity-report .psq-table > tbody > tr.psq-data-row:nth-child(even):hover > td {
+            background-color: rgba(13,110,253,0.04) !important;
         }
         /* Section headings should stick below the table header when scrolling */
         .purchase-sale-quantity-report .purchase-sale-section-heading {
@@ -457,7 +510,7 @@
             background: #fff;
         }
         /* Scrollbar styling */
-        .purchase-sale-quantity-report .psq-scroll-wrapper::-webkit-scrollbar { height: 10px; width: 10px; }
+        .purchase-sale-quantity-report .psq-scroll-wrapper::-webkit-scrollbar { height: 8px; width: 8px; }
         .purchase-sale-quantity-report .psq-scroll-wrapper::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 8px; }
         .purchase-sale-quantity-report .psq-scroll-wrapper::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
         .purchase-sale-quantity-report .psq-scroll-wrapper::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
@@ -466,12 +519,17 @@
     @media print {
         .no-print { display: none !important; }
         .report-header { display: block !important; }
+        .purchase-sale-quantity-report .psq-report-header { background: #0b4a7e !important; }
         .purchase-sale-quantity-report .psq-scroll-wrapper { max-height: none !important; overflow: visible !important; }
-        .purchase-sale-quantity-report .psq-table > thead > tr > th { position: static !important; box-shadow: none !important; }
+        .purchase-sale-quantity-report .psq-table > thead > tr > th { position: static !important; box-shadow: none !important; text-transform: none !important; }
     }
 
     .purchase-sale-quantity-report .card-footer .btn {
-        transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out;
+        transition: all 0.2s ease;
+    }
+    .purchase-sale-quantity-report .card-footer .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.12);
     }
 
     .purchase-sale-quantity-report .input-group .ts-wrapper {
