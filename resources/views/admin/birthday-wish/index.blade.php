@@ -180,11 +180,6 @@ $senderName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                     {{-- Channel Selection --}}
                     <label class="form-label fw-semibold small mb-2">Send via</label>
                     <div class="d-flex gap-3 mb-4 flex-wrap">
-                        <label class="channel-btn d-flex align-items-center gap-2 active" id="channel-email-btn">
-                            <input type="checkbox" class="form-check-input" id="compose-via-email" checked>
-                            <span class="material-icons material-symbols-rounded text-primary" style="font-size:20px;">mail</span>
-                            <span class="fw-semibold small">Email</span>
-                        </label>
                         <label class="channel-btn d-flex align-items-center gap-2" id="channel-whatsapp-btn">
                             <input type="checkbox" class="form-check-input" id="compose-via-whatsapp">
                             <span class="material-icons material-symbols-rounded text-success" style="font-size:20px;">chat</span>
