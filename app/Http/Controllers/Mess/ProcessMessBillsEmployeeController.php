@@ -328,9 +328,7 @@ class ProcessMessBillsEmployeeController extends Controller
      */
     private function generateCombinedInvoiceNo(string $buyerName, string $clientTypeSlug): string
     {
-        $seed = trim($buyerName) . '|' . $clientTypeSlug;
-        $num = abs(crc32($seed)) % 100000;
-        return 'CB-' . date('Ymd') . '-' . str_pad((string) $num, 5, '0', STR_PAD_LEFT);
+        return mess_combined_bill_slip_no($buyerName, $clientTypeSlug);
     }
 
     /**

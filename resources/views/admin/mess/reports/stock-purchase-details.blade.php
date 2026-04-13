@@ -172,8 +172,6 @@
                                     @php $vendorSectionTotal = 0; @endphp
                                     @foreach($vendorGroup['orders'] as $order)
                                         @php
-                                            $storeName = $order->store ? $order->store->store_name : 'N/A';
-                                            $billLabel = $storeName . '(Primary) Bill No. ' . ($order->po_number ?? $order->id) . ' (' . $order->po_date->format('d-m-Y') . ')';
                                             $billSubtotal = 0;
                                             $billTaxTotal = 0;
                                         @endphp
@@ -181,7 +179,7 @@
                                             <td colspan="8" class="bill-header small fw-semibold text-white">
                                                 <span class="d-inline-flex align-items-center gap-1">
                                                     <span class="material-symbols-rounded" style="font-size:1rem;" aria-hidden="true">receipt</span>
-                                                    {{ $billLabel }}
+                                                    {{ $order->stockPurchaseReportBillLabel() }}
                                                 </span>
                                             </td>
                                         </tr>

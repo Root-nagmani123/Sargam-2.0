@@ -299,13 +299,11 @@
                 @php $vendorSectionTotal = 0; @endphp
                 @foreach($vendorGroup['orders'] as $order)
                     @php
-                        $storeName = $order->store ? $order->store->store_name : 'N/A';
-                        $billLabel = $storeName . '(Primary) Bill No. ' . ($order->po_number ?? $order->id) . ' (' . ($order->po_date ? $order->po_date->format('d-m-Y') : 'N/A') . ')';
                         $billSubtotal = 0;
                         $billTaxTotal = 0;
                     @endphp
                     <tr class="bill-hdr">
-                        <td colspan="8">{{ $billLabel }}</td>
+                        <td colspan="8">{{ $order->stockPurchaseReportBillLabel() }}</td>
                     </tr>
                     @foreach($order->items as $item)
                         @php
