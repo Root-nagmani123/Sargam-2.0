@@ -69,23 +69,28 @@ use App\Http\Controllers\Admin\BirthdayWishController;
 use App\Http\Controllers\Admin\WordOfTheDayController;
 
 
-Route::get('clear-cache', function () {
-    Artisan::call('cache:clear');
-    Artisan::call('config:clear');
-    Artisan::call('view:clear');
-    Artisan::call('route:clear');
-    Artisan::call('optimize:clear');
-    return redirect()->back()->with('success', 'Cache cleared successfully');
-});
 // Authentication Routes
 Auth::routes(['verify' => true, 'register' => false]);
 
 // Public Routes
 Route::get('/', [LoginController::class, 'showLoginForm'])->name('login');
-Route::post('/login', [LoginController::class, 'authenticate'])->name('post_login');
+Route::post('/login', [LoginController::class, 'authenticate'])
+    ->middleware('throttle:login')
+    ->name('post_login');
 
 // Protected Routes
 Route::middleware(['auth'])->group(function () {
+
+    Route::get('clear-cache', function () {
+        abort_unless(hasRole('Admin') || hasRole('Super Admin'), 403);
+        Artisan::call('cache:clear');
+        Artisan::call('config:clear');
+        Artisan::call('view:clear');
+        Artisan::call('route:clear');
+        Artisan::call('optimize:clear');
+
+        return redirect()->back()->with('success', 'Cache cleared successfully');
+    })->name('clear-cache');
 
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('users/get-roles', [UserController::class, 'getAllRoles'])
