@@ -96,6 +96,18 @@ function mess_category_wise_client_type_line_base(
     return $clientTypeLabel;
 }
 
+/**
+ * Combined bill slip / invoice number (Process Mess Bills & Sale Voucher Report).
+ * Format: CB-YYYYMMDD-XXXXX (deterministic per buyer + client type; date is current day).
+ */
+function mess_combined_bill_slip_no(string $buyerName, string $clientTypeSlug): string
+{
+    $seed = trim($buyerName) . '|' . $clientTypeSlug;
+    $num = abs(crc32($seed)) % 100000;
+
+    return 'CB-' . date('Ymd') . '-' . str_pad((string) $num, 5, '0', STR_PAD_LEFT);
+}
+
 function createDirectory($path)
 {
     $directory = public_path('storage/' . $path);
