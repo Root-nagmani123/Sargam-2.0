@@ -347,6 +347,12 @@ $(document).ready(function() {
             unit_type_id: getSelVal(document.getElementById('unit_name')) || '',
             unit_sub_type_id: getSelVal(document.getElementById('unit_sub_type')) || ''
         };
+        if (prefill && prefill.possession_pk) {
+            params.possession_pk = String(prefill.possession_pk);
+        }
+        if (prefill && prefill.reading_pk) {
+            params.reading_pk = String(prefill.reading_pk);
+        }
         $.get(listUrl, params, function(res) {
             if (!res.status || !res.data || res.data.length === 0) {
                 $('#meterReadingSaveForm').hide();
