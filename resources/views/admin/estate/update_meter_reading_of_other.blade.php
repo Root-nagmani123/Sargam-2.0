@@ -286,6 +286,9 @@ $(document).ready(function() {
         if (possessionPks && String(possessionPks).trim() !== '') {
             params.possession_pks = String(possessionPks).trim();
         }
+        if (prefill && prefill.reading_pk) {
+            params.reading_pk = String(prefill.reading_pk);
+        }
         // Load grid by meter-change month + estate filters (meter reading date is for Save, not list).
         $.get(listUrl, params, function(res) {
             if (!res.status || !res.data || res.data.length === 0) {
