@@ -1085,11 +1085,6 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/database/print', [FeedbackController::class, 'printFeedbackDatabase'])->name('admin.feedback.database.print');
         Route::get('/database/export-pdf', [FeedbackController::class, 'exportFeedbackDatabasePdf'])->name('admin.feedback.database.export.pdf');
         Route::get('/database/export-excel', [FeedbackController::class, 'exportFeedbackDatabaseExcel'])->name('admin.feedback.database.export.excel');
-        Route::get('/session-timetable-report', [FeedbackController::class, 'sessionTimetableReport'])->name('admin.feedback.session_timetable_report');
-        Route::get('/session-timetable-report/datatable', [FeedbackController::class, 'sessionTimetableReportDatatable'])->name('admin.feedback.session_timetable_report.datatable');
-        Route::get('/session-timetable-report/print', [FeedbackController::class, 'printSessionTimetableReport'])->name('admin.feedback.session_timetable_report.print');
-        Route::get('/session-timetable-report/export-pdf', [FeedbackController::class, 'exportSessionTimetableReportPdf'])->name('admin.feedback.session_timetable_report.export.pdf');
-        Route::get('/session-timetable-report/export-excel', [FeedbackController::class, 'exportSessionTimetableReportExcel'])->name('admin.feedback.session_timetable_report.export.excel');
     });
     Route::get('/feedback_average', [FeedbackController::class, 'showFacultyAverage'])->name('feedback.average');
     Route::post('/faculty_view', [FeedbackController::class, 'facultyView'])->name('admin.feedback.faculty_view');

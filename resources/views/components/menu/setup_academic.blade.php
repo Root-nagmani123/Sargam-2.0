@@ -209,11 +209,6 @@
                                         <span class="hide-menu small small-sm-normal text-nowrap">Faculty Feedback
                                             Database</span>
                                     </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('admin.feedback.session_timetable_report') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Timetable Sessions
-                                            Report</span>
-                                    </a></li>
 
                                 <li class="sidebar-item">
                                     <a class="sidebar-link" href="{{ route('admin.feedback.pending.students') }}">

@@ -551,7 +551,6 @@
                 str_starts_with($path, 'courseAttendanceNoticeMap') || str_starts_with($path, 'course_memo') ||
                 str_starts_with($path, 'building_floor') || str_starts_with($path, 'group_mapping') ||
                 str_starts_with($path, 'course-repository') || str_starts_with($path, 'feedback') || str_starts_with($path, 'admin/feedback') ||
-                str_starts_with($path, 'admin/faculty/session-timetable') ||
                 str_starts_with($path, 'admin/notice') || str_starts_with($path, 'attendance') ||
                 str_starts_with($path, 'security') || str_starts_with($path, 'ot_notice') ||
                 str_starts_with($path, 'forms') || str_starts_with($path, 'registration') ||
