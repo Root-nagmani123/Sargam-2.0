@@ -1,5 +1,5 @@
 @php
-    $printedOn = now()->format('d/m/Y') . ' ' . now()->format('g:i:s A');
+    $printedOn = now()->format('d-m-Y H:i');
 
     // Emblem
     $emblemSrc = $emblemSrc ?? 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
@@ -79,136 +79,108 @@
     <style>
         @page {
             size: A4 landscape;
-            margin: 6mm;
+            margin: 12mm 10mm 12mm 10mm;
         }
+        * { box-sizing: border-box; }
+        html { font-size: 9pt; }
         body {
-            font-family: DejaVu Sans, Arial, sans-serif;
-            font-size: 7pt;
+            font-family: DejaVu Sans, Arial, Helvetica, sans-serif;
+            font-size: 9pt;
             margin: 0;
             padding: 0;
-            color: #222;
+            color: #212529;
             background: #fff;
+            line-height: 1.4;
         }
 
-        .lbsnaa-header-wrap {
-            border-bottom: 2px solid #004a93;
-            margin-bottom: 10px;
-            padding: 2px 0 8px;
-        }
-        .branding-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 0;
-        }
-        .branding-table td {
-            border: 0;
-            padding: 0;
-            vertical-align: middle;
-        }
-        .branding-logo-left {
-            width: 42px;
-        }
-        .branding-text {
-            text-align: left;
-            padding: 0 10px 0 2px;
-            line-height: 1.25;
-        }
-        .branding-logo-right {
-            width: 200px;
-            text-align: right;
-        }
-        .lbsnaa-brand-line-1 {
-            font-size: 8pt;
-            color: #004a93;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            font-weight: 600;
-        }
-        .lbsnaa-brand-line-2 {
-            font-size: 13pt;
-            color: #222;
-            font-weight: 700;
-            text-transform: uppercase;
-            margin-top: 2px;
-        }
-        .lbsnaa-brand-line-3 {
-            font-size: 10pt;
-            color: #555;
-            margin-top: 2px;
-        }
-        .header-img-left {
-            width: 34px;
-            height: 34px;
-        }
-        .header-img-right {
-            width: 165px;
-            height: auto;
-        }
-
-        .report-header-block {
-            text-align: center;
-            margin-bottom: 10px;
+        /* ── Header ── */
+        .pdf-header {
+            border-bottom: 2.5px solid #0b4a7e;
             padding-bottom: 8px;
+            margin-bottom: 10px;
+        }
+        .pdf-header table { width: 100%; border-collapse: collapse; }
+        .pdf-header td { border: 0; padding: 0; vertical-align: middle; }
+        .pdf-header .hdr-left { width: 50px; }
+        .pdf-header .hdr-left img { width: 40px; height: 40px; }
+        .pdf-header .hdr-center { padding-left: 10px; }
+        .pdf-header .hdr-right { width: 50px; text-align: right; }
+        .pdf-header .hdr-right img { width: 40px; height: 40px; }
+        .brand-1 { font-size: 7pt; text-transform: uppercase; letter-spacing: 0.06em; color: #0b4a7e; font-weight: 600; }
+        .brand-2 { font-size: 9.5pt; font-weight: 700; text-transform: uppercase; color: #111; margin-top: 2px; }
+        .brand-3 { font-size: 7.5pt; color: #555; margin-top: 2px; }
+
+        /* ── Report title block ── */
+        .report-title-block {
+            text-align: center;
+            margin-bottom: 8px;
+            padding-bottom: 6px;
             border-bottom: 1px solid #dee2e6;
         }
-        .report-title-center {
-            font-size: 13pt;
+        .report-title {
+            font-size: 10pt;
             font-weight: 700;
             text-transform: uppercase;
-            margin: 0 0 6px;
-            color: #212529;
+            letter-spacing: 0.04em;
+            color: #0f172a;
+            margin: 0 0 5px;
         }
-        .report-date-bar {
-            background: #004a93;
-            color: #fff;
-            padding: 6px 12px;
-            text-align: center;
-            font-weight: 600;
-            font-size: 9pt;
+        .report-date-pill {
             display: inline-block;
+            background: #0b4a7e;
+            color: #fff;
+            font-weight: 600;
+            font-size: 8pt;
+            padding: 3px 12px;
+            border-radius: 10px;
         }
 
-        .report-meta-print {
-            font-size: 7pt;
-            margin: 4px 0 6px;
-            line-height: 1.35;
-            text-align: left;
+        /* ── Meta section ── */
+        .report-meta {
+            font-size: 8pt;
+            margin-bottom: 8px;
+            line-height: 1.5;
+            color: #334155;
         }
-        .report-meta-print .meta-line {
-            margin-bottom: 3px;
-            word-wrap: break-word;
-        }
+        .report-meta .meta-label { font-weight: 700; color: #0f172a; }
 
-        table.timetable-data {
+        /* ── Main data table ── */
+        .data-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 6.5pt;
-            margin-bottom: 8px;
+            font-size: 7pt;
             table-layout: fixed;
         }
-        table.timetable-data th,
-        table.timetable-data td {
-            padding: 2px 3px;
-            border: 1px solid #dee2e6;
+        .data-table th,
+        .data-table td {
+            padding: 3px 4px;
+            border: 1px solid #d1d5db;
             vertical-align: middle;
             word-wrap: break-word;
             overflow: hidden;
         }
-        table.timetable-data thead th {
-            background: #d3d6d9;
+
+        /* Header row */
+        .data-table thead th {
+            background: #0b4a7e;
+            color: #fff;
             font-weight: 600;
+            font-size: 7pt;
             text-align: left;
-            font-size: 6.5pt;
+            white-space: nowrap;
         }
-        table.timetable-data thead th.text-center {
-            text-align: center;
+        .data-table thead th.text-center { text-align: center; }
+
+        /* Item rows */
+        .data-table tbody tr:nth-child(even) td {
+            background: #f9fafb;
         }
-        table.timetable-data .text-center {
-            text-align: center;
-        }
-        table.timetable-data tbody tr:nth-child(even) td {
-            background: #fafbfc;
-        }
+
+        .text-end { text-align: right; }
+        .text-center { text-align: center; }
+        .text-muted { color: #6c757d; }
+        thead { display: table-header-group; }
+        tr { page-break-inside: avoid; }
 
         .footer {
             border-top: 1px solid #dee2e6;
@@ -222,68 +194,71 @@
 </head>
 <body>
 
-<div class="lbsnaa-header-wrap">
-    <table class="branding-table">
-        <tr>
-            <td class="branding-logo-left">
-                <img src="{{ $emblemSrc }}" alt="Emblem of India" class="header-img-left">
-            </td>
-            <td class="branding-text">
-                <div class="lbsnaa-brand-line-1">Government of India</div>
-                <div class="lbsnaa-brand-line-2">LBSNAA MUSSOORIE</div>
-                <div class="lbsnaa-brand-line-3">Lal Bahadur Shastri National Academy of Administration</div>
-            </td>
-            <td class="branding-logo-right">
-                <img src="{{ $lbsnaaLogoSrc }}" alt="LBSNAA Logo" class="header-img-right">
-            </td>
-        </tr>
-    </table>
-</div>
+    {{-- Header --}}
+    <div class="pdf-header">
+        <table>
+            <tr>
+                <td class="hdr-left">
+                    <img src="{{ $emblemSrc }}" alt="Emblem of India">
+                </td>
+                <td class="hdr-center">
+                    <div class="brand-1">Government of India</div>
+                    <div class="brand-2">LBSNAA MUSSOORIE</div>
+                    <div class="brand-3">Lal Bahadur Shastri National Academy of Administration</div>
+                </td>
+                <td class="hdr-right">
+                    <img src="{{ $lbsnaaLogoSrc }}" alt="LBSNAA Logo">
+                </td>
+            </tr>
+        </table>
+    </div>
 
-<div class="report-header-block">
-    <h1 class="report-title-center">Timetable Session Report</h1>
-    <div class="report-date-bar">{{ $filterLine }}</div>
-</div>
+    {{-- Title --}}
+    <div class="report-title-block">
+        <h1 class="report-title">Timetable Session Report</h1>
+        <div class="report-date-pill">{{ $filterLine }}</div>
+    </div>
 
-<div class="report-meta-print">
-    <div class="meta-line"><strong>Printed on:</strong> {{ $printedOn }}</div>
-    <div class="meta-line"><strong>Total records:</strong> {{ $rowCount }}</div>
-</div>
+    {{-- Meta --}}
+    <div class="report-meta">
+        <span class="meta-label">Printed on:</span> {{ $printedOn }}<br>
+        <span class="meta-label">Total records:</span> {{ $rowCount }}
+    </div>
 
-@php
-    $cols = $visibleColumns ?? [];
-    $colCount = count($cols);
-@endphp
+    @php
+        $cols = $visibleColumns ?? [];
+        $colCount = count($cols);
+    @endphp
 
-@if(empty($rows))
-    <p style="font-size:10pt; color:#555;">No records found for the selected filters.</p>
-@else
-    <table class="timetable-data">
-        <thead>
-        <tr>
-            @foreach($cols as $col)
-                <th @if($col['key'] === 'sno') class="text-center" @endif>{{ $col['label'] }}</th>
-            @endforeach
-        </tr>
-        </thead>
-        <tbody>
-        @foreach($rows as $index => $row)
+    @if(empty($rows))
+        <p style="font-size:10pt; color:#555;">No records found for the selected filters.</p>
+    @else
+        <table class="data-table">
+            <thead>
             <tr>
                 @foreach($cols as $col)
-                    @if($col['key'] === 'sno')
-                        <td class="text-center">{{ $index + 1 }}</td>
-                    @else
-                        <td>{{ $row[$col['key']] ?? '' }}</td>
-                    @endif
+                    <th @if($col['key'] === 'sno') class="text-center" @endif>{{ $col['label'] }}</th>
                 @endforeach
             </tr>
-        @endforeach
-        </tbody>
-    </table>
-@endif
+            </thead>
+            <tbody>
+            @foreach($rows as $index => $row)
+                <tr>
+                    @foreach($cols as $col)
+                        @if($col['key'] === 'sno')
+                            <td class="text-center">{{ $index + 1 }}</td>
+                        @else
+                            <td>{{ $row[$col['key']] ?? '' }}</td>
+                        @endif
+                    @endforeach
+                </tr>
+            @endforeach
+            </tbody>
+        </table>
+    @endif
 
-<div class="footer">
-    <small>LBSNAA Mussoorie &mdash; Timetable Session Report</small>
-</div>
+    <div class="footer">
+        <small>LBSNAA Mussoorie &mdash; Timetable Session Report</small>
+    </div>
 </body>
 </html>

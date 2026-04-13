@@ -218,6 +218,17 @@
     height: 36px;
     right: 8px;
 }
+.select2-container--default .select2-selection--single .select2-selection__clear {
+    position: absolute;
+    right: 28px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1rem;
+    line-height: 1;
+    height: auto;
+    margin: 0;
+    padding: 0 4px;
+}
 #timetableReportTable .dtr-control,
 #timetableReportTable th.dtr-control,
 #timetableReportTable td.dtr-control { display: none !important; }
@@ -378,7 +389,7 @@ $(document).ready(function() {
         var vis = [];
         reportDt.columns().every(function(i) { if (this.visible()) vis.push(i); });
 
-        var html = '<table class="table table-bordered table-striped"><thead><tr>';
+        var html = '<thead><tr>';
         vis.forEach(function(ci) {
             html += '<th>' + ($(reportDt.column(ci).header()).text() || '').trim() + '</th>';
         });
@@ -401,14 +412,14 @@ $(document).ready(function() {
             html += '</tr>';
         });
 
-        html += '</tbody></table>';
+        html += '</tbody>';
         return html;
     }
 
     function openPrintWindow(tableHtml) {
         var title = 'Timetable Session Report';
-        var emblemSrc = 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
-        var lbsnaaLogoSrc = '{{ asset("images/lbsnaa_logo.jpg") }}';
+        var emblemUrl = '{{ asset("images/ashoka.png") }}';
+        var logoUrl = '{{ asset("admin_assets/images/logos/logo.png") }}';
 
         // Build filter summary line
         var filterParts = [];
@@ -424,65 +435,141 @@ $(document).ready(function() {
         if ($('#filter_module_name').val()) filterParts.push('Module: ' + $('#filter_module_name').val());
         if ($('#filter_date_from').val()) filterParts.push('From: ' + $('#filter_date_from').val());
         if ($('#filter_date_to').val()) filterParts.push('To: ' + $('#filter_date_to').val());
-        var filterLine = filterParts.join(' | ');
+        var filterLine = filterParts.length ? filterParts.join(' | ') : 'No filters applied';
 
-        var now = new Date();
-        var printedOn = now.toLocaleDateString('en-IN') + ' ' + now.toLocaleTimeString('en-IN');
+        var printWindow = window.open('', '_blank');
+        if (!printWindow) { window.print(); return; }
 
-        var win = window.open('', '_blank');
-        if (!win) { window.print(); return; }
-
-        win.document.open();
-        win.document.write(
-            '<!doctype html><html><head><meta charset="utf-8">' +
-            '<title>' + title + '</title>' +
-            '<style>' +
-            '@page{size:A4 landscape;margin:8mm;}' +
-            'body{font-family:Arial,sans-serif;font-size:8px;color:#222;margin:0;padding:0;}' +
-            '.lbsnaa-header-wrap{border-bottom:2px solid #004a93;margin-bottom:8px;padding:2px 0 6px;}' +
-            '.branding-table{width:100%;border-collapse:collapse;}' +
-            '.branding-table td{border:0;padding:0;vertical-align:middle;}' +
-            '.branding-logo-left{width:40px;}' +
-            '.branding-text{text-align:left;padding:0 8px 0 2px;line-height:1.25;}' +
-            '.branding-logo-right{width:180px;text-align:right;}' +
-            '.lbsnaa-brand-line-1{font-size:7px;color:#004a93;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;}' +
-            '.lbsnaa-brand-line-2{font-size:12px;color:#222;font-weight:700;text-transform:uppercase;margin-top:1px;}' +
-            '.lbsnaa-brand-line-3{font-size:9px;color:#555;margin-top:1px;}' +
-            '.header-img-left{width:30px;height:30px;}' +
-            '.header-img-right{width:150px;height:auto;}' +
-            '.report-header-block{text-align:center;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #dee2e6;}' +
-            '.report-title-center{font-size:12px;font-weight:700;text-transform:uppercase;margin:0 0 4px;color:#212529;}' +
-            '.report-date-bar{background:#004a93;color:#fff;padding:4px 10px;text-align:center;font-weight:600;font-size:8px;display:inline-block;}' +
-            '.report-meta-print{font-size:7px;margin:4px 0 8px;line-height:1.4;text-align:left;}' +
-            'table{width:100%;border-collapse:collapse;font-size:8px;}' +
-            'th,td{border:1px solid #dee2e6;padding:3px 4px;vertical-align:top;word-break:break-word;white-space:normal;}' +
-            'thead th{background:#d3d6d9;font-weight:600;text-align:left;white-space:nowrap;}' +
-            'tbody tr:nth-child(even) td{background:#fafbfc;}' +
-            'thead{display:table-header-group;}' +
-            'tr{page-break-inside:avoid;}' +
-            '.footer{border-top:1px solid #dee2e6;font-size:7px;color:#666;text-align:center;padding-top:4px;margin-top:6px;}' +
-            '</style></head><body>' +
-            '<div class="lbsnaa-header-wrap">' +
-            '<table class="branding-table"><tr>' +
-            '<td class="branding-logo-left"><img src="' + emblemSrc + '" alt="Emblem of India" class="header-img-left"></td>' +
-            '<td class="branding-text">' +
-            '<div class="lbsnaa-brand-line-1">Government of India</div>' +
-            '<div class="lbsnaa-brand-line-2">LBSNAA MUSSOORIE</div>' +
-            '<div class="lbsnaa-brand-line-3">Lal Bahadur Shastri National Academy of Administration</div>' +
-            '</td>' +
-            '<td class="branding-logo-right"><img src="' + lbsnaaLogoSrc + '" alt="LBSNAA Logo" class="header-img-right"></td>' +
-            '</tr></table></div>' +
-            '<div class="report-header-block">' +
-            '<h1 class="report-title-center">' + title + '</h1>' +
-            '<div class="report-date-bar">' + filterLine + '</div>' +
-            '</div>' +
-            '<div class="report-meta-print"><strong>Printed on:</strong> ' + printedOn + '</div>' +
-            tableHtml +
-            '<div class="footer"><small>LBSNAA Mussoorie — Timetable Session Report</small></div>' +
-            '</body></html>'
-        );
-        win.document.close();
-        setTimeout(function() { win.focus(); win.print(); win.close(); }, 400);
+        printWindow.document.open();
+        printWindow.document.write('<!doctype html>\n' +
+'<html lang="en">\n' +
+'<head>\n' +
+'    <meta charset="utf-8">\n' +
+'    <title>' + title + ' - LBSNAA MUSSOORIE</title>\n' +
+'    <style>\n' +
+'        *, *::before, *::after { box-sizing: border-box; }\n' +
+'        body {\n' +
+'            font-family: "Segoe UI", system-ui, -apple-system, sans-serif;\n' +
+'            font-size: 11px;\n' +
+'            color: #212529;\n' +
+'            -webkit-print-color-adjust: exact;\n' +
+'            print-color-adjust: exact;\n' +
+'            margin: 0;\n' +
+'            padding: 12mm 10mm;\n' +
+'        }\n' +
+'\n' +
+'        /* ── Print Header ── */\n' +
+'        .print-header {\n' +
+'            display: flex;\n' +
+'            align-items: center;\n' +
+'            gap: 12px;\n' +
+'            border-bottom: 3px solid #004a93;\n' +
+'            padding-bottom: 10px;\n' +
+'            margin-bottom: 12px;\n' +
+'        }\n' +
+'        .print-header img { height: 48px; width: auto; object-fit: contain; }\n' +
+'        .header-text { flex: 1; }\n' +
+'        .header-text .line1 { font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; color: #004a93; font-weight: 600; margin: 0; }\n' +
+'        .header-text .line2 { font-size: 14px; font-weight: 700; text-transform: uppercase; color: #1a1a1a; margin: 2px 0 0; }\n' +
+'        .header-text .line3 { font-size: 9px; color: #555; margin: 1px 0 0; }\n' +
+'\n' +
+'        /* ── Report Title & Meta ── */\n' +
+'        .report-title-block { text-align: center; margin-bottom: 10px; }\n' +
+'        .report-title-block h2 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin: 0 0 4px; color: #1a1a1a; }\n' +
+'        .date-pill {\n' +
+'            display: inline-block;\n' +
+'            background: #004a93;\n' +
+'            color: #fff;\n' +
+'            padding: 3px 14px;\n' +
+'            border-radius: 10px;\n' +
+'            font-size: 10px;\n' +
+'            font-weight: 500;\n' +
+'            -webkit-print-color-adjust: exact;\n' +
+'            print-color-adjust: exact;\n' +
+'            border: 1px solid #004a93;\n' +
+'        }\n' +
+'        @media print {\n' +
+'            .date-pill {\n' +
+'                background: #004a93 !important;\n' +
+'                color: #fff !important;\n' +
+'                -webkit-print-color-adjust: exact !important;\n' +
+'                print-color-adjust: exact !important;\n' +
+'            }\n' +
+'            .date-pill-fallback {\n' +
+'                display: block;\n' +
+'                text-align: center;\n' +
+'                font-size: 10px;\n' +
+'                font-weight: 700;\n' +
+'                color: #004a93;\n' +
+'                margin-top: 2px;\n' +
+'            }\n' +
+'        }\n' +
+'        .date-pill-fallback {\n' +
+'            display: none;\n' +
+'        }\n' +
+'        .report-meta {\n' +
+'            font-size: 10px;\n' +
+'            line-height: 1.7;\n' +
+'            margin: 8px 0 10px;\n' +
+'            color: #333;\n' +
+'        }\n' +
+'        .report-meta strong { color: #1a1a1a; }\n' +
+'\n' +
+'        /* ── Data Table ── */\n' +
+'        .data-table { width: 100%; border-collapse: collapse; font-size: 10px; }\n' +
+'        .data-table th, .data-table td { padding: 4px 6px; border: 1px solid #bbb; vertical-align: middle; word-break: break-word; white-space: normal; }\n' +
+'        .data-table thead th { background: #004a93; color: #fff; font-weight: 600; font-size: 10px; text-align: left; }\n' +
+'\n' +
+'        /* Alternating item rows */\n' +
+'        .data-table tbody tr:nth-child(even) td { background: #f9fafb; }\n' +
+'\n' +
+'        /* ── Footer ── */\n' +
+'        .footer { border-top: 1px solid #dee2e6; font-size: 8px; color: #666; text-align: center; padding-top: 4px; margin-top: 8px; }\n' +
+'\n' +
+'        /* ── Print-specific ── */\n' +
+'        @page { size: A4 landscape; margin: 8mm; }\n' +
+'        @media print {\n' +
+'            body { padding: 0; }\n' +
+'            thead { display: table-header-group; }\n' +
+'            tr { page-break-inside: avoid; }\n' +
+'        }\n' +
+'    </style>\n' +
+'</head>\n' +
+'<body>\n' +
+'\n' +
+'<div class="print-header">\n' +
+'    <img src="' + emblemUrl + '" alt="Emblem">\n' +
+'    <div class="header-text">\n' +
+'        <p class="line1">Government of India</p>\n' +
+'        <p class="line2">LBSNAA MUSSOORIE</p>\n' +
+'        <p class="line3">Lal Bahadur Shastri National Academy of Administration</p>\n' +
+'    </div>\n' +
+'    <img src="' + logoUrl + '" alt="LBSNAA Logo" onerror="this.style.display=\'none\'">\n' +
+'</div>\n' +
+'\n' +
+'<div class="report-title-block">\n' +
+'    <h2>' + title + '</h2>\n' +
+'    <span class="date-pill">' + filterLine + '</span>\n' +
+'    <span class="date-pill-fallback">' + filterLine + '</span>\n' +
+'</div>\n' +
+'\n' +
+'<div class="report-meta">\n' +
+'    <strong>Course Mode:</strong> ' + (currentMode === 'archive' ? 'Archived' : 'Active') + ' &nbsp;&nbsp;|&nbsp;&nbsp; ' +
+'    <strong>Printed:</strong> ' + new Date().toLocaleDateString('en-IN') + ' ' + new Date().toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit'}) + '\n' +
+'</div>\n' +
+'\n' +
+'<table class="data-table">\n' + tableHtml + '\n</table>\n' +
+'\n' +
+'<div class="footer"><small>LBSNAA Mussoorie &mdash; Timetable Session Report</small></div>\n' +
+'\n' +
+'<script>\n' +
+'    window.addEventListener("load", function() {\n' +
+'        setTimeout(function() { window.print(); }, 300);\n' +
+'    });\n' +
+'<\/script>\n' +
+'</body>\n' +
+'</html>');
+        printWindow.document.close();
     }
 
     // ── DataTable init / reload ──
