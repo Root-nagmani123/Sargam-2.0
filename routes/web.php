@@ -121,13 +121,16 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/birthday-wishes/send-bulk-email', [BirthdayWishController::class, 'sendBulkEmail'])->name('admin.birthday-wish.send-bulk-email');
     Route::post('/birthday-wishes/send-notification', [BirthdayWishController::class, 'sendNotification'])->name('admin.birthday-wish.send-notification');
 
-    // Login page — Word of the Day (Admin / Super Admin)
+    // Login page — Word of the Day (policy: Admin / Super Admin or permission)
+    Route::get('/word-of-day/export', [WordOfTheDayController::class, 'export'])->name('admin.word-of-day.export');
+    Route::post('/word-of-day/import', [WordOfTheDayController::class, 'import'])->name('admin.word-of-day.import');
+    Route::post('/word-of-day/reorder', [WordOfTheDayController::class, 'reorder'])->name('admin.word-of-day.reorder');
     Route::get('/word-of-day', [WordOfTheDayController::class, 'index'])->name('admin.word-of-day.index');
     Route::get('/word-of-day/create', [WordOfTheDayController::class, 'create'])->name('admin.word-of-day.create');
     Route::post('/word-of-day', [WordOfTheDayController::class, 'store'])->name('admin.word-of-day.store');
-    Route::get('/word-of-day/{id}/edit', [WordOfTheDayController::class, 'edit'])->name('admin.word-of-day.edit');
-    Route::put('/word-of-day/{id}', [WordOfTheDayController::class, 'update'])->name('admin.word-of-day.update');
-    Route::delete('/word-of-day/{id}', [WordOfTheDayController::class, 'destroy'])->name('admin.word-of-day.destroy');
+    Route::get('/word-of-day/{word}/edit', [WordOfTheDayController::class, 'edit'])->name('admin.word-of-day.edit');
+    Route::put('/word-of-day/{word}', [WordOfTheDayController::class, 'update'])->name('admin.word-of-day.update');
+    Route::delete('/word-of-day/{word}', [WordOfTheDayController::class, 'destroy'])->name('admin.word-of-day.destroy');
 
     // Dashboard Statistics (Batch Profile)
     // NOTE: Currently served by a Blade view; replace with controller when business logic is ready.

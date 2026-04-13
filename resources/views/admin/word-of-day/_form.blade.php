@@ -44,6 +44,16 @@
     </div>
 
     <div class="mb-3">
+        <label class="form-label fw-semibold">Scheduled date <span class="text-body-secondary fw-normal">(optional)</span></label>
+        <input type="date" name="scheduled_date" class="form-control @error('scheduled_date') is-invalid @enderror"
+            value="{{ old('scheduled_date', $isEdit && $word->scheduled_date ? $word->scheduled_date->format('Y-m-d') : '') }}">
+        @error('scheduled_date')
+            <div class="invalid-feedback d-block">{{ $message }}</div>
+        @enderror
+        <small class="text-body-secondary">If set, this entry is shown on that calendar day instead of the normal rotation.</small>
+    </div>
+
+    <div class="mb-3">
         <label class="form-label fw-semibold">Active</label>
         <select name="active_inactive" class="form-select @error('active_inactive') is-invalid @enderror" required>
             @php

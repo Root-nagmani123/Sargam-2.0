@@ -1063,16 +1063,20 @@
                 </form>
 
                 <!-- Word of Day -->
-                <div class="word-of-day">
-                    <h6>
+                <div class="word-of-day" aria-labelledby="word-of-day-heading">
+                    <h6 id="word-of-day-heading">
                         <i class="bi bi-translate" aria-hidden="true"></i>
                         आज का शब्द / Word of the Day
                     </h6>
-                    <p>
+                    <p class="mb-0" aria-live="polite">
                         @if(!empty($wordOfTheDay))
-                            {{ $wordOfTheDay->displayLine() }}
+                            <span lang="hi">{{ $wordOfTheDay->hindi_text }}</span>
+                            <span aria-hidden="true"> — </span>
+                            <span lang="en">{{ $wordOfTheDay->english_text }}</span>
                         @else
-                            अर्हक अंक - Qualifying marks
+                            <span lang="hi">अर्हक अंक</span>
+                            <span aria-hidden="true"> — </span>
+                            <span lang="en">Qualifying marks</span>
                         @endif
                     </p>
                 </div>

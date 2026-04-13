@@ -9,14 +9,10 @@ class WordOfTheDaySeeder extends Seeder
 {
     /**
      * Seed bilingual “word of the day” entries (admin / governance / academic theme).
-     * Safe to run multiple times: only inserts when the table is empty.
+     * Safe to run multiple times: upserts by hindi + english pair.
      */
     public function run(): void
     {
-        if (WordOfTheDay::query()->exists()) {
-            return;
-        }
-
         $rows = [
             ['अर्हक अंक', 'Qualifying marks'],
             ['पाठ्यक्रम', 'Curriculum'],
@@ -53,14 +49,18 @@ class WordOfTheDaySeeder extends Seeder
 
         $now = now();
         foreach ($rows as $i => [$hindi, $english]) {
-            WordOfTheDay::create([
-                'hindi_text' => $hindi,
-                'english_text' => $english,
-                'sort_order' => $i + 1,
-                'active_inactive' => true,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ]);
+            WordOfTheDay::query()->firstOrCreate(
+                [
+                    'hindi_text' => $hindi,
+                    'english_text' => $english,
+                ],
+                [
+                    'sort_order' => $i + 1,
+                    'active_inactive' => true,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]
+            );
         }
     }
 }
