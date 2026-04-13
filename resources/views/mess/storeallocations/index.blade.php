@@ -140,7 +140,6 @@
     width: 100%;
     min-width: 0;
 }
-/* Item row: outer uses Bootstrap .form-select; inner is borderless flex (see classNames in JS) */
 #createStoreAllocationModal #allocationItemsTable .alloc-item-choices-outer.form-select,
 #editStoreAllocationModal #editAllocationItemsTable .alloc-item-choices-outer.form-select {
     padding: 0;
@@ -152,7 +151,6 @@
     outline: 0;
     box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
 }
-/* Item row open: stack above following rows (table paints lower rows on top otherwise) */
 #createStoreAllocationModal #allocationItemsTable tbody tr:has(.choices.is-open),
 #editStoreAllocationModal #editAllocationItemsTable tbody tr:has(.choices.is-open) {
     position: relative;
@@ -162,6 +160,29 @@
 #editStoreAllocationModal #editAllocationItemsTable .choices.is-open {
     position: relative;
     z-index: 3001;
+}
+#createStoreAllocationModal #allocationItemsTable .choices__list--dropdown.alloc-item-dd-fixed,
+#editStoreAllocationModal #editAllocationItemsTable .choices__list--dropdown.alloc-item-dd-fixed {
+    z-index: 20050 !important;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    overflow: visible !important;
+}
+#createStoreAllocationModal #allocationItemsTable .choices[data-type*="select-one"] .choices__list--dropdown .choices__input,
+#editStoreAllocationModal #editAllocationItemsTable .choices[data-type*="select-one"] .choices__list--dropdown .choices__input {
+    display: block !important;
+    visibility: visible !important;
+    width: 100% !important;
+    box-sizing: border-box;
+    margin: 0 !important;
+    min-height: calc(1.5em + 0.5rem + 2px);
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--bs-body-color);
+    background-color: var(--bs-body-bg);
+    border: 0;
+    border-bottom: 1px solid var(--bs-border-color);
+    border-radius: 0;
 }
 /* Default modal Choices stacking (Store Name etc.) */
 #createStoreAllocationModal .choices,
@@ -175,20 +196,6 @@
 #createStoreAllocationModal .choices__list--dropdown,
 #editStoreAllocationModal .choices__list--dropdown {
     z-index: 20041 !important;
-}
-#createStoreAllocationModal #allocationItemsTable .choices__list--dropdown.alloc-item-dd-fixed,
-#editStoreAllocationModal #editAllocationItemsTable .choices__list--dropdown.alloc-item-dd-fixed {
-    z-index: 20050 !important;
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-    overflow: visible !important;
-}
-/* Search field: keep visible (Choices + Bootstrap); fixed dropdown scrolls list only */
-#createStoreAllocationModal #allocationItemsTable .choices__list--dropdown .choices__input,
-#editStoreAllocationModal #editAllocationItemsTable .choices__list--dropdown .choices__input {
-    display: block !important;
-    width: 100% !important;
-    box-sizing: border-box;
-    margin: 0 !important;
 }
 /* Remove row: × perfectly centered in cell */
 #createStoreAllocationModal #allocationItemsTable td.alloc-action-cell,
@@ -545,8 +552,7 @@
     let createRowIndex = 1;
     let editRowIndex = 0;
 
-    /** Choices.js defaults (v10) — merge when skinning item rows with Bootstrap */
-    const CHOICES_DEFAULT_CLASSNAMES = {
+    var CHOICES_DEFAULT_CLASSNAMES = {
         containerOuter: 'choices',
         containerInner: 'choices__inner',
         input: 'choices__input',
@@ -576,13 +582,13 @@
     };
 
     function buildChoicesOptions(el) {
-        const placeholder = el.getAttribute('data-placeholder') || 'Select';
-        const base = {
+        var placeholder = el.getAttribute('data-placeholder') || 'Select';
+        var base = {
             shouldSort: false,
             position: 'bottom',
             placeholder: true,
             placeholderValue: placeholder,
-            searchPlaceholderValue: 'Search items...',
+            searchPlaceholderValue: el.classList.contains('alloc-item-select') ? 'Search items...' : 'Search...',
         };
         if (el.classList.contains('alloc-item-select')) {
             base.searchEnabled = true;
@@ -593,7 +599,7 @@
                 containerOuter: 'choices form-select form-select-sm w-100 alloc-item-choices-outer',
                 containerInner: 'choices__inner d-flex align-items-center flex-nowrap overflow-hidden border-0 rounded-0 bg-transparent px-2',
                 listSingle: 'choices__list--single flex-grow-1 min-w-0 text-start',
-                listDropdown: 'choices__list--dropdown border rounded-2 shadow-sm bg-body mt-1 py-1',
+                listDropdown: 'choices__list--dropdown border rounded-2 shadow-sm bg-body mt-1 p-0',
                 item: 'choices__item text-truncate min-w-0',
                 itemSelectable: 'choices__item--selectable px-3 py-2 text-truncate d-block w-100',
                 itemChoice: 'choices__item--choice px-3 py-2 text-truncate d-block w-100',
@@ -605,14 +611,14 @@
     }
 
     function positionAllocItemDropdownFixed(selectEl) {
-        const wrap = selectEl.closest('.choices');
+        var wrap = selectEl.closest('.choices');
         if (!wrap) return;
-        const inner = wrap.querySelector('.choices__inner');
-        const dd = wrap.querySelector('.choices__list--dropdown');
+        var inner = wrap.querySelector('.choices__inner');
+        var dd = wrap.querySelector('.choices__list--dropdown');
         if (!inner || !dd) return;
-        const r = inner.getBoundingClientRect();
-        const spaceBelow = window.innerHeight - r.bottom - 8;
-        const maxPanel = Math.min(320, Math.max(160, spaceBelow));
+        var r = inner.getBoundingClientRect();
+        var spaceBelow = window.innerHeight - r.bottom - 8;
+        var maxPanel = Math.min(320, Math.max(160, spaceBelow));
         dd.classList.add('alloc-item-dd-fixed');
         dd.style.position = 'fixed';
         dd.style.left = r.left + 'px';
@@ -620,13 +626,12 @@
         dd.style.width = Math.max(r.width, 1) + 'px';
         dd.style.zIndex = '20050';
         dd.style.boxSizing = 'border-box';
-        /* Do not scroll the whole panel — clips/hides the search. Scroll inner list only. */
         dd.style.maxHeight = '';
         dd.style.overflowY = '';
         dd.style.overflow = '';
-        const searchInput = dd.querySelector('.choices__input');
-        const innerList = dd.querySelector('.choices__list[role="listbox"]');
-        const searchH = searchInput ? Math.ceil(searchInput.getBoundingClientRect().height || 44) : 44;
+        var searchInput = dd.querySelector('.choices__input');
+        var innerList = dd.querySelector('.choices__list[role="listbox"]');
+        var searchH = searchInput ? Math.ceil(searchInput.getBoundingClientRect().height || 44) : 44;
         if (innerList) {
             innerList.style.maxHeight = Math.max(72, maxPanel - searchH - 8) + 'px';
             innerList.style.overflowY = 'auto';
@@ -634,9 +639,9 @@
     }
 
     function clearAllocItemDropdownFixed(selectEl) {
-        const wrap = selectEl.closest('.choices');
+        var wrap = selectEl.closest('.choices');
         if (!wrap) return;
-        const dd = wrap.querySelector('.choices__list--dropdown');
+        var dd = wrap.querySelector('.choices__list--dropdown');
         if (!dd) return;
         dd.classList.remove('alloc-item-dd-fixed');
         dd.style.position = '';
@@ -648,7 +653,7 @@
         dd.style.overflow = '';
         dd.style.zIndex = '';
         dd.style.boxSizing = '';
-        const innerList = dd.querySelector('.choices__list[role="listbox"]');
+        var innerList = dd.querySelector('.choices__list[role="listbox"]');
         if (innerList) {
             innerList.style.maxHeight = '';
             innerList.style.overflowY = '';
@@ -658,18 +663,25 @@
     function initChoices(root) {
         if (typeof window.Choices === 'undefined') return;
 
-        const scope = root || document;
+        var scope = root || document;
         scope.querySelectorAll('select.choices-select').forEach(function(el) {
             if (el.dataset.choicesInitialized === 'true') return;
 
-            const opts = buildChoicesOptions(el);
+            var opts = buildChoicesOptions(el);
             el._choices = new Choices(el, opts);
             el.dataset.choicesInitialized = 'true';
 
-            // Choices.js may not bubble change the same way as a native select; unit must update on pick.
+            if (el.classList.contains('alloc-item-select') && el._choices && el._choices.config) {
+                el._choices.config.searchEnabled = true;
+                el._choices.config.searchChoices = true;
+                if (typeof el._choices._canSearch !== 'undefined') {
+                    el._choices._canSearch = true;
+                }
+            }
+
             if (el.classList.contains('alloc-item-select')) {
-                const syncAllocRowFromItem = function () {
-                    const row = el.closest('.allocation-item-row');
+                var syncAllocRowFromItem = function() {
+                    var row = el.closest('.allocation-item-row');
                     if (row) {
                         updateUnit(row);
                         calcLineTotal(row);
@@ -680,7 +692,7 @@
             }
 
             function setModalBodyDropdownOpen(show) {
-                const mb = el.closest('.modal-body');
+                var mb = el.closest('.modal-body');
                 if (!mb) return;
                 if (show) {
                     mb.classList.add('alloc-dropdown-open');
@@ -697,7 +709,7 @@
                 setModalBodyDropdownOpen(true);
                 if (!el.classList.contains('alloc-item-select')) return;
                 el._allocItemReposition = function() {
-                    const w = el.closest('.choices');
+                    var w = el.closest('.choices');
                     if (!w || !w.classList.contains('is-open')) return;
                     positionAllocItemDropdownFixed(el);
                 };
@@ -706,6 +718,16 @@
                         positionAllocItemDropdownFixed(el);
                         window.addEventListener('resize', el._allocItemReposition);
                         document.addEventListener('scroll', el._allocItemReposition, true);
+                        var wrap = el.closest('.choices');
+                        var searchInp = wrap && wrap.querySelector('.choices__list--dropdown .choices__input');
+                        if (searchInp) {
+                            searchInp.removeAttribute('hidden');
+                            try {
+                                searchInp.focus({ preventScroll: true });
+                            } catch (err) {
+                                searchInp.focus();
+                            }
+                        }
                     });
                 });
             });
@@ -732,7 +754,7 @@
         }
         clearAllocItemDropdownFixed(el);
         if (el._choices) {
-            el._choices.destroy();
+            try { el._choices.destroy(); } catch (err) {}
             el._choices = null;
         }
         delete el.dataset.choicesInitialized;
@@ -870,7 +892,7 @@
             if (!sel || !String(sel.value || '').trim()) {
                 e.preventDefault();
                 alert('Please select an item on each line, or remove incomplete rows using the × button.');
-                const wrap = sel && sel.closest('.choices');
+                var wrap = sel && (sel.closest('.choices') || sel.closest('td'));
                 if (wrap && typeof wrap.scrollIntoView === 'function') {
                     wrap.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
                 }
@@ -935,7 +957,7 @@
         if (e.target.classList.contains('alloc-remove-row')) {
             const row = e.target.closest('.allocation-item-row');
             if (row && document.querySelectorAll('#allocationItemsBody .allocation-item-row').length > 1) {
-                destroyChoices(row.querySelector('select.choices-select'));
+                destroyChoices(row.querySelector('.alloc-item-select'));
                 row.remove();
                 updateCreateRemoveButtons();
             }
@@ -963,7 +985,7 @@
                 }
                 document.getElementById('editAllocationDate').value = a.allocation_date || '';
                 const tbody = document.getElementById('editAllocationItemsBody');
-                tbody.querySelectorAll('select.choices-select').forEach(destroyChoices);
+                tbody.querySelectorAll('select.alloc-item-select').forEach(destroyChoices);
                 tbody.innerHTML = '';
                 if (items.length === 0) {
                     tbody.insertAdjacentHTML('beforeend', getItemRowHtml(0, null));
@@ -975,11 +997,6 @@
                     editRowIndex = items.length;
                 }
                 initChoices(document.getElementById('editStoreAllocationModal'));
-                tbody.querySelectorAll('select.alloc-item-select').forEach(function(selectEl) {
-                    if (selectEl._choices && selectEl.value) {
-                        selectEl._choices.setChoiceByValue(String(selectEl.value));
-                    }
-                });
                 tbody.querySelectorAll('.allocation-item-row').forEach(function(row) {
                     updateUnit(row);
                     calcLineTotal(row);
@@ -1017,7 +1034,7 @@
         if (e.target.classList.contains('alloc-remove-row')) {
             const row = e.target.closest('.allocation-item-row');
             if (row && document.querySelectorAll('#editAllocationItemsBody .allocation-item-row').length > 1) {
-                destroyChoices(row.querySelector('select.choices-select'));
+                destroyChoices(row.querySelector('.alloc-item-select'));
                 row.remove();
                 updateEditRemoveButtons();
             }
@@ -1035,7 +1052,6 @@
         });
     }
 
-    // Initialize Choices.js for all modal dropdowns, including dynamic rows
     document.addEventListener('DOMContentLoaded', function() {
         initChoices(document.getElementById('createStoreAllocationModal'));
         initChoices(document.getElementById('editStoreAllocationModal'));

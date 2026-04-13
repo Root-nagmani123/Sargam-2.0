@@ -9,19 +9,19 @@
         <x-breadcrum title="Purchase Orders"></x-breadcrum>
     </div>
     <div class="datatables">
-        <div class="card shadow-lg border-0 rounded-4 overflow-hidden">
-            <div class="card-header bg-gradient border-0 py-3 px-3 px-md-4" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
+        <div class="card shadow-sm border-0 rounded-3 overflow-hidden">
+            <div class="card-header border-0 py-3 px-3 px-md-4 position-relative" style="background:linear-gradient(135deg,#0b4a7e 0%,#1a6fa0 100%);">
                 <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 no-print">
-                    <div class="d-flex align-items-start gap-3">
-                        <div class="rounded-4 bg-primary bg-gradient text-white d-none d-sm-flex align-items-center justify-content-center flex-shrink-0 shadow-sm" style="width: 3rem; height: 3rem;">
-                            <i class="material-icons material-symbol-rounded" style="font-size: 1.5rem;" aria-hidden="true">receipt_long</i>
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-3 bg-white bg-opacity-15 d-none d-sm-flex align-items-center justify-content-center flex-shrink-0" style="width: 2.75rem; height: 2.75rem;">
+                            <i class="material-icons material-symbol-rounded" style="font-size: 1.4rem;" aria-hidden="true">receipt_long</i>
                         </div>
                         <div>
-                            <h4 class="mb-1 fw-bold text-dark">Purchase Orders</h4>
-                            <p class="mb-0 text-body-secondary small fw-medium">Filter the list, open a row to view, or create a new purchase order.</p>
+                            <h4 class="mb-0 fw-bold text-white">Purchase Orders</h4>
+                            <p class="mb-0 text-white-50 small">Filter, view, or create a new purchase order</p>
                         </div>
                     </div>
-                    <button type="button" class="btn btn-primary px-4 py-2 rounded-1 d-inline-flex align-items-center gap-2 shadow-sm fw-semibold" data-bs-toggle="modal" data-bs-target="#createPurchaseOrderModal" style="transition: all 0.3s ease;">
+                    <button type="button" class="btn btn-light text-primary px-4 py-2 rounded-2 d-inline-flex align-items-center gap-2 shadow-sm fw-semibold po-btn-create" data-bs-toggle="modal" data-bs-target="#createPurchaseOrderModal">
                         <i class="material-icons material-symbol-rounded" style="font-size: 1.1rem;" aria-hidden="true">add</i>
                         <span class="d-none d-sm-inline">Create Purchase Order</span>
                         <span class="d-inline d-sm-none">New</span>
@@ -38,25 +38,25 @@
                 @endif
 
                 {{-- Filters --}}
-                <form method="GET" action="{{ route('admin.mess.purchaseorders.index') }}" class="card border-0 shadow-lg rounded-4 mb-4 no-print po-filter-card" aria-label="Purchase order list filters">
-                    <div class="card-header bg-gradient border-bottom py-3 px-3 px-md-4 d-flex flex-wrap align-items-center justify-content-between gap-3" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
-                        <div class="d-flex align-items-start gap-3">
-                            <span class="rounded-4 bg-primary bg-gradient text-white d-inline-flex align-items-center justify-content-center flex-shrink-0 shadow-sm" style="width: 2.75rem; height: 2.75rem;" aria-hidden="true">
-                                <i class="material-icons material-symbol-rounded" style="font-size: 1.35rem;">tune</i>
-                            </span>
-                            <div>
-                                <h6 class="mb-0 fw-bold text-dark">Refine results</h6>
-                                <p class="mb-0 small text-body-secondary fw-medium">Set a period, then narrow by vendor and store. Multi-select is supported.</p>
+                <form method="GET" action="{{ route('admin.mess.purchaseorders.index') }}" class="card border-0 shadow-sm rounded-3 mb-4 no-print po-filter-card" aria-label="Purchase order list filters">
+                    <div class="card-header bg-white border-bottom border-light-subtle py-3 px-3 px-md-4 position-relative" style="border-top:3px solid #0b4a7e !important;">
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="material-symbols-rounded text-primary" style="font-size:1.5rem;" aria-hidden="true">tune</span>
+                                <div>
+                                    <h6 class="mb-0 fw-semibold text-body">Refine Results</h6>
+                                    <p class="mb-0 small text-body-secondary">Filter by period, vendor & store</p>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div class="card-body p-3 p-md-4" style="background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);">
+                    <div class="card-body p-3 p-md-4 bg-body-tertiary">
                         <div class="row g-4 align-items-stretch">
                             <div class="col-12 col-lg-5 col-xl-4">
-                                <div class="h-100 rounded-4 border-0 bg-white p-3 p-md-4 shadow-sm">
+                                <div class="h-100 rounded-3 border border-light-subtle bg-white p-3 p-md-4">
                                     <div class="d-flex align-items-center gap-2 mb-3">
-                                        <span class="badge rounded-1 bg-primary bg-gradient text-white fw-bold text-uppercase shadow-sm" style="font-size: 0.7rem; letter-spacing: 0.08em; padding: 0.35rem 0.75rem;">Period</span>
-                                        <span class="small text-body-secondary fw-medium">Order date range</span>
+                                        <span class="badge rounded-pill bg-primary-subtle text-primary-emphasis fw-semibold px-3" style="font-size: 0.7rem; letter-spacing: 0.06em;">Period</span>
+                                        <span class="small text-body-secondary">Order date range</span>
                                     </div>
                                     <div class="row g-3">
                                         <div class="col-sm-6">
@@ -85,10 +85,10 @@
                                 </div>
                             </div>
                             <div class="col-12 col-lg-7 col-xl-8">
-                                <div class="h-100 rounded-4 border-0 bg-white p-3 p-md-4 shadow-sm">
+                                <div class="h-100 rounded-3 border border-light-subtle bg-white p-3 p-md-4">
                                     <div class="d-flex align-items-center gap-2 mb-3">
-                                        <span class="badge rounded-1 bg-success bg-gradient text-white fw-bold text-uppercase shadow-sm" style="font-size: 0.7rem; letter-spacing: 0.08em; padding: 0.35rem 0.75rem;">Scope</span>
-                                        <span class="small text-body-secondary fw-medium">Vendors and stores <span class="d-none d-sm-inline">(leave blank for all)</span></span>
+                                        <span class="badge rounded-pill bg-success-subtle text-success-emphasis fw-semibold px-3" style="font-size: 0.7rem; letter-spacing: 0.06em;">Scope</span>
+                                        <span class="small text-body-secondary">Vendors & stores <span class="d-none d-sm-inline">(leave blank for all)</span></span>
                                     </div>
                                     <div class="row g-3 align-items-start">
                                         <div class="col-12 col-md-6">
@@ -125,18 +125,14 @@
                             <div class="col-12">
                                 <div class="d-flex flex-column flex-md-row flex-wrap align-items-stretch align-items-md-center justify-content-between gap-3 pt-3 mt-2 border-top">
                                     <div class="d-flex flex-wrap gap-2">
-                                        <button type="submit" class="btn btn-primary rounded-1 d-inline-flex align-items-center justify-content-center gap-2 px-4 py-2 shadow-sm fw-semibold" style="transition: all 0.3s ease;">
-                                            <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;" aria-hidden="true">filter_alt</i>
+                                        <button type="submit" class="btn btn-primary rounded-2 d-inline-flex align-items-center justify-content-center gap-2 px-4 py-2 shadow-sm fw-semibold">
+                                            <i class="material-icons material-symbol-rounded" style="font-size: 1.1rem;" aria-hidden="true">filter_alt</i>
                                             <span>Apply filters</span>
                                         </button>
-                                        <a href="{{ route('admin.mess.purchaseorders.index') }}" class="btn btn-outline-secondary rounded-1 d-inline-flex align-items-center justify-content-center gap-2 px-4 py-2 fw-semibold" style="transition: all 0.3s ease;">
-                                            <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;" aria-hidden="true">restart_alt</i>
+                                        <a href="{{ route('admin.mess.purchaseorders.index') }}" class="btn btn-outline-secondary rounded-2 d-inline-flex align-items-center justify-content-center gap-2 px-4 py-2 fw-semibold">
+                                            <i class="material-icons material-symbol-rounded" style="font-size: 1.1rem;" aria-hidden="true">restart_alt</i>
                                             <span>Clear</span>
                                         </a>
-                                        <button type="button" class="btn btn-outline-primary rounded-1 d-inline-flex align-items-center justify-content-center gap-2 px-4 py-2 fw-semibold" onclick="window.print()" title="Print list or Save as PDF" style="transition: all 0.3s ease;">
-                                            <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;" aria-hidden="true">print</i>
-                                            <span>Print</span>
-                                        </button>
                                     </div>
                                     <p class="mb-0 small text-body-secondary text-center text-md-end ms-md-auto flex-shrink-0 fst-italic" style="max-width: 28rem;">Tip: use the search field in each dropdown to find vendors or stores. Remove chips to clear a selection; leave both empty for all.</p>
                                 </div>
@@ -159,16 +155,16 @@
                     <div class="report-print-date small text-muted mt-1">Printed on {{ now()->format('d-m-Y, h:i A') }}</div>
                 </div>
 
-                <div class="table-responsive shadow-sm rounded-4 overflow-hidden">
-                    <table id="purchaseOrdersTable" class="table table-hover align-middle mb-0 w-100">
-                        <thead class="table-light">
-                            <tr class="small text-uppercase">
-                                <th scope="col" class="fw-bold border-0 py-3 ps-4 text-muted">#</th>
-                                <th scope="col" class="fw-bold border-0 py-3 text-muted">Order No.</th>
-                                <th scope="col" class="fw-bold border-0 py-3 text-muted">Vendor</th>
-                                <th scope="col" class="fw-bold border-0 py-3 text-muted">Store</th>
-                                <th scope="col" class="fw-bold border-0 py-3 text-muted">Status</th>
-                                <th scope="col" class="fw-bold border-0 py-3 pe-4 text-end d-print-none text-muted">Actions</th>
+                <div class="table-responsive">
+                    <table id="purchaseOrdersTable" class="table align-middle mb-0 w-100 po-data-table">
+                        <thead>
+                            <tr class="small">
+                                <th scope="col" class="po-th border-0 py-3 ps-4">#</th>
+                                <th scope="col" class="po-th border-0 py-3">Order No.</th>
+                                <th scope="col" class="po-th border-0 py-3">Vendor</th>
+                                <th scope="col" class="po-th border-0 py-3">Store</th>
+                                <th scope="col" class="po-th border-0 py-3">Status</th>
+                                <th scope="col" class="po-th border-0 py-3 pe-4 text-end d-print-none">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -178,30 +174,32 @@
                                     : ($po->status === 'rejected' ? 'text-bg-danger'
                                     : ($po->status === 'completed' ? 'text-bg-primary' : 'text-bg-warning'));
                             @endphp
-                            <tr class="border-bottom">
+                            <tr class="po-row">
                                 <td class="ps-4 py-3 text-body-secondary fw-medium">{{ $loop->iteration }}</td>
-                                <td class="py-3 fw-bold text-dark">{{ $po->po_number }}</td>
-                                <td class="py-3 text-body">{{ $po->vendor->name ?? 'N/A' }}</td>
-                                <td class="py-3 text-body">{{ $po->store->store_name ?? 'N/A' }}</td>
                                 <td class="py-3">
-                                    <span class="badge rounded-1 {{ $statusBadgeClass }} px-3 py-2 fw-semibold" style="font-size: 0.75rem; letter-spacing: 0.02em;">
+                                    <span class="fw-semibold text-body">{{ $po->po_number }}</span>
+                                </td>
+                                <td class="py-3 text-body-secondary">{{ $po->vendor->name ?? 'N/A' }}</td>
+                                <td class="py-3 text-body-secondary">{{ $po->store->store_name ?? 'N/A' }}</td>
+                                <td class="py-3">
+                                    <span class="badge rounded-pill {{ $statusBadgeClass }} px-3 py-1 fw-semibold" style="font-size: 0.72rem; letter-spacing: 0.02em;">
                                         {{ ucfirst($po->status) }}
                                     </span>
                                 </td>
                                 <td class="d-print-none text-end pe-4 py-3">
-                                    <div class="d-inline-flex align-items-center justify-content-end gap-2">
-                                    <button type="button" class="btn btn-sm btn-outline-primary border-2 btn-view-po rounded-3 shadow-sm" data-po-id="{{ $po->id }}" title="View" style="transition: all 0.3s ease;">
-                                        <i class="material-icons material-symbol-rounded align-middle" style="font-size: 1.125rem;">visibility</i>
+                                    <div class="d-inline-flex align-items-center justify-content-end gap-1">
+                                    <button type="button" class="btn btn-sm btn-outline-primary btn-view-po rounded-2 po-action-btn" data-po-id="{{ $po->id }}" title="View">
+                                        <i class="material-icons material-symbol-rounded align-middle" style="font-size: 1rem;">visibility</i>
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-outline-info border-2 btn-edit-po rounded-3 shadow-sm" data-po-id="{{ $po->id }}" title="Edit" style="transition: all 0.3s ease;">
-                                        <i class="material-icons material-symbol-rounded align-middle" style="font-size: 1.125rem;">edit</i>
+                                    <button type="button" class="btn btn-sm btn-outline-info btn-edit-po rounded-2 po-action-btn" data-po-id="{{ $po->id }}" title="Edit">
+                                        <i class="material-icons material-symbol-rounded align-middle" style="font-size: 1rem;">edit</i>
                                     </button>
                                     @if($canDeletePurchaseOrder)
                                         <form action="{{ route('admin.mess.purchaseorders.destroy', $po->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this purchase order?');">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-outline-danger border-2 rounded-3 shadow-sm" title="Delete" style="transition: all 0.3s ease;">
-                                                <i class="material-icons material-symbol-rounded align-middle" style="font-size: 1.125rem;">delete</i>
+                                            <button type="submit" class="btn btn-sm btn-outline-danger rounded-2 po-action-btn" title="Delete">
+                                                <i class="material-icons material-symbol-rounded align-middle" style="font-size: 1rem;">delete</i>
                                             </button>
                                         </form>
                                     @endif
@@ -220,8 +218,49 @@
 
 <style>
     .po-ux .letter-spacing-1 { letter-spacing: 0.04em; }
+
+    /* ── Navy table header ── */
+    .po-th {
+        background: linear-gradient(135deg, #0b4a7e 0%, #1a6fa0 100%) !important;
+        color: #fff !important;
+        font-weight: 600;
+        font-size: 0.75rem;
+        letter-spacing: 0.06em;
+        white-space: nowrap;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    /* ── Row hover / transition ── */
+    .po-row { transition: background-color .18s ease; }
+    .po-row:hover { background-color: rgba(11,74,126,.04) !important; }
+
+    /* ── Action buttons ── */
+    .po-action-btn {
+        width: 2rem; height: 2rem;
+        display: inline-flex; align-items: center; justify-content: center;
+        padding: 0; transition: all .2s ease;
+    }
+    .po-action-btn:hover { transform: translateY(-1px); box-shadow: 0 2px 6px rgba(0,0,0,.12); }
+
+    /* ── Create button hover ── */
+    .po-btn-create { transition: all .25s ease; }
+    .po-btn-create:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(255,255,255,.25); }
+
+    /* ── Fade-in animation ── */
+    @keyframes po-fade-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    .po-ux .datatables { animation: po-fade-in .4s ease-out; }
+    .po-filter-card { animation: po-fade-in .35s ease-out; }
+
     @media (max-width: 575.98px) {
-        .po-ux .datatables .table thead th { font-size: 0.7rem; }
+        .po-ux .datatables .table thead th { font-size: 0.65rem; }
+    }
+
+    /* ── Modal form field focus — navy ring ── */
+    #createPurchaseOrderModal .form-control:focus,
+    #createPurchaseOrderModal .form-select:focus {
+        border-color: #0b4a7e !important;
+        box-shadow: 0 0 0 .2rem rgba(11,74,126,.15);
     }
     /* Print header – standard level (matches category-wise-print-slip) */
     .report-mess-title {
@@ -475,7 +514,17 @@
 
 #createPurchaseOrderModal .card-body,
 #editPurchaseOrderModal .card-body {
-    overflow: hidden;
+    overflow: visible;
+}
+
+#createPurchaseOrderModal .modal-content,
+#editPurchaseOrderModal .modal-content {
+    overflow: visible;
+}
+
+#createPurchaseOrderModal .card,
+#editPurchaseOrderModal .card {
+    overflow: visible;
 }
 
 
@@ -653,219 +702,71 @@
 .po-ux .po-filter-multiselect-wrap .ts-control {
     border-top-left-radius: 0;
     border-bottom-left-radius: 0;
-    min-height: calc(1.5em + 0.75rem + 4px);
-    font-size: 0.875rem;
-    border-width: 2px;
+    min-height: calc(1.5em + .5rem + calc(var(--bs-border-width) * 2));
+    font-size: .875rem;
     border-left-width: 0;
 }
 .choices__list--multiple .choices__item {
-        background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%) !important;
+        background-color: var(--bs-primary) !important;
         border: none !important;
-        border-radius: 0.5rem !important;
+        border-radius: var(--bs-border-radius-pill) !important;
         color: #fff !important;
-        font-size: 0.875rem !important;
-        padding: 0.375rem 0.75rem !important;
-        font-weight: 600 !important;
-        box-shadow: 0 0.125rem 0.25rem rgba(13, 110, 253, 0.3) !important;
-        transition: opacity 0.2s ease !important;
+        font-size: .8rem !important;
+        padding: .25rem .625rem !important;
+        font-weight: 500 !important;
     }
-    
-    .choices__list--multiple .choices__item:hover {
-        opacity: 0.9;
-    }
-
+    .choices__list--multiple .choices__item:hover { opacity: .85; }
     /* ========================================
-       Native Bootstrap Select Enhancement
+       Native Bootstrap Select / Input tweaks
        ======================================== */
-    
-    /* Enhanced Bootstrap form-select styling */
-    .form-select {
-        transition: border-color 0.2s ease, box-shadow 0.2s ease;
-        font-weight: 500;
-    }
-    
-    .form-select:hover:not(:focus) {
-        border-color: #b8c5d6;
-    }
-    
-    .form-select:focus {
-        border-color: #86b7fe;
-        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
-    }
-    
-    .form-select-lg {
-        font-size: 0.95rem;
-        padding: 0.625rem 2.5rem 0.625rem 0.875rem;
-        min-height: 42px;
-    }
-    
-    .form-select.border-2 {
-        border-width: 2px !important;
-    }
-    
-    /* Multi-select enhancement */
-    select[multiple].form-select {
-        min-height: 120px;
-        padding: 0.5rem;
-    }
-    
-    select[multiple].form-select option {
-        padding: 0.5rem 0.75rem;
-        margin-bottom: 0.25rem;
-        border-radius: 0.375rem;
-        transition: background-color 0.15s ease;
-    }
-    
-    select[multiple].form-select option:hover {
-        background-color: rgba(13, 110, 253, 0.08);
-        color: #0d6efd;
-    }
-    
-    select[multiple].form-select option:checked {
-        background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
-        color: white;
-        font-weight: 600;
-    }
-    
-    /* ========================================
-       Enhanced Bootstrap Input Controls
-       ======================================== */
-    
-    /* Form control enhancements */
+    .form-select,
     .form-control {
-        transition: border-color 0.2s ease, box-shadow 0.2s ease;
-        font-weight: 500;
+        transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
     }
-    
-    .form-control:hover:not([readonly]):not(:focus) {
-        border-color: #b8c5d6;
-    }
-    
-    .form-control-lg {
-        font-size: 0.95rem;
-        padding: 0.625rem 0.875rem;
-        min-height: 42px;
-    }
-    
-    .form-control.border-2 {
-        border-width: 2px !important;
-    }
-    
-    /* File input enhancement */
-    .form-control[type="file"] {
-        padding: 0.5rem 0.75rem;
-    }
-    
-    .form-control[type="file"]:hover {
-        cursor: pointer;
-    }
+    .form-control[type="file"] { cursor: pointer; }
 
     /* ========================================
-       Enhanced UI/UX Animations & Effects
+       Minimal UI polish
        ======================================== */
-    
-    /* Button hover effects */
-    .btn {
-        transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-    }
-    
-    .btn-primary:hover {
-        box-shadow: 0 0.25rem 0.5rem rgba(13, 110, 253, 0.25) !important;
-    }
-    
-    .btn-success:hover {
-        box-shadow: 0 0.25rem 0.5rem rgba(25, 135, 84, 0.25) !important;
-    }
-    
-    .btn-warning:hover {
-        box-shadow: 0 0.25rem 0.5rem rgba(255, 193, 7, 0.25) !important;
-    }
-    
-    .btn-info:hover {
-        box-shadow: 0 0.25rem 0.5rem rgba(13, 202, 240, 0.25) !important;
-    }
-    
-    .btn-outline-primary:hover,
-    .btn-outline-info:hover,
-    .btn-outline-danger:hover {
-        box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.12) !important;
-    }
-    
-    /* Card hover effects */
-    .card {
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-    
-    /* Table row hover - enhanced */
-    .table-hover tbody tr {
-        transition: background-color 0.15s ease;
-    }
-    
-    .table-hover tbody tr:hover {
-        background-color: rgba(13, 110, 253, 0.05) !important;
-    }
-    
-    /* Badge enhancements */
-    .badge {
-        transition: opacity 0.2s ease;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-    
-    /* Input group enhancements */
-    .input-group:focus-within {
-        box-shadow: 0 0.125rem 0.5rem rgba(13, 110, 253, 0.12);
-        transition: box-shadow 0.2s ease;
-    }
-    
-    /* Smooth scrolling for modal body */
-    .modal-body {
-        scroll-behavior: smooth;
-    }
-    
-    /* Icon effects */
-    .material-icons {
-        transition: opacity 0.2s ease;
-    }
+    .modal-body { scroll-behavior: smooth; }
 </style>
 <div class="modal fade" id="createPurchaseOrderModal" tabindex="-1" aria-labelledby="createPurchaseOrderModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-lg-down modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg rounded-4">
+        <div class="modal-content border-0 shadow rounded-3">
             <form method="POST" action="{{ route('admin.mess.purchaseorders.store') }}" id="createPOForm" enctype="multipart/form-data">
                 @csrf
-                <div class="modal-header border-0 border-bottom py-3 px-4 bg-light bg-gradient">
+                <div class="modal-header bg-white border-bottom border-light-subtle py-3 px-4" style="border-top:4px solid #0b4a7e !important;">
                     <div>
-                        <h5 class="modal-title fw-bold mb-1 text-dark" id="createPurchaseOrderModalLabel">Create purchase order</h5>
-                        <p class="mb-0 small text-body-secondary fw-medium">Required fields are marked with <span class="text-danger fw-bold">*</span></p>
+                        <h5 class="modal-title fw-semibold mb-0 text-body" id="createPurchaseOrderModalLabel">Create Purchase Order</h5>
+                        <p class="mb-0 small text-body-secondary">Fields marked <span class="text-danger">*</span> are required</p>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body px-3 px-md-4 py-3 py-md-4 bg-white">
+                <div class="modal-body px-3 px-md-4 py-3 py-md-4 bg-body-tertiary">
                     <input type="hidden" name="po_number" value="{{ $po_number }}">
 
-                    <div class="row g-3 g-xl-4 align-items-stretch mb-3 mb-xl-4">
+                    <div class="row g-3 align-items-stretch mb-3">
                         {{-- Order Details --}}
-                        <div class="col-12 col-xl-8">
-                            <div class="card border-0 shadow-lg h-100 rounded-4 overflow-hidden">
-                                <div class="card-header bg-white border-bottom py-3 px-4 d-flex align-items-center gap-2">
-                                    <div class="rounded-3 bg-primary bg-gradient text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm" style="width: 36px; height: 36px;">
-                                        <i class="material-icons material-symbol-rounded fs-6" aria-hidden="true">assignment</i>
-                                    </div>
-                                    <h6 class="mb-0 fw-bold text-dark">Order details</h6>
+                        <div class="col-12">
+                            <div class="card border border-light-subtle h-100 rounded-3">
+                                <div class="card-header bg-white py-2 px-3 d-flex align-items-center gap-2">
+                                    <i class="material-icons material-symbol-rounded text-primary" style="font-size:1.15rem;" aria-hidden="true">assignment</i>
+                                    <span class="fw-semibold small text-body">Order Details</span>
                                 </div>
-                                <div class="card-body p-3 p-md-4 bg-white">
+                                <div class="card-body p-3 bg-white">
                                     <div class="row g-3">
                                         <div class="col-md-4">
-                                            <label class="form-label fw-bold small mb-2 text-dark">Order number</label>
-                                            <input type="text" class="form-control form-control-lg rounded-3 bg-light border-0 shadow" value="{{ $po_number }}" readonly placeholder="Auto-generated">
-                                            <div class="form-text fst-italic">Auto-generated</div>
+                                            <label class="form-label small mb-1">Order number</label>
+                                            <input type="text" class="form-control form-control-sm bg-body-secondary" value="{{ $po_number }}" readonly>
+                                            <div class="form-text">Auto-generated</div>
                                         </div>
                                         <div class="col-md-4">
-                                            <label class="form-label fw-bold small mb-2 text-dark">Order date <span class="text-danger">*</span></label>
-                                            <input type="date" name="po_date" class="form-control form-control-lg rounded-3 shadow border-2" value="{{ date('Y-m-d') }}" max="{{ date('Y-m-d') }}" required>
+                                            <label class="form-label small mb-1">Order date <span class="text-danger">*</span></label>
+                                            <input type="date" name="po_date" class="form-control form-control-sm" value="{{ date('Y-m-d') }}" max="{{ date('Y-m-d') }}" required>
                                         </div>
                                         <div class="col-md-4">
-                                            <label class="form-label fw-bold small mb-2 text-dark">Store</label>
-                                            <select name="store_id" class="form-select form-select-lg rounded-3 shadow border-2">
+                                            <label class="form-label small mb-1">Store</label>
+                                            <select name="store_id" class="form-select form-select-sm">
                                                 <option value="">Select Store</option>
                                                 @foreach($stores as $store)
                                                     <option value="{{ $store->id }}">{{ $store->store_name }}</option>
@@ -873,8 +774,8 @@
                                             </select>
                                         </div>
                                         <div class="col-md-4">
-                                            <label class="form-label fw-bold small mb-2 text-dark">Vendor <span class="text-danger">*</span></label>
-                                            <select name="vendor_id" class="form-select form-select-lg rounded-3 shadow border-2" required>
+                                            <label class="form-label small mb-1">Vendor <span class="text-danger">*</span></label>
+                                            <select name="vendor_id" class="form-select form-select-sm" required>
                                                 <option value="">Select Vendor</option>
                                                 @foreach($vendors as $vendor)
                                                     <option value="{{ $vendor->id }}">{{ $vendor->name }}</option>
@@ -882,8 +783,8 @@
                                             </select>
                                         </div>
                                         <div class="col-md-4">
-                                            <label class="form-label fw-bold small mb-2 text-dark">Payment mode</label>
-                                            <select name="payment_code" class="form-select form-select-lg rounded-3 shadow border-2">
+                                            <label class="form-label small mb-1">Payment mode</label>
+                                            <select name="payment_code" class="form-select form-select-sm">
                                                 <option value="">Select Payment Mode</option>
                                                 @foreach($paymentModes as $value => $label)
                                                     <option value="{{ $value }}">{{ $label }}</option>
@@ -891,44 +792,33 @@
                                             </select>
                                         </div>
                                         <div class="col-md-4">
-                                            <label class="form-label fw-bold small mb-2 text-dark">Bill / invoice no.</label>
-                                            <input type="text" name="bill_no" class="form-control form-control-lg rounded-3 shadow border-2" maxlength="100" placeholder="Optional">
+                                            <label class="form-label small mb-1">Bill / invoice no.</label>
+                                            <input type="text" name="bill_no" class="form-control form-control-sm" maxlength="100" placeholder="Optional">
                                         </div>
                                         <div class="col-md-4">
-                                            <label class="form-label fw-bold small mb-2 text-dark">Bill date</label>
-                                            <input type="date" name="bill_date" class="form-control form-control-lg rounded-3 shadow border-2" max="{{ date('Y-m-d') }}">
+                                            <label class="form-label small mb-1">Bill date</label>
+                                            <input type="date" name="bill_date" class="form-control form-control-sm" max="{{ date('Y-m-d') }}">
                                         </div>
                                         <div class="col-md-4">
-                                            <label class="form-label fw-bold small mb-2 text-dark">Challan / reference</label>
-                                            <input type="text" name="challan_no" class="form-control form-control-lg rounded-3 shadow border-2" maxlength="100" placeholder="Optional">
+                                            <label class="form-label small mb-1">Challan / reference</label>
+                                            <input type="text" name="challan_no" class="form-control form-control-sm" maxlength="100" placeholder="Optional">
                                         </div>
                                         <div class="col-md-4">
-                                            <label class="form-label fw-bold small mb-2 text-dark">Challan date</label>
-                                            <input type="date" name="challan_date" class="form-control form-control-lg rounded-3 shadow border-2" max="{{ date('Y-m-d') }}">
+                                            <label class="form-label small mb-1">Challan date</label>
+                                            <input type="date" name="challan_date" class="form-control form-control-sm" max="{{ date('Y-m-d') }}">
                                         </div>
                                     </div>
+                                    <hr class="my-2">
+                                    <div class="bg-white py-2 px-3 d-flex align-items-center gap-2 mt-2">
+                                    <i class="material-icons material-symbol-rounded text-success" style="font-size:1.15rem;" aria-hidden="true">attach_file</i>
+                                    <span class="fw-semibold small text-body">Bill Upload</span>
+                                    <span class="badge bg-body-secondary text-body-secondary ms-auto" style="font-size:.65rem;">Optional</span>
                                 </div>
-                            </div>
-                        </div>
-
-                        {{-- Bill / Attachment (Upload) --}}
-                        <div class="col-12 col-xl-4">
-                            <div class="card border-0 shadow-lg h-100 rounded-4 overflow-hidden" style="border-left: 4px solid var(--bs-primary) !important;">
-                                <div class="card-header bg-white border-bottom py-3 px-4 d-flex align-items-center gap-2">
-                                    <div class="rounded-3 bg-primary bg-gradient text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm" style="width: 36px; height: 36px;">
-                                        <i class="material-icons material-symbol-rounded fs-6" aria-hidden="true">attach_file</i>
-                                    </div>
-                                    <h6 class="mb-0 fw-bold text-dark">Bill upload</h6>
-                                    <span class="badge rounded-1 bg-secondary bg-opacity-25 text-secondary border-0 ms-auto fw-semibold px-3">Optional</span>
-                                </div>
-                                <div class="card-body p-3 p-md-4 bg-white d-flex flex-column">
                                     <div class="mb-auto">
-                                        <label class="form-label fw-bold small mb-2 text-dark">Attachment</label>
-                                        <div class="input-group rounded-3 overflow-hidden shadow">
-                                            <input type="file" name="bill_file" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.webp" id="createBillFileInput">
-                                            <button type="button" class="btn btn-outline-secondary" id="createBillClearBtn">Remove</button>
-                                        </div>
-                                        <div class="form-text fst-italic">PDF, JPG, JPEG, PNG or WEBP · max 5 MB</div>
+                                        <label class="form-label small mb-1">Attachment</label>
+                                        <input type="file" name="bill_file" class="form-control form-control-sm" accept=".pdf,.jpg,.jpeg,.png,.webp" id="createBillFileInput">
+                                        <div class="form-text">PDF, JPG, PNG, WEBP · max 5 MB</div>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary mt-2" id="createBillClearBtn">Remove file</button>
                                     </div>
                                 </div>
                             </div>
@@ -936,71 +826,66 @@
                     </div>
 
                     {{-- Item Details --}}
-                    <div class="card border-0 shadow-lg mb-0 rounded-4 overflow-hidden">
-                        <div class="card-header bg-white border-bottom py-3 px-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
-                            <div class="d-flex align-items-center gap-3">
-                                <div class="rounded-3 bg-success bg-gradient text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm" style="width: 40px; height: 40px;">
-                                    <i class="material-icons material-symbol-rounded fs-5" aria-hidden="true">inventory_2</i>
-                                </div>
-                                <div>
-                                    <h6 class="mb-0 fw-bold text-dark">Line items</h6>
-                                    <span class="small text-body-secondary d-block fw-medium">Add items to create purchase order lines.</span>
-                                </div>
+                    <div class="card border border-light-subtle mb-0 rounded-3">
+                        <div class="card-header bg-white py-2 px-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="material-icons material-symbol-rounded text-warning" style="font-size:1.15rem;" aria-hidden="true">inventory_2</i>
+                                <span class="fw-semibold small text-body">Line Items</span>
                             </div>
-                            <button type="button" class="btn btn-sm btn-success rounded-1 d-inline-flex align-items-center gap-2 px-3 shadow-sm fw-semibold" id="addPoItemRow">
-                                <i class="material-icons material-symbol-rounded fs-6">add</i> Add line
+                            <button type="button" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 px-2" id="addPoItemRow">
+                                <i class="material-icons material-symbol-rounded" style="font-size:.9rem;">add</i> Add line
                             </button>
                         </div>
                         <div class="card-body p-0 bg-white">
                             <div class="po-item-details-table-wrap">
                             <div class="table-responsive">
-                                <table class="table table-sm table-hover text-nowrap mb-0 align-middle" id="poItemsTable">
-                                    <thead class="table-light">
+                                <table class="table table-sm mb-0 align-middle" id="poItemsTable">
+                                    <thead>
                                         <tr>
-                                            <th scope="col" style="width: 180px;" class="fw-bold text-dark py-3 ps-3">Item <span class="text-danger">*</span></th>
-                                            <th scope="col" style="width:150px;" class="fw-bold text-dark py-3">Unit</th>
-                                            <th scope="col" class="fw-bold text-dark py-3">Code</th>
-                                            <th scope="col" class="fw-bold text-dark py-3">Qty <span class="text-danger">*</span></th>
-                                            <th scope="col" class="fw-bold text-dark py-3">Rate <span class="text-danger">*</span></th>
-                                            <th scope="col" class="fw-bold text-dark py-3">Tax %</th>
-                                            <th scope="col" class="fw-bold text-dark py-3">Line total</th>
-                                            <th scope="col" class="fw-bold text-dark py-3 pe-3 text-center" style="width:3rem;"> </th>
+                                            <th scope="col" style="width:180px;" class="fw-semibold small py-2 ps-3">Item <span class="text-danger">*</span></th>
+                                            <th scope="col" style="width:150px;" class="fw-semibold small py-2">Unit</th>
+                                            <th scope="col" class="fw-semibold small py-2">Code</th>
+                                            <th scope="col" class="fw-semibold small py-2">Qty <span class="text-danger">*</span></th>
+                                            <th scope="col" class="fw-semibold small py-2">Rate <span class="text-danger">*</span></th>
+                                            <th scope="col" class="fw-semibold small py-2">Tax %</th>
+                                            <th scope="col" class="fw-semibold small py-2">Line total</th>
+                                            <th scope="col" class="fw-semibold small py-2 pe-3 text-center" style="width:2.5rem;"></th>
                                         </tr>
                                     </thead>
                                     <tbody id="poItemsBody">
                                         <tr class="po-item-row">
-                                            <td class="py-2">
-                                                <select name="items[0][item_subcategory_id]" class="form-select form-select-sm po-item-select rounded-3 shadow-sm border-2" required aria-label="Select item for this line">
+                                            <td class="py-1 ps-3">
+                                                <select name="items[0][item_subcategory_id]" class="form-select form-select-sm po-item-select" required aria-label="Select item">
                                                     <option value="">Select Item</option>
                                                     @foreach($itemSubcategories as $sub)
                                                         <option value="{{ $sub['id'] }}" data-unit="{{ e($sub['unit_measurement']) }}" data-code="{{ e($sub['item_code']) }}">{{ $sub['item_name'] }}</option>
                                                     @endforeach
                                                 </select>
                                             </td>
-                                            <td class="py-2"><input type="text" name="items[0][unit]" class="form-control form-control-sm rounded-3 po-unit" readonly placeholder="—"></td>
-                                            <td class="py-2"><input type="text" name="items[0][item_code_display]" class="form-control form-control-sm rounded-3 po-item-code" readonly placeholder="—"></td>
-                                            <td class="py-2"><input type="text" name="items[0][quantity]" class="form-control form-control-sm rounded-3 po-qty" required></td>
-                                            <td class="py-2"><input type="text" name="items[0][unit_price]" class="form-control form-control-sm rounded-3 po-unit-price" required></td>
-                                            <td class="py-2"><input type="text" name="items[0][tax_percent]" class="form-control form-control-sm rounded-3 po-tax"></td>
-                                            <td class="py-2"><input type="text" name="items[0][total_display]" class="form-control form-control-sm rounded-3 po-line-total bg-light" readonly></td>
-                                            <td class="py-2 text-center"><button type="button" class="btn btn-sm btn-outline-danger rounded-3 po-remove-row" disabled title="Remove line">×</button></td>
+                                            <td class="py-1"><input type="text" name="items[0][unit]" class="form-control form-control-sm po-unit bg-body-secondary" readonly placeholder="—"></td>
+                                            <td class="py-1"><input type="text" name="items[0][item_code_display]" class="form-control form-control-sm po-item-code bg-body-secondary" readonly placeholder="—"></td>
+                                            <td class="py-1"><input type="text" name="items[0][quantity]" class="form-control form-control-sm po-qty" required></td>
+                                            <td class="py-1"><input type="text" name="items[0][unit_price]" class="form-control form-control-sm po-unit-price" required></td>
+                                            <td class="py-1"><input type="text" name="items[0][tax_percent]" class="form-control form-control-sm po-tax"></td>
+                                            <td class="py-1"><input type="text" name="items[0][total_display]" class="form-control form-control-sm po-line-total bg-body-secondary" readonly></td>
+                                            <td class="py-1 text-center"><button type="button" class="btn btn-sm btn-outline-danger po-remove-row" disabled title="Remove line"><i class="material-icons material-symbol-rounded" style="font-size:.85rem;">close</i></button></td>
                                         </tr>
                                     </tbody>
                                 </table>
                             </div>
                             </div>
                         </div>
-                        <div class="card-footer bg-light border-0 d-flex justify-content-end align-items-center py-3 px-4">
-                            <div class="d-flex align-items-baseline gap-3 flex-wrap justify-content-end">
-                                <span class="fw-bold text-dark small text-uppercase">Grand total</span>
-                                <span class="fs-4 text-primary fw-bold" id="poGrandTotal">₹0.00</span>
-                            </div>
+                        <div class="card-footer bg-body-tertiary d-flex justify-content-end align-items-center py-2 px-3">
+                            <span class="text-body-secondary small me-2">Grand Total:</span>
+                            <span class="fs-5 fw-bold text-primary" id="poGrandTotal">₹0.00</span>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-0 border-top py-3 px-4 bg-light">
-                    <button type="button" class="btn btn-outline-secondary rounded-1 px-4 fw-semibold" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary rounded-1 px-5 shadow-sm fw-semibold">Create purchase order</button>
+                <div class="modal-footer bg-body-tertiary border-top border-light-subtle py-3 px-4">
+                    <button type="button" class="btn btn-light border px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary px-4 d-inline-flex align-items-center gap-2">
+                        <i class="material-icons material-symbol-rounded" style="font-size:1rem;">check</i> Create
+                    </button>
                 </div>
             </form>
         </div>

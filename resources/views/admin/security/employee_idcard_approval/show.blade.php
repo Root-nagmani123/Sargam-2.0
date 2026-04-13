@@ -69,9 +69,9 @@
                                 @if($photoExists)
                                     <img src="{{ asset('storage/' . $photoPath) }}" alt="Employee Photo" class="img-fluid rounded" style="max-height: 250px; object-fit: cover; border: 1px solid #dee2e6;">
                                     <div class="mt-2">
-                                        <a href="{{ asset('storage/' . $photoPath) }}" target="_blank" class="btn btn-sm btn-outline-primary">
-                                            <i class="material-icons material-symbols-rounded" style="font-size:16px;">download</i>
-                                            Download
+                                        <a href="{{ asset('storage/' . $photoPath) }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary">
+                                            <i class="material-icons material-symbols-rounded" style="font-size:16px;">visibility</i>
+                                            View
                                         </a>
                                     </div>
                                 @elseif($request->photo)
@@ -144,6 +144,16 @@
                                         'full' => false,
                                     ];
                                 }
+                                // De-dupe by storage path (e.g. contractual doc_path exposed as both joining_letter and documents)
+                                $seenPaths = [];
+                                $docLinks = array_values(array_filter($docLinks, function ($d) use (&$seenPaths) {
+                                    $p = $d['path'] ?? '';
+                                    if ($p === '' || isset($seenPaths[$p])) {
+                                        return false;
+                                    }
+                                    $seenPaths[$p] = true;
+                                    return true;
+                                }));
                             @endphp
 
                             @if(!empty($docLinks))
@@ -199,6 +209,24 @@
                                         @endif
                                     </td>
                                 </tr>
+                                <tr><th>Academy Joining Date</th>
+                                    <td>
+                                        @if(!empty($request->academy_joining))
+                                            @php
+                                                $ajStr = $request->academy_joining instanceof \DateTimeInterface
+                                                    ? $request->academy_joining->format('Y-m-d')
+                                                    : (string) $request->academy_joining;
+                                                try {
+                                                    echo e(\Carbon\Carbon::parse($ajStr)->format('d/m/Y'));
+                                                } catch (\Exception $e) {
+                                                    echo e($ajStr);
+                                                }
+                                            @endphp
+                                        @else
+                                            --
+                                        @endif
+                                    </td>
+                                </tr>
                                 <tr><th>Blood Group</th><td>{{ $request->blood_group ?? '--' }}</td></tr>
                                 <tr><th>Contact No</th><td>{{ $request->mobile_number ?? $request->telephone_number ?? '--' }}</td></tr>
                                 <tr><th>Valid From</th><td>{{ $request->id_card_valid_from ?? '--' }}</td></tr>
@@ -228,7 +256,8 @@
                                                 default => 'secondary'
                                             };
                                         @endphp
-                                        <span class="badge bg-{{ $statusClass }}">{{ $statusText }}</span>
+                                        <span class="badge bg-{{ $statusClass }}"
+                                              @if(($request->status ?? '') === 'Approved') title="Please collect your ID card from security section" @endif>{{ $statusText }}</span>
                                     </td>
                                 </tr>
                             </table>

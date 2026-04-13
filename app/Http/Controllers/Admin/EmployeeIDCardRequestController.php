@@ -16,6 +16,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -270,20 +272,29 @@ class EmployeeIDCardRequestController extends Controller
     }
 
     /**
-     * Check if the given employee (pk) already has an approved ID card (Permanent or Contractual).
+     * Approved **permanent** ID card for this employee (security_parm_id_apply).
+     * Used when blocking a new Permanent "Own ID Card" — contractual approvals must not block that flow.
+     */
+    private static function hasApprovedPermanentIdCard(int $employeePk): bool
+    {
+        return SecurityParmIdApply::where('employee_master_pk', $employeePk)
+            ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
+            ->exists();
+    }
+
+    /**
+     * Check if the given employee (pk) already has an approved ID card (Permanent or Contractual row they created).
      */
     private static function hasApprovedIdCard(int $employeePk): bool
     {
-        $perm = SecurityParmIdApply::where('employee_master_pk', $employeePk)
-            ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
-            ->exists();
-        if ($perm) {
+        if (static::hasApprovedPermanentIdCard($employeePk)) {
             return true;
         }
         $cont = DB::table('security_con_oth_id_apply')
             ->where('created_by', $employeePk)
             ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
             ->exists();
+
         return $cont;
     }
 
@@ -317,6 +328,220 @@ class EmployeeIDCardRequestController extends Controller
             ->exists();
 
         return $cont;
+    }
+
+    private static function normalizeBeneficiaryNameKey(string $name): string
+    {
+        return mb_strtolower(trim(preg_replace('/\s+/u', ' ', $name)));
+    }
+
+    private static function normalizeMobileDigits(?string $mobile): ?string
+    {
+        if ($mobile === null || trim((string) $mobile) === '') {
+            return null;
+        }
+        $digits = preg_replace('/\D+/', '', (string) $mobile);
+
+        return $digits !== '' ? $digits : null;
+    }
+
+    /**
+     * Pending contractual row for the same real-world person.
+     * Name matching is done in PHP with {@see normalizeBeneficiaryNameKey} so it matches DB values that only differ
+     * by internal spaces/tabs (SQL LOWER(TRIM(...)) alone does not collapse "A  B" vs "A B").
+     */
+    private static function hasPendingContractualByBeneficiaryIdentity(string $beneficiaryName, ?string $mobileRaw, ?string $dobYmd): bool
+    {
+        $nameKey = static::normalizeBeneficiaryNameKey($beneficiaryName);
+        if ($nameKey === '') {
+            return false;
+        }
+
+        $rows = DB::table('security_con_oth_id_apply')
+            ->where('id_status', SecurityParmIdApply::ID_STATUS_PENDING)
+            ->get(['employee_name', 'mobile_no', 'employee_dob']);
+
+        $mobileDigits = static::normalizeMobileDigits($mobileRaw);
+
+        foreach ($rows as $row) {
+            if (static::normalizeBeneficiaryNameKey((string) ($row->employee_name ?? '')) !== $nameKey) {
+                continue;
+            }
+
+            if ($mobileDigits !== null) {
+                $rowM = static::normalizeMobileDigits($row->mobile_no ?? null);
+                if ($rowM === $mobileDigits || $rowM === null) {
+                    return true;
+                }
+
+                continue;
+            }
+
+            if ($dobYmd) {
+                $rowDob = null;
+                if (! empty($row->employee_dob)) {
+                    try {
+                        $rowDob = \Carbon\Carbon::parse($row->employee_dob)->toDateString();
+                    } catch (\Exception $e) {
+                        $rowDob = null;
+                    }
+                }
+                if ($rowDob === null || $rowDob === $dobYmd) {
+                    return true;
+                }
+
+                continue;
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * All employee_master identifiers that may appear in security_con_oth_id_apply.created_by (pk and pk_old).
+     *
+     * @return list<int>
+     */
+    private static function employeeLinkedCreatedByIds(?int $employeeMasterPk): array
+    {
+        if ($employeeMasterPk === null || $employeeMasterPk <= 0) {
+            return [];
+        }
+        $hasPkOld = Schema::hasColumn('employee_master', 'pk_old');
+        $cols = $hasPkOld ? ['pk', 'pk_old'] : ['pk'];
+        $row = DB::table('employee_master')->where('pk', $employeeMasterPk)->first($cols);
+        if (! $row) {
+            return [(int) $employeeMasterPk];
+        }
+        $ids = [(int) ($row->pk ?? $employeeMasterPk)];
+        if ($hasPkOld && isset($row->pk_old) && (int) $row->pk_old > 0 && (int) $row->pk_old !== (int) ($row->pk ?? 0)) {
+            $ids[] = (int) $row->pk_old;
+        }
+
+        return array_values(array_unique(array_filter($ids, fn ($v) => (int) $v > 0)));
+    }
+
+    /**
+     * True if this employee already has a pending (not approved/rejected) permanent ID card application.
+     */
+    private static function hasPendingPermanentIdCardRequest(int $employeeMasterPk): bool
+    {
+        return SecurityParmIdApply::where('employee_master_pk', $employeeMasterPk)
+            ->where('id_status', SecurityParmIdApply::ID_STATUS_PENDING)
+            ->exists();
+    }
+
+    /**
+     * Pending permanent application whose linked employee name matches (PHP-normalized), for cases where
+     * employee_master_pk was not resolved on the form but the beneficiary is the same person.
+     */
+    private static function hasPendingPermanentMatchingBeneficiaryName(string $beneficiaryName): bool
+    {
+        $nameKey = static::normalizeBeneficiaryNameKey($beneficiaryName);
+        if ($nameKey === '') {
+            return false;
+        }
+
+        $rows = DB::table('security_parm_id_apply as spa')
+            ->join('employee_master as em', 'em.pk', '=', 'spa.employee_master_pk')
+            ->where('spa.id_status', SecurityParmIdApply::ID_STATUS_PENDING)
+            ->select(['em.first_name', 'em.last_name'])
+            ->get();
+
+        foreach ($rows as $r) {
+            $full = static::normalizeBeneficiaryNameKey(trim(($r->first_name ?? '') . ' ' . ($r->last_name ?? '')));
+            if ($full === $nameKey) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * True if a pending contractual row exists for the same beneficiary (normalized name) and the same
+     * submitter/subject id(s) including pk_old. Also includes $rawAuthUserId (session user_id) because
+     * created_by is sometimes stored as login id rather than resolved employee_master.pk.
+     * Does not filter on DOB — old rows may have NULL employee_dob, which previously let duplicates through.
+     *
+     * @param  int|string|null  $rawAuthUserId
+     */
+    private static function hasPendingContractualBeneficiaryRequest(int $authEmployeePk, int $subjectEmployeePk, string $beneficiaryName, $rawAuthUserId = null): bool
+    {
+        if ($authEmployeePk <= 0) {
+            return false;
+        }
+        $nameKey = static::normalizeBeneficiaryNameKey($beneficiaryName);
+        if ($nameKey === '') {
+            return false;
+        }
+
+        $idSet = array_merge(
+            static::employeeLinkedCreatedByIds($authEmployeePk),
+            static::employeeLinkedCreatedByIds($subjectEmployeePk),
+        );
+        if ($rawAuthUserId !== null && $rawAuthUserId !== '') {
+            $idSet[] = (int) $rawAuthUserId;
+        }
+        $idSet = array_values(array_unique(array_filter($idSet, fn ($v) => (int) $v > 0)));
+        if ($idSet === []) {
+            return false;
+        }
+
+        $rows = DB::table('security_con_oth_id_apply')
+            ->where('id_status', SecurityParmIdApply::ID_STATUS_PENDING)
+            ->whereIn('created_by', $idSet)
+            ->get(['employee_name']);
+
+        foreach ($rows as $row) {
+            if (static::normalizeBeneficiaryNameKey((string) ($row->employee_name ?? '')) === $nameKey) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Pending new-card request for this subject: permanent row, contractual row matched by beneficiary identity
+     * (name + mobile / DOB / name-only), or contractual row matched by created_by. Works when the logged-in user
+     * has no employee_master row (e.g. Admin) — authEmployeePk may be null.
+     *
+     * @param  int|string|null  $rawAuthUserId
+     */
+    private static function hasAnyPendingNewEmployeeIdCardRequest(
+        int $subjectEmployeePk,
+        string $beneficiaryName,
+        ?int $authEmployeePk,
+        $rawAuthUserId = null,
+        ?string $mobileRaw = null,
+        ?string $dobYmd = null
+    ): bool {
+        if (static::normalizeBeneficiaryNameKey($beneficiaryName) === '') {
+            return false;
+        }
+
+        if ($subjectEmployeePk > 0 && static::hasPendingPermanentIdCardRequest($subjectEmployeePk)) {
+            return true;
+        }
+
+        if (static::hasPendingPermanentMatchingBeneficiaryName($beneficiaryName)) {
+            return true;
+        }
+
+        if (static::hasPendingContractualByBeneficiaryIdentity($beneficiaryName, $mobileRaw, $dobYmd)) {
+            return true;
+        }
+
+        if ($authEmployeePk !== null && (int) $authEmployeePk > 0) {
+            $subj = $subjectEmployeePk > 0 ? $subjectEmployeePk : (int) $authEmployeePk;
+
+            return static::hasPendingContractualBeneficiaryRequest((int) $authEmployeePk, $subj, $beneficiaryName, $rawAuthUserId);
+        }
+
+        return false;
     }
 
     public function create()
@@ -387,14 +612,13 @@ class EmployeeIDCardRequestController extends Controller
     }
 
     /**
-     * AJAX: Logged-in user's employee details for autofill on create form.
-     * Used for Permanent + "Own ID Card" and Contractual + "Others ID Card".
+     * AJAX: Logged-in user's employee details for autofill on create form (Permanent + Contractual "Own ID Card").
      * Resolves employee by pk or pk_old so data is found either way.
      */
     public function me()
     {
-        $userId = Auth::user()->user_id ?? null;
-        if (!$userId) {
+        $userId = Auth::user()->user_id ?? Auth::id();
+        if (! $userId) {
             return response()->json(['employee' => null]);
         }
         $emp = EmployeeMaster::with('designation')
@@ -494,7 +718,17 @@ class EmployeeIDCardRequestController extends Controller
             'joining_letter' => 'nullable|mimes:pdf,doc,docx|max:5120',
             'fir_receipt' => 'required_if:duplication_reason,Lost|nullable|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120',
             'payment_receipt' => 'nullable|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120',
-            'documents' => 'nullable|mimes:pdf,doc,docx|max:5120',
+            'documents' => [
+                'nullable',
+                'file',
+                Rule::requiredIf(function () use ($request) {
+                    $dup = in_array($request->input('request_for') ?? '', ['Replacement', 'Duplication', 'Extension'], true);
+
+                    return ($request->input('employee_type') === 'Contractual Employee') && ! $dup;
+                }),
+                'mimes:pdf,doc,docx',
+                'max:5120',
+            ],
             'remarks' => 'nullable|string',
             'employee_master_pk' => 'nullable|integer|exists:employee_master,pk',
         ], [
@@ -509,6 +743,7 @@ class EmployeeIDCardRequestController extends Controller
             'section.required_if' => 'Section is required for Contractual Employees.',
             'vendor_organization_name.required_if' => 'Vendor / Organization Name is required for Contractual Employees.',
             'id_card_valid_upto.after' => 'ID Card Valid Upto date must be a future date.',
+            'documents.required' => 'Please upload a supporting document (PDF or DOC, max 5 MB): include appointment letter, joining letter, contract/engagement order, or similar proof as applicable.',
         ]);
 
         $authEmpPk = Auth::user()->user_id ?? Auth::id();
@@ -558,29 +793,80 @@ class EmployeeIDCardRequestController extends Controller
             $employeePk = $emp?->pk;
         }
 
+        // Beneficiary master pk when explicitly chosen (Others/Family). Do not use auth fallback — used for pending checks only.
+        $beneficiaryMasterPkFromForm = null;
+        if (! empty($validated['employee_master_pk'])) {
+            $rawBenef = (int) $validated['employee_master_pk'];
+            $benefRow = EmployeeMaster::where('pk', $rawBenef)->orWhere('pk_old', $rawBenef)->first();
+            $beneficiaryMasterPkFromForm = $benefRow ? (int) $benefRow->pk : $rawBenef;
+        }
+
         // Restrict NEW *own* ID card only when user already has an approved card.
         // Do NOT block when request is for "Others ID Card" or "Family ID Card" (applying for someone else).
         $requestFor = $validated['request_for'] ?? 'Own ID Card';
+        if ($requestFor === '') {
+            $requestFor = 'Own ID Card';
+        }
         $isDupOrExt = in_array($requestFor, ['Replacement', 'Duplication', 'Extension'], true);
-        $isForSelf = $employeePk && $authEmployeePk && $employeePk === $authEmployeePk;
+        $isApplyingForAnotherEmployee = in_array($requestFor, ['Others ID Card', 'Family ID Card'], true);
+        // Others/Family: never treat as "self" even if employee_master_pk fell back to the logged-in user.
+        $isForSelf = ! $isApplyingForAnotherEmployee
+            && $employeePk
+            && $authEmployeePk
+            && (int) $employeePk === (int) $authEmployeePk;
+        $employeeType = $validated['employee_type'];
+        // Permanent own fresh card: only an approved **permanent** card should block (not an approved contractual one).
+        $hasApprovedForOwnFreshBlock = $employeeType === 'Permanent Employee'
+            ? static::hasApprovedPermanentIdCard((int) $employeePk)
+            : static::hasApprovedIdCard((int) $employeePk);
         $blockOwnNewCard = $isForSelf
             && $requestFor === 'Own ID Card'
             && !$isDupOrExt
-            && static::hasApprovedIdCard($employeePk);
+            && $hasApprovedForOwnFreshBlock;
         if ($blockOwnNewCard) {
             throw ValidationException::withMessages([
                 'employee_type' => 'You already have an approved ID card. A new request for yourself cannot be created. For duplicate or extension, use the Duplicate ID Card or relevant option.',
             ]);
         }
 
-        $employeeType = $validated['employee_type'];
+        // Only block when the contractual applicant is requesting their *own* card (not Others/Family).
         $isContractualSelfRequest = $isForSelf
             && $employeeType === 'Contractual Employee'
-            && (($requestFor ?? '') === 'Others ID Card' || ($requestFor ?? '') === 'Own ID Card');
+            && ($requestFor ?? '') === 'Own ID Card';
         if ($isContractualSelfRequest && static::hasValidApprovedIdCard((int) $employeePk)) {
             throw ValidationException::withMessages([
                 'employee_type' => 'You already have a valid ID card. You can raise a new request for yourself only after expiry, or apply for another person.',
             ]);
+        }
+
+        // Block a second *new* ID card request while one is already pending (generation flow only).
+        $requestForPending = ($requestFor !== '' && $requestFor !== null) ? $requestFor : 'Own ID Card';
+        if (! $isDupOrExt && in_array($requestForPending, ['Own ID Card', 'Others ID Card'], true)) {
+            $pendingMsg = 'An Employee ID Card request is already pending for this employee. Please wait until it is approved or rejected before submitting a new one.';
+            $beneficiaryName = trim((string) ($validated['name'] ?? ''));
+            // Others/Family: do not use applicant's employee_master_pk for security_parm_id_apply pending lookup
+            // (that table row may exist from another creator and never appear in this user's list).
+            $pendingPermanentSubjectPk = $isApplyingForAnotherEmployee
+                ? (int) ($beneficiaryMasterPkFromForm ?? 0)
+                : (int) ($employeePk ?: ($authEmployeePk ?? 0));
+            $rawSessionUserId = Auth::user()->user_id ?? Auth::id();
+            $pendingDobYmd = ! empty($validated['date_of_birth'])
+                ? static::parseDateToYmd($validated['date_of_birth'])
+                : null;
+            $pendingMobile = $validated['mobile_number'] ?? null;
+            if ($beneficiaryName !== ''
+                && static::hasAnyPendingNewEmployeeIdCardRequest(
+                    $pendingPermanentSubjectPk,
+                    $beneficiaryName,
+                    $authEmployeePk,
+                    $rawSessionUserId,
+                    $pendingMobile,
+                    $pendingDobYmd
+                )) {
+                throw ValidationException::withMessages([
+                    'employee_type' => $pendingMsg,
+                ]);
+            }
         }
 
         $cardNameCode = $employeeType === 'Permanent Employee' ? 'p' : 'c';
@@ -846,10 +1132,9 @@ class EmployeeIDCardRequestController extends Controller
                 if ($request->hasFile('documents')) {
                     $docPath = $request->file('documents')->store('idcard/documents', 'public');
                 }
-                $empIdApply_data= $empIdApply;
-               
+
                 // Insert matches security_con_oth_id_apply structure (pk auto; section = bigint department_master_pk)
-                DB::table('security_con_oth_id_apply')->insert([
+                $contRow = [
                     'emp_id_apply' => $empIdApply,
                     'employee_name' => $validated['name'] ?? null,
                     'sec_id_card_config_pk' => $configMap->config_pk,
@@ -875,8 +1160,14 @@ class EmployeeIDCardRequestController extends Controller
                     'department_approval_emp_pk' => !empty($validated['approval_authority']) ? (int) $validated['approval_authority'] : null,
                     'section' => $userDepartmentPk,
                     'depart_approval_status' => 1,
-                ]);
-             
+                ];
+                if ($docPath !== null && Schema::hasColumn('security_con_oth_id_apply', 'joining_letter_path')) {
+                    $contRow['joining_letter_path'] = $docPath;
+                }
+                DB::table('security_con_oth_id_apply')->insert($contRow);
+                if ($employeePk) {
+                    static::syncEmployeeDojIfEmpty((int) $employeePk, $validated['academy_joining'] ?? null);
+                }
 
                 // Case 3 - Request Employee ID Card (Other/Contractual): Only security_con_oth_id_apply at request time.
                 // security_con_oth_id_apply_approval rows are inserted when approvers approve (EmployeeIDCardApprovalController).
@@ -886,6 +1177,9 @@ class EmployeeIDCardRequestController extends Controller
         $successMsg = 'Employee ID Card request created successfully!';
         if ($joiningLetterPath) {
             $successMsg .= ' Joining document uploaded successfully.';
+        }
+        if ($employeeType === 'Contractual Employee' && ! $isDupOrExt && $request->hasFile('documents')) {
+            $successMsg .= ' Supporting document saved to database successfully.';
         }
         return redirect()
             ->route('admin.employee_idcard.index')
@@ -927,6 +1221,36 @@ class EmployeeIDCardRequestController extends Controller
         return view('admin.employee_idcard.show', ['request' => $request]);
     }
 
+    /**
+     * Block edit/delete once final status is not pending, or any section/security approver has acted.
+     */
+    private function redirectIfIdCardRequestNotEditableByApplicant(mixed $routeId, array $res): ?\Illuminate\Http\RedirectResponse
+    {
+        $mayEdit = false;
+        if ($res['type'] === 'cont') {
+            $row = DB::table('security_con_oth_id_apply')->where('pk', $res['pk'])->first();
+            if ($row) {
+                $dto = IdCardSecurityMapper::toContractualRequestDto($row);
+                $mayEdit = (bool) ($dto->user_may_edit_request ?? false);
+            }
+        } else {
+            $row = SecurityParmIdApply::with(['approvals' => function ($q) {
+                $q->select(['pk', 'security_parm_id_apply_pk', 'status', 'recommend_status']);
+            }])->find($res['pk']);
+            if ($row) {
+                $dto = IdCardSecurityMapper::toEmployeeRequestDto($row);
+                $mayEdit = (bool) ($dto->user_may_edit_request ?? false);
+            }
+        }
+        if (! $mayEdit) {
+            return redirect()
+                ->route('admin.employee_idcard.show', $routeId)
+                ->with('error', 'This request cannot be edited or deleted: an approver has already acted or the status has changed.');
+        }
+
+        return null;
+    }
+
     public function edit($id)
     {
         $cardTypes = DB::table('sec_id_cardno_master')->orderBy('sec_card_name')->pluck('sec_card_name');
@@ -951,19 +1275,15 @@ class EmployeeIDCardRequestController extends Controller
             }
         }
         $res = static::resolveId($id);
+        if ($redirectLocked = $this->redirectIfIdCardRequestNotEditableByApplicant($id, $res)) {
+            return $redirectLocked;
+        }
         if ($res['type'] === 'cont') {
             $row = DB::table('security_con_oth_id_apply')->where('pk', $res['pk'])->first();
             if (!$row) {
                 abort(404);
             }
             $request = IdCardSecurityMapper::toContractualRequestDto($row);
-            // Autofill academy_joining from employee_master when created_by links to an employee
-            if (!empty($row->created_by)) {
-                $emp = EmployeeMaster::where('pk', $row->created_by)->first(['doj']);
-                if ($emp && $emp->doj) {
-                    $request->academy_joining = \Carbon\Carbon::parse($emp->doj)->format('Y-m-d');
-                }
-            }
             $designations = DesignationMaster::active()->orderBy('designation_name')->pluck('designation_name', 'designation_name')->all();
             return view('admin.employee_idcard.edit', [
                 'request' => $request,
@@ -978,7 +1298,7 @@ class EmployeeIDCardRequestController extends Controller
             'employee.designation:pk,designation_name',
             'creator:pk,first_name,last_name,department_master_pk',
             'creator.department:pk,department_name',
-            'approvals:pk,security_parm_id_apply_pk,status,approval_emp_pk,created_date,approval_remarks',
+            'approvals:pk,security_parm_id_apply_pk,status,recommend_status,approval_emp_pk,created_date,approval_remarks',
             'approvals.approver:pk,first_name,last_name'
         ])->findOrFail($res['pk']);
         $request = IdCardSecurityMapper::toEmployeeRequestDto($row);
@@ -1020,7 +1340,7 @@ class EmployeeIDCardRequestController extends Controller
             'joining_letter' => 'nullable|mimes:pdf,doc,docx|max:5120',
             'fir_receipt' => 'nullable|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120',
             'payment_receipt' => 'nullable|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120',
-            'documents' => 'nullable|mimes:pdf,doc,docx|max:5120',
+            'documents' => 'nullable|file|mimes:pdf,doc,docx|max:5120',
             'status' => 'nullable|in:Pending,Approved,Rejected,Issued',
             'remarks' => 'nullable|string',
         ], [
@@ -1028,6 +1348,9 @@ class EmployeeIDCardRequestController extends Controller
         ]);
 
         $res = static::resolveId($id);
+        if ($redirectLocked = $this->redirectIfIdCardRequestNotEditableByApplicant($id, $res)) {
+            return $redirectLocked;
+        }
         if ($res['type'] === 'cont') {
             $row = DB::table('security_con_oth_id_apply')->where('pk', $res['pk'])->first();
             if (!$row) {
@@ -1077,12 +1400,32 @@ class EmployeeIDCardRequestController extends Controller
                 $up['id_photo_path'] = $request->file('photo')->store('idcard/photos', 'public');
                 $documentsUploadedList[] = 'Photo';
             }
-            if ($request->hasFile('documents')) {
-                $up['doc_path'] = $request->file('documents')->store('idcard/documents', 'public');
-                $documentsUploadedList[] = 'Documents';
+            if ($request->hasFile('documents') && $request->file('documents')->isValid()) {
+                $oldDocPath = $row->doc_path ?? null;
+                $oldJoinLetterPath = Schema::hasColumn('security_con_oth_id_apply', 'joining_letter_path')
+                    ? ($row->joining_letter_path ?? null)
+                    : null;
+                $storedDoc = $request->file('documents')->store('idcard/documents', 'public');
+                $up['doc_path'] = $storedDoc;
+                if (Schema::hasColumn('security_con_oth_id_apply', 'joining_letter_path')) {
+                    $up['joining_letter_path'] = $storedDoc;
+                }
+                $documentsUploadedList[] = 'Supporting document';
+                foreach (array_unique(array_filter([$oldDocPath, $oldJoinLetterPath])) as $prevPath) {
+                    if ($prevPath !== '' && $prevPath !== $storedDoc && Storage::disk('public')->exists($prevPath)) {
+                        Storage::disk('public')->delete($prevPath);
+                    }
+                }
             }
             DB::table('security_con_oth_id_apply')->where('pk', $res['pk'])->update($up);
-            
+            $freshRow = DB::table('security_con_oth_id_apply')->where('pk', $res['pk'])->first();
+            if ($freshRow) {
+                $benef = IdCardSecurityMapper::resolveContractualBeneficiaryEmployee($freshRow);
+                if ($benef && ! empty($benef->pk)) {
+                    static::syncEmployeeDojIfEmpty((int) $benef->pk, $validated['academy_joining'] ?? null);
+                }
+            }
+
             $successMsg = 'Employee ID Card request updated successfully!';
             if (!empty($documentsUploadedList)) {
                 $successMsg .= ' ' . implode(' and ', $documentsUploadedList) . ' uploaded successfully.';
@@ -1162,7 +1505,7 @@ class EmployeeIDCardRequestController extends Controller
             if (array_key_exists('father_name', $validated)) {
                 $emp->father_name = $validated['father_name'];
             }
-            if (!empty($validated['academy_joining'])) {
+            if (! empty($validated['academy_joining']) && static::employeeMasterDojIsEmpty($emp->doj)) {
                 $emp->doj = \Carbon\Carbon::parse($validated['academy_joining'])->format('Y-m-d');
             }
             $emp->save();
@@ -1333,6 +1676,9 @@ class EmployeeIDCardRequestController extends Controller
     public function destroy($id)
     {
         $res = static::resolveId($id);
+        if ($redirectLocked = $this->redirectIfIdCardRequestNotEditableByApplicant($id, $res)) {
+            return $redirectLocked;
+        }
         if ($res['type'] === 'cont') {
             $row = DB::table('security_con_oth_id_apply')->where('pk', $res['pk'])->first();
             if (!$row) {
@@ -1411,7 +1757,7 @@ class EmployeeIDCardRequestController extends Controller
         $with = [
             'employee:pk,first_name,last_name,designation_master_pk',
             'employee.designation:pk,designation_name',
-            'approvals:pk,security_parm_id_apply_pk,status,approval_emp_pk,created_date,approval_remarks',
+            'approvals:pk,security_parm_id_apply_pk,status,recommend_status,approval_emp_pk,created_date,approval_remarks',
             'approvals.approver:pk,first_name,last_name',
         ];
         $columns = ['pk', 'emp_id_apply', 'employee_master_pk', 'id_status', 'created_date', 'card_valid_from', 'card_valid_to', 'id_card_no', 'id_photo_path', 'joining_letter_path', 'mobile_no', 'telephone_no', 'blood_group', 'card_type', 'permanent_type', 'perm_sub_type', 'remarks', 'created_by', 'employee_dob'];
@@ -1468,6 +1814,42 @@ class EmployeeIDCardRequestController extends Controller
         }
 
         return $merged;
+    }
+
+    /**
+     * True when employee_master.doj is unset or a known "empty" sentinel.
+     */
+    private static function employeeMasterDojIsEmpty($doj): bool
+    {
+        if ($doj === null) {
+            return true;
+        }
+        $s = trim((string) $doj);
+        if ($s === '') {
+            return true;
+        }
+        if ($s === '0000-00-00' || str_starts_with($s, '0000-00-00')) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Set employee_master.doj from the ID card form only when doj is currently empty.
+     */
+    private static function syncEmployeeDojIfEmpty(int $employeeMasterPk, ?string $academyJoiningInput): void
+    {
+        $ymd = static::parseDateToYmd(trim((string) ($academyJoiningInput ?? '')));
+        if ($ymd === null) {
+            return;
+        }
+        $emp = EmployeeMaster::query()->where('pk', $employeeMasterPk)->first(['pk', 'doj']);
+        if (! $emp || ! static::employeeMasterDojIsEmpty($emp->doj)) {
+            return;
+        }
+        $emp->doj = $ymd;
+        $emp->save();
     }
 
     /**
