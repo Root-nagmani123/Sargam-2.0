@@ -280,6 +280,21 @@
                                             </td>
                                         </tr>
                                     @endforelse
+                                    @if(! empty($section['reportData']))
+                                        @php
+                                            $psGrandPurchase = collect($section['reportData'])->sum('purchase_qty');
+                                            $psGrandSale = collect($section['reportData'])->sum('sale_qty');
+                                        @endphp
+                                        <tr class="table-secondary fw-semibold">
+                                            <td class="text-center">—</td>
+                                            <td>Grand Total</td>
+                                            <td>—</td>
+                                            <td class="text-end">{{ number_format($psGrandPurchase, 2) }}</td>
+                                            <td class="text-end">—</td>
+                                            <td class="text-end">{{ number_format($psGrandSale, 2) }}</td>
+                                            <td class="text-end">—</td>
+                                        </tr>
+                                    @endif
                                 </tbody>
                             </table>
                         </div>
@@ -339,6 +354,26 @@
                                 <span class="small text-body-tertiary">Try adjusting your filters</span>
                             </div>
                         @endforelse
+                        @if(! empty($groupedData ?? []) && ! empty($section['reportData']))
+                            @php
+                                $psGrandPurchaseGrouped = collect($section['reportData'])->sum('purchase_qty');
+                                $psGrandSaleGrouped = collect($section['reportData'])->sum('sale_qty');
+                            @endphp
+                            <div class="table-responsive border-top border-secondary border-opacity-25">
+                                <table class="table align-middle mb-0">
+                                    <tbody>
+                                        <tr class="table-secondary fw-semibold">
+                                            <td class="text-center" style="width: 60px;">—</td>
+                                            <td colspan="2">Grand Total</td>
+                                            <td class="text-end">{{ number_format($psGrandPurchaseGrouped, 2) }}</td>
+                                            <td class="text-end">—</td>
+                                            <td class="text-end">{{ number_format($psGrandSaleGrouped, 2) }}</td>
+                                            <td class="text-end">—</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        @endif
                     @endif
                     @if(! empty($section['paginator']) && $section['paginator']->hasPages())
                         <div class="d-flex justify-content-center py-3 px-2 border-top bg-body-tertiary bg-opacity-25 no-print">
