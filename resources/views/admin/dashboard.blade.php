@@ -92,37 +92,100 @@
     padding-bottom: 0.9rem !important;
 }
 
-.dashboard-birthday-item {
-    transition: box-shadow 0.22s ease, transform 0.18s ease, border-color 0.2s ease;
-}
-.dashboard-birthday-item:hover {
-    box-shadow: 0 0.5rem 1.25rem rgba(var(--bs-primary-rgb), 0.14) !important;
-    transform: translateY(-2px);
+.dashboard-panel-birthday {
+    border: 1px solid rgba(var(--bs-primary-rgb), 0.1);
 }
 .dashboard-panel-birthday .card-header {
-    background: linear-gradient(125deg, rgba(var(--bs-primary-rgb), 0.1) 0%, rgba(var(--bs-primary-rgb), 0.03) 42%, transparent 100%);
+    background: linear-gradient(
+        125deg,
+        rgba(var(--bs-primary-rgb), 0.14) 0%,
+        rgba(255, 193, 7, 0.1) 38%,
+        rgba(var(--bs-primary-rgb), 0.05) 100%
+    );
+    border-bottom: 1px solid rgba(var(--bs-primary-rgb), 0.12) !important;
 }
-.dashboard-birthday-item .dashboard-avatar {
-    width: 2.75rem;
-    height: 2.75rem;
-    font-size: 0.95rem;
+.dashboard-birthday-header-icon {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.95) 0%, rgba(var(--bs-primary-rgb), 0.12) 100%);
+    color: var(--bs-primary);
+    box-shadow: 0 4px 14px rgba(var(--bs-primary-rgb), 0.18);
+    font-size: 1.45rem !important;
+}
+.dashboard-birthday-item {
+    position: relative;
+    transition: box-shadow 0.22s ease, transform 0.2s ease, border-color 0.2s ease;
+    border: 1px solid rgba(var(--bs-primary-rgb), 0.1) !important;
+    background:
+        radial-gradient(120% 80% at 100% 0%, rgba(233, 30, 99, 0.06) 0%, transparent 55%),
+        radial-gradient(90% 70% at 0% 100%, rgba(var(--bs-primary-rgb), 0.07) 0%, transparent 50%),
+        var(--bs-body-bg);
+}
+.dashboard-birthday-item::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+    opacity: 0.85;
+}
+.dashboard-birthday-item:hover {
+    box-shadow: 0 0.65rem 1.5rem rgba(var(--bs-primary-rgb), 0.16), 0 0 0 1px rgba(var(--bs-primary-rgb), 0.06) !important;
+    transform: translateY(-3px);
+    border-color: rgba(var(--bs-primary-rgb), 0.22) !important;
+}
+.dashboard-birthday-item .dashboard-birthday-card-inner {
+    position: relative;
+    z-index: 1;
+}
+.dashboard-birthday-item .dashboard-avatar-birthday {
+    width: 3.5rem;
+    height: 3.5rem;
+    font-size: 1.1rem;
+    box-shadow: 0 6px 18px rgba(16, 24, 40, 0.12);
+    outline: 3px solid rgba(255, 255, 255, 0.92);
+    outline-offset: 2px;
 }
 .dashboard-birthday-item .dashboard-birthday-contact .material-icons.material-symbols-rounded {
-    width: 1.85rem;
-    height: 1.85rem;
-    border-radius: 0.45rem;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 0.4rem;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     background: rgba(var(--bs-primary-rgb), 0.1);
     color: var(--bs-primary);
-    font-size: 1rem !important;
+    font-size: 0.95rem !important;
+}
+.dashboard-birthday-actions .btn {
+    font-size: 0.8125rem;
 }
 .dashboard-panel-birthday .dashboard-empty-state {
-    padding: 2.5rem 1.5rem;
+    padding: 2.75rem 1.5rem;
+    background: linear-gradient(180deg, rgba(var(--bs-primary-rgb), 0.04) 0%, rgba(255, 193, 7, 0.04) 100%);
 }
 .dashboard-panel-birthday .btn:focus-visible {
     box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.28);
+}
+.dashboard-upcoming-birthday-row {
+    border: 1px solid rgba(var(--bs-warning-rgb), 0.15);
+    background: linear-gradient(105deg, rgba(var(--bs-warning-rgb), 0.08) 0%, var(--bs-body-bg) 55%);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.dashboard-upcoming-birthday-row:hover {
+    border-color: rgba(var(--bs-warning-rgb), 0.35);
+    box-shadow: 0 4px 12px rgba(var(--bs-warning-rgb), 0.12);
+}
+.dashboard-upcoming-birthday-row .dashboard-upcoming-avatar {
+    width: 2.5rem;
+    height: 2.5rem;
+    font-size: 0.8rem;
+    box-shadow: 0 2px 8px rgba(16, 24, 40, 0.08);
 }
 
 .dashboard-avatar {
@@ -969,17 +1032,17 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
 
         <div class="col-lg-5">
             <div class="card dashboard-panel dashboard-panel-birthday shadow-sm rounded-4 mb-4 overflow-hidden">
-                <div class="card-header py-3 px-3 px-md-4 border-bottom border-primary-subtle border-opacity-25 bg-body-secondary bg-opacity-25">
+                <div class="card-header py-3 px-3 px-md-4">
                     <div class="d-flex flex-wrap align-items-center gap-3">
                         <div class="d-flex align-items-center gap-3 min-w-0 flex-grow-1">
-                            <span class="material-icons material-symbols-rounded text-primary flex-shrink-0 rounded-3 p-2 bg-primary-subtle" style="font-size: 1.35rem;" aria-hidden="true">cake</span>
-                            <div class="min-w-0 vstack gap-0 lh-sm">
-                                <h4 class="mb-0 fw-semibold text-primary-emphasis fs-5 text-truncate">Today's Birthday</h4>
-                                <span class="small text-body-secondary text-truncate d-none d-sm-block">Colleagues celebrating today</span>
+                            <span class="material-icons material-symbols-rounded dashboard-birthday-header-icon flex-shrink-0" aria-hidden="true">cake</span>
+                            <div class="min-w-0 vstack gap-1 lh-sm">
+                                <h4 class="mb-0 fw-semibold text-primary-emphasis fs-5 text-truncate">Today's birthdays</h4>
+                                <span class="small text-body-secondary text-truncate d-none d-sm-block">Celebrate colleagues — send wishes in one tap</span>
                             </div>
                         </div>
                         <div class="d-flex flex-wrap align-items-center gap-2 w-100 w-md-auto justify-content-md-end">
-                            <span class="badge rounded-pill px-3 py-2 text-bg-primary-subtle text-primary-emphasis border border-primary-subtle fw-semibold lh-1">
+                            <span class="badge rounded-pill px-3 py-2 bg-white text-primary-emphasis border border-primary-subtle fw-bold shadow-sm lh-1" title="People celebrating today">
                                 {{ $emp_dob_data->count() }}
                             </span>
                             @if($emp_dob_data->isNotEmpty())
@@ -997,13 +1060,13 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                         </div>
                     </div>
                 </div>
-                <div class="card-body p-3 p-md-4 pe-2 dashboard-list-scroll bg-body-tertiary bg-opacity-25">
+                <div class="card-body p-3 p-md-4 pe-2 dashboard-list-scroll" style="background: linear-gradient(180deg, rgba(var(--bs-primary-rgb), 0.03) 0%, transparent 28%);">
                     @if($emp_dob_data->isEmpty())
-                    <div class="dashboard-empty-state rounded-4 border border-dashed border-secondary-subtle bg-body-secondary bg-opacity-10 mb-0">
-                        <span class="material-icons material-symbols-rounded text-secondary-emphasis" aria-hidden="true">card_giftcard</span>
-                        <p class="mb-0 small text-body-secondary fw-medium">No birthdays today.</p>
+                    <div class="dashboard-empty-state rounded-4 border border-dashed border-primary-subtle mb-0">
+                        <span class="material-icons material-symbols-rounded text-primary-emphasis opacity-75" style="font-size: 2.25rem;" aria-hidden="true">card_giftcard</span>
+                        <p class="mb-0 small text-body-secondary fw-semibold">No birthdays today</p>
                         @if(($upcomingBirthdays ?? collect())->isNotEmpty())
-                        <p class="mb-0 mt-2 small text-body-secondary opacity-75">See upcoming birthdays below.</p>
+                        <p class="mb-0 mt-2 small text-body-secondary">Upcoming celebrations are listed below.</p>
                         @endif
                     </div>
                     @else
@@ -1019,14 +1082,14 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                         $body = rawurlencode("Dear " . ($fullName ?: '') . ",\n\nWishing you a very Happy Birthday!\n\nRegards,");
                         @endphp
                         <li role="listitem">
-                        <div class="card dashboard-birthday-item border-0 border-start border-4 border-primary bg-body shadow-sm rounded-4 overflow-hidden">
-                            <div class="card-body p-3 p-sm-4 bg-primary-subtle bg-opacity-10">
+                        <div class="card dashboard-birthday-item shadow-sm rounded-4 overflow-hidden">
+                            <div class="card-body p-3 p-sm-4 dashboard-birthday-card-inner">
                                 <div class="d-flex align-items-start gap-3">
-                                    <div class="flex-shrink-0 pt-0">
+                                    <div class="flex-shrink-0 position-relative">
                                     @if($photo)
-                                        <img src="{{ $photo }}" alt="" class="rounded-circle object-fit-cover dashboard-avatar border border-3 border-white shadow">
+                                        <img src="{{ $photo }}" alt="" class="rounded-circle object-fit-cover dashboard-avatar-birthday user-select-none">
                                     @else
-                                        <div class="rounded-circle {{ $avClass }} fw-semibold d-inline-flex align-items-center justify-content-center dashboard-avatar border border-3 border-white shadow user-select-none">
+                                        <div class="rounded-circle {{ $avClass }} fw-semibold d-inline-flex align-items-center justify-content-center dashboard-avatar-birthday user-select-none">
                                             {{ strtoupper(substr($employee->first_name, 0, 1)) }}
                                         </div>
                                     @endif
@@ -1035,49 +1098,60 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                                     <div class="flex-grow-1 min-w-0 vstack gap-2 gap-sm-3">
                                         <div class="d-flex flex-wrap align-items-start justify-content-between column-gap-2 row-gap-2">
                                             <div class="min-w-0 flex-grow-1 order-1">
-                                                <div class="dashboard-birthday-name fw-semibold fs-6 text-body text-truncate mb-0 lh-sm">{{ $fullName }}</div>
-                                                <div class="dashboard-birthday-designation small text-body-secondary text-truncate mb-0 mt-1 opacity-90">{{ $employee->designation_name }}</div>
+                                                <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                                                    <div class="dashboard-birthday-name fw-bold fs-6 text-body text-truncate mb-0 lh-sm">{{ $fullName }}</div>
+                                                    <span class="badge rounded-pill bg-primary-subtle text-primary-emphasis border border-primary-subtle small fw-semibold px-2 py-1" style="font-size: 0.65rem; letter-spacing: 0.04em;" title="Birthday today">Today</span>
+                                                </div>
+                                                @if(!empty($employee->designation_name))
+                                                <div class="dashboard-birthday-designation small text-body-secondary text-truncate mb-0 opacity-90">
+                                                    <span class="material-icons material-symbols-rounded align-middle me-1 opacity-50" style="font-size: 1rem;" aria-hidden="true">work</span>{{ $employee->designation_name }}
+                                                </div>
+                                                @endif
                                             </div>
 
                                             <div class="d-flex flex-wrap align-items-center gap-2 ms-sm-auto order-2">
-                                            <div class="dashboard-birthday-badge d-inline-flex align-items-center gap-1 text-uppercase small fw-semibold text-primary-emphasis bg-primary-subtle border border-primary-subtle rounded-pill px-2 py-1" style="font-size: 0.65rem; letter-spacing: 0.05em;" title="Wish them">
-                                                <span class="material-icons material-symbols-rounded flex-shrink-0" style="font-size: 14px;" aria-hidden="true">cake</span>
-                                                <span>Birthday</span>
-                                            </div>
                                             @php $wishCount = $birthdayWishCounts[$employee->pk] ?? 0; @endphp
                                             @if($wishCount > 0)
-                                            <span class="badge rounded-pill bg-success-subtle text-success-emphasis border border-success-subtle small fw-medium px-2 py-2" title="{{ $wishCount }} wishes sent">
-                                                🎁 {{ $wishCount }} {{ $wishCount === 1 ? 'wish' : 'wishes' }}
+                                            <span class="badge rounded-pill bg-success-subtle text-success-emphasis border border-success-subtle small fw-semibold px-2 py-2" title="{{ $wishCount }} wishes sent">
+                                                <span class="me-1" aria-hidden="true">🎁</span>{{ $wishCount }} {{ $wishCount === 1 ? 'wish' : 'wishes' }}
                                             </span>
                                             @endif
                                             </div>
                                         </div>
 
-                                        <div class="dashboard-birthday-contact vstack gap-2 small text-body-secondary pt-2 mt-1 border-top border-secondary border-opacity-10">
+                                        <div class="dashboard-birthday-contact rounded-3 px-2 py-2 small text-body-secondary bg-body-secondary bg-opacity-50 border border-secondary border-opacity-10">
+                                            <div class="row g-2 gy-2">
                                             @if($email !== '')
+                                                <div class="col-12">
                                                 <span class="d-flex align-items-center gap-2 min-w-0">
                                                     <span class="material-icons material-symbols-rounded flex-shrink-0" aria-hidden="true">mail</span>
                                                     <span class="text-truncate">{{ $email }}</span>
                                                 </span>
+                                                </div>
                                             @endif
                                             @if(!empty($employee->mobile))
+                                                <div class="col-sm-6">
                                                 <span class="d-flex align-items-center gap-2 min-w-0">
                                                     <span class="material-icons material-symbols-rounded flex-shrink-0" aria-hidden="true">call</span>
                                                     <span class="text-truncate">{{ $employee->mobile }}</span>
                                                 </span>
+                                                </div>
                                             @endif
                                             @if(!empty($employee->office_extension_no))
+                                                <div class="col-sm-6">
                                                 <span class="d-flex align-items-center gap-2 min-w-0">
                                                     <span class="material-icons material-symbols-rounded flex-shrink-0" aria-hidden="true">local_phone</span>
                                                     <span class="text-truncate">Ext {{ $employee->office_extension_no }}</span>
                                                 </span>
+                                                </div>
                                             @endif
+                                            </div>
                                         </div>
 
-                                        <div class="d-flex gap-2 flex-wrap pt-2 mt-1 border-top border-secondary border-opacity-10">
+                                        <div class="dashboard-birthday-actions d-flex gap-2 flex-wrap pt-1">
                                             @if($email !== '')
                                             <a href="mailto:{{ $email }}?subject={{ $subject }}&body={{ $body }}"
-                                               class="btn btn-sm btn-outline-primary rounded-pill d-inline-flex align-items-center gap-2 px-3 fw-semibold"
+                                               class="btn btn-sm btn-primary rounded-pill d-inline-flex align-items-center gap-2 px-3 fw-semibold shadow-sm"
                                                title="Send Birthday Email">
                                                 <span class="material-icons material-symbols-rounded" style="font-size:15px;" aria-hidden="true">mail</span>
                                                 <span class="small">Email</span>
@@ -1092,7 +1166,7 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                                             <a href="https://wa.me/{{ $whatsappPhone }}?text={{ $whatsappMsg }}"
                                                target="_blank"
                                                rel="noopener noreferrer"
-                                               class="btn btn-sm btn-outline-success rounded-pill d-inline-flex align-items-center gap-2 px-3 fw-semibold"
+                                               class="btn btn-sm btn-success rounded-pill d-inline-flex align-items-center gap-2 px-3 fw-semibold shadow-sm"
                                                title="Send Birthday WhatsApp">
                                                 <span class="material-icons material-symbols-rounded" style="font-size:15px;" aria-hidden="true">chat</span>
                                                 <span class="small">WhatsApp</span>
@@ -1121,11 +1195,14 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
             </div>
 
             @if(($upcomingBirthdays ?? collect())->isNotEmpty())
-            <div class="card dashboard-panel shadow-sm rounded-4 mb-4">
-                <div class="card-header py-3 px-4 d-flex align-items-center gap-2">
-                    <span class="material-icons material-symbols-rounded text-warning">upcoming</span>
-                    <h6 class="mb-0 fw-semibold">Upcoming Birthdays</h6>
-                    <span class="ms-auto badge rounded-pill text-bg-warning-subtle text-warning border border-warning-subtle">
+            <div class="card dashboard-panel shadow-sm rounded-4 mb-4 border border-warning-subtle border-opacity-25">
+                <div class="card-header py-3 px-4 d-flex align-items-center flex-wrap gap-2 border-bottom border-warning-subtle border-opacity-20" style="background: linear-gradient(120deg, rgba(var(--bs-warning-rgb), 0.1) 0%, transparent 65%);">
+                    <span class="material-icons material-symbols-rounded text-warning rounded-3 p-2 bg-warning-subtle bg-opacity-50" style="font-size: 1.35rem;" aria-hidden="true">upcoming</span>
+                    <div class="vstack gap-0 lh-sm min-w-0 flex-grow-1">
+                        <h6 class="mb-0 fw-semibold">Upcoming birthdays</h6>
+                        <span class="small text-body-secondary d-none d-sm-block">Next week on the calendar</span>
+                    </div>
+                    <span class="badge rounded-pill text-bg-warning-subtle text-warning-emphasis border border-warning-subtle fw-semibold">
                         Next 7 days
                     </span>
                 </div>
@@ -1138,23 +1215,23 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                             $upAvClasses = ['text-bg-primary', 'text-bg-info', 'text-bg-success', 'text-bg-warning', 'text-bg-danger'];
                             $upAvClass = $upAvClasses[$loop->index % count($upAvClasses)];
                         @endphp
-                        <div class="d-flex align-items-center gap-2 px-2 py-2 rounded-3" style="background: rgba(var(--bs-warning-rgb), 0.05);">
+                        <div class="d-flex align-items-center gap-3 px-3 py-2 rounded-4 dashboard-upcoming-birthday-row">
                             @if($upPhoto)
-                                <img src="{{ $upPhoto }}" alt="" class="rounded-circle object-fit-cover flex-shrink-0" style="width:2rem; height:2rem;">
+                                <img src="{{ $upPhoto }}" alt="" class="rounded-circle object-fit-cover flex-shrink-0 dashboard-upcoming-avatar">
                             @else
-                                <div class="rounded-circle {{ $upAvClass }} fw-semibold d-inline-flex align-items-center justify-content-center flex-shrink-0" style="width:2rem; height:2rem; font-size:0.75rem;">
+                                <div class="rounded-circle {{ $upAvClass }} fw-semibold d-inline-flex align-items-center justify-content-center flex-shrink-0 dashboard-upcoming-avatar">
                                     {{ strtoupper(substr($upcoming->first_name, 0, 1)) }}
                                 </div>
                             @endif
                             <div class="min-w-0 flex-grow-1">
                                 <div class="fw-semibold small text-truncate">{{ $upName }}</div>
-                                <div class="text-body-secondary" style="font-size:0.7rem;">{{ $upcoming->designation_name ?? '' }}</div>
+                                <div class="text-body-secondary text-truncate" style="font-size:0.72rem;">{{ $upcoming->designation_name ?? '' }}</div>
                             </div>
-                            <div class="text-end flex-shrink-0">
-                                <span class="badge rounded-pill bg-warning-subtle text-warning border border-warning-subtle" style="font-size:0.65rem;">
-                                    🎂 {{ $upcoming->birthday_date }}
+                            <div class="text-end flex-shrink-0 vstack gap-1 align-items-end">
+                                <span class="badge rounded-pill bg-warning-subtle text-warning-emphasis border border-warning-subtle fw-semibold" style="font-size:0.68rem;">
+                                    {{ $upcoming->birthday_date }}
                                 </span>
-                                <div class="text-body-secondary" style="font-size:0.6rem;">in {{ $upcoming->days_away }} {{ $upcoming->days_away == 1 ? 'day' : 'days' }}</div>
+                                <span class="text-body-secondary" style="font-size:0.65rem;">{{ $upcoming->days_away == 0 ? 'Today' : ('in ' . $upcoming->days_away . ' ' . ($upcoming->days_away == 1 ? 'day' : 'days')) }}</span>
                             </div>
                         </div>
                         @endforeach
@@ -1246,6 +1323,17 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
 
 @push('scripts')
 <script>
+/** Avoid "Unexpected token '<'" when the server returns HTML (419, login, error page). */
+function dashboardParseJsonResponse(response) {
+    var ct = response.headers.get('content-type') || '';
+    if (ct.indexOf('application/json') === -1) {
+        return response.text().then(function () {
+            throw new Error('Session may have expired or the server returned an error page. Please refresh and try again.');
+        });
+    }
+    return response.json();
+}
+
 // Birthday wish modal logic
 (function() {
     const templates = {
@@ -1324,7 +1412,9 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': csrfToken
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest'
                     },
                     body: JSON.stringify({
                         email: currentRecipient.email,
@@ -1333,7 +1423,7 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                         employee_pk: currentRecipient.employee_pk ? parseInt(currentRecipient.employee_pk) : null
                     })
                 })
-                .then(function(r) { return r.json(); })
+                .then(function(r) { return dashboardParseJsonResponse(r); })
                 .then(function(data) {
                     if (data.success) {
                         if (sendWhatsapp && currentRecipient.mobile) {
@@ -1362,9 +1452,14 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                     var csrfToken2 = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
                     fetch('{{ route("admin.birthday-wish.send-notification") }}', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken2 },
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken2,
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
                         body: JSON.stringify({ employee_pks: [parseInt(currentRecipient.employee_pk)] })
-                    }).catch(function() {});
+                    }).then(function(r) { return dashboardParseJsonResponse(r); }).catch(function() {});
                 }
                 bootstrap.Modal.getInstance(document.getElementById('customWishModal')).hide();
                 showToast('Birthday wish sent via WhatsApp!', 'success');
@@ -1409,10 +1504,12 @@ window.markAsReadDashboard = function(notificationId, clickedElement) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'X-Requested-With': 'XMLHttpRequest'
             }
         })
-        .then(response => response.json().then(data => ({ ok: response.ok, data })))
+        .then(response => dashboardParseJsonResponse(response).then(data => ({ ok: response.ok, data })))
         .then(({ ok, data }) => {
             if (!ok) {
                 throw new Error(data.error || 'Failed to mark notification as read');
@@ -1486,7 +1583,7 @@ document.addEventListener('DOMContentLoaded', function() {
             },
         })
             .then(function(response) {
-                return response.json().then(function(data) {
+                return dashboardParseJsonResponse(response).then(function(data) {
                     return { ok: response.ok, data: data };
                 });
             })
@@ -1632,7 +1729,7 @@ document.addEventListener('DOMContentLoaded', function() {
     btn.addEventListener('click', function() {
         if (!confirm('Send birthday wishes (email + notification) to all birthday people today?')) return;
 
-        var csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        var csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
         var allCards = document.querySelectorAll('.btn-custom-wish');
         var recipients = [];
         allCards.forEach(function(card) {
@@ -1656,7 +1753,9 @@ document.addEventListener('DOMContentLoaded', function() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'X-Requested-With': 'XMLHttpRequest'
             },
             body: JSON.stringify({
                 recipients: recipients,
@@ -1664,7 +1763,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 message_template: "Dear {name},\n\nWishing you a very Happy Birthday! May this special day bring you joy, success, and good health.\n\nWarm regards,\n{{ $userName ?? 'Team' }}"
             })
         })
-        .then(function(r) { return r.json(); })
+        .then(function(r) { return dashboardParseJsonResponse(r); })
         .then(function(data) {
             if (data.success) {
                 var div = document.createElement('div');

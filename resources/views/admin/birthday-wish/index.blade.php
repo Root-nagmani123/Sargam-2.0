@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Birthday Wishes - Sargam')
+@section('title', 'Birthday Wishes')
 
 @section('content')
 <style>
@@ -180,11 +180,6 @@ $senderName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                     {{-- Channel Selection --}}
                     <label class="form-label fw-semibold small mb-2">Send via</label>
                     <div class="d-flex gap-3 mb-4 flex-wrap">
-                        <label class="channel-btn d-flex align-items-center gap-2 active" id="channel-email-btn">
-                            <input type="checkbox" class="form-check-input" id="compose-via-email" checked>
-                            <span class="material-icons material-symbols-rounded text-primary" style="font-size:20px;">mail</span>
-                            <span class="fw-semibold small">Email</span>
-                        </label>
                         <label class="channel-btn d-flex align-items-center gap-2" id="channel-whatsapp-btn">
                             <input type="checkbox" class="form-check-input" id="compose-via-whatsapp">
                             <span class="material-icons material-symbols-rounded text-success" style="font-size:20px;">chat</span>
@@ -207,6 +202,15 @@ $senderName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
 
 @push('scripts')
 <script>
+function birthdayWishParseJsonResponse(response) {
+    var ct = response.headers.get('content-type') || '';
+    if (ct.indexOf('application/json') === -1) {
+        return response.text().then(function () {
+            throw new Error('Session may have expired or the server returned an error page. Please refresh and try again.');
+        });
+    }
+    return response.json();
+}
 (function() {
     var senderName = @json($senderName);
 
@@ -316,13 +320,15 @@ $senderName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                 if (emailRecipients.length > 0) {
                     sendBtn.disabled = true;
                     sendBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Sending emails...';
-                    var csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+                    var csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
 
                     fetch('{{ route("admin.birthday-wish.send-bulk-email") }}', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': csrfToken
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken,
+                            'X-Requested-With': 'XMLHttpRequest'
                         },
                         body: JSON.stringify({
                             recipients: emailRecipients.map(function(r) { return { email: r.email, name: r.name, employee_pk: r.employee_pk }; }),
@@ -330,7 +336,7 @@ $senderName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                             message_template: message
                         })
                     })
-                    .then(function(r) { return r.json(); })
+                    .then(function(r) { return birthdayWishParseJsonResponse(r); })
                     .then(function(data) {
                         if (data.success) {
                             showToast(data.message, 'success');
@@ -359,12 +365,17 @@ $senderName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                     .map(function(r) { return parseInt(r.employee_pk); })
                     .filter(function(pk) { return !isNaN(pk) && pk > 0; });
                 if (whatsappOnlyPks.length > 0) {
-                    var csrfToken2 = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+                    var csrfToken2 = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
                     fetch('{{ route("admin.birthday-wish.send-notification") }}', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken2 },
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken2,
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
                         body: JSON.stringify({ employee_pks: whatsappOnlyPks })
-                    }).catch(function() {});
+                    }).then(function(r) { return birthdayWishParseJsonResponse(r); }).catch(function() {});
                 }
                 whatsappRecipients.forEach(function(r, idx) {
                     var personalMsg = message.replace(/\{name\}/g, r.name).replace(/\{first_name\}/g, r.name.split(' ')[0]);

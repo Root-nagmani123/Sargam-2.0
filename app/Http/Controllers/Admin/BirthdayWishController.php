@@ -73,62 +73,77 @@ class BirthdayWishController extends Controller
 
     public function sendBulkEmail(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'recipients'             => 'required|array|min:1',
-            'recipients.*.email'     => 'required|email|max:255',
-            'recipients.*.name'      => 'required|string|max:255',
-            'recipients.*.employee_pk' => 'nullable|integer',
-            'subject'                => 'required|string|max:255',
-            'message_template'       => 'required|string|max:5000',
-        ]);
+        try {
+            $validator = Validator::make($request->all(), [
+                'recipients'               => 'required|array|min:1',
+                'recipients.*.email'       => 'required|email|max:255',
+                'recipients.*.name'        => 'required|string|max:255',
+                'recipients.*.employee_pk' => 'nullable|integer',
+                'subject'                  => 'required|string|max:255',
+                'message_template'         => 'required|string|max:5000',
+            ]);
 
-        if ($validator->fails()) {
-            return response()->json(['success' => false, 'error' => $validator->errors()->first()], 422);
-        }
+            if ($validator->fails()) {
+                return response()->json(['success' => false, 'error' => $validator->errors()->first()], 422);
+            }
 
-        $results = ['sent' => 0, 'failed' => 0];
-        $notifiedPks = [];
+            $results = ['sent' => 0, 'failed' => 0];
+            $notifiedPks = [];
 
-        foreach ($request->input('recipients') as $recipient) {
-            $personalizedMessage = str_replace(
-                ['{name}', '{first_name}'],
-                [$recipient['name'], explode(' ', $recipient['name'])[0]],
-                $request->input('message_template')
-            );
+            foreach ($request->input('recipients') as $recipient) {
+                $name = (string) ($recipient['name'] ?? '');
+                $first = $name !== '' ? explode(' ', $name, 2)[0] : '';
+                $personalizedMessage = str_replace(
+                    ['{name}', '{first_name}'],
+                    [$name, $first],
+                    $request->input('message_template')
+                );
 
-            try {
-                $emailService = new EmailService($request->input('subject'));
-                $failed = $emailService->sendBulk(collect([$recipient['email']]), $personalizedMessage);
-                if (empty($failed)) {
-                    $results['sent']++;
-                    if (!empty($recipient['employee_pk'])) {
-                        $notifiedPks[] = (int) $recipient['employee_pk'];
+                try {
+                    $emailService = new EmailService($request->input('subject'));
+                    $failed = $emailService->sendBulk(collect([$recipient['email']]), $personalizedMessage);
+                    if (empty($failed)) {
+                        $results['sent']++;
+                        if (! empty($recipient['employee_pk'])) {
+                            $notifiedPks[] = (int) $recipient['employee_pk'];
+                        }
+                    } else {
+                        $results['failed']++;
                     }
-                } else {
+                } catch (\Throwable $e) {
                     $results['failed']++;
+                    Log::error('BirthdayWishController: bulk email failed', [
+                        'email' => $recipient['email'] ?? null,
+                        'error' => $e->getMessage(),
+                    ]);
                 }
-            } catch (\Throwable $e) {
-                $results['failed']++;
-                Log::error('BirthdayWishController: bulk email failed', [
-                    'email' => $recipient['email'],
-                    'error' => $e->getMessage(),
-                ]);
             }
-        }
 
-        // Create in-app birthday notifications for all successfully emailed recipients
-        if (!empty($notifiedPks)) {
-            $senderName = Auth::user() ? (Auth::user()->first_name ?? Auth::user()->name ?? 'Someone') : 'Someone';
-            foreach ($notifiedPks as $pk) {
-                $this->createBirthdayNotification($pk, $senderName);
+            if (! empty($notifiedPks)) {
+                $senderName = Auth::user() ? (Auth::user()->first_name ?? Auth::user()->name ?? 'Someone') : 'Someone';
+                foreach ($notifiedPks as $pk) {
+                    $this->createBirthdayNotification($pk, $senderName);
+                }
             }
-        }
 
-        return response()->json([
-            'success' => true,
-            'message' => "Sent: {$results['sent']}, Failed: {$results['failed']}",
-            'results' => $results,
-        ]);
+            return response()->json([
+                'success' => true,
+                'message' => "Sent: {$results['sent']}, Failed: {$results['failed']}",
+                'results' => $results,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('BirthdayWishController: sendBulkEmail failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => config('app.debug')
+                    ? $e->getMessage()
+                    : 'Could not send birthday emails. Check mail configuration (e.g. MAIL_MAILER, SMTP) or try again later.',
+            ], 500);
+        }
     }
 
     /**
