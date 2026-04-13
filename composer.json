@@ -21,7 +21,6 @@
         "microsoft/azure-storage-blob": "^1.5",
         "mpdf/mpdf": "^8.2",
         "spatie/laravel-permission": "^6.16",
-        "yajra/laravel-datatables-export": "^1.2",
         "yajra/laravel-datatables-fractal": "^10.0"
     },
     "require-dev": {

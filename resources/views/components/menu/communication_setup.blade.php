@@ -34,6 +34,12 @@
                                         <span class="hide-menu small small-sm-normal text-nowrap">Birthday Wishes</span>
                                     </a>
                                 </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.word-of-day.*') ? 'active' : '' }}"
+                                        href="{{ route('admin.word-of-day.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Word of the Day</span>
+                                    </a>
+                                </li>
                             </ul>
 
                             <li class="sidebar-item comm-sidebar-section-heading mt-2">

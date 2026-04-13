@@ -7,6 +7,7 @@ use Illuminate\Foundation\Auth\AuthenticatesUsers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
+use App\Models\WordOfTheDay;
 use Adldap\Laravel\Facades\Adldap;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\DB;
@@ -47,6 +48,16 @@ class LoginController extends Controller
     {
         $this->middleware('guest')->except('logout');
         $this->middleware('auth')->only('logout');
+    }
+
+    /**
+     * Show the application's login form (public). Passes today's word for the login banner.
+     */
+    public function showLoginForm()
+    {
+        $wordOfTheDay = WordOfTheDay::wordForToday();
+
+        return view('auth.login', compact('wordOfTheDay'));
     }
 
     public function authenticate_bkp(Request $request) {

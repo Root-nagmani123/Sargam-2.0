@@ -66,6 +66,7 @@ use App\Http\Controllers\Admin\EmployeeIDCardRequestController;
 use App\Http\Controllers\Admin\DuplicateIDCardRequestController;
 use App\Http\Controllers\Admin\FamilyIDCardRequestController;
 use App\Http\Controllers\Admin\BirthdayWishController;
+use App\Http\Controllers\Admin\WordOfTheDayController;
 
 
 Route::get('clear-cache', function () {
@@ -119,6 +120,14 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/birthday-wishes/send-email', [BirthdayWishController::class, 'sendEmail'])->name('admin.birthday-wish.send-email');
     Route::post('/birthday-wishes/send-bulk-email', [BirthdayWishController::class, 'sendBulkEmail'])->name('admin.birthday-wish.send-bulk-email');
     Route::post('/birthday-wishes/send-notification', [BirthdayWishController::class, 'sendNotification'])->name('admin.birthday-wish.send-notification');
+
+    // Login page — Word of the Day (Admin / Super Admin)
+    Route::get('/word-of-day', [WordOfTheDayController::class, 'index'])->name('admin.word-of-day.index');
+    Route::get('/word-of-day/create', [WordOfTheDayController::class, 'create'])->name('admin.word-of-day.create');
+    Route::post('/word-of-day', [WordOfTheDayController::class, 'store'])->name('admin.word-of-day.store');
+    Route::get('/word-of-day/{id}/edit', [WordOfTheDayController::class, 'edit'])->name('admin.word-of-day.edit');
+    Route::put('/word-of-day/{id}', [WordOfTheDayController::class, 'update'])->name('admin.word-of-day.update');
+    Route::delete('/word-of-day/{id}', [WordOfTheDayController::class, 'destroy'])->name('admin.word-of-day.destroy');
 
     // Dashboard Statistics (Batch Profile)
     // NOTE: Currently served by a Blade view; replace with controller when business logic is ready.

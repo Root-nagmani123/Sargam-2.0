@@ -1068,7 +1068,13 @@
                         <i class="bi bi-translate" aria-hidden="true"></i>
                         आज का शब्द / Word of the Day
                     </h6>
-                    <p>अर्हक अंक - Qualifying marks</p>
+                    <p>
+                        @if(!empty($wordOfTheDay))
+                            {{ $wordOfTheDay->displayLine() }}
+                        @else
+                            अर्हक अंक - Qualifying marks
+                        @endif
+                    </p>
                 </div>
             </div>
         </main>
