@@ -85,18 +85,7 @@ class ProcessMessBillsEmployeeController extends Controller
         if (!empty($clientTypePks)) {
             $dateRangeQuery->whereIn('client_type_pk', $clientTypePks);
         }
-        if ($dateFrom) {
-            $dateRangeQuery->where(function ($q) use ($dateFrom) {
-                $q->where('issue_date', '>=', $dateFrom)
-                  ->orWhere('date_from', '>=', $dateFrom);
-            });
-        }
-        if ($dateTo) {
-            $dateRangeQuery->where(function ($q) use ($dateTo) {
-                $q->where('issue_date', '<=', $dateTo)
-                  ->orWhere('date_to', '<=', $dateTo);
-            });
-        }
+        $this->applySellingVoucherDateRangeOverlapFilter($dateRangeQuery, $dateFrom, $dateTo);
         $this->applyBuyerNameFilter($dateRangeQuery, $buyerNames);
 
         // Query 2: Regular Selling Voucher (kitchen_issue_master)
@@ -332,6 +321,62 @@ class ProcessMessBillsEmployeeController extends Controller
     }
 
     /**
+     * Restrict sv_date_range_reports to rows whose billing window overlaps [dateFrom, dateTo].
+     * When both date_from and date_to are set on the row, overlap is
+     * date_from <= dateTo AND date_to >= dateFrom. Otherwise issue_date must fall inside the filter window.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     */
+    private function applySellingVoucherDateRangeOverlapFilter($query, ?string $dateFrom, ?string $dateTo): void
+    {
+        if (!$dateFrom && !$dateTo) {
+            return;
+        }
+        if ($dateFrom && $dateTo) {
+            $query->where(function ($q) use ($dateFrom, $dateTo) {
+                $q->where(function ($q2) use ($dateFrom, $dateTo) {
+                    $q2->whereNotNull('date_from')
+                        ->whereNotNull('date_to')
+                        ->where('date_from', '<=', $dateTo)
+                        ->where('date_to', '>=', $dateFrom);
+                })->orWhere(function ($q2) use ($dateFrom, $dateTo) {
+                    $q2->where(function ($q3) {
+                        $q3->whereNull('date_from')->orWhereNull('date_to');
+                    })->whereBetween('issue_date', [$dateFrom, $dateTo]);
+                });
+            });
+
+            return;
+        }
+        if ($dateFrom) {
+            $query->where(function ($q) use ($dateFrom) {
+                $q->where(function ($q2) use ($dateFrom) {
+                    $q2->whereNotNull('date_from')
+                        ->whereNotNull('date_to')
+                        ->where('date_to', '>=', $dateFrom);
+                })->orWhere(function ($q2) use ($dateFrom) {
+                    $q2->where(function ($q3) {
+                        $q3->whereNull('date_from')->orWhereNull('date_to');
+                    })->where('issue_date', '>=', $dateFrom);
+                });
+            });
+
+            return;
+        }
+        $query->where(function ($q) use ($dateTo) {
+            $q->where(function ($q2) use ($dateTo) {
+                $q2->whereNotNull('date_from')
+                    ->whereNotNull('date_to')
+                    ->where('date_from', '<=', $dateTo);
+            })->orWhere(function ($q2) use ($dateTo) {
+                $q2->where(function ($q3) {
+                    $q3->whereNull('date_from')->orWhereNull('date_to');
+                })->where('issue_date', '<=', $dateTo);
+            });
+        });
+    }
+
+    /**
      * Group bills by buyer (client_name + client_type_slug) and build combined bill rows.
      * Returns array of combined bill objects for display and payment.
      * Uses a single combined_invoice_no (e.g. CB-20260312-00123) so slip/receipt shows one invoice like others.
@@ -361,7 +406,19 @@ class ProcessMessBillsEmployeeController extends Controller
             }
             $due = max(0, $total - $paid);
 
-            $dates = $group->map(fn ($b) => $b->issue_date ? $b->issue_date->format('Y-m-d') : null)->filter()->unique()->sort()->values();
+            $dates = $group->flatMap(function ($b) {
+                if ($b instanceof SellingVoucherDateRangeReport && $b->date_from && $b->date_to) {
+                    return [
+                        $b->date_from->format('Y-m-d'),
+                        $b->date_to->format('Y-m-d'),
+                    ];
+                }
+                if ($b->issue_date) {
+                    return [$b->issue_date->format('Y-m-d')];
+                }
+
+                return [];
+            })->filter()->unique()->sort()->values();
             $dateMin = $dates->first();
             $dateMax = $dates->last();
             $invoiceDateRange = $dateMin && $dateMax
@@ -446,16 +503,7 @@ class ProcessMessBillsEmployeeController extends Controller
         if ($buyerName) {
             $dateRangeBase->where('client_name', 'like', '%' . $buyerName . '%');
         }
-        if ($dateFrom) {
-            $dateRangeBase->where(function ($q) use ($dateFrom) {
-                $q->where('issue_date', '>=', $dateFrom)->orWhere('date_from', '>=', $dateFrom);
-            });
-        }
-        if ($dateTo) {
-            $dateRangeBase->where(function ($q) use ($dateTo) {
-                $q->where('issue_date', '<=', $dateTo)->orWhere('date_to', '<=', $dateTo);
-            });
-        }
+        $this->applySellingVoucherDateRangeOverlapFilter($dateRangeBase, $dateFrom, $dateTo);
 
         $kitchenClientTypes = $clientType
             ? [$this->clientTypeSlugToKitchenId($clientType)]
@@ -522,16 +570,7 @@ class ProcessMessBillsEmployeeController extends Controller
             ->whereIn('client_type_slug', $clientType ? [$clientType] : self::ALLOWED_CLIENT_SLUGS);
 
         $this->applyBuyerNameFilter($dateRangeQuery, $buyerNames);
-        if ($dateFrom) {
-            $dateRangeQuery->where(function ($q) use ($dateFrom) {
-                $q->where('issue_date', '>=', $dateFrom)->orWhere('date_from', '>=', $dateFrom);
-            });
-        }
-        if ($dateTo) {
-            $dateRangeQuery->where(function ($q) use ($dateTo) {
-                $q->where('issue_date', '<=', $dateTo)->orWhere('date_to', '<=', $dateTo);
-            });
-        }
+        $this->applySellingVoucherDateRangeOverlapFilter($dateRangeQuery, $dateFrom, $dateTo);
 
         $kitchenClientTypes = $clientType
             ? [$this->clientTypeSlugToKitchenId($clientType)]
@@ -848,17 +887,11 @@ class ProcessMessBillsEmployeeController extends Controller
         $dateFrom = $request->filled('date_from') ? $this->parseDate($request->date_from) : now()->startOfMonth()->format('Y-m-d');
         $dateTo = $request->filled('date_to') ? $this->parseDate($request->date_to) : now()->endOfMonth()->format('Y-m-d');
 
-            $dateRangeBills = SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'course', 'items'])
+        $dateRangeBillsQuery = SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'course', 'items'])
             ->where('client_type_slug', $clientTypeSlug)
-            ->where('client_name', $buyerName)
-            ->where(function ($q) use ($dateFrom) {
-                $q->where('issue_date', '>=', $dateFrom)->orWhere('date_from', '>=', $dateFrom);
-            })
-            ->where(function ($q) use ($dateTo) {
-                $q->where('issue_date', '<=', $dateTo)->orWhere('date_to', '<=', $dateTo);
-            })
-            ->orderBy('issue_date')
-            ->get();
+            ->where('client_name', $buyerName);
+        $this->applySellingVoucherDateRangeOverlapFilter($dateRangeBillsQuery, $dateFrom, $dateTo);
+        $dateRangeBills = $dateRangeBillsQuery->orderBy('issue_date')->get();
 
         $kitchenBills = KitchenIssueMaster::with(['store', 'clientTypeCategory', 'course', 'items'])
             ->whereIn('kitchen_issue_type', self::KITCHEN_MESS_SELLING_ISSUE_TYPES)
@@ -1098,16 +1131,7 @@ class ProcessMessBillsEmployeeController extends Controller
             $dateRangeQuery->where('client_type_pk', $clientTypePk);
         }
         $this->applyBuyerNameFilter($dateRangeQuery, $buyerNames);
-        if ($dateFrom) {
-            $dateRangeQuery->where(function ($q) use ($dateFrom) {
-                $q->where('issue_date', '>=', $dateFrom)->orWhere('date_from', '>=', $dateFrom);
-            });
-        }
-        if ($dateTo) {
-            $dateRangeQuery->where(function ($q) use ($dateTo) {
-                $q->where('issue_date', '<=', $dateTo)->orWhere('date_to', '<=', $dateTo);
-            });
-        }
+        $this->applySellingVoucherDateRangeOverlapFilter($dateRangeQuery, $dateFrom, $dateTo);
 
         // Query 2: Regular Selling Voucher (Kitchen Issue)
         $kitchenClientTypes = $clientType
