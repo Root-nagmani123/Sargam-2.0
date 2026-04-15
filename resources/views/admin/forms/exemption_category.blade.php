@@ -2,10 +2,13 @@
 
 @section('title', 'Exemption Master | Lal Bahadur Shastri National Academy of Administration')
 
-@section('setup_content')
+@push('styles')
 <link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.css" rel="stylesheet" />
+@endpush
 
+@section('setup_content')
 <div class="container-fluid">
+    <div id="status-msg" class="mb-3"></div>
     <div class="card" style="border-left:4px solid #004a93;">
         <div class="card-body">
             <div class="row">
@@ -117,8 +120,7 @@
 </div>
 @endsection
 
-@section('scripts')
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+@push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.js"></script>
 <script>
 $(document).ready(function() {
@@ -143,4 +145,4 @@ $(document).ready(function() {
     });
 });
 </script>
-@endsection
+@endpush

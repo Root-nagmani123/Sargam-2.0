@@ -50,7 +50,9 @@
             </div>
         </div>
     </div>
-@section('scripts')
+@endsection
+
+@push('scripts')
     <script>
         const submissionColumns = @json($submissionColumns);
 
@@ -383,4 +385,4 @@
         }
     </script>
 
-@endsection
+@endpush
