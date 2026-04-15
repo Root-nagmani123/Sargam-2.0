@@ -402,7 +402,7 @@
     document.getElementById('emp_type_cont')?.addEventListener('change', toggleFmlApprovalAuthority);
     toggleFmlApprovalAuthority();
 
-    // Contractual: autofill designation, section (department), display name from employee_master (create page only)
+    // Contractual: autofill from employee_master and/or security_con_oth_id_apply (lookup endpoint)
     var fmlLookupAbort = null;
     var fmlLookupUrl = @json(route('admin.family_idcard.lookup.employee_by_id'));
 
@@ -447,7 +447,7 @@
             return r.json().then(function (body) { return { ok: r.ok, body: body }; });
         }).then(function (res) {
             if (!res.ok || !res.body.success || !res.body.data) {
-                var msg = (res.body && res.body.message) ? res.body.message : 'No match in employee master.';
+                var msg = (res.body && res.body.message) ? res.body.message : 'No match in employee master or contractual ID applications.';
                 setFmlLookupHint(msg, 'error');
                 if (nameDisp) nameDisp.value = '';
                 return;
@@ -457,7 +457,7 @@
             if (desig) desig.value = d.designation || '';
             if (section && d.department) section.value = d.department;
             if (d.emp_id && idInp) idInp.value = d.emp_id;
-            setFmlLookupHint('Name and designation loaded from employee master. You can edit before save.', 'success');
+            setFmlLookupHint('Name and designation loaded (employee master or contractual ID application). You can edit before save.', 'success');
         }).catch(function (err) {
             if (err && err.name === 'AbortError') return;
             setFmlLookupHint('Lookup failed. Try again.', 'error');

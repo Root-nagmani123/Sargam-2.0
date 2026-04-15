@@ -234,7 +234,10 @@ class FamilyIDCardRequestController extends Controller
     }
 
     /**
-     * Create page only: resolve employee name, designation, department from employee_master (by emp_id / pk / pk_old).
+     * Create page only: resolve employee name, designation, department.
+     * 1) employee_master by emp_id / pk / pk_old
+     * 2) else security_con_oth_id_apply by id_card_no or emp_id_apply, then employee_master via employee_master_pk if present,
+     *    else fields stored on the contractual application row.
      * Does not change store behaviour; used for contractual Employee ID autofill in the browser.
      */
     public function lookupEmployeeByIdForCreate(Request $request)
@@ -247,7 +250,99 @@ class FamilyIDCardRequestController extends Controller
             ], 422);
         }
 
-        $em = DB::table('employee_master as em')
+        $em = $this->familyIdcardLookupEmployeeMasterRow($lookup);
+        if ($em) {
+            return response()->json([
+                'success' => true,
+                'data' => $this->familyIdcardLookupPayloadFromMasterRow($em, null),
+            ]);
+        }
+
+        if (! Schema::hasTable('security_con_oth_id_apply')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No employee found for this ID.',
+            ], 404);
+        }
+
+        $conParts = [];
+        $conBindings = [];
+        if (Schema::hasColumn('security_con_oth_id_apply', 'id_card_no')) {
+            $conParts[] = '(id_card_no = ? OR TRIM(id_card_no) = ?)';
+            $conBindings[] = $lookup;
+            $conBindings[] = $lookup;
+        }
+        if (Schema::hasColumn('security_con_oth_id_apply', 'emp_id_apply')) {
+            $conParts[] = '(emp_id_apply = ? OR TRIM(emp_id_apply) = ?)';
+            $conBindings[] = $lookup;
+            $conBindings[] = $lookup;
+        }
+
+        $con = $conParts === []
+            ? null
+            : DB::table('security_con_oth_id_apply')
+                ->whereRaw(implode(' OR ', $conParts), $conBindings)
+                ->orderByDesc('created_date')
+                ->first();
+
+        if (! $con) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No employee found for this ID in employee master or contractual ID card applications.',
+            ], 404);
+        }
+
+        $displayId = null;
+        if (Schema::hasColumn('security_con_oth_id_apply', 'id_card_no') && ! empty($con->id_card_no)) {
+            $displayId = (string) $con->id_card_no;
+        }
+        if ($displayId === null && Schema::hasColumn('security_con_oth_id_apply', 'emp_id_apply') && ! empty($con->emp_id_apply)) {
+            $displayId = (string) $con->emp_id_apply;
+        }
+
+        $empPk = 0;
+        if (Schema::hasColumn('security_con_oth_id_apply', 'employee_master_pk')) {
+            $empPk = (int) ($con->employee_master_pk ?? 0);
+        }
+        if ($empPk > 0) {
+            $emLinked = $this->familyIdcardLookupEmployeeMasterRow((string) $empPk);
+            if ($emLinked) {
+                return response()->json([
+                    'success' => true,
+                    'data' => $this->familyIdcardLookupPayloadFromMasterRow($emLinked, $displayId),
+                ]);
+            }
+        }
+
+        $name = Schema::hasColumn('security_con_oth_id_apply', 'employee_name')
+            ? trim((string) ($con->employee_name ?? ''))
+            : '';
+        $designation = Schema::hasColumn('security_con_oth_id_apply', 'designation_name')
+            ? (string) ($con->designation_name ?? '')
+            : '';
+        $department = '';
+        if (Schema::hasColumn('security_con_oth_id_apply', 'section') && ! empty($con->section) && Schema::hasTable('department_master')) {
+            $deptName = DB::table('department_master')->where('pk', $con->section)->value('department_name');
+            $department = $deptName ? (string) $deptName : '';
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'employee_name' => $name,
+                'designation' => $designation,
+                'department' => $department,
+                'emp_id' => $displayId,
+            ],
+        ]);
+    }
+
+    /**
+     * @return object|null row with first_name, last_name, emp_id, designation_name, department_name
+     */
+    private function familyIdcardLookupEmployeeMasterRow(string $lookup): ?object
+    {
+        return DB::table('employee_master as em')
             ->leftJoin('designation_master as dm', 'dm.pk', '=', 'em.designation_master_pk')
             ->leftJoin('department_master as dept', 'dept.pk', '=', 'em.department_master_pk')
             ->where(function ($q) use ($lookup) {
@@ -270,25 +365,24 @@ class FamilyIDCardRequestController extends Controller
                 'dept.department_name',
             ])
             ->first();
+    }
 
-        if (! $em) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No employee found for this ID.',
-            ], 404);
-        }
-
+    /**
+     * @param  object  $em  employee_master join row
+     */
+    private function familyIdcardLookupPayloadFromMasterRow(object $em, ?string $preferredDisplayId): array
+    {
         $name = trim(($em->first_name ?? '') . ' ' . ($em->last_name ?? ''));
+        $empId = ($preferredDisplayId !== null && $preferredDisplayId !== '')
+            ? $preferredDisplayId
+            : ($em->emp_id !== null && (string) $em->emp_id !== '' ? (string) $em->emp_id : null);
 
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'employee_name' => $name,
-                'designation' => (string) ($em->designation_name ?? ''),
-                'department' => (string) ($em->department_name ?? ''),
-                'emp_id' => $em->emp_id !== null && (string) $em->emp_id !== '' ? (string) $em->emp_id : null,
-            ],
-        ]);
+        return [
+            'employee_name' => $name,
+            'designation' => (string) ($em->designation_name ?? ''),
+            'department' => (string) ($em->department_name ?? ''),
+            'emp_id' => $empId,
+        ];
     }
 
     public function store(Request $request)
