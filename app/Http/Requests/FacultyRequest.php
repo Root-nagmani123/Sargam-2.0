@@ -33,6 +33,9 @@ class FacultyRequest extends FormRequest
             'country' => 'required|exists:country_master,pk',
             'current_sector' => 'required|integer|in:1,2',
             'joiningdate' => 'required|date',
+            'email' => 'nullable|email:rfc,dns',
+            'alternativeEmail' => 'nullable|email:rfc,dns',
+            'mobile' => ['nullable', 'digits:10'],
             // ...existing code...
         ];
     }
@@ -58,7 +61,10 @@ class FacultyRequest extends FormRequest
             // 'state.required' => 'State is required',
             // 'city.required' => 'City is required',
             // 'email.required' => 'Email is required',
+            'email.email' => 'Please enter a valid email address (e.g. name@example.com)',
+            'alternativeEmail.email' => 'Please enter a valid alternate email address (e.g. name@example.com)',
             // 'alternativeEmail.required' => 'Alternative email is required',
+            'mobile.digits' => 'Mobile number must be exactly 10 digits',
             // 'photo.required' => 'Photo is required',
             // 'document.required' => 'Document is required',
             // 'residence_address.required' => 'Residence address is required',

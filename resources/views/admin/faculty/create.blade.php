@@ -861,18 +861,36 @@ $(document).ready(function () {
 
     // Check Email
     $('input[name="email"]').on('blur', function () {
-        let email = $(this).val();
-        if (email) {
-            checkUnique('email', email, $(this));
+        let email = $(this).val().trim();
+        $(this).nextAll('.unique-error').remove(); // Clear all error messages
+        if (!email) return;
+        // Strict email format: must contain exactly one @, with text before and a valid domain after
+        let emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            $(this).addClass('is-invalid');
+            $(this).after('<small class="text-danger unique-error">Please enter a valid email address (e.g. name@example.com)</small>');
+            return;
         }
+        $(this).removeClass('is-invalid');
+        checkUnique('email', email, $(this));
     });
 
     // Check Mobile
     $('input[name="mobile"]').on('blur', function () {
-        let mobile = $(this).val();
-        if (mobile) {
-            checkUnique('mobile', mobile, $(this));
+        let mobile = $(this).val().trim();
+        $(this).nextAll('.unique-error').remove(); // Clear all error messages
+        if (!mobile) return;
+        // Must be exactly 10 digits
+        let mobileRegex = /^[0-9]{10}$/;
+        if (!mobileRegex.test(mobile)) {
+            $(this).addClass('is-invalid mobile-duplicate');
+            $(this).after('<small class="text-danger unique-error">Mobile number must be exactly 10 digits</small>');
+            isMobileDuplicate = true;
+            return;
         }
+        $(this).removeClass('is-invalid mobile-duplicate');
+        isMobileDuplicate = false;
+        checkUnique('mobile', mobile, $(this));
     });
 
     /*
@@ -896,33 +914,24 @@ $(document).ready(function () {
                 value: value
             },
             success: function (response) {
-                inputElement.next('.unique-error').remove(); // remove old messages
-                 inputElement.removeClass('mobile-duplicate');
+                inputElement.nextAll('.unique-error').remove(); // remove all error/success messages
+                inputElement.removeClass('mobile-duplicate');
 
                 if (response.exists) {
                     inputElement.after('<small class="text-danger unique-error">' + response.message + '</small>');
-                   // inputElement.addClass('is-invalid');
-                     inputElement.addClass('is-invalid mobile-duplicate');
+                    inputElement.addClass('is-invalid mobile-duplicate');
 
-			/*if (type === 'mobile') {
-                    isMobileDuplicate = true;
-                    $("#saveFacultyForm").prop('disabled', true);
-                }
-				*/
-				if (type === 'mobile') {
-					isMobileDuplicate = true;
-					toastr.warning("Mobile exists. You can update other details.");
-				}
-
+                    if (type === 'mobile') {
+                        isMobileDuplicate = true;
+                        toastr.warning("Mobile exists. You can update other details.");
+                    }
                 } else {
                     inputElement.after('<small class="text-success unique-error">' + response.message + '</small>');
                     inputElement.removeClass('is-invalid');
 
                     if (type === 'mobile') {
-                    isMobileDuplicate = false;
-                    $("#saveFacultyForm").prop('disabled', false);
-
-
+                        isMobileDuplicate = false;
+                        $("#saveFacultyForm").prop('disabled', false);
                     }
                 }
             }
