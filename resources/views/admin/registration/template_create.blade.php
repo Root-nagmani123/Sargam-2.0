@@ -65,7 +65,7 @@
                                 <option value="">Choose Option</option>
                                 @foreach ($forms as $item)
                                     <option value="{{ $item->id }}"
-                                        {{ old('parent_id') == $item->id ? 'selected' : '' }}>
+                                        {{ (old('parent_id', optional($template)->id) == $item->id) ? 'selected' : '' }}>
                                         {{ $item->name }}
                                     </option>
                                 @endforeach
@@ -75,13 +75,15 @@
                         <!-- Course Start Date -->
                         <div class="col-md-6">
                             <label for="course_sdate" class="form-label">Course Start Date:</label>
-                            <input type="date" class="form-control" id="course_sdate" name="course_sdate" required>
+                            <input type="date" class="form-control" id="course_sdate" name="course_sdate"
+                                value="{{ old('course_sdate', optional($template)->course_sdate) }}" required>
                         </div>
 
                         <!-- Course End Date -->
                         <div class="col-md-6">
                             <label for="course_edate" class="form-label">Course End Date:</label>
-                            <input type="date" class="form-control" id="course_edate" name="course_edate" required>
+                            <input type="date" class="form-control" id="course_edate" name="course_edate"
+                                value="{{ old('course_edate', optional($template)->course_edate) }}" required>
                         </div>
 
                         <!-- Visibility Toggle -->

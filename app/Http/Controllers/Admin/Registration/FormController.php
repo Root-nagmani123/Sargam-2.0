@@ -44,7 +44,9 @@ class FormController extends Controller
         });
         $forms_parent = DB::table('local_form')
             ->where('visible', 1)
-            ->whereNull('parent_id') // Only parent forms
+            ->where(function ($q) {
+                $q->whereNull('parent_id')->orWhere('parent_id', 0);
+            })
             ->orderBy('name')
             ->get();
 
@@ -103,7 +105,14 @@ class FormController extends Controller
             ->whereNull('parent_id')  // ONLY parent forms
             ->orderBy('name')
             ->get();
-        return view('admin.registration.template_create', compact('forms'));
+
+        // Pre-fill from selected template
+        $template = null;
+        if (request()->has('template')) {
+            $template = DB::table('local_form')->where('id', request()->query('template'))->first();
+        }
+
+        return view('admin.registration.template_create', compact('forms', 'template'));
     }
 
 
@@ -584,6 +593,11 @@ class FormController extends Controller
             ->orderBy('sortorder')
             ->get();
 
+        // If this is a parent form and it has children, redirect to first child
+        if (($form->parent_id == 0 || $form->parent_id == null) && $childForms->isNotEmpty()) {
+            return redirect()->route('forms.show', $childForms->first()->id);
+        }
+
         // Check fields for the current form
         $fields = DB::table('form_data')
             ->where('formid', $form->id)
@@ -591,21 +605,6 @@ class FormController extends Controller
             ->orderBy('row_index')
             ->orderBy('col_index')
             ->get();
-
-        // If this is a parent form with no fields, but children exist,
-        // switch to first child form and load its fields instead
-        if (($form->parent_id == 0 || $form->parent_id == null) && $fields->isEmpty() && $childForms->isNotEmpty()) {
-            // Switch form to first child
-            $form = $childForms->first();
-
-            // Reload fields for first child form
-            $fields = DB::table('form_data')
-                ->where('formid', $form->id)
-                ->orderBy('id')
-                ->orderBy('row_index')
-                ->orderBy('col_index')
-                ->get();
-        }
 
         // Group fields for display (table and grid)
         $fieldsBySection = [];
@@ -825,9 +824,12 @@ class FormController extends Controller
     {
         $form = DB::table('local_form')->where('id', $id)->first();
 
-        if (!$form) return back()->with('error', 'Form not found.');
+        if (!$form) {
+            return response()->json(['success' => false, 'message' => 'Form not found.'], 404);
+        }
 
         $above = DB::table('local_form')
+            ->where('parent_id', $form->parent_id)
             ->where('sortorder', '<', $form->sortorder)
             ->orderByDesc('sortorder')
             ->first();
@@ -839,16 +841,19 @@ class FormController extends Controller
             });
         }
 
-        return back()->with('success', 'Form moved up successfully.');
+        return response()->json(['success' => true, 'message' => 'Form moved up successfully.']);
     }
 
     public function moveDown($id)
     {
         $form = DB::table('local_form')->where('id', $id)->first();
 
-        if (!$form) return back()->with('error', 'Form not found.');
+        if (!$form) {
+            return response()->json(['success' => false, 'message' => 'Form not found.'], 404);
+        }
 
         $below = DB::table('local_form')
+            ->where('parent_id', $form->parent_id)
             ->where('sortorder', '>', $form->sortorder)
             ->orderBy('sortorder')
             ->first();
@@ -860,7 +865,7 @@ class FormController extends Controller
             });
         }
 
-        return back()->with('success', 'Form moved down successfully.');
+        return response()->json(['success' => true, 'message' => 'Form moved down successfully.']);
     }
 
 
