@@ -617,6 +617,7 @@
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     @stack('scripts')
+    @yield('scripts')
     <script>
 document.addEventListener('DOMContentLoaded', function () {
     const toggle = document.getElementById('searchToggle');
@@ -711,7 +712,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const sidebarType = body.getAttribute("data-sidebartype");
     console.log('Initial sidebar type:', sidebarType);
     console.log('Icon elements found:', icons.length);
-    
+
     if (sidebarType === "mini-sidebar") {
         // Sidebar should be collapsed - ensure main-wrapper doesn't have show-sidebar
         sidebar.classList.remove("show-sidebar");
@@ -778,14 +779,14 @@ document.addEventListener("DOMContentLoaded", function () {
       document.documentElement.style.colorScheme = 'light';
       document.documentElement.style.setProperty('--bs-body-bg', '#fff', 'important');
       document.documentElement.style.setProperty('--bs-body-color', '#212529', 'important');
-      
+
       // Remove any dark mode classes
       document.documentElement.classList.remove('dark');
       if (document.body) {
         document.body.classList.remove('dark');
         document.body.style.colorScheme = 'light';
       }
-      
+
       // Force reflow to apply styles
       document.documentElement.offsetHeight;
     });

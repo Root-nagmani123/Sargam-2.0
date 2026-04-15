@@ -731,6 +731,8 @@ input.is-invalid {
                                         placeholder="Joining Date"
                                         formLabelClass="form-label"
 										value="{{ $value ?? '' }}"
+                                        required
+                                        :labelRequired="true"
                                         />
 
                                 </div>

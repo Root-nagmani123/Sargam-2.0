@@ -25,81 +25,15 @@ class FacultyRequest extends FormRequest
      */
     public function rules()
     {
-        
+
         $existingFaculty = FacultyMaster::find($this->faculty_id);
         $otherCityPks = City::whereRaw('LOWER(city_name) = ?', ['other'])->pluck('pk')->toArray();
         return [
-
             // Basic Info
-
-            // "facultyType" => "",
-            // "firstName"=> "required|string|max:255|regex:/^[A-Za-z\s]+$/",
-            // "middlename"=> "nullable|string|max:255|regex:/^[A-Za-z\s]+$/",
-            // "lastname"=> "required|string|max:255|regex:/^[A-Za-z\s]+$/",
-            // "fullname"=> "required|string|max:255|regex:/^[A-Za-z\s]+$/",
-            // "gender"=>"required|string|in:male,female,other",
-            // "landline"=> "required|string|max:255",
-            // "mobile"=> "required|string|max:255",
-            // "country"=> "required",
-            // "state"=> "required|string",
-            // "city"=> "required|string",
-            // "email"=> "required|email|max:255",
-            // "alternativeEmail" => "nullable|email|max:255",
-            // 'photo' => [
-            //     Rule::requiredIf(function () use ($existingFaculty) {
-            //         return !$existingFaculty || empty($existingFaculty->photo_uplode_path);
-            //     }),
-            //     'nullable',
-            //     'mimes:jpg,jpeg,png',
-            //     'max:2048'
-            // ],
-            // "document" => [
-            //     Rule::requiredIf(function () use ($existingFaculty) {
-            //         return !$existingFaculty || empty($existingFaculty->Doc_uplode_path);
-            //     }),
-            //     'nullable',
-            //     'mimes:pdf,jpg,jpeg,png',
-            //     'max:2048'
-            // ],
-            // "residence_address" => "nullable|string|max:255",
-            // "permanent_address" => "nullable|string|max:255",
-
-            // Qualification Details (array fields)
-            // 'degree.*' => 'required|string|max:255',
-            // 'university_institution_name.*' => 'required|string|max:255',
-            // 'year_of_passing.*' => 'required',
-            // 'percentage_CGPA.*' => 'required|numeric|min:0|max:100',
-            // 'certificate.*' => 'required|mimes:pdf,jpg,jpeg,png|max:2048',
-
-            // Experience Details (array fields)
-            // 'experience.*' => 'required|numeric|min:0|max:100',
-            // 'specialization.*' => 'required|string|max:255',
-            // 'institution.*' => 'required|string|max:255',
-            // 'position.*' => 'required|string|max:255',
-            // 'duration.*' => 'required|numeric|min:0|max:100',
-            // 'work.*' => 'required|string|max:255',
-
-            // Bank Details
-            // "bankname" => "required|string|max:255",
-            // "accountnumber" => "required|string|max:255",
-            // "ifsccode" => "required|string|max:255",
-            // "pannumber" => "required|string|max:255",
-            
-
-            // Other information
-            // 'researchpublications' => 'nullable|mimes:pdf,jpg,jpeg|max:2048',
-            // 'professionalmemberships' => 'nullable|mimes:pdf,jpg,jpeg|max:2048',
-            // 'recommendationdetails' => 'nullable|mimes:pdf,jpg,jpeg|max:2048',
-            // 'joiningdate'=> 'required|date',
-            
-            // Radio button
-            // 'current_sector' => 'required|string|in:1,2',
-
-            // 'other_city' => [
-            //     Rule::requiredIf(in_array($this->input('city'), $otherCityPks)),
-            //     'string',
-            //     'nullable'
-            // ],
+            'country' => 'required|exists:country_master,pk',
+            'current_sector' => 'required|integer|in:1,2',
+            'joiningdate' => 'required|date',
+            // ...existing code...
         ];
     }
 
@@ -162,7 +96,7 @@ class FacultyRequest extends FormRequest
             // 'researchpublications.required' => 'Research publications are required',
             // 'professionalmemberships.required' => 'Professional memberships are required',
             // 'recommendationdetails.required' => 'Recommendation details are required',
-            // 'joiningdate.required' => 'Joining date is required',
-        ]; 
+            'joiningdate.required' => 'Joining date is required',
+        ];
     }
 }

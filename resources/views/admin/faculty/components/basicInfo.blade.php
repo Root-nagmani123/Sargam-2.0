@@ -314,7 +314,7 @@
             label="Photo Upload:"
             placeholder="Photo upload :"
             formLabelClass="form-label"
-            labelRequired="true"
+
             helperSmallText="Please upload a recent passport-sized photo"
             />
 

@@ -64,6 +64,10 @@ class FacultyDataTable extends DataTable
                 $editUrl = route('faculty.edit', ['id' => $id]);
                 $viewUrl = route('faculty.show', ['id' => $id]);
                 $deleteUrl = route('faculty.destroy', ['id' => $id]);
+                $isActive = $row->active_inactive == 1;
+                $disabledAttr = $isActive ? 'disabled' : '';
+                $deleteTitle = $isActive ? 'Deactivate faculty first to enable deletion' : 'Delete';
+                $deleteStyle = $isActive ? 'opacity:0.5;cursor:not-allowed;' : '';
 
                 return '
                     <a href="'.$editUrl.'" class="btn btn-primary btn-sm" title="Edit">
@@ -72,11 +76,11 @@ class FacultyDataTable extends DataTable
                     <a href="'.$viewUrl.'" class="btn btn-info btn-sm" title="View">
                         <i class="material-icons" style="font-size:14px;">visibility</i>
                     </a>
-                    <button type="button" class="btn btn-danger btn-sm delete-faculty-btn" 
-                        data-url="'.$deleteUrl.'" 
-                        data-name="'.htmlspecialchars($row->full_name, ENT_QUOTES).'" 
-                        data-token="'.$csrf.'" 
-                        title="Delete">
+                    <button type="button" class="btn btn-danger btn-sm delete-faculty-btn"
+                        data-url="'.$deleteUrl.'"
+                        data-name="'.htmlspecialchars($row->full_name, ENT_QUOTES).'"
+                        data-token="'.$csrf.'"
+                        title="'.$deleteTitle.'" '.$disabledAttr.' style="'.$deleteStyle.'">
                         <i class="material-icons" style="font-size:14px;">delete</i>
                     </button>
                 ';

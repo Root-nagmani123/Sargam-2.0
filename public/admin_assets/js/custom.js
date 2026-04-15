@@ -160,7 +160,7 @@ $(document).on('mousedown', 'select[data-readonly]', function (e) {
 $(document).on('change', '.status-toggle', function () {
     let $checkbox = $(this);
     let table = $checkbox.data('table');
-    
+
     let column = $checkbox.data('column');
     let id = $checkbox.data('id');
     let id_column = $checkbox.data('id_column');
@@ -537,36 +537,45 @@ document.addEventListener('DOMContentLoaded', function () {
             type: 'POST',
             url: routes.facultyStoreUrl,
             data: formData,
+            dataType: 'json',
             contentType: false,
             processData: false,
             beforeSend: function () {
                 showLoader();
             },
             success: function (response) {
+                hideLoader();
+                console.log('Faculty Response:', response);
 
-                // Handle success response
-                if (response.status) {
-                    toastr.options = {
-                        timeOut: 50, // 1.5 seconds
-                        onHidden: function () {
-                            // Force redirect to faculty.index (relative path => same host always)
-                            var facultyIndexPathMeta = document.querySelector('meta[name="faculty-index-path"]');
-                            var facultyIndexPath = facultyIndexPathMeta ? facultyIndexPathMeta.getAttribute('content') : null;
-                            window.location.href = facultyIndexPath || routes.facultyIndexUrl;
-                        }
-                    };
+                if (response && response.status) {
+                    var facultyIndexPath = $('meta[name="faculty-index-path"]').attr('content');
 
-                    toastr.success(response.message);
-
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success!',
+                        text: response.message || 'Faculty saved successfully',
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#4CAF50',
+                        allowOutsideClick: false
+                    }).then(function () {
+                        window.location.href = facultyIndexPath || routes.facultyIndexUrl;
+                    });
                 } else {
-                    toastr.error(response.message);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error!',
+                        text: response && response.message ? response.message : 'An error occurred',
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#d33'
+                    });
                     $btn.prop('disabled', false);
                 }
             },
             error: function (error) {
+                hideLoader(); // Hide before Swal so preloader doesn't cover the dialog
                 console.log('Error:', error);
                 if (error.status == 422) {
-                    let errors = error.responseJSON.errors;
+                    let errors = error.responseJSON && error.responseJSON.errors;
 
                     for (let key in errors) {
                         // Handle array fields (e.g., degree.0, university_institution_name.1)
@@ -593,7 +602,13 @@ document.addEventListener('DOMContentLoaded', function () {
                         }
                     }
                 } else {
-                    toastr.error('Something went wrong. Please try again.');
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Oops!',
+                        text: 'Something went wrong. Please try again.',
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#d33'
+                    });
                 }
                 $btn.prop('disabled', false);
             },
@@ -1677,7 +1692,7 @@ $(document).on('change', '#from_date, #to_date', function () {
     // Only trigger if at least one date is selected
     let fromDate = $('#from_date').val();
     let toDate = $('#to_date').val();
-    
+
     if (fromDate || toDate) {
         performAttendanceSearch();
     }
@@ -1698,29 +1713,29 @@ $(document).on('click', '#resetAttendance', function () {
     // Clear date fields
     $('#from_date').val('');
     $('#to_date').val('');
-    
+
     attendanceChoicesClear($('#programme'));
-    
+
     // Reset attendance type to 'full_day'
     $('#full_day').prop('checked', true);
     $('input[name="attendance_type"]').trigger('change');
-    
+
     attendanceChoicesClear($('#session'));
     attendanceChoicesClear($('#manual_session'));
-    
+
     // Hide session containers
     $('#normal_session_container').hide();
     $('#manual_session_container').hide();
-    
+
     // Destroy DataTable if it exists
     if ($.fn.DataTable.isDataTable('#attendanceTable')) {
         attendanceTable.destroy();
         attendanceTable = null;
     }
-    
+
     // Restore default message row - show all elements with this ID
     $('#defaultMessageRow').show();
-    
+
     // If no default message row exists, the table body should be empty after destroy
     // DataTable destroy should restore original HTML, but ensure default message is visible
     if ($('#attendanceTable tbody tr').length === 0) {
