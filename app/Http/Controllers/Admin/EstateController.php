@@ -3844,6 +3844,41 @@ class EstateController extends Controller
     }
 
     /**
+     * When Update Meter Reading saves physical meter numbers on a month-reading row, mirror them onto
+     * estate_house_master so possession / vacant-house flows show the current meter nos.
+     *
+     * @param  array<string, mixed>  $update  Payload applied (or inserted) for emrd/emro; may contain meter_one / meter_two.
+     */
+    private function syncEstateHouseMasterMeterNosFromReadingRow(?int $estateHouseMasterPk, array $update): void
+    {
+        if ($estateHouseMasterPk === null || $estateHouseMasterPk <= 0 || $update === []) {
+            return;
+        }
+
+        $patch = [];
+        if (array_key_exists('meter_one', $update) && Schema::hasColumn('estate_house_master', 'meter_one')) {
+            $v = $update['meter_one'];
+            $patch['meter_one'] = ($v !== null && $v !== '')
+                ? (int) preg_replace('/\D/', '', (string) $v)
+                : 0;
+        }
+        if (array_key_exists('meter_two', $update) && Schema::hasColumn('estate_house_master', 'meter_two')) {
+            $v = $update['meter_two'];
+            $patch['meter_two'] = ($v !== null && $v !== '')
+                ? (int) preg_replace('/\D/', '', (string) $v)
+                : 0;
+        }
+
+        if ($patch === []) {
+            return;
+        }
+
+        DB::table('estate_house_master')
+            ->where('pk', $estateHouseMasterPk)
+            ->update($patch);
+    }
+
+    /**
      * Compute and set meter_one_consume_unit, meter_two_consume_unit, meter_one_elec_charge, meter_two_elec_charge, electricty_charges,
      * and per_unit (total consumed units when column exists) for an existing estate_month_reading_details row (by pk).
      */
@@ -6858,6 +6893,10 @@ class EstateController extends Controller
                     }
 
                     $this->syncEstatePossessionElectricReadingsFromEmrdUpdate((int) $row->estate_possession_details_pk, $update);
+                    $this->syncEstateHouseMasterMeterNosFromReadingRow(
+                        isset($row->audit_estate_house_pk) ? (int) $row->audit_estate_house_pk : null,
+                        $update
+                    );
 
                     break;
                 }
@@ -6869,6 +6908,10 @@ class EstateController extends Controller
 
             if ($row && ! empty($update)) {
                 $this->syncEstatePossessionElectricReadingsFromEmrdUpdate((int) $row->estate_possession_details_pk, $update);
+                $this->syncEstateHouseMasterMeterNosFromReadingRow(
+                    isset($row->audit_estate_house_pk) ? (int) $row->audit_estate_house_pk : null,
+                    $update
+                );
             }
 
             if (
@@ -8314,12 +8357,22 @@ class EstateController extends Controller
                                 ->update($possessionUpdate);
                         }
 
+                        $this->syncEstateHouseMasterMeterNosFromReadingRow(
+                            $otherPossessionCtx && ! empty($otherPossessionCtx->house_pk) ? (int) $otherPossessionCtx->house_pk : null,
+                            $update
+                        );
+
                         break;
                     }
                 }
 
                 EstateMonthReadingDetailsOther::where('pk', $resolvePk)->update($update);
                 $resolvedOtherReadingPkByFormPk[$formPk] = $resolvePk;
+
+                $this->syncEstateHouseMasterMeterNosFromReadingRow(
+                    $otherPossessionCtx && ! empty($otherPossessionCtx->house_pk) ? (int) $otherPossessionCtx->house_pk : null,
+                    $update
+                );
 
                 if (
                     $newMeterNoDigits !== ''
@@ -10223,8 +10276,11 @@ class EstateController extends Controller
         $isDataTables = $request->has('draw');
         $draw = (int) $request->get('draw', 0);
         $start = max(0, (int) $request->get('start', 0));
-        $length = (int) $request->get('length', 10);
-        if ($length <= 0) {
+        $lengthParam = $request->get('length', 10);
+        // DataTables "Show all" / print sends length = -1; must not coerce to 10 (server-side).
+        $fetchAllRows = $lengthParam === '-1' || (int) $lengthParam === -1;
+        $length = (int) $lengthParam;
+        if (! $fetchAllRows && $length <= 0) {
             $length = 10;
         }
         $searchValue = trim((string) data_get($request->all(), 'search.value', ''));
@@ -10438,6 +10494,11 @@ class EstateController extends Controller
             });
         }
         $recordsFiltered = (clone $filteredQuery)->count();
+
+        if ($fetchAllRows) {
+            $start = 0;
+            $length = max(0, $recordsFiltered);
+        }
 
         $orderCol = (int) data_get($request->all(), 'order.0.column', 0);
         $orderDir = strtolower((string) data_get($request->all(), 'order.0.dir', 'asc')) === 'desc' ? 'desc' : 'asc';
