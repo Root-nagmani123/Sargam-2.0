@@ -104,7 +104,16 @@ class VehiclePassController extends Controller
     public function create()
     {
         $vehicleTypes = SecVehicleType::active()->get();
+        [$currentUserEmployee, $currentUserIdCard] = $this->currentUserEmployeeAndIdCardForVehiclePass();
 
+        return view('admin.security.vehicle_pass.create', compact('vehicleTypes', 'currentUserEmployee', 'currentUserIdCard'));
+    }
+
+    /**
+     * @return array{0: ?object, 1: ?object} [currentUserEmployee, currentUserIdCard] for create/edit vehicle pass forms.
+     */
+    private function currentUserEmployeeAndIdCardForVehiclePass(): array
+    {
         $currentUserEmployee = null;
         $currentUserIdCard = null;
         $user = Auth::user();
@@ -125,7 +134,6 @@ class VehiclePassController extends Controller
                     'emp_id' => $emp->emp_id ?? '',
                 ];
 
-                // Check for valid ID card (permanent or contractual)
                 $permIdCard = DB::table('security_parm_id_apply')
                     ->where('employee_master_pk', $emp->pk)
                     ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
@@ -136,13 +144,12 @@ class VehiclePassController extends Controller
 
                 $contIdCard = DB::table('security_con_oth_id_apply')
                     ->where('emp_id_apply', $emp->emp_id ?? '')
-                    ->where('id_status', 2) // Approved
+                    ->where('id_status', 2)
                     ->whereNotNull('card_valid_to')
                     ->where('card_valid_to', '>=', now()->format('Y-m-d'))
                     ->orderByDesc('card_valid_to')
                     ->first(['card_valid_to', 'id_card_no']);
 
-                // Use whichever ID card is available (prefer permanent if both exist)
                 $idCard = $permIdCard ?: $contIdCard;
                 if ($idCard) {
                     $currentUserIdCard = (object) [
@@ -153,7 +160,7 @@ class VehiclePassController extends Controller
             }
         }
 
-        return view('admin.security.vehicle_pass.create', compact('vehicleTypes', 'currentUserEmployee', 'currentUserIdCard'));
+        return [$currentUserEmployee, $currentUserIdCard];
     }
 
     /**
@@ -335,10 +342,7 @@ class VehiclePassController extends Controller
         $vehiclePass->vehicle_tw_pk = $vehicleTwPk;
         $vehiclePass->employee_id_card = $employeeIdCard ?? '';
         $vehiclePass->emp_master_pk = $empMasterPk;
-        $vehiclePass->applicant_type = $applicantType;
-        $vehiclePass->applicant_name = $applicantName;
-        $vehiclePass->designation = $designation;
-        $vehiclePass->department = $department;
+        $vehiclePass->applicant_type = VehiclePassTWApply::applicantTypeFormToInt($applicantType);
 
         $vehiclePass->vehicle_type = $validated['vehicle_type'];
         $vehiclePass->vehicle_no = $validated['vehicle_no'];
@@ -392,8 +396,15 @@ class VehiclePassController extends Controller
 
         $vehicleTypes = SecVehicleType::active()->get();
         $editApplicantDisplay = $this->resolveVehiclePassApplicantDisplayForEdit($vehiclePass);
+        [$currentUserEmployee, $currentUserIdCard] = $this->currentUserEmployeeAndIdCardForVehiclePass();
 
-        return view('admin.security.vehicle_pass.edit', compact('vehiclePass', 'vehicleTypes', 'editApplicantDisplay'));
+        return view('admin.security.vehicle_pass.edit', compact(
+            'vehiclePass',
+            'vehicleTypes',
+            'editApplicantDisplay',
+            'currentUserEmployee',
+            'currentUserIdCard'
+        ));
     }
 
     /**
@@ -616,7 +627,7 @@ class VehiclePassController extends Controller
 
         $vehiclePass->employee_id_card = $employeeIdCard ?? $vehiclePass->employee_id_card;
         $vehiclePass->emp_master_pk = $empMasterPk;
-        $vehiclePass->applicant_type = $applicantType;
+        $vehiclePass->applicant_type = VehiclePassTWApply::applicantTypeFormToInt($applicantType);
         $vehiclePass->applicant_name = $applicantName;
         $vehiclePass->designation = $designation;
         $vehiclePass->department = $department;

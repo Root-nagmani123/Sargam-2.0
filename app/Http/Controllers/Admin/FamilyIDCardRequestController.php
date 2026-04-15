@@ -186,8 +186,6 @@ class FamilyIDCardRequestController extends Controller
     public function create()
     {
         $userDepartmentName = null;
-        $approvalAuthorityEmployees = collect();
-        $defaultApprovalAuthorityPk = null;
         $defaultEmployeeIdPermanent = '';
         $defaultEmployeeIdContractual = '';
         $defaultDesignation = '';
@@ -198,17 +196,9 @@ class FamilyIDCardRequestController extends Controller
                 ->orWhere('pk_old', $authUserId)
                 ->first();
                 if ($authEmp) {
-                    $defaultApprovalAuthorityPk = $authEmp->pk;
                     $defaultDesignation = $authEmp->designation->designation_name ?? '';
                     if ($authEmp->department_master_pk) {
                         $userDepartmentName = $authEmp->department->department_name ?? null;
-                        $approvalAuthorityEmployees = EmployeeMaster::with('designation')
-                            ->where('department_master_pk', $authEmp->department_master_pk)
-                            ->when(Schema::hasColumn('employee_master', 'payroll'), fn ($q) => $q->where('payroll', 0))
-                            ->when(Schema::hasColumn('employee_master', 'status'), fn ($q) => $q->where('status', 1))
-                            ->orderBy('first_name')
-                            ->orderBy('last_name')
-                            ->get(['pk', 'first_name', 'last_name', 'designation_master_pk']);
                     }
 
                     // Permanent Employee: default to EmployeeMaster.emp_id (Employee ID)
@@ -237,8 +227,6 @@ class FamilyIDCardRequestController extends Controller
 
         return view('admin.family_idcard.create', [
             'userDepartmentName' => $userDepartmentName,
-            'approvalAuthorityEmployees' => $approvalAuthorityEmployees,
-            'defaultApprovalAuthorityPk' => $defaultApprovalAuthorityPk,
             'defaultEmployeeIdPermanent' => $defaultEmployeeIdPermanent,
             'defaultEmployeeIdContractual' => $defaultEmployeeIdContractual,
             'defaultDesignation' => $defaultDesignation,
@@ -376,9 +364,6 @@ class FamilyIDCardRequestController extends Controller
         $employeeId = $request->input('employee_id');
         $createdBy = Auth::user()->user_id;
         $employeeType = $request->input('employee_type', 'Permanent Employee');
-        $approvalAuthorityPk = $employeeType === 'Contractual Employee'
-            ? (int) $request->input('approval_authority')
-            : null;
         $count = 0;
         $nextPk = (int) SecurityFamilyIdApply::max('pk') + 1;
         $groupPhotoPath = null;

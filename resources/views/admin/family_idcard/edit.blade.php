@@ -132,7 +132,7 @@
                                     <td class="align-middle fw-medium row-sno">{{ $idx + 1 }}</td>
                                     <td class="align-middle">
                                         <input type="hidden" name="members[{{ $idx }}][id]" value="{{ $member->id }}">
-                                        <input type="text" name="members[{{ $idx }}][name]" class="form-control  member-name" value="{{ old('members.'.$idx.'.name', $member->name ?? '') }}" placeholder="Name" required>
+                                        <input type="text" name="members[{{ $idx }}][name]" class="form-control member-name" value="{{ old('members.'.$idx.'.name', $member->name ?? '') }}" placeholder="Name" required style="min-width: 10rem;">
                                     </td>
                                     <td class="align-middle">
                                         <select name="members[{{ $idx }}][relation]" class="form-select form-select-sm">
@@ -151,7 +151,6 @@
                                     <td class="align-middle">
                                         <input type="date" name="members[{{ $idx }}][valid_to]" class="form-control " value="{{ old('members.'.$idx.'.valid_to', $member->valid_to ? $member->valid_to->format('Y-m-d') : '') }}">
                                     </td>
-                                    <td class="align-middle">
                                     <td class="align-middle">
                                         @php
                                             $memberPhoto = $member->id_photo_path ?? $member->family_photo ?? null;
@@ -195,58 +194,6 @@
                     </table>
                 </div>
                 <p id="noMembersMsg" class="small text-muted mt-2 d-none">Add at least one family member using the button above.</p>
-
-                <template id="familyMemberRowTemplate">
-@verbatim
-                    <tr class="family-member-row" data-row-index="{{INDEX}}">
-                        <td class="align-middle fw-medium row-sno">{{SNO}}</td>
-                        <td class="align-middle">
-                            <input type="text" name="members[{{INDEX}}][name]" class="form-control  member-name" placeholder="Name" required>
-                        </td>
-                        <td class="align-middle">
-                            <select name="members[{{INDEX}}][relation]" class="form-select form-select-sm">
-                                <option value="">Select Relation</option>
-                                <option value="Spouse">Spouse</option>
-                                <option value="Son">Son</option>
-                                <option value="Daughter">Daughter</option>
-                                <option value="Father">Father</option>
-                                <option value="Mother">Mother</option>
-                                <option value="Brother">Brother</option>
-                                <option value="Sister">Sister</option>
-                                <option value="Other">Other</option>
-                            </select>
-                        </td>
-                        <td class="align-middle">
-                            <input type="date" name="members[{{INDEX}}][dob]" class="form-control ">
-                        </td>
-                        <td class="align-middle">
-                            <input type="date" name="members[{{INDEX}}][valid_from]" class="form-control  valid-from-field" min="{{ date('Y-m-d') }}">
-                        </td>
-                        <td class="align-middle">
-                            <input type="date" name="members[{{INDEX}}][valid_to]" class="form-control ">
-                        </td>
-                        <td class="align-middle">
-                            <div class="family-idcard-upload-zone-sm position-relative member-photo-cell" data-row="{{INDEX}}">
-                                <input type="file" name="members[{{INDEX}}][family_photo]" class="d-none member-photo-input" accept=".jpeg,.jpg,.png" data-row="{{INDEX}}">
-                                <div class="family-idcard-upload-placeholder-sm" data-placeholder="{{INDEX}}">
-                                    <i class="material-icons material-symbols-rounded" style="font-size:1.5rem; color:#6c757d;">upload</i>
-                                    <span class="small d-block mt-1">Upload</span>
-                                    <span class="small text-muted d-block">JPG, PNG. Max 2 MB</span>
-                                </div>
-                                <div class="family-idcard-upload-preview-sm d-none position-relative" data-preview="{{INDEX}}">
-                                    <img src="" alt="Preview" class="member-preview-img" data-img="{{INDEX}}" style="max-height:60px; border-radius:4px;">
-                                    <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0 m-0 p-0 member-photo-remove" style="width:22px; height:22px; font-size:14px; line-height:1; border-radius:50%;" data-row="{{INDEX}}" aria-label="Remove">&times;</button>
-                                </div>
-                            </div>
-                        </td>
-                        <td class="align-middle text-center">
-                            <button type="button" class="btn btn-outline-danger btn-sm remove-member-btn" data-row="{{INDEX}}" title="Remove row" aria-label="Remove row">
-                                <i class="material-icons material-symbols-rounded" style="font-size:18px;">delete</i>
-                            </button>
-                        </td>
-                    </tr>
-@endverbatim
-                </template>
 
                 <p class="small text-danger mt-4 mb-0">*Required Fields: All marked fields are mandatory.</p>
 
@@ -336,6 +283,8 @@
 .family-idcard-preview-remove { width: 32px; height: 32px; padding: 0; z-index: 2; border-radius: 50%; }
 .family-idcard-members-table thead tr { background: #122442; color: #fff; }
 .family-idcard-members-table thead th { font-weight: 600; padding: 0.75rem 1rem; }
+.family-idcard-members-table td:nth-child(2) { min-width: 11rem; }
+.family-idcard-members-table .member-name { min-width: 10rem; width: 100%; }
 .btn-outline-primary { border: 1px solid #004a93; color: #004a93; }
 .btn-outline-primary:hover { background-color: #004a93; color: #fff; }
 </style>

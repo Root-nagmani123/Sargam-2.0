@@ -48,7 +48,6 @@
                     $oldDesignation = old('designation', $defaultDesignation ?? '');
                     $oldCardType = old('card_type', 'Family');
                     $oldSection = old('section', $userDepartmentName ?? 'NIELIT');
-                    $oldApprovalAuthority = old('approval_authority', $defaultApprovalAuthorityPk ?? '');
                 @endphp
 
                 <div class="row g-3 mb-4" data-employee-id-permanent="{{ e($defaultEmployeeIdPermanent ?? '') }}" data-employee-id-contractual="{{ e($defaultEmployeeIdContractual ?? '') }}" data-designation="{{ e($defaultDesignation ?? '') }}">
@@ -106,19 +105,6 @@
                                required
                                @if($isPermanent) readonly @endif>
                         @error('section')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                    </div>
-                    <!-- Approval Authority: shown only when Contractual -->
-                    <div class="col-md-6 fml-approval-authority-wrap" id="fmlApprovalAuthorityWrap" style="display: none;">
-                        <label for="approval_authority" class="form-label">Approval Authority <span class="text-danger">*</span></label>
-                        <select name="approval_authority" id="approval_authority" class="form-select">
-                            <option value="">-- Select Authority --</option>
-                            @foreach($approvalAuthorityEmployees ?? [] as $emp)
-                                @php $empName = trim(($emp->first_name ?? '') . ' ' . ($emp->last_name ?? '')); @endphp
-                                <option value="{{ $emp->pk }}" {{ $oldApprovalAuthority == $emp->pk ? 'selected' : '' }}>{{ $empName }}{{ $emp->designation ? ' (' . $emp->designation->designation_name . ')' : '' }}</option>
-                            @endforeach
-                        </select>
-                        <small class="text-muted">Approval authority on behalf of your section</small>
-                        @error('approval_authority')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-12">
                         <label class="form-label">Upload Group Photo <span class="text-danger">*</span></label>
@@ -369,12 +355,10 @@
 (function() {
     'use strict';
 
-    // Employee type toggle: show Approval Authority when Contractual; update Employee ID & Designation
+    // Employee type toggle: Contractual = editable employee fields; Permanent = locked defaults
     function toggleFmlApprovalAuthority() {
         var contRad = document.getElementById('emp_type_cont');
-        var wrap = document.getElementById('fmlApprovalAuthorityWrap');
-        var sel = document.getElementById('approval_authority');
-        if (!contRad || !wrap || !sel) return;
+        if (!contRad) return;
         var empIdInp = document.getElementById('employee_id');
         var desigInp = document.getElementById('designation');
         var sectionInp = document.getElementById('section');
@@ -383,19 +367,11 @@
         var hint = document.getElementById('fmlContractualLookupHint');
 
         if (contRad.checked) {
-            wrap.style.display = 'block';
-            sel.disabled = false;
-            sel.required = true;
-            // Contractual: allow editing employee fields
             if (empIdInp) { empIdInp.readOnly = false; empIdInp.classList.remove('bg-light'); }
             if (desigInp) { desigInp.readOnly = false; desigInp.classList.remove('bg-light'); }
             if (sectionInp) { sectionInp.readOnly = false; sectionInp.classList.remove('bg-light'); }
             if (nameWrap) nameWrap.classList.remove('d-none');
         } else {
-            wrap.style.display = 'none';
-            sel.disabled = true;
-            sel.required = false;
-            sel.value = '';
             // Permanent: lock employee fields (non-editable)
             if (empIdInp) { empIdInp.readOnly = true; empIdInp.classList.add('bg-light'); }
             if (desigInp) { desigInp.readOnly = true; desigInp.classList.add('bg-light'); }

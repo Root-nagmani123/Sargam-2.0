@@ -16,9 +16,15 @@ class VehiclePassTWApply extends Model
     protected $keyType = 'string';
     public $timestamps = false;
 
+    /** vehicle_pass_tw_apply.applicant_type: government_vehicle = 1, employee = 2, others = 3 */
+    public const APPLICANT_TYPE_GOVERNMENT_VEHICLE = 1;
+
+    public const APPLICANT_TYPE_EMPLOYEE = 2;
+
+    public const APPLICANT_TYPE_OTHERS = 3;
+
     /**
      * Fillable aligned with SQL: vehicle_pass_tw_apply (pk, vehicle_tw_pk, employee_id_card, vehicle_type, vehicle_no, ...).
-     * No applicant_type, applicant_name, designation, department in table; display from employee relation.
      */
     protected $fillable = [
         'vehicle_tw_pk',
@@ -51,6 +57,46 @@ class VehiclePassTWApply extends Model
         'created_date' => 'datetime',
         'veh_card_genrated_date' => 'datetime',
     ];
+
+    /**
+     * Map create/edit form value to DB flag.
+     */
+    public static function applicantTypeFormToInt(string $form): int
+    {
+        return match ($form) {
+            'government_vehicle' => self::APPLICANT_TYPE_GOVERNMENT_VEHICLE,
+            'employee' => self::APPLICANT_TYPE_EMPLOYEE,
+            'others' => self::APPLICANT_TYPE_OTHERS,
+            default => self::APPLICANT_TYPE_OTHERS,
+        };
+    }
+
+    /**
+     * Map DB flag (or legacy string) to form radio value for Blade/validation.
+     */
+    public static function applicantTypeToFormValue($stored): ?string
+    {
+        if ($stored === null || $stored === '') {
+            return null;
+        }
+        if (is_string($stored)) {
+            if (in_array($stored, ['employee', 'others', 'government_vehicle'], true)) {
+                return $stored;
+            }
+            if (is_numeric($stored)) {
+                $stored = (int) $stored;
+            } else {
+                return null;
+            }
+        }
+
+        return match ((int) $stored) {
+            self::APPLICANT_TYPE_GOVERNMENT_VEHICLE => 'government_vehicle',
+            self::APPLICANT_TYPE_EMPLOYEE => 'employee',
+            self::APPLICANT_TYPE_OTHERS => 'others',
+            default => null,
+        };
+    }
 
     public function employee()
     {
