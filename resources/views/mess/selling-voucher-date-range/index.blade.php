@@ -3047,6 +3047,7 @@ $selectedStores = collect((array) request()->input('store', []))
                 if (drCourseSelect.tomselect) drCourseSelect.tomselect.clear();
                 else drCourseSelect.value = '';
                 drCourseSelect.removeAttribute('required');
+                drCourseSelect.removeAttribute('name');
             }
             if (drCourseNameSelect) {
                 setSelectVisible(drCourseNameSelect, false);
@@ -3115,6 +3116,7 @@ $selectedStores = collect((array) request()->input('store', []))
                 if (drCourseSelect.tomselect) drCourseSelect.tomselect.clear();
                 else drCourseSelect.value = '';
                 drCourseSelect.removeAttribute('required');
+                drCourseSelect.removeAttribute('name');
             }
             if (drCourseNameSelect) {
                 setSelectVisible(drCourseNameSelect, false);
@@ -3269,6 +3271,7 @@ $selectedStores = collect((array) request()->input('store', []))
                 if (drCourseSelect) {
                     setSelectVisible(drCourseSelect, false);
                     drCourseSelect.removeAttribute('required');
+                    drCourseSelect.removeAttribute('name');
                     if (drCourseSelect.tomselect) drCourseSelect.tomselect.clear();
                     else drCourseSelect.value = '';
                 }
