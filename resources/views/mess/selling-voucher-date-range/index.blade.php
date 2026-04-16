@@ -4830,15 +4830,40 @@ $selectedStores = collect((array) request()->input('store', []))
                 .then(function(res) {
                     var data = res.payload;
                     if (res.ok && data && data.success) {
-                        // Reset form for next entry but keep modal open
+                        var modalRoot = document.getElementById('addReportModal');
+                        var storeSelect = modalRoot ? modalRoot.querySelector(
+                            'select[name="inve_store_master_pk"]') : null;
+                        var savedStoreId = getSelectValue(storeSelect);
+
                         resetAddReportForm();
-                        initAddModalTomSelects();
-                        refreshAllAvailable();
-                        document.querySelectorAll('#addModalItemsBody .dr-item-row').forEach(
-                            function(row) {
-                                updateAddRowTotal(row);
+
+                        function afterAddModalInventoryRefresh() {
+                            updateAddItemDropdowns();
+                            initAddModalTomSelects();
+                            refreshAllAvailable();
+                            document.querySelectorAll('#addModalItemsBody .dr-item-row').forEach(
+                                function(row) {
+                                    updateAddRowTotal(row);
+                                });
+                            updateAddGrandTotal();
+                            var body = modalRoot && modalRoot.querySelector('.modal-body');
+                            if (body) body.scrollTop = 0;
+                        }
+
+                        if (savedStoreId) {
+                            if (storeSelect) {
+                                storeSelect.value = String(savedStoreId);
+                            }
+                            currentStoreId = String(savedStoreId);
+                            fetchStoreItems(String(savedStoreId), function() {
+                                afterAddModalInventoryRefresh();
                             });
-                        updateAddGrandTotal();
+                        } else {
+                            currentStoreId = null;
+                            filteredItems = itemSubcategories;
+                            afterAddModalInventoryRefresh();
+                        }
+
                         refreshSellingVoucherDateRangeTable();
 
                         if (window.toastr && data.message) {

@@ -69,7 +69,6 @@
             <tr>
                 @if($dompdfSafeTables)
                     <td class="text-center align-middle">{{ $combinedSlipNo }}</td>
-                    <td class="align-middle">{{ $combinedRemarks }}</td>
                     <td>{{ $itemName }}</td>
                     <td class="text-center">{{ $itemIssueDateFormatted }}</td>
                     <td class="text-end">{{ number_format($netQty, 2) }}</td>
@@ -79,7 +78,6 @@
                 @else
                     @if($rowIdx === 0)
                         <td class="text-center align-middle" rowspan="{{ $totalRows }}">{{ $combinedSlipNo }}</td>
-                        <td class="align-middle" rowspan="{{ $totalRows }}">{{ $combinedRemarks }}</td>
                     @endif
                     <td>{{ $itemName }}</td>
                     <td class="text-center">{{ $itemIssueDateFormatted }}</td>
