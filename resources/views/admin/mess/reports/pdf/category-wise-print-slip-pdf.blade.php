@@ -10,6 +10,11 @@
         }
 
         /* Match standalone print view (category-wise-print-slip-print) for PDF output */
+        html, body {
+            height: auto !important;
+            min-height: 0 !important;
+        }
+
         body {
             font-family: DejaVu Sans, Arial, sans-serif;
             font-size: 12px;
@@ -36,16 +41,25 @@
 
         .print-page-wrap {
             page-break-after: auto;
+            break-inside: auto;
+            page-break-inside: auto;
         }
 
         .print-page-break {
             page-break-after: always;
+            break-after: page;
         }
 
         .print-grand-total-block {
             display: block;
             margin-top: 12px;
             page-break-inside: avoid;
+            break-inside: avoid;
+        }
+
+        .report-buyer-client-banner {
+            page-break-inside: avoid;
+            break-inside: avoid;
         }
 
         .report-header {
@@ -94,6 +108,7 @@
             margin-top: 2px;
         }
 
+        /* Default (e.g. non-table layout); PDF dompdf path uses .lbsnaa-branding-table overrides below */
         .lbsnaa-header-logo {
             width: 34px;
             height: 34px;
@@ -113,7 +128,15 @@
 
         .print-slip-section {
             margin-bottom: 14px;
-            page-break-inside: avoid;
+            page-break-inside: auto;
+            break-inside: auto;
+        }
+
+        .print-slip-table thead {
+            display: table-header-group;
+        }
+        .print-slip-table tfoot {
+            display: table-footer-group;
         }
 
         .table-responsive {
@@ -231,8 +254,32 @@
             padding: 0 12px 0 0;
         }
         .lbsnaa-branding-table td.lbsnaa-branding-logo {
-            width: 104px;
+            width: 150px;
             text-align: right;
+            white-space: nowrap;
+        }
+
+        /*
+         * Dompdf often stretches images to both width+height when both are set; the partial
+         * stacks .lbsnaa-header-logo (34×34) + .lbsnaa-header-logo-right on the LBSNAA img.
+         * Scope explicit sizing so the emblem stays square and the academy logo keeps aspect ratio.
+         */
+        .lbsnaa-branding-table .lbsnaa-branding-emblem img {
+            width: 34px !important;
+            height: 34px !important;
+            max-width: 40px !important;
+            max-height: 40px !important;
+            object-fit: contain;
+        }
+
+        .lbsnaa-branding-table .lbsnaa-branding-logo img {
+            width: auto !important;
+            height: auto !important;
+            max-width: 100% !important;
+            max-height: 48px !important;
+            object-fit: contain;
+            display: block;
+            margin-left: auto;
         }
     </style>
 </head>
