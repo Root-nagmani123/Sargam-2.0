@@ -6,6 +6,9 @@
     <x-session_message />
     <div class="datatables">
         <div class="card" style="border-left: 4px solid #004a93;">
+            <div class="card-header border-bottom">
+                <h4>Assign Permission ({{ ucfirst($role->name) }})</h4>
+            </div>
             <div class="card-body">
                 <div class="table-responsive">
                     <table class="table table-bordered">

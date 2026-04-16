@@ -66,7 +66,11 @@
                                 <td>{{ $user->mobile_no }}</td>
                                 <td>
                                     <span class="badge bg-success">
-                                        {{ $user->roles ?? 'No Role' }}
+                                      {{ DB::table('model_has_roles')
+                                        ->join('roles', 'roles.id', '=', 'model_has_roles.role_id')
+                                        ->where('model_has_roles.model_id', $user->pk)
+                                        ->pluck('name')
+                                        ->implode(', ') ?: 'No Role' }}
                                     </span>
                                 </td>
                                 <td>
