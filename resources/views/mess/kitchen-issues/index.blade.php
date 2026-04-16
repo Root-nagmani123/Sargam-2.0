@@ -1890,9 +1890,21 @@ document.addEventListener('DOMContentLoaded', function() {
         storeSel.value = '';
     }
 
+    /** Rebuild Choices + item rows from current `filteredItems` (call after reset and/or fetchStoreItems). */
+    function reinitAddSellingVoucherModalItemGrid() {
+        initAddModalTomSelects();
+        if (typeof updateModalNameField === 'function') updateModalNameField();
+        updateAddItemDropdowns();
+        refreshAllAvailable();
+        document.querySelectorAll('#modalItemsBody .sv-item-row').forEach(function(row) { calcRow(row); });
+        updateGrandTotal();
+        syncAddModalChoicesToNative();
+    }
+
     // Helper: reset Add Selling Voucher modal form (without closing modal).
     // Keeps modal open; clears fields, item rows, and store-scoped item cache so the next entry starts fresh.
-    function resetSellingVoucherModalForm() {
+    // @param {boolean} skipDeferredReinit — if true, caller will refetch inventory and call reinitAddSellingVoucherModalItemGrid (e.g. after AJAX save).
+    function resetSellingVoucherModalForm(skipDeferredReinit) {
         var modalEl = document.getElementById('addSellingVoucherModal');
         if (!modalEl) return;
 
@@ -1937,17 +1949,15 @@ document.addEventListener('DOMContentLoaded', function() {
         var grandTotalEl = document.getElementById('modalGrandTotal');
         if (grandTotalEl) grandTotalEl.textContent = '₹0.00';
 
+        if (skipDeferredReinit) {
+            return;
+        }
+
         // Modal stays open after AJAX save; re-init dropdowns and item grid (defer so DOM + destroy settle).
         window.requestAnimationFrame(function () {
             window.setTimeout(function () {
                 try {
-                    initAddModalTomSelects();
-                    if (typeof updateModalNameField === 'function') updateModalNameField();
-                    updateAddItemDropdowns();
-                    refreshAllAvailable();
-                    document.querySelectorAll('#modalItemsBody .sv-item-row').forEach(function(row) { calcRow(row); });
-                    updateGrandTotal();
-                    syncAddModalChoicesToNative();
+                    reinitAddSellingVoucherModalItemGrid();
                 } catch (err) {
                     console.error('resetSellingVoucherModalForm re-init failed', err);
                 }
@@ -2072,7 +2082,46 @@ document.addEventListener('DOMContentLoaded', function() {
                     var data = res.data;
                     var success = !!(data && (data.success === true || data.success === 1 || data.success === '1' || data.voucher_id != null));
                     if (res.ok && success) {
-                        resetSellingVoucherModalForm();
+                        var modalRoot = document.getElementById('addSellingVoucherModal');
+                        var storeSel = modalRoot ? modalRoot.querySelector('select[name="store_id"]') : null;
+                        var savedStoreId = '';
+                        if (storeSel) {
+                            if (storeSel.tomselect && typeof storeSel.tomselect.getValue === 'function') {
+                                var gv = storeSel.tomselect.getValue();
+                                savedStoreId = Array.isArray(gv) ? (gv[0] || '') : (gv == null ? '' : String(gv));
+                            } else {
+                                savedStoreId = storeSel.value || '';
+                            }
+                        }
+
+                        resetSellingVoucherModalForm(true);
+
+                        function finishAddModalAfterSave() {
+                            try {
+                                reinitAddSellingVoucherModalItemGrid();
+                            } catch (err) {
+                                console.error('reinit after save failed', err);
+                            }
+                            var body = modalRoot && modalRoot.querySelector('.modal-body');
+                            if (body) body.scrollTop = 0;
+                        }
+
+                        if (savedStoreId) {
+                            if (storeSel) {
+                                storeSel.value = String(savedStoreId);
+                            }
+                            currentStoreId = String(savedStoreId);
+                            fetchStoreItems(String(savedStoreId), function() {
+                                finishAddModalAfterSave();
+                            });
+                        } else {
+                            currentStoreId = null;
+                            filteredItems = itemSubcategories;
+                            window.requestAnimationFrame(function() {
+                                window.setTimeout(finishAddModalAfterSave, 10);
+                            });
+                        }
+
                         refreshSellingVouchersTable();
                         if (window.toastr && data.message) {
                             toastr.success(data.message);
@@ -2215,7 +2264,8 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(err => {
             console.error(err);
             alert('Failed to load store items.');
-            filteredItems = [];
+            filteredItems = itemSubcategories || [];
+            if (callback) callback();
         });
     }
 
