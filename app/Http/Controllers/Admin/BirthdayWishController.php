@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\EmployeeMaster;
+use App\Models\Notification;
 use App\Services\Messaging\EmailService;
 use App\Services\NotificationService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -33,7 +35,172 @@ class BirthdayWishController extends Controller
             )
             ->get();
 
-        return view('admin.birthday-wish.index', compact('todayBirthdays'));
+        $myEmployeePk = Auth::user()->user_id ?? null;
+        $isMyBirthday = false;
+        $myBirthdayWishCount = 0;
+        if ($myEmployeePk) {
+            $myDob = EmployeeMaster::where('pk', $myEmployeePk)->value('dob');
+            if ($myDob) {
+                $isMyBirthday = Carbon::parse($myDob)->format('m-d') === now()->format('m-d');
+            }
+            if ($isMyBirthday) {
+                $myBirthdayWishCount = Notification::where('receiver_user_id', $myEmployeePk)
+                    ->where('type', 'birthday')
+                    ->whereDate('created_at', today())
+                    ->count();
+            }
+        }
+
+        return view('admin.birthday-wish.index', compact(
+            'todayBirthdays',
+            'isMyBirthday',
+            'myBirthdayWishCount'
+        ));
+    }
+
+    /**
+     * JSON: today's birthday wish notifications for the logged-in user (with sender names).
+     */
+    public function myBirthdayWishesToday(Request $request)
+    {
+        $myEmployeePk = Auth::user()->user_id ?? null;
+        if (! $myEmployeePk) {
+            return response()->json(['success' => false, 'error' => 'Unauthorized'], 403);
+        }
+
+        $myDob = EmployeeMaster::where('pk', $myEmployeePk)->value('dob');
+        if (! $myDob || Carbon::parse($myDob)->format('m-d') !== now()->format('m-d')) {
+            return response()->json(['success' => true, 'wishes' => []]);
+        }
+
+        $wishes = DB::table('notifications as n')
+            ->leftJoin('employee_master as se', 'n.sender_user_id', '=', 'se.pk')
+            ->where('n.receiver_user_id', $myEmployeePk)
+            ->where('n.type', 'birthday')
+            ->whereDate('n.created_at', today())
+            ->orderByDesc('n.created_at')
+            ->select([
+                'n.pk',
+                'n.sender_user_id',
+                'n.message',
+                'n.created_at',
+                DB::raw("TRIM(CONCAT(COALESCE(se.first_name,''),' ',COALESCE(se.last_name,''))) as sender_name"),
+                'se.email as sender_email',
+            ])
+            ->get();
+
+        $wishPks = $wishes->pluck('pk')->filter()->map(fn ($pk) => (int) $pk)->values()->all();
+        $repliedReferencePks = [];
+        if ($wishPks !== []) {
+            $repliedReferencePks = Notification::query()
+                ->where('type', 'birthday_reply')
+                ->where('module_name', 'BirthdayWish')
+                ->whereIn('reference_pk', $wishPks)
+                ->where('sender_user_id', $myEmployeePk)
+                ->pluck('reference_pk')
+                ->unique()
+                ->all();
+        }
+        $repliedSet = array_fill_keys($repliedReferencePks, true);
+
+        $wishes->transform(function ($row) use ($repliedSet) {
+            $row->already_replied = isset($repliedSet[(int) $row->pk]);
+
+            return $row;
+        });
+
+        return response()->json([
+            'success' => true,
+            'wishes' => $wishes,
+        ]);
+    }
+
+    /**
+     * Reply to someone who sent a birthday wish (in-app notification + email if available).
+     */
+    public function replyToWish(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'notification_pk' => 'required|integer',
+            'message' => 'required|string|max:2000',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'error' => $validator->errors()->first()], 422);
+        }
+
+        $myEmployeePk = Auth::user()->user_id ?? null;
+        if (! $myEmployeePk) {
+            return response()->json(['success' => false, 'error' => 'Unauthorized'], 403);
+        }
+
+        $wish = Notification::where('pk', $request->integer('notification_pk'))->first();
+        if (! $wish || (int) $wish->receiver_user_id !== (int) $myEmployeePk
+            || $wish->type !== 'birthday'
+        ) {
+            return response()->json(['success' => false, 'error' => 'Wish not found.'], 404);
+        }
+
+        if (! $wish->sender_user_id || (int) $wish->sender_user_id === (int) $myEmployeePk) {
+            return response()->json(['success' => false, 'error' => 'Cannot reply to this wish.'], 422);
+        }
+
+        $wishDay = $wish->created_at ? Carbon::parse($wish->created_at)->format('Y-m-d') : null;
+        if ($wishDay !== null && $wishDay !== now()->format('Y-m-d')) {
+            return response()->json(['success' => false, 'error' => 'This wish is not from today.'], 422);
+        }
+
+        $alreadyReplied = Notification::query()
+            ->where('type', 'birthday_reply')
+            ->where('module_name', 'BirthdayWish')
+            ->where('reference_pk', (int) $wish->pk)
+            ->where('sender_user_id', $myEmployeePk)
+            ->exists();
+        if ($alreadyReplied) {
+            return response()->json(['success' => false, 'error' => 'You have already replied to this wish.'], 422);
+        }
+
+        $senderId = (int) $wish->sender_user_id;
+        $replyBody = $request->input('message');
+        $u = Auth::user();
+        $replierName = $u
+            ? trim((string) ($u->first_name ?? '').' '.(string) (data_get($u, 'last_name', '')))
+            : '';
+        if ($replierName === '') {
+            $replierName = $u->name ?? 'Colleague';
+        }
+
+        try {
+            $notificationService = app(NotificationService::class);
+            $notificationService->create(
+                receiverUserId: $senderId,
+                type: 'birthday_reply',
+                moduleName: 'BirthdayWish',
+                referencePk: (int) $wish->pk,
+                title: 'Reply to your birthday wish',
+                message: "{$replierName} replied: {$replyBody}"
+            );
+        } catch (\Throwable $e) {
+            Log::error('BirthdayWishController: reply notification failed', ['error' => $e->getMessage()]);
+
+            return response()->json(['success' => false, 'error' => 'Could not send your reply. Try again.'], 500);
+        }
+
+        $senderEmail = EmployeeMaster::where('pk', $senderId)->value('email');
+        if ($senderEmail) {
+            try {
+                $emailService = new EmailService('Reply: birthday wish');
+                $body = "Hello,\n\n{$replierName} sent you a reply regarding their birthday:\n\n{$replyBody}\n";
+                $emailService->sendBulk(collect([$senderEmail]), $body);
+            } catch (\Throwable $e) {
+                Log::warning('BirthdayWishController: reply email failed', ['error' => $e->getMessage()]);
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Your reply was sent.',
+        ]);
     }
 
     public function sendEmail(Request $request)

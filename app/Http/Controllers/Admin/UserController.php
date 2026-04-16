@@ -133,19 +133,6 @@ class UserController extends Controller
               ->count();
       }
 
-      // Wish count per birthday person (how many wishes they received today)
-      $birthdayWishCounts = [];
-      if ($emp_dob_data->isNotEmpty()) {
-          $birthdayPks = $emp_dob_data->pluck('pk')->toArray();
-          $birthdayWishCounts = \App\Models\Notification::whereIn('receiver_user_id', $birthdayPks)
-              ->where('type', 'birthday')
-              ->whereDate('created_at', today())
-              ->selectRaw('receiver_user_id, COUNT(*) as wish_count')
-              ->groupBy('receiver_user_id')
-              ->pluck('wish_count', 'receiver_user_id')
-              ->toArray();
-      }
-
       // Upcoming birthdays (next 7 days, excluding today)
       $upcomingBirthdays = collect();
       for ($i = 1; $i <= 7; $i++) {
@@ -317,7 +304,6 @@ class UserController extends Controller
             'emp_dob_data',
             'isMyBirthday',
             'myBirthdayWishCount',
-            'birthdayWishCounts',
             'upcomingBirthdays',
             'totalActiveCourses',
             'upcomingCourses',

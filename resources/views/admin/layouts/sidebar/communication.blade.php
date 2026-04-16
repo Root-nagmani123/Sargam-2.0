@@ -210,17 +210,20 @@ document.addEventListener('DOMContentLoaded', function() {
     const sidebarMenus = sidebarComm.querySelectorAll('.sidebarmenu nav');
 
     function markActiveLinks() {
-        const currentUrl = window.location.href;
-        sidebarMenus.forEach(function(nav) {
-            const links = nav.querySelectorAll('.sidebar-link[href]');
-            links.forEach(function(link) {
-                const href = link.getAttribute('href');
-                if (!href || href === '#' || href === 'javascript:void(0)') return;
-                if (link.href === currentUrl) {
-                    link.classList.add('active');
-                }
+        if (typeof window.sargamMarkSidebarActiveLinks === 'function') {
+            window.sargamMarkSidebarActiveLinks(sidebarMenus);
+        } else {
+            const currentUrl = window.location.href;
+            sidebarMenus.forEach(function(nav) {
+                nav.querySelectorAll('.sidebar-link[href]').forEach(function(link) {
+                    const href = link.getAttribute('href');
+                    if (!href || href === '#' || href === 'javascript:void(0)') return;
+                    if (link.href === currentUrl) {
+                        link.classList.add('active');
+                    }
+                });
             });
-        });
+        }
     }
 
     function keepSidebarVisible(menuId, duration = 3000) {

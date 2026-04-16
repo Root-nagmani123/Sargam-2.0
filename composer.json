@@ -21,7 +21,9 @@
         "microsoft/azure-storage-blob": "^1.5",
         "mpdf/mpdf": "^8.2",
         "spatie/laravel-permission": "^6.16",
-        "yajra/laravel-datatables-fractal": "^10.0"
+        "yajra/laravel-datatables-buttons": "9.1",
+        "yajra/laravel-datatables-fractal": "^10.0",
+        "yajra/laravel-datatables-html": "9.4"
     },
     "require-dev": {
         "fakerphp/faker": "^1.9.1",

@@ -472,9 +472,9 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                     <p class="mb-0 text-white-50 small">Wishing you a wonderful year ahead!</p>
                     @if(($myBirthdayWishCount ?? 0) > 0)
                     <div class="mt-1">
-                        <span class="badge bg-white text-primary rounded-pill px-3 py-1 fw-semibold" style="font-size:0.85rem;">
-                            🎁 {{ $myBirthdayWishCount }} {{ $myBirthdayWishCount === 1 ? 'wish' : 'wishes' }} received today!
-                        </span>
+                        <button type="button" class="badge bg-white text-primary rounded-pill px-3 py-2 fw-semibold border-0 shadow-sm" style="font-size:0.85rem; cursor: pointer;" data-bs-toggle="modal" data-bs-target="#birthdayWishesReceivedModal" title="See who wished you and send a reply">
+                            🎁 {{ $myBirthdayWishCount }} {{ $myBirthdayWishCount === 1 ? 'wish' : 'wishes' }} received today — tap to view &amp; reply
+                        </button>
                     </div>
                     @endif
                 </div>
@@ -512,6 +512,9 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
         pointer-events: none;
     }
     </style>
+    @if(($myBirthdayWishCount ?? 0) > 0)
+        @include('admin.birthday-wish.partials.received_wishes_modal')
+    @endif
     @endif
 
     <div class="dashboard-welcome shadow-sm bg-gradient d-flex flex-wrap align-items-center justify-content-between gap-2">
@@ -1003,11 +1006,11 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                                                 <span class="material-icons material-symbols-rounded" style="font-size: 16px;">cake</span>
                                                 Birthday
                                             </div>
-                                            @php $wishCount = $birthdayWishCounts[$employee->pk] ?? 0; @endphp
-                                            @if($wishCount > 0)
-                                            <span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle" style="font-size:0.65rem;" title="{{ $wishCount }} wishes sent">
-                                                🎁 {{ $wishCount }} {{ $wishCount === 1 ? 'wish' : 'wishes' }}
-                                            </span>
+                                            {{-- Wishes count: only on your own row, and only you see it (not other viewers) --}}
+                                            @if((int) ($user->user_id ?? 0) === (int) ($employee->pk ?? 0) && ($myBirthdayWishCount ?? 0) > 0)
+                                                <span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle" style="font-size:0.65rem;" title="{{ $myBirthdayWishCount }} wishes received">
+                                                    🎁 {{ $myBirthdayWishCount }} {{ $myBirthdayWishCount === 1 ? 'wish' : 'wishes' }}
+                                                </span>
                                             @endif
                                         </div>
 
@@ -1578,7 +1581,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!btn) return;
 
     btn.addEventListener('click', function() {
-        if (!confirm('Send birthday wishes (email + notification) to all birthday people today?')) return;
+        if (!confirm('Send birthday wishes notification to all birthday people today?')) return;
 
         var csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
         var allCards = document.querySelectorAll('.btn-custom-wish');

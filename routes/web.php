@@ -125,6 +125,8 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/birthday-wishes/send-email', [BirthdayWishController::class, 'sendEmail'])->name('admin.birthday-wish.send-email');
     Route::post('/birthday-wishes/send-bulk-email', [BirthdayWishController::class, 'sendBulkEmail'])->name('admin.birthday-wish.send-bulk-email');
     Route::post('/birthday-wishes/send-notification', [BirthdayWishController::class, 'sendNotification'])->name('admin.birthday-wish.send-notification');
+    Route::get('/birthday-wishes/my-wishes-today', [BirthdayWishController::class, 'myBirthdayWishesToday'])->name('admin.birthday-wish.my-wishes-today');
+    Route::post('/birthday-wishes/reply', [BirthdayWishController::class, 'replyToWish'])->name('admin.birthday-wish.reply');
 
     // Login page — Word of the Day (policy: Admin / Super Admin or permission)
     Route::get('/word-of-day/export', [WordOfTheDayController::class, 'export'])->name('admin.word-of-day.export');

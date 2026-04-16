@@ -1,47 +1,47 @@
 {{-- $activeNavTab is set in admin.layouts.master before this include --}}
 <header class="topbar">
     <!-- Skip to Content (GIGW Mandatory) -->
-<a href="#main-content" class="visually-hidden-focusable skip-link">
-    Skip to main content
-</a>
+    <a href="#main-content" class="visually-hidden-focusable skip-link">
+        Skip to main content
+    </a>
 
     <header class="header-top-bar d-none d-lg-block">
-    <div class="d-flex align-items-center justify-content-between flex-wrap py-1">
+        <div class="d-flex align-items-center justify-content-between flex-wrap py-1">
 
-    <!-- Left: Government Identity -->
-    <div class="d-flex align-items-center gap-2">
-        <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Flag_of_India.svg/330px-Flag_of_India.svg.png"
-            alt="Emblem of India" class="header-flag-icon">
-        <span class="fw-semibold small text-white">
-            भारत सरकार | Government of India
-        </span>
-    </div>
+            <!-- Left: Government Identity -->
+            <div class="d-flex align-items-center gap-2">
+                <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Flag_of_India.svg/330px-Flag_of_India.svg.png"
+                    alt="Emblem of India" class="header-flag-icon">
+                <span class="fw-semibold small text-white">
+                    भारत सरकार | Government of India
+                </span>
+            </div>
 
-    <!-- Right: Utilities with vertical separators -->
-    <nav aria-label="Utility Navigation">
-        <ul class="list-inline mb-0 d-flex align-items-center gap-0 small header-utility-nav">
-            <li class="list-inline-item">
-                <a href="#main-content" class="text-white text-decoration-none px-2">Skip to content</a>
-            </li>
-            <li class="header-utility-sep" aria-hidden="true"></li>
-            <li class="list-inline-item d-flex align-items-center gap-1" aria-label="Font size controls">
-                <a href="javascript:void(0)" class="text-white px-2 header-font-btn" aria-label="Decrease font size">A-</a>
-                <a href="javascript:void(0)" class="text-white px-2 header-font-btn" aria-label="Normal font size">A</a>
-                <a href="javascript:void(0)" class="text-white px-2 header-font-btn" aria-label="Increase font size">A+</a>
-            </li>
-            <li class="header-utility-sep" aria-hidden="true"></li>
-            <li class="list-inline-item">
-                <div class="header-lang-dropdown">
-                    <i class="material-icons material-symbols-rounded header-globe-icon">language</i>
-                    <select class="form-select form-select-sm header-lang-select" aria-label="Select Language">
-                        <option selected>English</option>
-                        <option>हिन्दी</option>
-                    </select>
-                </div>
-            </li>
-        </ul>
-    </nav>
-    </div>
+            <!-- Right: Utilities with vertical separators -->
+            <nav aria-label="Utility Navigation">
+                <ul class="list-inline mb-0 d-flex align-items-center gap-0 small header-utility-nav">
+                    <li class="list-inline-item">
+                        <a href="#main-content" class="text-white text-decoration-none px-2">Skip to content</a>
+                    </li>
+                    <li class="header-utility-sep" aria-hidden="true"></li>
+                    <li class="list-inline-item d-flex align-items-center gap-1" aria-label="Font size controls">
+                        <a href="javascript:void(0)" class="text-white px-2 header-font-btn" aria-label="Decrease font size">A-</a>
+                        <a href="javascript:void(0)" class="text-white px-2 header-font-btn" aria-label="Normal font size">A</a>
+                        <a href="javascript:void(0)" class="text-white px-2 header-font-btn" aria-label="Increase font size">A+</a>
+                    </li>
+                    <li class="header-utility-sep" aria-hidden="true"></li>
+                    <li class="list-inline-item">
+                        <div class="header-lang-dropdown">
+                            <i class="material-icons material-symbols-rounded header-globe-icon">language</i>
+                            <select class="form-select form-select-sm header-lang-select" aria-label="Select Language">
+                                <option selected>English</option>
+                                <option>हिन्दी</option>
+                            </select>
+                        </div>
+                    </li>
+                </ul>
+            </nav>
+        </div>
     </header>
 
     <div class="with-vertical">
@@ -119,99 +119,99 @@
                 <!-- Right Side: Logout + Last Login -->
                 <div class="d-flex align-items-center ms-auto gap-3 header-right-actions">
 
-    <!-- Notifications (visible on both desktop and mobile) -->
-    <div class="dropdown position-relative d-none d-lg-block">
-        <button type="button"
-            class="btn btn-light rounded-1 p-2 position-relative shadow-sm notification-btn "
-            id="notificationDropdown"
-            data-bs-toggle="dropdown"
-            aria-expanded="false"
-            aria-label="Notifications">
+                    <!-- Notifications (visible on both desktop and mobile) -->
+                    <div class="dropdown position-relative d-none d-lg-block">
+                        <button type="button"
+                            class="btn btn-light rounded-1 p-2 position-relative shadow-sm notification-btn "
+                            id="notificationDropdown"
+                            data-bs-toggle="dropdown"
+                            aria-expanded="false"
+                            aria-label="Notifications">
 
-            <i class="material-icons material-symbols-rounded fs-5">
-                notifications
-            </i>
+                            <i class="material-icons material-symbols-rounded fs-5">
+                                notifications
+                            </i>
 
-            @php
-                $unreadCount = notification()->getUnreadCount(
-                    Auth::user()->user_id ?? 0,
-                    hasRole('Admin') ? 10 : null
-                );
-            @endphp
+                            @php
+                            $unreadCount = notification()->getUnreadCount(
+                            Auth::user()->user_id ?? 0,
+                            hasRole('Admin') ? 10 : null
+                            );
+                            @endphp
 
-            @if($unreadCount > 0)
-                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge">
-                    {{ $unreadCount > 99 ? '99+' : $unreadCount }}
-                </span>
-            @endif
-        </button>
+                            @if($unreadCount > 0)
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge">
+                                {{ $unreadCount > 99 ? '99+' : $unreadCount }}
+                            </span>
+                            @endif
+                        </button>
 
-        <!-- Dropdown -->
-        <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-4 p-0 notification-dropdown"
-            aria-labelledby="notificationDropdown">
+                        <!-- Dropdown -->
+                        <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-4 p-0 notification-dropdown"
+                            aria-labelledby="notificationDropdown">
 
-            <!-- Header -->
-            <li class="notification-dropdown-header">
-                <span class="fw-semibold">Notifications</span>
-                @if($unreadCount > 0)
-                    <button type="button"
-                        class="btn btn-sm btn-link text-primary p-0 text-nowrap"
-                        onclick="markAllAsRead()">
-                        Mark all as read
-                    </button>
-                @endif
-            </li>
+                            <!-- Header -->
+                            <li class="notification-dropdown-header">
+                                <span class="fw-semibold">Notifications</span>
+                                @if($unreadCount > 0)
+                                <button type="button"
+                                    class="btn btn-sm btn-link text-primary p-0 text-nowrap js-notification-mark-all-read"
+                                    onclick="markAllAsRead(event)">
+                                    Mark all as read
+                                </button>
+                                @endif
+                            </li>
 
-            <div id="notificationList" class="notification-list">
-                @php
-                    $notifications = notification()->getNotifications(
-                        Auth::user()->user_id ?? 0,
-                        10,
-                        false,
-                        hasRole('Admin') ? 10 : null
-                    );
-                @endphp
+                            <div id="notificationList" class="notification-list">
+                                @php
+                                $notifications = notification()->getNotifications(
+                                Auth::user()->user_id ?? 0,
+                                10,
+                                false,
+                                hasRole('Admin') ? 10 : null
+                                );
+                                @endphp
 
-                @if($notifications->count() > 0)
-                    @foreach($notifications as $notification)
-                        <li class="notification-list-item">
-                            <a class="notification-item {{ $notification->is_read ? '' : 'notification-item-unread' }}"
-                               href="javascript:void(0)"
-                                   data-notification-id="{{ $notification->pk }}">
-                                <div class="notification-item-body">
-                                    <div class="d-flex align-items-start justify-content-between gap-2">
-                                        <span class="notification-item-title">{{ $notification->title ?? 'Notification' }}</span>
-                                        @if(empty($notification->is_read))
-                                        <span class="badge bg-danger notification-new-tag">New</span>
-                                        @endif
-                                    </div>
-                                    <p class="notification-item-message">{{ Str::limit(\App\Services\NotificationService::stripMessCombinedReceiptPayloadForDisplay($notification->message ?? ''), 60) }}</p>
-                                    <span class="notification-item-time">{{ \Carbon\Carbon::parse($notification->created_at)->diffForHumans() }}</span>
-                                </div>
-                            </a>
-                        </li>
-                    @endforeach
-                @else
-                    <li class="notification-empty-state">
-                        <i class="material-icons material-symbols-rounded">notifications_none</i>
-                        <span>No notifications</span>
-                    </li>
-                @endif
-            </div>
-        </ul>
-    </div>
+                                @if($notifications->count() > 0)
+                                @foreach($notifications as $notification)
+                                <li class="notification-list-item">
+                                    <a class="notification-item {{ $notification->is_read ? '' : 'notification-item-unread' }}"
+                                        href="javascript:void(0)"
+                                        data-notification-id="{{ $notification->pk }}">
+                                        <div class="notification-item-body">
+                                            <div class="d-flex align-items-start justify-content-between gap-2">
+                                                <span class="notification-item-title">{{ $notification->title ?? 'Notification' }}</span>
+                                                @if(empty($notification->is_read))
+                                                <span class="badge bg-danger notification-new-tag">New</span>
+                                                @endif
+                                            </div>
+                                            <p class="notification-item-message">{{ Str::limit(\App\Services\NotificationService::stripMessCombinedReceiptPayloadForDisplay($notification->message ?? ''), 60) }}</p>
+                                            <span class="notification-item-time">{{ \Carbon\Carbon::parse($notification->created_at)->diffForHumans() }}</span>
+                                        </div>
+                                    </a>
+                                </li>
+                                @endforeach
+                                @else
+                                <li class="notification-empty-state">
+                                    <i class="material-icons material-symbols-rounded">notifications_none</i>
+                                    <span>No notifications</span>
+                                </li>
+                                @endif
+                            </div>
+                        </ul>
+                    </div>
 
-    <!-- Logout -->
-    <form action="{{ route('logout') }}" method="POST" class="m-0">
-        @csrf
-        <button type="submit"
-            class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1 px-3 rounded-1 shadow-sm"
-            aria-label="Sign out">
-            <i class="material-icons material-symbols-rounded fs-6">logout</i>
-            <span class="small fw-medium">Logout</span>
-        </button>
-    </form>
-</div>
+                    <!-- Logout -->
+                    <form action="{{ route('logout') }}" method="POST" class="m-0">
+                        @csrf
+                        <button type="submit"
+                            class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1 px-3 rounded-1 shadow-sm"
+                            aria-label="Sign out">
+                            <i class="material-icons material-symbols-rounded fs-6">logout</i>
+                            <span class="small fw-medium">Logout</span>
+                        </button>
+                    </form>
+                </div>
 
             </div>
 
@@ -234,7 +234,7 @@
                             data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-setup' ? 'true' : 'false' }}" aria-controls="setup-panel"
                             id="setup-tab-mobile">
                             <i class="material-icons material-symbols-rounded" aria-hidden="true">settings</i>
-                            @if(hasRole('Admin') || hasRole('Training-Induction') ||  hasRole('Staff'))
+                            @if(hasRole('Admin') || hasRole('Training-Induction') || hasRole('Staff'))
                             <span>Setup</span>
                             @elseif(hasRole('Internal Faculty') || hasRole('Guest Faculty') ||
                             hasRole('Student-OT'))
@@ -252,27 +252,27 @@
                             <span>Communication</span>
                         </a>
                     </li>
-                        </ul>
-                    </li>
+                </ul>
+                </li>
 
-                    <!-- Notifications (Offcanvas on mobile for reliable display) -->
-                    <li class="nav-item" role="none">
-                        <button type="button"
-                            class="nav-link mobile-tab-link border-0 bg-transparent p-0 position-relative"
-                            id="notificationBtnMobile" data-bs-toggle="offcanvas" data-bs-target="#notificationOffcanvasMobile"
-                            aria-controls="notificationOffcanvasMobile" aria-label="Notifications" title="Notifications">
-                            <i class="material-icons material-symbols-rounded" aria-hidden="true">notifications_active</i>
-                            @php
-                            $unreadCountMobile = notification()->getUnreadCount(Auth::user()->user_id ?? 0);
-                            @endphp
-                            @if($unreadCountMobile > 0)
-                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 9px;">
-                                {{ $unreadCountMobile > 99 ? '99+' : $unreadCountMobile }}
-                            </span>
-                            @endif
-                            <span>Notifications</span>
-                        </button>
-                    </li>
+                <!-- Notifications (Offcanvas on mobile for reliable display) -->
+                <li class="nav-item" role="none">
+                    <button type="button"
+                        class="nav-link mobile-tab-link border-0 bg-transparent p-0 position-relative"
+                        id="notificationBtnMobile" data-bs-toggle="offcanvas" data-bs-target="#notificationOffcanvasMobile"
+                        aria-controls="notificationOffcanvasMobile" aria-label="Notifications" title="Notifications">
+                        <i class="material-icons material-symbols-rounded" aria-hidden="true">notifications_active</i>
+                        @php
+                        $unreadCountMobile = notification()->getUnreadCount(Auth::user()->user_id ?? 0);
+                        @endphp
+                        @if($unreadCountMobile > 0)
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge" style="font-size: 9px;">
+                            {{ $unreadCountMobile > 99 ? '99+' : $unreadCountMobile }}
+                        </span>
+                        @endif
+                        <span>Notifications</span>
+                    </button>
+                </li>
                 </ul>
             </div>
 
@@ -282,7 +282,7 @@
                 <div class="offcanvas-header border-bottom py-3">
                     <h5 class="offcanvas-title fw-semibold" id="notificationOffcanvasMobileLabel">Notifications</h5>
                     @if($unreadCountMobile > 0)
-                    <button type="button" class="btn btn-sm btn-link text-primary p-0" onclick="markAllAsRead()">
+                    <button type="button" class="btn btn-sm btn-link text-primary p-0 js-notification-mark-all-read" onclick="markAllAsRead(event)">
                         Mark all as read
                     </button>
                     @endif
@@ -292,10 +292,10 @@
                     <div id="notificationListMobile">
                         @php
                         $notificationsMobile = notification()->getNotifications(
-                            Auth::user()->user_id ?? 0,
-                            10,
-                            false,
-                            hasRole('Admin') ? 10 : null
+                        Auth::user()->user_id ?? 0,
+                        10,
+                        false,
+                        hasRole('Admin') ? 10 : null
                         );
                         @endphp
                         @if($notificationsMobile->count() > 0)
@@ -328,20 +328,24 @@
                 .notification-btn {
                     transition: background-color 0.2s ease, transform 0.2s ease;
                 }
+
                 .notification-btn:hover {
                     background-color: var(--bs-light);
                     transform: translateY(-1px);
                 }
+
                 .notification-badge {
                     font-size: 10px;
                     padding: 4px 6px;
                 }
+
                 .notification-dropdown {
                     width: 380px;
                     max-height: 440px;
                     overflow: hidden;
                     padding: 0;
                 }
+
                 .notification-dropdown-header {
                     display: flex;
                     justify-content: space-between;
@@ -353,15 +357,18 @@
                     top: 0;
                     z-index: 1;
                 }
+
                 .notification-list {
                     max-height: 380px;
                     overflow-y: auto;
                     padding: 8px 0;
                 }
+
                 .notification-list-item {
                     list-style: none;
                     margin: 0;
                 }
+
                 .notification-item {
                     display: block;
                     padding: 14px 18px;
@@ -372,37 +379,45 @@
                     border-left: 3px solid transparent;
                     transition: background-color 0.2s ease, border-color 0.2s ease;
                 }
+
                 .notification-item:hover {
                     background-color: rgba(0, 0, 0, 0.04);
                 }
+
                 .notification-item-unread {
                     background-color: rgba(var(--bs-primary-rgb), 0.06);
                     border-left-color: var(--bs-primary);
                 }
+
                 .notification-item-unread:hover {
                     background-color: rgba(var(--bs-primary-rgb), 0.1);
                 }
+
                 .notification-item-body {
                     min-width: 0;
                 }
+
                 .notification-item-title {
                     font-size: 0.875rem;
                     font-weight: 600;
                     color: var(--bs-primary);
                     line-height: 1.3;
                 }
+
                 .notification-item-message {
                     font-size: 0.8125rem;
                     color: var(--bs-primary);
                     margin: 6px 0 0 0;
                     line-height: 1.4;
                 }
+
                 .notification-item-time {
                     font-size: 0.6875rem;
                     color: var(--bs-primary);
                     margin-top: 6px;
                     display: block;
                 }
+
                 /* Blinking "New" tag for unread notifications */
                 .notification-new-tag {
                     font-size: 0.625rem;
@@ -412,10 +427,21 @@
                     flex-shrink: 0;
                     animation: notification-blink 1.2s ease-in-out infinite;
                 }
+
                 @keyframes notification-blink {
-                    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(var(--bs-danger-rgb), 0.4); }
-                    50% { opacity: 0.85; box-shadow: 0 0 0 4px rgba(var(--bs-danger-rgb), 0); }
+
+                    0%,
+                    100% {
+                        opacity: 1;
+                        box-shadow: 0 0 0 0 rgba(var(--bs-danger-rgb), 0.4);
+                    }
+
+                    50% {
+                        opacity: 0.85;
+                        box-shadow: 0 0 0 4px rgba(var(--bs-danger-rgb), 0);
+                    }
                 }
+
                 .notification-empty-state {
                     display: flex;
                     flex-direction: column;
@@ -426,953 +452,1078 @@
                     list-style: none;
                     margin: 0;
                 }
+
                 .notification-empty-state .material-icons {
                     font-size: 2.5rem;
                     opacity: 0.35;
                     margin-bottom: 10px;
                 }
+
                 .notification-empty-state span {
                     font-size: 0.875rem;
                 }
+
                 /* Mobile offcanvas notifications */
                 .notification-mobile-list {
                     padding: 8px 12px 16px;
                 }
+
                 .notification-mobile-item {
                     margin: 4px 0;
                     padding: 14px 16px;
                 }
 
                 /* Skip link visibility */
-.skip-link {
-    position: absolute;
-    top: -40px;
-    left: 10px;
-    background: #0d6efd;
-    color: #fff;
-    padding: 6px 12px;
-    z-index: 1000;
-    border-radius: 4px;
-}
-.skip-link:focus { top: 10px; }
-:focus-visible { outline: 3px solid #ffbf47; outline-offset: 2px; }
-
-/* Header - Match reference design */
-.header-top-bar {
-    background: #122442;
-    height: 40px;
-    border: none;
-}
-.header-flag-icon { height: 20px; }
-.header-utility-nav .header-utility-sep {
-    width: 1px;
-    height: 16px;
-    background: rgba(255,255,255,0.5);
-    margin: 0 8px;
-    display: inline-block;
-}
-.header-font-btn { text-decoration: none !important; }
-.header-lang-dropdown {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    background: rgba(255,255,255,0.15);
-    border-radius: 6px;
-    padding: 4px 10px;
-}
-.header-globe-icon { font-size: 18px !important; color: #fff !important; }
-.header-lang-select {
-    background: transparent !important;
-    border: none !important;
-    color: #fff !important;
-    font-size: 0.875rem;
-    padding: 2px 4px;
-    min-width: 80px;
-}
-.header-lang-select option { background: #122442; color: #fff; }
-
-/* Main nav bar - white background */
-.with-vertical .navbar { background: #fff !important }
-.header-brand { gap: 10px !important; }
-.header-logo-emblem { height: 40px; object-fit: contain; }
-.header-logo { height: 32px; object-fit: contain; }
-/* Desktop: larger, more prominent logo */
-@media (min-width: 992px) {
-    .header-brand { gap: 12px !important; }
-    .header-logo-emblem { height: 52px !important; }
-    .header-logo { height: 44px !important; }
-}
-.header-app-name {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: #004a93;
-}
-
-/* Nav container - light grey pill */
-.header-main-nav {
-    background: #f0f0f0 !important;
-    border-radius: 12px;
-    height: 48px;
-    border: 1px solid rgba(0,0,0,0.05);
-}
-.header-nav-link {
-    color: #6c757d !important;
-    border-radius: 8px;
-    text-decoration: none !important;
-    border-bottom: 2px solid transparent;
-    transition: color 0.2s, border-color 0.2s;
-}
-.header-nav-link:hover { color: #495057 !important; }
-.header-nav-link.active {
-    color: #004a93 !important;
-    border-bottom-color: #004a93;
-    font-weight: 500;
-}
-.header-search-btn {
-    background: transparent !important;
-    border: none !important;
-    color: #6c757d !important;
-    padding: 6px 10px !important;
-    border-radius: 8px;
-}
-.header-search-btn:hover { color: #004a93 !important; }
-
-/* Right side */
-.header-right-actions { margin-right: 1rem; }
-.header-icon-sm { font-size: 24px !important; }
-.header-logout-icon { font-size: 22px !important; }
-.header-last-login { font-size: 0.8125rem; }
-
-/* Divider before logout */
-.header-logout-divider {
-    width: 1px;
-    height: 28px;
-    background: rgba(0, 0, 0, 0.08);
-    flex-shrink: 0;
-}
-
-/* Logout button - enhanced */
-.header-logout-btn {
-    gap: 3px;
-    min-width: 52px;
-    padding: 6px 10px !important;
-    border-radius: 10px;
-    color: #6c757d !important;
-    border: 1px solid transparent;
-    transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
-}
-.header-logout-btn:hover {
-    color: #004a93 !important;
-    background-color: rgba(0, 74, 147, 0.08) !important;
-    border-color: rgba(0, 74, 147, 0.12);
-}
-.header-logout-btn:active {
-    transform: scale(0.97);
-}
-
-/* Notification dropdown: end-align on large screens, start-align on smaller for proper view */
-.dropdown-menu-end-lg[data-bs-popper] {
-    left: 0;
-    right: auto;
-}
-@media (min-width: 992px) {
-    .dropdown-menu-end-lg[data-bs-popper] {
-        left: auto;
-        right: 0;
-    }
-}
-
-            @media (max-width: 991.98px) {
-                body {
-                    padding-bottom: 64px !important;
+                .skip-link {
+                    position: absolute;
+                    top: -40px;
+                    left: 10px;
+                    background: #0d6efd;
+                    color: #fff;
+                    padding: 6px 12px;
+                    z-index: 1000;
+                    border-radius: 4px;
                 }
 
-                /* Mobile: Right-align logout and header actions */
-                .header-right-actions {
-                    width: 100%;
-                    justify-content: flex-end !important;
-                    margin-left: 0 !important;
-                    margin-right: 0 !important;
-                    padding: 0.5rem 0;
+                .skip-link:focus {
+                    top: 10px;
                 }
 
-                /* Hide sidebar by default on mobile - responsive width */
-                .left-sidebar,
-                .side-mini-panel,
-                aside.side-mini-panel,
-                aside.side-mini-panel.with-vertical {
-                    position: fixed !important;
-                    top: 0 !important;
-                    left: -100% !important;
-                    width: min(320px, 88vw) !important;
-                    max-width: 320px !important;
-                    height: 100vh !important;
-                    z-index: 1060 !important;
-                    background: transparent !important;
-                    transition: left 0.3s ease-in-out !important;
-                    display: block !important;
-                    visibility: hidden !important;
-                    opacity: 0 !important;
-                    overflow-y: auto !important;
+                :focus-visible {
+                    outline: 3px solid #ffbf47;
+                    outline-offset: 2px;
                 }
 
-                /* Sidebar mini panel specific - compact when hidden */
-                .side-mini-panel {
-                    width: 64px !important;
-                    left: -64px !important;
+                /* Header - Match reference design */
+                .header-top-bar {
+                    background: #122442;
+                    height: 40px;
+                    border: none;
                 }
 
-                /* Hide sidebar tab content by default on mobile */
-                #sidebarTabContent {
-                    display: none !important;
-                    visibility: hidden !important;
-                    opacity: 0 !important;
+                .header-flag-icon {
+                    height: 20px;
                 }
 
-                .sidebar-overlay {
-                    z-index: 1050 !important;
+                .header-utility-nav .header-utility-sep {
+                    width: 1px;
+                    height: 16px;
+                    background: rgba(255, 255, 255, 0.5);
+                    margin: 0 8px;
+                    display: inline-block;
                 }
 
-                /* Ensure sidebar toggle button is accessible */
-                #headerCollapse {
-                    z-index: 1040 !important;
-                    position: relative !important;
-                    pointer-events: auto !important;
-                }
-
-                /* Show sidebar when toggled - handle all sidebar instances */
-                .left-sidebar.show-sidebar,
-                .side-mini-panel.show-sidebar,
-                aside.side-mini-panel.show-sidebar,
-                aside.side-mini-panel.with-vertical.show-sidebar,
-                #sidebarTabContent .tab-pane.show.active .side-mini-panel.show-sidebar,
-                #sidebarTabContent .tab-pane .side-mini-panel.show-sidebar {
-                    left: 0 !important;
-                    transform: translateX(0) !important;
-                    visibility: visible !important;
-                    opacity: 1 !important;
-                    display: block !important;
-                    background: transparent !important;
-                    pointer-events: auto !important;
-                }
-
-                /* Expand side-mini-panel to responsive width on mobile when open - so child module (sidebar-nav) is visible */
-                .side-mini-panel.show-sidebar,
-                aside.side-mini-panel.show-sidebar,
-                aside.side-mini-panel.with-vertical.show-sidebar {
-                    width: min(320px, 88vw) !important;
-                    max-width: 320px !important;
-                }
-
-                /* Show sidebar tab content when sidebar is open */
-                body.sidebar-open #sidebarTabContent {
-                    display: block !important;
-                    visibility: visible !important;
-                    opacity: 1 !important;
-                }
-                
-                /* Ensure active sidebar tab pane is visible */
-                body.sidebar-open #sidebarTabContent .tab-pane.show.active {
-                    display: block !important;
-                    visibility: visible !important;
-                    opacity: 1 !important;
-                }
-
-                .nav-container.d-lg-none {
-                    position: fixed !important;
-                    bottom: 0 !important;
-                    left: 0 !important;
-                    right: 0 !important;
-                    width: 100% !important;
-                    z-index: 1030 !important;
-                    margin: 0 !important;
-                    padding: 0 !important;
-                    pointer-events: none !important;
-                    overflow: visible !important;
-                }
-
-                .nav-container.d-lg-none .mobile-tabbar {
-                    pointer-events: auto !important;
-                }
-
-                .mobile-tabbar {
-                    position: fixed !important;
-                    bottom: 0 !important;
-                    left: 0 !important;
-                    right: 0 !important;
-                    width: 100% !important;
-                    z-index: 1030 !important;
-                    display: flex !important;
-                    flex-direction: row !important;
-                    justify-content: space-around !important;
-                    align-items: center !important;
-                    gap: 2px !important;
-                    padding: 6px 4px !important;
-                    margin: 0 !important;
-                    background: #ffffff !important;
-                    border-top: 1px solid rgba(0, 0, 0, 0.08) !important;
-                    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.06) !important;
-                    list-style: none !important;
-                    height: 64px !important;
-                    pointer-events: auto !important;
-                    overflow: visible !important;
-                }
-
-                /* Hide mobile tab bar when sidebar is open - handled by JS */
-                body.sidebar-open .mobile-tabbar {
-                    display: none !important;
-                }
-
-                .mobile-tabbar .nav-item {
-                    flex: 1 1 0 !important;
-                    text-align: center !important;
-                    margin: 0 !important;
-                    padding: 0 !important;
-                }
-
-
-                .mobile-tab-link {
-                    display: flex !important;
-                    flex-direction: column !important;
-                    align-items: center !important;
-                    justify-content: center !important;
-                    gap: 2px !important;
-                    padding: 6px 4px !important;
-                    font-size: 11px !important;
-                    color: #475569 !important;
-                    border-radius: 10px !important;
+                .header-font-btn {
                     text-decoration: none !important;
-                    width: 100% !important;
-                    height: 100% !important;
-                    border: none !important;
+                }
+
+                .header-lang-dropdown {
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    background: rgba(255, 255, 255, 0.15);
+                    border-radius: 6px;
+                    padding: 4px 10px;
+                }
+
+                .header-globe-icon {
+                    font-size: 18px !important;
+                    color: #fff !important;
+                }
+
+                .header-lang-select {
                     background: transparent !important;
-                    cursor: pointer !important;
-                    pointer-events: auto !important;
-                    -webkit-tap-highlight-color: rgba(29, 78, 216, 0.1) !important;
-                    touch-action: manipulation !important;
+                    border: none !important;
+                    color: #fff !important;
+                    font-size: 0.875rem;
+                    padding: 2px 4px;
+                    min-width: 80px;
                 }
 
-                .mobile-tab-link:hover,
-                .mobile-tab-link:focus {
-                    color: #1d4ed8 !important;
-                    background: rgba(29, 78, 216, 0.05) !important;
+                .header-lang-select option {
+                    background: #122442;
+                    color: #fff;
                 }
 
-                .mobile-tab-link i {
+                /* Main nav bar - white background */
+                .with-vertical .navbar {
+                    background: #fff !important
+                }
+
+                .header-brand {
+                    gap: 10px !important;
+                }
+
+                .header-logo-emblem {
+                    height: 40px;
+                    object-fit: contain;
+                }
+
+                .header-logo {
+                    height: 32px;
+                    object-fit: contain;
+                }
+
+                /* Desktop: larger, more prominent logo */
+                @media (min-width: 992px) {
+                    .header-brand {
+                        gap: 12px !important;
+                    }
+
+                    .header-logo-emblem {
+                        height: 52px !important;
+                    }
+
+                    .header-logo {
+                        height: 44px !important;
+                    }
+                }
+
+                .header-app-name {
+                    font-size: 1.25rem;
+                    font-weight: 700;
+                    color: #004a93;
+                }
+
+                /* Nav container - light grey pill */
+                .header-main-nav {
+                    background: #f0f0f0 !important;
+                    border-radius: 12px;
+                    height: 48px;
+                    border: 1px solid rgba(0, 0, 0, 0.05);
+                }
+
+                .header-nav-link {
+                    color: #6c757d !important;
+                    border-radius: 8px;
+                    text-decoration: none !important;
+                    border-bottom: 2px solid transparent;
+                    transition: color 0.2s, border-color 0.2s;
+                }
+
+                .header-nav-link:hover {
+                    color: #495057 !important;
+                }
+
+                .header-nav-link.active {
+                    color: #004a93 !important;
+                    border-bottom-color: #004a93;
+                    font-weight: 500;
+                }
+
+                .header-search-btn {
+                    background: transparent !important;
+                    border: none !important;
+                    color: #6c757d !important;
+                    padding: 6px 10px !important;
+                    border-radius: 8px;
+                }
+
+                .header-search-btn:hover {
+                    color: #004a93 !important;
+                }
+
+                /* Right side */
+                .header-right-actions {
+                    margin-right: 1rem;
+                }
+
+                .header-icon-sm {
+                    font-size: 24px !important;
+                }
+
+                .header-logout-icon {
                     font-size: 22px !important;
-                    line-height: 22px !important;
-                    display: block !important;
                 }
 
-                .mobile-tab-link span {
-                    font-size: 10px !important;
-                    line-height: 1.2 !important;
-                    white-space: nowrap !important;
+                .header-last-login {
+                    font-size: 0.8125rem;
                 }
 
-                .mobile-tab-link.active {
-                    color: #1d4ed8 !important;
-                    background: rgba(29, 78, 216, 0.08) !important;
+                /* Divider before logout */
+                .header-logout-divider {
+                    width: 1px;
+                    height: 28px;
+                    background: rgba(0, 0, 0, 0.08);
+                    flex-shrink: 0;
                 }
 
-                .mobile-tab-link.active i {
-                    color: #1d4ed8 !important;
-                }
-            }
-
-            /* Very small phones - narrower sidebar */
-            @media (max-width: 375px) {
-                .left-sidebar,
-                .side-mini-panel,
-                aside.side-mini-panel,
-                aside.side-mini-panel.with-vertical {
-                    width: min(280px, 92vw) !important;
-                    max-width: 280px !important;
-                }
-                .side-mini-panel.show-sidebar,
-                aside.side-mini-panel.show-sidebar,
-                aside.side-mini-panel.with-vertical.show-sidebar {
-                    width: min(280px, 92vw) !important;
-                    max-width: 280px !important;
-                }
-            }
-
-            @media (max-width: 991.98px) and (orientation: landscape) {
-                .mobile-tabbar {
-                    height: 56px !important;
+                /* Logout button - enhanced */
+                .header-logout-btn {
+                    gap: 3px;
+                    min-width: 52px;
+                    padding: 6px 10px !important;
+                    border-radius: 10px;
+                    color: #6c757d !important;
+                    border: 1px solid transparent;
+                    transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
                 }
 
-                body {
-                    padding-bottom: 56px !important;
+                .header-logout-btn:hover {
+                    color: #004a93 !important;
+                    background-color: rgba(0, 74, 147, 0.08) !important;
+                    border-color: rgba(0, 74, 147, 0.12);
                 }
 
-                .mobile-tab-link {
-                    padding: 4px 2px !important;
+                .header-logout-btn:active {
+                    transform: scale(0.97);
                 }
 
-                .mobile-tab-link i {
-                    font-size: 20px !important;
+                /* Notification dropdown: end-align on large screens, start-align on smaller for proper view */
+                .dropdown-menu-end-lg[data-bs-popper] {
+                    left: 0;
+                    right: auto;
                 }
 
-                .mobile-tab-link span {
-                    font-size: 9px !important;
-                }
-            }
-
-            /* Mobile notifications offcanvas - ensure it appears above tabbar */
-            @media (max-width: 991.98px) {
-                #notificationOffcanvasMobile {
-                    z-index: 1100 !important;
-                }
-            }
-
-            /* Desktop styles - ensure sidebar is visible */
-            @media (min-width: 992px) {
-                /* Reset any mobile-specific styles on desktop */
-                .left-sidebar,
-                .side-mini-panel,
-                aside.side-mini-panel,
-                aside.side-mini-panel.with-vertical {
-                    position: fixed !important;
-                    left: 0 !important;
-                    top: 0 !important;
-                    visibility: visible !important;
-                    opacity: 1 !important;
-                    display: block !important;
+                @media (min-width: 992px) {
+                    .dropdown-menu-end-lg[data-bs-popper] {
+                        left: auto;
+                        right: 0;
+                    }
                 }
 
-                /* Ensure sidebar tab content is visible on desktop */
-                #sidebarTabContent {
-                    display: block !important;
-                    visibility: visible !important;
-                    opacity: 1 !important;
+                @media (max-width: 991.98px) {
+                    body {
+                        padding-bottom: 64px !important;
+                    }
+
+                    /* Mobile: Right-align logout and header actions */
+                    .header-right-actions {
+                        width: 100%;
+                        justify-content: flex-end !important;
+                        margin-left: 0 !important;
+                        margin-right: 0 !important;
+                        padding: 0.5rem 0;
+                    }
+
+                    /* Hide sidebar by default on mobile - responsive width */
+                    .left-sidebar,
+                    .side-mini-panel,
+                    aside.side-mini-panel,
+                    aside.side-mini-panel.with-vertical {
+                        position: fixed !important;
+                        top: 0 !important;
+                        left: -100% !important;
+                        width: min(320px, 88vw) !important;
+                        max-width: 320px !important;
+                        height: 100vh !important;
+                        z-index: 1060 !important;
+                        background: transparent !important;
+                        transition: left 0.3s ease-in-out !important;
+                        display: block !important;
+                        visibility: hidden !important;
+                        opacity: 0 !important;
+                        overflow-y: auto !important;
+                    }
+
+                    /* Sidebar mini panel specific - compact when hidden */
+                    .side-mini-panel {
+                        width: 64px !important;
+                        left: -64px !important;
+                    }
+
+                    /* Hide sidebar tab content by default on mobile */
+                    #sidebarTabContent {
+                        display: none !important;
+                        visibility: hidden !important;
+                        opacity: 0 !important;
+                    }
+
+                    .sidebar-overlay {
+                        z-index: 1050 !important;
+                    }
+
+                    /* Ensure sidebar toggle button is accessible */
+                    #headerCollapse {
+                        z-index: 1040 !important;
+                        position: relative !important;
+                        pointer-events: auto !important;
+                    }
+
+                    /* Show sidebar when toggled - handle all sidebar instances */
+                    .left-sidebar.show-sidebar,
+                    .side-mini-panel.show-sidebar,
+                    aside.side-mini-panel.show-sidebar,
+                    aside.side-mini-panel.with-vertical.show-sidebar,
+                    #sidebarTabContent .tab-pane.show.active .side-mini-panel.show-sidebar,
+                    #sidebarTabContent .tab-pane .side-mini-panel.show-sidebar {
+                        left: 0 !important;
+                        transform: translateX(0) !important;
+                        visibility: visible !important;
+                        opacity: 1 !important;
+                        display: block !important;
+                        background: transparent !important;
+                        pointer-events: auto !important;
+                    }
+
+                    /* Expand side-mini-panel to responsive width on mobile when open - so child module (sidebar-nav) is visible */
+                    .side-mini-panel.show-sidebar,
+                    aside.side-mini-panel.show-sidebar,
+                    aside.side-mini-panel.with-vertical.show-sidebar {
+                        width: min(320px, 88vw) !important;
+                        max-width: 320px !important;
+                    }
+
+                    /* Show sidebar tab content when sidebar is open */
+                    body.sidebar-open #sidebarTabContent {
+                        display: block !important;
+                        visibility: visible !important;
+                        opacity: 1 !important;
+                    }
+
+                    /* Ensure active sidebar tab pane is visible */
+                    body.sidebar-open #sidebarTabContent .tab-pane.show.active {
+                        display: block !important;
+                        visibility: visible !important;
+                        opacity: 1 !important;
+                    }
+
+                    .nav-container.d-lg-none {
+                        position: fixed !important;
+                        bottom: 0 !important;
+                        left: 0 !important;
+                        right: 0 !important;
+                        width: 100% !important;
+                        z-index: 1030 !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        pointer-events: none !important;
+                        overflow: visible !important;
+                    }
+
+                    .nav-container.d-lg-none .mobile-tabbar {
+                        pointer-events: auto !important;
+                    }
+
+                    .mobile-tabbar {
+                        position: fixed !important;
+                        bottom: 0 !important;
+                        left: 0 !important;
+                        right: 0 !important;
+                        width: 100% !important;
+                        z-index: 1030 !important;
+                        display: flex !important;
+                        flex-direction: row !important;
+                        justify-content: space-around !important;
+                        align-items: center !important;
+                        gap: 2px !important;
+                        padding: 6px 4px !important;
+                        margin: 0 !important;
+                        background: #ffffff !important;
+                        border-top: 1px solid rgba(0, 0, 0, 0.08) !important;
+                        box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.06) !important;
+                        list-style: none !important;
+                        height: 64px !important;
+                        pointer-events: auto !important;
+                        overflow: visible !important;
+                    }
+
+                    /* Hide mobile tab bar when sidebar is open - handled by JS */
+                    body.sidebar-open .mobile-tabbar {
+                        display: none !important;
+                    }
+
+                    .mobile-tabbar .nav-item {
+                        flex: 1 1 0 !important;
+                        text-align: center !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                    }
+
+
+                    .mobile-tab-link {
+                        display: flex !important;
+                        flex-direction: column !important;
+                        align-items: center !important;
+                        justify-content: center !important;
+                        gap: 2px !important;
+                        padding: 6px 4px !important;
+                        font-size: 11px !important;
+                        color: #475569 !important;
+                        border-radius: 10px !important;
+                        text-decoration: none !important;
+                        width: 100% !important;
+                        height: 100% !important;
+                        border: none !important;
+                        background: transparent !important;
+                        cursor: pointer !important;
+                        pointer-events: auto !important;
+                        -webkit-tap-highlight-color: rgba(29, 78, 216, 0.1) !important;
+                        touch-action: manipulation !important;
+                    }
+
+                    .mobile-tab-link:hover,
+                    .mobile-tab-link:focus {
+                        color: #1d4ed8 !important;
+                        background: rgba(29, 78, 216, 0.05) !important;
+                    }
+
+                    .mobile-tab-link i {
+                        font-size: 22px !important;
+                        line-height: 22px !important;
+                        display: block !important;
+                    }
+
+                    .mobile-tab-link span {
+                        font-size: 10px !important;
+                        line-height: 1.2 !important;
+                        white-space: nowrap !important;
+                    }
+
+                    .mobile-tab-link.active {
+                        color: #1d4ed8 !important;
+                        background: rgba(29, 78, 216, 0.08) !important;
+                    }
+
+                    .mobile-tab-link.active i {
+                        color: #1d4ed8 !important;
+                    }
                 }
 
-                /* Ensure active sidebar tab pane is visible */
-                #sidebarTabContent .tab-pane.show.active {
-                    display: block !important;
-                    visibility: visible !important;
-                    opacity: 1 !important;
+                /* Very small phones - narrower sidebar */
+                @media (max-width: 375px) {
+
+                    .left-sidebar,
+                    .side-mini-panel,
+                    aside.side-mini-panel,
+                    aside.side-mini-panel.with-vertical {
+                        width: min(280px, 92vw) !important;
+                        max-width: 280px !important;
+                    }
+
+                    .side-mini-panel.show-sidebar,
+                    aside.side-mini-panel.show-sidebar,
+                    aside.side-mini-panel.with-vertical.show-sidebar {
+                        width: min(280px, 92vw) !important;
+                        max-width: 280px !important;
+                    }
                 }
 
-                /* Remove overlay on desktop */
-                .sidebar-overlay {
-                    display: none !important;
+                @media (max-width: 991.98px) and (orientation: landscape) {
+                    .mobile-tabbar {
+                        height: 56px !important;
+                    }
+
+                    body {
+                        padding-bottom: 56px !important;
+                    }
+
+                    .mobile-tab-link {
+                        padding: 4px 2px !important;
+                    }
+
+                    .mobile-tab-link i {
+                        font-size: 20px !important;
+                    }
+
+                    .mobile-tab-link span {
+                        font-size: 9px !important;
+                    }
                 }
 
-                /* Ensure body doesn't have mobile padding on desktop */
-                body {
-                    padding-bottom: 0 !important;
+                /* Mobile notifications offcanvas - ensure it appears above tabbar */
+                @media (max-width: 991.98px) {
+                    #notificationOffcanvasMobile {
+                        z-index: 1100 !important;
+                    }
                 }
 
-                /* Reset any inline styles that might hide sidebar on desktop */
-                .left-sidebar[style*="left: -"],
-                .side-mini-panel[style*="left: -"],
-                aside.side-mini-panel[style*="left: -"] {
-                    left: 0 !important;
-                }
-            }
+                /* Desktop styles - ensure sidebar is visible */
+                @media (min-width: 992px) {
 
-            /* Medium desktop fallback (e.g., 1280x1024 at 100% zoom):
+                    /* Reset any mobile-specific styles on desktop */
+                    .left-sidebar,
+                    .side-mini-panel,
+                    aside.side-mini-panel,
+                    aside.side-mini-panel.with-vertical {
+                        position: fixed !important;
+                        left: 0 !important;
+                        top: 0 !important;
+                        visibility: visible !important;
+                        opacity: 1 !important;
+                        display: block !important;
+                    }
+
+                    /* Ensure sidebar tab content is visible on desktop */
+                    #sidebarTabContent {
+                        display: block !important;
+                        visibility: visible !important;
+                        opacity: 1 !important;
+                    }
+
+                    /* Ensure active sidebar tab pane is visible */
+                    #sidebarTabContent .tab-pane.show.active {
+                        display: block !important;
+                        visibility: visible !important;
+                        opacity: 1 !important;
+                    }
+
+                    /* Remove overlay on desktop */
+                    .sidebar-overlay {
+                        display: none !important;
+                    }
+
+                    /* Ensure body doesn't have mobile padding on desktop */
+                    body {
+                        padding-bottom: 0 !important;
+                    }
+
+                    /* Reset any inline styles that might hide sidebar on desktop */
+                    .left-sidebar[style*="left: -"],
+                    .side-mini-panel[style*="left: -"],
+                    aside.side-mini-panel[style*="left: -"] {
+                        left: 0 !important;
+                    }
+                }
+
+                /* Medium desktop fallback (e.g., 1280x1024 at 100% zoom):
                keep content shifted so fixed sidebar doesn't overlap mid section. */
-            @media (min-width: 992px) and (max-width: 1299.98px) {
-                html[data-layout="vertical"] body[data-sidebartype="full"] .page-wrapper {
-                    margin-left: calc(80px + 240px) !important;
-                    width: calc(100% - 320px) !important;
-                }
+                @media (min-width: 992px) and (max-width: 1299.98px) {
+                    html[data-layout="vertical"] body[data-sidebartype="full"] .page-wrapper {
+                        margin-left: calc(80px + 240px) !important;
+                        width: calc(100% - 320px) !important;
+                    }
 
-                html[data-layout="vertical"] body[data-sidebartype="mini-sidebar"] .page-wrapper {
-                    margin-left: 80px !important;
-                    width: calc(100% - 80px) !important;
+                    html[data-layout="vertical"] body[data-sidebartype="mini-sidebar"] .page-wrapper {
+                        margin-left: 80px !important;
+                        width: calc(100% - 80px) !important;
+                    }
                 }
-            }
             </style>
-<script>
-    const root = document.documentElement;
-    let fontSize = 100;
+            <script>
+                const root = document.documentElement;
+                let fontSize = 100;
 
-    document.querySelectorAll('[aria-label]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            if (btn.textContent === 'A+') fontSize += 10;
-            if (btn.textContent === 'A-') fontSize -= 10;
-            if (btn.textContent === 'A') fontSize = 100;
-            root.style.fontSize = fontSize + '%';
-        });
-    });
-</script>
+                document.querySelectorAll('[aria-label]').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        if (btn.textContent === 'A+') fontSize += 10;
+                        if (btn.textContent === 'A-') fontSize -= 10;
+                        if (btn.textContent === 'A') fontSize = 100;
+                        root.style.fontSize = fontSize + '%';
+                    });
+                });
+            </script>
 
             <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                // Sidebar toggle handler for mobile
-                const sidebarToggler = document.getElementById('headerCollapse');
-                const mobileTabbar = document.querySelector('.mobile-tabbar');
-                
-                // Function to get the currently active sidebar (from active tab)
-                function getActiveSidebar() {
-                    // First, try to find sidebar in the active sidebar tab pane
-                    const activeSidebarPane = document.querySelector('#sidebarTabContent .tab-pane.show.active');
-                    if (activeSidebarPane) {
-                        const sidebarInPane = activeSidebarPane.querySelector('.side-mini-panel');
-                        if (sidebarInPane) return sidebarInPane;
+                document.addEventListener('DOMContentLoaded', function() {
+                    // Sidebar toggle handler for mobile
+                    const sidebarToggler = document.getElementById('headerCollapse');
+                    const mobileTabbar = document.querySelector('.mobile-tabbar');
+
+                    // Function to get the currently active sidebar (from active tab)
+                    function getActiveSidebar() {
+                        // First, try to find sidebar in the active sidebar tab pane
+                        const activeSidebarPane = document.querySelector('#sidebarTabContent .tab-pane.show.active');
+                        if (activeSidebarPane) {
+                            const sidebarInPane = activeSidebarPane.querySelector('.side-mini-panel');
+                            if (sidebarInPane) return sidebarInPane;
+                        }
+
+                        // Fallback: find any visible sidebar
+                        const visibleSidebar = document.querySelector('.side-mini-panel:not([style*="display: none"])');
+                        if (visibleSidebar) return visibleSidebar;
+
+                        // Last resort: find any sidebar
+                        return document.querySelector('.left-sidebar') || document.querySelector('.side-mini-panel');
                     }
-                    
-                    // Fallback: find any visible sidebar
-                    const visibleSidebar = document.querySelector('.side-mini-panel:not([style*="display: none"])');
-                    if (visibleSidebar) return visibleSidebar;
-                    
-                    // Last resort: find any sidebar
-                    return document.querySelector('.left-sidebar') || document.querySelector('.side-mini-panel');
-                }
-                
-                function updateSidebarState() {
-                    // Only apply mobile-specific styles on mobile
-                    if (window.innerWidth >= 992) {
-                        // On desktop, don't interfere with sidebar visibility
-                        // Let desktop CSS handle it
-                        return;
-                    }
-                    
-                    const sidebar = getActiveSidebar();
-                    if (!sidebar) return;
-                    
-                    const isOpen = sidebar.classList.contains('show-sidebar');
-                    const sidebarTabContent = document.getElementById('sidebarTabContent');
-                    
-                    if (isOpen) {
-                        document.body.classList.add('sidebar-open');
-                        
-                        // Ensure sidebar and its content are visible (mobile only)
-                        sidebar.style.left = '0';
-                        sidebar.style.visibility = 'visible';
-                        sidebar.style.opacity = '1';
-                        sidebar.style.display = 'block';
-                        
-                        // Ensure sidebar tab content is visible
-                        if (sidebarTabContent) {
-                            sidebarTabContent.style.display = 'block';
-                            sidebarTabContent.style.visibility = 'visible';
-                            sidebarTabContent.style.opacity = '1';
-                        }
-                        
-                        // Ensure overlay is visible
-                        let overlay = document.querySelector('.sidebar-overlay');
-                        if (!overlay) {
-                            overlay = document.createElement('div');
-                            overlay.className = 'sidebar-overlay';
-                            document.body.appendChild(overlay);
-                        }
-                        overlay.classList.add('active');
-                        
-                        // Prevent body scroll when sidebar is open
-                        document.body.style.overflow = 'hidden';
-                    } else {
-                        document.body.classList.remove('sidebar-open');
-                        
-                        // Hide sidebar (mobile only)
-                        const sidebarWidth = sidebar.classList.contains('side-mini-panel') ? '-70px' : '-100%';
-                        sidebar.style.left = sidebarWidth;
-                        sidebar.style.visibility = 'hidden';
-                        sidebar.style.opacity = '0';
-                        
-                        // Hide sidebar tab content
-                        if (sidebarTabContent) {
-                            sidebarTabContent.style.display = 'none';
-                            sidebarTabContent.style.visibility = 'hidden';
-                            sidebarTabContent.style.opacity = '0';
-                        }
-                        
-                        // Hide overlay
-                        const overlay = document.querySelector('.sidebar-overlay');
-                        if (overlay) {
-                            overlay.classList.remove('active');
-                        }
-                        
-                        // Restore body scroll
-                        document.body.style.overflow = '';
-                    }
-                }
-                
-                // Initialize: Hide sidebar by default on mobile only
-                if (window.innerWidth < 992) {
-                    const sidebar = getActiveSidebar();
-                    if (sidebar) {
-                        sidebar.classList.remove('show-sidebar');
-                        const sidebarTabContent = document.getElementById('sidebarTabContent');
-                        if (sidebarTabContent) {
-                            sidebarTabContent.style.display = 'none';
-                            sidebarTabContent.style.visibility = 'hidden';
-                            sidebarTabContent.style.opacity = '0';
-                        }
-                    }
-                } else {
-                    // On desktop: ensure sidebar is visible and remove any mobile styles
-                    const sidebar = getActiveSidebar();
-                    if (sidebar) {
-                        // Remove mobile-specific inline styles
-                        sidebar.style.left = '';
-                        sidebar.style.visibility = '';
-                        sidebar.style.opacity = '';
-                        sidebar.style.display = '';
-                        
-                        // Ensure sidebar tab content is visible
-                        const sidebarTabContent = document.getElementById('sidebarTabContent');
-                        if (sidebarTabContent) {
-                            sidebarTabContent.style.display = '';
-                            sidebarTabContent.style.visibility = '';
-                            sidebarTabContent.style.opacity = '';
-                        }
-                    }
-                }
-                
-                // Observe all sidebar elements for state changes
-                function observeSidebars() {
-                    const allSidebars = document.querySelectorAll('.side-mini-panel, .left-sidebar');
-                    allSidebars.forEach(sidebar => {
-                        const observer = new MutationObserver(function(mutations) {
-                            mutations.forEach(function(mutation) {
-                                if (mutation.attributeName === 'class') {
-                                    updateSidebarState();
-                                }
-                            });
-                        });
-                        
-                        observer.observe(sidebar, {
-                            attributes: true,
-                            attributeFilter: ['class']
-                        });
-                    });
-                }
-                
-                observeSidebars();
-                
-                // Re-observe when tabs change (new sidebar content might be added)
-                document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
-                    tab.addEventListener('shown.bs.tab', function() {
-                        setTimeout(observeSidebars, 100);
-                        updateSidebarState();
-                    });
-                });
-                
-                // Handle window resize - switch between mobile and desktop
-                let resizeTimeout;
-                window.addEventListener('resize', function() {
-                    clearTimeout(resizeTimeout);
-                    resizeTimeout = setTimeout(function() {
+
+                    function updateSidebarState() {
+                        // Only apply mobile-specific styles on mobile
                         if (window.innerWidth >= 992) {
-                            // Switched to desktop - ensure sidebar is visible
-                            const sidebar = getActiveSidebar();
-                            if (sidebar) {
-                                // Remove mobile-specific inline styles
-                                sidebar.style.left = '';
-                                sidebar.style.visibility = '';
-                                sidebar.style.opacity = '';
-                                sidebar.style.display = '';
-                                
-                                // Ensure sidebar tab content is visible
-                                const sidebarTabContent = document.getElementById('sidebarTabContent');
-                                if (sidebarTabContent) {
-                                    sidebarTabContent.style.display = '';
-                                    sidebarTabContent.style.visibility = '';
-                                    sidebarTabContent.style.opacity = '';
-                                }
-                                
-                                // Remove overlay
-                                const overlay = document.querySelector('.sidebar-overlay');
-                                if (overlay) {
-                                    overlay.classList.remove('active');
-                                }
-                                
-                                // Restore body scroll
-                                document.body.style.overflow = '';
-                                document.body.classList.remove('sidebar-open');
-                            }
-                        } else {
-                            // Switched to mobile - apply mobile styles
-                            updateSidebarState();
+                            // On desktop, don't interfere with sidebar visibility
+                            // Let desktop CSS handle it
+                            return;
                         }
-                    }, 150);
-                });
-                
-                // Check initial state
-                updateSidebarState();
-                
-                // Handle overlay clicks
-                document.addEventListener('click', function(e) {
-                    const overlay = document.querySelector('.sidebar-overlay');
-                    if (overlay && e.target === overlay && overlay.classList.contains('active')) {
+
+                        const sidebar = getActiveSidebar();
+                        if (!sidebar) return;
+
+                        const isOpen = sidebar.classList.contains('show-sidebar');
+                        const sidebarTabContent = document.getElementById('sidebarTabContent');
+
+                        if (isOpen) {
+                            document.body.classList.add('sidebar-open');
+
+                            // Ensure sidebar and its content are visible (mobile only)
+                            sidebar.style.left = '0';
+                            sidebar.style.visibility = 'visible';
+                            sidebar.style.opacity = '1';
+                            sidebar.style.display = 'block';
+
+                            // Ensure sidebar tab content is visible
+                            if (sidebarTabContent) {
+                                sidebarTabContent.style.display = 'block';
+                                sidebarTabContent.style.visibility = 'visible';
+                                sidebarTabContent.style.opacity = '1';
+                            }
+
+                            // Ensure overlay is visible
+                            let overlay = document.querySelector('.sidebar-overlay');
+                            if (!overlay) {
+                                overlay = document.createElement('div');
+                                overlay.className = 'sidebar-overlay';
+                                document.body.appendChild(overlay);
+                            }
+                            overlay.classList.add('active');
+
+                            // Prevent body scroll when sidebar is open
+                            document.body.style.overflow = 'hidden';
+                        } else {
+                            document.body.classList.remove('sidebar-open');
+
+                            // Hide sidebar (mobile only)
+                            const sidebarWidth = sidebar.classList.contains('side-mini-panel') ? '-70px' : '-100%';
+                            sidebar.style.left = sidebarWidth;
+                            sidebar.style.visibility = 'hidden';
+                            sidebar.style.opacity = '0';
+
+                            // Hide sidebar tab content
+                            if (sidebarTabContent) {
+                                sidebarTabContent.style.display = 'none';
+                                sidebarTabContent.style.visibility = 'hidden';
+                                sidebarTabContent.style.opacity = '0';
+                            }
+
+                            // Hide overlay
+                            const overlay = document.querySelector('.sidebar-overlay');
+                            if (overlay) {
+                                overlay.classList.remove('active');
+                            }
+
+                            // Restore body scroll
+                            document.body.style.overflow = '';
+                        }
+                    }
+
+                    // Initialize: Hide sidebar by default on mobile only
+                    if (window.innerWidth < 992) {
                         const sidebar = getActiveSidebar();
                         if (sidebar) {
                             sidebar.classList.remove('show-sidebar');
-                            updateSidebarState();
+                            const sidebarTabContent = document.getElementById('sidebarTabContent');
+                            if (sidebarTabContent) {
+                                sidebarTabContent.style.display = 'none';
+                                sidebarTabContent.style.visibility = 'hidden';
+                                sidebarTabContent.style.opacity = '0';
+                            }
                         }
-                    }
-                });
-                
-                // Ensure sidebar toggle button works
-                if (sidebarToggler) {
-                    sidebarToggler.addEventListener('click', function(e) {
-                        // On desktop, let the default sidebar toggle behavior work
-                        if (window.innerWidth >= 992) {
-                            // Don't prevent default on desktop - let existing sidebar toggle handle it
-                            return;
-                        }
-                        
-                        // On mobile, handle toggle
-                        e.preventDefault();
-                        e.stopPropagation();
+                    } else {
+                        // On desktop: ensure sidebar is visible and remove any mobile styles
                         const sidebar = getActiveSidebar();
                         if (sidebar) {
-                            sidebar.classList.toggle('show-sidebar');
-                            updateSidebarState();
+                            // Remove mobile-specific inline styles
+                            sidebar.style.left = '';
+                            sidebar.style.visibility = '';
+                            sidebar.style.opacity = '';
+                            sidebar.style.display = '';
+
+                            // Ensure sidebar tab content is visible
+                            const sidebarTabContent = document.getElementById('sidebarTabContent');
+                            if (sidebarTabContent) {
+                                sidebarTabContent.style.display = '';
+                                sidebarTabContent.style.visibility = '';
+                                sidebarTabContent.style.opacity = '';
+                            }
                         }
-                    });
-                }
-                
-                // Mobile collapse: document-level delegation (capture phase)
-                let collapseHandledAt = 0;
-                function handleMobileCollapse(e) {
-                    if (window.innerWidth >= 992) return;
-                    
-                    const trigger = e.target.closest('[data-bs-toggle="collapse"]');
-                    if (!trigger) return;
-                    
-                    const sidebarTabContent = document.getElementById('sidebarTabContent');
-                    if (!sidebarTabContent || !sidebarTabContent.contains(trigger)) return;
-                    
-                    if (!document.querySelector('.side-mini-panel.show-sidebar')) return;
-                    
-                    // Prevent double-fire from pointerup + click on touch devices
-                    const now = Date.now();
-                    if (now - collapseHandledAt < 400) return;
-                    collapseHandledAt = now;
-                    
-                    const targetId = (trigger.getAttribute('data-bs-target') || trigger.getAttribute('href') || '').replace(/^#/, '');
-                    if (!targetId) return;
-                    
-                    const targetElement = document.getElementById(targetId);
-                    if (!targetElement) return;
-                    
-                    if (typeof bootstrap !== 'undefined' && bootstrap.Collapse) {
-                        let bsCollapse = bootstrap.Collapse.getInstance(targetElement);
-                        if (!bsCollapse) {
-                            bsCollapse = new bootstrap.Collapse(targetElement, { toggle: false });
-                        }
-                        bsCollapse.toggle();
-                        // Accordion: close other collapses in same sidebar-nav
-                        const parentNav = trigger.closest('.sidebar-nav');
-                        if (parentNav) {
-                            parentNav.querySelectorAll('.collapse').forEach(c => {
-                                if (c !== targetElement && c.classList.contains('show')) {
-                                    const other = bootstrap.Collapse.getInstance(c);
-                                    if (other) other.hide();
-                                }
-                            });
-                        }
-                        // Rotate arrow icon
-                        const icon = trigger.querySelector('.material-icons');
-                        if (icon) {
-                            setTimeout(() => {
-                                icon.textContent = targetElement.classList.contains('show') ? 'keyboard_arrow_up' : 'keyboard_arrow_down';
-                            }, 350);
-                        }
-                        e.preventDefault();
-                        e.stopPropagation();
                     }
-                }
-                
-                document.addEventListener('pointerup', handleMobileCollapse, true);
-                document.addEventListener('click', handleMobileCollapse, true);
-             
 
-                // Time format is already set in PHP, no need to override
+                    // Observe all sidebar elements for state changes
+                    function observeSidebars() {
+                        const allSidebars = document.querySelectorAll('.side-mini-panel, .left-sidebar');
+                        allSidebars.forEach(sidebar => {
+                            const observer = new MutationObserver(function(mutations) {
+                                mutations.forEach(function(mutation) {
+                                    if (mutation.attributeName === 'class') {
+                                        updateSidebarState();
+                                    }
+                                });
+                            });
 
-                // Active tab indicator animation
-                const activeTab = document.querySelector('.nav-link.active');
-                const indicator = document.querySelector('.active-tab-indicator');
-
-                if (activeTab && indicator) {
-                    updateIndicatorPosition(activeTab);
-
-                    // Listen for tab changes
-                    document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
-                        tab.addEventListener('shown.bs.tab', function(e) {
-                            updateIndicatorPosition(e.target);
-
-                            // Keep active state in sync between desktop and mobile tabs
-                            const targetId = e.target.getAttribute('href');
-                            document.querySelectorAll('[data-bs-toggle="tab"]').forEach(link => {
-                                if (link.getAttribute('href') === targetId) {
-                                    link.classList.add('active');
-                                    link.setAttribute('aria-selected', 'true');
-                                } else {
-                                    link.classList.remove('active');
-                                    link.setAttribute('aria-selected', 'false');
-                                }
+                            observer.observe(sidebar, {
+                                attributes: true,
+                                attributeFilter: ['class']
                             });
                         });
-                    });
-                }
+                    }
 
-                function updateIndicatorPosition(element) {
-                    const rect = element.getBoundingClientRect();
-                    const parentRect = element.closest('.nav-container').getBoundingClientRect();
+                    observeSidebars();
 
-                    indicator.style.width = `${rect.width}px`;
-                    indicator.style.transform = `translateX(${rect.left - parentRect.left}px)`;
-                }
-
-                // Enhanced dropdown interaction
-                const financialDropdown = document.getElementById('financialDropdown');
-                if (financialDropdown) {
-                    financialDropdown.addEventListener('focus', function() {
-                        this.setAttribute('aria-expanded', 'true');
+                    // Re-observe when tabs change (new sidebar content might be added)
+                    document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
+                        tab.addEventListener('shown.bs.tab', function() {
+                            setTimeout(observeSidebars, 100);
+                            updateSidebarState();
+                        });
                     });
 
-                    financialDropdown.addEventListener('blur', function(e) {
-                        if (!this.parentElement.contains(e.relatedTarget)) {
-                            this.setAttribute('aria-expanded', 'false');
+                    // Handle window resize - switch between mobile and desktop
+                    let resizeTimeout;
+                    window.addEventListener('resize', function() {
+                        clearTimeout(resizeTimeout);
+                        resizeTimeout = setTimeout(function() {
+                            if (window.innerWidth >= 992) {
+                                // Switched to desktop - ensure sidebar is visible
+                                const sidebar = getActiveSidebar();
+                                if (sidebar) {
+                                    // Remove mobile-specific inline styles
+                                    sidebar.style.left = '';
+                                    sidebar.style.visibility = '';
+                                    sidebar.style.opacity = '';
+                                    sidebar.style.display = '';
+
+                                    // Ensure sidebar tab content is visible
+                                    const sidebarTabContent = document.getElementById('sidebarTabContent');
+                                    if (sidebarTabContent) {
+                                        sidebarTabContent.style.display = '';
+                                        sidebarTabContent.style.visibility = '';
+                                        sidebarTabContent.style.opacity = '';
+                                    }
+
+                                    // Remove overlay
+                                    const overlay = document.querySelector('.sidebar-overlay');
+                                    if (overlay) {
+                                        overlay.classList.remove('active');
+                                    }
+
+                                    // Restore body scroll
+                                    document.body.style.overflow = '';
+                                    document.body.classList.remove('sidebar-open');
+                                }
+                            } else {
+                                // Switched to mobile - apply mobile styles
+                                updateSidebarState();
+                            }
+                        }, 150);
+                    });
+
+                    // Check initial state
+                    updateSidebarState();
+
+                    // Handle overlay clicks
+                    document.addEventListener('click', function(e) {
+                        const overlay = document.querySelector('.sidebar-overlay');
+                        if (overlay && e.target === overlay && overlay.classList.contains('active')) {
+                            const sidebar = getActiveSidebar();
+                            if (sidebar) {
+                                sidebar.classList.remove('show-sidebar');
+                                updateSidebarState();
+                            }
                         }
                     });
-                }
 
-                // Search trigger functionality - scroll to DataTables search or focus search input
-                const searchTriggers = document.querySelectorAll('.search-trigger');
-                if (searchTriggers.length) {
-                    searchTriggers.forEach(trigger => {
-                        trigger.addEventListener('click', function(e) {
+                    // Ensure sidebar toggle button works
+                    if (sidebarToggler) {
+                        sidebarToggler.addEventListener('click', function(e) {
+                            // On desktop, let the default sidebar toggle behavior work
+                            if (window.innerWidth >= 992) {
+                                // Don't prevent default on desktop - let existing sidebar toggle handle it
+                                return;
+                            }
+
+                            // On mobile, handle toggle
                             e.preventDefault();
                             e.stopPropagation();
-                            this.setAttribute('aria-expanded', 'true');
-                            // Find DataTables search input on current page
-                            const dtSearchInput = document.querySelector('.dataTables_filter input');
-                            if (dtSearchInput) {
-                                dtSearchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                dtSearchInput.focus();
+                            const sidebar = getActiveSidebar();
+                            if (sidebar) {
+                                sidebar.classList.toggle('show-sidebar');
+                                updateSidebarState();
                             }
                         });
+                    }
+
+                    // Mobile collapse: document-level delegation (capture phase)
+                    let collapseHandledAt = 0;
+
+                    function handleMobileCollapse(e) {
+                        if (window.innerWidth >= 992) return;
+
+                        const trigger = e.target.closest('[data-bs-toggle="collapse"]');
+                        if (!trigger) return;
+
+                        const sidebarTabContent = document.getElementById('sidebarTabContent');
+                        if (!sidebarTabContent || !sidebarTabContent.contains(trigger)) return;
+
+                        if (!document.querySelector('.side-mini-panel.show-sidebar')) return;
+
+                        // Prevent double-fire from pointerup + click on touch devices
+                        const now = Date.now();
+                        if (now - collapseHandledAt < 400) return;
+                        collapseHandledAt = now;
+
+                        const targetId = (trigger.getAttribute('data-bs-target') || trigger.getAttribute('href') || '').replace(/^#/, '');
+                        if (!targetId) return;
+
+                        const targetElement = document.getElementById(targetId);
+                        if (!targetElement) return;
+
+                        if (typeof bootstrap !== 'undefined' && bootstrap.Collapse) {
+                            let bsCollapse = bootstrap.Collapse.getInstance(targetElement);
+                            if (!bsCollapse) {
+                                bsCollapse = new bootstrap.Collapse(targetElement, {
+                                    toggle: false
+                                });
+                            }
+                            bsCollapse.toggle();
+                            // Accordion: close other collapses in same sidebar-nav
+                            const parentNav = trigger.closest('.sidebar-nav');
+                            if (parentNav) {
+                                parentNav.querySelectorAll('.collapse').forEach(c => {
+                                    if (c !== targetElement && c.classList.contains('show')) {
+                                        const other = bootstrap.Collapse.getInstance(c);
+                                        if (other) other.hide();
+                                    }
+                                });
+                            }
+                            // Rotate arrow icon
+                            const icon = trigger.querySelector('.material-icons');
+                            if (icon) {
+                                setTimeout(() => {
+                                    icon.textContent = targetElement.classList.contains('show') ? 'keyboard_arrow_up' : 'keyboard_arrow_down';
+                                }, 350);
+                            }
+                            e.preventDefault();
+                            e.stopPropagation();
+                        }
+                    }
+
+                    document.addEventListener('pointerup', handleMobileCollapse, true);
+                    document.addEventListener('click', handleMobileCollapse, true);
+
+
+                    // Time format is already set in PHP, no need to override
+
+                    // Active tab indicator animation
+                    const activeTab = document.querySelector('.nav-link.active');
+                    const indicator = document.querySelector('.active-tab-indicator');
+
+                    if (activeTab && indicator) {
+                        updateIndicatorPosition(activeTab);
+
+                        // Listen for tab changes
+                        document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
+                            tab.addEventListener('shown.bs.tab', function(e) {
+                                updateIndicatorPosition(e.target);
+
+                                // Keep active state in sync between desktop and mobile tabs
+                                const targetId = e.target.getAttribute('href');
+                                document.querySelectorAll('[data-bs-toggle="tab"]').forEach(link => {
+                                    if (link.getAttribute('href') === targetId) {
+                                        link.classList.add('active');
+                                        link.setAttribute('aria-selected', 'true');
+                                    } else {
+                                        link.classList.remove('active');
+                                        link.setAttribute('aria-selected', 'false');
+                                    }
+                                });
+                            });
+                        });
+                    }
+
+                    function updateIndicatorPosition(element) {
+                        const rect = element.getBoundingClientRect();
+                        const parentRect = element.closest('.nav-container').getBoundingClientRect();
+
+                        indicator.style.width = `${rect.width}px`;
+                        indicator.style.transform = `translateX(${rect.left - parentRect.left}px)`;
+                    }
+
+                    // Enhanced dropdown interaction
+                    const financialDropdown = document.getElementById('financialDropdown');
+                    if (financialDropdown) {
+                        financialDropdown.addEventListener('focus', function() {
+                            this.setAttribute('aria-expanded', 'true');
+                        });
+
+                        financialDropdown.addEventListener('blur', function(e) {
+                            if (!this.parentElement.contains(e.relatedTarget)) {
+                                this.setAttribute('aria-expanded', 'false');
+                            }
+                        });
+                    }
+
+                    // Search trigger functionality - scroll to DataTables search or focus search input
+                    const searchTriggers = document.querySelectorAll('.search-trigger');
+                    if (searchTriggers.length) {
+                        searchTriggers.forEach(trigger => {
+                            trigger.addEventListener('click', function(e) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                this.setAttribute('aria-expanded', 'true');
+                                // Find DataTables search input on current page
+                                const dtSearchInput = document.querySelector('.dataTables_filter input');
+                                if (dtSearchInput) {
+                                    dtSearchInput.scrollIntoView({
+                                        behavior: 'smooth',
+                                        block: 'center'
+                                    });
+                                    dtSearchInput.focus();
+                                }
+                            });
+                        });
+                    }
+
+                    // Keyboard navigation enhancement
+                    document.querySelectorAll('.nav-link, .dropdown-item').forEach(item => {
+                        item.addEventListener('keydown', function(e) {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                this.click();
+                            }
+                        });
+                    });
+
+                    // Mobile tab handling - ensure Bootstrap tabs work
+                    const mobileTabs = document.querySelectorAll('.mobile-tab-link[data-bs-toggle="tab"]');
+                    mobileTabs.forEach(tab => {
+                        tab.addEventListener('click', function(e) {
+                            const href = this.getAttribute('href');
+                            if (!href || href === '#') {
+                                e.preventDefault();
+                                return;
+                            }
+
+                            // Find corresponding desktop tab and trigger it
+                            const desktopTab = document.querySelector(`#mainNavbar .nav-link[href="${href}"]`);
+                            if (desktopTab) {
+                                e.preventDefault();
+                                desktopTab.click();
+                            } else {
+                                // If no desktop tab found, try Bootstrap tab directly
+                                if (typeof bootstrap !== 'undefined' && bootstrap.Tab) {
+                                    try {
+                                        const tabElement = new bootstrap.Tab(this);
+                                        tabElement.show();
+                                    } catch (err) {
+                                        console.log('Bootstrap tab error:', err);
+                                    }
+                                }
+                            }
+                        });
+                    });
+                });
+
+                // Notification functions
+                const notificationMarkReadUrlTemplate = '{{ route("admin.notifications.mark-read-redirect", ["id" => "__ID__"]) }}';
+                const notificationMarkAllReadUrl = '{{ route("admin.notifications.mark-all-read") }}';
+
+                function markAsRead(notificationId) {
+                    console.log('[Notification][Step 1] markAsRead called', {
+                        notificationId,
+                        currentUrl: window.location.href
+                    });
+                    const endpoint = '/admin/notifications/mark-read-redirect/' + notificationId;
+                    console.log('[Notification][Step 2] Calling endpoint', {
+                        endpoint
+                    });
+                    fetch(endpoint, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                            }
+                        })
+                        .then(response => {
+                            console.log('[Notification][Step 3] HTTP response', {
+                                status: response.status,
+                                ok: response.ok,
+                                redirected: response.redirected,
+                                responseUrl: response.url
+                            });
+                            return response.json().then(data => ({
+                                ok: response.ok,
+                                status: response.status,
+                                data
+                            }));
+                        })
+                        .then(({
+                            ok,
+                            status,
+                            data
+                        }) => {
+                            console.log('[Notification][Step 4] Controller JSON payload', {
+                                ok,
+                                status,
+                                data
+                            });
+                            if (data.success && data.redirect_url) {
+                                // Redirect to the appropriate module view
+                                console.log('[Notification][Step 5] Redirecting to redirect_url', {
+                                    redirectUrl: data.redirect_url
+                                });
+                                window.location.href = data.redirect_url;
+                            } else if (data.success) {
+                                // Fallback: reload if no redirect URL
+                                console.log('[Notification][Step 5] success=true but redirect_url missing, triggering reload');
+                                // location.reload(); //ye redirect ho rha h 
+                            } else {
+                                console.log('[Notification][Step 5] Failed to mark notification as read', data);
+                            }
+                        })
+                        .catch(error => {
+                            console.log('[Notification][Step X] Exception in markAsRead', error);
+                            // Fallback to dashboard on error
+                            console.log('[Notification][Fallback] Redirecting to dashboard due to error');
+                            // window.location.href = '{{ route("admin.dashboard") }}';
+                        });
+                }
+
+                // Notification click (avoid inline onclick to prevent Blade JS parsing issues)
+                document.addEventListener('click', function(e) {
+                    const target = e.target && e.target.closest ? e.target.closest('[data-notification-id]') : null;
+                    if (!target) return;
+
+                    const id = target.getAttribute('data-notification-id');
+                    if (!id) return;
+
+                    console.log('[Notification][Step 0] Notification clicked', {
+                        id,
+                        elementClass: target.className
+                    });
+                    markAsRead(id);
+                });
+
+                function applyMarkAllNotificationsReadUI() {
+                    document.querySelectorAll('.notification-badge').forEach(function (el) {
+                        el.remove();
+                    });
+                    document.querySelectorAll('.js-notification-mark-all-read').forEach(function (btn) {
+                        btn.classList.add('d-none');
+                        btn.setAttribute('hidden', 'hidden');
+                    });
+                    document.querySelectorAll('#notificationList .notification-item, #notificationListMobile .notification-item').forEach(function (el) {
+                        el.classList.remove('notification-item-unread');
+                    });
+                    document.querySelectorAll('#notificationList .notification-new-tag, #notificationListMobile .notification-new-tag').forEach(function (el) {
+                        el.remove();
                     });
                 }
 
-                // Keyboard navigation enhancement
-                document.querySelectorAll('.nav-link, .dropdown-item').forEach(item => {
-                    item.addEventListener('keydown', function(e) {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            this.click();
-                        }
-                    });
-                });
-
-                // Mobile tab handling - ensure Bootstrap tabs work
-                const mobileTabs = document.querySelectorAll('.mobile-tab-link[data-bs-toggle="tab"]');
-                mobileTabs.forEach(tab => {
-                    tab.addEventListener('click', function(e) {
-                        const href = this.getAttribute('href');
-                        if (!href || href === '#') {
-                            e.preventDefault();
-                            return;
-                        }
-                        
-                        // Find corresponding desktop tab and trigger it
-                        const desktopTab = document.querySelector(`#mainNavbar .nav-link[href="${href}"]`);
-                        if (desktopTab) {
-                            e.preventDefault();
-                            desktopTab.click();
-                        } else {
-                            // If no desktop tab found, try Bootstrap tab directly
-                            if (typeof bootstrap !== 'undefined' && bootstrap.Tab) {
-                                try {
-                                    const tabElement = new bootstrap.Tab(this);
-                                    tabElement.show();
-                                } catch(err) {
-                                    console.log('Bootstrap tab error:', err);
-                                }
+                function markAllAsRead(ev) {
+                    if (ev) {
+                        ev.preventDefault();
+                        ev.stopPropagation();
+                    }
+                    fetch(notificationMarkAllReadUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'X-Requested-With': 'XMLHttpRequest'
                             }
-                        }
-                    });
-                });
-            });
-
-            // Notification functions
-            const notificationMarkReadUrlTemplate = '{{ route("admin.notifications.mark-read-redirect", ["id" => "__ID__"]) }}';
-            const notificationMarkAllReadUrl = '{{ route("admin.notifications.mark-all-read") }}';
-            function markAsRead(notificationId) {
-                console.log('[Notification][Step 1] markAsRead called', { notificationId, currentUrl: window.location.href });
-                const endpoint = '/admin/notifications/mark-read-redirect/' + notificationId;
-                console.log('[Notification][Step 2] Calling endpoint', { endpoint });
-                fetch(endpoint, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                        }
-                    })
-                    .then(response => {
-                        console.log('[Notification][Step 3] HTTP response', {
-                            status: response.status,
-                            ok: response.ok,
-                            redirected: response.redirected,
-                            responseUrl: response.url
-                        });
-                        return response.json().then(data => ({ ok: response.ok, status: response.status, data }));
-                    })
-                    .then(({ ok, status, data }) => {
-                        console.log('[Notification][Step 4] Controller JSON payload', { ok, status, data });
-                        if (data.success && data.redirect_url) {
-                            // Redirect to the appropriate module view
-                            console.log('[Notification][Step 5] Redirecting to redirect_url', { redirectUrl: data.redirect_url });
-                            window.location.href = data.redirect_url;
-                        } else if (data.success) {
-                            // Fallback: reload if no redirect URL
-                            console.log('[Notification][Step 5] success=true but redirect_url missing, triggering reload');
-                            // location.reload(); //ye redirect ho rha h 
-                        } else {
-                            console.log('[Notification][Step 5] Failed to mark notification as read', data);
-                        }
-                    })
-                    .catch(error => {
-                        console.log('[Notification][Step X] Exception in markAsRead', error);
-                        // Fallback to dashboard on error
-                        console.log('[Notification][Fallback] Redirecting to dashboard due to error');
-                        // window.location.href = '{{ route("admin.dashboard") }}';
-                    });
-            }
-
-            // Notification click (avoid inline onclick to prevent Blade JS parsing issues)
-            document.addEventListener('click', function (e) {
-                const target = e.target && e.target.closest ? e.target.closest('[data-notification-id]') : null;
-                if (!target) return;
-
-                const id = target.getAttribute('data-notification-id');
-                if (!id) return;
-
-                console.log('[Notification][Step 0] Notification clicked', {
-                    id,
-                    elementClass: target.className
-                });
-                markAsRead(id);
-            });
-
-            function markAllAsRead() {
-                const markAllEndpoint = '/admin/notifications/mark-all-read';
-                console.log('[Notification][AllRead][Step 1] markAllAsRead called', { endpoint: markAllEndpoint });
-                fetch(markAllEndpoint, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                        }
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        console.log('[Notification][AllRead][Step 2] Controller JSON payload', data);
-                        if (data.success) {
-                            console.log('[Notification][AllRead][Step 3] Reloading page after success');
-                            location.reload();
-                        }
-                    })
-                    .catch(error => console.error('[Notification][AllRead][Step X] Exception', error));
-            }
+                        })
+                        .then(function (response) {
+                            return response.json().then(function (data) {
+                                return { ok: response.ok, data: data };
+                            });
+                        })
+                        .then(function (result) {
+                            if (result.ok && result.data && result.data.success) {
+                                applyMarkAllNotificationsReadUI();
+                            }
+                        })
+                        .catch(function () {});
+                }
             </script>
         </nav>
     </div>
@@ -1382,62 +1533,61 @@
 
 <!-- 🧠 Search Toggle Script -->
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll("time").forEach(function(el) {
-        const dt = new Date(el.getAttribute("datetime"));
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll("time").forEach(function(el) {
+            const dt = new Date(el.getAttribute("datetime"));
 
-        const day = String(dt.getDate()).padStart(2, '0');
-        const month = String(dt.getMonth() + 1).padStart(2, '0'); // JS months start at 0
-        const year = dt.getFullYear();
+            const day = String(dt.getDate()).padStart(2, '0');
+            const month = String(dt.getMonth() + 1).padStart(2, '0'); // JS months start at 0
+            const year = dt.getFullYear();
 
-        const hours = String(dt.getHours()).padStart(2, '0');
-        const minutes = String(dt.getMinutes()).padStart(2, '0');
-        const seconds = String(dt.getSeconds()).padStart(2, '0');
+            const hours = String(dt.getHours()).padStart(2, '0');
+            const minutes = String(dt.getMinutes()).padStart(2, '0');
+            const seconds = String(dt.getSeconds()).padStart(2, '0');
 
-        el.textContent = `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
+            el.textContent = `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
+        });
     });
-});
 </script>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const toggleBtn = document.getElementById('searchToggleBtn');
-    const searchBox = document.getElementById('searchContainer');
-    const closeBtn = document.getElementById('closeSearchBtn');
-    const searchInput = document.getElementById('tableSearchInput');
+    document.addEventListener('DOMContentLoaded', function() {
+        const toggleBtn = document.getElementById('searchToggleBtn');
+        const searchBox = document.getElementById('searchContainer');
+        const closeBtn = document.getElementById('closeSearchBtn');
+        const searchInput = document.getElementById('tableSearchInput');
 
-    if (toggleBtn && searchBox) {
-        toggleBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            searchBox.classList.toggle('show');
-            if (searchBox.classList.contains('show') && searchInput) {
-                searchInput.focus();
-            } else if (searchInput) {
+        if (toggleBtn && searchBox) {
+            toggleBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                searchBox.classList.toggle('show');
+                if (searchBox.classList.contains('show') && searchInput) {
+                    searchInput.focus();
+                } else if (searchInput) {
+                    searchInput.value = '';
+                }
+            });
+        }
+        if (closeBtn && searchBox && searchInput) {
+            closeBtn.addEventListener('click', () => {
+                searchBox.classList.remove('show');
                 searchInput.value = '';
-            }
-        });
-    }
-    if (closeBtn && searchBox && searchInput) {
-        closeBtn.addEventListener('click', () => {
-            searchBox.classList.remove('show');
-            searchInput.value = '';
-        });
-    }
-    if (searchBox && toggleBtn) {
-        document.addEventListener('click', (e) => {
-            if (!searchBox.contains(e.target) && !toggleBtn.contains(e.target)) {
+            });
+        }
+        if (searchBox && toggleBtn) {
+            document.addEventListener('click', (e) => {
+                if (!searchBox.contains(e.target) && !toggleBtn.contains(e.target)) {
+                    searchBox.classList.remove('show');
+                }
+            });
+        }
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && searchBox) {
                 searchBox.classList.remove('show');
             }
         });
-    }
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && searchBox) {
-            searchBox.classList.remove('show');
-        }
     });
-});
-
 </script>
 
 <!-- Fallback Tab Switcher (if Bootstrap JS not active) -->
@@ -1447,239 +1597,290 @@ document.addEventListener('DOMContentLoaded', function() {
     window.SARGAM_DASHBOARD_URL = @json(route('admin.dashboard'));
 </script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Include both desktop and mobile tabs
-    const tabLinks = document.querySelectorAll('[data-bs-toggle="tab"]');
-    const panes = document.querySelectorAll('#mainNavbarContent .tab-pane');
+    document.addEventListener('DOMContentLoaded', function() {
+        // Include both desktop and mobile tabs
+        const tabLinks = document.querySelectorAll('[data-bs-toggle="tab"]');
+        const panes = document.querySelectorAll('#mainNavbarContent .tab-pane');
 
-    function showPane(targetId) {
-        if (!targetId || targetId === '#') return; // Skip empty hrefs
+        function showPane(targetId) {
+            if (!targetId || targetId === '#') return; // Skip empty hrefs
 
-        // If the target pane has no server-rendered section on this page,
-        // keep current body content as-is; still switch header/sidebar tab state.
-        const targetPaneId = getMainContentPaneId(targetId);
-        const targetPane = targetPaneId ? document.getElementById(targetPaneId) : null;
-        const canSwitchBodyPane = !!(targetPane && targetPane.children.length > 0);
+            // If the target pane has no server-rendered section on this page,
+            // keep current body content as-is; still switch header/sidebar tab state.
+            const targetPaneId = getMainContentPaneId(targetId);
+            const targetPane = targetPaneId ? document.getElementById(targetPaneId) : null;
+            const canSwitchBodyPane = !!(targetPane && targetPane.children.length > 0);
 
-        if (canSwitchBodyPane) {
-            panes.forEach(p => {
-                if ('#' + p.id === targetId) {
-                    p.classList.add('show', 'active');
+            if (canSwitchBodyPane) {
+                panes.forEach(p => {
+                    if ('#' + p.id === targetId) {
+                        p.classList.add('show', 'active');
+                    } else {
+                        p.classList.remove('show', 'active');
+                    }
+                });
+            }
+
+            // Update all tabs (desktop and mobile)
+            tabLinks.forEach(l => {
+                const href = l.getAttribute('href');
+                if (href === targetId) {
+                    l.classList.add('active');
+                    l.setAttribute('aria-selected', 'true');
                 } else {
-                    p.classList.remove('show', 'active');
+                    l.classList.remove('active');
+                    l.setAttribute('aria-selected', 'false');
                 }
             });
+
+            // Save the active tab to localStorage
+            localStorage.setItem('activeMainTab', targetId);
         }
-        
-        // Update all tabs (desktop and mobile)
-        tabLinks.forEach(l => {
-            const href = l.getAttribute('href');
-            if (href === targetId) {
-                l.classList.add('active');
-                l.setAttribute('aria-selected', 'true');
-            } else {
-                l.classList.remove('active');
-                l.setAttribute('aria-selected', 'false');
+
+        function getMainContentPaneId(targetId) {
+            const map = {
+                '#home': 'home',
+                '#tab-setup': 'tab-setup',
+                '#tab-communications': 'tab-communications',
+                '#tab-academics': 'tab-academics',
+                '#tab-material-management': 'tab-material-management'
+            };
+            return map[targetId] || null;
+        }
+
+        function isMainContentPaneEmpty(targetId) {
+            const pid = getMainContentPaneId(targetId);
+            if (!pid) return true;
+            const pane = document.querySelector('#mainNavbarContent #' + pid);
+            if (!pane) return true;
+            return pane.children.length === 0;
+        }
+
+        /**
+         * After a tab switch, show the first mini-nav submenu so the sidebar is never blank.
+         */
+        function activateDefaultSubmenuForPane(targetId) {
+            const sidebarTabMap = {
+                '#home': '#sidebar-home',
+                '#tab-setup': '#sidebar-setup',
+                '#tab-communications': '#sidebar-communications',
+                '#tab-academics': '#sidebar-academics',
+                '#tab-material-management': '#sidebar-purchase-order'
+            };
+            const sidebarPaneSel = sidebarTabMap[targetId];
+            if (!sidebarPaneSel) return;
+
+            const pane = document.querySelector('#sidebarTabContent ' + sidebarPaneSel + '.tab-pane');
+            if (!pane) return;
+
+            const storageKey = 'active-mini-nav-' + (pane.id || 'global');
+            let storedId = localStorage.getItem(storageKey);
+            let itemEl = null;
+            if (storedId) {
+                try {
+                    itemEl = pane.querySelector('#' + (typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(storedId) : storedId.replace(/([#.;?+*^$[\]\\(){}|\-])/g, '\\$1')));
+                } catch (err) {
+                    itemEl = null;
+                }
             }
-        });
-        
-        // Save the active tab to localStorage
-        localStorage.setItem('activeMainTab', targetId);
-    }
-
-    function getMainContentPaneId(targetId) {
-        const map = {
-            '#home': 'home',
-            '#tab-setup': 'tab-setup',
-            '#tab-communications': 'tab-communications',
-            '#tab-academics': 'tab-academics',
-            '#tab-material-management': 'tab-material-management'
-        };
-        return map[targetId] || null;
-    }
-
-    function isMainContentPaneEmpty(targetId) {
-        const pid = getMainContentPaneId(targetId);
-        if (!pid) return true;
-        const pane = document.querySelector('#mainNavbarContent #' + pid);
-        if (!pane) return true;
-        return pane.children.length === 0;
-    }
-
-    /**
-     * After a tab switch, show the first mini-nav submenu so the sidebar is never blank.
-     */
-    function activateDefaultSubmenuForPane(targetId) {
-        const sidebarTabMap = {
-            '#home': '#sidebar-home',
-            '#tab-setup': '#sidebar-setup',
-            '#tab-communications': '#sidebar-communications',
-            '#tab-academics': '#sidebar-academics',
-            '#tab-material-management': '#sidebar-purchase-order'
-        };
-        const sidebarPaneSel = sidebarTabMap[targetId];
-        if (!sidebarPaneSel) return;
-
-        const pane = document.querySelector('#sidebarTabContent ' + sidebarPaneSel + '.tab-pane');
-        if (!pane) return;
-
-        const storageKey = 'active-mini-nav-' + (pane.id || 'global');
-        let storedId = localStorage.getItem(storageKey);
-        let itemEl = null;
-        if (storedId) {
-            try {
-                itemEl = pane.querySelector('#' + (typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(storedId) : storedId.replace(/([#.;?+*^$[\]\\(){}|\-])/g, '\\$1')));
-            } catch (err) {
-                itemEl = null;
+            if (!itemEl) {
+                itemEl = pane.querySelector('.mini-nav .mini-nav-item[id]') || pane.querySelector('.mini-nav .mini-nav-item');
             }
-        }
-        if (!itemEl) {
-            itemEl = pane.querySelector('.mini-nav .mini-nav-item[id]') || pane.querySelector('.mini-nav .mini-nav-item');
-        }
-        if (!itemEl || !itemEl.id) return;
+            if (!itemEl || !itemEl.id) return;
 
-        pane.querySelectorAll('.mini-nav .mini-nav-item').forEach(el => el.classList.remove('selected'));
-        itemEl.classList.add('selected');
+            pane.querySelectorAll('.mini-nav .mini-nav-item').forEach(el => el.classList.remove('selected'));
+            itemEl.classList.add('selected');
 
-        const targetMenuId = 'menu-right-' + itemEl.id;
-        const allMenus = pane.querySelectorAll('.sidebarmenu nav');
-        allMenus.forEach(nav => {
-            nav.classList.remove('d-block');
-            nav.style.display = 'none';
-        });
-        const safeId = targetMenuId.replace(/([#.;?+*^$[\]\\(){}|\-])/g, '\\$1');
-        const targetMenu = pane.querySelector('#' + safeId);
-        if (targetMenu) {
-            targetMenu.classList.add('d-block');
-            targetMenu.style.display = 'block';
-            document.body.setAttribute('data-sidebartype', 'full');
-        }
-
-    }
-
-    // Handle clicks on all tabs (desktop and mobile)
-    tabLinks.forEach(link => {
-        link.addEventListener('click', function(e) {
-            const target = this.getAttribute('href');
-            if (!target || target === '#') {
-                e.preventDefault();
-                return; // Skip tabs without proper href
+            const targetMenuId = 'menu-right-' + itemEl.id;
+            const allMenus = pane.querySelectorAll('.sidebarmenu nav');
+            allMenus.forEach(nav => {
+                nav.classList.remove('d-block');
+                nav.style.display = 'none';
+            });
+            const safeId = targetMenuId.replace(/([#.;?+*^$[\]\\(){}|\-])/g, '\\$1');
+            const targetMenu = pane.querySelector('#' + safeId);
+            if (targetMenu) {
+                targetMenu.classList.add('d-block');
+                targetMenu.style.display = 'block';
+                document.body.setAttribute('data-sidebartype', 'full');
             }
 
-            // From Setup (or any non-Home main tab), "Home" must load the dashboard route
-            // so the main content area is not an empty/stale #home pane.
-            // Note: some setup-only pages (e.g. admin.mess.*) used to leave $activeNavTab as #home;
-            // also detect "effective" setup when #tab-setup has content but #home does not.
-            if (target === '#home' && window.SARGAM_DASHBOARD_URL) {
-                const routeTab = window.SARGAM_ACTIVE_NAV_TAB || '#home';
-                const setupPane = document.querySelector('#mainNavbarContent #tab-setup.tab-pane');
-                const homePane = document.querySelector('#mainNavbarContent #home.tab-pane');
-                const setupHasContent = !!(setupPane && setupPane.children.length > 0);
-                const homeHasContent = !!(homePane && homePane.children.length > 0);
-                const effectiveSetup = routeTab !== '#home' || (setupHasContent && !homeHasContent);
-                if (effectiveSetup) {
+        }
+
+        // Handle clicks on all tabs (desktop and mobile)
+        tabLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                const target = this.getAttribute('href');
+                if (!target || target === '#') {
                     e.preventDefault();
-                    window.location.href = window.SARGAM_DASHBOARD_URL;
-                    return;
+                    return; // Skip tabs without proper href
                 }
-            }
 
-            e.preventDefault();
-            showPane(target);
-            history.replaceState(null, '', target);
-            // Defer so #sidebarTabContent sync (other listeners) runs first
-            setTimeout(function() { activateDefaultSubmenuForPane(target); }, 0);
+                // From Setup (or any non-Home main tab), "Home" must load the dashboard route
+                // so the main content area is not an empty/stale #home pane.
+                // Note: some setup-only pages (e.g. admin.mess.*) used to leave $activeNavTab as #home;
+                // also detect "effective" setup when #tab-setup has content but #home does not.
+                if (target === '#home' && window.SARGAM_DASHBOARD_URL) {
+                    const routeTab = window.SARGAM_ACTIVE_NAV_TAB || '#home';
+                    const setupPane = document.querySelector('#mainNavbarContent #tab-setup.tab-pane');
+                    const homePane = document.querySelector('#mainNavbarContent #home.tab-pane');
+                    const setupHasContent = !!(setupPane && setupPane.children.length > 0);
+                    const homeHasContent = !!(homePane && homePane.children.length > 0);
+                    const effectiveSetup = routeTab !== '#home' || (setupHasContent && !homeHasContent);
+                    if (effectiveSetup) {
+                        e.preventDefault();
+                        window.location.href = window.SARGAM_DASHBOARD_URL;
+                        return;
+                    }
+                }
+
+                e.preventDefault();
+                showPane(target);
+                history.replaceState(null, '', target);
+                // Defer so #sidebarTabContent sync (other listeners) runs first
+                setTimeout(function() {
+                    activateDefaultSubmenuForPane(target);
+                }, 0);
+            });
         });
-    });
 
-    // Determine initial tab.
-    // Prefer tab inferred from current URL + sidebar links,
-    // then server route tab, then localStorage fallback.
-    function inferTabFromSidebarByUrl() {
-        const current = new URL(window.location.href);
-        const currentPath = current.pathname.replace(/\/+$/, '');
-        const currentQuery = current.search || '';
-        const sidebarPanes = [
-            { pane: '#sidebar-home', tab: '#home' },
-            { pane: '#sidebar-setup', tab: '#tab-setup' },
-            { pane: '#sidebar-communications', tab: '#tab-communications' },
-            { pane: '#sidebar-academics', tab: '#tab-academics' },
-            { pane: '#sidebar-purchase-order', tab: '#tab-material-management' }
-        ];
+        // Determine initial tab.
+        // Prefer tab inferred from current URL + sidebar links,
+        // then server route tab, then localStorage fallback.
+        function inferTabFromSidebarByUrl() {
+            const current = new URL(window.location.href);
+            let currentPath = current.pathname.replace(/\/+$/, '');
+            if (!currentPath) currentPath = '/';
+            const currentQuery = current.search || '';
+            const sidebarPanes = [{
+                    pane: '#sidebar-home',
+                    tab: '#home'
+                },
+                {
+                    pane: '#sidebar-setup',
+                    tab: '#tab-setup'
+                },
+                {
+                    pane: '#sidebar-communications',
+                    tab: '#tab-communications'
+                },
+                {
+                    pane: '#sidebar-academics',
+                    tab: '#tab-academics'
+                },
+                {
+                    pane: '#sidebar-purchase-order',
+                    tab: '#tab-material-management'
+                }
+            ];
 
-        for (const item of sidebarPanes) {
-            const links = document.querySelectorAll(`${item.pane} .sidebar-link[href]`);
-            for (const link of links) {
-                if (!link.href) continue;
-                const target = new URL(link.href, window.location.origin);
-                const targetPath = target.pathname.replace(/\/+$/, '');
-                const targetQuery = target.search || '';
-                if (targetPath === currentPath && targetQuery === currentQuery) {
-                    return item.tab;
+            function isSidebarNavLink(link) {
+                const href = link.getAttribute('href');
+                if (!href || href === '#' || href === 'javascript:void(0)') return false;
+                if (href.charAt(0) === '#') return false;
+                if (link.getAttribute('data-bs-toggle') === 'collapse') return false;
+                return true;
+            }
+
+            function normalizePanePath(pathname) {
+                let p = pathname.replace(/\/+$/, '');
+                if (!p) p = '/';
+                return p;
+            }
+
+            for (const item of sidebarPanes) {
+                const links = document.querySelectorAll(`${item.pane} .sidebar-link[href]`);
+                for (const link of links) {
+                    if (!isSidebarNavLink(link)) continue;
+                    const target = new URL(link.href, window.location.origin);
+                    const targetPath = normalizePanePath(target.pathname);
+                    const targetQuery = target.search || '';
+                    if (targetPath === currentPath && targetQuery === currentQuery) {
+                        return item.tab;
+                    }
                 }
             }
+
+            // GET filters add query string; sidebar links are usually path-only. Match path, prefer non-Home panes first.
+            const pathMatchOrder = [...sidebarPanes].sort(function(a, b) {
+                if (a.tab === '#home') return 1;
+                if (b.tab === '#home') return -1;
+                return 0;
+            });
+            for (const item of pathMatchOrder) {
+                const links = document.querySelectorAll(`${item.pane} .sidebar-link[href]`);
+                for (const link of links) {
+                    if (!isSidebarNavLink(link)) continue;
+                    const target = new URL(link.href, window.location.origin);
+                    const targetPath = normalizePanePath(target.pathname);
+                    const targetQuery = target.search || '';
+                    if (targetPath === currentPath && !targetQuery && currentQuery) {
+                        return item.tab;
+                    }
+                }
+            }
+
+            // create/edit/show: longest pathname prefix wins (prefer non-Home on ties)
+            let bestTab = null;
+            let bestLen = -1;
+            for (const item of pathMatchOrder) {
+                const links = document.querySelectorAll(`${item.pane} .sidebar-link[href]`);
+                for (const link of links) {
+                    if (!isSidebarNavLink(link)) continue;
+                    const target = new URL(link.href, window.location.origin);
+                    const targetPath = normalizePanePath(target.pathname);
+                    if (currentPath !== targetPath && !currentPath.startsWith(targetPath + '/')) {
+                        continue;
+                    }
+                    if (targetPath.length > bestLen) {
+                        bestLen = targetPath.length;
+                        bestTab = item.tab;
+                    }
+                }
+            }
+            return bestTab;
         }
 
-        // GET filters add query string; sidebar links are usually path-only. Match path, prefer non-Home panes first.
-        const pathMatchOrder = [...sidebarPanes].sort(function (a, b) {
-            if (a.tab === '#home') return 1;
-            if (b.tab === '#home') return -1;
-            return 0;
-        });
-        for (const item of pathMatchOrder) {
-            const links = document.querySelectorAll(`${item.pane} .sidebar-link[href]`);
-            for (const link of links) {
-                if (!link.href) continue;
-                const target = new URL(link.href, window.location.origin);
-                const targetPath = target.pathname.replace(/\/+$/, '');
-                const targetQuery = target.search || '';
-                if (targetPath === currentPath && !targetQuery && currentQuery) {
-                    return item.tab;
-                }
-            }
-        }
+        const routeTab = window.SARGAM_ACTIVE_NAV_TAB || '#home';
+        const savedTab = localStorage.getItem('activeMainTab');
+        const inferredTab = inferTabFromSidebarByUrl();
+        const hasRouteTab = !!document.querySelector(`[data-bs-toggle="tab"][href="${routeTab}"]`);
+        const hasSavedTab = !!document.querySelector(`[data-bs-toggle="tab"][href="${savedTab}"]`);
+        const hasInferredTab = !!document.querySelector(`[data-bs-toggle="tab"][href="${inferredTab}"]`);
+        let initial = '#home';
 
-        return null;
-    }
-
-    const routeTab = window.SARGAM_ACTIVE_NAV_TAB || '#home';
-    const savedTab = localStorage.getItem('activeMainTab');
-    const inferredTab = inferTabFromSidebarByUrl();
-    const hasRouteTab = !!document.querySelector(`[data-bs-toggle="tab"][href="${routeTab}"]`);
-    const hasSavedTab = !!document.querySelector(`[data-bs-toggle="tab"][href="${savedTab}"]`);
-    const hasInferredTab = !!document.querySelector(`[data-bs-toggle="tab"][href="${inferredTab}"]`);
-    let initial = '#home';
-
-    if (hasInferredTab) {
-        initial = inferredTab;
-        console.log('Initial tab from sidebar URL match:', initial);
-    } else if (hasRouteTab) {
-        initial = routeTab;
-        console.log('Initial tab from route:', initial);
-    } else if (hasSavedTab) {
-        initial = savedTab;
-        console.log('Initial tab from storage fallback:', initial);
-    } else {
-        console.log('Initial tab fallback to home');
-    }
-    
-    showPane(initial);
-    
-    // Sync mobile tabs with initial state
-    const allTabs = document.querySelectorAll('[data-bs-toggle="tab"]');
-    allTabs.forEach(tab => {
-        const href = tab.getAttribute('href');
-        if (href === initial) {
-            tab.classList.add('active');
-            tab.setAttribute('aria-selected', 'true');
+        if (hasInferredTab) {
+            initial = inferredTab;
+            console.log('Initial tab from sidebar URL match:', initial);
+        } else if (hasRouteTab) {
+            initial = routeTab;
+            console.log('Initial tab from route:', initial);
+        } else if (hasSavedTab) {
+            initial = savedTab;
+            console.log('Initial tab from storage fallback:', initial);
         } else {
-            tab.classList.remove('active');
-            tab.setAttribute('aria-selected', 'false');
+            console.log('Initial tab fallback to home');
         }
+
+        showPane(initial);
+
+        // Sync mobile tabs with initial state
+        const allTabs = document.querySelectorAll('[data-bs-toggle="tab"]');
+        allTabs.forEach(tab => {
+            const href = tab.getAttribute('href');
+            if (href === initial) {
+                tab.classList.add('active');
+                tab.setAttribute('aria-selected', 'true');
+            } else {
+                tab.classList.remove('active');
+                tab.setAttribute('aria-selected', 'false');
+            }
+        });
+
+        // Apply default submenu/content for initial tab (after sidebar init)
+        setTimeout(function() {
+            activateDefaultSubmenuForPane(initial);
+        }, 0);
     });
-    
-    // Apply default submenu/content for initial tab (after sidebar init)
-    setTimeout(function() { activateDefaultSubmenuForPane(initial); }, 0);
-});
 </script>
 <!-- 🌟 Header End -->

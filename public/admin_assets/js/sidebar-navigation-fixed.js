@@ -3,6 +3,79 @@
  * Properly connects sidebar menu links to header tabs and body content
  */
 
+(function (global) {
+    'use strict';
+
+    function normalizePathname(urlInput) {
+        try {
+            var u = typeof urlInput === 'string' ? new URL(urlInput, global.location.origin) : urlInput;
+            var p = u.pathname || '/';
+            if (p.length > 1 && p.charAt(p.length - 1) === '/') {
+                p = p.slice(0, -1);
+            }
+            return p;
+        } catch (e) {
+            return '';
+        }
+    }
+
+    function isSidebarPageNavLink(link) {
+        var href = link.getAttribute('href');
+        if (!href || href === '#' || href === 'javascript:void(0)') {
+            return false;
+        }
+        if (href.charAt(0) === '#') {
+            return false;
+        }
+        if (link.getAttribute('data-bs-toggle') === 'collapse') {
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Per-nav: clear .active, then mark the best .sidebar-link for the current URL.
+     * Uses exact match or longest pathname prefix so index + create/edit/show stay highlighted.
+     *
+     * @param {NodeListOf<Element>|Element[]} sidebarMenus - .sidebarmenu nav elements
+     */
+    global.sargamMarkSidebarActiveLinks = function (sidebarMenus) {
+        if (!sidebarMenus || !sidebarMenus.length) {
+            return;
+        }
+        var currentPath = normalizePathname(global.location.href);
+        Array.prototype.forEach.call(sidebarMenus, function (nav) {
+            var links = Array.prototype.slice.call(nav.querySelectorAll('.sidebar-link[href]')).filter(isSidebarPageNavLink);
+            links.forEach(function (l) {
+                l.classList.remove('active');
+            });
+            var best = null;
+            var bestLen = -1;
+            links.forEach(function (link) {
+                var linkPath = '';
+                try {
+                    linkPath = normalizePathname(link.href);
+                } catch (e2) {
+                    return;
+                }
+                if (!linkPath) {
+                    return;
+                }
+                if (currentPath !== linkPath && currentPath.indexOf(linkPath + '/') !== 0) {
+                    return;
+                }
+                if (linkPath.length > bestLen) {
+                    bestLen = linkPath.length;
+                    best = link;
+                }
+            });
+            if (best) {
+                best.classList.add('active');
+            }
+        });
+    };
+})(typeof window !== 'undefined' ? window : this);
+
 document.addEventListener('DOMContentLoaded', function() {
     'use strict';
     

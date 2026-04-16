@@ -2,7 +2,7 @@
 
 @section('title', 'Birthday Wishes')
 
-@section('content')
+@section('communications_content')
 <style>
 .birthday-wish-page .birthday-person-card {
     border: 1px solid rgba(var(--bs-primary-rgb), 0.15);
@@ -60,6 +60,36 @@ $senderName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
 
 <div class="container-fluid px-3 px-lg-4 birthday-wish-page">
     <x-breadcrum title="Birthday Wishes" />
+
+    @if(!empty($isMyBirthday))
+    <div class="card border-0 rounded-4 shadow-sm mb-4 overflow-hidden"
+        style="background: linear-gradient(135deg, #e91e63 0%, #9c27b0 45%, #673ab7 100%);">
+        <div class="card-body px-4 py-3 text-white">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div class="d-flex align-items-center gap-2 min-w-0">
+                    <span class="material-icons material-symbols-rounded flex-shrink-0" style="font-size: 2rem;">cake</span>
+                    <div class="min-w-0">
+                        <div class="fw-bold">Happy Birthday, {{ $senderName }}!</div>
+                        <div class="small text-white-50">Wishes from colleagues appear below — open to see who wrote and reply.</div>
+                    </div>
+                </div>
+                @if(($myBirthdayWishCount ?? 0) > 0)
+                <button type="button"
+                    class="btn btn-light rounded-pill text-primary fw-semibold shadow-sm flex-shrink-0"
+                    data-bs-toggle="modal" data-bs-target="#birthdayWishesReceivedModal">
+                    <span class="material-icons material-symbols-rounded align-middle" style="font-size: 18px;">redeem</span>
+                    {{ $myBirthdayWishCount }} {{ $myBirthdayWishCount === 1 ? 'wish' : 'wishes' }} received today — view &amp; reply
+                </button>
+                @else
+                <span class="small text-white-50 flex-shrink-0">No wishes yet today — check back later.</span>
+                @endif
+            </div>
+        </div>
+    </div>
+    @if(($myBirthdayWishCount ?? 0) > 0)
+        @include('admin.birthday-wish.partials.received_wishes_modal')
+    @endif
+    @endif
 
     <div class="row g-4">
         {{-- Left: Today's Birthdays --}}
