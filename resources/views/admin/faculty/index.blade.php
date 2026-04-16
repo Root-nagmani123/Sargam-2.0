@@ -8,6 +8,28 @@
     <!--<x-session_message />-->
     <div id="status-msg"></div>
 
+@push('scripts')
+<script>
+$(document).ready(function () {
+    var urlParams = new URLSearchParams(window.location.search);
+    var toastMsg = urlParams.get('toast');
+    if (toastMsg) {
+        toastr.options = {
+            "timeOut": "4000",
+            "extendedTimeOut": "1000",
+            "positionClass": "toast-top-right",
+            "closeButton": true,
+            "progressBar": true
+        };
+        toastr.success(decodeURIComponent(toastMsg));        // Push toastr container down slightly
+        $('#toast-container').css('top', '80px');        // Clean URL without reload
+        var cleanUrl = window.location.pathname + window.location.hash;
+        window.history.replaceState({}, document.title, cleanUrl);
+    }
+});
+</script>
+@endpush
+
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card" style="border-left:4px solid #004a93;">
@@ -46,7 +68,12 @@
                             </div>
                         </div>
                     </div>
-
+                       @if(session('success'))
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    {{ session('success') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            @endif
                     <hr>
                     {!! $dataTable->table(['class' => 'table']) !!}
                 </div>
@@ -63,11 +90,11 @@
 // Delete Faculty with SweetAlert Confirmation
 $(document).on('click', '.delete-faculty-btn', function(e) {
     e.preventDefault();
-    
+
     var deleteUrl = $(this).data('url');
     var facultyName = $(this).data('name');
     var csrfToken = $(this).data('token');
-    
+
     Swal.fire({
         title: 'Are you sure?',
         html: 'You are about to delete faculty: <strong>' + facultyName + '</strong><br><br>This action cannot be undone!',
@@ -90,7 +117,7 @@ $(document).on('click', '.delete-faculty-btn', function(e) {
                     Swal.showLoading();
                 }
             });
-            
+
             // Send AJAX delete request
             $.ajax({
                 url: deleteUrl,

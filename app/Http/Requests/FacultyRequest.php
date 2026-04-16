@@ -30,6 +30,7 @@ class FacultyRequest extends FormRequest
         $otherCityPks = City::whereRaw('LOWER(city_name) = ?', ['other'])->pluck('pk')->toArray();
         return [
             // Basic Info
+            'facultyType' => 'required|exists:faculty_type_master,pk',
             'country' => 'required|exists:country_master,pk',
             'current_sector' => 'required|integer|in:1,2',
             'joiningdate' => 'required|date',
@@ -45,6 +46,8 @@ class FacultyRequest extends FormRequest
         return [
             // Basic Info
 
+            'facultyType.required' => 'Faculty Type is required.',
+            'facultyType.exists'   => 'Selected Faculty Type is invalid.',
             // 'facultyType.required' => 'Faculty type is required',
             // 'firstName.required' => 'First name is required',
             // 'middlename.required' => 'Middle name is required',

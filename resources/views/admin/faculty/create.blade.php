@@ -762,6 +762,7 @@ input.is-invalid {
                        id="success2-radio" value="2" >
                      <label class="form-check-label" for="success2-radio">Private Sector</label>
                      </div>
+                     <div id="current-sector-error-placeholder"></div>
                        </div>
                 </div>
 
@@ -862,7 +863,7 @@ $(document).ready(function () {
     // Check Email
     $('input[name="email"]').on('blur', function () {
         let email = $(this).val().trim();
-        $(this).nextAll('.unique-error').remove(); // Clear all error messages
+        $(this).nextAll('.unique-error, .faculty-error-msg').remove(); // Clear all error messages
         if (!email) return;
         // Strict email format: must contain exactly one @, with text before and a valid domain after
         let emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -878,7 +879,7 @@ $(document).ready(function () {
     // Check Mobile
     $('input[name="mobile"]').on('blur', function () {
         let mobile = $(this).val().trim();
-        $(this).nextAll('.unique-error').remove(); // Clear all error messages
+        $(this).nextAll('.unique-error, .faculty-error-msg').remove(); // Clear all error messages
         if (!mobile) return;
         // Must be exactly 10 digits
         let mobileRegex = /^[0-9]{10}$/;
@@ -914,8 +915,8 @@ $(document).ready(function () {
                 value: value
             },
             success: function (response) {
-                inputElement.nextAll('.unique-error').remove(); // remove all error/success messages
-                inputElement.removeClass('mobile-duplicate');
+                inputElement.nextAll('.unique-error, .faculty-error-msg').remove(); // remove all error/success messages
+                inputElement.removeClass('mobile-duplicate is-invalid');
 
                 if (response.exists) {
                     inputElement.after('<small class="text-danger unique-error">' + response.message + '</small>');

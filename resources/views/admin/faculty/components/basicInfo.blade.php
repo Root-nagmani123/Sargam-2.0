@@ -13,7 +13,8 @@
                 label="Faculty Type :"
                 formLabelClass="form-label"
                 :options="$facultyTypeList"
-
+                 required="true"
+                 labelRequired="true"
                 value="{{ $faculty->faculty_type }}"
                 />
         </div>
@@ -36,6 +37,8 @@
                 label="First Name :"
                 placeholder="First Name"
                 formLabelClass="form-label"
+                required="true"
+                labelRequired="true"
                 value="{{ $faculty->first_name }}"
 
                 formInputClass="only-letters"
@@ -66,7 +69,8 @@
                 label="Last Name :"
                 placeholder="Last Name"
                 formLabelClass="form-label"
-
+                required="true"
+                labelRequired="true"
                 value="{{ $faculty->last_name }}"
                 formInputClass="only-letters"
                 />
@@ -94,6 +98,8 @@
                         label="Full Name :"
                         placeholder="Full Name"
                         formLabelClass="form-label"
+                        required
+                        :labelRequired="true"
                         value="{{ $faculty->full_name }}"
 
                         />
@@ -130,7 +136,8 @@
                 placeholder="Gender"
                 formLabelClass="form-label"
                 :options="$genderList"
-
+                required="true"
+                 labelRequired="true"
                 value="{{ $faculty->gender }}"
                 />
 
@@ -160,7 +167,8 @@
                 label="Mobile Number :"
                 placeholder="Mobile Number"
                 formLabelClass="form-label"
-
+                required="true"
+                labelRequired="true"
                 value="{{ $faculty->mobile_no }}"
                 formInputClass="only-numbers"
                 />

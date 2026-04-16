@@ -65,6 +65,7 @@
                                             id="success2-radio" value="2" {{ $faculty->faculty_sector == 2 ? 'checked' : '' }}>
                                         <label class="form-check-label" for="success2-radio">Private Sector</label>
                                     </div>
+                                    <div id="current-sector-error-placeholder"></div>
                                 </div>
                             </div>
                             <div class="col-12">
