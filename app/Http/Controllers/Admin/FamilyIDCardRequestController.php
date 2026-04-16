@@ -527,15 +527,22 @@ class FamilyIDCardRequestController extends Controller
             ->get()
             ->map(fn ($r) => IdCardSecurityMapper::toFamilyRequestDto($r));
 
+        $canModify = ! $this->familyGroupHasApprovalProgress($row) && (int) $row->id_status !== 2;
+
         return view('admin.family_idcard.show', [
             'request' => $request,
             'members' => $members,
+            'can_modify_request' => $canModify,
         ]);
     }
 
     public function edit($id)
     {
         $row = SecurityFamilyIdApply::where('fml_id_apply', $id)->firstOrFail();
+        if ($this->familyGroupHasApprovalProgress($row) || (int) $row->id_status === 2) {
+            return redirect()->route('admin.family_idcard.show', $id)
+                ->with('error', 'This request cannot be edited because it has been approved or the approval process has already started.');
+        }
         $request = IdCardSecurityMapper::toFamilyRequestDto($row);
         // Same group = same emp_id_apply + created_by + created_date (include all members)
         $createdDate = $row->created_date instanceof \DateTimeInterface
@@ -593,6 +600,10 @@ class FamilyIDCardRequestController extends Controller
     public function update(Request $request, $id)
     {
         $row = SecurityFamilyIdApply::where('fml_id_apply', $id)->firstOrFail();
+        if ($this->familyGroupHasApprovalProgress($row) || (int) $row->id_status === 2) {
+            return redirect()->route('admin.family_idcard.show', $id)
+                ->with('error', 'This request cannot be updated because it has been approved or the approval process has already started.');
+        }
         $employeeType = $row->employee_type;
         
         $validated = $request->validate([

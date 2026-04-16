@@ -297,7 +297,7 @@
             <!-- Action Buttons -->
             <div class="row mt-4">
                 <div class="col-md-12">
-                    @if($vehiclePass->vech_card_status == 1)
+                    @if($vehiclePass->vech_card_status == 1 && ($canModifyApplication ?? false))
                         <a href="{{ route('admin.security.vehicle_pass.edit', encrypt($vehiclePass->vehicle_tw_pk)) }}" class="btn btn-warning">
                             <i class="material-icons material-symbols-rounded" style="font-size:20px;vertical-align:middle;">edit</i>
                             Edit Application

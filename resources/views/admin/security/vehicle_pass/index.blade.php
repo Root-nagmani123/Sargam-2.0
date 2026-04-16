@@ -156,16 +156,18 @@
                                                 <a href="{{ route('admin.security.vehicle_pass.show', encrypt($pass->vehicle_tw_pk)) }}" class="text-primary" title="View" data-bs-toggle="tooltip">
                                                     <i class="material-icons material-symbols-rounded" style="font-size:22px;">visibility</i>
                                                 </a>
-                                                <a href="{{ route('admin.security.vehicle_pass.edit', encrypt($pass->vehicle_tw_pk)) }}" class="text-success" title="Edit" data-bs-toggle="tooltip">
-                                                    <i class="material-icons material-symbols-rounded" style="font-size:22px;">edit</i>
-                                                </a>
-                                                <form action="{{ route('admin.security.vehicle_pass.delete', encrypt($pass->vehicle_tw_pk)) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this application?');">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="btn btn-link p-0 text-danger" title="Delete" data-bs-toggle="tooltip">
-                                                        <i class="material-icons material-symbols-rounded" style="font-size:22px;">delete</i>
-                                                    </button>
-                                                </form>
+                                                @if(! $pass->approvals_exists)
+                                                    <a href="{{ route('admin.security.vehicle_pass.edit', encrypt($pass->vehicle_tw_pk)) }}" class="text-success" title="Edit" data-bs-toggle="tooltip">
+                                                        <i class="material-icons material-symbols-rounded" style="font-size:22px;">edit</i>
+                                                    </a>
+                                                    <form action="{{ route('admin.security.vehicle_pass.delete', encrypt($pass->vehicle_tw_pk)) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this application?');">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" class="btn btn-link p-0 text-danger" title="Delete" data-bs-toggle="tooltip">
+                                                            <i class="material-icons material-symbols-rounded" style="font-size:22px;">delete</i>
+                                                        </button>
+                                                    </form>
+                                                @endif
                                             </div>
                                         </td>
                                     </tr>

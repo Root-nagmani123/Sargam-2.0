@@ -16,7 +16,9 @@
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h5 class="mb-0 fw-bold">Request Details</h5>
                 <div class="d-flex gap-2">
-                    <a href="{{ route('admin.family_idcard.edit', $request->id) }}" class="btn btn-outline-primary btn-sm">Edit</a>
+                    @if($can_modify_request ?? false)
+                        <a href="{{ route('admin.family_idcard.edit', $request->id) }}" class="btn btn-outline-primary btn-sm">Edit</a>
+                    @endif
                     <a href="{{ route('admin.family_idcard.index') }}" class="btn btn-outline-secondary btn-sm">Back to List</a>
                 </div>
             </div>

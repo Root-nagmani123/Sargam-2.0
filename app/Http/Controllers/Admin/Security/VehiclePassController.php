@@ -7,14 +7,12 @@ use App\Exports\VehiclePassExport;
 use App\Models\VehiclePassTWApply;
 use App\Models\SecVehicleType;
 use App\Models\EmployeeMaster;
-use App\Models\SecurityParmIdApply;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\ValidationException;
 use Maatwebsite\Excel\Facades\Excel;
 
 class VehiclePassController extends Controller
@@ -30,7 +28,13 @@ class VehiclePassController extends Controller
         // IMPORTANT: Group creator conditions so status filters apply correctly.
         // Otherwise "where(veh_created_by = X) OR (veh_created_by = pk_old AND status = ...)"
         // would cause records to appear in both Pending and Archive regardless of status.
-        $baseQuery = fn () => VehiclePassTWApply::with(['vehicleType', 'employee', 'approval'])
+        $baseQuery = fn () => VehiclePassTWApply::with(['vehicleType', 'employee'])
+            ->withExists(['approvals' => function ($q) {
+                $q->where(function ($w) {
+                    $w->whereIn('status', [1, 2, 3])
+                        ->orWhereIn('veh_recommend_status', [1, 2, 3]);
+                });
+            }])
             ->where(function ($q) use ($employeePk, $pk_old) {
                 $q->where('veh_created_by', $employeePk);
                 if ($pk_old) {
@@ -104,63 +108,39 @@ class VehiclePassController extends Controller
     public function create()
     {
         $vehicleTypes = SecVehicleType::active()->get();
-        [$currentUserEmployee, $currentUserIdCard] = $this->currentUserEmployeeAndIdCardForVehiclePass();
+        $currentUserEmployee = $this->currentUserEmployeeForVehiclePass();
 
-        return view('admin.security.vehicle_pass.create', compact('vehicleTypes', 'currentUserEmployee', 'currentUserIdCard'));
+        return view('admin.security.vehicle_pass.create', compact('vehicleTypes', 'currentUserEmployee'));
     }
 
     /**
-     * @return array{0: ?object, 1: ?object} [currentUserEmployee, currentUserIdCard] for create/edit vehicle pass forms.
+     * Logged-in employee row for create/edit autofill (Employee / Government Vehicle).
+     * ID card is not validated or enforced for these applicant types.
      */
-    private function currentUserEmployeeAndIdCardForVehiclePass(): array
+    private function currentUserEmployeeForVehiclePass(): ?object
     {
-        $currentUserEmployee = null;
-        $currentUserIdCard = null;
         $user = Auth::user();
         $employeePk = $user->user_id ?? null;
-        if ($employeePk) {
-            $emp = EmployeeMaster::with(['designation', 'department'])
-                ->where('status', 1)
-                ->where(function ($q) use ($employeePk) {
-                    $q->where('pk', $employeePk)->orWhere('pk_old', $employeePk);
-                })
-                ->first();
-            if ($emp) {
-                $currentUserEmployee = (object) [
-                    'pk' => $emp->pk,
-                    'name' => trim($emp->first_name . ' ' . ($emp->last_name ?? '')),
-                    'designation' => $emp->designation->designation_name ?? '',
-                    'department' => $emp->department->department_name ?? '',
-                    'emp_id' => $emp->emp_id ?? '',
-                ];
-
-                $permIdCard = DB::table('security_parm_id_apply')
-                    ->where('employee_master_pk', $emp->pk)
-                    ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
-                    ->whereNotNull('card_valid_to')
-                    ->where('card_valid_to', '>=', now()->format('Y-m-d'))
-                    ->orderByDesc('card_valid_to')
-                    ->first(['card_valid_to', 'id_card_no']);
-
-                $contIdCard = DB::table('security_con_oth_id_apply')
-                    ->where('emp_id_apply', $emp->emp_id ?? '')
-                    ->where('id_status', 2)
-                    ->whereNotNull('card_valid_to')
-                    ->where('card_valid_to', '>=', now()->format('Y-m-d'))
-                    ->orderByDesc('card_valid_to')
-                    ->first(['card_valid_to', 'id_card_no']);
-
-                $idCard = $permIdCard ?: $contIdCard;
-                if ($idCard) {
-                    $currentUserIdCard = (object) [
-                        'valid_to' => $idCard->card_valid_to,
-                        'id_card_no' => $idCard->id_card_no,
-                    ];
-                }
-            }
+        if (! $employeePk) {
+            return null;
+        }
+        $emp = EmployeeMaster::with(['designation', 'department'])
+            ->where('status', 1)
+            ->where(function ($q) use ($employeePk) {
+                $q->where('pk', $employeePk)->orWhere('pk_old', $employeePk);
+            })
+            ->first();
+        if (! $emp) {
+            return null;
         }
 
-        return [$currentUserEmployee, $currentUserIdCard];
+        return (object) [
+            'pk' => $emp->pk,
+            'name' => trim($emp->first_name . ' ' . ($emp->last_name ?? '')),
+            'designation' => $emp->designation->designation_name ?? '',
+            'department' => $emp->department->department_name ?? '',
+            'emp_id' => $emp->emp_id ?? '',
+        ];
     }
 
     /**
@@ -272,56 +252,6 @@ class VehiclePassController extends Controller
                 $department = $department ?: ($emp->department->department_name ?? null);
                 $employeeIdCard = $employeeIdCard ?: ($emp->emp_id ?? null);
             }
-
-            // Check for valid ID card (permanent or contractual)
-            $validIdCard = null;
-
-            // First check permanent employee ID card
-            $permIdCard = DB::table('security_parm_id_apply')
-                ->where('employee_master_pk', $empMasterPk)
-                ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
-                ->where(function ($q) {
-                    $q->whereNull('card_valid_to')->orWhere('card_valid_to', '>=', now()->format('Y-m-d'));
-                })
-                ->orderByDesc('card_valid_to')
-                ->first(['card_valid_to', 'id_card_no']);
-
-            // If not found, check contractual employee ID card
-            if (!$permIdCard && $emp) {
-                $contIdCard = DB::table('security_con_oth_id_apply')
-                    ->where('emp_id_apply', $emp->emp_id ?? '')
-                    ->where('id_status', 2)
-                    ->where(function ($q) {
-                        $q->whereNull('card_valid_to')->orWhere('card_valid_to', '>=', now()->format('Y-m-d'));
-                    })
-                    ->orderByDesc('card_valid_to')
-                    ->first(['card_valid_to', 'id_card_no']);
-
-                $validIdCard = $contIdCard;
-            } else {
-                $validIdCard = $permIdCard;
-            }
-
-            if (!$validIdCard) {
-                throw ValidationException::withMessages([
-                    'applicant_type' => ['A valid (approved and not expired) Employee ID Card is required to apply for Vehicle Pass.'],
-                ]);
-            }
-
-            // Validate that vehicle pass valid_to does not exceed ID card valid_to
-            if ($validIdCard->card_valid_to) {
-                $idCardValidTo = \Carbon\Carbon::parse($validIdCard->card_valid_to);
-                $vehiclePassValidTo = \Carbon\Carbon::parse($validated['vech_card_valid_to']);
-
-                if ($vehiclePassValidTo->greaterThan($idCardValidTo)) {
-                    throw ValidationException::withMessages([
-                        'vech_card_valid_to' => [
-                            'Vehicle Pass validity cannot exceed your ID Card validity. Your ID Card is valid until '
-                            . $idCardValidTo->format('d/m/Y') . '.'
-                        ],
-                    ]);
-                }
-            }
         }
 
         $govVeh = $applicantType === 'government_vehicle' ? 1 : 0;
@@ -375,8 +305,9 @@ class VehiclePassController extends Controller
 
         $vehiclePass = VehiclePassTWApply::with(['vehicleType', 'employee', 'approvals.approvedBy'])
             ->findOrFail($pk);
+        $canModifyApplication = $this->applicantCanModifyVehiclePass($vehiclePass);
 
-        return view('admin.security.vehicle_pass.show', compact('vehiclePass'));
+        return view('admin.security.vehicle_pass.show', compact('vehiclePass', 'canModifyApplication'));
     }
 
     public function edit($id)
@@ -389,21 +320,24 @@ class VehiclePassController extends Controller
 
         $vehiclePass = VehiclePassTWApply::with(['employee.designation', 'employee.department'])->findOrFail($pk);
         
-        // Only allow editing if status is pending
+        // Only allow editing if status is pending and no approver has acted yet
         if ($vehiclePass->vech_card_status != 1) {
             return redirect()->route('admin.security.vehicle_pass.index')->with('error', 'Cannot edit approved/rejected application');
+        }
+        if (! $this->applicantCanModifyVehiclePass($vehiclePass)) {
+            return redirect()->route('admin.security.vehicle_pass.show', encrypt($pk))
+                ->with('error', 'This application cannot be edited because the approval process has already started.');
         }
 
         $vehicleTypes = SecVehicleType::active()->get();
         $editApplicantDisplay = $this->resolveVehiclePassApplicantDisplayForEdit($vehiclePass);
-        [$currentUserEmployee, $currentUserIdCard] = $this->currentUserEmployeeAndIdCardForVehiclePass();
+        $currentUserEmployee = $this->currentUserEmployeeForVehiclePass();
 
         return view('admin.security.vehicle_pass.edit', compact(
             'vehiclePass',
             'vehicleTypes',
             'editApplicantDisplay',
-            'currentUserEmployee',
-            'currentUserIdCard'
+            'currentUserEmployee'
         ));
     }
 
@@ -515,9 +449,13 @@ class VehiclePassController extends Controller
 
         $vehiclePass = VehiclePassTWApply::findOrFail($pk);
 
-        // Only allow editing if status is pending
+        // Only allow editing if status is pending and no approver has acted yet
         if ($vehiclePass->vech_card_status != 1) {
             return redirect()->route('admin.security.vehicle_pass.index')->with('error', 'Cannot edit approved/rejected application');
+        }
+        if (! $this->applicantCanModifyVehiclePass($vehiclePass)) {
+            return redirect()->route('admin.security.vehicle_pass.show', encrypt($pk))
+                ->with('error', 'This application cannot be updated because the approval process has already started.');
         }
 
         $validated = $request->validate([
@@ -563,56 +501,6 @@ class VehiclePassController extends Controller
                 $department = $department ?: ($emp->department->department_name ?? null);
                 $employeeIdCard = $employeeIdCard ?: ($emp->emp_id ?? null);
             }
-
-            // Check for valid ID card (permanent or contractual)
-            $validIdCard = null;
-
-            // First check permanent employee ID card
-            $permIdCard = DB::table('security_parm_id_apply')
-                ->where('employee_master_pk', $empMasterPk)
-                ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
-                ->where(function ($q) {
-                    $q->whereNull('card_valid_to')->orWhere('card_valid_to', '>=', now()->format('Y-m-d'));
-                })
-                ->orderByDesc('card_valid_to')
-                ->first(['card_valid_to', 'id_card_no']);
-
-            // If not found, check contractual employee ID card
-            if (!$permIdCard && $emp) {
-                $contIdCard = DB::table('security_con_oth_id_apply')
-                    ->where('emp_id_apply', $emp->emp_id ?? '')
-                    ->where('id_status', 2)
-                    ->where(function ($q) {
-                        $q->whereNull('card_valid_to')->orWhere('card_valid_to', '>=', now()->format('Y-m-d'));
-                    })
-                    ->orderByDesc('card_valid_to')
-                    ->first(['card_valid_to', 'id_card_no']);
-
-                $validIdCard = $contIdCard;
-            } else {
-                $validIdCard = $permIdCard;
-            }
-
-            if (!$validIdCard) {
-                throw ValidationException::withMessages([
-                    'applicant_type' => ['A valid (approved and not expired) Employee ID Card is required to apply for Vehicle Pass.'],
-                ]);
-            }
-
-            // Validate that vehicle pass valid_to does not exceed ID card valid_to
-            if ($validIdCard->card_valid_to) {
-                $idCardValidTo = \Carbon\Carbon::parse($validIdCard->card_valid_to);
-                $vehiclePassValidTo = \Carbon\Carbon::parse($validated['vech_card_valid_to']);
-
-                if ($vehiclePassValidTo->greaterThan($idCardValidTo)) {
-                    throw ValidationException::withMessages([
-                        'vech_card_valid_to' => [
-                            'Vehicle Pass validity cannot exceed your ID Card validity. Your ID Card is valid until '
-                            . $idCardValidTo->format('d/m/Y') . '.'
-                        ],
-                    ]);
-                }
-            }
         }
 
         $govVeh = $applicantType === 'government_vehicle' ? 1 : 0;
@@ -652,9 +540,13 @@ class VehiclePassController extends Controller
 
         $vehiclePass = VehiclePassTWApply::findOrFail($pk);
 
-        // Only allow deleting if status is pending
+        // Only allow deleting if status is pending and no approver has acted yet
         if ($vehiclePass->vech_card_status != 1) {
             return redirect()->route('admin.security.vehicle_pass.index')->with('error', 'Cannot delete approved/rejected application');
+        }
+        if (! $this->applicantCanModifyVehiclePass($vehiclePass)) {
+            return redirect()->route('admin.security.vehicle_pass.index')
+                ->with('error', 'Cannot delete this application because the approval process has already started.');
         }
 
         // Delete uploaded document
@@ -665,6 +557,33 @@ class VehiclePassController extends Controller
         $vehiclePass->delete();
 
         return redirect()->route('admin.security.vehicle_pass.index')->with('success', 'Vehicle Pass application deleted successfully');
+    }
+
+    /**
+     * True when any security approver has recorded an action (recommend / final approve / reject).
+     * Pending-only rows (status 0, no recommend) do not count.
+     */
+    private function vehiclePassHasApproverAction(VehiclePassTWApply $vehiclePass): bool
+    {
+        if (! Schema::hasTable('vehicle_pass_tw_apply_approval')) {
+            return false;
+        }
+
+        return DB::table('vehicle_pass_tw_apply_approval')
+            ->where('vehicle_TW_pk', $vehiclePass->vehicle_tw_pk)
+            ->where(function ($q) {
+                $q->whereIn('status', [1, 2, 3])
+                    ->orWhereIn('veh_recommend_status', [1, 2, 3]);
+            })
+            ->exists();
+    }
+
+    /**
+     * Applicant may edit/delete only while pending and before any approval step is recorded.
+     */
+    private function applicantCanModifyVehiclePass(VehiclePassTWApply $vehiclePass): bool
+    {
+        return (int) $vehiclePass->vech_card_status === 1 && ! $this->vehiclePassHasApproverAction($vehiclePass);
     }
 
     /**

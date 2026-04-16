@@ -285,7 +285,6 @@ $(document).ready(function() {
         var applicantTypeGovernment = document.getElementById('applicant_type_government');
         var empMasterPkInput = document.getElementById('emp_master_pk');
         var currentUserEmployee = @json($currentUserEmployee ?? null);
-        var currentUserIdCard = @json($currentUserIdCard ?? null);
         var idCardInput = document.getElementById('employee_id_card');
         var nameEl = document.getElementById('applicant_name');
         var desEl = document.getElementById('designation');
@@ -386,12 +385,7 @@ $(document).ready(function() {
                     if (deptEl) deptEl.value = '';
                 }
                 setApplicantFieldsReadonly(true);
-                if (validToInput && currentUserIdCard && currentUserIdCard.valid_to) {
-                    var v = currentUserIdCard.valid_to;
-                    if (typeof v === 'string' && v.length >= 10) {
-                        validToInput.setAttribute('max', v.slice(0, 10));
-                    }
-                } else if (validToInput) {
+                if (validToInput) {
                     validToInput.removeAttribute('max');
                 }
             } else {
@@ -409,11 +403,8 @@ $(document).ready(function() {
         function initEditApplicantUiFromServer() {
             if (isEmployeeOrGovVehicle()) {
                 setApplicantFieldsReadonly(true);
-                if (validToInput && currentUserIdCard && currentUserIdCard.valid_to) {
-                    var v = currentUserIdCard.valid_to;
-                    if (typeof v === 'string' && v.length >= 10) {
-                        validToInput.setAttribute('max', v.slice(0, 10));
-                    }
+                if (validToInput) {
+                    validToInput.removeAttribute('max');
                 }
             } else {
                 setApplicantFieldsReadonly(false);

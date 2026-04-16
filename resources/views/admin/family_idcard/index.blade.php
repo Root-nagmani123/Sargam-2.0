@@ -167,26 +167,13 @@
                                     <td class="family-idcard-actions-col">
                                         <div class="d-flex gap-2">
                                             <a href="{{ route('admin.family_idcard.members', $req->first_id) }}" class="btn  btn-outline-primary bg-transparent border-0 text-primary p-0" title="View members"><i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i></a>
-                                            <a href="{{ route('admin.family_idcard.edit', $req->first_id) }}" class="btn  btn-outline-primary bg-transparent border-0 text-primary p-0" title="Edit"><i class="material-icons material-symbols-rounded" style="font-size:18px;">edit</i></a>
-                                            @php
-                                                $canArchiveActive = ($req->can_delete ?? true) && (int) ($req->id_status ?? 1) !== 2;
-                                                $archiveDisabledTitle = (int) ($req->id_status ?? 1) === 2
-                                                    ? 'Approved request cannot be deleted'
-                                                    : 'Cannot delete after approval has started';
-                                            @endphp
-                                            @if($canArchiveActive)
+                                            @if($req->can_delete ?? true)
+                                                <a href="{{ route('admin.family_idcard.edit', $req->first_id) }}" class="btn  btn-outline-primary bg-transparent border-0 text-primary p-0" title="Edit"><i class="material-icons material-symbols-rounded" style="font-size:18px;">edit</i></a>
                                                 <form action="{{ route('admin.family_idcard.destroy', $req->first_id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to archive this request?');">
                                                     @csrf
                                                     @method('DELETE')
                                                     <button type="submit" class="btn btn-outline-danger bg-transparent border-0 text-primary p-0" title="Archive"><i class="material-icons material-symbols-rounded" style="font-size:18px;">delete</i></button>
                                                 </form>
-                                            @else
-                                                <button type="button"
-                                                        class="btn btn-outline-danger bg-transparent border-0 text-primary p-0"
-                                                        title="{{ $archiveDisabledTitle }}"
-                                                        disabled>
-                                                    <i class="material-icons material-symbols-rounded" style="font-size:18px;">delete</i>
-                                                </button>
                                             @endif
                                         </div>
                                     </td>
