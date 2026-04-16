@@ -830,6 +830,7 @@ class SellingVoucherDateRangeController extends Controller
                 'item_name' => $item->item_name ?: ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? '—'),
                 'quantity' => (float) $item->quantity,
                 'unit' => $item->unit ?? '—',
+                'issue_date' => $item->issue_date ? $item->issue_date->format('Y-m-d') : '',
                 'return_quantity' => (float) ($item->return_quantity ?? 0),
                 'return_date' => $item->return_date ? $item->return_date->format('Y-m-d') : '',
             ];
@@ -876,29 +877,20 @@ class SellingVoucherDateRangeController extends Controller
                     DB::rollBack();
                     return back()->withInput()->with('error', 'Return quantity cannot be greater than issued quantity.');
                 }
-                if (!empty($returnDate) && $report->issue_date) {
-                    try {
-                        $ret = Carbon::parse($returnDate)->startOfDay();
-                        $iss = Carbon::parse($report->issue_date)->startOfDay();
-                        if ($ret->gt(now()->startOfDay())) {
-                            DB::rollBack();
-                            return back()->withInput()->with('error', 'Return date cannot be in the future.');
-                        }
-                        if ($ret->lt($iss)) {
-                            DB::rollBack();
-                            return back()->withInput()->with('error', 'Return date cannot be earlier than issue date.');
-                        }
-                    } catch (\Exception $e) {
-                        DB::rollBack();
-                        return back()->withInput()->with('error', 'Invalid return date.');
-                    }
-                }
-                if (!empty($returnDate) && !$report->issue_date) {
+                if (!empty($returnDate)) {
                     try {
                         $ret = Carbon::parse($returnDate)->startOfDay();
                         if ($ret->gt(now()->startOfDay())) {
                             DB::rollBack();
                             return back()->withInput()->with('error', 'Return date cannot be in the future.');
+                        }
+                        $effectiveIssue = $item->issue_date ?: $report->issue_date;
+                        if ($effectiveIssue) {
+                            $iss = Carbon::parse($effectiveIssue)->startOfDay();
+                            if ($ret->lt($iss)) {
+                                DB::rollBack();
+                                return back()->withInput()->with('error', 'Return date cannot be earlier than issue date.');
+                            }
                         }
                     } catch (\Exception $e) {
                         DB::rollBack();

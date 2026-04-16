@@ -1327,6 +1327,7 @@ $selectedStores = collect((array) request()->input('store', []))
                                             <th>Item Name</th>
                                             <th>Issued Quantity</th>
                                             <th>Item Unit</th>
+                                            <th>Item Issue Date</th>
                                             <th>Return Quantity</th>
                                             <th>Return Date</th>
                                         </tr>
@@ -4189,6 +4190,12 @@ $selectedStores = collect((array) request()->input('store', []))
                 const todayYmd = new Date().toISOString().slice(0, 10);
                 const tbody = document.getElementById('returnItemModalBody');
                 tbody.innerHTML = '';
+                function ymdToDmY(ymd) {
+                    if (!ymd) return '—';
+                    var p = String(ymd).split('-');
+                    if (p.length !== 3) return ymd;
+                    return p[2] + '/' + p[1] + '/' + p[0];
+                }
                 (data.items || []).forEach(function(item, i) {
                     const id = (item.id != null) ? item.id : '';
                     const name = (item.item_name || '—').replace(/</g, '&lt;').replace(/"/g,
@@ -4198,18 +4205,20 @@ $selectedStores = collect((array) request()->input('store', []))
                     const retQty = item.return_quantity != null ? item.return_quantity : 0;
                     const retDate = item.return_date || '';
                     const issuedQty = parseFloat(qty) || 0;
+                    const rowIssueYmd = (item.issue_date || issueDate || '').trim();
+                    const issueDisp = ymdToDmY(rowIssueYmd);
                     tbody.insertAdjacentHTML('beforeend',
                         '<tr><td>' + name + '<input type="hidden" name="items[' + i +
                         '][id]" value="' + id + '"></td><td>' + qty + '</td><td>' + unit +
-                        '</td>' +
+                        '</td><td class="text-nowrap">' + issueDisp + '</td>' +
                         '<td><input type="number" name="items[' + i +
                         '][return_quantity]" class="form-control  dr-return-qty" step="0.01" min="0" max="' +
                         issuedQty + '" data-issued="' + issuedQty + '" value="' + retQty +
                         '"><div class="invalid-feedback">Return Qty cannot exceed Issued Qty.</div></td>' +
                         '<td><input type="date" name="items[' + i +
                         '][return_date]" class="form-control  dr-return-date" max="' +
-                        todayYmd + '" ' + (issueDate ? ('min="' + issueDate +
-                            '" data-issue-date="' + issueDate + '"') : '') + ' value="' +
+                        todayYmd + '" ' + (rowIssueYmd ? ('min="' + rowIssueYmd +
+                            '" data-issue-date="' + rowIssueYmd + '"') : '') + ' value="' +
                         retDate +
                         '"><div class="invalid-feedback">Return date must be between issue date and today.</div></td></tr>'
                     );
