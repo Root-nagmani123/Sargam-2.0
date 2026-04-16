@@ -3270,6 +3270,7 @@ $selectedStores = collect((array) request()->input('store', []))
                 if (drCourseSelect) {
                     setSelectVisible(drCourseSelect, false);
                     drCourseSelect.removeAttribute('required');
+                    drCourseSelect.removeAttribute('name');
                     if (drCourseSelect.tomselect) drCourseSelect.tomselect.clear();
                     else drCourseSelect.value = '';
                 }
