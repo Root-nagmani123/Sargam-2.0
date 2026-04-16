@@ -3,6 +3,24 @@
 @section('title', 'Faculty')
 
 @section('setup_content')
+<style>
+    /* Keep datatable controls on same line in responsive mode */
+    .dataTables_wrapper .dataTables_length,
+    .dataTables_wrapper .dataTables_filter {
+        display: inline-block;
+        margin-right: 1rem;
+        margin-bottom: 0.5rem;
+    }
+
+    @media (max-width: 576px) {
+        .dataTables_wrapper .dataTables_length {
+            margin-right: 0.5rem;
+        }
+        .dataTables_wrapper .dataTables_filter {
+            margin-left: 0;
+        }
+    }
+</style>
 <div class="container-fluid">
 <x-breadcrum title="Faculty"></x-breadcrum>
     <!--<x-session_message />-->
@@ -35,19 +53,19 @@ $(document).ready(function () {
         <div class="card" style="border-left:4px solid #004a93;">
             <div class="card-body">
                 <div class="table-responsive">
-                    <div class="row">
-                        <div class="col-6">
+                    <div class="row align-items-center">
+                        <div class="col-12 col-md-6 mb-2 mb-md-0">
                             <h4 class="fw-semibold text-primary mb-0" style="color:#004a93 !important;">
                                 Faculty
                             </h4>
                         </div>
 
-                        <div class="col-6">
-                            <div class="d-flex justify-content-end align-items-center gap-3">
+                        <div class="col-12 col-md-6">
+                            <div class="d-flex flex-column flex-sm-row flex-wrap justify-content-md-end align-items-stretch align-items-sm-center gap-2">
 
                                 <!-- Add Faculty -->
                                 <a href="{{ route('faculty.create') }}"
-                                    class="btn btn-primary d-flex align-items-center gap-1 shadow-sm"
+                                    class="btn btn-primary d-flex align-items-center justify-content-center gap-1 shadow-sm"
                                     style="background-color:#004a93; border-color:#004a93;"
                                     aria-label="Add New Faculty">
                                     <span class="material-symbols-rounded fs-5">add</span>
@@ -56,14 +74,14 @@ $(document).ready(function () {
 
                                 <!-- Export Excel -->
                                 <a href="{{ route('faculty.excel.export') }}"
-                                    class="btn btn-outline-primary d-flex align-items-center gap-1 shadow-sm"
+                                    class="btn btn-outline-primary d-flex align-items-center justify-content-center gap-1 shadow-sm"
                                     style="border-color:#004a93; color:#004a93;" aria-label="Export Faculty Excel">
                                     <span class="material-symbols-rounded fs-5">export_notes</span>
                                     Export Excel
                                 </a>
-                                <a href="{{ route('faculty.printBlank') }}"  class="btn btn-outline-success">
-									<i class="material-icons">print</i> Print Blank Form
-								</a>
+                                <a href="{{ route('faculty.printBlank') }}" class="btn btn-outline-success d-flex align-items-center justify-content-center gap-1">
+                                    <i class="material-icons">print</i> Print Blank Form
+                                </a>
 
                             </div>
                         </div>

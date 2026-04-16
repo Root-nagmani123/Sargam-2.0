@@ -440,7 +440,7 @@ input.is-invalid {
                                        <!-- PDF Preview -->
                            <div class="d-flex align-items-start mt-2">
                             <iframe id="documentPreviewPDF" class="d-none border"
-                                    style="width: 200px; height: 200px; border-radius: 6px;"></iframe>
+                                    style="width: 100%; max-width: 200px; height: 200px; border-radius: 6px;"></iframe>
                         </div>
 
                     <!-- Existing Document Link -->
@@ -461,7 +461,7 @@ input.is-invalid {
                             <div id="education_fields" class="my-4"></div>
 
                             <div class="row degree-row" id="education_fields">
-                                <div class="col-3">
+                                <div class="col-12 col-sm-6 col-md-3">
 
                                     <x-input
                                         name="degree[]"
@@ -472,7 +472,7 @@ input.is-invalid {
                                         />
 
                                 </div>
-                                <div class="col-3">
+                                <div class="col-12 col-sm-6 col-md-3">
                                     <x-input
                                         name="university_institution_name[]"
                                         label="University/Institution Name :"
@@ -480,7 +480,7 @@ input.is-invalid {
                                         formLabelClass="form-label"
                                         />
                                 </div>
-                                <div class="col-3">
+                                <div class="col-12 col-sm-6 col-md-3">
                                     {{-- <x-input
                                         type="number"
                                         name="year_of_passing[]"
@@ -502,7 +502,7 @@ input.is-invalid {
                                         helperSmallText="Select the year of passing"
                                     />
                                 </div>
-                                <div class="col-3">
+                                <div class="col-12 col-sm-6 col-md-3">
                                     <x-input
                                         type="number"
                                         min="0"
@@ -514,7 +514,7 @@ input.is-invalid {
                                         />
 
                                 </div>
-                                <div class="col-3 mt-3">
+                                <div class="col-12 col-sm-6 col-md-3 mt-3">
 
                                     <x-input
                                         type="file"
@@ -546,7 +546,7 @@ input.is-invalid {
                             <hr>
                             <div id="experience_fields_wrapper" class="my-4"></div>
                             <div class="row experience-row" id="experience_fields">
-                                <div class="col-3">
+                                <div class="col-12 col-sm-6 col-md-3">
                                     <x-input
                                         name="experience[]"
                                         label="Years of Experience :"
@@ -554,7 +554,7 @@ input.is-invalid {
                                         formLabelClass="form-label"
                                         />
                                 </div>
-                                <div class="col-3">
+                                <div class="col-12 col-sm-6 col-md-3">
 
                                     <x-input
                                         name="specialization[]"
@@ -564,7 +564,7 @@ input.is-invalid {
                                         />
 
                                 </div>
-                                <div class="col-3">
+                                <div class="col-12 col-sm-6 col-md-3">
                                     <x-input
                                         name="institution[]"
                                         label="Previous Institutions :"
@@ -572,7 +572,7 @@ input.is-invalid {
                                         formLabelClass="form-label"
                                         />
                                 </div>
-                                <div class="col-3">
+                                <div class="col-12 col-sm-6 col-md-3">
                                     <x-input
                                         name="position[]"
                                         label="Position Held :"
@@ -581,7 +581,7 @@ input.is-invalid {
                                         />
 
                                 </div>
-                                <div class="col-3 mt-3">
+                                <div class="col-12 col-sm-6 col-md-3 mt-3">
                                     <x-input
                                         type="number"
                                         name="duration[]"
@@ -591,7 +591,7 @@ input.is-invalid {
                                         min="0"
                                         />
                                 </div>
-                                <div class="col-3 mt-3">
+                                <div class="col-12 col-sm-6 col-md-3 mt-3">
                                     <x-input
                                         name="work[]"
                                         label="Nature of Work :"
@@ -670,7 +670,7 @@ input.is-invalid {
                             <h4 class="card-title">Other information</h4>
                             <hr>
                             <div class="row">
-                                <div class="col-6">
+                                <div class="col-12 col-md-6">
 
                                     <x-input
                                         type="file"
@@ -689,7 +689,7 @@ input.is-invalid {
                                 <div class="existing-research mt-2"></div>
 
                                 </div>
-                                <div class="col-6">
+                                <div class="col-12 col-md-6">
 
                                     <x-input
                                         type="file"
@@ -705,7 +705,7 @@ input.is-invalid {
                                 </div>
                                 <div class="existing-membership mt-2"></div>
                                 </div>
-                                <div class="col-6 mt-3">
+                                <div class="col-12 col-md-6 mt-3">
 
                                     <x-input
                                         type="file"
@@ -723,7 +723,7 @@ input.is-invalid {
                                 <div class="existing-reference mt-2"></div>
 
                                 </div>
-                                <div class="col-6 mt-3">
+                                <div class="col-12 col-md-6 mt-3">
                                     <x-input
                                         type="date"
                                         name="joiningdate"

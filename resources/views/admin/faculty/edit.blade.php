@@ -76,7 +76,7 @@
                                     <fieldset>
                                         <div class="row">
                                             @foreach ($faculties as $key => $option)
-                                            <div class="col-3">
+                                            <div class="col-12 col-sm-6 col-md-3">
                                                 <div class="form-check py-2">
                                                     <input type="checkbox" name="faculties[]" value="{{ $key }}"
                                                         class="form-check-input" id="{{ $loop->index }}"
