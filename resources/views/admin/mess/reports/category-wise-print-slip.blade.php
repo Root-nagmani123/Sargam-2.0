@@ -329,15 +329,34 @@
     @media print {
         .no-print { display: none !important; }
         @page { size: A4; margin: 12mm; }
+        /* Avoid phantom pages from full-viewport heights / clipped cards */
+        html, body {
+            height: auto !important;
+            min-height: 0 !important;
+        }
         body { font-size: 13px; background: #fff !important; }
+        #main-wrapper, .page-wrapper, .body-wrapper {
+            min-height: 0 !important;
+            height: auto !important;
+            max-height: none !important;
+            overflow: visible !important;
+        }
         .container-fluid { max-width: 100% !important; padding: 0 !important; }
+        .card, .card-body {
+            overflow: visible !important;
+            page-break-inside: auto;
+            break-inside: auto;
+        }
         .print-page-wrap {
             page-break-after: auto;
             padding: 0;
             margin: 0 0 8px 0;
+            break-inside: auto;
+            page-break-inside: auto;
         }
         .print-page-break {
             page-break-after: always;
+            break-after: page;
         }
         .report-header {
             margin-top: 0;
@@ -367,9 +386,15 @@
             border-radius: 3px;
             margin-bottom: 10px;
         }
+        /* Long buyer tables must split across pages; "avoid" caused blank pages in Chrome / PDF */
         .print-slip-section {
-            page-break-inside: avoid;
+            page-break-inside: auto;
+            break-inside: auto;
             margin-bottom: 14px;
+        }
+        .report-buyer-client-banner {
+            page-break-inside: avoid;
+            break-inside: avoid;
         }
         .print-slip-section .table-responsive,
         .print-slip-section .cw-slip-table-scroll,
@@ -400,6 +425,14 @@
             font-size: 12px;
             border-collapse: collapse;
             box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            page-break-inside: auto;
+            break-inside: auto;
+        }
+        .print-slip-table thead {
+            display: table-header-group;
+        }
+        .print-slip-table tfoot {
+            display: table-footer-group;
         }
         .print-slip-table thead tr {
             background: #2c3e50 !important;
