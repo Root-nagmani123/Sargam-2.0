@@ -449,6 +449,9 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/event-delete/{id}', [CalendarController::class, 'delete_event'])->name('calendar.event.delete');
 
         Route::get('/get-week', [CalendarController::class, 'weeklyTimetable'])->name('getWeek');
+        Route::get('/week-timetable-pdf', [CalendarController::class, 'exportWeekTimetablePdf'])->name('week-timetable-pdf');
+        Route::get('/week-timetable-print', [CalendarController::class, 'exportWeekTimetablePrint'])->name('week-timetable-print');
+        Route::get('/week-timetable-excel', [CalendarController::class, 'exportWeekTimetableExcel'])->name('week-timetable-excel');
     });
 
     // Timetable Report

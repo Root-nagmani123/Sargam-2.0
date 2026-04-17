@@ -915,7 +915,7 @@
 <body>
     <a href="#login-form" class="skip-to-content">Skip to Main Content</a>
 
-    <div class="login-wrapper">
+    <div class="login-wrapper d-flex flex-column min-vh-100">
         <!-- Background Carousel -->
         <div class="bg-carousel-container" aria-hidden="true">
             <div id="bgCarousel" class="carousel slide carousel-fade" data-bs-ride="carousel" data-bs-interval="6000" data-bs-pause="false">
@@ -968,15 +968,15 @@
         </header>
 
         <!-- Main Content -->
-        <main class="main-content" role="main">
-            <div class="login-card">
+        <main class="main-content d-flex align-items-center justify-content-center flex-grow-1 w-100" role="main">
+            <div class="login-card shadow-lg w-100" style="max-width: 480px;">
                 <!-- Logo & Title -->
-                <div class="login-logo">
+                <div class="login-logo mb-4 text-center">
                     <img src="{{ asset('admin_assets/images/logos/logo.svg') }}" 
                         alt="Sargam - LBSNAA Portal"
-                        loading="eager">
-                    <h1 id="login-form">Welcome Back</h1>
-                    <p>Sign in to access your LBSNAA account</p>
+                        loading="eager" class="img-fluid mb-2" style="max-width: 180px;">
+                    <h1 id="login-form" class="fw-bold fs-3 mb-1">Welcome Back</h1>
+                    <p class="text-muted mb-0">Sign in to access your LBSNAA account</p>
                 </div>
 
                 <!-- Error Alert -->
@@ -999,17 +999,16 @@
                 @endif
 
                 <!-- Login Form -->
-                <form action="{{ route('post_login') }}" method="POST" id="loginForm" novalidate>
+                <form action="{{ route('post_login') }}" method="POST" id="loginForm" novalidate class="needs-validation" autocomplete="off">
                     @csrf
-
                     <!-- Username -->
-                    <div class="form-group">
-                        <label for="username" class="form-label">
+                    <div class="form-group mb-3">
+                        <label for="username" class="form-label d-flex align-items-center gap-2">
                             <i class="bi bi-person-fill" aria-hidden="true"></i>
-                            Username <span class="text-danger">*</span>
+                            <span>Username <span class="text-danger">*</span></span>
                         </label>
                         <input type="text" 
-                            class="form-control @error('username') is-invalid @enderror" 
+                            class="form-control @error('username') is-invalid @enderror py-3" 
                             id="username"
                             name="username"
                             value="{{ old('username') }}"
@@ -1017,58 +1016,51 @@
                             autocomplete="username"
                             required
                             autofocus>
-                        <small class="form-text">Your official registration number or ID</small>
+                        <div class="form-text">Your official registration number or ID</div>
                     </div>
-
                     <!-- Password -->
-                    <div class="form-group">
+                    <div class="form-group mb-3">
                         <div class="d-flex justify-content-between align-items-center mb-2">
-                            <label for="password" class="form-label mb-0">
+                            <label for="password" class="form-label mb-0 d-flex align-items-center gap-2">
                                 <i class="bi bi-lock-fill" aria-hidden="true"></i>
-                                Password <span class="text-danger">*</span>
+                                <span>Password <span class="text-danger">*</span></span>
                             </label>
                         </div>
-                        <div class="input-group">
+                        <div class="input-group flex-nowrap">
                             <input type="password" 
-                                class="form-control @error('password') is-invalid @enderror" 
+                                class="form-control @error('password') is-invalid @enderror py-3" 
                                 id="password"
                                 name="password"
                                 placeholder="Enter your password"
                                 autocomplete="current-password"
                                 required>
-                            <button type="button" class="input-addon" id="togglePassword" aria-label="Show password">
+                            <button type="button" class="input-addon border-0 bg-transparent" id="togglePassword" aria-label="Show password" tabindex="0">
                                 <i class="bi bi-eye" aria-hidden="true"></i>
                             </button>
-                            
                         </div>
-                        <div class="text-end">
-                        
-                        <a href="{{ route('password.request') ?? '#' }}" class="forgot-link">
-                                Forgot Password?
-                            </a>
+                        <div class="text-end mt-1">
+                            <a href="{{ route('password.request') ?? '#' }}" class="forgot-link small">Forgot Password?</a>
                         </div>
                     </div>
-
                     <!-- Submit -->
-                    <button type="submit" class="btn-login" id="loginBtn">
+                    <button type="submit" class="btn-login btn btn-primary btn-lg mt-2 mb-3 d-flex align-items-center justify-content-center gap-2 w-100" id="loginBtn">
                         <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
-                        Sign In
+                        <span>Sign In</span>
                     </button>
-
                     <!-- Security -->
-                    <div class="security-badge">
+                    <div class="security-badge mt-2">
                         <i class="bi bi-shield-lock-fill" aria-hidden="true"></i>
                         <span>Secure & Encrypted Connection</span>
                     </div>
                 </form>
 
                 <!-- Word of Day -->
-                <div class="word-of-day" aria-labelledby="word-of-day-heading">
-                    <h6 id="word-of-day-heading">
-                        <i class="bi bi-translate" aria-hidden="true"></i>
+                <div class="word-of-day mt-4 pt-3 border-top text-center" aria-labelledby="word-of-day-heading">
+                    <h6 id="word-of-day-heading" class="text-muted fw-semibold mb-2">
+                        <i class="bi bi-translate me-1" aria-hidden="true"></i>
                         आज का शब्द / Word of the Day
                     </h6>
-                    <p class="mb-0" aria-live="polite">
+                    <p class="mb-0 fs-6" aria-live="polite">
                         @if(!empty($wordOfTheDay))
                             <span lang="hi">{{ $wordOfTheDay->hindi_text }}</span>
                             <span aria-hidden="true"> — </span>

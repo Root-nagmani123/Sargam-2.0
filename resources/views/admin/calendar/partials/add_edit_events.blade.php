@@ -1,257 +1,272 @@
 <!-- Add/Edit Event Modal -->
- <style>
-    :root {
-        --primary-gradient: linear-gradient(135deg, #af2910, #ff7e5f);
-        --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        --card-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-        --input-focus-glow: 0 0 0 3px rgba(13, 110, 253, 0.1);
+@php
+    /** LBSNAA branding (override from parent: @include(..., ['calendarEventModalEmblemSrc' => ...]) ) */
+    $calendarEventModalEmblemSrc = $calendarEventModalEmblemSrc ?? 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
+    $calendarEventModalLbsnaaLogoSrc = $calendarEventModalLbsnaaLogoSrc ?? (
+        is_file(public_path('images/lbsnaa_logo.jpg'))
+            ? asset('images/lbsnaa_logo.jpg')
+            : 'https://www.lbsnaa.gov.in/admin_assets/images/logo.png'
+    );
+@endphp
+<style>
+    #eventModal {
+        --lbsnaa-blue: #004a93;
+        --lbsnaa-blue-dark: #003566;
+        --lbsnaa-blue-rgb: 0, 74, 147;
+        --event-modal-accent: var(--lbsnaa-blue);
+        --event-modal-accent-rgb: var(--lbsnaa-blue-rgb);
+        --event-modal-header-gradient: linear-gradient(160deg, #003566 0%, #004a93 42%, #0a5aa8 100%);
+        --event-modal-card-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        --event-modal-card-shadow-hover: 0 0.5rem 1rem rgba(0, 74, 147, 0.12);
+        --event-modal-focus-ring: 0 0 0 0.25rem rgba(var(--lbsnaa-blue-rgb), 0.22);
     }
 
-    .modal-body {
-        background: linear-gradient(to bottom, #f8f9fa 0%, #ffffff 100%);
+    #eventModal .modal-content {
+        border: 0;
+        box-shadow: 0 1rem 3rem rgba(0, 36, 70, 0.2);
     }
 
-    .form-section {
-        background: #ffffff;
-        border-radius: 1rem;
-        border: 1px solid #e9ecef;
-        padding: 1.5rem;
-        transition: all 0.3s ease;
+    #eventModal .modal-header {
+        background: var(--event-modal-header-gradient) !important;
+        border-bottom: 2px solid rgba(255, 255, 255, 0.2);
     }
 
-    .form-section:hover {
-        box-shadow: var(--card-shadow);
-        border-color: #dee2e6;
+    #eventModal .event-modal-emblem {
+        width: 36px;
+        height: 36px;
+        object-fit: contain;
+        flex-shrink: 0;
+        filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
     }
 
-    .form-section-header {
+    #eventModal .event-modal-lbsnaa-logo {
+        height: 40px;
+        width: auto;
+        max-width: 150px;
+        object-fit: contain;
+        flex-shrink: 0;
+        filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.15));
+    }
+
+    #eventModal .event-modal-brand-lines .event-modal-brand-line-1 {
+        font-size: 0.65rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.72);
         font-weight: 600;
-        color: #0d6efd;
-        display: flex;
-        align-items: center;
+    }
+
+    #eventModal .event-modal-brand-lines .event-modal-brand-line-2 {
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: #fff;
+        line-height: 1.2;
+        max-width: 16rem;
+    }
+
+    #eventModal .modal-body {
+        background: linear-gradient(
+            to bottom,
+            rgba(var(--lbsnaa-blue-rgb), 0.05) 0%,
+            var(--bs-secondary-bg) 12%,
+            var(--bs-body-bg) 42%
+        );
+        overflow-x: visible !important;
+        max-height: min(70vh, 780px);
+        overflow-y: auto;
+    }
+
+    #eventModal .modal-footer {
+        background-color: var(--bs-body-bg);
+        border-top: 1px solid var(--bs-border-color-translucent);
         gap: 0.5rem;
     }
 
-    .required::after {
-        content: " *";
-        color: #dc3545;
-        font-weight: 600;
-    }
-
-    .form-label {
+    #eventModal .form-label {
         font-weight: 500;
-        color: #495057;
-        margin-bottom: 0.5rem;
+        color: var(--bs-emphasis-color);
+        margin-bottom: 0.375rem;
         display: flex;
         align-items: center;
         gap: 0.5rem;
-        font-size: 0.9rem;
+        font-size: 0.875rem;
     }
 
-    .form-label i {
-        color: #6c757d;
-        font-size: 0.9em;
+    #eventModal .form-label i {
+        color: var(--lbsnaa-blue);
+        opacity: 0.85;
+        font-size: 1rem;
+        flex-shrink: 0;
     }
 
-    .form-control,
-    .form-select {
-        border: 2px solid #e9ecef;
-        border-radius: 0.5rem;
-        padding: 0.625rem 0.875rem;
-        transition: all 0.2s ease;
-        font-size: 0.95rem;
+    #eventModal .required::after {
+        content: " *";
+        color: var(--bs-danger);
+        font-weight: 600;
     }
 
-    .form-control:hover,
-    .form-select:hover {
-        border-color: #ced4da;
+    #eventModal .form-control,
+    #eventModal .form-select {
+        border-width: 1px;
+        transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
     }
 
-    .form-control:focus,
-    .form-select:focus {
-        border-color: #0d6efd;
-        box-shadow: var(--input-focus-glow);
-        transform: translateY(-1px);
+    #eventModal .form-control:focus,
+    #eventModal .form-select:focus {
+        border-color: var(--event-modal-accent);
+        box-shadow: var(--event-modal-focus-ring);
     }
 
-    textarea.form-control {
+    #eventModal textarea.form-control {
         resize: vertical;
-        min-height: 80px;
+        min-height: 5.5rem;
     }
 
-    .helper-text {
-        font-size: 0.825rem;
-        color: #6c757d;
+    #eventModal .helper-text,
+    #eventModal .form-text {
+        font-size: 0.8125rem;
     }
 
-    section h3 {
+    #eventModal .event-modal-section-title {
         position: relative;
-        padding-bottom: 0.75rem;
-        margin-bottom: 1.5rem !important;
+        padding-bottom: 0.5rem;
     }
 
-    section h3::after {
+    #eventModal .event-modal-section-title::after {
         content: '';
         position: absolute;
         bottom: 0;
         left: 0;
-        width: 60px;
+        width: 2.5rem;
         height: 3px;
-        background: var(--primary-gradient);
+        background: var(--lbsnaa-blue);
         border-radius: 2px;
     }
 
-    #type_name_container {
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        border: 2px dashed #ced4da;
-        border-radius: 0.75rem;
-        padding: 1.25rem;
-        transition: all 0.3s ease;
-        min-height: 60px;
+    #eventModal .event-modal-section-heading {
+        color: var(--lbsnaa-blue) !important;
     }
 
-    #type_name_container:hover {
-        border-color: #adb5bd;
-        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    #eventModal .event-modal-section-card > .card-header {
+        border-left: 4px solid var(--lbsnaa-blue);
+        border-radius: var(--bs-border-radius-xl) 0 0 0;
     }
 
-    .form-check-input {
+    #eventModal .btn-primary {
+        --bs-btn-bg: var(--lbsnaa-blue);
+        --bs-btn-border-color: var(--lbsnaa-blue);
+        --bs-btn-hover-bg: var(--lbsnaa-blue-dark);
+        --bs-btn-hover-border-color: var(--lbsnaa-blue-dark);
+        --bs-btn-active-bg: var(--lbsnaa-blue-dark);
+        --bs-btn-active-border-color: #002a4d;
+        --bs-btn-focus-shadow-rgb: var(--lbsnaa-blue-rgb);
+    }
+
+    #eventModal .form-check-input:focus {
+        border-color: var(--lbsnaa-blue);
+        box-shadow: 0 0 0 0.2rem rgba(var(--lbsnaa-blue-rgb), 0.25);
+    }
+
+    #eventModal .form-check-input:checked {
+        background-color: var(--lbsnaa-blue);
+        border-color: var(--lbsnaa-blue);
+    }
+
+    #eventModal .form-switch .form-check-input:checked {
+        background-color: var(--lbsnaa-blue);
+        border-color: var(--lbsnaa-blue);
+    }
+
+    #eventModal #type_name_container {
+        background: linear-gradient(135deg, var(--bs-secondary-bg) 0%, var(--bs-tertiary-bg) 100%);
+        border: 2px dashed var(--bs-border-color);
+        transition: border-color 0.2s ease, background 0.2s ease;
+        min-height: 3.75rem;
+    }
+
+    #eventModal #type_name_container:hover {
+        border-color: rgba(var(--lbsnaa-blue-rgb), 0.35);
+        background: linear-gradient(135deg, var(--bs-body-bg) 0%, rgba(var(--lbsnaa-blue-rgb), 0.06) 100%);
+    }
+
+    #eventModal #type_name_container.border-danger {
+        border-color: var(--bs-danger) !important;
+        border-style: solid !important;
+    }
+
+    #eventModal .event-modal-accent-border {
+        border-color: rgba(var(--lbsnaa-blue-rgb), 0.35) !important;
+    }
+
+    #eventModal .event-modal-bio-card {
+        border-color: rgba(var(--lbsnaa-blue-rgb), 0.35) !important;
+        background-color: rgba(var(--lbsnaa-blue-rgb), 0.08) !important;
+    }
+
+    #eventModal .form-check-input {
         cursor: pointer;
-        width: 1.125em;
-        height: 1.125em;
-        border: 2px solid #dee2e6;
-        transition: all 0.2s ease;
     }
 
-    .form-check-input:checked {
-        background-color: #0d6efd;
-        border-color: #0d6efd;
-        box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
-    }
-
-    .form-check-label {
+    #eventModal .form-check-label {
         cursor: pointer;
         user-select: none;
-        color: #495057;
-        font-weight: 400;
     }
 
-    .form-check:hover .form-check-label {
-        color: #212529;
+    #eventModal .card {
+        transition: box-shadow 0.2s ease, transform 0.2s ease;
     }
 
-    .card {
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        border: 1px solid #e9ecef;
+    #eventModal .card:hover {
+        box-shadow: var(--event-modal-card-shadow-hover) !important;
     }
 
-    .card:hover {
-        transform: translateY(-2px);
-        box-shadow: var(--card-shadow-hover);
-    }
-
-    input[type="time"],
-    input[type="date"] {
+    #eventModal input[type="time"],
+    #eventModal input[type="date"] {
         cursor: pointer;
     }
 
-    .btn {
-        font-weight: 500;
-        padding: 0.625rem 1.25rem;
-        border-radius: 0.5rem;
-        transition: all 0.2s ease;
+    #eventModal .modal-footer .btn {
+        min-width: 6.5rem;
     }
 
-    .btn:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    }
-
-    .btn:active {
-        transform: translateY(0);
-    }
-
-    .modal-header {
-        background: var(--primary-gradient) !important;
-        border-radius: 0;
-    }
-
-    @keyframes fadeInUp {
-        from {
-            opacity: 0;
-            transform: translateY(10px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    section {
-        animation: fadeInUp 0.4s ease-out;
-    }
-
-    .form-switch .form-check-input {
-        width: 2.5em;
-        height: 1.25em;
-        cursor: pointer;
-    }
-
-    .form-switch .form-check-input:checked {
-        background-color: #198754;
-        border-color: #198754;
-    }
-
-    /* Choices.js bootstrap-like styling inside event modal */
+    /* Choices.js inside event modal */
     #eventModal .choices {
         width: 100%;
+        position: relative;
+        z-index: 1;
     }
 
     #eventModal .choices__inner.form-select {
-        border: 2px solid #e9ecef !important;
-        border-radius: 0.5rem !important;
-        min-height: 42px !important;
-        background: #fff !important;
-        padding: 0.45rem 0.75rem !important;
+        min-height: 2.625rem !important;
+        background: var(--bs-body-bg) !important;
+        padding: 0.375rem 0.75rem !important;
     }
 
     #eventModal .choices.is-focused .choices__inner.form-select,
     #eventModal .choices.is-open .choices__inner.form-select {
-        border-color: #0d6efd !important;
-        box-shadow: var(--input-focus-glow) !important;
+        border-color: var(--event-modal-accent) !important;
+        box-shadow: var(--event-modal-focus-ring) !important;
     }
 
     #eventModal .choices__list--multiple .choices__item {
-        background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%) !important;
+        background: linear-gradient(135deg, #004a93 0%, #003566 100%) !important;
         border: none !important;
-        border-radius: 0.375rem !important;
+        border-radius: var(--bs-border-radius) !important;
         color: #fff !important;
         font-size: 0.875rem !important;
     }
 
     #eventModal .choices__list--dropdown,
     #eventModal .choices__list[aria-expanded] {
-        border: 2px solid #e9ecef !important;
-        border-radius: 0.5rem !important;
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15) !important;
+        border: 1px solid var(--bs-border-color) !important;
+        border-radius: var(--bs-border-radius-lg) !important;
+        box-shadow: var(--bs-box-shadow) !important;
         z-index: 2000 !important;
     }
 
-    /* modal-dialog-scrollable sets overflow:hidden on .modal-content and clips Choices lists */
     #eventModal .modal-dialog.modal-dialog-scrollable .modal-content {
         overflow: visible !important;
         max-height: min(90vh, 920px);
-    }
-
-    #eventModal .modal-body {
-        overflow-x: visible !important;
-        max-height: min(70vh, 780px);
-        overflow-y: auto;
-    }
-
-    #eventModal .choices {
-        position: relative;
-        z-index: 1;
     }
 
     #eventModal .choices.is-open {
@@ -265,308 +280,255 @@
 </style>
 
 <div class="modal fade" id="eventModal" tabindex="-1" aria-labelledby="eventModalTitle" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-scrollable modal-lg">
+    <div class="modal-dialog modal-dialog-scrollable modal-lg modal-dialog-centered">
         <form id="eventForm" novalidate>
             @csrf
-            <div class="modal-content">
-                <!-- Modal Header -->
-                <div class="modal-header bg-primary text-white">
-                    <div class="d-flex flex-column w-100">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h2 class="modal-title h5 mb-0 text-white" id="eventModalTitle">Add Calendar Event</h2>
-                            &nbsp;&nbsp;&nbsp;&nbsp;
-                            <label for="start_datetime" class="form-label text-white me-2 mb-0">
-                                <i class="bi bi-calendar-date me-1" aria-hidden="true"></i>Date:
+            <div class="modal-content rounded-4 overflow-hidden">
+                <div class="modal-header text-white px-3 px-md-4 pt-3 pb-3 flex-column align-items-stretch gap-2">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 gap-md-3 w-100">
+                        <div class="d-flex align-items-center gap-2 min-w-0 flex-grow-1">
+                            <img src="{{ $calendarEventModalEmblemSrc }}" width="36" height="36" class="event-modal-emblem" alt="National Emblem" loading="lazy">
+                            <div class="event-modal-brand-lines text-start lh-sm d-none d-sm-block min-w-0">
+                                <div class="event-modal-brand-line-1">Government of India</div>
+                                <div class="event-modal-brand-line-2">Lal Bahadur Shastri National Academy of Administration</div>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                            <img src="{{ $calendarEventModalLbsnaaLogoSrc }}" class="event-modal-lbsnaa-logo" alt="LBSNAA" loading="lazy">
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                    </div>
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 w-100 border-top border-white border-opacity-25 pt-2">
+                        <h2 class="modal-title h5 mb-0 text-white text-break d-flex align-items-center gap-2">
+                            <i class="bi bi-calendar-plus d-sm-none" aria-hidden="true"></i>
+                            <span id="eventModalTitle">Add Calendar Event</span>
+                        </h2>
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            <label for="start_datetime" class="form-label text-white mb-0 small fw-semibold text-nowrap mb-0">
+                                <i class="bi bi-calendar3 me-1" aria-hidden="true"></i>Event date
                             </label>
                             <input type="date" name="start_datetime" id="start_datetime"
-                                class="form-control  w-auto text-white" required aria-required="true">
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                                aria-label="Close"></button>
-
-                        </div>
-                        <div class="mt-2 d-flex align-items-center">
-
+                                class="form-control form-control-sm bg-white text-dark border-0 shadow-sm w-auto min-w-0"
+                                required aria-required="true">
                         </div>
                     </div>
                 </div>
 
-                <!-- Modal Body -->
-                <div class="modal-body">
-                    <!-- Basic Information -->
-                    <section class="mb-4 p-4 bg-white rounded-3 shadow-sm" aria-labelledby="basicInfoHeading">
-                        <h3 id="basicInfoHeading" class="h6 text-primary mb-3 fw-semibold">
-                            <i class="bi bi-info-circle-fill me-2"></i>Basic Information
-                        </h3>
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label for="Course_name" class="form-label required">
-                                    <i class="bi bi-book"></i>Course Name
-                                </label>
-                                <select name="Course_name" id="Course_name" class="form-control" required
-                                    aria-required="true">
-                                    <option value="">Select Course</option>
-                                    @foreach($courseMaster as $course)
-                                    <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
-                                    @endforeach
-                                </select>
+                <div class="modal-body px-3 px-md-4 py-3 py-md-4">
+                    <section class="mb-3 mb-md-4" aria-labelledby="basicInfoHeading">
+                        <div class="card border-0 shadow-sm rounded-4 event-modal-section-card">
+                            <div class="card-header bg-transparent border-bottom py-3 px-3 px-md-4">
+                                <h3 id="basicInfoHeading" class="event-modal-section-title h6 mb-0 event-modal-section-heading fw-semibold d-flex align-items-center gap-2">
+                                    <i class="bi bi-info-circle-fill fs-5 opacity-75" aria-hidden="true"></i>
+                                    Basic Information
+                                </h3>
                             </div>
-
-                            <div class="col-md-6">
-                                <label for="group_type" class="form-label required">
-                                    <i class="bi bi-people"></i>Group Type
-                                </label>
-                                <select name="group_type" id="group_type" class="form-control" required
-                                    aria-required="true">
-                                    <option value="">Select Group Type</option>
-                                </select>
-                            </div>
-
-                            <div class="col-12">
-                                <label class="form-label required">
-                                    <i class="bi bi-tag"></i>Group Type Name
-                                </label>
-                                <div id="type_name_container" class="border rounded p-3 bg-light-subtle">
-                                    <div class="text-center text-muted" id="groupTypePlaceholder">
-                                        <i class="bi bi-arrow-right-circle me-2"></i>Select a Group Type first
-                                    </div>
-                                </div>
-                                <div class="invalid-feedback" id="type_names_error" style="display: none;">
-                                    Please select at least one Group Type Name.
-                                </div>
-                            </div>
-
-                            <div class="col-md-6">
-                                <label for="subject_module" class="form-label required">
-                                    <i class="bi bi-grid-3x3"></i>Subject Module
-                                </label>
-                                <select name="subject_module" id="subject_module" class="form-control" required
-                                    aria-required="true">
-                                    <option value="">Select Subject Module</option>
-                                    @foreach($subjects as $subject)
-                                    <option value="{{ $subject->pk }}" data-id="{{ $subject->pk }}">
-                                        {{ $subject->module_name }}
-                                    </option>
-                                    @endforeach
-                                </select>
-                            </div>
-
-                            <div class="col-md-6">
-                                <label for="subject_name" class="form-label required">
-                                    <i class="bi bi-journal-text"></i>Subject Name
-                                </label>
-                                <select name="subject_name" id="subject_name" class="form-control" required
-                                    aria-required="true">
-                                    <option value="">Select Subject Name</option>
-                                </select>
-                            </div>
-
-                            <div class="col-12">
-                                <label for="topic" class="form-label required">
-                                    <i class="material-icons">edit</i>Topic
-                                </label>
-                                <textarea name="topic" id="topic" class="form-control" rows="3"
-                                    placeholder="Enter topic details" required aria-required="true"></textarea>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- Faculty & Venue -->
-                    <section class="mb-4 p-4 bg-white rounded-3 shadow-sm" aria-labelledby="facultyVenueHeading">
-                        <h3 id="facultyVenueHeading" class="h6 text-primary mb-3 fw-semibold">
-                            <i class="bi bi-person-badge me-2"></i>Faculty & Venue
-                        </h3>
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label for="faculty" class="form-label required">
-                                    <i class="bi bi-person-circle"></i>Faculty
-                                </label>
-                                <select name="faculty[]" id="faculty" class="form-control" required aria-required="true" multiple>
-                                    @foreach($facultyMaster as $faculty)
-                                    <option value="{{ $faculty->pk }}" data-faculty_type="{{ $faculty->faculty_type }}">
-                                        {{ $faculty->full_name }}
-                                    </option>
-                                    @endforeach
-                                </select>
-                            </div>
-
-                            <div class="col-md-6">
-                                <label for="faculty_type" class="form-label required">
-                                    <i class="bi bi-diagram-3"></i>Faculty Type
-                                </label>
-                                <select name="faculty_type" id="faculty_type" class="form-control" required
-                                    aria-required="true">
-                                    <option value="">Select Faculty Type</option>
-                                    <option value="1">Internal</option>
-                                    <option value="2">Guest</option>
-                                    <option value="3">Research</option>
-                                </select>
-                            </div>
-
-
-                            <div class="col-md-6">
-                                <label for="vanue" class="form-label required">
-                                    <i class="bi bi-geo-alt"></i>Location
-                                </label>
-                                <select name="vanue" id="vanue" class="form-control" required aria-required="true">
-                                    <option value="">Select Location</option>
-                                    @foreach($venueMaster as $loc)
-                                    <option value="{{ $loc->venue_id }}">{{ $loc->venue_name }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div class="col-md-6" id="internalFacultyDiv">
-                                <label for="internal_faculty" class="form-label required">
-                                    <i class="bi bi-person-check"></i>Internal Faculty
-                                </label>
-                                <select name="internal_faculty[]" id="internal_faculty" class="form-control" required
-                                    aria-required="true" multiple>
-                                    @foreach($facultyMaster as $faculty)
-                                    <option value="{{ $faculty->pk }}" data-faculty_type="{{ $faculty->faculty_type }}">
-                                        {{ $faculty->full_name }}
-                                    </option>
-                                    @endforeach
-                                </select>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- Schedule -->
-                    <section class="mb-4 p-4 bg-white rounded-3 shadow-sm" aria-labelledby="scheduleHeading">
-                        <h3 id="scheduleHeading" class="h6 text-primary mb-3 fw-semibold">
-                            <i class="bi bi-clock-history me-2"></i>Schedule
-                        </h3>
-
-                        <!-- Shift Type -->
-                        <div class="mb-3">
-                            <label class="form-label d-block required">
-                                <i class="bi bi-toggle-on"></i>Shift Type
-                            </label>
-                            <div class="form-check form-check-inline">
-                                <input type="radio" name="shift_type" id="normalShift" value="1"
-                                    class="form-check-input" checked aria-controls="shiftSelect">
-                                <label class="form-check-label" for="normalShift">Normal Shift</label>
-                            </div>
-                            <div class="form-check form-check-inline">
-                                <input type="radio" name="shift_type" id="manualShift" value="2"
-                                    class="form-check-input" aria-controls="manualShiftFields">
-                                <label class="form-check-label" for="manualShift">Manual Shift</label>
-                            </div>
-                        </div>
-
-                        <!-- Normal Shift -->
-                        <div id="shiftSelect" class="mb-3">
-                            <label for="shift" class="form-label required">
-                                <i class="bi bi-calendar-range"></i>Shift
-                            </label>
-                            <select name="shift" id="shift" class="form-control" required aria-required="true">
-                                <option value="">Select Shift</option>
-                                @foreach($classSessionMaster as $shift)
-                                <option value="{{ $shift->shift_time }}">
-                                    {{ $shift->shift_name }} ({{ $shift->shift_time }})
-                                </option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        <!-- Manual Shift -->
-                        <div id="manualShiftFields" class="d-none">
-                            <div class="mb-3">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" value="1" id="fullDayCheckbox"
-                                        name="fullDayCheckbox" aria-controls="dateTimeFields">
-                                    <label class="form-check-label" for="fullDayCheckbox">
-                                        Full Day Event
-                                    </label>
-                                </div>
-                            </div>
-
-                            <div id="dateTimeFields">
+                            <div class="card-body p-3 p-md-4">
                                 <div class="row g-3">
                                     <div class="col-md-6">
-                                        <label for="start_time" class="form-label required">
-                                            <i class="bi bi-clock"></i>Start Time
+                                        <label for="Course_name" class="form-label required">
+                                            <i class="bi bi-book" aria-hidden="true"></i>Course Name
                                         </label>
-                                        <input type="time" name="start_time" id="start_time" class="form-control"
-                                            aria-describedby="startTimeHelp">
-                                        <small id="startTimeHelp" class="form-text text-muted">
-                                            Must be at least 1 hour from now
-                                        </small>
+                                        <select name="Course_name" id="Course_name" class="form-select" required aria-required="true">
+                                            <option value="">Select Course</option>
+                                            @foreach($courseMaster as $course)
+                                            <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
+                                            @endforeach
+                                        </select>
                                     </div>
+
                                     <div class="col-md-6">
-                                        <label for="end_time" class="form-label required">
-                                            <i class="bi bi-clock-fill"></i>End Time
+                                        <label for="group_type" class="form-label required">
+                                            <i class="bi bi-people" aria-hidden="true"></i>Group Type
                                         </label>
-                                        <input type="time" name="end_time" id="end_time" class="form-control">
+                                        <select name="group_type" id="group_type" class="form-select" required aria-required="true">
+                                            <option value="">Select Group Type</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="col-12">
+                                        <label class="form-label required">
+                                            <i class="bi bi-tag" aria-hidden="true"></i>Group Type Name
+                                        </label>
+                                        <div id="type_name_container" class="rounded-3 p-3">
+                                            <div class="text-center text-body-secondary small user-select-none" id="groupTypePlaceholder">
+                                                <i class="bi bi-arrow-right-circle me-1" aria-hidden="true"></i>Select a Group Type first
+                                            </div>
+                                        </div>
+                                        <div class="invalid-feedback" id="type_names_error" style="display: none;">
+                                            Please select at least one Group Type Name.
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label for="subject_module" class="form-label required">
+                                            <i class="bi bi-grid-3x3-gap" aria-hidden="true"></i>Subject Module
+                                        </label>
+                                        <select name="subject_module" id="subject_module" class="form-select" required aria-required="true">
+                                            <option value="">Select Subject Module</option>
+                                            @foreach($subjects as $subject)
+                                            <option value="{{ $subject->pk }}" data-id="{{ $subject->pk }}">
+                                                {{ $subject->module_name }}
+                                            </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label for="subject_name" class="form-label required">
+                                            <i class="bi bi-journal-text" aria-hidden="true"></i>Subject Name
+                                        </label>
+                                        <select name="subject_name" id="subject_name" class="form-select" required aria-required="true">
+                                            <option value="">Select Subject Name</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="col-12">
+                                        <label for="topic" class="form-label required">
+                                            <i class="bi bi-pencil-square" aria-hidden="true"></i>Topic
+                                        </label>
+                                        <textarea name="topic" id="topic" class="form-control" rows="3"
+                                            placeholder="Enter topic details" required aria-required="true"></textarea>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </section>
 
-                    <!-- Additional Options -->
-                    <section class="pt-4 border-top" aria-labelledby="additionalOptionsHeading">
-                        <h3 id="additionalOptionsHeading" class="h6 text-primary mb-3 fw-semibold">
-                            <i class="bi bi-sliders me-2"></i>Additional Options
-                        </h3>
+                    <section class="mb-3 mb-md-4" aria-labelledby="facultyVenueHeading">
+                        <div class="card border-0 shadow-sm rounded-4 event-modal-section-card">
+                            <div class="card-header bg-transparent border-bottom py-3 px-3 px-md-4">
+                                <h3 id="facultyVenueHeading" class="event-modal-section-title h6 mb-0 event-modal-section-heading fw-semibold d-flex align-items-center gap-2">
+                                    <i class="bi bi-person-badge fs-5 opacity-75" aria-hidden="true"></i>
+                                    Faculty &amp; Venue
+                                </h3>
+                            </div>
+                            <div class="card-body p-3 p-md-4">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label for="faculty" class="form-label required">
+                                            <i class="bi bi-person-circle" aria-hidden="true"></i>Faculty
+                                        </label>
+                                        <select name="faculty[]" id="faculty" class="form-select" required aria-required="true" multiple>
+                                            @foreach($facultyMaster as $faculty)
+                                            <option value="{{ $faculty->pk }}" data-faculty_type="{{ $faculty->faculty_type }}">
+                                                {{ $faculty->full_name }}
+                                            </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
 
-                        <div class="row g-3">
-                            <!-- Feedback Group -->
-                            <div class="col-md-8">
-                                <div class="card border-0 shadow-sm rounded-4 h-100" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
-                                    <div class="card-body p-3">
-                                        <!-- Feedback Parent -->
-                                        <div class="form-check form-switch mb-3">
-                                            <input class="form-check-input" type="checkbox" id="feedback_checkbox"
-                                                name="feedback_checkbox" value="1" aria-controls="feedbackOptions">
-                                            <label class="form-check-label fw-semibold" for="feedback_checkbox">
-                                                Feedback
-                                            </label>
-                                        </div>
+                                    <div class="col-md-6">
+                                        <label for="faculty_type" class="form-label required">
+                                            <i class="bi bi-diagram-3" aria-hidden="true"></i>Faculty Type
+                                        </label>
+                                        <select name="faculty_type" id="faculty_type" class="form-select" required aria-required="true">
+                                            <option value="">Select Faculty Type</option>
+                                            <option value="1">Internal</option>
+                                            <option value="2">Guest</option>
+                                            <option value="3">Research</option>
+                                        </select>
+                                    </div>
 
-                                        <!-- Feedback Child Options -->
-                                        <div id="feedbackOptions" class="ps-4 border-start d-none">
-                                            <div class="form-check mb-2">
-                                                <input class="form-check-input" type="checkbox" id="remarkCheckbox"
-                                                    name="remarkCheckbox" value="1">
-                                                <label class="form-check-label" for="remarkCheckbox">
-                                                    Remark
-                                                </label>
-                                            </div>
-
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" id="ratingCheckbox"
-                                                    name="ratingCheckbox" value="1">
-                                                <label class="form-check-label" for="ratingCheckbox">
-                                                    Rating
-                                                </label>
-                                            </div>
-                                            <!-- <div class="form-check" id="facultyReviewRatingDiv">
-                                                <input class="form-check-input" type="checkbox" id="facultyReviewRating"
-                                                    name="facultyReviewRating" value="1">
-                                                <label class="form-check-label" for="facultyReviewRating">
-                                                    Internal Faculty Feedback<span class="text-muted fs-6">internal
-                                                        faculty can give feedback to guest faculty</span>
-                                                </label>
-                                            </div> -->
-
-                                            <small class="text-muted d-block mt-2">
-                                                Select at least one feedback component.
-                                            </small>
-                                        </div>
+                                    <div class="col-md-6">
+                                        <label for="vanue" class="form-label required">
+                                            <i class="bi bi-geo-alt" aria-hidden="true"></i>Location
+                                        </label>
+                                        <select name="vanue" id="vanue" class="form-select" required aria-required="true">
+                                            <option value="">Select Location</option>
+                                            @foreach($venueMaster as $loc)
+                                            <option value="{{ $loc->venue_id }}">{{ $loc->venue_name }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6" id="internalFacultyDiv">
+                                        <label for="internal_faculty" class="form-label required">
+                                            <i class="bi bi-person-check" aria-hidden="true"></i>Internal Faculty
+                                        </label>
+                                        <select name="internal_faculty[]" id="internal_faculty" class="form-select" required
+                                            aria-required="true" multiple>
+                                            @foreach($facultyMaster as $faculty)
+                                            <option value="{{ $faculty->pk }}" data-faculty_type="{{ $faculty->faculty_type }}">
+                                                {{ $faculty->full_name }}
+                                            </option>
+                                            @endforeach
+                                        </select>
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    </section>
 
-                            <!-- Bio Attendance (Independent) -->
-                            <div class="col-md-4">
-                                <div class="card border-0 shadow-sm rounded-4 h-100" style="background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%);">
-                                    <div class="card-body p-3 d-flex align-items-center">
+                    <section class="mb-3 mb-md-4" aria-labelledby="scheduleHeading">
+                        <div class="card border-0 shadow-sm rounded-4 event-modal-section-card">
+                            <div class="card-header bg-transparent border-bottom py-3 px-3 px-md-4">
+                                <h3 id="scheduleHeading" class="event-modal-section-title h6 mb-0 event-modal-section-heading fw-semibold d-flex align-items-center gap-2">
+                                    <i class="bi bi-clock-history fs-5 opacity-75" aria-hidden="true"></i>
+                                    Schedule
+                                </h3>
+                            </div>
+                            <div class="card-body p-3 p-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label d-block required">
+                                        <i class="bi bi-toggle-on" aria-hidden="true"></i>Shift Type
+                                    </label>
+                                    <div class="d-flex flex-wrap gap-3 p-3 rounded-3 bg-body-secondary border border-secondary border-opacity-25">
+                                        <div class="form-check m-0">
+                                            <input type="radio" name="shift_type" id="normalShift" value="1"
+                                                class="form-check-input" checked aria-controls="shiftSelect">
+                                            <label class="form-check-label" for="normalShift">Normal Shift</label>
+                                        </div>
+                                        <div class="form-check m-0">
+                                            <input type="radio" name="shift_type" id="manualShift" value="2"
+                                                class="form-check-input" aria-controls="manualShiftFields">
+                                            <label class="form-check-label" for="manualShift">Manual Shift</label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div id="shiftSelect" class="mb-0">
+                                    <label for="shift" class="form-label required">
+                                        <i class="bi bi-calendar-range" aria-hidden="true"></i>Shift
+                                    </label>
+                                    <select name="shift" id="shift" class="form-select" required aria-required="true">
+                                        <option value="">Select Shift</option>
+                                        @foreach($classSessionMaster as $shift)
+                                        <option value="{{ $shift->shift_time }}">
+                                            {{ $shift->shift_name }} ({{ $shift->shift_time }})
+                                        </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <div id="manualShiftFields" class="d-none mt-3 pt-3 border-top">
+                                    <div class="mb-3">
                                         <div class="form-check form-switch">
-                                            <input class="form-check-input" type="checkbox" id="bio_attendanceCheckbox"
-                                                name="bio_attendanceCheckbox" value="1">
-                                            <label class="form-check-label fw-semibold" for="bio_attendanceCheckbox">
-                                                Bio Attendance
+                                            <input class="form-check-input" type="checkbox" value="1" id="fullDayCheckbox"
+                                                name="fullDayCheckbox" aria-controls="dateTimeFields">
+                                            <label class="form-check-label fw-medium" for="fullDayCheckbox">
+                                                Full Day Event
                                             </label>
+                                        </div>
+                                    </div>
+
+                                    <div id="dateTimeFields">
+                                        <div class="row g-3">
+                                            <div class="col-md-6">
+                                                <label for="start_time" class="form-label required">
+                                                    <i class="bi bi-clock" aria-hidden="true"></i>Start Time
+                                                </label>
+                                                <input type="time" name="start_time" id="start_time" class="form-control"
+                                                    aria-describedby="startTimeHelp">
+                                                <div id="startTimeHelp" class="form-text">
+                                                    Must be at least 1 hour from now
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label for="end_time" class="form-label required">
+                                                    <i class="bi bi-clock-fill" aria-hidden="true"></i>End Time
+                                                </label>
+                                                <input type="time" name="end_time" id="end_time" class="form-control">
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -574,14 +536,76 @@
                         </div>
                     </section>
 
+                    <section class="mb-0" aria-labelledby="additionalOptionsHeading">
+                        <div class="card border-0 shadow-sm rounded-4 event-modal-section-card">
+                            <div class="card-header bg-transparent border-bottom py-3 px-3 px-md-4">
+                                <h3 id="additionalOptionsHeading" class="event-modal-section-title h6 mb-0 event-modal-section-heading fw-semibold d-flex align-items-center gap-2">
+                                    <i class="bi bi-sliders fs-5 opacity-75" aria-hidden="true"></i>
+                                    Additional Options
+                                </h3>
+                            </div>
+                            <div class="card-body p-3 p-md-4">
+                                <div class="row g-3">
+                                    <div class="col-lg-8">
+                                        <div class="card h-100 border border-secondary border-opacity-25 shadow-sm rounded-4 bg-body-secondary bg-opacity-25">
+                                            <div class="card-body p-3 p-md-4">
+                                                <div class="form-check form-switch mb-3">
+                                                    <input class="form-check-input" type="checkbox" id="feedback_checkbox"
+                                                        name="feedback_checkbox" value="1" aria-controls="feedbackOptions">
+                                                    <label class="form-check-label fw-semibold" for="feedback_checkbox">
+                                                        Feedback
+                                                    </label>
+                                                </div>
+
+                                                <div id="feedbackOptions" class="ms-1 ps-3 border-start border-2 event-modal-accent-border d-none">
+                                                    <div class="form-check mb-2">
+                                                        <input class="form-check-input" type="checkbox" id="remarkCheckbox"
+                                                            name="remarkCheckbox" value="1">
+                                                        <label class="form-check-label" for="remarkCheckbox">
+                                                            Remark
+                                                        </label>
+                                                    </div>
+
+                                                    <div class="form-check mb-0">
+                                                        <input class="form-check-input" type="checkbox" id="ratingCheckbox"
+                                                            name="ratingCheckbox" value="1">
+                                                        <label class="form-check-label" for="ratingCheckbox">
+                                                            Rating
+                                                        </label>
+                                                    </div>
+
+                                                    <div class="form-text mt-2 mb-0">
+                                                        Select at least one feedback component.
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-lg-4">
+                                        <div class="card h-100 border shadow-sm rounded-4 event-modal-bio-card">
+                                            <div class="card-body p-3 p-md-4 d-flex align-items-center">
+                                                <div class="form-check form-switch mb-0 w-100">
+                                                    <input class="form-check-input" type="checkbox" id="bio_attendanceCheckbox"
+                                                        name="bio_attendanceCheckbox" value="1">
+                                                    <label class="form-check-label fw-semibold" for="bio_attendanceCheckbox">
+                                                        Bio Attendance
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
                 </div>
 
-                <!-- Modal Footer -->
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                <div class="modal-footer px-3 px-md-4 py-3 flex-wrap justify-content-end">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">
                         Cancel
                     </button>
-                    <button type="submit" class="btn btn-primary" id="submitEventBtn">
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 shadow-sm" id="submitEventBtn">
                         <i class="bi bi-check-circle me-1" aria-hidden="true"></i>
                         <span class="btn-text">Add Event</span>
                     </button>

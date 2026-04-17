@@ -631,6 +631,219 @@ body.calendar-suppress-course-filter-dropdown .calendar-choices-bootstrap .choic
     box-shadow: 0 0 0 4px rgba(0, 74, 147, 0.2);
 }
 
+/* -------------------------------------------------------------------------
+   List view — Revised Time Table (PDF-style sheet, LBSNAA)
+   Scoped under #eventListView so grid/cards elsewhere stay unchanged.
+   ------------------------------------------------------------------------- */
+#eventListView .timetable-pdf-sheet {
+    --tt-pdf-blue: #004a93;
+    --tt-pdf-border: #1a1a1a;
+    background: #fff;
+    border-color: var(--tt-pdf-blue) !important;
+}
+
+#eventListView .timetable-pdf-banner {
+    border-color: var(--tt-pdf-blue) !important;
+}
+
+#eventListView .timetable-pdf-emblem {
+    width: 44px;
+    height: 44px;
+    object-fit: contain;
+}
+
+#eventListView .timetable-pdf-logo {
+    height: 48px;
+    width: auto;
+    max-width: 160px;
+    object-fit: contain;
+}
+
+#eventListView .timetable-pdf-hindi {
+    line-height: 1.35;
+}
+
+#eventListView .timetable-container {
+    border-color: rgba(0, 0, 0, 0.35) !important;
+    border-radius: 0.25rem !important;
+}
+
+#eventListView .timetable-grid {
+    margin-bottom: 0;
+    font-size: 0.875rem;
+}
+
+#eventListView .timetable-grid thead th {
+    background: #fff !important;
+    color: #111 !important;
+    font-weight: 700;
+    text-align: center;
+    vertical-align: middle;
+    border-color: rgba(0, 0, 0, 0.55) !important;
+    padding: 0.5rem 0.35rem;
+    font-size: 0.8rem;
+    letter-spacing: 0.02em;
+}
+
+#eventListView .timetable-grid thead tr.day-names-row th {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.45);
+}
+
+#eventListView .timetable-grid thead tr.date-row th {
+    font-size: 0.78rem;
+    padding-top: 0.25rem;
+    padding-bottom: 0.35rem;
+}
+
+#eventListView .timetable-grid thead th .tt-day-name {
+    display: block;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    opacity: 0.92;
+}
+
+#eventListView .timetable-grid thead th .tt-day-date {
+    display: block;
+    font-weight: 700;
+    font-size: 0.95rem;
+    margin-top: 0.15rem;
+}
+
+#eventListView .timetable-grid .time-column {
+    background: #fff !important;
+    color: #111 !important;
+    border-right: 2px solid #000 !important;
+    font-variant-numeric: tabular-nums;
+}
+
+#eventListView .timetable-grid .time-slot {
+    text-align: center;
+    font-weight: 700;
+    line-height: 1.25;
+    white-space: pre-line;
+    font-size: 0.78rem;
+}
+
+#eventListView .timetable-grid td.event-cell {
+    background: #fff;
+    max-height: 280px;
+    border-color: rgba(0, 0, 0, 0.2) !important;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+#eventListView .list-event-card {
+    border-radius: 0.25rem;
+    border: 1px solid rgba(0, 0, 0, 0.18);
+    border-left-width: 3px !important;
+    border-left-color: var(--tt-pdf-blue) !important;
+    box-shadow: none;
+    padding: 0.45rem 0.5rem;
+    background: #fff;
+    transform: none;
+}
+
+#eventListView .list-event-card:hover {
+    transform: none;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
+    background: #f8fafc;
+}
+
+#eventListView .list-event-card .title {
+    font-size: 0.82rem;
+    font-weight: 700;
+    line-height: 1.35;
+    margin-bottom: 0.25rem;
+}
+
+#eventListView .list-event-card .meta {
+    font-size: 0.72rem;
+    padding: 0.1rem 0;
+    background: transparent;
+    width: 100%;
+}
+
+#eventListView .list-event-card .group-badge {
+    font-size: 0.65rem;
+    padding: 0.15rem 0.45rem;
+    border-radius: 0.15rem;
+}
+
+/* Parallel Group A / B bands (official time table layout) */
+#eventListView .tt-pdf-group-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+#eventListView .tt-pdf-group-row {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 0;
+    border-top: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+#eventListView .tt-pdf-group-row:first-child {
+    border-top: 0;
+}
+
+#eventListView .tt-pdf-group-label {
+    flex: 0 0 1.75rem;
+    width: 1.75rem;
+    min-height: 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 0.85rem;
+    color: var(--tt-pdf-blue);
+    background: rgba(0, 74, 147, 0.06);
+    border-right: 1px solid rgba(0, 74, 147, 0.25);
+    user-select: none;
+}
+
+#eventListView .tt-pdf-group-body {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 0.25rem 0.35rem 0.35rem 0.45rem;
+}
+
+#eventListView .tt-pdf-group-body .list-event-card {
+    margin-bottom: 0.35rem;
+}
+
+#eventListView .tt-pdf-group-body .list-event-card:last-child {
+    margin-bottom: 0;
+}
+
+#eventListView .timetable-grid tr.break-row th,
+#eventListView .timetable-grid tr.break-row td,
+#eventListView .timetable-grid tr.lunch-row th,
+#eventListView .timetable-grid tr.lunch-row td,
+#eventListView .timetable-grid tr.break-notes-row th,
+#eventListView .timetable-grid tr.break-notes-row td {
+    background: #fff8e6 !important;
+    color: #1a1a1a !important;
+    font-weight: 600;
+    font-size: 0.78rem;
+}
+
+#eventListView .timetable-grid tr.venue-summary-row th,
+#eventListView .timetable-grid tr.venue-summary-row td {
+    background: #f8fafc !important;
+    font-weight: 700;
+    font-size: 0.74rem;
+    text-align: center;
+    vertical-align: middle;
+}
+
+#eventListView .accordion-button:not(.collapsed) {
+    background-color: rgba(0, 74, 147, 0.08);
+    color: var(--tt-pdf-blue);
+}
+
 /* Timetable styling */
 .timetable-grid {
     border-collapse: separate;
@@ -2141,6 +2354,45 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
     .fc {
         font-size: 0.95rem;
     }
+
+    /* When printing from Timetable sheet tab, cells read like the official PDF */
+    #eventListView .timetable-pdf-sheet {
+        box-shadow: none !important;
+    }
+
+    #eventListView .timetable-grid th,
+    #eventListView .timetable-grid td {
+        border: 1px solid #000 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    #eventListView .timetable-grid tr {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    #eventListView #timetableLegendAccordion {
+        display: none !important;
+    }
+
+    /* Print only the timetable sheet (from toolbar "Print sheet") */
+    body.timetable-print-only * {
+        visibility: hidden;
+    }
+    body.timetable-print-only #eventListView,
+    body.timetable-print-only #eventListView * {
+        visibility: visible;
+    }
+    body.timetable-print-only #eventListView {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        max-width: 100%;
+        padding: 0 8mm;
+        background: #fff;
+    }
 }
 .control-panel:focus-within {
     outline: 2px solid #004a93;
@@ -2201,20 +2453,6 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
         <!-- Filters & View Controls -->
         <fieldset class="d-flex flex-column flex-md-row align-items-stretch align-items-md-end gap-3 mb-0">
             <legend class="visually-hidden">View and Filter Controls</legend>
-
-            <!-- Density Toggle -->
-            <div class="btn-group shadow-sm" role="group" aria-label="Toggle calendar density">
-                <button
-                    type="button"
-                    class="btn btn-outline-secondary d-inline-flex align-items-center gap-2 px-3 py-2 rounded-2"
-                    id="toggleDensityBtn"
-                    aria-pressed="false"
-                    aria-expanded="false"
-                >
-                    <i class="bi bi-arrows-collapse" aria-hidden="true"></i>
-                    <span class="fw-medium">Compact View</span>
-                </button>
-            </div>
 
             <!-- Course Filter -->
             <div class="calendar-choices-bootstrap d-flex flex-column gap-1 min-w-0" style="min-width: 260px;">
@@ -2287,90 +2525,184 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
                         })();
                     </script>
 
+                    <!-- View switch + week exports: outside #eventListView so controls stay visible on calendar modes -->
+                    <div id="calendarSheetToolbar" class="d-flex flex-wrap align-items-stretch align-items-sm-center justify-content-between gap-2 mb-3 pb-3 border-bottom border-light">
+                        <div class="btn-group btn-group-sm shadow-sm flex-shrink-0" role="group" aria-label="Calendar view">
+                            <button type="button" class="btn btn-outline-primary active" data-view="month" id="calendarViewMonthBtn" aria-pressed="true">Calendar</button>
+                            <button type="button" class="btn btn-outline-primary" data-view="week" id="calendarViewWeekBtn" aria-pressed="false">Week</button>
+                            <button type="button" class="btn btn-outline-primary" data-view="list" id="calendarViewSheetBtn" aria-pressed="false">Timetable sheet</button>
+                        </div>
+                        <div class="btn-group btn-group-sm shadow-sm flex-wrap" role="group" aria-label="Week timetable export">
+                            <button type="button" class="btn btn-outline-secondary" id="weekTimetablePrintBtn" title="Print weekly timetable">
+                                <i class="bi bi-printer me-1" aria-hidden="true"></i>Print
+                            </button>
+                            <button type="button" class="btn btn-outline-danger" id="weekTimetablePdfViewBtn" title="Open weekly timetable PDF in a new tab">
+                                <i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i>PDF
+                            </button>
+                            <button type="button" class="btn btn-outline-danger" id="weekTimetablePdfDownloadBtn" title="Download weekly timetable as PDF file">
+                                <i class="bi bi-download me-1" aria-hidden="true"></i>PDF file
+                            </button>
+                            <button type="button" class="btn btn-outline-success" id="weekTimetableExcelBtn" title="Download weekly timetable as Excel (grid + sessions)">
+                                <i class="bi bi-file-earmark-spreadsheet me-1" aria-hidden="true"></i>Excel
+                            </button>
+                            <button type="button" class="btn btn-outline-dark" id="weekTimetablePrintPageBtn" title="Print only the timetable sheet (this page)">
+                                <i class="bi bi-printer-fill me-1" aria-hidden="true"></i>Print sheet
+                            </button>
+                        </div>
+                    </div>
+
                     <!-- FullCalendar placeholder (you may initialize FullCalendar separately) -->
                     <div id="calendar" class="fc mb-4" role="application" aria-label="Interactive calendar"></div>
 
-                    <!-- List View -->
+                    <!-- List View — Revised time table (PDF-style sheet) -->
                     <div id="eventListView" class="mt-4 d-none" role="region" aria-label="Weekly timetable">
                         <div class="timetable-wrapper">
-                            <!-- Timetable Header -->
-                            <div class="timetable-header bg-gradient shadow-sm border rounded-4 p-4 mb-4">
-                                <div class="row align-items-center g-4">
-                                    <div class="col-md-2 text-center text-md-start">
-                                        <div class="logo-wrapper p-2 bg-white rounded-3 shadow-sm d-inline-block">
-                                            <img src="{{ asset('images/lbsnaa_logo.jpg') }}" alt="LBSNAA Logo"
-                                                class="img-fluid" width="70" height="70">
+                            <div class="card timetable-pdf-sheet border-2 shadow-sm mb-4">
+                                <div class="card-body p-3 p-md-4">
+                                    <header class="timetable-pdf-banner pb-3 mb-3 border-bottom border-2">
+                                        <div class="row g-3 align-items-center">
+                                            <div class="col-auto">
+                                                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png"
+                                                    width="44" height="44" class="timetable-pdf-emblem" alt="National Emblem" loading="lazy">
+                                            </div>
+                                            <div class="col min-w-0">
+                                                <p class="timetable-pdf-hindi institution-name hindi-text mb-1 small text-body-secondary">
+                                                    लाल बहादुर शास्त्री राष्ट्रीय प्रशासन अकादमी, मसूरी
+                                                </p>
+                                                <p class="timetable-pdf-english fw-semibold text-primary mb-1 mb-md-2">
+                                                    Lal Bahadur Shastri National Academy of Administration, Mussoorie
+                                                </p>
+                                                <p class="timetable-pdf-course text-body-secondary small mb-0 fw-medium" id="timetableCourseTitle">
+                                                    Academic timetable — select a course filter when available
+                                                </p>
+                                                <p class="timetable-pdf-period small text-muted mb-0 mt-1 fst-italic d-none" id="timetableCoursePeriod" aria-live="polite"></p>
+                                            </div>
+                                            <div class="col-auto text-end d-none d-md-block">
+                                                <img src="{{ asset('images/lbsnaa_logo.jpg') }}"
+                                                    onerror="this.onerror=null;this.src='https://www.lbsnaa.gov.in/admin_assets/images/logo.png'"
+                                                    class="timetable-pdf-logo" alt="LBSNAA" width="160" height="48" loading="lazy">
+                                            </div>
                                         </div>
-                                    </div>
 
-                                    <div class="col-md-6 text-center">
-                                        <h1 class="h3 mb-2 fw-bold text-primary">Weekly Timetable</h1>
-                                        <p class="text-muted mb-0 fw-medium" id="weekRangeText" aria-live="polite">
-                                            <i class="bi bi-calendar-week me-2" aria-hidden="true"></i>—
+                                        <div class="row align-items-end g-2 mt-3">
+                                            <div class="col-lg-8">
+                                                <h1 class="h4 fw-bold text-dark mb-1 d-flex flex-wrap align-items-center gap-2">
+                                                    <span>Time Table</span>
+                                                    <span class="text-secondary fw-normal">:</span>
+                                                    <span class="text-secondary fw-normal">Week</span>
+                                                    <span id="currentWeekNumber" class="text-primary" aria-live="polite">—</span>
+                                                    <span class="text-secondary fw-normal ms-1 small">Revised</span>
+                                                </h1>
+                                                <p class="text-muted small mb-0" id="weekRangeText" aria-live="polite">
+                                                    <i class="bi bi-calendar-week me-1" aria-hidden="true"></i>—
+                                                </p>
+                                            </div>
+                                            <div class="col-lg-4">
+                                                <div class="d-flex flex-wrap justify-content-lg-end gap-2">
+                                                    <div class="btn-group shadow-sm" role="group" aria-label="Week navigation">
+                                                        <button type="button" class="btn btn-outline-primary btn-sm px-2" id="prevWeekBtn" aria-label="Previous week">
+                                                            <i class="bi bi-chevron-left" aria-hidden="true"></i>
+                                                        </button>
+                                                        <button type="button" class="btn btn-primary btn-sm px-3" id="currentWeekBtn" aria-label="Current week">
+                                                            <i class="bi bi-calendar-check me-1" aria-hidden="true"></i>Today
+                                                        </button>
+                                                        <button type="button" class="btn btn-outline-primary btn-sm px-2" id="nextWeekBtn" aria-label="Next week">
+                                                            <i class="bi bi-chevron-right" aria-hidden="true"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <p class="small text-center text-body-secondary border-top border-light pt-2 mt-3 mb-0 px-md-5">
+                                            <span class="fw-semibold text-dark">Note:</span>
+                                            Tea break, lunch break, and venue lines follow the official programme when entered as session titles in the calendar.
                                         </p>
+                                    </header>
+
+                                    @php
+                                        $ttFootnotes = array_values(array_filter(array_map('trim', config('week_timetable.footnotes', []))));
+                                    @endphp
+                                    @if(count($ttFootnotes))
+                                        <div class="timetable-footnotes small text-body-secondary border border-light rounded-2 px-3 py-2 mb-2 bg-light" role="note" aria-label="Programme notes">
+                                            @foreach ($ttFootnotes as $fn)
+                                                <p class="mb-1 lh-sm">{{ e($fn) }}</p>
+                                            @endforeach
+                                        </div>
+                                    @endif
+
+                                    <div class="timetable-container border border-dark border-opacity-25 rounded-1 overflow-hidden bg-white">
+                                        <div class="table-responsive" role="region" aria-label="Weekly timetable grid">
+                                            <table class="table table-bordered timetable-grid mb-0" id="timetableTable"
+                                                aria-describedby="timetableDescription">
+                                                <caption class="visually-hidden" id="timetableDescription">
+                                                    Weekly academic timetable showing events by time slot and weekday
+                                                </caption>
+                                                <thead id="timetableHead">
+                                                    <tr class="day-names-row">
+                                                        <th scope="col" rowspan="2" class="time-column align-middle">TIME</th>
+                                                        <th scope="col" class="text-center">Monday</th>
+                                                        <th scope="col" class="text-center">Tuesday</th>
+                                                        <th scope="col" class="text-center">Wednesday</th>
+                                                        <th scope="col" class="text-center">Thursday</th>
+                                                        <th scope="col" class="text-center">Friday</th>
+                                                    </tr>
+                                                    <tr class="date-row">
+                                                        <th scope="col" class="text-center">—</th>
+                                                        <th scope="col" class="text-center">—</th>
+                                                        <th scope="col" class="text-center">—</th>
+                                                        <th scope="col" class="text-center">—</th>
+                                                        <th scope="col" class="text-center">—</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="timetableBody">
+                                                    <!-- JS populates rows -->
+                                                </tbody>
+                                            </table>
+                                        </div>
                                     </div>
 
-                                    <div class="col-md-4 text-center text-md-end">
-                                        <div class="week-controls bg-white rounded-3 p-3 shadow-sm d-inline-block">
-                                            <div class="btn-group mb-2" role="group" aria-label="Week navigation">
-                                                <button type="button" class="btn btn-outline-primary" id="prevWeekBtn"
-                                                    aria-label="Previous week">
-                                                    <i class="bi bi-chevron-left"></i>
+                                    <div class="accordion accordion-flush mt-4 border-top pt-3" id="timetableLegendAccordion">
+                                        <div class="accordion-item border rounded-2 overflow-hidden">
+                                            <h2 class="accordion-header" id="timetableLegendHeading">
+                                                <button class="accordion-button collapsed py-2 small fw-semibold" type="button"
+                                                    data-bs-toggle="collapse" data-bs-target="#timetableLegendCollapse"
+                                                    aria-expanded="false" aria-controls="timetableLegendCollapse">
+                                                    <i class="bi bi-journal-text me-2 text-primary" aria-hidden="true"></i>
+                                                    Venues, cadres &amp; abbreviations (reference)
                                                 </button>
-                                                <button type="button" class="btn btn-primary px-4" id="currentWeekBtn"
-                                                    aria-label="Current week">
-                                                    <i class="bi bi-calendar-check me-2"></i>Today
-                                                </button>
-                                                <button type="button" class="btn btn-outline-primary" id="nextWeekBtn"
-                                                    aria-label="Next week">
-                                                    <i class="bi bi-chevron-right"></i>
-                                                </button>
-                                            </div>
-
-                                            <div class="week-badge">
-                                                <span class="badge bg-primary-subtle text-primary fs-6 px-3 py-2">
-                                                    Week <span id="currentWeekNumber" class="fw-bold">—</span>
-                                                </span>
+                                            </h2>
+                                            <div id="timetableLegendCollapse" class="accordion-collapse collapse" aria-labelledby="timetableLegendHeading"
+                                                data-bs-parent="#timetableLegendAccordion">
+                                                <div class="accordion-body small text-body-secondary">
+                                                    <p class="mb-2 text-dark fw-semibold">Sample reference (from official time table format)</p>
+                                                    <div class="row g-3">
+                                                        <div class="col-md-6">
+                                                            <p class="fw-semibold text-primary mb-1">Venue abbreviations</p>
+                                                            <ul class="list-unstyled mb-0 lh-sm">
+                                                                <li><strong>TH</strong> — Tagore Hall</li>
+                                                                <li><strong>AH</strong> — Ambedkar Hall (Aadharshila)</li>
+                                                                <li><strong>SA</strong> — Sampoornanand Auditorium</li>
+                                                                <li><strong>SPH</strong> — Sardar Patel Hall</li>
+                                                            </ul>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <p class="fw-semibold text-primary mb-1">Module tags</p>
+                                                            <ul class="list-unstyled mb-0 lh-sm">
+                                                                <li><strong>GM</strong> — Governance Module</li>
+                                                                <li><strong>L</strong> — Law</li>
+                                                                <li><strong>RAM</strong> — Rural &amp; Agriculture Module</li>
+                                                                <li><strong>TM</strong> — Technology Module</li>
+                                                            </ul>
+                                                        </div>
+                                                    </div>
+                                                    <p class="mb-0 mt-2 fst-italic">Your live grid uses calendar data; expand rows to read full topic, faculty, and venue from each cell.</p>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-
-                            <!-- Week Cards (Accessible, GIGW-friendly) -->
-                            <div id="weekCards" class="week-cards mb-4" role="region" aria-labelledby="weekCardsTitle">
-                                <h2 id="weekCardsTitle" class="h5 fw-bold text-primary mb-3">Week at a glance</h2>
-                                <div class="row g-3" role="list" aria-label="Days of the week">
-                                    <!-- JS will render day cards here -->
-                                </div>
-                            </div>
-
-                            <!-- Timetable table -->
-                            <div class="timetable-container border rounded-3 overflow-hidden">
-                                <div class="table-responsive" role="region" aria-label="Weekly timetable">
-                                    <table class="table table-bordered timetable-grid" id="timetableTable"
-                                        aria-describedby="timetableDescription">
-                                        <caption class="visually-hidden" id="timetableDescription">
-                                            Weekly academic timetable showing events
-                                        </caption>
-                                        <thead id="timetableHead">
-                                            <tr>
-                                                <th scope="col" class="time-column">Time</th>
-                                                <th scope="col">Monday</th>
-                                                <th scope="col">Tuesday</th>
-                                                <th scope="col">Wednesday</th>
-                                                <th scope="col">Thursday</th>
-                                                <th scope="col">Friday</th>
-                                            </tr>
-                                        </thead>
-
-                                        <tbody id="timetableBody">
-                                            <!-- JS will populate body -->
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-
                         </div>
                     </div>
 
@@ -2392,6 +2724,7 @@ console.log('FullCalendar loaded:', typeof FullCalendar !== 'undefined');
 
 // Configuration object
 const CalendarConfig = {
+    courseMeta: @json($calendarCourseMeta ?? []),
     api: {
         events: "{{ route('calendar.event.calendar-details') }}",
         eventDetails: "{{ route('calendar.event.Singlecalendar-details') }}",
@@ -2399,7 +2732,10 @@ const CalendarConfig = {
         update: '/calendar/event-update/',
         delete: '/calendar/event-delete/',
         groupTypes: "{{ route('calendar.get.group.types') }}",
-        subjectNames: "{{ route('calendar.get.subject.name') }}"
+        subjectNames: "{{ route('calendar.get.subject.name') }}",
+        weekTimetablePdf: "{{ route('calendar.week-timetable-pdf') }}",
+        weekTimetablePrint: "{{ route('calendar.week-timetable-print') }}",
+        weekTimetableExcel: "{{ route('calendar.week-timetable-excel') }}"
     },
     colors: [
         '#4e73df', '#1cc88a', '#36b9cc', '#f6c23e',
@@ -3097,15 +3433,69 @@ class CalendarManager {
 
 
     bindEvents() {
-        // View toggle buttons
+        // View toggle buttons (use currentTarget so clicks on inner icons hit the button)
         document.querySelectorAll('[data-view]').forEach(btn => {
-            btn.addEventListener('click', (e) => this.toggleView(e.target));
+            btn.addEventListener('click', (e) => {
+                const t = e.currentTarget;
+                if (t) {
+                    this.toggleView(t);
+                }
+            });
         });
 
         // Week navigation buttons (List View)
         document.getElementById('prevWeekBtn')?.addEventListener('click', () => this.navigateWeek(-1));
         document.getElementById('nextWeekBtn')?.addEventListener('click', () => this.navigateWeek(1));
         document.getElementById('currentWeekBtn')?.addEventListener('click', () => this.navigateWeek(0));
+
+        const weekTimetableExportParams = () => {
+            const params = new URLSearchParams();
+            params.set('week_offset', String(this.listViewWeekOffset ?? 0));
+            if (this.selectedCourseId) {
+                params.set('course_id', String(this.selectedCourseId));
+            }
+            return params;
+        };
+        const weekTimetableQs = () => weekTimetableExportParams().toString();
+
+        document.getElementById('weekTimetablePrintBtn')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            const base = CalendarConfig.api.weekTimetablePrint;
+            window.open(`${base}?${weekTimetableQs()}`, '_blank', 'noopener');
+        });
+        document.getElementById('weekTimetablePdfViewBtn')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            const base = CalendarConfig.api.weekTimetablePdf;
+            window.open(`${base}?${weekTimetableQs()}`, '_blank', 'noopener');
+        });
+        document.getElementById('weekTimetablePdfDownloadBtn')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            const base = CalendarConfig.api.weekTimetablePdf;
+            const params = weekTimetableExportParams();
+            params.set('download', '1');
+            window.location.assign(`${base}?${params.toString()}`);
+        });
+        document.getElementById('weekTimetableExcelBtn')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            const base = CalendarConfig.api.weekTimetableExcel;
+            window.location.assign(`${base}?${weekTimetableQs()}`);
+        });
+
+        document.getElementById('weekTimetablePrintPageBtn')?.addEventListener('click', () => {
+            const list = document.getElementById('eventListView');
+            if (!list || list.classList.contains('d-none')) {
+                window.alert('Switch to “Timetable sheet” first, then use Print sheet.');
+                return;
+            }
+            document.body.classList.add('timetable-print-only');
+            const done = () => {
+                document.body.classList.remove('timetable-print-only');
+                window.removeEventListener('afterprint', done);
+            };
+            window.addEventListener('afterprint', done);
+            window.setTimeout(() => window.print(), 150);
+            window.setTimeout(done, 20000);
+        });
 
         // Form submission
         document.getElementById('eventForm').addEventListener('submit', (e) => this.handleFormSubmit(e));
@@ -3218,6 +3608,10 @@ class CalendarManager {
     }
 
     toggleView(button) {
+        if (!button || !button.dataset || !button.dataset.view) {
+            return;
+        }
+
         // Update button states
         document.querySelectorAll('[data-view]').forEach(btn => {
             btn.classList.remove('active');
@@ -4020,19 +4414,40 @@ async setInternalFaculty(internalFacultyIds) {
             const weekStart = new Date(today.getFullYear(), today.getMonth(), diff);
             weekStart.setDate(weekStart.getDate() + (this.listViewWeekOffset * 7));
 
-            // Update week display in header (use same calculation as updateCurrentWeek)
+            // Week badge: programme week from course start_year (matches official PDF), else ISO-style week
             const date = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate());
             const jan4 = new Date(date.getFullYear(), 0, 4);
             const monday = new Date(jan4);
             monday.setDate(monday.getDate() - monday.getDay() + 1);
             const timeDiff = date - monday;
             const weekDiff = Math.floor(timeDiff / (7 * 24 * 60 * 60 * 1000));
-            const weekNum = weekDiff + 1;
+            let weekNum = weekDiff + 1;
 
-            const weekElement = document.getElementById('currentWeek');
+            const cmeta = CalendarConfig.courseMeta && this.selectedCourseId
+                ? CalendarConfig.courseMeta[String(this.selectedCourseId)]
+                : null;
+            if (cmeta && cmeta.start_year) {
+                try {
+                    const prog = new Date(cmeta.start_year);
+                    if (!Number.isNaN(prog.getTime())) {
+                        const progMon = this.startOfMondayTs(prog);
+                        const wsMon = this.startOfMondayTs(weekStart);
+                        const days = Math.round((wsMon - progMon) / 86400000);
+                        if (!Number.isNaN(days) && days >= 0) {
+                            weekNum = Math.floor(days / 7) + 1;
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Programme week number', e);
+                }
+            }
+
+            const weekElement = document.getElementById('currentWeekNumber');
             if (weekElement) {
                 weekElement.textContent = weekNum;
             }
+
+            this.updateTimetablePdfBanner(weekStart);
 
             // Update table header with week dates
             this.updateTableHeader(weekStart);
@@ -4042,47 +4457,181 @@ async setInternalFaculty(internalFacultyIds) {
             console.log('Week start:', weekStart);
             console.log('Total events:', events.length);
 
-            // Filter and render events
-            const filteredEvents = this.getEventsForWeek(events, this.listViewWeekOffset);
+            // Filter and render (timetable sheet omits holidays; main calendar still receives them)
+            const filteredEvents = this.getEventsForWeek(events, this.listViewWeekOffset)
+                .filter((e) => !this.isCalendarHoliday(e));
             console.log('Filtered events for this week:', filteredEvents.length);
-            this.renderListView(filteredEvents);
-            this.renderWeekCards(events, weekStart);
+            this.renderListView(filteredEvents, weekStart);
             this.updateWeekRangeText(weekStart);
         } catch (error) {
             console.error('Error loading list view:', error);
         }
     }
 
+    /**
+     * List view banner — course line (matches official time table header style).
+     */
+    updateTimetablePdfBanner(weekStart) {
+        const courseEl = document.getElementById('timetableCourseTitle');
+        const periodEl = document.getElementById('timetableCoursePeriod');
+        if (!courseEl) return;
+
+        const sel = document.getElementById('courseFilter');
+        const opt = sel && sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex] : null;
+        const fromSelect = opt && opt.value ? String(opt.text).trim() : '';
+
+        const setPeriodFromMeta = () => {
+            if (!periodEl) return;
+            const cmeta = CalendarConfig.courseMeta && this.selectedCourseId
+                ? CalendarConfig.courseMeta[String(this.selectedCourseId)]
+                : null;
+            if (cmeta && cmeta.start_year && cmeta.end_date) {
+                try {
+                    const s = new Date(cmeta.start_year);
+                    const e = new Date(cmeta.end_date);
+                    if (!Number.isNaN(s.getTime()) && !Number.isNaN(e.getTime())) {
+                        const fmt = (d) => d.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+                        periodEl.textContent = '(' + fmt(s) + ' to ' + fmt(e) + ')';
+                        periodEl.classList.remove('d-none');
+                        return;
+                    }
+                } catch (err) {
+                    /* ignore */
+                }
+            }
+            periodEl.textContent = '';
+            periodEl.classList.add('d-none');
+        };
+
+        if (fromSelect) {
+            courseEl.textContent = fromSelect;
+            setPeriodFromMeta();
+            return;
+        }
+        if (Array.isArray(this.courses) && this.selectedCourseId) {
+            const c = this.courses.find(x => String(x.pk) === String(this.selectedCourseId));
+            if (c && (c.course_name || c.name)) {
+                courseEl.textContent = (c.course_name || c.name).trim();
+                setPeriodFromMeta();
+                return;
+            }
+        }
+        courseEl.textContent = 'Academic timetable — select a course filter when available';
+        setPeriodFromMeta();
+    }
+
+    /** Monday 00:00 of the list-view week (same logic as loadListView). */
+    getListViewWeekStart() {
+        const today = new Date();
+        const dayOfWeek = today.getDay();
+        const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+        const weekStart = new Date(today.getFullYear(), today.getMonth(), diff);
+        weekStart.setDate(weekStart.getDate() + (this.listViewWeekOffset * 7));
+        weekStart.setHours(0, 0, 0, 0);
+        return weekStart;
+    }
+
+    escapeHtml(str) {
+        if (str == null) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    /**
+     * One row of tea/lunch notices per weekday (matches PDF break row).
+     */
+    buildBreakNoticeRowHtml(events, weekStart) {
+        const dayKeys = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+        const inners = dayKeys.map((_, i) => {
+            const d = new Date(weekStart);
+            d.setDate(d.getDate() + i);
+            const parts = [];
+            events.forEach((ev) => {
+                if (this.isCalendarHoliday(ev)) return;
+                const evd = new Date(ev.start);
+                if (evd.getFullYear() !== d.getFullYear() || evd.getMonth() !== d.getMonth() || evd.getDate() !== d.getDate()) {
+                    return;
+                }
+                const title = String(ev.title || '').trim();
+                if (!/\b(tea\s*break|lunch\s*break)\b/i.test(title)) return;
+                const p = this.getListEventProps(ev);
+                const line = title + (p.class_session ? ': ' + p.class_session : '');
+                parts.push(line);
+            });
+            return parts.length ? parts.join(' ') : '';
+        });
+        if (!inners.some(Boolean)) {
+            return '';
+        }
+        const cells = inners.map((inner) => `<td class="event-cell text-center">${inner ? this.escapeHtml(inner) : ''}</td>`);
+        return `<tr class="break-notes-row break-row"><th scope="row" class="time-column"></th>${cells.join('')}</tr>`;
+    }
+
+    /** VENUES: … line from distinct group + venue (matches official sheet). */
+    buildVenueSummaryLine(events) {
+        const labels = [];
+        const seen = new Set();
+        events.forEach((ev) => {
+            if (this.isCalendarHoliday(ev)) return;
+            const title = String(ev.title || '').trim();
+            if (title && /\b(tea\s*break|lunch\s*break)\b/i.test(title)) return;
+            const p = this.getListEventProps(ev);
+            const g = String(p.group_name || '').trim();
+            const v = String(p.vanue || p.venue_name || '').trim();
+            if (!g && !v) return;
+            const label = g ? `${g}: ${v}` : v;
+            const key = label.toLowerCase();
+            if (seen.has(key)) return;
+            seen.add(key);
+            labels.push(label);
+        });
+        if (!labels.length) return '';
+        return 'VENUES: ' + labels.join(', ');
+    }
+
     updateTableHeader(weekStart) {
-        // Get the table and its header
         const table = document.getElementById('timetableTable');
         if (!table) {
             console.warn('Table #timetableTable not found');
             return;
         }
 
-        const thead = table.querySelector('thead tr');
+        const thead = table.querySelector('thead');
         if (!thead) {
             console.warn('Table header not found');
             return;
         }
 
         const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-        const headers = thead.querySelectorAll('th:not(.time-column)');
-
-        headers.forEach((header, index) => {
+        const dateCells = days.map((_, index) => {
             const date = new Date(weekStart);
             date.setDate(date.getDate() + index);
-            const dateStr = date.toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric'
-            });
-            header.innerHTML = `${days[index]}<br><small class="text-muted">${dateStr}</small>`;
-        });
+            const dd = String(date.getDate()).padStart(2, '0');
+            const mm = String(date.getMonth() + 1).padStart(2, '0');
+            const yyyy = date.getFullYear();
+            const dateStr = `${dd}.${mm}.${yyyy}`;
+            return `<th scope="col" class="text-center">${dateStr}</th>`;
+        }).join('');
+
+        const dayCells = days.map((d) => `<th scope="col" class="text-center">${d}</th>`).join('');
+
+        thead.innerHTML = `
+            <tr class="day-names-row">
+                <th scope="col" rowspan="2" class="time-column align-middle">TIME</th>
+                ${dayCells}
+            </tr>
+            <tr class="date-row">
+                ${dateCells}
+            </tr>
+        `;
     }
 
-    renderListView(events) {
+    renderListView(events, weekStart) {
         const tbody = document.getElementById('timetableBody');
+        const ws = weekStart || this.getListViewWeekStart();
 
         if (!events.length) {
             tbody.innerHTML = `
@@ -4098,17 +4647,27 @@ async setInternalFaculty(internalFacultyIds) {
             return;
         }
 
-        // Group events by time slot
+        // Group events by time slot (same keys / order as PDF export)
         const timeSlots = this.groupEventsByTime(events);
+        const sortedTimes = Object.keys(timeSlots).sort((a, b) => this.compareWeekTimetableTimeSlots(a, b));
 
-        let html = '';
-        Object.entries(timeSlots).forEach(([time, dayEvents]) => {
+        const breakRow = this.buildBreakNoticeRowHtml(events, ws);
+        const venueText = this.buildVenueSummaryLine(events);
+        const venueRow = venueText
+            ? `<tr class="venue-summary-row"><th scope="row" class="time-column"></th><td colspan="5" class="event-cell text-center">${this.escapeHtml(venueText)}</td></tr>`
+            : '';
+
+        let html = breakRow + venueRow;
+        sortedTimes.forEach((time) => {
+            const dayEvents = timeSlots[time];
+            const sample = this.pickSampleEventForTimeSlot(dayEvents);
+            const timeCell = sample ? this.formatTimeColumnDisplay(sample) : String(time).replace(/\s+/g, '\n');
             html += `
                 <tr>
-                    <th scope="row" class="time-slot">${time}</th>
+                    <th scope="row" class="time-slot time-column">${timeCell.replace(/\n/g, '<br>')}</th>
                     ${['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map(day => `
                         <td class="event-cell">
-                            ${dayEvents[day] ? this.renderListEvent(dayEvents[day]) : ''}
+                            ${dayEvents[day] ? this.renderGroupedDayCell(dayEvents[day]) : ''}
                         </td>
                     `).join('')}
                 </tr>
@@ -4120,168 +4679,411 @@ async setInternalFaculty(internalFacultyIds) {
         this.initializeScrollIndicators();
     }
 
-    renderWeekCards(events, weekStart) {
-        const container = document.querySelector('#weekCards .row');
-        if (!container) return;
-
-        const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
-        const byDay = new Map();
-
-        // Prepare boundaries: Monday start to Sunday end
-        const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekEnd.getDate() + 6);
-
-        days.forEach((_, i) => {
-            const d = new Date(weekStart);
-            d.setDate(d.getDate() + i);
-            const key = d.toISOString().split('T')[0];
-            byDay.set(key, { date: d, events: [] });
-        });
-
-        // Filter incoming events to week range and allocate to day buckets
-        (events || []).forEach(evt => {
-            const d = new Date(evt.start);
-            if (isNaN(d)) return;
-            if (d < weekStart || d > weekEnd) return;
-            const key = new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString?.() ?
-                new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString().split('T')[0] :
-                `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-            if (byDay.has(key)) byDay.get(key).events.push(evt);
-        });
-
-        container.innerHTML = '';
-        days.forEach((label, i) => {
-            const d = new Date(weekStart);
-            d.setDate(d.getDate() + i);
-            const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-            const info = byDay.get(key) || { date: d, events: [] };
-            const count = info.events.length;
-
-            const dateStr = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
-            const fullStr = d.toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-
-            const col = document.createElement('div');
-            col.className = 'col-12 col-md-6 col-xl-4';
-            col.setAttribute('role', 'listitem');
-            col.innerHTML = `
-                <div class="week-day-card" tabindex="0" aria-label="${label} ${fullStr}, ${count} event${count!==1?'s':''}">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <div class="fw-bold text-dark">${label} <span class="text-muted">${dateStr}</span></div>
-                        <span class="badge bg-primary-subtle text-primary">${count} event${count!==1?'s':''}</span>
-                    </div>
-                    <div class="week-day-events">
-                        ${info.events.slice(0, 3).map(evt => {
-                            const title = evt.title || evt.extendedProps?.topic || '';
-                            const venue = evt.extendedProps?.vanue || evt.extendedProps?.venue_name || '';
-                            const faculty = evt.extendedProps?.faculty_name || '';
-                            const timeTxt = evt.start ? new Date(evt.start).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '';
-                            return `
-                            <div class="mini-event d-flex align-items-center gap-2" role="button" tabindex="0" aria-label="${title}${timeTxt?`, at ${timeTxt}`:''}${venue?`, at ${venue}`:''}">
-                                <i class="bi bi-clock text-primary" aria-hidden="true"></i>
-                                <span class="mini-title text-truncate">${title}</span>
-                                ${timeTxt ? `<span class="mini-time text-muted">${timeTxt}</span>` : ''}
-                            </div>`;
-                        }).join('')}
-                        ${count > 3 ? `<a href="#" class="mini-more" aria-label="Show ${count-3} more events">+ ${count-3} more</a>` : ''}
-                    </div>
-                </div>
-            `;
-            container.appendChild(col);
-        });
-    }
-
     updateWeekRangeText(weekStart) {
         const el = document.getElementById('weekRangeText');
         if (!el) return;
-        const startStr = new Date(weekStart).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
-        const end = new Date(weekStart); end.setDate(end.getDate() + 6);
-        const endStr = end.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
-        el.innerHTML = `<i class="bi bi-calendar-week me-2" aria-hidden="true"></i>${startStr} – ${endStr}`;
+        const fmt = (d) => {
+            const x = new Date(d);
+            const dd = String(x.getDate()).padStart(2, '0');
+            const mm = String(x.getMonth() + 1).padStart(2, '0');
+            const yyyy = x.getFullYear();
+            return `${dd}.${mm}.${yyyy}`;
+        };
+        const startStr = fmt(weekStart);
+        const end = new Date(weekStart);
+        end.setDate(end.getDate() + 6);
+        const endStr = fmt(end);
+        el.innerHTML = `<i class="bi bi-calendar-week me-1" aria-hidden="true"></i><span class="fw-medium text-dark">${startStr}</span> <span class="text-muted">to</span> <span class="fw-medium text-dark">${endStr}</span>`;
+    }
+
+    pad2(n) {
+        return String(n).padStart(2, '0');
+    }
+
+    normalizeTimetableSessionString(s) {
+        if (s == null || s === '') {
+            return '';
+        }
+        let t = String(s).trim();
+        t = t.replace(/[\u2013\u2014\u2212]/g, '-').replace(/\s*hrs\.?\s*$/i, '').trim();
+
+        return t;
+    }
+
+    /** @returns {[string, string]|null} */
+    splitSessionTimeRange(raw) {
+        const s = this.normalizeTimetableSessionString(raw);
+        if (!s) {
+            return null;
+        }
+        const patterns = [/\s+to\s+/i, /\s*-\s*/];
+        for (let i = 0; i < patterns.length; i += 1) {
+            const parts = s.split(patterns[i]);
+            if (parts.length === 2) {
+                const a = parts[0].trim();
+                const b = parts[1].trim();
+                if (a && b) {
+                    return [a, b];
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /** Monday 00:00 local time as epoch ms */
+    startOfMondayTs(d) {
+        const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        const dow = x.getDay();
+        x.setDate(x.getDate() + (dow === 0 ? -6 : 1 - dow));
+        x.setHours(0, 0, 0, 0);
+        return x.getTime();
+    }
+
+    /** Parse class_session start on calendar day → epoch ms, or null */
+    weekTimetableSessionSlotStartMs(event, dayDate) {
+        const p = this.getListEventProps(event);
+        const pair = this.splitSessionTimeRange(p.class_session);
+        let left = '';
+        if (pair) {
+            left = pair[0].trim();
+        } else {
+            const sessNorm = this.normalizeTimetableSessionString(p.class_session || '');
+            left = sessNorm;
+        }
+        if (!left) {
+            return null;
+        }
+        const y = dayDate.getFullYear();
+        const mo = dayDate.getMonth();
+        const da = dayDate.getDate();
+        const probe = new Date(`${y}-${this.pad2(mo + 1)}-${this.pad2(da)} ${left}`);
+        return Number.isNaN(probe.getTime()) ? null : probe.getTime();
+    }
+
+    /**
+     * Start/end minutes from local midnight (matches PHP weekTimetableSlotWindowMinutes).
+     * Same clock band on all weekdays → one timetable row (serial 9:00 … 17:30 style order).
+     *
+     * @returns {[number, number]}  Use t1 negative when no usable clock (sort last).
+     */
+    weekTimetableSlotWindowMinutes(event) {
+        const p = this.getListEventProps(event);
+        const st = event.start ? new Date(event.start) : null;
+        const pair = this.splitSessionTimeRange(p.class_session);
+        if (pair) {
+            const left = this.parseClockTo24h(pair[0].trim());
+            const right = this.parseClockTo24h(pair[1].trim());
+            if (left && right) {
+                const [h1, m1] = left.split(':').map((x) => parseInt(x, 10));
+                const [h2, m2] = right.split(':').map((x) => parseInt(x, 10));
+                let t1 = h1 * 60 + m1;
+                let t2 = h2 * 60 + m2;
+                if (t2 < t1) {
+                    t2 += 1440;
+                }
+                return [t1, t2];
+            }
+        }
+        if (event.allDay && st && !Number.isNaN(st.getTime())) {
+            const sessNorm = this.normalizeTimetableSessionString(p.class_session || '');
+            if (sessNorm) {
+                const single = this.parseClockTo24h(sessNorm);
+                if (single) {
+                    const [h, mi] = single.split(':').map((x) => parseInt(x, 10));
+                    const t1 = h * 60 + mi;
+                    return [t1, Math.min(t1 + 50, 24 * 60)];
+                }
+            }
+            const ms = this.weekTimetableSessionSlotStartMs(event, st);
+            if (ms != null) {
+                const d = new Date(ms);
+                const t1 = d.getHours() * 60 + d.getMinutes();
+                return [t1, Math.min(t1 + 50, 24 * 60)];
+            }
+            return [-1, -1];
+        }
+        if (!st || Number.isNaN(st.getTime())) {
+            return [-1, -1];
+        }
+        const t1 = st.getHours() * 60 + st.getMinutes();
+        const en = event.end ? new Date(event.end) : new Date(st.getTime() + 50 * 60 * 1000);
+        let t2 = en.getHours() * 60 + en.getMinutes();
+        const sameCalDay = st.getFullYear() === en.getFullYear()
+            && st.getMonth() === en.getMonth()
+            && st.getDate() === en.getDate();
+        if (!sameCalDay && t2 < t1) {
+            t2 += 1440;
+        }
+        return [t1, t2];
+    }
+
+    /** Same slot key as PHP weekTimetableSlotSortKey (clock-only band). */
+    weekTimetableSlotSortKey(event) {
+        const [t1, t2] = this.weekTimetableSlotWindowMinutes(event);
+        if (t1 < 0) {
+            return '999990_999990';
+        }
+        const pad5 = (n) => String(Math.min(n, 99999)).padStart(5, '0');
+        return `${pad5(t1)}_${pad5(t2)}`;
+    }
+
+    parseClockTo24h(chunk) {
+        const c = String(chunk == null ? '' : chunk).trim();
+        if (!c) {
+            return null;
+        }
+        const m = c.match(/^(\d{1,2})(\d{2})$/);
+        if (m) {
+            const h = parseInt(m[1], 10);
+            const mi = parseInt(m[2], 10);
+            if (h <= 23 && mi <= 59) {
+                return `${this.pad2(h)}:${this.pad2(mi)}`;
+            }
+        }
+        const d = new Date(`1970-01-01 ${c}`);
+        if (Number.isNaN(d.getTime())) {
+            return null;
+        }
+        return `${this.pad2(d.getHours())}:${this.pad2(d.getMinutes())}`;
+    }
+
+    /** Official sheet: "HH:mm\nto\nHH:mm" from class_session when possible (including all-day rows). */
+    formatTimeColumnDisplay(event) {
+        const p = this.getListEventProps(event);
+        const pair = this.splitSessionTimeRange(p.class_session);
+        if (pair) {
+            const left = this.parseClockTo24h(pair[0]);
+            const right = this.parseClockTo24h(pair[1]);
+            if (left && right) {
+                return `${left}\nto\n${right}`;
+            }
+        }
+        const sessNorm = this.normalizeTimetableSessionString(p.class_session || '');
+        if (event.allDay && sessNorm) {
+            const single = this.parseClockTo24h(sessNorm);
+            if (single) {
+                return `${single}\nto\n${single}`;
+            }
+            return 'All Day';
+        }
+        if (event.allDay) {
+            return 'All Day';
+        }
+        const st = event.start ? new Date(event.start) : null;
+        const en = event.end ? new Date(event.end) : null;
+        if (!st || Number.isNaN(st.getTime())) {
+            return '—';
+        }
+        const e2 = (!en || Number.isNaN(en.getTime())) ? new Date(st.getTime() + 50 * 60 * 1000) : en;
+        return `${this.pad2(st.getHours())}:${this.pad2(st.getMinutes())}\nto\n${this.pad2(e2.getHours())}:${this.pad2(e2.getMinutes())}`;
+    }
+
+    compareWeekTimetableTimeSlots(a, b) {
+        return String(a).localeCompare(String(b));
+    }
+
+    pickSampleEventForTimeSlot(dayMap) {
+        for (const d of ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']) {
+            if (dayMap[d] && dayMap[d][0]) {
+                return dayMap[d][0];
+            }
+        }
+        return null;
     }
 
     groupEventsByTime(events) {
-        // Implement grouping logic based on your data structure
-        // This is a simplified example
         const groups = {};
 
         events.forEach(event => {
-            const time = event.start ? new Date(event.start).toLocaleTimeString([], {
-                hour: '2-digit',
-                minute: '2-digit'
-            }) : 'All Day';
+            const slotKey = this.weekTimetableSlotSortKey(event);
 
-            if (!groups[time]) groups[time] = {};
+            if (!groups[slotKey]) {
+                groups[slotKey] = {};
+            }
 
             const day = new Date(event.start).getDay();
             const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
             const dayName = dayNames[day];
 
-            if (!groups[time][dayName]) {
-                groups[time][dayName] = [];
+            if (!groups[slotKey][dayName]) {
+                groups[slotKey][dayName] = [];
             }
 
-            groups[time][dayName].push(event);
+            groups[slotKey][dayName].push(event);
         });
 
         return groups;
     }
 
+    /** Calendar / API holiday entries — hidden on the revised timetable sheet only. */
+    isCalendarHoliday(event) {
+        const ex = event.extendedProps || {};
+        return event.type === 'holiday'
+            || ex.type === 'holiday'
+            || String(event.id || '').startsWith('holiday_');
+    }
+
+    /**
+     * Normalise API / FullCalendar event fields for list view (flat JSON + extendedProps).
+     */
+    getListEventProps(event) {
+        const ex = event.extendedProps || {};
+        const gn = event.group_name ?? ex.group_name ?? '';
+        const gns = event.group_names ?? ex.group_names;
+        const namesArr = Array.isArray(gns) ? gns : (gn ? String(gn).split(',').map(s => s.trim()).filter(Boolean) : []);
+        return {
+            ...ex,
+            group_name: gn || namesArr.join(', '),
+            group_names: namesArr,
+            class_session: event.class_session ?? ex.class_session ?? '',
+            vanue: event.vanue ?? ex.vanue ?? '',
+            venue_name: event.venue_name ?? ex.venue_name ?? '',
+            faculty_name: event.faculty_name ?? ex.faculty_name ?? '',
+            topic: event.topic ?? ex.topic ?? '',
+        };
+    }
+
+    /**
+     * Map group text to a PDF-style row letter (A, B, …) when possible.
+     */
+    inferPdfGroupRowLetter(props, fallbackIndex = 0) {
+        const raw = (props.group_name || '').trim();
+        const blob = raw.toLowerCase();
+        const m = blob.match(/\bgroup\s*([a-z])\b/i);
+        if (m) return m[1].toUpperCase();
+        if (blob.includes('group a')) return 'A';
+        if (blob.includes('group b')) return 'B';
+        if (blob.includes('group c')) return 'C';
+        if (blob.includes('group d')) return 'D';
+        if (Array.isArray(props.group_names) && props.group_names.length) {
+            const first = String(props.group_names[0]).trim();
+            const m2 = first.toLowerCase().match(/\bgroup\s*([a-z])\b/i);
+            if (m2) return m2[1].toUpperCase();
+        }
+        return '';
+    }
+
+    /**
+     * Split concurrent sessions into parallel rows (Group A / Group B style).
+     */
+    bucketEventsForPdfRows(events) {
+        const list = Array.isArray(events) ? [...events] : [events];
+        if (!list.length) return [];
+
+        const isHoliday = (ev) => ev.type === 'holiday' || String(ev.id || '').startsWith('holiday_');
+        if (list.every(isHoliday)) {
+            return [{ letter: '', events: list }];
+        }
+
+        const letters = list.map((ev, idx) => {
+            const p = this.getListEventProps(ev);
+            return { ev, letter: this.inferPdfGroupRowLetter(p, idx) };
+        });
+
+        const allBlank = letters.every(x => !x.letter);
+        if (allBlank && list.length > 1) {
+            return list.map((ev, i) => ({
+                letter: String.fromCharCode(65 + i),
+                events: [ev],
+            }));
+        }
+
+        const map = new Map();
+        letters.forEach(({ ev, letter }) => {
+            const key = letter || '_';
+            if (!map.has(key)) map.set(key, []);
+            map.get(key).push(ev);
+        });
+
+        const orderKeys = (a, b) => {
+            if (a === '_') return 1;
+            if (b === '_') return -1;
+            return a.localeCompare(b);
+        };
+
+        return [...map.entries()]
+            .sort(([a], [b]) => orderKeys(a, b))
+            .map(([key, evs]) => ({
+                letter: key === '_' ? '' : key,
+                events: evs,
+            }));
+    }
+
+    renderGroupedDayCell(dayEvents) {
+        const arr = Array.isArray(dayEvents) ? dayEvents : [dayEvents];
+        const rows = this.bucketEventsForPdfRows(arr);
+        const html = rows.map((row) => {
+            const labelHtml = row.letter
+                ? `<span class="tt-pdf-group-label" aria-label="Group row ${row.letter}">${row.letter}</span>`
+                : '';
+            const body = row.events.map((ev) => this.renderSingleListEventCard(ev, { suppressGroupBadge: !!row.letter })).join('');
+            return `<div class="tt-pdf-group-row">${labelHtml}<div class="tt-pdf-group-body">${body}</div></div>`;
+        }).join('');
+        return `<div class="tt-pdf-group-rows">${html}</div>`;
+    }
+
+    /** One or more cards (legacy array support). */
     renderListEvent(events) {
         const arr = Array.isArray(events) ? events : [events];
-        return arr.map(event => {
-            const groupName = event.extendedProps.group_name || event.extendedProps.group || '';
-            const title = event.title || event.extendedProps.topic || '';
-            const faculty = event.extendedProps.faculty_name || '';
-            const venue = event.extendedProps.vanue || event.extendedProps.venue_name || '';
-            const classSession = event.extendedProps.class_session || '';
-            const startTime = event.start ? new Date(event.start).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
-            const endTime = event.end ? new Date(event.end).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
-            const timeRange = startTime && endTime ? `${startTime} - ${endTime}` : '';
-            
-            return `
-                <div class="list-event-card p-2 mb-2" data-group="${groupName}">
-                    ${groupName ? `<div class="group-badge">${groupName}</div>` : ''}
+        return arr.map((ev) => this.renderSingleListEventCard(ev, {})).join('');
+    }
+
+    renderSingleListEventCard(event, opts = {}) {
+        const p = this.getListEventProps(event);
+        const groupName = p.group_name || '';
+        const title = event.title || p.topic || '';
+        const faculty = p.faculty_name || '';
+        const venue = p.vanue || p.venue_name || '';
+        const classSession = p.class_session || '';
+        const startTime = event.start ? new Date(event.start).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
+        const endTime = event.end ? new Date(event.end).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
+        const timeRange = startTime && endTime ? `${startTime} - ${endTime}` : '';
+        const showBadge = !opts.suppressGroupBadge && groupName;
+        const eid = event.id != null ? String(event.id).replace(/"/g, '&quot;') : '';
+
+        return `
+                <div class="list-event-card p-2 mb-2" data-group="${groupName}" data-id="${eid}">
+                    ${showBadge ? `<div class="group-badge">${groupName}</div>` : ''}
                     <div class="title">${title}</div>
-                    <div class="meta d-flex align-items-center"><i class="material-icons me-1">class</i>${classSession}</div> <div class="meta d-flex align-items-center"><i class="material-icons me-1">place</i>${venue}</div>
-                    <div class="meta d-flex align-items-center"><i class="material-icons me-1">person</i>${faculty}</div>
-                    
-                    <!-- Hover Tooltip -->
+                    ${classSession ? `<div class="meta d-flex align-items-start gap-1"><i class="bi bi-book flex-shrink-0" aria-hidden="true"></i><span>${classSession}</span></div>` : ''}
+                    ${faculty ? `<div class="meta d-flex align-items-start gap-1"><i class="bi bi-person flex-shrink-0" aria-hidden="true"></i><span>(${faculty})</span></div>` : ''}
+                    ${venue ? `<div class="meta d-flex align-items-start gap-1"><i class="bi bi-geo-alt flex-shrink-0" aria-hidden="true"></i><span>${venue}</span></div>` : ''}
                     <div class="event-tooltip">
                         <div class="tooltip-title">${title}</div>
                         ${timeRange ? `
                         <div class="tooltip-row">
-                            <i class="bi bi-clock"></i>
+                            <i class="bi bi-clock" aria-hidden="true"></i>
                             <span class="tooltip-label">Time:</span>
                             <span class="tooltip-value">${timeRange}</span>
                         </div>` : ''}
                         ${groupName ? `
                         <div class="tooltip-row">
-                            <i class="bi bi-people"></i>
+                            <i class="bi bi-people" aria-hidden="true"></i>
                             <span class="tooltip-label">Group:</span>
                             <span class="tooltip-value">${groupName}</span>
                         </div>` : ''}
                         ${venue ? `
                         <div class="tooltip-row">
-                            <i class="bi bi-geo-alt"></i>
+                            <i class="bi bi-geo-alt" aria-hidden="true"></i>
                             <span class="tooltip-label">Venue:</span>
                             <span class="tooltip-value">${venue}</span>
                         </div>` : ''}
                         ${faculty ? `
                         <div class="tooltip-row">
-                            <i class="material-icons me-1">person</i>
+                            <i class="bi bi-person" aria-hidden="true"></i>
                             <span class="tooltip-label">Faculty:</span>
                             <span class="tooltip-value">${faculty}</span>
                         </div>` : ''}
                         ${classSession ? `
                         <div class="tooltip-row">
-                            <i class="material-icons me-1">book</i>
+                            <i class="bi bi-journal-text" aria-hidden="true"></i>
                             <span class="tooltip-label">Session:</span>
                             <span class="tooltip-value">${classSession}</span>
                         </div>` : ''}
                     </div>
                 </div>
             `;
-        }).join('');
     }
 
     initializeScrollIndicators() {
@@ -4321,6 +5123,9 @@ async setInternalFaculty(internalFacultyIds) {
             const text = row.textContent.toLowerCase();
             if (text.includes('break time')) row.classList.add('break-row');
             if (text.includes('lunch')) row.classList.add('lunch-row');
+            if (/\btea\s*break\b/.test(text) || /\blunch\s*break\b/.test(text)) {
+                row.classList.add('break-row');
+            }
         });
     }
 
@@ -4357,8 +5162,8 @@ async setInternalFaculty(internalFacultyIds) {
         const weekDiff = Math.floor(timeDiff / (7 * 24 * 60 * 60 * 1000));
         const weekNum = weekDiff + 1;
 
-        // Update the week number display
-        const weekElement = document.getElementById('currentWeek');
+        // Update the week number display (list view banner)
+        const weekElement = document.getElementById('currentWeekNumber');
         if (weekElement) {
             weekElement.textContent = weekNum;
         }
