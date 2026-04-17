@@ -277,7 +277,56 @@ class EmployeeIDCardRequestController extends Controller
      */
     private static function hasApprovedPermanentIdCard(int $employeePk): bool
     {
-        return SecurityParmIdApply::where('employee_master_pk', $employeePk)
+        $subjectPks = static::employeeLinkedSubjectMasterPks($employeePk);
+        if ($subjectPks === []) {
+            return false;
+        }
+
+        return SecurityParmIdApply::whereIn('employee_master_pk', $subjectPks)
+            ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
+            ->exists();
+    }
+
+    /**
+     * employee_master.pk values that may appear as security_parm_id_apply.employee_master_pk (pk and pk_old).
+     *
+     * @return list<int>
+     */
+    private static function employeeLinkedSubjectMasterPks(int $employeeMasterPk): array
+    {
+        if ($employeeMasterPk <= 0) {
+            return [];
+        }
+        $hasPkOld = Schema::hasColumn('employee_master', 'pk_old');
+        $cols = $hasPkOld ? ['pk', 'pk_old'] : ['pk'];
+        $row = DB::table('employee_master')
+            ->where('pk', $employeeMasterPk)
+            ->when($hasPkOld, fn ($q) => $q->orWhere('pk_old', $employeeMasterPk))
+            ->first($cols);
+        if (! $row) {
+            return [$employeeMasterPk];
+        }
+        $ids = [(int) ($row->pk ?? $employeeMasterPk)];
+        if ($hasPkOld && isset($row->pk_old) && (int) $row->pk_old > 0 && (int) $row->pk_old !== (int) ($row->pk ?? 0)) {
+            $ids[] = (int) $row->pk_old;
+        }
+
+        return array_values(array_unique(array_filter($ids, fn ($v) => (int) $v > 0)));
+    }
+
+    /**
+     * Approved contractual ID card application for this employee in security_con_oth_id_apply (any approved status).
+     * Matches created_by to employee pk and pk_old where applicable.
+     */
+    private static function hasApprovedContractualIdApplyForEmployee(int $employeePk): bool
+    {
+        $ids = static::employeeLinkedCreatedByIds($employeePk);
+        if ($ids === []) {
+            return false;
+        }
+
+        return DB::table('security_con_oth_id_apply')
+            ->whereIn('created_by', $ids)
             ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
             ->exists();
     }
@@ -290,12 +339,8 @@ class EmployeeIDCardRequestController extends Controller
         if (static::hasApprovedPermanentIdCard($employeePk)) {
             return true;
         }
-        $cont = DB::table('security_con_oth_id_apply')
-            ->where('created_by', $employeePk)
-            ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
-            ->exists();
 
-        return $cont;
+        return static::hasApprovedContractualIdApplyForEmployee($employeePk);
     }
 
     /**
@@ -306,8 +351,9 @@ class EmployeeIDCardRequestController extends Controller
     {
         $today = now()->toDateString();
 
-        $perm = DB::table('security_parm_id_apply')
-            ->where('employee_master_pk', $employeePk)
+        $permPks = static::employeeLinkedSubjectMasterPks($employeePk);
+        $perm = $permPks !== [] && DB::table('security_parm_id_apply')
+            ->whereIn('employee_master_pk', $permPks)
             ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
             ->where(function ($q) use ($today) {
                 $q->whereNull('card_valid_to')
@@ -318,8 +364,9 @@ class EmployeeIDCardRequestController extends Controller
             return true;
         }
 
-        $cont = DB::table('security_con_oth_id_apply')
-            ->where('created_by', $employeePk)
+        $contIds = static::employeeLinkedCreatedByIds($employeePk);
+        $cont = $contIds !== [] && DB::table('security_con_oth_id_apply')
+            ->whereIn('created_by', $contIds)
             ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
             ->where(function ($q) use ($today) {
                 $q->whereNull('card_valid_to')
@@ -815,18 +862,29 @@ class EmployeeIDCardRequestController extends Controller
             && $authEmployeePk
             && (int) $employeePk === (int) $authEmployeePk;
         $employeeType = $validated['employee_type'];
-        // Permanent own fresh card: only an approved **permanent** card should block (not an approved contractual one).
-        $hasApprovedForOwnFreshBlock = $employeeType === 'Permanent Employee'
-            ? static::hasApprovedPermanentIdCard((int) $employeePk)
-            : static::hasApprovedIdCard((int) $employeePk);
+        // Own fresh card: block when an approved card already exists (permanent vs contractual rules differ).
         $blockOwnNewCard = $isForSelf
             && $requestFor === 'Own ID Card'
-            && !$isDupOrExt
-            && $hasApprovedForOwnFreshBlock;
+            && ! $isDupOrExt;
         if ($blockOwnNewCard) {
-            throw ValidationException::withMessages([
-                'employee_type' => 'You already have an approved ID card. A new request for yourself cannot be created. For duplicate or extension, use the Duplicate ID Card or relevant option.',
-            ]);
+            if ($employeeType === 'Permanent Employee') {
+                if (static::hasApprovedPermanentIdCard((int) $employeePk)) {
+                    throw ValidationException::withMessages([
+                        'employee_type' => 'You already have an approved ID card. A new request for yourself cannot be created. For duplicate or extension, use the Duplicate ID Card or relevant option.',
+                    ]);
+                }
+            } else {
+                if (static::hasApprovedContractualIdApplyForEmployee((int) $employeePk)) {
+                    throw ValidationException::withMessages([
+                        'employee_type' => 'You already have an approved ID card. A new request for yourself cannot be created. For duplicate or extension, use the Duplicate ID Card or relevant option.',
+                    ]);
+                }
+                if (static::hasApprovedPermanentIdCard((int) $employeePk)) {
+                    throw ValidationException::withMessages([
+                        'employee_type' => 'You already have an approved ID card. A new request for yourself cannot be created. For duplicate or extension, use the Duplicate ID Card or relevant option.',
+                    ]);
+                }
+            }
         }
 
         // Only block when the contractual applicant is requesting their *own* card (not Others/Family).
