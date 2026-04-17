@@ -168,15 +168,29 @@
                     </h5>
                 </div>
             </div>
+            @php
+                $resolvedEmpName = null;
+                $resolvedEmpCode = null;
+                if ($vehiclePass->employee) {
+                    $resolvedEmpName = trim(($vehiclePass->employee->first_name ?? '') . ' ' . ($vehiclePass->employee->last_name ?? ''));
+                    $resolvedEmpCode = $vehiclePass->employee->emp_id ?? $vehiclePass->employee_id_card;
+                } else {
+                    $resolvedEmpName = trim((string) ($vehiclePass->applicant_name ?? ''));
+                    if ($resolvedEmpName === '') {
+                        $resolvedEmpName = \App\Models\VehiclePassTWApply::resolveNameByEmployeeIdCard($vehiclePass->employee_id_card);
+                    }
+                    $resolvedEmpCode = $vehiclePass->employee_id_card;
+                }
+            @endphp
             <div class="row">
                 <div class="col-md-6">
                     <div class="mb-3">
                         <label class="form-label fw-bold">Employee Name</label>
                         <div class="form-control bg-light">
-                            @if($vehiclePass->employee)
-                                {{ $vehiclePass->employee->name ?? trim($vehiclePass->employee->first_name . ' ' . ($vehiclePass->employee->last_name ?? '')) }}
+                            @if($resolvedEmpName !== null && $resolvedEmpName !== '')
+                                {{ $resolvedEmpName }}
                             @else
-                                <span class="text-muted">{{ $vehiclePass->employee_id_card ?: '--' }}</span>
+                                <span class="text-muted">--</span>
                             @endif
                         </div>
                     </div>
@@ -185,11 +199,7 @@
                     <div class="mb-3">
                         <label class="form-label fw-bold">Employee Code</label>
                         <div class="form-control bg-light">
-                            @if($vehiclePass->employee)
-                                {{ $vehiclePass->employee->emp_id ?? $vehiclePass->employee_id_card ?? '--' }}
-                            @else
-                                <span class="text-muted">{{ $vehiclePass->employee_id_card ?: '--' }}</span>
-                            @endif
+                            {{ $resolvedEmpCode ?: '--' }}
                         </div>
                     </div>
                 </div>
@@ -287,7 +297,7 @@
             <!-- Action Buttons -->
             <div class="row mt-4">
                 <div class="col-md-12">
-                    @if($vehiclePass->vech_card_status == 1)
+                    @if($vehiclePass->vech_card_status == 1 && ($canModifyApplication ?? false))
                         <a href="{{ route('admin.security.vehicle_pass.edit', encrypt($vehiclePass->vehicle_tw_pk)) }}" class="btn btn-warning">
                             <i class="material-icons material-symbols-rounded" style="font-size:20px;vertical-align:middle;">edit</i>
                             Edit Application

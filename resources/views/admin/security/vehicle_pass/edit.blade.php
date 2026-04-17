@@ -27,14 +27,20 @@
             @endif
 
             @php
-                $editApplicantType = old('applicant_type', $vehiclePass->gov_veh == 1 ? 'government_vehicle' : ($vehiclePass->emp_master_pk ? 'employee' : 'others'));
-                $editName = $vehiclePass->employee ? trim($vehiclePass->employee->first_name . ' ' . ($vehiclePass->employee->last_name ?? '')) : '';
-                $editDesignation = $vehiclePass->employee && $vehiclePass->employee->designation ? $vehiclePass->employee->designation->designation_name : '';
-                $editDepartment = $vehiclePass->employee && $vehiclePass->employee->department ? $vehiclePass->employee->department->department_name : '';
+                $storedApplicantTypeStr = \App\Models\VehiclePassTWApply::applicantTypeToFormValue($vehiclePass->applicant_type ?? null);
+                if (! in_array($storedApplicantTypeStr, ['employee', 'others', 'government_vehicle'], true)) {
+                    $storedApplicantTypeStr = $vehiclePass->gov_veh == 1 ? 'government_vehicle' : ($vehiclePass->emp_master_pk ? 'employee' : 'others');
+                }
+                $editApplicantType = old('applicant_type', $storedApplicantTypeStr ?? 'others');
+                $editOthersMode = ($editApplicantType === 'others');
+                $editName = old('applicant_name', $editApplicantDisplay['name'] ?? '');
+                $editDesignation = old('designation', $editApplicantDisplay['designation'] ?? '');
+                $editDepartment = old('department', $editApplicantDisplay['department'] ?? '');
             @endphp
 
             <form action="{{ route('admin.security.vehicle_pass.update', encrypt($vehiclePass->vehicle_tw_pk)) }}" method="POST" enctype="multipart/form-data" id="vehiclePassForm">
                 @csrf
+                <input type="hidden" name="emp_master_pk" value="{{ old('emp_master_pk', $vehiclePass->emp_master_pk) }}">
 
                 <div class="card border-0 shadow-sm mb-4">
                     <div class="card-body p-4">
@@ -67,29 +73,34 @@
                     <div class="col-md-6">
                         <div class="mb-3">
                             <label for="employee_id_card" class="form-label">ID Card Number</label>
-                            <input type="text" name="employee_id_card" id="employee_id_card" class="form-control"
-                                value="{{ old('employee_id_card', $vehiclePass->employee_id_card) }}" placeholder="Enter ID Card Number" maxlength="100">
+                            <input type="text" name="employee_id_card" id="employee_id_card" class="form-control {{ $editOthersMode ? '' : 'bg-light' }}"
+                                value="{{ old('employee_id_card', $vehiclePass->employee_id_card) }}" placeholder="Enter ID Card Number" maxlength="100"
+                                @unless($editOthersMode) readonly @endunless>
+                            <div id="editVehiclePassIdCardLookupHint" class="small mt-1 d-none" role="status"></div>
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="mb-3">
                             <label for="applicant_name" class="form-label">Name</label>
-                            <input type="text" name="applicant_name" id="applicant_name" class="form-control" readonly
-                                value="{{ old('applicant_name', $editName) }}" placeholder="From employee (display only)">
+                            <input type="text" name="applicant_name" id="applicant_name" class="form-control {{ $editOthersMode ? '' : 'bg-light' }}"
+                                value="{{ $editName }}" placeholder="—"
+                                @unless($editOthersMode) readonly @endunless>
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="mb-3">
                             <label for="designation" class="form-label">Designation</label>
-                            <input type="text" name="designation" id="designation" class="form-control" readonly
-                                value="{{ old('designation', $editDesignation) }}" placeholder="From employee (display only)">
+                            <input type="text" name="designation" id="designation" class="form-control {{ $editOthersMode ? '' : 'bg-light' }}"
+                                value="{{ $editDesignation }}" placeholder="—"
+                                @unless($editOthersMode) readonly @endunless>
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="mb-3">
                             <label for="department" class="form-label">Department</label>
-                            <input type="text" name="department" id="department" class="form-control" readonly
-                                value="{{ old('department', $editDepartment) }}" placeholder="From employee (display only)">
+                            <input type="text" name="department" id="department" class="form-control {{ $editOthersMode ? '' : 'bg-light' }}"
+                                value="{{ $editDepartment }}" placeholder="—"
+                                @unless($editOthersMode) readonly @endunless>
                         </div>
                     </div>
                     <div class="col-md-6">
@@ -267,6 +278,174 @@
 @push('scripts')
 <script>
 $(document).ready(function() {
+    window.editVehiclePassLoggedInCapYmd = @json($idCardValidityCapYmd ?? null);
+    window.editOthersLookupIdCardCapYmd = null;
+
+    function editEffectiveIdCardCapYmd() {
+        var emp = document.getElementById('applicant_type_employee');
+        var gov = document.getElementById('applicant_type_government');
+        if ((emp && emp.checked) || (gov && gov.checked)) {
+            return window.editVehiclePassLoggedInCapYmd || null;
+        }
+        return window.editOthersLookupIdCardCapYmd || null;
+    }
+
+    // Others: ID card lookup (employee_master) + applicant type toggle (same behaviour as create)
+    (function () {
+        var applicantTypeEmployee = document.getElementById('applicant_type_employee');
+        var applicantTypeOthers = document.getElementById('applicant_type_others');
+        var applicantTypeGovernment = document.getElementById('applicant_type_government');
+        var empMasterPkInput = document.getElementById('emp_master_pk');
+        var currentUserEmployee = @json($currentUserEmployee ?? null);
+        var idCardInput = document.getElementById('employee_id_card');
+        var nameEl = document.getElementById('applicant_name');
+        var desEl = document.getElementById('designation');
+        var deptEl = document.getElementById('department');
+        var validToInput = document.getElementById('vech_card_valid_to');
+        var lookupHint = document.getElementById('editVehiclePassIdCardLookupHint');
+        var othersLookupAbort = null;
+        var lookupUrl = @json(route('admin.security.vehicle_pass.lookup.by_id_card'));
+
+        function isEmployeeOrGovVehicle() {
+            return (applicantTypeEmployee && applicantTypeEmployee.checked) || (applicantTypeGovernment && applicantTypeGovernment.checked);
+        }
+
+        function setEditLookupHint(message, kind) {
+            if (!lookupHint) return;
+            if (!message) {
+                lookupHint.classList.add('d-none');
+                lookupHint.textContent = '';
+                lookupHint.classList.remove('text-success', 'text-danger', 'text-muted');
+                return;
+            }
+            lookupHint.classList.remove('d-none', 'text-success', 'text-danger', 'text-muted');
+            lookupHint.classList.add(kind === 'error' ? 'text-danger' : (kind === 'success' ? 'text-success' : 'text-muted'));
+            lookupHint.textContent = message;
+        }
+
+        function setApplicantFieldsReadonly(readonly) {
+            var ro = !!readonly;
+            [idCardInput, nameEl, desEl, deptEl].forEach(function (el) {
+                if (!el) return;
+                el.readOnly = ro;
+                if (ro) el.classList.add('bg-light');
+                else el.classList.remove('bg-light');
+            });
+        }
+
+        function applyEditOthersIdCardLookup() {
+            if (!applicantTypeOthers || !applicantTypeOthers.checked) return;
+            if (!idCardInput) return;
+            var idVal = (idCardInput.value || '').trim();
+            if (!idVal) {
+                setEditLookupHint('', '');
+                window.editOthersLookupIdCardCapYmd = null;
+                if (typeof syncEditDateConstraints === 'function') syncEditDateConstraints();
+                return;
+            }
+            if (othersLookupAbort) {
+                try { othersLookupAbort.abort(); } catch (e) {}
+            }
+            othersLookupAbort = new AbortController();
+            setEditLookupHint('Looking up employee…', 'muted');
+            var url = lookupUrl + (lookupUrl.indexOf('?') >= 0 ? '&' : '?') + 'id_card_number=' + encodeURIComponent(idVal);
+            fetch(url, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                signal: othersLookupAbort.signal
+            }).then(function (r) { return r.json().then(function (body) { return { ok: r.ok, body: body }; }); })
+                .then(function (res) {
+                    if (!res.ok || !res.body.success || !res.body.data) {
+                        var msg = (res.body && res.body.message) ? res.body.message : 'Could not load details for this ID.';
+                        setEditLookupHint(msg, 'error');
+                        window.editOthersLookupIdCardCapYmd = null;
+                        if (typeof syncEditDateConstraints === 'function') syncEditDateConstraints();
+                        return;
+                    }
+                    var d = res.body.data;
+                    if (idCardInput) idCardInput.value = d.employee_id_card || idVal;
+                    if (nameEl) nameEl.value = d.applicant_name || '';
+                    if (desEl) desEl.value = d.designation || '';
+                    if (deptEl) deptEl.value = d.department || '';
+                    if (empMasterPkInput && d.emp_master_pk) empMasterPkInput.value = String(d.emp_master_pk);
+                    window.editOthersLookupIdCardCapYmd = d.id_card_valid_to || null;
+                    if (typeof syncEditDateConstraints === 'function') syncEditDateConstraints();
+                    setEditLookupHint(
+                        d.id_card_valid_to
+                            ? 'Name, designation and department loaded. Pass dates cannot exceed ID card validity.'
+                            : 'Name, designation and department loaded from employee master.',
+                        'success'
+                    );
+                }).catch(function (err) {
+                    if (err && err.name === 'AbortError') return;
+                    setEditLookupHint('Request failed. Please try again.', 'error');
+                });
+        }
+
+        function updateEditApplicantTypeFields() {
+            if (isEmployeeOrGovVehicle()) {
+                setEditLookupHint('', '');
+                if (currentUserEmployee && empMasterPkInput) {
+                    empMasterPkInput.value = String(currentUserEmployee.pk);
+                    if (idCardInput) idCardInput.value = currentUserEmployee.emp_id || '';
+                    if (nameEl) nameEl.value = currentUserEmployee.name || '';
+                    if (desEl) desEl.value = currentUserEmployee.designation || '';
+                    if (deptEl) deptEl.value = currentUserEmployee.department || '';
+                } else if (empMasterPkInput) {
+                    empMasterPkInput.value = '';
+                    if (idCardInput) idCardInput.value = '';
+                    if (nameEl) nameEl.value = '';
+                    if (desEl) desEl.value = '';
+                    if (deptEl) deptEl.value = '';
+                }
+                setApplicantFieldsReadonly(true);
+                window.editOthersLookupIdCardCapYmd = null;
+            } else {
+                if (empMasterPkInput) empMasterPkInput.value = '';
+                if (idCardInput) idCardInput.value = '';
+                if (nameEl) nameEl.value = '';
+                if (desEl) desEl.value = '';
+                if (deptEl) deptEl.value = '';
+                setApplicantFieldsReadonly(false);
+                window.editOthersLookupIdCardCapYmd = null;
+                setEditLookupHint('', '');
+            }
+            if (typeof syncEditDateConstraints === 'function') {
+                syncEditDateConstraints();
+            }
+        }
+
+        function initEditApplicantUiFromServer() {
+            if (isEmployeeOrGovVehicle()) {
+                setApplicantFieldsReadonly(true);
+                window.editOthersLookupIdCardCapYmd = null;
+            } else {
+                setApplicantFieldsReadonly(false);
+            }
+            if (typeof syncEditDateConstraints === 'function') syncEditDateConstraints();
+        }
+
+        if (applicantTypeEmployee) applicantTypeEmployee.addEventListener('change', updateEditApplicantTypeFields);
+        if (applicantTypeOthers) applicantTypeOthers.addEventListener('change', updateEditApplicantTypeFields);
+        if (applicantTypeGovernment) applicantTypeGovernment.addEventListener('change', updateEditApplicantTypeFields);
+        initEditApplicantUiFromServer();
+
+        if (idCardInput) {
+            idCardInput.addEventListener('blur', function () {
+                if (applicantTypeOthers && applicantTypeOthers.checked) {
+                    applyEditOthersIdCardLookup();
+                } else {
+                    setEditLookupHint('', '');
+                }
+            });
+            idCardInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (applicantTypeOthers && applicantTypeOthers.checked) applyEditOthersIdCardLookup();
+                }
+            });
+        }
+    })();
+
     // Edit doc upload: click zone, preview, remove
     var editZone = document.getElementById('editDocUploadZone');
     var editInput = document.getElementById('doc_upload');
@@ -408,8 +587,23 @@ $(document).ready(function() {
         }
         if (toEl.value && fromEl.value && toEl.value < fromEl.value) {
             toEl.value = '';
-        } else if (toEl.value && toEl.value < toEl.min) {
+        } else         if (toEl.value && toEl.value < toEl.min) {
             toEl.value = '';
+        }
+
+        var capY = (typeof editEffectiveIdCardCapYmd === 'function') ? editEffectiveIdCardCapYmd() : null;
+        if (capY) {
+            fromEl.setAttribute('max', capY);
+            toEl.setAttribute('max', capY);
+            if (fromEl.value && fromEl.value > capY) {
+                fromEl.value = '';
+            }
+            if (toEl.value && toEl.value > capY) {
+                toEl.value = '';
+            }
+        } else {
+            fromEl.removeAttribute('max');
+            toEl.removeAttribute('max');
         }
     }
 
