@@ -10,7 +10,7 @@
     <!-- Filter: Bill Month + Show -->
     <div class="card shadow-sm border-0 rounded-3 mb-4">
         <div class="card-body p-4">
-            <h1 class="h4 fw-bold text-dark mb-1">List Bill For Other And Lbsna</h1>
+            <h1 class="h4 fw-bold text-dark mb-1">List Bill For Other And Lbsnaa</h1>
             <p class="text-muted small mb-4">Only notified bills are listed for the selected month except for other employee. Select Bill Month and click Show. If you expect more records, ensure those bills are notified except other employee.</p>
             <form id="billReportGridFilterForm" class="row g-3 align-items-end">
                 <div class="col-12 col-md-4">

@@ -331,7 +331,7 @@
     .alphabet-loader .letters span {
         font-size: 32px;
         font-weight: 700;
-        font-family: 'Poppins', sans-serif;
+        font-family: 'Montserrat', sans-serif;
         color: #004a93;
         opacity: 0.2;
         animation: pulseText 1.2s infinite ease-in-out;

@@ -82,9 +82,30 @@ class UserController extends Controller
             ];
         }
 
+        // Add logged-in user's birthday to calendar
+        $currentUser = Auth::user();
+        $userEmployee = $currentUser ? EmployeeMaster::where('pk', $currentUser->user_id)->where('status', 1)->first() : null;
+        if ($userEmployee && $userEmployee->dob) {
+            $dob = \Carbon\Carbon::parse($userEmployee->dob);
+            $birthdayThisYear = $dob->copy()->year($year);
+            if ((int) $birthdayThisYear->month === (int) $month) {
+                $bdKey = $birthdayThisYear->format('Y-m-d');
+                if (!isset($events[$bdKey])) {
+                    $events[$bdKey] = [];
+                }
+                $events[$bdKey][] = [
+                    'title' => 'Your Birthday! 🎂',
+                    'type' => 'birthday',
+                    'description' => 'Happy Birthday!',
+                ];
+            }
+        }
+
       $emp_dob_data = EmployeeMaster::where('status', 1)->whereRaw("DATE_FORMAT(dob, '%m-%d') = DATE_FORMAT(CURDATE(), '%m-%d')")
+        ->where('employee_master.pk', '!=', Auth::user()->user_id ?? 0)
         ->leftjoin('designation_master', 'employee_master.designation_master_pk', '=', 'designation_master.pk')
         ->select(
+            'employee_master.pk',
             'employee_master.first_name',
             'employee_master.email',
             'employee_master.mobile',
@@ -95,6 +116,58 @@ class UserController extends Controller
             'employee_master.dob'
         )
       ->get();
+
+      // Check if today is logged-in user's birthday
+      $isMyBirthday = false;
+      if ($userEmployee && $userEmployee->dob) {
+          $myDob = \Carbon\Carbon::parse($userEmployee->dob);
+          $isMyBirthday = $myDob->format('m-d') === now()->format('m-d');
+      }
+
+      // Count wishes received today (birthday notifications for logged-in user)
+      $myBirthdayWishCount = 0;
+      if ($isMyBirthday) {
+          $myBirthdayWishCount = \App\Models\Notification::where('receiver_user_id', Auth::user()->user_id)
+              ->where('type', 'birthday')
+              ->whereDate('created_at', today())
+              ->count();
+      }
+
+      // Wish count per birthday person (how many wishes they received today)
+      $birthdayWishCounts = [];
+      if ($emp_dob_data->isNotEmpty()) {
+          $birthdayPks = $emp_dob_data->pluck('pk')->toArray();
+          $birthdayWishCounts = \App\Models\Notification::whereIn('receiver_user_id', $birthdayPks)
+              ->where('type', 'birthday')
+              ->whereDate('created_at', today())
+              ->selectRaw('receiver_user_id, COUNT(*) as wish_count')
+              ->groupBy('receiver_user_id')
+              ->pluck('wish_count', 'receiver_user_id')
+              ->toArray();
+      }
+
+      // Upcoming birthdays (next 7 days, excluding today)
+      $upcomingBirthdays = collect();
+      for ($i = 1; $i <= 7; $i++) {
+          $futureDate = now()->addDays($i);
+          $upcoming = EmployeeMaster::where('status', 1)
+              ->whereRaw("DATE_FORMAT(dob, '%m-%d') = ?", [$futureDate->format('m-d')])
+              ->leftjoin('designation_master', 'employee_master.designation_master_pk', '=', 'designation_master.pk')
+              ->select(
+                  'employee_master.pk',
+                  'employee_master.first_name',
+                  'employee_master.last_name',
+                  'employee_master.profile_picture',
+                  'employee_master.dob',
+                  'designation_master.designation_name'
+              )
+              ->get()
+              ->each(function ($emp) use ($futureDate) {
+                  $emp->birthday_date = $futureDate->format('d M');
+                  $emp->days_away = $futureDate->diffInDays(now());
+              });
+          $upcomingBirthdays = $upcomingBirthdays->merge($upcoming);
+      }
 
       $totalActiveCourses = CourseMaster::where('active_inactive', 1)->where('start_year', '<', now())->where('end_date', '>=', now())->count();
       $upcomingCourses = CourseMaster::where('active_inactive', 1)->where('start_year', '>', now())->count();
@@ -242,6 +315,10 @@ class UserController extends Controller
             'month',
             'events',
             'emp_dob_data',
+            'isMyBirthday',
+            'myBirthdayWishCount',
+            'birthdayWishCounts',
+            'upcomingBirthdays',
             'totalActiveCourses',
             'upcomingCourses',
             'total_guest_faculty',

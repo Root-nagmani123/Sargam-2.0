@@ -130,14 +130,23 @@
                                     @elseif(hasRole('Internal Faculty') || hasRole('Guest Faculty') ||
                                     hasRole('Student-OT'))
                                     <span>Academics</span>
-                                    @elseif(hasRole('Staff'))
-                                    <span>Communication</span>
                                     @else
                                     <span>Setup</span>
                                     @endif
 
                                 </a>
                             </li>
+
+                            <!-- Communications -->
+                            <li class="nav-item" role="none">
+                                <a href="#tab-communications"
+                                    class="nav-link header-nav-link px-3 py-2 {{ $activeNavTab === '#tab-communications' ? 'active' : '' }}"
+                                    data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-communications' ? 'true' : 'false' }}" aria-controls="tab-communications"
+                                    id="communications-tab">
+                                    <span>Communication</span>
+                                </a>
+                            </li>
+
                         </ul>
                     </div>
 
@@ -267,6 +276,16 @@
                             hasRole('Student-OT'))
                             <span>Academics</span>
                             @endif
+                        </a>
+                    </li>
+
+                    <!-- Communications -->
+                    <li class="nav-item" role="none">
+                        <a href="#tab-communications" class="nav-link mobile-tab-link {{ $activeNavTab === '#tab-communications' ? 'active' : '' }}"
+                            data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-communications' ? 'true' : 'false' }}" aria-controls="tab-communications"
+                            id="communications-tab-mobile">
+                            <i class="material-icons material-symbols-rounded" aria-hidden="true">forum</i>
+                            <span>Communication</span>
                         </a>
                     </li>
                         </ul>

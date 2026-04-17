@@ -4,10 +4,7 @@
 
 @section('setup_content')
     <div class="container-fluid">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h4 class="fw-bold">Add New Exemption</h4>
-            <a href="{{ route('admin.exemptionIndex') }}" class="btn btn-secondary">← Back to List</a>
-        </div>
+        <x-breadcrum title="Add New Exemption" />
 
         <div class="card card-body">
             @if (session('success'))

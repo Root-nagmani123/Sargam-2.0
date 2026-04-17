@@ -2,153 +2,289 @@
 
 namespace App\Exports;
 
-use Illuminate\Database\Query\Builder;
-use Maatwebsite\Excel\Concerns\FromQuery;
+use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\WithEvents;
+use Maatwebsite\Excel\Concerns\WithTitle;
+use Maatwebsite\Excel\Concerns\WithCustomStartCell;
+use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
 
 class PendingFeedbackExport implements
-    FromQuery,
+    FromArray,
     WithHeadings,
-    WithMapping,
     ShouldAutoSize,
-    WithStyles
+    WithStyles,
+    WithEvents,
+    WithTitle,
+    WithCustomStartCell
 {
-    protected Builder $query;
-    protected int $index = 0;
+    protected array $students;
+    protected array $filters;
+    protected string $exportDate;
+    protected int $headerRows = 5; // rows used by LBSNAA header before data
 
-    /**
-     * Constructor accepts Query Builder
-     */
-    public function __construct(Builder $query)
+    /** When false, one row per student only (no per-session sub-rows). */
+    protected bool $withSessionDetails;
+
+    public function __construct(array $students, array $filters, string $exportDate, bool $withSessionDetails = true)
     {
-        $this->query = $query;
+        $this->students = $students;
+        $this->filters = $filters;
+        $this->exportDate = $exportDate;
+        $this->withSessionDetails = $withSessionDetails;
     }
 
-    /**
-     * Return the query to export
-     */
-    public function query()
+    public function title(): string
     {
-        return $this->query;
+        return 'Pending Feedback';
     }
 
-    /**
-     * Headings for the Excel file
-     */
+    public function startCell(): string
+    {
+        return 'A' . ($this->headerRows + 1);
+    }
+
     public function headings(): array
     {
         return [
-            'S.No.',
+            '#',
             'Student Name',
             'Email',
-            'Phone',
-            'OT Code',
             'Course',
-            'Session Topic',
-            // 'Faculty',
-            // 'Venue',
-            'Start Date',
-            'End Date',
-            'Session Time',
-            'Generated On'
+            'Feedback Given',
+            'Feedback Not Given',
+            'Session Name',
+            'Date',
+            'Time',
+            'Feedback Status',
         ];
     }
 
-    /**
-     * Map each row to the Excel columns
-     */
-    public function map($row): array
+    public function array(): array
     {
-        return [
-            ++$this->index,
-            $row->student_name ?? '',
-            $row->email ?? '',
-            $row->contact_no ?? '',
-            $row->generated_OT_code ?? '',
-            $row->course_name ?? '',
-            $row->subject_topic ?? '',
-            // $row->faculty_name ?? 'N/A',
-            // $row->venue_name ?? '',
-            $row->from_date ? date('d-m-Y', strtotime($row->from_date)) : '',
-            $row->to_date ? date('d-m-Y', strtotime($row->to_date)) : '',
-            $row->class_session ?? '',
-            now()->format('d-m-Y H:i:s')
-        ];
+        $rows = [];
+        $serial = 0;
+
+        foreach ($this->students as $student) {
+            $serial++;
+            $sessionCount = count($student['sessions']);
+
+            // Student summary row
+            $rows[] = [
+                $serial,
+                $student['student_name'],
+                $student['email'] ?? '',
+                $student['course_summary'] ?? '—',
+                $student['feedback_given'],
+                $student['feedback_not_given'],
+                "{$sessionCount} session(s)",
+                '',
+                '',
+                '',
+            ];
+
+            if (!$this->withSessionDetails) {
+                continue;
+            }
+
+            // Session detail rows
+            foreach ($student['sessions'] as $session) {
+                $rows[] = [
+                    '',
+                    '',
+                    '',
+                    $session['course_name'] ?? '—',
+                    '',
+                    '',
+                    $session['session_name'] ?? '—',
+                    $session['date'] ?? '—',
+                    $session['time'] ?? '—',
+                    $session['feedback_status'] === 'given' ? 'Given' : 'Not Given',
+                ];
+            }
+        }
+
+        return $rows;
     }
 
-    /**
-     * Apply styling to the Excel sheet
-     */
     public function styles(Worksheet $sheet)
     {
         $lastRow = $sheet->getHighestRow();
-        $lastColumn = $sheet->getHighestColumn();
+        $lastCol = 'J';
+        $dataStart = $this->headerRows + 1; // heading row
+        $dataRowStart = $dataStart + 1;     // first data row
 
-        // Header styling
-        $sheet->getStyle("A1:{$lastColumn}1")->applyFromArray([
-            'font' => [
-                'bold' => true,
-                'size' => 12,
-                'color' => ['rgb' => 'FFFFFF'],
-            ],
+        // Heading row styling
+        $sheet->getStyle("A{$dataStart}:{$lastCol}{$dataStart}")->applyFromArray([
+            'font' => ['bold' => true, 'size' => 11, 'color' => ['rgb' => 'FFFFFF']],
             'alignment' => [
                 'horizontal' => Alignment::HORIZONTAL_CENTER,
                 'vertical' => Alignment::VERTICAL_CENTER,
             ],
             'fill' => [
                 'fillType' => Fill::FILL_SOLID,
-                'startColor' => ['rgb' => '4472C4'],
+                'startColor' => ['rgb' => '003366'],
             ],
             'borders' => [
-                'allBorders' => [
-                    'borderStyle' => Border::BORDER_THIN,
-                    'color' => ['rgb' => '000000'],
-                ],
+                'allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => '002244']],
             ],
         ]);
 
-        // Data rows borders
-        $sheet->getStyle("A2:{$lastColumn}{$lastRow}")->applyFromArray([
-            'borders' => [
-                'allBorders' => [
-                    'borderStyle' => Border::BORDER_THIN,
-                    'color' => ['rgb' => 'CCCCCC'],
+        // Data rows
+        if ($lastRow >= $dataRowStart) {
+            $sheet->getStyle("A{$dataRowStart}:{$lastCol}{$lastRow}")->applyFromArray([
+                'borders' => [
+                    'allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'CCCCCC']],
                 ],
-            ],
-            'alignment' => [
-                'vertical' => Alignment::VERTICAL_CENTER,
-            ],
-        ]);
+                'alignment' => ['vertical' => Alignment::VERTICAL_CENTER],
+            ]);
+        }
 
-        // Alternate row coloring
-        for ($row = 2; $row <= $lastRow; $row++) {
-            if ($row % 2 == 0) {
-                $sheet->getStyle("A{$row}:{$lastColumn}{$row}")
-                    ->getFill()
-                    ->setFillType(Fill::FILL_SOLID)
-                    ->getStartColor()
-                    ->setRGB('F2F2F2');
+        // Style student summary rows vs session detail rows
+        $currentRow = $dataRowStart;
+        foreach ($this->students as $student) {
+            // Student row — bold with light bg
+            $sheet->getStyle("A{$currentRow}:{$lastCol}{$currentRow}")->applyFromArray([
+                'font' => ['bold' => true, 'size' => 10],
+                'fill' => [
+                    'fillType' => Fill::FILL_SOLID,
+                    'startColor' => ['rgb' => 'E8EEF6'],
+                ],
+            ]);
+
+            // Given badge color
+            $sheet->getStyle("E{$currentRow}")->getFont()->getColor()->setRGB('198754');
+            // Not Given badge color
+            $sheet->getStyle("F{$currentRow}")->getFont()->getColor()->setRGB('DC3545');
+
+            $currentRow++; // move past student row
+
+            if (!$this->withSessionDetails) {
+                continue;
+            }
+
+            // Session rows
+            foreach ($student['sessions'] as $session) {
+                $sheet->getStyle("D{$currentRow}:J{$currentRow}")->applyFromArray([
+                    'font' => ['size' => 9, 'color' => ['rgb' => '555555']],
+                ]);
+
+                // Color the status cell
+                $statusCell = "J{$currentRow}";
+                if ($session['feedback_status'] === 'given') {
+                    $sheet->getStyle($statusCell)->applyFromArray([
+                        'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+                        'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '198754']],
+                    ]);
+                } else {
+                    $sheet->getStyle($statusCell)->applyFromArray([
+                        'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+                        'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'DC3545']],
+                    ]);
+                }
+
+                $currentRow++;
             }
         }
 
-        // Center align specific columns
-        $centerColumns = ['A', 'D', 'E', 'J', 'K', 'L', 'M'];
-        foreach ($centerColumns as $col) {
-            $sheet->getStyle("{$col}2:{$col}{$lastRow}")
-                ->getAlignment()
-                ->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        // Center certain columns
+        $centerCols = ['A', 'E', 'F', 'H', 'I', 'J'];
+        foreach ($centerCols as $col) {
+            if ($lastRow >= $dataRowStart) {
+                $sheet->getStyle("{$col}{$dataRowStart}:{$col}{$lastRow}")
+                    ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            }
         }
 
-        // Freeze header row
-        $sheet->freezePane('A2');
+        // Freeze pane below header + heading row
+        $sheet->freezePane("A" . ($dataStart + 1));
 
         return [];
+    }
+
+    public function registerEvents(): array
+    {
+        return [
+            AfterSheet::class => function (AfterSheet $event) {
+                $sheet = $event->sheet->getDelegate();
+
+                // ── LBSNAA Header ──
+                // Row 1: Institution name (merged)
+                $sheet->mergeCells('A1:J1');
+                $sheet->setCellValue('A1', 'LAL BAHADUR SHASTRI NATIONAL ACADEMY OF ADMINISTRATION');
+                $sheet->getStyle('A1')->applyFromArray([
+                    'font' => ['bold' => true, 'size' => 14, 'color' => ['rgb' => '003366']],
+                    'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
+                ]);
+                $sheet->getRowDimension(1)->setRowHeight(28);
+
+                // Row 2: Report title
+                $sheet->mergeCells('A2:J2');
+                $sheet->setCellValue('A2', 'PENDING STUDENT FEEDBACK REPORT');
+                $sheet->getStyle('A2')->applyFromArray([
+                    'font' => ['bold' => true, 'size' => 12, 'color' => ['rgb' => '004A93']],
+                    'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+                ]);
+                $sheet->getRowDimension(2)->setRowHeight(22);
+
+                // Row 3: Filter info
+                $sheet->mergeCells('A3:J3');
+                $scope = $this->filters['course_scope'] ?? '';
+                $scopePart = $scope !== '' ? "Scope: {$scope}  |  " : '';
+                $filterText = $scopePart
+                    . 'Course: ' . ($this->filters['course'] ?? 'All')
+                    . '  |  Session: ' . ($this->filters['session'] ?? 'All')
+                    . '  |  Period: ' . ($this->filters['from_date'] ?? 'All') . ' — ' . ($this->filters['to_date'] ?? 'All')
+                    . '  |  Generated: ' . $this->exportDate;
+                $sheet->setCellValue('A3', $filterText);
+                $sheet->getStyle('A3')->applyFromArray([
+                    'font' => ['size' => 9, 'color' => ['rgb' => '555555']],
+                    'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+                ]);
+
+                // Row 4: Summary counts
+                $totalStudents = count($this->students);
+                $totalGiven = array_sum(array_column($this->students, 'feedback_given'));
+                $totalNotGiven = array_sum(array_column($this->students, 'feedback_not_given'));
+                $sheet->mergeCells('A4:J4');
+                $sheet->setCellValue('A4', "Total Students: {$totalStudents}  |  Feedback Given: {$totalGiven}  |  Feedback Not Given: {$totalNotGiven}");
+                $sheet->getStyle('A4')->applyFromArray([
+                    'font' => ['bold' => true, 'size' => 10, 'color' => ['rgb' => '003366']],
+                    'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F0F4FA']],
+                ]);
+
+                // Row 5: empty spacer
+                $sheet->getRowDimension(5)->setRowHeight(6);
+
+                // Header border bottom
+                $sheet->getStyle('A1:J4')->applyFromArray([
+                    'borders' => [
+                        'outline' => ['borderStyle' => Border::BORDER_MEDIUM, 'color' => ['rgb' => '003366']],
+                    ],
+                ]);
+
+                // Try to add logo
+                $logoPath = public_path('images/lbsnaa_logo.jpg');
+                if (file_exists($logoPath)) {
+                    $drawing = new Drawing();
+                    $drawing->setName('LBSNAA Logo');
+                    $drawing->setDescription('LBSNAA Logo');
+                    $drawing->setPath($logoPath);
+                    $drawing->setHeight(50);
+                    $drawing->setCoordinates('A1');
+                    $drawing->setOffsetX(5);
+                    $drawing->setOffsetY(2);
+                    $drawing->setWorksheet($sheet);
+                }
+            },
+        ];
     }
 }

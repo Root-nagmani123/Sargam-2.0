@@ -10,7 +10,7 @@
 .page-wrapper {
     background: #fff;
     padding: 20px 40px;
-    font-family: "Inter", Arial, sans-serif;
+    font-family: "Noto Sans", "Noto Sans Devanagari", Arial, sans-serif;
 }
 
 .section-title {
@@ -74,7 +74,7 @@ width: 170px;
         ============================================================ -->
         <div class="row mb-4 align-items-center">
             <div class="col-md-2 text-center">
-                <img src="{{ $faculty->photo_uplode_path ? asset('storage/'.$faculty->photo_uplode_path) : asset('default-user.png') }}"
+                <img src="{{ $faculty->photo_uplode_path ? asset('storage/'.$faculty->photo_uplode_path) : asset('images/dummypic.jpeg') }}"
                      alt="Faculty Photo" class="profile-photo">
             </div>
 

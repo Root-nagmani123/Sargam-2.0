@@ -452,15 +452,15 @@
             border: 3px solid transparent;
         }
 
-        .sargam-loader-ring-outer {
-            width: 100%;
-            height: 100%;
-            border-top-color: #004a93;
-            border-right-color: #0d6efd;
-            border-bottom-color: #004a93;
-            border-left-color: transparent;
-            animation: sargamSpin 1.2s linear infinite;
-        }
+    .sargam-loader-ring-outer {
+        width: 100%;
+        height: 100%;
+        border-top-color: #004a93;
+        border-right-color: #0d6efd;
+        border-bottom-color: #004a93;
+        border-left-color: transparent;
+        animation: sargamSpin 1.2s linear infinite;
+    }
 
         .sargam-loader-ring-mid {
             width: 100px;
@@ -497,6 +497,15 @@
             font-family: 'Poppins', 'Segoe UI', system-ui, sans-serif;
             letter-spacing: 0.02em;
         }
+    /* Brand text with letter-by-letter animation */
+    .sargam-loader-brand {
+        display: inline-flex;
+        gap: 2px;
+        font-size: clamp(1.75rem, 5vw, 3rem);
+        font-weight: 800;
+        font-family: 'Montserrat', 'Segoe UI', system-ui, sans-serif;
+        letter-spacing: 0.02em;
+    }
 
         .sargam-loader-brand span {
             display: inline-block;
@@ -714,6 +723,7 @@
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     @stack('scripts')
+    @yield('scripts')
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const toggle = document.getElementById('searchToggle');
@@ -804,68 +814,68 @@
                 }
             } catch (e) { }
 
-            // Initialize collapsed state on page load
-            const sidebarType = body.getAttribute("data-sidebartype");
-            console.log('Initial sidebar type:', sidebarType);
-            console.log('Icon elements found:', icons.length);
+    // Initialize collapsed state on page load
+    const sidebarType = body.getAttribute("data-sidebartype");
+    console.log('Initial sidebar type:', sidebarType);
+    console.log('Icon elements found:', icons.length);
 
-            if (sidebarType === "mini-sidebar") {
-                // Sidebar should be collapsed - ensure main-wrapper doesn't have show-sidebar
-                sidebar.classList.remove("show-sidebar");
-                // Add close class to sidebarmenu elements
-                sidebarmenus.forEach(function (el) {
-                    el.classList.add("close");
-                });
-                // Set all icon instances to expand (collapsed state)
-                icons.forEach(function (icon) {
-                    icon.textContent = "keyboard_double_arrow_right";
-                    icon.classList.remove("rotated");
-                });
-                console.log('Set all icons to non-rotated (collapsed state)');
-                // After initial collapse state, adjust DataTables to new layout
-                setTimeout(adjustAllDataTables, 300);
-            } else {
-                // Sidebar should be expanded
-                sidebar.classList.add("show-sidebar");
-                sidebarmenus.forEach(function (el) {
-                    el.classList.remove("close");
-                });
-                // Set all icon instances to rotated (expanded state)
-                icons.forEach(function (icon) {
-                    icon.textContent = "keyboard_double_arrow_right";
-                    icon.classList.add("rotated");
-                });
-                console.log('Set all icons to rotated (expanded state)');
-                // After initial expanded state, adjust DataTables to new layout
-                setTimeout(adjustAllDataTables, 300);
-            }
-
-            // Sync all icon instances with data-sidebartype changes and adjust tables after toggle
-            function syncIconWithSidebar(type) {
-                const allIcons = document.querySelectorAll("#sidebarToggleIcon");
-                allIcons.forEach(function (icon) {
-                    icon.textContent = "keyboard_double_arrow_right";
-                    if (type === "full") {
-                        icon.classList.add("rotated");
-                    } else {
-                        icon.classList.remove("rotated");
-                    }
-                });
-                console.log('Synced', allIcons.length, 'icon(s) to type:', type);
-            }
-
-            const observer = new MutationObserver(function (mutations) {
-                for (const m of mutations) {
-                    if (m.attributeName === 'data-sidebartype') {
-                        const t = body.getAttribute('data-sidebartype');
-                        syncIconWithSidebar(t);
-                        setTimeout(adjustAllDataTables, 300);
-                    }
-                }
-            });
-            observer.observe(body, { attributes: true, attributeFilter: ['data-sidebartype'] });
+    if (sidebarType === "mini-sidebar") {
+        // Sidebar should be collapsed - ensure main-wrapper doesn't have show-sidebar
+        sidebar.classList.remove("show-sidebar");
+        // Add close class to sidebarmenu elements
+        sidebarmenus.forEach(function(el) {
+            el.classList.add("close");
         });
-    </script>
+        // Set all icon instances to expand (collapsed state)
+        icons.forEach(function(icon) {
+            icon.textContent = "keyboard_double_arrow_right";
+            icon.classList.remove("rotated");
+        });
+        console.log('Set all icons to non-rotated (collapsed state)');
+        // After initial collapse state, adjust DataTables to new layout
+        setTimeout(adjustAllDataTables, 300);
+    } else {
+        // Sidebar should be expanded
+        sidebar.classList.add("show-sidebar");
+        sidebarmenus.forEach(function(el) {
+            el.classList.remove("close");
+        });
+        // Set all icon instances to rotated (expanded state)
+        icons.forEach(function(icon) {
+            icon.textContent = "keyboard_double_arrow_right";
+            icon.classList.add("rotated");
+        });
+        console.log('Set all icons to rotated (expanded state)');
+        // After initial expanded state, adjust DataTables to new layout
+        setTimeout(adjustAllDataTables, 300);
+    }
+
+    // Sync all icon instances with data-sidebartype changes and adjust tables after toggle
+    function syncIconWithSidebar(type) {
+        const allIcons = document.querySelectorAll("#sidebarToggleIcon");
+        allIcons.forEach(function(icon) {
+            icon.textContent = "keyboard_double_arrow_right";
+            if (type === "full") {
+                icon.classList.add("rotated");
+            } else {
+                icon.classList.remove("rotated");
+            }
+        });
+        console.log('Synced', allIcons.length, 'icon(s) to type:', type);
+    }
+
+    const observer = new MutationObserver(function(mutations) {
+        for (const m of mutations) {
+            if (m.attributeName === 'data-sidebartype') {
+                const t = body.getAttribute('data-sidebartype');
+                syncIconWithSidebar(t);
+                setTimeout(adjustAllDataTables, 300);
+            }
+        }
+    });
+    observer.observe(body, { attributes: true, attributeFilter: ['data-sidebartype'] });
+});
+</script>
 
     <!-- Final safeguard: Force light mode on window load -->
     <script>
@@ -943,6 +953,103 @@
     </script>
 
   @yield('script')
+  <!-- Final safeguard: Force light mode on window load -->
+  <script>
+    window.addEventListener('load', function() {
+      // Force light mode one final time after everything loads
+      document.documentElement.setAttribute('data-bs-theme', 'light');
+      document.documentElement.style.colorScheme = 'light';
+      document.documentElement.style.setProperty('--bs-body-bg', '#fff', 'important');
+      document.documentElement.style.setProperty('--bs-body-color', '#212529', 'important');
+
+      // Remove any dark mode classes
+      document.documentElement.classList.remove('dark');
+      if (document.body) {
+        document.body.classList.remove('dark');
+        document.body.style.colorScheme = 'light';
+      }
+
+      // Force reflow to apply styles
+      document.documentElement.offsetHeight;
+    });
+  </script>
+
+  <script>
+    // Admin Mess: Tab on dropdown should act like Enter (Select2-friendly)
+    (function () {
+      function isAdminMessPage() {
+        try {
+          const p = (window.location && window.location.pathname || '').toLowerCase();
+          return p.includes('/admin/mess') || (p.includes('/mess') && !p.includes('/message'));
+        } catch (e) {
+          return false;
+        }
+      }
+
+      function shouldConvertTabToEnter(e) {
+        if (!e || e.defaultPrevented) return false;
+        if (e.key !== 'Tab' || e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) return false;
+
+        const active = document.activeElement;
+
+        // Select2: when dropdown is open, focus is in .select2-search__field
+        const isSelect2Search = !!(active && active.classList && active.classList.contains('select2-search__field'));
+        const isSelect2Open = !!document.querySelector('.select2-container--open');
+
+        if (isSelect2Search && isSelect2Open) return true;
+
+        // Fallback: if focus is within a select2 container and it's open
+        if (isSelect2Open && active && active.closest && active.closest('.select2-container')) return true;
+
+        // Choices.js: open dropdown has `.choices.is-open`; focus is usually in `.choices__input`
+        const choicesRoot = active && active.closest ? active.closest('.choices') : null;
+        if (choicesRoot && choicesRoot.classList && choicesRoot.classList.contains('is-open')) return true;
+        if (document.querySelector('.choices.is-open') && active && active.classList && active.classList.contains('choices__input')) return true;
+
+        // Tom Select: open dropdown typically sets `.ts-wrapper.dropdown-active`
+        const tomRoot = active && active.closest ? active.closest('.ts-wrapper') : null;
+        if (tomRoot && tomRoot.classList && tomRoot.classList.contains('dropdown-active')) return true;
+        if (document.querySelector('.ts-wrapper.dropdown-active') && active && active.closest && active.closest('.ts-control')) return true;
+
+        return false;
+      }
+
+      function dispatchEnterOnActiveElement() {
+        const el = document.activeElement;
+        if (!el) return;
+
+        // Prefer keyboard event for Select2; it listens on keydown in the search field
+        try {
+          const evt = new KeyboardEvent('keydown', {
+            key: 'Enter',
+            code: 'Enter',
+            keyCode: 13,
+            which: 13,
+            bubbles: true,
+            cancelable: true
+          });
+          el.dispatchEvent(evt);
+        } catch (e) {
+          // Very old browsers fallback
+          if (typeof el.dispatchEvent === 'function') {
+            const legacy = document.createEvent('Event');
+            legacy.initEvent('keydown', true, true);
+            legacy.keyCode = 13;
+            legacy.which = 13;
+            el.dispatchEvent(legacy);
+          }
+        }
+      }
+
+      document.addEventListener('keydown', function (e) {
+        if (!isAdminMessPage()) return;
+        if (!shouldConvertTabToEnter(e)) return;
+
+        e.preventDefault();
+        dispatchEnterOnActiveElement();
+      }, true);
+    })();
+  </script>
 </body>
 
 </html>

@@ -48,10 +48,26 @@ class FacultyController extends Controller
      */
     public function store(FacultyRequest $request)
     {
+
         try {
             DB::beginTransaction();
 
+            // Check for missing country
+            if (empty($request->country)) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Country is required.'
+                ], 422);
+            }
+
             // Step 1: Prepare Faculty Details
+            $faculty_sector = is_numeric($request->current_sector) ? (int)$request->current_sector : null;
+            if (!in_array($faculty_sector, [1, 2])) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Faculty sector is required and must be 1 or 2.'
+                ], 422);
+            }
             $facultyDetails = [
                 'faculty_type' => $request->facultyType,
                 'first_name' => $request->firstName,
@@ -78,7 +94,7 @@ class FacultyController extends Controller
                 'Account_No' => $request->accountnumber,
                 'IFSC_Code' => $request->ifsccode,
                 'PAN_No' => $request->pannumber,
-                'faculty_sector' => $request->current_sector,
+                'faculty_sector' => $faculty_sector,
                 'faculty_pa' => $request->facultyType == '1' ? $request->faculty_pa : null, // Only save for Internal faculty type
                 'created_by' => Auth::id(),
                 'last_update' => now(),
@@ -137,11 +153,19 @@ class FacultyController extends Controller
                         'message' => 'Faculty not found'
                     ], 404);
                 }
+                $originalFacultyType = $faculty->faculty_type;
                 $faculty->fill($facultyDetails);
                 $faculty->save();
+                // Regenerate faculty code if faculty type changed or code is missing
+                if ($originalFacultyType != $request->facultyType || empty($faculty->faculty_code)) {
+                    $this->generateFacultyCode($faculty, $request->facultyType);
+                    FacultyMaster::where('pk', $faculty->pk)->update(['faculty_code' => $faculty->faculty_code]);
+                }
             } else {
                 $faculty = FacultyMaster::create($facultyDetails);
                 $this->generateFacultyCode($faculty, $request->facultyType);
+                // Directly update the faculty code in the database for new faculty
+                FacultyMaster::where('pk', $faculty->pk)->update(['faculty_code' => $faculty->faculty_code]);
             }
 
             // Step 2: Handle Qualification Details
@@ -223,7 +247,6 @@ class FacultyController extends Controller
             return response()->json([
                 'status' => true,
                 'message' => $isUpdate ? 'Faculty updated successfully' : 'Faculty created successfully',
-                'data' => $faculty
             ]);
 
         } catch (\Exception $e) {
@@ -541,6 +564,15 @@ class FacultyController extends Controller
         try {
             DB::beginTransaction();
 
+            // Fetch faculty and check if it exists
+            $faculty = FacultyMaster::find($request->faculty_id);
+            if (!$faculty) {
+                return redirect()->route('faculty.index')->with('error', 'Faculty not found');
+            }
+
+            // Capture the original faculty type to detect changes
+            $originalFacultyType = $faculty->faculty_type;
+
             # Step : 1
             // Store Faculty Details
 
@@ -614,10 +646,6 @@ class FacultyController extends Controller
             $facultyDetails['last_update']   = now();
             $facultyDetails['active_inactive'] = 1;
 
-            $faculty = FacultyMaster::find($request->faculty_id);
-            if (!$faculty) {
-                return redirect()->route('faculty.index')->with('error', 'Faculty not found');
-            }
             //print_r($facultyDetails);die;
             logger()->info('DB columns', \Schema::getColumnListing('faculty_master'));
            //$faculty->update($facultyDetails);
@@ -630,7 +658,13 @@ class FacultyController extends Controller
 
             $faculty->save();
 
-            $this->generateFacultyCode($faculty, $request->facultyType);
+            // Regenerate faculty code if faculty type has changed or code is missing
+            $facultyTypeChanged = ($originalFacultyType != $request->facultyType);
+            if ($facultyTypeChanged || empty($faculty->faculty_code)) {
+                $this->generateFacultyCode($faculty, $request->facultyType);
+                // Directly update the faculty code in the database
+                FacultyMaster::where('pk', $faculty->pk)->update(['faculty_code' => $faculty->faculty_code, 'last_update' => now()]);
+            }
 
             if ($faculty) {
 
@@ -741,23 +775,28 @@ class FacultyController extends Controller
     }
     function generateFacultyCode($faculty, $facultyType)
     {
-        $prefix = FacultyTypeMaster::where('pk', $facultyType)->pluck('shot_faculty_type_name')->first();
+        $prefix = FacultyTypeMaster::where('pk', $facultyType)->value('shot_faculty_type_name');
 
-        // Fetch latest code with this prefix
+        if (empty($prefix)) {
+            return;
+        }
+
+        // Fetch latest code with this prefix, ordered by the numeric suffix
         $latestFaculty = FacultyMaster::where('faculty_code', 'like', $prefix . '-%')
-            ->orderByDesc('faculty_code')
+            ->where('pk', '!=', $faculty->pk)
+            ->orderByRaw('CAST(SUBSTRING_INDEX(faculty_code, \'-\', -1) AS UNSIGNED) DESC')
             ->first();
 
-        if ($latestFaculty && preg_match('/\d+$/', $latestFaculty->faculty_code, $matches)) {
-            $nextNumber = (int) $matches[0] + 1;
+        if ($latestFaculty && preg_match('/-0*(\d+)$/', $latestFaculty->faculty_code, $matches)) {
+            $nextNumber = (int) $matches[1] + 1;
         } else {
             $nextNumber = 1;
         }
 
         $facultyCode = $prefix . '-' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
 
+        // Set the faculty code on the object (caller will handle saving)
         $faculty->faculty_code = $facultyCode;
-        $faculty->save(); // or update() if you prefer
     }
 
     function show(String $id)
@@ -783,6 +822,31 @@ class FacultyController extends Controller
     function excelExportFaculty()
     {
         return Excel::download(new \App\Exports\FacultyExport(), 'faculty_list_'.time().'.xlsx');
+    }
+
+    public function generateFacultyCodeAjax(Request $request)
+    {
+        $facultyType = $request->faculty_type;
+
+        $prefix = FacultyTypeMaster::where('pk', $facultyType)->value('shot_faculty_type_name');
+
+        if (!$prefix) {
+            return response()->json(['status' => false, 'message' => 'Invalid faculty type'], 422);
+        }
+
+        $latestFaculty = FacultyMaster::where('faculty_code', 'like', $prefix . '-%')
+            ->orderByDesc('faculty_code')
+            ->first();
+
+        if ($latestFaculty && preg_match('/\d+$/', $latestFaculty->faculty_code, $matches)) {
+            $nextNumber = (int) $matches[0] + 1;
+        } else {
+            $nextNumber = 1;
+        }
+
+        $code = $prefix . '-' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
+
+        return response()->json(['status' => true, 'code' => $code]);
     }
 
 	//check existing record implemented
@@ -890,6 +954,14 @@ class FacultyController extends Controller
                     'status' => false,
                     'message' => 'Faculty not found'
                 ], 404);
+            }
+
+            // Restrict deletion of active faculty
+            if ($faculty->active_inactive == 1) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Active faculty cannot be deleted. Please deactivate the faculty first before deleting.'
+                ], 422);
             }
 
             // Delete related records first

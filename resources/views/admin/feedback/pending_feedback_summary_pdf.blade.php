@@ -183,11 +183,19 @@
                 $periodText = 'Until ' . date('d-M-Y', strtotime($filters['filter_to_date']));
             }
         @endphp
+        @php
+            $summaryScope = ($filters['filter_course_scope'] ?? 'active') === 'archive' ? 'Archive programs' : 'Active (current) programs';
+        @endphp
         @if(!empty($courseName))
-        <span><strong>Course:</strong> {{ $courseName }}</span>
+        <span><strong>Program / Course:</strong> {{ $courseName }}</span>
+        @else
+        <span><strong>Program / Course:</strong> All {{ $summaryScope }}</span>
         @endif
         @if(!empty($sessionName))
         <span><strong>Session:</strong> {{ $sessionName }}</span>
+        @endif
+        @if(!empty($periodText))
+        <span><strong>Period:</strong> {{ $periodText }}</span>
         @endif
         <span><strong>Generated on:</strong> {{ $export_date ?? now()->format('d-m-Y H:i') }}</span>
     </div>
@@ -212,7 +220,7 @@
             <th class="text-start" style="min-width: 110px;">User Name</th>
             <th class="text-start" style="min-width: 130px;">Email</th>
             <th class="text-center" style="width: 70px;">Contact</th>
-            <th class="text-start" style="min-width: 110px;">Course</th>
+            <th class="text-start" style="min-width: 110px;">Program / Course</th>
             <th class="text-start" style="min-width: 100px;">Session Info</th>
             <th class="text-start" style="min-width: 100px;">Date Range</th>
             <th class="text-center" style="width: 70px;">Pending Count</th>

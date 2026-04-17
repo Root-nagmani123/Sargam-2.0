@@ -2,6 +2,19 @@
 
 @section('title', 'Faculty')
 
+@push('styles')
+    <style>
+        .faculty-index-page .card-faculty-accent {
+            border-left: 4px solid #004a93;
+        }
+        @media (min-width: 768px) {
+            .faculty-index-page .faculty-actions .btn {
+                white-space: nowrap;
+            }
+        }
+    </style>
+@endpush
+
 @section('setup_content')
 <div class="container-fluid">
 <x-breadcrum title="Faculty"></x-breadcrum>
@@ -52,22 +65,21 @@
                 </div>
             </div>
         </div>
-        <!-- end Zero Configuration -->
     </div>
-</div>
 @endsection
+
 @push('scripts')
-{!! $dataTable->scripts() !!}
+    {!! $dataTable->scripts() !!}
 
 <script>
 // Delete Faculty with SweetAlert Confirmation
 $(document).on('click', '.delete-faculty-btn', function(e) {
     e.preventDefault();
-    
+
     var deleteUrl = $(this).data('url');
     var facultyName = $(this).data('name');
     var csrfToken = $(this).data('token');
-    
+
     Swal.fire({
         title: 'Are you sure?',
         html: 'You are about to delete faculty: <strong>' + facultyName + '</strong><br><br>This action cannot be undone!',
@@ -90,7 +102,7 @@ $(document).on('click', '.delete-faculty-btn', function(e) {
                     Swal.showLoading();
                 }
             });
-            
+
             // Send AJAX delete request
             $.ajax({
                 url: deleteUrl,
@@ -132,6 +144,26 @@ $(document).on('click', '.delete-faculty-btn', function(e) {
             });
         }
     });
+});
+</script>
+
+<script>
+$(document).ready(function () {
+    var urlParams = new URLSearchParams(window.location.search);
+    var toastMsg = urlParams.get('toast');
+    if (toastMsg) {
+        toastr.options = {
+            "timeOut": "4000",
+            "extendedTimeOut": "1000",
+            "positionClass": "toast-top-right",
+            "closeButton": true,
+            "progressBar": true
+        };
+        toastr.success(decodeURIComponent(toastMsg));        // Push toastr container down slightly
+        $('#toast-container').css('top', '80px');        // Clean URL without reload
+        var cleanUrl = window.location.pathname + window.location.hash;
+        window.history.replaceState({}, document.title, cleanUrl);
+    }
 });
 </script>
 @endpush

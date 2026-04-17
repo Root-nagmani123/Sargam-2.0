@@ -73,15 +73,6 @@ function mess_category_wise_client_type_line_base(
     $cat = $cat === '' ? null : $cat;
 
     if ($slug === 'employee') {
-        $coreBuyer = mess_buyer_core_name_for_client_type($buyerName);
-        if ($coreBuyer !== '') {
-            $parts = [$coreBuyer];
-            if ($cat !== null && strcasecmp($cat, $coreBuyer) !== 0) {
-                $parts[] = $cat;
-            }
-
-            return $clientTypeLabel . ' (' . implode(', ', $parts) . ')';
-        }
         if ($cat !== null) {
             return $clientTypeLabel . ' (' . $cat . ')';
         }
@@ -94,6 +85,18 @@ function mess_category_wise_client_type_line_base(
     }
 
     return $clientTypeLabel;
+}
+
+/**
+ * Combined bill slip / invoice number (Process Mess Bills & Sale Voucher Report).
+ * Format: CB-YYYYMMDD-XXXXX (deterministic per buyer + client type; date is current day).
+ */
+function mess_combined_bill_slip_no(string $buyerName, string $clientTypeSlug): string
+{
+    $seed = trim($buyerName) . '|' . $clientTypeSlug;
+    $num = abs(crc32($seed)) % 100000;
+
+    return 'CB-' . date('Ymd') . '-' . str_pad((string) $num, 5, '0', STR_PAD_LEFT);
 }
 
 function createDirectory($path)

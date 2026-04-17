@@ -56,8 +56,8 @@
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label for="modal_employee_name" class="form-label">Employee Name <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control other-estate-no-special" id="modal_employee_name" name="employee_name" required
-                                maxlength="500" title="Only letters, numbers, spaces, hyphen, apostrophe and dot are allowed." placeholder="e.g. John Doe">
+                            <input type="text" class="form-control" id="modal_employee_name" name="employee_name" required
+                                maxlength="500" placeholder="e.g. John Doe">
                         </div>
                         <div class="col-md-6">
                             <label for="modal_father_name" class="form-label">Father Name <span class="text-danger">*</span></label>
@@ -176,7 +176,6 @@
 
             var allowedRegex = /^[\p{L}\p{N}\s.\-' ]+$/u;
             var fields = [
-                { id: '#modal_employee_name', name: 'Employee name' },
                 { id: '#modal_father_name', name: 'Father name' },
                 { id: '#modal_section', name: 'Section' }
             ];

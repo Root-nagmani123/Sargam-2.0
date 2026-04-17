@@ -915,6 +915,7 @@
                                             <th style="color: #fff;">Item Name</th>
                                             <th style="color: #fff;">Issued Quantity</th>
                                             <th style="color: #fff;">Item Unit</th>
+                                            <th style="color: #fff;">Item Issue Date</th>
                                             <th style="color: #fff;">Return Quantity</th>
                                             <th style="color: #fff;">Return Date</th>
                                         </tr>
@@ -1890,9 +1891,21 @@ document.addEventListener('DOMContentLoaded', function() {
         storeSel.value = '';
     }
 
+    /** Rebuild Choices + item rows from current `filteredItems` (call after reset and/or fetchStoreItems). */
+    function reinitAddSellingVoucherModalItemGrid() {
+        initAddModalTomSelects();
+        if (typeof updateModalNameField === 'function') updateModalNameField();
+        updateAddItemDropdowns();
+        refreshAllAvailable();
+        document.querySelectorAll('#modalItemsBody .sv-item-row').forEach(function(row) { calcRow(row); });
+        updateGrandTotal();
+        syncAddModalChoicesToNative();
+    }
+
     // Helper: reset Add Selling Voucher modal form (without closing modal).
     // Keeps modal open; clears fields, item rows, and store-scoped item cache so the next entry starts fresh.
-    function resetSellingVoucherModalForm() {
+    // @param {boolean} skipDeferredReinit — if true, caller will refetch inventory and call reinitAddSellingVoucherModalItemGrid (e.g. after AJAX save).
+    function resetSellingVoucherModalForm(skipDeferredReinit) {
         var modalEl = document.getElementById('addSellingVoucherModal');
         if (!modalEl) return;
 
@@ -1937,17 +1950,15 @@ document.addEventListener('DOMContentLoaded', function() {
         var grandTotalEl = document.getElementById('modalGrandTotal');
         if (grandTotalEl) grandTotalEl.textContent = '₹0.00';
 
+        if (skipDeferredReinit) {
+            return;
+        }
+
         // Modal stays open after AJAX save; re-init dropdowns and item grid (defer so DOM + destroy settle).
         window.requestAnimationFrame(function () {
             window.setTimeout(function () {
                 try {
-                    initAddModalTomSelects();
-                    if (typeof updateModalNameField === 'function') updateModalNameField();
-                    updateAddItemDropdowns();
-                    refreshAllAvailable();
-                    document.querySelectorAll('#modalItemsBody .sv-item-row').forEach(function(row) { calcRow(row); });
-                    updateGrandTotal();
-                    syncAddModalChoicesToNative();
+                    reinitAddSellingVoucherModalItemGrid();
                 } catch (err) {
                     console.error('resetSellingVoucherModalForm re-init failed', err);
                 }
@@ -2072,7 +2083,46 @@ document.addEventListener('DOMContentLoaded', function() {
                     var data = res.data;
                     var success = !!(data && (data.success === true || data.success === 1 || data.success === '1' || data.voucher_id != null));
                     if (res.ok && success) {
-                        resetSellingVoucherModalForm();
+                        var modalRoot = document.getElementById('addSellingVoucherModal');
+                        var storeSel = modalRoot ? modalRoot.querySelector('select[name="store_id"]') : null;
+                        var savedStoreId = '';
+                        if (storeSel) {
+                            if (storeSel.tomselect && typeof storeSel.tomselect.getValue === 'function') {
+                                var gv = storeSel.tomselect.getValue();
+                                savedStoreId = Array.isArray(gv) ? (gv[0] || '') : (gv == null ? '' : String(gv));
+                            } else {
+                                savedStoreId = storeSel.value || '';
+                            }
+                        }
+
+                        resetSellingVoucherModalForm(true);
+
+                        function finishAddModalAfterSave() {
+                            try {
+                                reinitAddSellingVoucherModalItemGrid();
+                            } catch (err) {
+                                console.error('reinit after save failed', err);
+                            }
+                            var body = modalRoot && modalRoot.querySelector('.modal-body');
+                            if (body) body.scrollTop = 0;
+                        }
+
+                        if (savedStoreId) {
+                            if (storeSel) {
+                                storeSel.value = String(savedStoreId);
+                            }
+                            currentStoreId = String(savedStoreId);
+                            fetchStoreItems(String(savedStoreId), function() {
+                                finishAddModalAfterSave();
+                            });
+                        } else {
+                            currentStoreId = null;
+                            filteredItems = itemSubcategories;
+                            window.requestAnimationFrame(function() {
+                                window.setTimeout(finishAddModalAfterSave, 10);
+                            });
+                        }
+
                         refreshSellingVouchersTable();
                         if (window.toastr && data.message) {
                             toastr.success(data.message);
@@ -2215,7 +2265,8 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(err => {
             console.error(err);
             alert('Failed to load store items.');
-            filteredItems = [];
+            filteredItems = itemSubcategories || [];
+            if (callback) callback();
         });
     }
 
@@ -2649,7 +2700,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (clientSelect) { setSelectVisible(clientSelect, true); clientSelect.setAttribute('required', 'required'); clientSelect.setAttribute('name', 'client_type_pk'); }
                 if (otCourseSelect) { setSelectVisible(otCourseSelect, false); otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
                 if (otStudentSelect) { setSelectVisible(otStudentSelect, false); otStudentSelect.removeAttribute('required'); otStudentSelect.innerHTML = '<option value="">Select Student</option>'; otStudentSelect.value = ''; }
-                if (courseSelect) { setSelectVisible(courseSelect, false); courseSelect.removeAttribute('required'); courseSelect.value = ''; }
+                if (courseSelect) { setSelectVisible(courseSelect, false); courseSelect.removeAttribute('required'); courseSelect.removeAttribute('name'); courseSelect.value = ''; }
                 if (courseNameSelect) { setSelectVisible(courseNameSelect, false); courseNameSelect.removeAttribute('required'); courseNameSelect.value = ''; }
                 if (clientSelect && clientNameOptionsAdd.length) {
                     rebuildClientNameSelect(clientSelect, clientNameOptionsAdd, this.value);
@@ -3229,6 +3280,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     const todayYmd = new Date().toISOString().slice(0, 10);
                     const tbody = document.getElementById('returnItemModalBody');
                     tbody.innerHTML = '';
+                    function ymdToDmY(ymd) {
+                        if (!ymd) return '—';
+                        var p = String(ymd).split('-');
+                        if (p.length !== 3) return ymd;
+                        return p[2] + '/' + p[1] + '/' + p[0];
+                    }
                     (data.items || []).forEach(function(item, i) {
                         const id = (item.id != null) ? item.id : '';
                         const name = (item.item_name || '—').replace(/</g, '&lt;').replace(/"/g, '&quot;');
@@ -3237,10 +3294,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         const retQty = item.return_quantity != null ? item.return_quantity : 0;
                         const retDate = item.return_date || '';
                         const issuedQty = parseFloat(qty) || 0;
+                        const rowIssueYmd = (item.issue_date || issueDate || '').trim();
+                        const issueDisp = ymdToDmY(rowIssueYmd);
                         tbody.insertAdjacentHTML('beforeend',
-                            '<tr><td>' + name + '<input type="hidden" name="items[' + i + '][id]" value="' + id + '"></td><td>' + qty + '</td><td>' + unit + '</td>' +
+                            '<tr><td>' + name + '<input type="hidden" name="items[' + i + '][id]" value="' + id + '"></td><td>' + qty + '</td><td>' + unit + '</td><td class="text-nowrap">' + issueDisp + '</td>' +
                             '<td><input type="number" name="items[' + i + '][return_quantity]" class="form-control  sv-return-qty" step="0.01" min="0" max="' + issuedQty + '" data-issued="' + issuedQty + '" value="' + retQty + '"><div class="invalid-feedback">Return Qty cannot exceed Issued Qty.</div></td>' +
-                            '<td><input type="date" name="items[' + i + '][return_date]" class="form-control  sv-return-date" max="' + todayYmd + '" ' + (issueDate ? ('min="' + issueDate + '" data-issue-date="' + issueDate + '"') : '') + ' value="' + retDate + '"><div class="invalid-feedback">Return date must be between issue date and today.</div></td></tr>');
+                            '<td><input type="date" name="items[' + i + '][return_date]" class="form-control  sv-return-date" max="' + todayYmd + '" ' + (rowIssueYmd ? ('min="' + rowIssueYmd + '" data-issue-date="' + rowIssueYmd + '"') : '') + ' value="' + retDate + '"><div class="invalid-feedback">Return date must be between issue date and today.</div></td></tr>');
                     });
                     document.getElementById('returnItemForm').action = returnSvBaseUrl + '/' + voucherId + '/return';
                     const modal = new bootstrap.Modal(document.getElementById('returnItemModal'));
