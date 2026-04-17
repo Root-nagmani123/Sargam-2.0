@@ -2,14 +2,8 @@
 
 @section('title', 'Path Page - Sargam | Lal Bahadur')
 
-@section('head')
-    {{-- <link href="https://cdnjs.cloudflare.com/ajax/libs/summernote/0.8.20/summernote-lite.min.css" rel="stylesheet"> --}}
-@endsection
-
 @section('setup_content')
     <link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.css" rel="stylesheet">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.js"></script>
     <div class="container-fluid">
         <!-- Page Header -->
     <x-breadcrum title="Create Path Page" />
@@ -157,37 +151,26 @@
             </div>
         </div>
     </div>
-@endsection
 
-@section('scripts')
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/summernote/0.8.20/summernote-lite.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <script>
         $(document).ready(function() {
             $('.summernote').summernote({
-                height: 250,
+                height: 200,
                 tabsize: 2,
                 toolbar: [
                     ['style', ['style']],
-                    ['font', ['bold', 'italic', 'underline', 'strikethrough', 'superscript',
-                        'subscript', 'clear'
-                    ]],
-                    ['fontname', ['fontname']],
+                    ['font', ['bold', 'italic', 'underline', 'clear']],
                     ['fontsize', ['fontsize']],
-                    ['color', ['color']],
-                    ['color', ['forecolor']], // Changed from 'color' to 'forecolor'
-                    ['para', ['ul', 'ol', 'paragraph', 'align']],
-                    ['height', ['height']],
+                    ['color', ['forecolor']],
+                    ['para', ['ul', 'ol', 'paragraph']],
                     ['table', ['table']],
-                    ['insert', ['link', 'picture', 'video', 'pdf']],
-                    ['view', ['fullscreen', 'codeview', 'help']],
+                    ['insert', ['link', 'picture']],
+                    ['view', ['fullscreen', 'codeview']],
                     ['misc', ['undo', 'redo']]
                 ],
-                fontSizes: ['8', '9', '10', '11', '12', '14', '16', '18', '20', '24', '28', '32', '36',
-                    '48', '64', '82', '150'
-                ] // optional: custom sizes
-
             });
 
             $('#add-faq').on('click', function() {
@@ -212,12 +195,10 @@
                 $('#faq-wrapper').append(newFaq);
             });
 
-            // Remove unsaved FAQ
             $(document).on('click', '.remove-faq', function() {
                 $(this).closest('.faq-item').remove();
             });
 
-            // Delete saved FAQ via form submission
             $(document).on('click', '.delete-faq-btn', function() {
                 const id = $(this).data('id');
                 if (confirm('Delete this FAQ?')) {
@@ -225,7 +206,6 @@
                         method: 'POST',
                         action: "/fc/faqs/" + id
                     });
-
                     form.append(`@csrf`);
                     form.append(`<input type="hidden" name="_method" value="DELETE">`);
                     $('body').append(form);
@@ -234,30 +214,13 @@
             });
         });
     </script>
-    <script>
-        (function() {
-            let today = new Date().toISOString().split('T')[0];
-            document.querySelectorAll(
-                    '#course_start_date, #course_end_date, #registration_start_date, #registration_end_date, #exemption_start_date, #exemption_end_date'
-                )
-                .forEach(el => el.min = today);
-        })();
-    </script>
-    <!-- SweetAlert2 CSS & JS -->
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     @if ($errors->any())
         <script>
             Swal.fire({
                 icon: 'error',
                 title: 'Validation Error',
-                html: `
-                <ul style="text-align: left;">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            `,
+                html: `<ul style="text-align: left;">@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>`,
                 confirmButtonText: 'OK'
             });
         </script>
@@ -265,26 +228,13 @@
 
     @if (session('success'))
         <script>
-            Swal.fire({
-                icon: 'success',
-                title: 'Success',
-                text: '{{ session('success') }}',
-                confirmButtonText: 'OK'
-            });
+            Swal.fire({ icon: 'success', title: 'Success', text: '{{ session('success') }}', confirmButtonText: 'OK' });
         </script>
     @endif
 
     @if (session('error'))
         <script>
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: '{{ session('error') }}',
-                confirmButtonText: 'OK'
-            });
+            Swal.fire({ icon: 'error', title: 'Error', text: '{{ session('error') }}', confirmButtonText: 'OK' });
         </script>
     @endif
-
-
-
 @endsection

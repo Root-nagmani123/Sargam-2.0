@@ -49,7 +49,7 @@
 <input type="hidden" id="pk" value="">
 <input type="hidden" id="active_inactive" value="">
 @endsection
-@section('scripts')
+@push('scripts')
 <script>
     $(function() {
         let table = $('#exceptiongetcategory').DataTable({
@@ -118,14 +118,18 @@
                     // Set hidden input values if needed
                     $('#pk').val(pk);
                     $('#active_inactive').val(active_inactive);
-                    table.ajax.reload(null, false);
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Updated!',
-                        text: 'Status has been updated successfully.',
-                        timer: 1500,
-                        showConfirmButton: false
-                    });
+                    table.ajax.reload(function() {
+                        // Clear hidden inputs after reload
+                        $('#pk').val('');
+                        $('#active_inactive').val('');
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Updated!',
+                            text: 'Status has been updated successfully.',
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+                    }, false);
                 }
                 else if (result.dismiss === Swal.DismissReason.cancel) {
                     checkbox.prop('checked', !active_inactive);
@@ -482,4 +486,4 @@ $(document).on('click', '.deleteBtn', function (e) {
     });
 </script>
 @endif
-@endsection
+@endpush
