@@ -344,6 +344,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('details/{id}', 'getFacultyDetails')->name('details');
         Route::get('download/{id}', 'downloadPDF')->name('download');
 
+        Route::post('generate-faculty-code', 'generateFacultyCodeAjax')->name('generate.code');
         // Static view
         Route::get('print-blank', function () {
             return view('admin.faculty.blank-print');
@@ -985,7 +986,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/mark-all-read', 'markAllAsRead')->name('mark-all-read');
     });
 
-    //change password work here 
+    //change password work here
     Route::get('/change_password', [UserController::class, 'change_password'])->name('admin.password.change_password');
 
     Route::post('/submit_change_password', [UserController::class, 'submit_change_password'])->name('admin.password.submit_change_password');

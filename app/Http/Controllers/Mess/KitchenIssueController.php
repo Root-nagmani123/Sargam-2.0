@@ -426,8 +426,7 @@ class KitchenIssueController extends Controller
             }],
             'payment_type' => 'required|integer|in:0,1,2',
             'client_type_slug' => 'required|string|in:employee,ot,course,section,other',
-            'client_type_pk' => ['nullable', function ($attribute, $value, $fail) use ($request) {
-                if ($value === null || $value === '') return;
+            'client_type_pk' => ['required', 'integer', 'min:1', function ($attribute, $value, $fail) use ($request) {
                 $slug = $request->client_type_slug ?? '';
                 if (in_array($slug, ['employee', 'section', 'other']) && !\App\Models\Mess\ClientType::where('id', $value)->exists()) {
                     $fail('The selected client is invalid.');
@@ -802,8 +801,7 @@ class KitchenIssueController extends Controller
             }],
             'payment_type' => 'required|integer|in:0,1,2',
             'client_type_slug' => 'required|string|in:employee,ot,course,section,other',
-            'client_type_pk' => ['nullable', function ($attribute, $value, $fail) use ($request) {
-                if ($value === null || $value === '') return;
+            'client_type_pk' => ['required', 'integer', 'min:1', function ($attribute, $value, $fail) use ($request) {
                 $slug = $request->client_type_slug ?? '';
                 if (in_array($slug, ['employee', 'section', 'other']) && !\App\Models\Mess\ClientType::where('id', $value)->exists()) {
                     $fail('The selected client is invalid.');
@@ -983,12 +981,15 @@ class KitchenIssueController extends Controller
             return redirect()->route('admin.mess.material-management.index');
         }
 
-        $items = $kitchenIssue->items->map(function ($item) {
+        $issueYmd = $kitchenIssue->issue_date ? $kitchenIssue->issue_date->format('Y-m-d') : '';
+
+        $items = $kitchenIssue->items->map(function ($item) use ($issueYmd) {
             return [
                 'id' => $item->pk,
                 'item_name' => $item->item_name ?: ($item->itemSubcategory->item_name ?? '—'),
                 'quantity' => (float) $item->quantity,
                 'unit' => $item->unit ?? '—',
+                'issue_date' => $issueYmd,
                 'return_quantity' => (float) ($item->return_quantity ?? 0),
                 'return_date' => $item->return_date ? $item->return_date->format('Y-m-d') : '',
             ];
@@ -996,7 +997,7 @@ class KitchenIssueController extends Controller
 
         return response()->json([
             'store_name' => $kitchenIssue->resolved_store_name,
-            'issue_date' => $kitchenIssue->issue_date ? $kitchenIssue->issue_date->format('Y-m-d') : '',
+            'issue_date' => $issueYmd,
             'items' => $items,
         ]);
     }
@@ -1035,29 +1036,20 @@ class KitchenIssueController extends Controller
                     DB::rollBack();
                     return back()->withInput()->with('error', 'Return quantity cannot be greater than issued quantity.');
                 }
-                if (!empty($returnDate) && $kitchenIssue->issue_date) {
-                    try {
-                        $ret = Carbon::parse($returnDate)->startOfDay();
-                        $iss = Carbon::parse($kitchenIssue->issue_date)->startOfDay();
-                        if ($ret->gt(now()->startOfDay())) {
-                            DB::rollBack();
-                            return back()->withInput()->with('error', 'Return date cannot be in the future.');
-                        }
-                        if ($ret->lt($iss)) {
-                            DB::rollBack();
-                            return back()->withInput()->with('error', 'Return date cannot be earlier than issue date.');
-                        }
-                    } catch (\Exception $e) {
-                        DB::rollBack();
-                        return back()->withInput()->with('error', 'Invalid return date.');
-                    }
-                }
-                if (!empty($returnDate) && !$kitchenIssue->issue_date) {
+                if (!empty($returnDate)) {
                     try {
                         $ret = Carbon::parse($returnDate)->startOfDay();
                         if ($ret->gt(now()->startOfDay())) {
                             DB::rollBack();
                             return back()->withInput()->with('error', 'Return date cannot be in the future.');
+                        }
+                        $effectiveIssue = $item->issue_date ?? $kitchenIssue->issue_date;
+                        if ($effectiveIssue) {
+                            $iss = Carbon::parse($effectiveIssue)->startOfDay();
+                            if ($ret->lt($iss)) {
+                                DB::rollBack();
+                                return back()->withInput()->with('error', 'Return date cannot be earlier than issue date.');
+                            }
                         }
                     } catch (\Exception $e) {
                         DB::rollBack();

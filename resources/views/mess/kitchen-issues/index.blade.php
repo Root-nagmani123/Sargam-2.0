@@ -915,6 +915,7 @@
                                             <th style="color: #fff;">Item Name</th>
                                             <th style="color: #fff;">Issued Quantity</th>
                                             <th style="color: #fff;">Item Unit</th>
+                                            <th style="color: #fff;">Item Issue Date</th>
                                             <th style="color: #fff;">Return Quantity</th>
                                             <th style="color: #fff;">Return Date</th>
                                         </tr>
@@ -2699,7 +2700,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (clientSelect) { setSelectVisible(clientSelect, true); clientSelect.setAttribute('required', 'required'); clientSelect.setAttribute('name', 'client_type_pk'); }
                 if (otCourseSelect) { setSelectVisible(otCourseSelect, false); otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
                 if (otStudentSelect) { setSelectVisible(otStudentSelect, false); otStudentSelect.removeAttribute('required'); otStudentSelect.innerHTML = '<option value="">Select Student</option>'; otStudentSelect.value = ''; }
-                if (courseSelect) { setSelectVisible(courseSelect, false); courseSelect.removeAttribute('required'); courseSelect.value = ''; }
+                if (courseSelect) { setSelectVisible(courseSelect, false); courseSelect.removeAttribute('required'); courseSelect.removeAttribute('name'); courseSelect.value = ''; }
                 if (courseNameSelect) { setSelectVisible(courseNameSelect, false); courseNameSelect.removeAttribute('required'); courseNameSelect.value = ''; }
                 if (clientSelect && clientNameOptionsAdd.length) {
                     rebuildClientNameSelect(clientSelect, clientNameOptionsAdd, this.value);
@@ -3279,6 +3280,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     const todayYmd = new Date().toISOString().slice(0, 10);
                     const tbody = document.getElementById('returnItemModalBody');
                     tbody.innerHTML = '';
+                    function ymdToDmY(ymd) {
+                        if (!ymd) return '—';
+                        var p = String(ymd).split('-');
+                        if (p.length !== 3) return ymd;
+                        return p[2] + '/' + p[1] + '/' + p[0];
+                    }
                     (data.items || []).forEach(function(item, i) {
                         const id = (item.id != null) ? item.id : '';
                         const name = (item.item_name || '—').replace(/</g, '&lt;').replace(/"/g, '&quot;');
@@ -3287,10 +3294,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         const retQty = item.return_quantity != null ? item.return_quantity : 0;
                         const retDate = item.return_date || '';
                         const issuedQty = parseFloat(qty) || 0;
+                        const rowIssueYmd = (item.issue_date || issueDate || '').trim();
+                        const issueDisp = ymdToDmY(rowIssueYmd);
                         tbody.insertAdjacentHTML('beforeend',
-                            '<tr><td>' + name + '<input type="hidden" name="items[' + i + '][id]" value="' + id + '"></td><td>' + qty + '</td><td>' + unit + '</td>' +
+                            '<tr><td>' + name + '<input type="hidden" name="items[' + i + '][id]" value="' + id + '"></td><td>' + qty + '</td><td>' + unit + '</td><td class="text-nowrap">' + issueDisp + '</td>' +
                             '<td><input type="number" name="items[' + i + '][return_quantity]" class="form-control  sv-return-qty" step="0.01" min="0" max="' + issuedQty + '" data-issued="' + issuedQty + '" value="' + retQty + '"><div class="invalid-feedback">Return Qty cannot exceed Issued Qty.</div></td>' +
-                            '<td><input type="date" name="items[' + i + '][return_date]" class="form-control  sv-return-date" max="' + todayYmd + '" ' + (issueDate ? ('min="' + issueDate + '" data-issue-date="' + issueDate + '"') : '') + ' value="' + retDate + '"><div class="invalid-feedback">Return date must be between issue date and today.</div></td></tr>');
+                            '<td><input type="date" name="items[' + i + '][return_date]" class="form-control  sv-return-date" max="' + todayYmd + '" ' + (rowIssueYmd ? ('min="' + rowIssueYmd + '" data-issue-date="' + rowIssueYmd + '"') : '') + ' value="' + retDate + '"><div class="invalid-feedback">Return date must be between issue date and today.</div></td></tr>');
                     });
                     document.getElementById('returnItemForm').action = returnSvBaseUrl + '/' + voucherId + '/return';
                     const modal = new bootstrap.Modal(document.getElementById('returnItemModal'));

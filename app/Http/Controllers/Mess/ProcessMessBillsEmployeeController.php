@@ -85,18 +85,9 @@ class ProcessMessBillsEmployeeController extends Controller
         if (!empty($clientTypePks)) {
             $dateRangeQuery->whereIn('client_type_pk', $clientTypePks);
         }
-        if ($dateFrom) {
-            $dateRangeQuery->where(function ($q) use ($dateFrom) {
-                $q->where('issue_date', '>=', $dateFrom)
-                  ->orWhere('date_from', '>=', $dateFrom);
-            });
-        }
-        if ($dateTo) {
-            $dateRangeQuery->where(function ($q) use ($dateTo) {
-                $q->where('issue_date', '<=', $dateTo)
-                  ->orWhere('date_to', '<=', $dateTo);
-            });
-        }
+        // Match Sale Voucher Report: filter SV date-range vouchers by line item request dates, not header dates only.
+        $dateRangeQuery->whereIn('status', $this->sellingVoucherDateRangeReportSaleVoucherStatuses());
+        $this->applySellingVoucherDateRangeItemIssueDateFilter($dateRangeQuery, $dateFrom, $dateTo);
         $this->applyBuyerNameFilter($dateRangeQuery, $buyerNames);
 
         // Query 2: Regular Selling Voucher (kitchen_issue_master)
@@ -141,10 +132,17 @@ class ProcessMessBillsEmployeeController extends Controller
             ->limit(5000)
             ->get();
 
-        // Load full models for each row so we can group by buyer
-        $bills = $rows->map(function ($bill) {
+        // Load full models for each row so we can group by buyer (DR: only line items inside the filter range, like Sale Voucher Report)
+        $bills = $rows->map(function ($bill) use ($dateFrom, $dateTo) {
             if ($bill->source_type === 'date_range') {
-                $model = SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'items'])->find($bill->id);
+                $model = SellingVoucherDateRangeReport::with([
+                    'store',
+                    'clientTypeCategory',
+                    'items' => function ($itemQ) use ($dateFrom, $dateTo) {
+                        $this->applySvDateRangeReportItemsIssueDateConstraint($itemQ, $dateFrom, $dateTo);
+                    },
+                    'items.itemSubcategory',
+                ])->find($bill->id);
                 if ($model) {
                     $model->setAttribute('source_type', 'date_range');
                 }
@@ -361,9 +359,27 @@ class ProcessMessBillsEmployeeController extends Controller
             }
             $due = max(0, $total - $paid);
 
-            $dates = $group->map(fn ($b) => $b->issue_date ? $b->issue_date->format('Y-m-d') : null)->filter()->unique()->sort()->values();
-            $dateMin = $dates->first();
-            $dateMax = $dates->last();
+            // Invoice date range: use line request dates for SV date-range (filtered items); else voucher issue_date (kitchen / header).
+            $dateStrings = collect();
+            foreach ($group as $b) {
+                if ($b instanceof SellingVoucherDateRangeReport && $b->relationLoaded('items') && $b->items->isNotEmpty()) {
+                    foreach ($b->items as $item) {
+                        if (! empty($item->issue_date)) {
+                            $d = $item->issue_date instanceof Carbon
+                                ? $item->issue_date->format('Y-m-d')
+                                : Carbon::parse($item->issue_date)->format('Y-m-d');
+                            $dateStrings->push($d);
+                        }
+                    }
+                } elseif ($b->issue_date) {
+                    $dateStrings->push($b->issue_date instanceof Carbon
+                        ? $b->issue_date->format('Y-m-d')
+                        : Carbon::parse($b->issue_date)->format('Y-m-d'));
+                }
+            }
+            $dateStrings = $dateStrings->filter()->unique()->sort()->values();
+            $dateMin = $dateStrings->first();
+            $dateMax = $dateStrings->last();
             $invoiceDateRange = $dateMin && $dateMax
                 ? (Carbon::parse($dateMin)->format('d-m-Y') . ($dateMin !== $dateMax ? ' to ' . Carbon::parse($dateMax)->format('d-m-Y') : ''))
                 : '—';
@@ -446,16 +462,8 @@ class ProcessMessBillsEmployeeController extends Controller
         if ($buyerName) {
             $dateRangeBase->where('client_name', 'like', '%' . $buyerName . '%');
         }
-        if ($dateFrom) {
-            $dateRangeBase->where(function ($q) use ($dateFrom) {
-                $q->where('issue_date', '>=', $dateFrom)->orWhere('date_from', '>=', $dateFrom);
-            });
-        }
-        if ($dateTo) {
-            $dateRangeBase->where(function ($q) use ($dateTo) {
-                $q->where('issue_date', '<=', $dateTo)->orWhere('date_to', '<=', $dateTo);
-            });
-        }
+        $dateRangeBase->whereIn('status', $this->sellingVoucherDateRangeReportSaleVoucherStatuses());
+        $this->applySellingVoucherDateRangeItemIssueDateFilter($dateRangeBase, $dateFrom, $dateTo);
 
         $kitchenClientTypes = $clientType
             ? [$this->clientTypeSlugToKitchenId($clientType)]
@@ -477,7 +485,11 @@ class ProcessMessBillsEmployeeController extends Controller
         $paidCount = (clone $dateRangeBase)->where('status', 2)->count() + (clone $kitchenBase)->where('status', 2)->count();
         $unpaidCount = $totalBills - $paidCount;
 
-        $svAmount = (float) (clone $dateRangeBase)->with('items')->get()->sum(fn ($r) => $r->net_total);
+        $svAmount = (float) (clone $dateRangeBase)->with([
+            'items' => function ($itemQ) use ($dateFrom, $dateTo) {
+                $this->applySvDateRangeReportItemsIssueDateConstraint($itemQ, $dateFrom, $dateTo);
+            },
+        ])->get()->sum(fn ($r) => $r->net_total);
         $kitchenAmount = (float) (clone $kitchenBase)->with('items')->get()->sum(fn ($b) => $b->net_total);
         $totalAmount = $svAmount + $kitchenAmount;
 
@@ -502,7 +514,6 @@ class ProcessMessBillsEmployeeController extends Controller
         $buyerNames = $this->normalizeBuyerNames($request->input('buyer_name'));
         $buyerName = $buyerNames[0] ?? null;
         $statusFilter = $request->filled('status') ? $request->status : null;
-        $statusFilter = $request->filled('status') ? $request->status : null;
 
         // Same union query as index, but get all results
         $dateRangeQuery = SellingVoucherDateRangeReport::query()
@@ -522,16 +533,8 @@ class ProcessMessBillsEmployeeController extends Controller
             ->whereIn('client_type_slug', $clientType ? [$clientType] : self::ALLOWED_CLIENT_SLUGS);
 
         $this->applyBuyerNameFilter($dateRangeQuery, $buyerNames);
-        if ($dateFrom) {
-            $dateRangeQuery->where(function ($q) use ($dateFrom) {
-                $q->where('issue_date', '>=', $dateFrom)->orWhere('date_from', '>=', $dateFrom);
-            });
-        }
-        if ($dateTo) {
-            $dateRangeQuery->where(function ($q) use ($dateTo) {
-                $q->where('issue_date', '<=', $dateTo)->orWhere('date_to', '<=', $dateTo);
-            });
-        }
+        $dateRangeQuery->whereIn('status', $this->sellingVoucherDateRangeReportSaleVoucherStatuses());
+        $this->applySellingVoucherDateRangeItemIssueDateFilter($dateRangeQuery, $dateFrom, $dateTo);
 
         $kitchenClientTypes = $clientType
             ? [$this->clientTypeSlugToKitchenId($clientType)]
@@ -579,9 +582,15 @@ class ProcessMessBillsEmployeeController extends Controller
             ->orderBy('id', 'desc')
             ->get();
 
-        $bills = $rowsRaw->map(function ($bill) {
+        $bills = $rowsRaw->map(function ($bill) use ($dateFrom, $dateTo) {
             if ($bill->source_type === 'date_range') {
-                $model = SellingVoucherDateRangeReport::with(['clientTypeCategory', 'items'])->find($bill->id);
+                $model = SellingVoucherDateRangeReport::with([
+                    'clientTypeCategory',
+                    'items' => function ($itemQ) use ($dateFrom, $dateTo) {
+                        $this->applySvDateRangeReportItemsIssueDateConstraint($itemQ, $dateFrom, $dateTo);
+                    },
+                    'items.itemSubcategory',
+                ])->find($bill->id);
                 if ($model) $model->setAttribute('source_type', 'date_range');
                 return $model;
             }
@@ -591,22 +600,6 @@ class ProcessMessBillsEmployeeController extends Controller
         })->filter()->values();
 
         $combinedBills = $this->groupBillsByBuyer($bills);
-
-        // Optional status filter on combined bills for export as well
-        if ($statusFilter !== null && $statusFilter !== '') {
-            $statusMap = [
-                'unpaid' => 0,
-                'partial' => 1,
-                'paid' => 2,
-                0 => 0,
-                1 => 1,
-                2 => 2,
-            ];
-            $normalized = $statusMap[$statusFilter] ?? null;
-            if ($normalized !== null) {
-                $combinedBills = $combinedBills->where('status', $normalized)->values();
-            }
-        }
 
         // Optional status filter on combined bills for export as well
         if ($statusFilter !== null && $statusFilter !== '') {
@@ -685,29 +678,26 @@ class ProcessMessBillsEmployeeController extends Controller
                     $remarksList[] = trim((string) $b->remarks);
                 }
                 foreach ($b->items ?? [] as $item) {
-                    // Prefer per-item issue_date (for Selling Voucher Date Range items),
-                    // otherwise fall back to the voucher's issue_date.
                     $itemIssueDate = null;
+                    $itemIssueYmd = null;
                     try {
                         if (isset($item->issue_date) && $item->issue_date) {
-                            $itemIssueDate = $item->issue_date instanceof Carbon
-                                ? $item->issue_date->format('d-m-Y')
-                                : Carbon::parse($item->issue_date)->format('d-m-Y');
+                            $idt = $item->issue_date instanceof Carbon
+                                ? $item->issue_date
+                                : Carbon::parse($item->issue_date);
+                            $itemIssueDate = $idt->format('d-m-Y');
+                            $itemIssueYmd = $idt->format('Y-m-d');
                         }
                     } catch (\Throwable $e) {
                         $itemIssueDate = null;
                     }
-                    // Prefer per-item issue_date (for Selling Voucher Date Range items),
-                    // otherwise fall back to the voucher's issue_date.
-                    $itemIssueDate = null;
-                    try {
-                        if (isset($item->issue_date) && $item->issue_date) {
-                            $itemIssueDate = $item->issue_date instanceof Carbon
-                                ? $item->issue_date->format('d-m-Y')
-                                : Carbon::parse($item->issue_date)->format('d-m-Y');
+                    if ($itemIssueYmd !== null) {
+                        if ($dateMin === null || $itemIssueYmd < $dateMin) {
+                            $dateMin = $itemIssueYmd;
                         }
-                    } catch (\Throwable $e) {
-                        $itemIssueDate = null;
+                        if ($dateMax === null || $itemIssueYmd > $dateMax) {
+                            $dateMax = $itemIssueYmd;
+                        }
                     }
                     $items[] = (object) [
                         'item_name' => $item->item_name ?? ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? '—'),
@@ -718,13 +708,12 @@ class ProcessMessBillsEmployeeController extends Controller
                         'itemSubcategory' => null,
                         'store_name' => $storeName,
                         'issue_date' => $itemIssueDate ?: $purchaseDateStr,
-                        'issue_date' => $itemIssueDate ?: $purchaseDateStr,
                     ];
                 }
-                if ($b->issue_date) {
+                if ($dateMin === null && $dateMax === null && $b->issue_date) {
                     $d = $b->issue_date->format('Y-m-d');
-                    if ($dateMin === null || $d < $dateMin) $dateMin = $d;
-                    if ($dateMax === null || $d > $dateMax) $dateMax = $d;
+                    $dateMin = $d;
+                    $dateMax = $d;
                 }
                 // Capture course name once (for OT / Course types)
                 if ($courseName === null) {
@@ -848,17 +837,20 @@ class ProcessMessBillsEmployeeController extends Controller
         $dateFrom = $request->filled('date_from') ? $this->parseDate($request->date_from) : now()->startOfMonth()->format('Y-m-d');
         $dateTo = $request->filled('date_to') ? $this->parseDate($request->date_to) : now()->endOfMonth()->format('Y-m-d');
 
-            $dateRangeBills = SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'course', 'items'])
+        $drBillQuery = SellingVoucherDateRangeReport::with([
+            'store',
+            'clientTypeCategory',
+            'course',
+            'items' => function ($itemQ) use ($dateFrom, $dateTo) {
+                $this->applySvDateRangeReportItemsIssueDateConstraint($itemQ, $dateFrom, $dateTo);
+            },
+            'items.itemSubcategory',
+        ])
             ->where('client_type_slug', $clientTypeSlug)
             ->where('client_name', $buyerName)
-            ->where(function ($q) use ($dateFrom) {
-                $q->where('issue_date', '>=', $dateFrom)->orWhere('date_from', '>=', $dateFrom);
-            })
-            ->where(function ($q) use ($dateTo) {
-                $q->where('issue_date', '<=', $dateTo)->orWhere('date_to', '<=', $dateTo);
-            })
-            ->orderBy('issue_date')
-            ->get();
+            ->whereIn('status', $this->sellingVoucherDateRangeReportSaleVoucherStatuses());
+        $this->applySellingVoucherDateRangeItemIssueDateFilter($drBillQuery, $dateFrom, $dateTo);
+        $dateRangeBills = $drBillQuery->orderBy('issue_date')->get();
 
         $kitchenBills = KitchenIssueMaster::with(['store', 'clientTypeCategory', 'course', 'items'])
             ->whereIn('kitchen_issue_type', self::KITCHEN_MESS_SELLING_ISSUE_TYPES)
@@ -898,48 +890,50 @@ class ProcessMessBillsEmployeeController extends Controller
                 $storeName = $bill->resolved_store_name ?? '—';
                 $storeNames[$storeName] = true;
                 $purchaseDate = $bill->issue_date ? $bill->issue_date->format('d-m-Y') : '—';
-                if ($bill->issue_date) {
-                    $d = $bill->issue_date->format('Y-m-d');
-                    if ($dateMin === null || $d < $dateMin) $dateMin = $d;
-                    if ($dateMax === null || $d > $dateMax) $dateMax = $d;
-                }
                 if ($clientTypeDisplay === '') {
                     $clientTypeDisplay = $bill->client_type_display ?? ($bill->client_type_label ?? ($bill->clientTypeCategory ? ucfirst($bill->clientTypeCategory->client_type ?? '') : '—'));
                 }
+                $billHadItemDates = false;
                 foreach ($bill->items ?? [] as $item) {
-                    // Prefer per-item issue_date where available (Selling Voucher Date Range items);
-                    // otherwise fall back to the voucher-level issue date.
                     $itemIssueDate = null;
+                    $itemIssueYmd = null;
                     try {
                         if (isset($item->issue_date) && $item->issue_date) {
-                            $itemIssueDate = $item->issue_date instanceof Carbon
-                                ? $item->issue_date->format('d-m-Y')
-                                : Carbon::parse($item->issue_date)->format('d-m-Y');
+                            $idt = $item->issue_date instanceof Carbon
+                                ? $item->issue_date
+                                : Carbon::parse($item->issue_date);
+                            $itemIssueDate = $idt->format('d-m-Y');
+                            $itemIssueYmd = $idt->format('Y-m-d');
                         }
                     } catch (\Throwable $e) {
                         $itemIssueDate = null;
                     }
-                    // Prefer per-item issue_date where available (Selling Voucher Date Range items);
-                    // otherwise fall back to the voucher-level issue date.
-                    $itemIssueDate = null;
-                    try {
-                        if (isset($item->issue_date) && $item->issue_date) {
-                            $itemIssueDate = $item->issue_date instanceof Carbon
-                                ? $item->issue_date->format('d-m-Y')
-                                : Carbon::parse($item->issue_date)->format('d-m-Y');
+                    if ($itemIssueYmd !== null) {
+                        $billHadItemDates = true;
+                        if ($dateMin === null || $itemIssueYmd < $dateMin) {
+                            $dateMin = $itemIssueYmd;
                         }
-                    } catch (\Throwable $e) {
-                        $itemIssueDate = null;
+                        if ($dateMax === null || $itemIssueYmd > $dateMax) {
+                            $dateMax = $itemIssueYmd;
+                        }
                     }
                     $items[] = [
                         'store_name' => $storeName,
                         'item_name' => $item->item_name ?? ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? '—'),
                         'issue_date' => $itemIssueDate ?: $purchaseDate,
-                        'issue_date' => $itemIssueDate ?: $purchaseDate,
                         'price' => number_format($item->rate ?? 0, 1),
                         'quantity' => $item->quantity,
                         'amount' => number_format($item->amount ?? 0, 2),
                     ];
+                }
+                if (! $billHadItemDates && $bill->issue_date) {
+                    $d = $bill->issue_date->format('Y-m-d');
+                    if ($dateMin === null || $d < $dateMin) {
+                        $dateMin = $d;
+                    }
+                    if ($dateMax === null || $d > $dateMax) {
+                        $dateMax = $d;
+                    }
                 }
             }
             $dueAmount = max(0, $totalAmount - $paidAmount);
@@ -1090,7 +1084,14 @@ class ProcessMessBillsEmployeeController extends Controller
 
         // Query 1: Selling Voucher with Date Range
         $dateRangeSlugs = $clientType ? [$clientType] : self::ALLOWED_CLIENT_SLUGS;
-        $dateRangeQuery = SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'items'])
+        $dateRangeQuery = SellingVoucherDateRangeReport::with([
+            'store',
+            'clientTypeCategory',
+            'items' => function ($itemQ) use ($dateFrom, $dateTo) {
+                $this->applySvDateRangeReportItemsIssueDateConstraint($itemQ, $dateFrom, $dateTo);
+            },
+            'items.itemSubcategory',
+        ])
             ->whereIn('client_type_slug', $dateRangeSlugs)
             ->where('status', '!=', 2); // Only unpaid bills
 
@@ -1098,16 +1099,7 @@ class ProcessMessBillsEmployeeController extends Controller
             $dateRangeQuery->where('client_type_pk', $clientTypePk);
         }
         $this->applyBuyerNameFilter($dateRangeQuery, $buyerNames);
-        if ($dateFrom) {
-            $dateRangeQuery->where(function ($q) use ($dateFrom) {
-                $q->where('issue_date', '>=', $dateFrom)->orWhere('date_from', '>=', $dateFrom);
-            });
-        }
-        if ($dateTo) {
-            $dateRangeQuery->where(function ($q) use ($dateTo) {
-                $q->where('issue_date', '<=', $dateTo)->orWhere('date_to', '<=', $dateTo);
-            });
-        }
+        $this->applySellingVoucherDateRangeItemIssueDateFilter($dateRangeQuery, $dateFrom, $dateTo);
 
         // Query 2: Regular Selling Voucher (Kitchen Issue)
         $kitchenClientTypes = $clientType
@@ -1819,6 +1811,63 @@ class ProcessMessBillsEmployeeController extends Controller
             'bill_id' => $billId,
             'client_name' => $clientName,
         ]);
+    }
+
+    /**
+     * SV date-range report statuses included on Sale Voucher Report (category-wise print slip).
+     *
+     * @return array<int, int>
+     */
+    private function sellingVoucherDateRangeReportSaleVoucherStatuses(): array
+    {
+        return [
+            SellingVoucherDateRangeReport::STATUS_DRAFT,
+            SellingVoucherDateRangeReport::STATUS_FINAL,
+            SellingVoucherDateRangeReport::STATUS_APPROVED,
+        ];
+    }
+
+    /**
+     * Limit SV date-range line items by request date (issue_date), same as Sale Voucher Report item scope.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Query\Builder  $itemQuery
+     */
+    private function applySvDateRangeReportItemsIssueDateConstraint($itemQuery, ?string $dateFromYmd, ?string $dateToYmd): void
+    {
+        if ($dateFromYmd && $dateToYmd) {
+            $itemQuery->whereBetween('issue_date', [$dateFromYmd, $dateToYmd]);
+
+            return;
+        }
+        if ($dateFromYmd) {
+            $itemQuery->whereDate('issue_date', '>=', $dateFromYmd);
+
+            return;
+        }
+        if ($dateToYmd) {
+            $itemQuery->whereDate('issue_date', '<=', $dateToYmd);
+
+            return;
+        }
+    }
+
+    /**
+     * Same date logic as ReportController::buildCategoryWisePrintSlipReportData:
+     * include a selling voucher (date range) header only if it has line items whose request date
+     * (sv_date_range_report_items.issue_date) falls in the selected range.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Query\Builder  $query
+     */
+    private function applySellingVoucherDateRangeItemIssueDateFilter($query, ?string $dateFromYmd, ?string $dateToYmd): void
+    {
+        if ($dateFromYmd || $dateToYmd) {
+            $query->whereHas('items', function ($itemQ) use ($dateFromYmd, $dateToYmd) {
+                $this->applySvDateRangeReportItemsIssueDateConstraint($itemQ, $dateFromYmd, $dateToYmd);
+            });
+
+            return;
+        }
+        $query->whereHas('items');
     }
 
     private function parseDate(string $value): ?string
