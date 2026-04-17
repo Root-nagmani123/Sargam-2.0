@@ -17,6 +17,13 @@
             $todayYmd = now()->format('Y-m-d');
             $oldValidFrom = old('veh_card_valid_from', $todayYmd);
             $oldValidTo = old('vech_card_valid_to', now()->addYear()->format('Y-m-d'));
+            $idCap = $idCardValidityCapYmd ?? null;
+            if ($idCap && $oldValidTo > $idCap) {
+                $oldValidTo = $idCap;
+            }
+            if ($idCap && $oldValidFrom > $idCap) {
+                $oldValidFrom = $idCap;
+            }
             if (in_array($oldApplicantType, ['employee', 'government_vehicle']) && isset($currentUserEmployee) && $currentUserEmployee) {
                 if ($oldIdCard === '') {
                     $oldIdCard = $currentUserEmployee->emp_id ?? '';
@@ -343,6 +350,8 @@
     var applicantTypeGovernment = document.getElementById('applicant_type_government');
     var empMasterPkInput = document.getElementById('emp_master_pk');
     var currentUserEmployee = @json($currentUserEmployee ?? null);
+    var loggedInUserIdCardCapYmd = @json($idCardValidityCapYmd ?? null);
+    var othersLookupIdCardCapYmd = null;
     var idCardInput = document.getElementById('employee_id_card');
     var othersLookupHint = document.getElementById('othersIdCardLookupHint');
     var othersLookupAbort = null;
@@ -367,7 +376,8 @@
         var validToInput = document.getElementById('vech_card_valid_to');
         if (!idVal) {
             setOthersLookupHint('', '');
-            if (validToInput) validToInput.removeAttribute('max');
+            othersLookupIdCardCapYmd = null;
+            if (typeof syncVehicleDateConstraints === 'function') syncVehicleDateConstraints();
             return;
         }
         if (othersLookupAbort) {
@@ -384,7 +394,8 @@
             if (!res.ok || !res.body.success || !res.body.data) {
                 var msg = (res.body && res.body.message) ? res.body.message : 'Could not load details for this ID card.';
                 setOthersLookupHint(msg, 'error');
-                if (validToInput) validToInput.removeAttribute('max');
+                othersLookupIdCardCapYmd = null;
+                if (typeof syncVehicleDateConstraints === 'function') syncVehicleDateConstraints();
                 return;
             }
             var d = res.body.data;
@@ -398,14 +409,7 @@
             if (empMasterPkInput && d.emp_master_pk) {
                 empMasterPkInput.value = String(d.emp_master_pk);
             }
-            if (validToInput && d.id_card_valid_to) {
-                validToInput.setAttribute('max', d.id_card_valid_to);
-                if (validToInput.value && validToInput.value > d.id_card_valid_to) {
-                    validToInput.value = d.id_card_valid_to;
-                }
-            } else if (validToInput) {
-                validToInput.removeAttribute('max');
-            }
+            othersLookupIdCardCapYmd = d.id_card_valid_to || null;
             syncVehicleDateConstraints();
             setOthersLookupHint(
                 d.id_card_valid_to
@@ -435,10 +439,14 @@
     }
 
     function clearVehiclePassValidToMaxFromIdCard() {
-        var validToInput = document.getElementById('vech_card_valid_to');
-        if (validToInput) {
-            validToInput.removeAttribute('max');
+        othersLookupIdCardCapYmd = null;
+    }
+
+    function effectiveVehiclePassIdCardCapYmd() {
+        if (typeof isEmployeeOrGovVehicle === 'function' && isEmployeeOrGovVehicle()) {
+            return loggedInUserIdCardCapYmd || null;
         }
+        return othersLookupIdCardCapYmd || null;
     }
 
     function updateApplicantTypeFields() {
@@ -464,6 +472,9 @@
             setOthersLookupHint('', '');
         }
         clearVehiclePassValidToMaxFromIdCard();
+        if (typeof syncVehicleDateConstraints === 'function') {
+            syncVehicleDateConstraints();
+        }
     }
 
     if (applicantTypeEmployee) applicantTypeEmployee.addEventListener('change', updateApplicantTypeFields);
@@ -512,6 +523,21 @@
             toDateInput.value = '';
         } else if (toDateInput.value && toDateInput.value < toDateInput.min) {
             toDateInput.value = '';
+        }
+
+        var capY = (typeof effectiveVehiclePassIdCardCapYmd === 'function') ? effectiveVehiclePassIdCardCapYmd() : null;
+        if (capY) {
+            fromDateInput.setAttribute('max', capY);
+            toDateInput.setAttribute('max', capY);
+            if (fromDateInput.value && fromDateInput.value > capY) {
+                fromDateInput.value = '';
+            }
+            if (toDateInput.value && toDateInput.value > capY) {
+                toDateInput.value = '';
+            }
+        } else {
+            fromDateInput.removeAttribute('max');
+            toDateInput.removeAttribute('max');
         }
     }
 

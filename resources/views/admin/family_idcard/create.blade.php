@@ -365,6 +365,38 @@
     'use strict';
 
     var familyIdcardContractualOnly = @json($familyIdcardContractualEmployeeOnly ?? false);
+    var familyCapPermanentYmd = @json($familyIdCardCapPermanentYmd ?? null);
+    var familyCapContractualYmd = @json($familyIdCardCapContractualYmd ?? null);
+
+    function currentFamilyIdCardCapYmd() {
+        if (familyIdcardContractualOnly) {
+            return familyCapContractualYmd;
+        }
+        var perm = document.getElementById('emp_type_govt');
+        var cont = document.getElementById('emp_type_cont');
+        if (cont && cont.checked) {
+            return familyCapContractualYmd;
+        }
+        if (perm && perm.checked) {
+            return familyCapPermanentYmd;
+        }
+        return familyCapPermanentYmd || familyCapContractualYmd;
+    }
+
+    function applyFamilyMemberIdCardDateCaps() {
+        var cap = currentFamilyIdCardCapYmd();
+        var nodes = document.querySelectorAll('#familyMembersBody input[name$="[valid_from]"], #familyMembersBody input[name$="[valid_to]"]');
+        nodes.forEach(function (inp) {
+            if (!cap) {
+                inp.removeAttribute('max');
+                return;
+            }
+            inp.setAttribute('max', cap);
+            if (inp.value && inp.value > cap) {
+                inp.value = '';
+            }
+        });
+    }
 
     function fmlIsContractualMode() {
         if (familyIdcardContractualOnly) return true;
@@ -416,10 +448,17 @@
         }
     }
     if (!familyIdcardContractualOnly) {
-        document.getElementById('emp_type_govt')?.addEventListener('change', toggleFmlApprovalAuthority);
-        document.getElementById('emp_type_cont')?.addEventListener('change', toggleFmlApprovalAuthority);
+        document.getElementById('emp_type_govt')?.addEventListener('change', function () {
+            toggleFmlApprovalAuthority();
+            applyFamilyMemberIdCardDateCaps();
+        });
+        document.getElementById('emp_type_cont')?.addEventListener('change', function () {
+            toggleFmlApprovalAuthority();
+            applyFamilyMemberIdCardDateCaps();
+        });
     }
     toggleFmlApprovalAuthority();
+    applyFamilyMemberIdCardDateCaps();
 
     // Contractual: autofill from employee_master and/or security_con_oth_id_apply (lookup endpoint)
     var fmlLookupAbort = null;
@@ -786,12 +825,14 @@
     
     // Apply date restrictions on page load
     applyDateRestrictions();
-    
+    applyFamilyMemberIdCardDateCaps();
+
     // Reapply restrictions after adding new rows
     var originalAddRow = addRow;
     addRow = function() {
         originalAddRow();
         applyDateRestrictions();
+        applyFamilyMemberIdCardDateCaps();
     };
 
     // Group photo: preview and remove

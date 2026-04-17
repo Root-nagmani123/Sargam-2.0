@@ -211,18 +211,22 @@ class DuplicateIDCardRequestController extends Controller
                     }
                 }
             }
-            // Prefer main table validity; if missing, fall back to latest approved duplicate/extension record
+            // Effective validity: merge main card with approved duplicate/extension (extension may carry a later end date).
             $validFrom = $row->card_valid_from;
             $validTo = $row->card_valid_to;
-            if (!$validFrom || !$validTo) {
-                $dup = DB::table('security_dup_perm_id_apply')
-                    ->where('id_card_no', $cardNo)
-                    ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
-                    ->orderByDesc('card_valid_to')
-                    ->first(['card_valid_from', 'card_valid_to']);
-                if ($dup) {
-                    $validFrom = $validFrom ?: ($dup->card_valid_from ?? null);
-                    $validTo = $validTo ?: ($dup->card_valid_to ?? null);
+            $dup = DB::table('security_dup_perm_id_apply')
+                ->where('id_card_no', $cardNo)
+                ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
+                ->orderByDesc('card_valid_to')
+                ->first(['card_valid_from', 'card_valid_to']);
+            if ($dup) {
+                $validFrom = $validFrom ?: ($dup->card_valid_from ?? null);
+                if (! empty($dup->card_valid_to)) {
+                    $mainTo = $validTo ? \Carbon\Carbon::parse($validTo) : null;
+                    $dupTo = \Carbon\Carbon::parse($dup->card_valid_to);
+                    $validTo = ($mainTo && $mainTo->gt($dupTo)) ? $mainTo->format('Y-m-d') : $dupTo->format('Y-m-d');
+                } elseif (! $validTo) {
+                    $validTo = $dup->card_valid_to ?? null;
                 }
             }
 
@@ -259,19 +263,23 @@ class DuplicateIDCardRequestController extends Controller
                 ], 404);
             }
 
-            // Prefer main table validity; if missing, fall back to latest approved contractual duplicate
+            // Effective validity: main contractual row plus approved duplicate/extension (later end date wins).
             $validFrom = $row->card_valid_from ?? null;
             $validTo = $row->card_valid_to ?? null;
-            if (! $validFrom || ! $validTo) {
-                $dup = DB::table('security_dup_other_id_apply')
-                    ->where('id_card_no', $cardNo)
-                    ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
-                    ->orderByDesc('card_valid_to')
-                    ->first(['card_valid_from', 'card_valid_to']);
+            $dup = DB::table('security_dup_other_id_apply')
+                ->where('id_card_no', $cardNo)
+                ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
+                ->orderByDesc('card_valid_to')
+                ->first(['card_valid_from', 'card_valid_to']);
 
-                if ($dup) {
-                    $validFrom = $validFrom ?: ($dup->card_valid_from ?? null);
-                    $validTo = $validTo ?: ($dup->card_valid_to ?? null);
+            if ($dup) {
+                $validFrom = $validFrom ?: ($dup->card_valid_from ?? null);
+                if (! empty($dup->card_valid_to)) {
+                    $mainTo = $validTo ? \Carbon\Carbon::parse($validTo) : null;
+                    $dupTo = \Carbon\Carbon::parse($dup->card_valid_to);
+                    $validTo = ($mainTo && $mainTo->gt($dupTo)) ? $mainTo->format('Y-m-d') : $dupTo->format('Y-m-d');
+                } elseif (! $validTo) {
+                    $validTo = $dup->card_valid_to ?? null;
                 }
             }
 

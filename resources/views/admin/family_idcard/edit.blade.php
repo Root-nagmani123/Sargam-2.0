@@ -146,10 +146,10 @@
                                         <input type="date" name="members[{{ $idx }}][dob]" class="form-control " value="{{ old('members.'.$idx.'.dob', $member->dob ? $member->dob->format('Y-m-d') : '') }}">
                                     </td>
                                     <td class="align-middle">
-                                        <input type="date" name="members[{{ $idx }}][valid_from]" class="form-control  valid-from-field" min="{{ date('Y-m-d') }}" value="{{ old('members.'.$idx.'.valid_from', $member->valid_from ? $member->valid_from->format('Y-m-d') : '') }}">
+                                        <input type="date" name="members[{{ $idx }}][valid_from]" class="form-control  valid-from-field" min="{{ date('Y-m-d') }}" @if(!empty($familyIdCardCapYmd)) max="{{ $familyIdCardCapYmd }}" @endif value="{{ old('members.'.$idx.'.valid_from', $member->valid_from ? $member->valid_from->format('Y-m-d') : '') }}">
                                     </td>
                                     <td class="align-middle">
-                                        <input type="date" name="members[{{ $idx }}][valid_to]" class="form-control " value="{{ old('members.'.$idx.'.valid_to', $member->valid_to ? $member->valid_to->format('Y-m-d') : '') }}">
+                                        <input type="date" name="members[{{ $idx }}][valid_to]" class="form-control " @if(!empty($familyIdCardCapYmd)) max="{{ $familyIdCardCapYmd }}" @endif value="{{ old('members.'.$idx.'.valid_to', $member->valid_to ? $member->valid_to->format('Y-m-d') : '') }}">
                                     </td>
                                     <td class="align-middle">
                                         @php
@@ -351,6 +351,19 @@
     if (!tbody || !addBtn || !template) return;
 
     var rowIndex = tbody.querySelectorAll('.family-member-row').length || 0;
+    var familyEditIdCardCapYmd = @json($familyIdCardCapYmd ?? null);
+
+    function applyFamilyEditIdCardDateCaps() {
+        if (!familyEditIdCardCapYmd) {
+            return;
+        }
+        tbody.querySelectorAll('input[name$="[valid_from]"], input[name$="[valid_to]"]').forEach(function (inp) {
+            inp.setAttribute('max', familyEditIdCardCapYmd);
+            if (inp.value && inp.value > familyEditIdCardCapYmd) {
+                inp.value = '';
+            }
+        });
+    }
 
     function applyDateRestrictions() {
         var today = new Date().toISOString().split('T')[0];
@@ -441,6 +454,7 @@
                 row.remove();
                 updateRowNumbers();
                 applyDateRestrictions();
+                applyFamilyEditIdCardDateCaps();
             });
         }
     }
@@ -455,6 +469,7 @@
         updateRowNumbers();
         bindRowEvents(newRow);
         applyDateRestrictions();
+        applyFamilyEditIdCardDateCaps();
         var noRow = document.getElementById('noMembersRow');
         if (noRow) noRow.remove();
     }
@@ -464,6 +479,7 @@
         bindRowEvents(row);
     });
     applyDateRestrictions();
+    applyFamilyEditIdCardDateCaps();
 
     if (addBtn && !addBtn.disabled) {
         addBtn.addEventListener('click', function() {

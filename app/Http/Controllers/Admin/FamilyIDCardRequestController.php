@@ -249,12 +249,26 @@ class FamilyIDCardRequestController extends Controller
             $familyIdcardContractualEmployeeOnly = (int) ($authEmp->payroll ?? 0) !== 0;
         }
 
+        $familyIdCardCapPermanentYmd = null;
+        $familyIdCardCapContractualYmd = null;
+        if ($authEmp) {
+            $canon = IdCardSecurityMapper::resolveCanonicalEmployeeMasterPk((int) $authEmp->pk);
+            if ($canon) {
+                $capP = IdCardSecurityMapper::approvedEmployeeIdCardValidityEnd($canon, 'Permanent Employee');
+                $capC = IdCardSecurityMapper::approvedEmployeeIdCardValidityEnd($canon, 'Contractual Employee');
+                $familyIdCardCapPermanentYmd = $capP ? $capP->format('Y-m-d') : null;
+                $familyIdCardCapContractualYmd = $capC ? $capC->format('Y-m-d') : null;
+            }
+        }
+
         return view('admin.family_idcard.create', [
             'userDepartmentName' => $userDepartmentName,
             'defaultEmployeeIdPermanent' => $defaultEmployeeIdPermanent,
             'defaultEmployeeIdContractual' => $defaultEmployeeIdContractual,
             'defaultDesignation' => $defaultDesignation,
             'familyIdcardContractualEmployeeOnly' => $familyIdcardContractualEmployeeOnly,
+            'familyIdCardCapPermanentYmd' => $familyIdCardCapPermanentYmd,
+            'familyIdCardCapContractualYmd' => $familyIdCardCapContractualYmd,
         ]);
     }
 
@@ -491,6 +505,8 @@ class FamilyIDCardRequestController extends Controller
             ]);
         }
 
+        $applicantCanonical = IdCardSecurityMapper::resolveCanonicalEmployeeMasterPk((int) (Auth::user()->user_id ?? Auth::id()));
+
         $employeeId = $request->input('employee_id');
         $createdBy = Auth::user()->user_id;
         $employeeType = $contractualOnly
@@ -521,6 +537,15 @@ class FamilyIDCardRequestController extends Controller
                     "members.{$index}.name" => "Family member '{$name}' with the same relation is already added for this employee. Duplicate entries are not allowed.",
                 ]);
             }
+
+            IdCardSecurityMapper::assertOptionalDatePairWithinApprovedIdCardEnd(
+                $applicantCanonical,
+                $employeeType,
+                $member['valid_from'] ?? null,
+                $member['valid_to'] ?? null,
+                "members.{$index}.valid_from",
+                "members.{$index}.valid_to"
+            );
 
             $familyPhotoPath_individual = null;
             if ($request->hasFile('members.' . $index . '.family_photo')) {
@@ -628,6 +653,13 @@ class FamilyIDCardRequestController extends Controller
             }
         }
 
+        $familyIdCardCapYmd = null;
+        $canonEdit = IdCardSecurityMapper::resolveCanonicalEmployeeMasterPk((int) $row->created_by);
+        if ($canonEdit) {
+            $capEdit = IdCardSecurityMapper::approvedEmployeeIdCardValidityEnd($canonEdit, $employeeType ?? 'Permanent Employee');
+            $familyIdCardCapYmd = $capEdit ? $capEdit->format('Y-m-d') : null;
+        }
+
         return view('admin.family_idcard.edit', [
             'request' => $request,
             'existingFamilyMembers' => $existingFamilyMembers,
@@ -635,6 +667,7 @@ class FamilyIDCardRequestController extends Controller
             'approvalAuthorityEmployees' => $approvalAuthorityEmployees,
             'currentApprovalAuthorityPk' => $currentApprovalAuthorityPk,
             'can_remove_members' => !$this->familyGroupHasApprovalProgress($row) && (int) $row->id_status !== 2,
+            'familyIdCardCapYmd' => $familyIdCardCapYmd,
         ]);
     }
 
@@ -679,6 +712,17 @@ class FamilyIDCardRequestController extends Controller
             ]);
         }
 
+        $applicantCanonical = IdCardSecurityMapper::resolveCanonicalEmployeeMasterPk((int) $row->created_by);
+        $empTypeForCap = $employeeType ?? $row->employee_type ?? 'Permanent Employee';
+        IdCardSecurityMapper::assertOptionalDatePairWithinApprovedIdCardEnd(
+            $applicantCanonical,
+            $empTypeForCap,
+            $from,
+            $to,
+            'valid_from',
+            'valid_to'
+        );
+
         $row->family_name = $validated['name'];
         $row->family_relation = $validated['relation'] ?? null;
         $row->emp_id_apply = $validated['employee_id'];
@@ -710,6 +754,17 @@ class FamilyIDCardRequestController extends Controller
                         "members.{$idx}.valid_to" => 'Valid To date must not be earlier than Valid From date.',
                     ]);
                 }
+            }
+
+            foreach ($members as $idx => $member) {
+                IdCardSecurityMapper::assertOptionalDatePairWithinApprovedIdCardEnd(
+                    $applicantCanonical,
+                    $empTypeForCap,
+                    $member['valid_from'] ?? null,
+                    $member['valid_to'] ?? null,
+                    "members.{$idx}.valid_from",
+                    "members.{$idx}.valid_to"
+                );
             }
 
             // Existing group rows (all members for this application)
@@ -863,6 +918,16 @@ class FamilyIDCardRequestController extends Controller
         if (!empty($from) && !empty($to) && $to < $from) {
             throw ValidationException::withMessages(['valid_to' => 'Valid To must not be earlier than Valid From.']);
         }
+        $applicantCanonical = IdCardSecurityMapper::resolveCanonicalEmployeeMasterPk((int) $mainRow->created_by);
+        $empTypeForCap = $mainRow->employee_type ?? 'Permanent Employee';
+        IdCardSecurityMapper::assertOptionalDatePairWithinApprovedIdCardEnd(
+            $applicantCanonical,
+            $empTypeForCap,
+            $validated['valid_from'] ?? null,
+            $validated['valid_to'] ?? null,
+            'valid_from',
+            'valid_to'
+        );
         $nextPk = (int) SecurityFamilyIdApply::max('pk') + 1;
         $fmlIdApply = 'FMD' . str_pad((string) $nextPk, 5, '0', STR_PAD_LEFT);
         $createdDate = $mainRow->created_date instanceof \DateTimeInterface
@@ -915,6 +980,16 @@ class FamilyIDCardRequestController extends Controller
         if (!empty($from) && !empty($to) && $to < $from) {
             throw ValidationException::withMessages(['valid_to' => 'Valid To must not be earlier than Valid From.']);
         }
+        $applicantCanonical = IdCardSecurityMapper::resolveCanonicalEmployeeMasterPk((int) $mainRow->created_by);
+        $empTypeForCap = $mainRow->employee_type ?? 'Permanent Employee';
+        IdCardSecurityMapper::assertOptionalDatePairWithinApprovedIdCardEnd(
+            $applicantCanonical,
+            $empTypeForCap,
+            $validated['valid_from'] ?? null,
+            $validated['valid_to'] ?? null,
+            'valid_from',
+            'valid_to'
+        );
         $memberRow->family_name = $validated['name'];
         $memberRow->family_relation = $validated['relation'] ?? null;
         $memberRow->employee_dob = $validated['dob'] ?? null;

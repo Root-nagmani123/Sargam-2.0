@@ -278,6 +278,18 @@
 @push('scripts')
 <script>
 $(document).ready(function() {
+    window.editVehiclePassLoggedInCapYmd = @json($idCardValidityCapYmd ?? null);
+    window.editOthersLookupIdCardCapYmd = null;
+
+    function editEffectiveIdCardCapYmd() {
+        var emp = document.getElementById('applicant_type_employee');
+        var gov = document.getElementById('applicant_type_government');
+        if ((emp && emp.checked) || (gov && gov.checked)) {
+            return window.editVehiclePassLoggedInCapYmd || null;
+        }
+        return window.editOthersLookupIdCardCapYmd || null;
+    }
+
     // Others: ID card lookup (employee_master) + applicant type toggle (same behaviour as create)
     (function () {
         var applicantTypeEmployee = document.getElementById('applicant_type_employee');
@@ -327,7 +339,8 @@ $(document).ready(function() {
             var idVal = (idCardInput.value || '').trim();
             if (!idVal) {
                 setEditLookupHint('', '');
-                if (validToInput) validToInput.removeAttribute('max');
+                window.editOthersLookupIdCardCapYmd = null;
+                if (typeof syncEditDateConstraints === 'function') syncEditDateConstraints();
                 return;
             }
             if (othersLookupAbort) {
@@ -344,7 +357,8 @@ $(document).ready(function() {
                     if (!res.ok || !res.body.success || !res.body.data) {
                         var msg = (res.body && res.body.message) ? res.body.message : 'Could not load details for this ID.';
                         setEditLookupHint(msg, 'error');
-                        if (validToInput) validToInput.removeAttribute('max');
+                        window.editOthersLookupIdCardCapYmd = null;
+                        if (typeof syncEditDateConstraints === 'function') syncEditDateConstraints();
                         return;
                     }
                     var d = res.body.data;
@@ -353,15 +367,14 @@ $(document).ready(function() {
                     if (desEl) desEl.value = d.designation || '';
                     if (deptEl) deptEl.value = d.department || '';
                     if (empMasterPkInput && d.emp_master_pk) empMasterPkInput.value = String(d.emp_master_pk);
-                    if (validToInput && d.id_card_valid_to) {
-                        validToInput.setAttribute('max', d.id_card_valid_to);
-                        if (validToInput.value && validToInput.value > d.id_card_valid_to) {
-                            validToInput.value = d.id_card_valid_to;
-                        }
-                    } else if (validToInput) {
-                        validToInput.removeAttribute('max');
-                    }
-                    setEditLookupHint('Name, designation and department loaded from employee master.', 'success');
+                    window.editOthersLookupIdCardCapYmd = d.id_card_valid_to || null;
+                    if (typeof syncEditDateConstraints === 'function') syncEditDateConstraints();
+                    setEditLookupHint(
+                        d.id_card_valid_to
+                            ? 'Name, designation and department loaded. Pass dates cannot exceed ID card validity.'
+                            : 'Name, designation and department loaded from employee master.',
+                        'success'
+                    );
                 }).catch(function (err) {
                     if (err && err.name === 'AbortError') return;
                     setEditLookupHint('Request failed. Please try again.', 'error');
@@ -385,9 +398,7 @@ $(document).ready(function() {
                     if (deptEl) deptEl.value = '';
                 }
                 setApplicantFieldsReadonly(true);
-                if (validToInput) {
-                    validToInput.removeAttribute('max');
-                }
+                window.editOthersLookupIdCardCapYmd = null;
             } else {
                 if (empMasterPkInput) empMasterPkInput.value = '';
                 if (idCardInput) idCardInput.value = '';
@@ -395,21 +406,22 @@ $(document).ready(function() {
                 if (desEl) desEl.value = '';
                 if (deptEl) deptEl.value = '';
                 setApplicantFieldsReadonly(false);
-                if (validToInput) validToInput.removeAttribute('max');
+                window.editOthersLookupIdCardCapYmd = null;
                 setEditLookupHint('', '');
+            }
+            if (typeof syncEditDateConstraints === 'function') {
+                syncEditDateConstraints();
             }
         }
 
         function initEditApplicantUiFromServer() {
             if (isEmployeeOrGovVehicle()) {
                 setApplicantFieldsReadonly(true);
-                if (validToInput) {
-                    validToInput.removeAttribute('max');
-                }
+                window.editOthersLookupIdCardCapYmd = null;
             } else {
                 setApplicantFieldsReadonly(false);
-                if (validToInput) validToInput.removeAttribute('max');
             }
+            if (typeof syncEditDateConstraints === 'function') syncEditDateConstraints();
         }
 
         if (applicantTypeEmployee) applicantTypeEmployee.addEventListener('change', updateEditApplicantTypeFields);
@@ -575,8 +587,23 @@ $(document).ready(function() {
         }
         if (toEl.value && fromEl.value && toEl.value < fromEl.value) {
             toEl.value = '';
-        } else if (toEl.value && toEl.value < toEl.min) {
+        } else         if (toEl.value && toEl.value < toEl.min) {
             toEl.value = '';
+        }
+
+        var capY = (typeof editEffectiveIdCardCapYmd === 'function') ? editEffectiveIdCardCapYmd() : null;
+        if (capY) {
+            fromEl.setAttribute('max', capY);
+            toEl.setAttribute('max', capY);
+            if (fromEl.value && fromEl.value > capY) {
+                fromEl.value = '';
+            }
+            if (toEl.value && toEl.value > capY) {
+                toEl.value = '';
+            }
+        } else {
+            fromEl.removeAttribute('max');
+            toEl.removeAttribute('max');
         }
     }
 

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin\Security;
 
 use App\Http\Controllers\Controller;
 use App\Exports\VehiclePassExport;
+use App\Support\IdCardSecurityMapper;
 use App\Models\VehiclePassTWApply;
 use App\Models\SecVehicleType;
 use App\Models\EmployeeMaster;
@@ -109,8 +110,18 @@ class VehiclePassController extends Controller
     {
         $vehicleTypes = SecVehicleType::active()->get();
         $currentUserEmployee = $this->currentUserEmployeeForVehiclePass();
+        $idCardValidityCapYmd = null;
+        $user = Auth::user();
+        $sessionPk = $user->user_id ?? $user->pk ?? null;
+        $canonical = IdCardSecurityMapper::resolveCanonicalEmployeeMasterPk($sessionPk);
+        if ($canonical) {
+            $cap = IdCardSecurityMapper::approvedEmployeeIdCardValidityEnd($canonical, null);
+            if ($cap) {
+                $idCardValidityCapYmd = $cap->format('Y-m-d');
+            }
+        }
 
-        return view('admin.security.vehicle_pass.create', compact('vehicleTypes', 'currentUserEmployee'));
+        return view('admin.security.vehicle_pass.create', compact('vehicleTypes', 'currentUserEmployee', 'idCardValidityCapYmd'));
     }
 
     /**
@@ -193,6 +204,9 @@ class VehiclePassController extends Controller
             ? (string) $em->emp_id
             : (string) $lookup;
 
+        $canonicalPk = IdCardSecurityMapper::resolveCanonicalEmployeeMasterPk((int) $em->pk);
+        $idCardCap = $canonicalPk ? IdCardSecurityMapper::approvedEmployeeIdCardValidityEnd($canonicalPk, null) : null;
+
         return response()->json([
             'success' => true,
             'data' => [
@@ -202,6 +216,7 @@ class VehiclePassController extends Controller
                 'department' => (string) ($em->department_name ?? ''),
                 'emp_master_pk' => (int) $em->pk,
                 'emp_id' => $em->emp_id !== null && (string) $em->emp_id !== '' ? (string) $em->emp_id : null,
+                'id_card_valid_to' => $idCardCap ? $idCardCap->format('Y-m-d') : null,
             ],
         ]);
     }
@@ -252,6 +267,23 @@ class VehiclePassController extends Controller
                 $department = $department ?: ($emp->department->department_name ?? null);
                 $employeeIdCard = $employeeIdCard ?: ($emp->emp_id ?? null);
             }
+        }
+
+        $canonicalForCap = null;
+        if (in_array($applicantType, ['employee', 'government_vehicle'], true)) {
+            $canonicalForCap = IdCardSecurityMapper::resolveCanonicalEmployeeMasterPk($employeePk);
+        } elseif ($applicantType === 'others' && $empMasterPk) {
+            $canonicalForCap = IdCardSecurityMapper::resolveCanonicalEmployeeMasterPk((int) $empMasterPk);
+        }
+        if ($canonicalForCap) {
+            IdCardSecurityMapper::assertPassValidityWithinApprovedEmployeeIdCard(
+                $canonicalForCap,
+                null,
+                $validated['veh_card_valid_from'],
+                $validated['vech_card_valid_to'],
+                'veh_card_valid_from',
+                'vech_card_valid_to'
+            );
         }
 
         $govVeh = $applicantType === 'government_vehicle' ? 1 : 0;
@@ -332,12 +364,23 @@ class VehiclePassController extends Controller
         $vehicleTypes = SecVehicleType::active()->get();
         $editApplicantDisplay = $this->resolveVehiclePassApplicantDisplayForEdit($vehiclePass);
         $currentUserEmployee = $this->currentUserEmployeeForVehiclePass();
+        $idCardValidityCapYmd = null;
+        $capPk = $vehiclePass->emp_master_pk
+            ? IdCardSecurityMapper::resolveCanonicalEmployeeMasterPk((int) $vehiclePass->emp_master_pk)
+            : null;
+        if ($capPk) {
+            $cap = IdCardSecurityMapper::approvedEmployeeIdCardValidityEnd($capPk, null);
+            if ($cap) {
+                $idCardValidityCapYmd = $cap->format('Y-m-d');
+            }
+        }
 
         return view('admin.security.vehicle_pass.edit', compact(
             'vehiclePass',
             'vehicleTypes',
             'editApplicantDisplay',
-            'currentUserEmployee'
+            'currentUserEmployee',
+            'idCardValidityCapYmd'
         ));
     }
 
@@ -501,6 +544,23 @@ class VehiclePassController extends Controller
                 $department = $department ?: ($emp->department->department_name ?? null);
                 $employeeIdCard = $employeeIdCard ?: ($emp->emp_id ?? null);
             }
+        }
+
+        $canonicalForCap = null;
+        if (in_array($applicantType, ['employee', 'government_vehicle'], true)) {
+            $canonicalForCap = IdCardSecurityMapper::resolveCanonicalEmployeeMasterPk($employeePk);
+        } elseif ($applicantType === 'others' && $empMasterPk) {
+            $canonicalForCap = IdCardSecurityMapper::resolveCanonicalEmployeeMasterPk((int) $empMasterPk);
+        }
+        if ($canonicalForCap) {
+            IdCardSecurityMapper::assertPassValidityWithinApprovedEmployeeIdCard(
+                $canonicalForCap,
+                null,
+                $validated['veh_card_valid_from'],
+                $validated['vech_card_valid_to'],
+                'veh_card_valid_from',
+                'vech_card_valid_to'
+            );
         }
 
         $govVeh = $applicantType === 'government_vehicle' ? 1 : 0;

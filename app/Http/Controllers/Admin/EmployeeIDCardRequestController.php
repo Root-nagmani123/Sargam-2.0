@@ -349,32 +349,26 @@ class EmployeeIDCardRequestController extends Controller
      */
     private static function hasValidApprovedIdCard(int $employeePk): bool
     {
+        $canonical = (int) (IdCardSecurityMapper::resolveCanonicalEmployeeMasterPk($employeePk) ?? $employeePk);
         $today = now()->toDateString();
 
-        $permPks = static::employeeLinkedSubjectMasterPks($employeePk);
-        $perm = $permPks !== [] && DB::table('security_parm_id_apply')
-            ->whereIn('employee_master_pk', $permPks)
-            ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
-            ->where(function ($q) use ($today) {
-                $q->whereNull('card_valid_to')
-                    ->orWhereDate('card_valid_to', '>=', $today);
-            })
-            ->exists();
-        if ($perm) {
+        if (IdCardSecurityMapper::hasOpenEndedApprovedEmployeeIdCard($canonical, 'Permanent Employee')) {
+            return true;
+        }
+        $permEnd = IdCardSecurityMapper::approvedEmployeeIdCardValidityEnd($canonical, 'Permanent Employee');
+        if ($permEnd && $permEnd->format('Y-m-d') >= $today) {
             return true;
         }
 
-        $contIds = static::employeeLinkedCreatedByIds($employeePk);
-        $cont = $contIds !== [] && DB::table('security_con_oth_id_apply')
-            ->whereIn('created_by', $contIds)
-            ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
-            ->where(function ($q) use ($today) {
-                $q->whereNull('card_valid_to')
-                    ->orWhereDate('card_valid_to', '>=', $today);
-            })
-            ->exists();
+        if (IdCardSecurityMapper::hasOpenEndedApprovedEmployeeIdCard($canonical, 'Contractual Employee')) {
+            return true;
+        }
+        $contEnd = IdCardSecurityMapper::approvedEmployeeIdCardValidityEnd($canonical, 'Contractual Employee');
+        if ($contEnd && $contEnd->format('Y-m-d') >= $today) {
+            return true;
+        }
 
-        return $cont;
+        return false;
     }
 
     private static function normalizeBeneficiaryNameKey(string $name): string
