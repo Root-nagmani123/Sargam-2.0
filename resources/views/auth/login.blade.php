@@ -43,7 +43,7 @@
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Noto+Sans+Devanagari:wght@400;500;600;700&family=Noto+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
     
     <link href="{{asset('admin_assets/css/accesibility-style_v1.css')}}" rel="stylesheet">
 
@@ -80,7 +80,8 @@
         --radius-lg: 0.75rem;
         --radius-xl: 1rem;
         --radius-2xl: 1.5rem;
-        --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        --font-sans: 'Noto Sans', 'Noto Sans Devanagari', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        --font-heading: 'Montserrat', 'Noto Sans', 'Noto Sans Devanagari', sans-serif;
     }
 
     *, *::before, *::after {
@@ -100,6 +101,11 @@
         line-height: 1.6;
         color: var(--text-primary);
         -webkit-font-smoothing: antialiased;
+    }
+
+    h1, h2, h3, h4, h5, h6,
+    .login-brand-title, .fw-bold.display-heading {
+        font-family: var(--font-heading);
     }
 
     /* ===== Skip Link ===== */

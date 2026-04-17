@@ -102,6 +102,21 @@
         background-color: #17a2b8;
         color: #fff;
     }
+
+    .holiday-badge.birthday-badge {
+        background: linear-gradient(135deg, #e91e63, #ff6090);
+        color: #fff;
+        font-weight: 600;
+        animation: birthday-pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes birthday-pulse {
+        0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(233, 30, 99, 0.4); }
+        50% { transform: scale(1.05); box-shadow: 0 0 6px 2px rgba(233, 30, 99, 0.25); }
+    }
+    .calendar-cell.is-birthday {
+        background-color: rgba(233, 30, 99, 0.08);
+        border: 2px solid rgba(233, 30, 99, 0.4);
+    }
     
     .calendar-legend {
         display: flex;
@@ -191,14 +206,20 @@ $globalDayIndex = $cellIndex - ($startWeekDay - 1);
 $isSelected = $selected && $selected->toDateString() === $iso;
 $isToday = $d->isToday();
 $hasEvent = array_key_exists($iso, $events);
+$isBirthday = $hasEvent && collect($events[$iso])->contains('type', 'birthday');
 @endphp
 
 
-<td tabindex="0" role="button" class="calendar-cell {{ $isSelected ? 'is-selected' : '' }} {{ $isToday ? 'is-today' : '' }} {{ $hasEvent ? 'has-event' : '' }}" data-date="{{ $iso }}" aria-pressed="{{ $isSelected ? 'true' : 'false' }}" aria-current="{{ $isToday ? 'date' : 'false' }}">
+<td tabindex="0" role="button" class="calendar-cell {{ $isSelected ? 'is-selected' : '' }} {{ $isToday ? 'is-today' : '' }} {{ $hasEvent ? 'has-event' : '' }} {{ $isBirthday ? 'is-birthday' : '' }}" data-date="{{ $iso }}" aria-pressed="{{ $isSelected ? 'true' : 'false' }}" aria-current="{{ $isToday ? 'date' : 'false' }}">
 <span class="day-number">{{ $d->day }}</span>
 @if($hasEvent)
     @foreach($events[$iso] as $event)
-        @if(isset($event['type']) && $event['type'] === 'holiday')
+        @if(isset($event['type']) && $event['type'] === 'birthday')
+            <span class="holiday-badge birthday-badge" 
+                  title="{{ $event['title'] }} - {{ $event['description'] ?? '' }}">
+                🎂 {{ Str::limit($event['title'], 15) }}
+            </span>
+        @elseif(isset($event['type']) && $event['type'] === 'holiday')
             <span class="holiday-badge holiday-{{ $event['holiday_type'] }}" 
                   title="{{ $event['title'] }} - {{ $event['description'] ?? '' }}">
                 {{ Str::limit($event['title'], 15) }}
@@ -230,6 +251,10 @@ $hasEvent = array_key_exists($iso, $events);
     <div class="legend-item">
         <span class="legend-color" style="background-color: #17a2b8;"></span>
         <span>Optional Holiday</span>
+    </div>
+    <div class="legend-item">
+        <span class="legend-color" style="background: linear-gradient(135deg, #e91e63, #ff6090);"></span>
+        <span>🎂 My Birthday</span>
     </div>
 </div>
 </div>

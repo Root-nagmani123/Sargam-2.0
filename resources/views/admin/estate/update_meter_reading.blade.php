@@ -95,7 +95,7 @@
                         <label for="meter_reading_date" class="form-label">Meter Reading Date</label>
                         <input type="date" class="form-control" id="meter_reading_date" name="meter_reading_date" placeholder="Select date" value="{{ old('reading_current_date', $meterReadingDateDefault) }}">
                         <small class="text-muted">
-                            <i class="bi bi-info-circle"></i> Optional for Load Data; required when you click Save.
+                            <i class="bi bi-info-circle"></i> Select Meter Reading Date
                         </small>
                     </div>
                 </div>
@@ -347,6 +347,12 @@ $(document).ready(function() {
             unit_type_id: getSelVal(document.getElementById('unit_name')) || '',
             unit_sub_type_id: getSelVal(document.getElementById('unit_sub_type')) || ''
         };
+        if (prefill && prefill.possession_pk) {
+            params.possession_pk = String(prefill.possession_pk);
+        }
+        if (prefill && prefill.reading_pk) {
+            params.reading_pk = String(prefill.reading_pk);
+        }
         $.get(listUrl, params, function(res) {
             if (!res.status || !res.data || res.data.length === 0) {
                 $('#meterReadingSaveForm').hide();

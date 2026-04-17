@@ -48,6 +48,9 @@ class FacultyRequest extends FormRequest
 
             'facultyType.required' => 'Faculty Type is required.',
             'facultyType.exists'   => 'Selected Faculty Type is invalid.',
+            'current_sector.required' => 'Please select the current sector.',
+            'current_sector.integer' => 'The sector field must be a valid selection.',
+            'current_sector.in' => 'Please select a valid sector (Government Sector or Private Sector).',
             // 'facultyType.required' => 'Faculty type is required',
             // 'firstName.required' => 'First name is required',
             // 'middlename.required' => 'Middle name is required',

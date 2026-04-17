@@ -40,6 +40,9 @@
                             <li class="sidebar-item"><a class="sidebar-link" href="{{ route('attendance.index') }}">
                                     <span class="hide-menu small small-sm-normal text-nowrap">Attendance</span>
                                 </a></li>
+                            <li class="sidebar-item"><a class="sidebar-link" href="{{ route('timetable-report.index') }}">
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Timetable Session Report</span>
+                                </a></li>
                             @if(hasRole('Training-MCTP') || hasRole('IST'))
                              <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('mdo-escrot-exemption.index') }}">

@@ -427,7 +427,7 @@
         gap: 2px;
         font-size: clamp(1.75rem, 5vw, 3rem);
         font-weight: 800;
-        font-family: 'Poppins', 'Segoe UI', system-ui, sans-serif;
+        font-family: 'Montserrat', 'Segoe UI', system-ui, sans-serif;
         letter-spacing: 0.02em;
     }
 

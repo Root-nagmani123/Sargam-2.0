@@ -3,7 +3,8 @@
 @section('title', 'Enrollment - Sargam | Lal Bahadur')
 
 @section('setup_content')
-    <div class="container-fluid">
+    @include('admin.partials.choices-bootstrap5')
+    <div id="enrollment-page" class="container-fluid">
         <x-breadcrum title="Enroll to New Course" />
         <x-session_message />
         <div class="row justify-content-center">
@@ -49,8 +50,8 @@
                                     <label for="course_master_pk" class="form-label">Select New Course:</label>
                                     <div class="mb-3">
                                         <select id="course_master_pk"
-                                            class="form-select select2 @error('course_master_pk') is-invalid @enderror"
-                                            name="course_master_pk" required>
+                                            class="form-select @error('course_master_pk') is-invalid @enderror"
+                                            name="course_master_pk" required data-placeholder="Select course">
                                             <option value="">Select Course</option>
                                             @if (isset($courses) && $courses->count())
                                                 @foreach ($courses as $course)
@@ -80,7 +81,7 @@
                                     <label for="previous_courses" class="form-label">Select Previous Courses:</label>
                                     <div class="mb-3">
                                         <select id="previous_courses"
-                                            class="form-select select2 @error('previous_courses') is-invalid @enderror"
+                                            class="form-select @error('previous_courses') is-invalid @enderror"
                                             name="previous_courses[]" multiple data-placeholder="Select previous courses">
                                             @if (isset($previousCourses) && $previousCourses->count())
                                                 @foreach ($previousCourses as $prev)
@@ -109,7 +110,7 @@
                                     <label for="services" class="form-label">Select Service:</label>
                                     <div class="mb-3">
                                         <select id="services"
-                                            class="form-select select2 @error('services') is-invalid @enderror"
+                                            class="form-select @error('services') is-invalid @enderror"
                                             name="services[]" multiple data-placeholder="Select services">
                                             @if (isset($services) && $services->count())
                                                 @foreach ($services as $service)
@@ -135,31 +136,26 @@
                             <div class="row mt-4">
                                 <div class="col-12">
                                     <div class="card">
-                                        <div class="card-header d-flex justify-content-between align-items-center">
+                                        <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
                                             <h5 class="mb-0">
                                                 Student List (<span id="studentCount">0</span>)
                                             </h5>
-                                            <div class="d-flex">
-                                                <input type="text" id="studentSearch"
-                                                    class="form-control me-2"
-                                                    placeholder="Search students..." style="width: 200px;">
+                                            <div class="d-flex flex-wrap align-items-center gap-2 ms-auto">
                                                 <button type="button" id="filterBtn" class="btn btn-sm btn-primary">
                                                     <i class="fas fa-filter"></i> Filter
                                                 </button>
-                                            </div>
-                                            <div class="text-end">
-                                                <button type="submit" class="btn btn-primary">
+                                                <button type="submit" class="btn btn-sm btn-primary">
                                                     Enroll
                                                 </button>
                                             </div>
                                         </div>
                                         <div class="card-body">
-                                            <div class="table-responsive">
-                                                <table class="table" id="studentTable">
+                                            <div class="table-responsive enrollment-dt-wrap">
+                                                <table class="table table-striped table-hover table-sm align-middle w-100" id="studentTable">
                                                     <thead>
                                                         <tr>
-                                                            <th width="50px">
-                                                                <input type="checkbox" id="selectAll">
+                                                            <th width="50px" class="align-middle">
+                                                                <input type="checkbox" class="form-check-input js-select-all-students" title="Select all students" aria-label="Select all students">
                                                             </th>
                                                             <th>Course Name</th>
                                                             <th>Student Name</th>
@@ -174,9 +170,6 @@
                                                         </tr>
                                                     </tbody>
                                                 </table>
-                                                <div class="mt-3 d-flex justify-content-center">
-                                                    <ul class="pagination" id="paginationContainer"></ul>
-                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -187,7 +180,6 @@
                 </div>
             </div>
         </div>
-    </div>
 
     <!-- Enrolled Students Modal -->
     <div class="modal fade" id="enrolledModal" tabindex="-1" aria-labelledby="enrolledModalLabel" aria-hidden="true">
@@ -205,7 +197,7 @@
                     <div class="row mb-3">
                         <div class="col-md-4">
                             <label for="modalCourseSelect" class="form-label">Select Course:</label>
-                            <select id="modalCourseSelect" class="form-select select2">
+                            <select id="modalCourseSelect" class="form-select" data-placeholder="All Active Courses">
                                 <option value="">All Active Courses</option>
                                 @if (isset($courses) && $courses->count())
                                     @foreach ($courses as $course)
@@ -252,8 +244,8 @@
                     </div>
 
                     <!-- Data Table -->
-                    <div class="table-responsive">
-                        <table class="table table-striped table-hover" id="enrolledTable">
+                    <div class="table-responsive enrollment-dt-wrap">
+                        <table class="table table-striped table-hover table-sm align-middle w-100" id="enrolledTable">
                             <thead class="table-light">
                                 <tr>
                                     <th width="50">#</th>
@@ -298,44 +290,130 @@
             </div>
         </div>
     </div>
+    </div>
 @endsection
 
-@section('scripts')
-    @section('scripts')
+@push('scripts')
 <script>
     $(function() {
         var editStudentBaseUrl = '{{ route('enrollment.edit', ':id') }}';
 
-        // --- INITIALIZE ALL SELECT2 DROPDOWNS ---
-        function initializeSelect2() {
-            $('#course_master_pk').select2({
-                placeholder: "Select course",
-                allowClear: true,
-                width: '100%'
-            });
+        var enrollmentRoot = document.getElementById('enrollment-page');
+        if (enrollmentRoot && typeof window.initChoicesBootstrap5In === 'function') {
+            window.initChoicesBootstrap5In(enrollmentRoot);
+        }
 
-            $('#previous_courses').select2({
-                placeholder: "Select previous courses",
-                allowClear: true,
-                width: '100%',
-                closeOnSelect: false
-            });
+        function refreshChoicesSelect(selectId) {
+            var el = document.getElementById(selectId);
+            if (el && el._choicesBs && typeof el._choicesBs.refresh === 'function') {
+                el._choicesBs.refresh();
+            }
+        }
 
-            $('#services').select2({
-                placeholder: "Select services",
-                allowClear: true,
-                width: '100%',
-                closeOnSelect: false
-            });
+        function setModalCourseValue(value) {
+            var el = document.getElementById('modalCourseSelect');
+            if (!el) return;
+            var v = value != null && value !== '' ? String(value) : '';
+            el.value = v;
+            if (el._choicesBs && typeof el._choicesBs.setChoiceByValue === 'function') {
+                try {
+                    el._choicesBs.setChoiceByValue(v);
+                } catch (e) {
+                    /* keep native value */
+                }
+            }
+            $(el).trigger('change');
+        }
 
-            $('#modalCourseSelect').select2({
-                placeholder: "All Courses",
-                allowClear: true,
-                width: '100%'
+        function destroyStudentDataTableIfAny() {
+            if ($.fn.dataTable.isDataTable('#studentTable')) {
+                $('#studentTable').DataTable().destroy();
+            }
+        }
+
+        function studentTableHasOnlyPlaceholderRow() {
+            var $rows = $('#studentTable tbody tr');
+            if ($rows.length !== 1) return false;
+            return $rows.find('td[colspan]').length > 0;
+        }
+
+        function initStudentDataTable() {
+            destroyStudentDataTableIfAny();
+            if (studentTableHasOnlyPlaceholderRow()) return;
+            if (!$('#studentTable tbody tr').length) return;
+
+            $('#studentTable').DataTable({
+                responsive: true,
+                autoWidth: false,
+                paging: false,
+                searching: true,
+                ordering: true,
+                info: true,
+                order: [[2, 'asc']],
+                columnDefs: [{
+                    orderable: false,
+                    searchable: false,
+                    targets: 0
+                }],
+                dom: "<'row mb-2 g-2'<'col-sm-12'f>>" +
+                    "<'row'<'col-sm-12'tr>>" +
+                    "<'row mt-2'<'col-sm-12'i>>",
+                language: {
+                    search: 'Search:',
+                    searchPlaceholder: 'Filter students…',
+                    emptyTable: 'No students loaded',
+                    zeroRecords: 'No matching students',
+                    info: 'Showing _TOTAL_ student(s)',
+                    infoEmpty: 'No students',
+                    infoFiltered: '(filtered from _MAX_ total)'
+                },
+                drawCallback: function() {
+                    var total = $('.student-checkbox').length;
+                    var checked = $('.student-checkbox:checked').length;
+                    $('.js-select-all-students').prop('checked', total > 0 && checked === total);
+                    updateSelectedStudents();
+                }
             });
         }
 
-        initializeSelect2();
+        function destroyEnrolledDataTableIfAny() {
+            if ($.fn.dataTable.isDataTable('#enrolledTable')) {
+                $('#enrolledTable').DataTable().destroy();
+            }
+        }
+
+        function enrolledTableHasOnlyPlaceholderRow() {
+            var $rows = $('#enrolledTable tbody tr');
+            if ($rows.length !== 1) return false;
+            return $rows.find('td[colspan]').length > 0;
+        }
+
+        function initEnrolledDataTable() {
+            destroyEnrolledDataTableIfAny();
+            if (enrolledTableHasOnlyPlaceholderRow()) return;
+            if (!$('#enrolledTable tbody tr').length) return;
+
+            $('#enrolledTable').DataTable({
+                responsive: true,
+                autoWidth: false,
+                paging: false,
+                searching: false,
+                ordering: true,
+                info: false,
+                order: [[1, 'asc']],
+                columnDefs: [{
+                    orderable: false,
+                    targets: [0, 6]
+                }],
+                dom: 'rt'
+            });
+        }
+
+        $('#enrolledModal').on('shown.bs.modal', function() {
+            if ($.fn.dataTable.isDataTable('#enrolledTable')) {
+                $('#enrolledTable').DataTable().columns.adjust().responsive.recalc();
+            }
+        });
 
         // ---------- Variables for enrolled modal ----------
         let currentPage = 1;
@@ -398,6 +476,7 @@
         }
 
         function loadEnrolledStudents() {
+            destroyEnrolledDataTableIfAny();
             $('#enrolledTableBody').html(
                 '<tr><td colspan="7" class="text-center"><div class="spinner-border spinner-border-sm me-2" role="status"></div>Loading students...</td></tr>'
             );
@@ -419,11 +498,13 @@
                             response.last_page || 1);
                         updateStats(response.total || 0);
                     } else {
+                        destroyEnrolledDataTableIfAny();
                         $('#enrolledTableBody').html('<tr><td colspan="7" class="text-center text-danger">' + (response.message || 'Error loading data') + '</td></tr>');
                     }
                 },
                 error: function(xhr, status, error) {
                     console.error('Enrolled Students AJAX Error:', error, xhr.responseText); // Debug
+                    destroyEnrolledDataTableIfAny();
                     $('#enrolledTableBody').html('<tr><td colspan="7" class="text-center text-danger">Error loading students data. Please try again.</td></tr>');
                 }
             });
@@ -431,6 +512,7 @@
 
         function populateEnrolledTable(students) {
             const tableBody = $('#enrolledTableBody');
+            destroyEnrolledDataTableIfAny();
             tableBody.empty();
 
             if (!students || students.length === 0) {
@@ -455,6 +537,8 @@
                 </tr>`;
                 tableBody.append(row);
             });
+
+            initEnrolledDataTable();
         }
 
         function updateStats(total) {
@@ -530,7 +614,7 @@
             $(function() {
                 const modalInstance = bootstrap.Modal.getOrCreateInstance(document.getElementById('enrolledModal'));
                 const enrolledCourseId = @json(session('selected_course'));
-                $('#modalCourseSelect').val(enrolledCourseId).trigger('change');
+                setModalCourseValue(enrolledCourseId);
                 modalInstance.show();
                 updateExportUrls(enrolledCourseId);
             });
@@ -553,8 +637,8 @@
                 }
             });
 
-            // refresh select2 so disabled option is reflected
-            previousCoursesSelect.trigger('change.select2');
+            refreshChoicesSelect('previous_courses');
+            previousCoursesSelect.trigger('change');
         }
 
         filterPreviousCourses();
@@ -571,8 +655,8 @@
             $('#studentCount').text(selectedStudents.length);
         }
 
-        // select all checkbox
-        $('#selectAll').on('change', function() {
+        // select all checkbox (delegated — survives DataTables redraws)
+        $('#studentTable').on('change', '.js-select-all-students', function() {
             const checked = $(this).prop('checked');
             $('.student-checkbox').prop('checked', checked);
             updateSelectedStudents();
@@ -582,17 +666,8 @@
         $(document).on('change', '.student-checkbox', function() {
             const total = $('.student-checkbox').length;
             const checked = $('.student-checkbox:checked').length;
-            $('#selectAll').prop('checked', total > 0 && checked === total);
+            $('.js-select-all-students').prop('checked', total > 0 && checked === total);
             updateSelectedStudents();
-        });
-
-        // client-side search in main table
-        $('#studentSearch').on('keyup', function() {
-            var value = $(this).val().toLowerCase();
-            $('#studentTable tbody tr').filter(function() {
-                if ($(this).attr('id') === 'noDataRow') return true;
-                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
-            });
         });
 
         // Filter button loads students via ajax - FIXED VERSION
@@ -613,6 +688,7 @@
                 return;
             }
 
+            destroyStudentDataTableIfAny();
             $('#studentTable tbody').html('<tr><td colspan="5" class="text-center">Loading students...</td></tr>');
 
             $.ajax({
@@ -631,6 +707,7 @@
                         console.log('Total students:', response.total_count); // Debug
                         populateStudentTable(response.students || []);
                     } else {
+                        destroyStudentDataTableIfAny();
                         $('#studentTable tbody').html(
                             '<tr id="noDataRow"><td colspan="5" class="text-center text-danger">' + 
                             (response.message || 'No students found') + 
@@ -642,7 +719,8 @@
                     console.error('AJAX Error Status:', status); // Debug
                     console.error('AJAX Error:', error); // Debug
                     console.error('XHR Response:', xhr.responseText); // Debug
-                    
+
+                    destroyStudentDataTableIfAny();
                     $('#studentTable tbody').html(
                         '<tr><td colspan="5" class="text-center text-danger">' +
                         'Error loading students. Status: ' + status + 
@@ -654,6 +732,7 @@
 
         function populateStudentTable(students) {
             var tableBody = $('#studentTable tbody');
+            destroyStudentDataTableIfAny();
             tableBody.empty();
 
             console.log('Students data received for table:', students); // Debug
@@ -666,7 +745,7 @@
                     '</tr>'
                 );
                 $('#studentCount').text(0);
-                $('#selectAll').prop('checked', false);
+                $('.js-select-all-students').prop('checked', false);
                 return;
             }
 
@@ -691,9 +770,11 @@
             });
 
             // Update count and checkboxes
-            $('#selectAll').prop('checked', true);
+            $('.js-select-all-students').prop('checked', true);
             updateSelectedStudents();
-            
+
+            initStudentDataTable();
+
             console.log('Table populated with ' + students.length + ' students'); // Debug
         }
 
@@ -710,5 +791,4 @@
         });
     });
 </script>
-@endsection
-@endsection
+@endpush

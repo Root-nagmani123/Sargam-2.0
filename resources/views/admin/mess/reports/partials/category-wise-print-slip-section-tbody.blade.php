@@ -1,15 +1,54 @@
-@php $sectionTotal = 0; @endphp
+@php
+    $sectionTotal = 0;
+    $firstV = $sectionVouchers->first();
+    $cbBuyerName = trim((string) ($firstV->client_name ?? ($firstV->clientTypeCategory?->client_name ?? '')));
+    $cbSlug = (string) ($firstV->client_type_slug ?? 'employee');
+    $combinedSlipNo = mess_combined_bill_slip_no($cbBuyerName, $cbSlug);
+    $combinedRemarks = $sectionVouchers
+        ->map(fn ($v) => trim((string) ($v->remarks ?? '')))
+        ->filter()
+        ->unique()
+        ->implode('; ');
+    if ($combinedRemarks === '') {
+        $combinedRemarks = '—';
+    }
+    $totalRows = 0;
+    foreach ($sectionVouchers as $v) {
+        $totalRows += $v->items->isEmpty() ? 1 : $v->items->count();
+    }
+    $rowIdx = 0;
+@endphp
 @foreach($sectionVouchers as $voucher)
     @php
-        $requestNo = $voucher->request_no ?? ('SV-' . str_pad($voucher->id ?? $voucher->pk ?? 0, 6, '0', STR_PAD_LEFT));
         $requestDate = $voucher->issue_date ? $voucher->issue_date->format('d-m-Y') : 'N/A';
-        $rowCount = max(1, $voucher->items->count());
     @endphp
     @if($voucher->items->isEmpty())
         <tr>
-            <td class="text-center">{{ $requestNo }}</td>
-            <td>{{ $voucher->remarks ?? '—' }}</td>
+            @if($dompdfSafeTables)
+                <td class="text-center align-middle">{{ $combinedSlipNo }}</td>
+                <td class="align-middle">{{ $combinedRemarks }}</td>
+                <td>—</td>
+                <td class="text-center">{{ $requestDate }}</td>
+                <td class="text-end">—</td>
+                <td class="text-end">—</td>
+                <td class="text-end">—</td>
+                <td class="align-middle">{{ $combinedRemarks }}</td>
+            @else
+                @if($rowIdx === 0)
+                    <td class="text-center align-middle" rowspan="{{ $totalRows }}">{{ $combinedSlipNo }}</td>
+                    <td class="align-middle" rowspan="{{ $totalRows }}">{{ $combinedRemarks }}</td>
+                @endif
+                <td>—</td>
+                <td class="text-center">{{ $requestDate }}</td>
+                <td class="text-end">—</td>
+                <td class="text-end">—</td>
+                <td class="text-end">—</td>
+                @if($rowIdx === 0)
+                    <td class="align-middle" rowspan="{{ $totalRows }}">{{ $combinedRemarks }}</td>
+                @endif
+            @endif
         </tr>
+        @php $rowIdx++; @endphp
     @else
         @foreach($voucher->items as $itemIndex => $item)
             @php
@@ -29,42 +68,39 @@
             @endphp
             <tr>
                 @if($dompdfSafeTables)
-                    <td class="text-center align-middle">{{ $requestNo }}</td>
-                    <td class="align-middle">{{ $voucher->remarks ?? '—' }}</td>
+                    <td class="text-center align-middle">{{ $combinedSlipNo }}</td>
                     <td>{{ $itemName }}</td>
                     <td class="text-center">{{ $itemIssueDateFormatted }}</td>
                     <td class="text-end">{{ number_format($netQty, 2) }}</td>
                     <td class="text-end">{{ number_format($rate, 2) }}</td>
                     <td class="text-end">{{ number_format($itemAmount, 2) }}</td>
-                    @if($itemIndex === 0)
-                        <td class="align-middle" rowspan="{{ $rowCount }}">{{ $voucher->remarks ?? '—' }}</td>
-                    @endif
+                    <td class="align-middle">{{ $combinedRemarks }}</td>
                 @else
-                    @if($itemIndex === 0)
-                        <td class="text-center align-middle" rowspan="{{ $rowCount }}">{{ $requestNo }}</td>
-                        <td class="align-middle" rowspan="{{ $rowCount }}">{{ $voucher->remarks ?? '—' }}</td>
+                    @if($rowIdx === 0)
+                        <td class="text-center align-middle" rowspan="{{ $totalRows }}">{{ $combinedSlipNo }}</td>
                     @endif
                     <td>{{ $itemName }}</td>
                     <td class="text-center">{{ $itemIssueDateFormatted }}</td>
                     <td class="text-end">{{ number_format($netQty, 2) }}</td>
                     <td class="text-end">{{ number_format($rate, 2) }}</td>
                     <td class="text-end">{{ number_format($itemAmount, 2) }}</td>
-                    @if($itemIndex === 0)
-                        <td class="align-middle" rowspan="{{ $rowCount }}">{{ $voucher->remarks ?? '—' }}</td>
+                    @if($rowIdx === 0)
+                        <td class="align-middle" rowspan="{{ $totalRows }}">{{ $combinedRemarks }}</td>
                     @endif
                 @endif
             </tr>
+            @php $rowIdx++; @endphp
         @endforeach
     @endif
 @endforeach
 <tr class="total-row">
     @if($dompdfSafeTables)
-        <td></td><td></td><td></td><td></td><td></td>
+        <td></td><td></td><td></td><td></td>
         <td class="text-end"><strong>TOTAL</strong></td>
         <td class="text-end"><strong>{{ number_format($sectionTotal, 2) }}</strong></td>
         <td></td>
     @else
-        <td colspan="5"></td>
+        <td colspan="4"></td>
         <td class="text-end"><strong>TOTAL</strong></td>
         <td class="text-end"><strong>{{ number_format($sectionTotal, 2) }}</strong></td>
         <td></td>

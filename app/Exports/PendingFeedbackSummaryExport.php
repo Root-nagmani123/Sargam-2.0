@@ -20,10 +20,14 @@ class PendingFeedbackSummaryExport implements FromCollection, WithHeadings, With
     protected $students;
     protected $filters;
 
-    public function __construct(Collection $students, array $filters = [])
+    /** @var bool When true, one row per session and extra columns (class time, timetable id). */
+    protected $withSessionDetails;
+
+    public function __construct(Collection $students, array $filters = [], bool $withSessionDetails = false)
     {
         $this->students = $students;
         $this->filters = $filters;
+        $this->withSessionDetails = $withSessionDetails;
     }
 
     public function collection()
@@ -33,26 +37,33 @@ class PendingFeedbackSummaryExport implements FromCollection, WithHeadings, With
 
     public function headings(): array
     {
-        return [
+        $headings = [
             'S.No.',
             'User Name',
             'Email',
             'Contact No.',
-            'Course Name',
+            'Program / Course',
             'Session Info',
             'Date Range',
-            'Pending Feedback Count'
+            'Pending Feedback Count',
         ];
+
+        if ($this->withSessionDetails) {
+            $headings[] = 'Class Time';
+            $headings[] = 'Timetable ID';
+        }
+
+        return $headings;
     }
 
     public function map($row): array
     {
         static $rowNumber = 0;
         $rowNumber++;
-        
+
         $pendingCount = $row->pending_count ?? 0;
-        
-        return [
+
+        $mapped = [
             $rowNumber,
             $row->user_name ?? '—',
             $row->email ?? '—',
@@ -60,16 +71,24 @@ class PendingFeedbackSummaryExport implements FromCollection, WithHeadings, With
             $row->course_name ?? '—',
             $row->session_info ?? 'Multiple Sessions',
             $row->date_range ?? '—',
-            $pendingCount
+            $pendingCount,
         ];
+
+        if ($this->withSessionDetails) {
+            $mapped[] = $row->class_session ?? '—';
+            $mapped[] = $row->timetable_pk ?? '—';
+        }
+
+        return $mapped;
     }
 
     public function styles(Worksheet $sheet)
     {
         $highestRow = $sheet->getHighestRow();
-        
-        // Style for header row (A1:H1)
-        $sheet->getStyle('A1:H1')->applyFromArray([
+        $lastCol = $this->withSessionDetails ? 'J' : 'H';
+
+        // Style for header row
+        $sheet->getStyle('A1:' . $lastCol . '1')->applyFromArray([
             'font' => [
                 'bold' => true,
                 'size' => 12,
@@ -92,7 +111,7 @@ class PendingFeedbackSummaryExport implements FromCollection, WithHeadings, With
         ]);
 
         // Style for data rows
-        $sheet->getStyle('A2:H' . $highestRow)->applyFromArray([
+        $sheet->getStyle('A2:' . $lastCol . $highestRow)->applyFromArray([
             'alignment' => [
                 'vertical' => Alignment::VERTICAL_CENTER,
             ],
@@ -140,20 +159,27 @@ class PendingFeedbackSummaryExport implements FromCollection, WithHeadings, With
 
     public function columnWidths(): array
     {
-        return [
-            'A' => 8,   // S.No.
-            'B' => 30,  // User Name
-            'C' => 35,  // Email
-            'D' => 15,  // Contact No.
-            'E' => 25,  // Course Name
-            'F' => 25,  // Session Info
-            'G' => 25,  // Date Range
-            'H' => 20,  // Pending Count
+        $widths = [
+            'A' => 8,
+            'B' => 30,
+            'C' => 35,
+            'D' => 15,
+            'E' => 25,
+            'F' => 25,
+            'G' => 25,
+            'H' => 20,
         ];
+
+        if ($this->withSessionDetails) {
+            $widths['I'] = 22;
+            $widths['J'] = 14;
+        }
+
+        return $widths;
     }
 
     public function title(): string
     {
-        return 'Pending Feedback Summary';
+        return $this->withSessionDetails ? 'Pending Feedback (Detailed)' : 'Pending Feedback Summary';
     }
 }

@@ -328,129 +328,148 @@
 </script>
 <script>
 function printStockBalance() {
-    const headTable = document.querySelector('.stock-balance-report .stock-balance-table-head-wrap table');
-    const bodyTable = document.querySelector('.stock-balance-report .stock-balance-table-body-scroll table');
-    const fallbackTable = document.querySelector('.stock-balance-report .stock-balance-table-split table')
-        || document.querySelector('.stock-balance-report table.stock-balance-table');
-    const table = bodyTable || fallbackTable;
-    if (!table) {
+    var headTable = document.querySelector('.stock-balance-report .stock-balance-table-head-wrap table');
+    var bodyTable = document.querySelector('.stock-balance-report .stock-balance-table-body-scroll table');
+    if (!bodyTable && !headTable) {
         window.print();
         return;
     }
 
-    const title     = 'Stock Balance as of Till Date';
-    const dateLabel = @json('As on ' . date('d-F-Y', strtotime($tillDate)));
-    const storeName = @json($selectedStoreName ? $selectedStoreName : 'All Stores');
+    var table = bodyTable || headTable;
+    var clonedBody = table.cloneNode(true);
 
-    // Build a new table so the header (with logos + meta + column headings)
-    // lives inside <thead> and repeats on every printed page.
-    const originalThead = headTable ? headTable.querySelector('thead') : table.querySelector('thead');
-    const originalTbody = bodyTable ? bodyTable.querySelector('tbody') : table.querySelector('tbody');
-    const columnsCount  = 7; // current number of visible columns in the report
+    // Remove Material Symbols icons from clone
+    clonedBody.querySelectorAll('.material-symbols-rounded, .material-icons').forEach(function(icon) {
+        icon.remove();
+    });
 
-    const columnHeadHtml = originalThead ? originalThead.innerHTML : '';
-    const bodyHtml       = originalTbody ? originalTbody.innerHTML : table.innerHTML;
+    var bodyHtml = clonedBody.querySelector('tbody') ? clonedBody.querySelector('tbody').innerHTML : clonedBody.innerHTML;
+    var theadSource = headTable ? headTable.querySelector('thead') : table.querySelector('thead');
+    var columnHeadHtml = theadSource ? theadSource.innerHTML : '';
 
-    const printableTable = `
-      <table class="table table-sm table-bordered align-middle mb-0">
-        <thead>
-          <tr>
-            <th colspan="${columnsCount}">
-              <div class="d-flex justify-content-between align-items-center mb-2">
-                <div class="d-flex align-items-center gap-2">
-                  <img src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg" alt="India Emblem" height="40">
-                  <div>
-                    <div class="brand-line-1">Government of India</div>
-                    <div class="brand-line-2">OFFICER'S MESS LBSNAA MUSSOORIE</div>
-                    <div class="brand-line-3">Lal Bahadur Shastri National Academy of Administration</div>
-                  </div>
-                </div>
-                <div>
-                  <img src="{{ $printLogoSrc }}" alt="LBSNAA Logo" height="40">
-                </div>
-              </div>
-              <div class="d-flex flex-wrap justify-content-between align-items-center report-meta">
-                <span><strong>${title}</strong></span>
-                <span>${dateLabel}</span>
-                <span><strong>Store:</strong> ${storeName}</span>
-                <span><strong>Printed on:</strong> ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}</span>
-              </div>
-            </th>
-          </tr>
-          ${columnHeadHtml}
-        </thead>
-        <tbody>
-          ${bodyHtml}
-        </tbody>
-      </table>
-    `;
+    var title = 'Stock Balance as of Till Date';
+    var dateLabel = @json('As on ' . date('d-F-Y', strtotime($tillDate)));
+    var storeName = @json($selectedStoreName ?? 'All Stores');
+    var emblemUrl = '{{ asset("images/ashoka.png") }}';
+    var logoUrl = '{{ asset("admin_assets/images/logos/logo.png") }}';
 
-    const printWindow = window.open('', '_blank');
+    var printWindow = window.open('', '_blank');
     if (!printWindow) { window.print(); return; }
 
     printWindow.document.open();
-    printWindow.document.write(`<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>${title} - OFFICER'S MESS LBSNAA MUSSOORIE</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-    body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      font-size: 11px;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
-    }
-    /* LBSNAA watermark */
-    body::before {
-      content: "";
-      position: fixed;
-      inset: 0;
-      background: url("https://www.lbsnaa.gov.in/admin_assets/images/logo.png") center center no-repeat;
-      background-size: 220px 220px;
-      opacity: 0.06;
-      z-index: -1;
-    }
-    .lbsnaa-header { border-bottom: 2px solid #004a93; padding-bottom:.75rem; margin-bottom:1rem; }
-    .brand-line-1 { font-size:.85rem; text-transform:uppercase; letter-spacing:.06em; color:#004a93; }
-    .brand-line-2 { font-size:1.1rem; font-weight:700; text-transform:uppercase; color:#222; }
-    .brand-line-3 { font-size:.8rem; color:#555; }
-    .report-meta { font-size:.8rem; margin-bottom:.75rem; }
-    .report-meta span { display:inline-block; margin-right:1.5rem; }
-    table { width:100%; border-collapse:collapse; font-size: 9px; }
-    th, td { padding:4px 6px; border:1px solid #dee2e6; }
-    thead th { background:#f8f9fa; font-weight:600; }
-    .table,
-    .table * {
-      white-space: normal !important;
-    }
-    .table-responsive {
-      overflow: visible !important;
-    }
-    thead { display:table-header-group; }
-    @page {
-      size: A4 portrait;
-      margin: 0.5in;
-    }
-    @media print {
-      body { margin:0; }
-    }
-  </style>
-</head>
-<body>
-  <div class="container-fluid">
-    <div class="table-responsive">
-      ${printableTable}
-    </div>
-  </div>
-
-  <script>
-    window.addEventListener('load', function() { window.print(); });
-  <\/script>
-</body>
-</html>`);
+    printWindow.document.write('<!doctype html>\n' +
+'<html lang="en">\n' +
+'<head>\n' +
+'    <meta charset="utf-8">\n' +
+'    <title>' + title + ' - OFFICER\'S MESS LBSNAA MUSSOORIE</title>\n' +
+'    <style>\n' +
+'        *, *::before, *::after { box-sizing: border-box; }\n' +
+'        body {\n' +
+'            font-family: "Segoe UI", system-ui, -apple-system, sans-serif;\n' +
+'            font-size: 11px;\n' +
+'            color: #212529;\n' +
+'            -webkit-print-color-adjust: exact;\n' +
+'            print-color-adjust: exact;\n' +
+'            margin: 0;\n' +
+'            padding: 12mm 10mm;\n' +
+'        }\n' +
+'\n' +
+'        /* ── Print Header ── */\n' +
+'        .print-header {\n' +
+'            display: flex;\n' +
+'            align-items: center;\n' +
+'            gap: 12px;\n' +
+'            border-bottom: 3px solid #004a93;\n' +
+'            padding-bottom: 10px;\n' +
+'            margin-bottom: 12px;\n' +
+'        }\n' +
+'        .print-header img { height: 48px; width: auto; object-fit: contain; }\n' +
+'        .header-text { flex: 1; }\n' +
+'        .header-text .line1 { font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; color: #004a93; font-weight: 600; margin: 0; }\n' +
+'        .header-text .line2 { font-size: 14px; font-weight: 700; text-transform: uppercase; color: #1a1a1a; margin: 2px 0 0; }\n' +
+'        .header-text .line3 { font-size: 9px; color: #555; margin: 1px 0 0; }\n' +
+'\n' +
+'        /* ── Report Title & Meta ── */\n' +
+'        .report-title-block { text-align: center; margin-bottom: 10px; }\n' +
+'        .report-title-block h2 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin: 0 0 4px; color: #1a1a1a; }\n' +
+'        .report-meta {\n' +
+'            font-size: 10px;\n' +
+'            line-height: 1.7;\n' +
+'            margin: 8px 0 10px;\n' +
+'            color: #333;\n' +
+'        }\n' +
+'        .report-meta strong { color: #1a1a1a; }\n' +
+'\n' +
+'        /* ── Data Table ── */\n' +
+'        .data-table { width: 100%; border-collapse: collapse; font-size: 10px; }\n' +
+'        .data-table th, .data-table td { padding: 4px 6px; border: 1px solid #bbb; vertical-align: middle; }\n' +
+'        .data-table thead th { background: #004a93; color: #fff; font-weight: 600; font-size: 10px; text-align: left; }\n' +
+'        .data-table thead th.text-end { text-align: right; }\n' +
+'        .data-table .text-end { text-align: right; }\n' +
+'        .data-table tbody tr:nth-child(even) td { background: #f9fafb; }\n' +
+'\n' +
+'        /* Total row */\n' +
+'        .data-table .table-light td {\n' +
+'            background: #e8edf4 !important;\n' +
+'            font-weight: 700;\n' +
+'            border-top: 2px solid #004a93;\n' +
+'            color: #004a93;\n' +
+'        }\n' +
+'\n' +
+'        /* ── Repeating header wrapper ── */\n' +
+'        .page-wrapper-table { width: 100%; border-collapse: collapse; border: none; }\n' +
+'        .page-wrapper-table > thead, .page-wrapper-table > tbody { border: none; }\n' +
+'        .page-wrapper-table td { padding: 0; border: none; }\n' +
+'\n' +
+'        /* ── Print-specific ── */\n' +
+'        @page { size: A4 portrait; margin: 8mm; }\n' +
+'        @media print {\n' +
+'            body { padding: 0; }\n' +
+'            .page-wrapper-table > thead { display: table-header-group; }\n' +
+'            .page-wrapper-table > thead td { padding-bottom: 8px; }\n' +
+'            thead { display: table-header-group; }\n' +
+'            tr { page-break-inside: avoid; }\n' +
+'        }\n' +
+'    </style>\n' +
+'</head>\n' +
+'<body>\n' +
+'\n' +
+'<table class="page-wrapper-table"><thead><tr><td>\n' +
+'<div class="print-header">\n' +
+'    <img src="' + emblemUrl + '" alt="Emblem">\n' +
+'    <div class="header-text">\n' +
+'        <p class="line1">Government of India</p>\n' +
+'        <p class="line2">OFFICER\'S MESS LBSNAA MUSSOORIE</p>\n' +
+'        <p class="line3">Lal Bahadur Shastri National Academy of Administration</p>\n' +
+'    </div>\n' +
+'    <img src="' + logoUrl + '" alt="LBSNAA Logo" onerror="this.style.display=\'none\'">\n' +
+'</div>\n' +
+'\n' +
+'<div class="report-title-block">\n' +
+'    <h2>' + title + '</h2>\n' +
+'    <p style="font-size:11px;font-weight:700;color:#004a93;margin:4px 0 0;text-align:center;">' + dateLabel + '</p>\n' +
+'</div>\n' +
+'\n' +
+'<div class="report-meta">\n' +
+'    <strong>Store:</strong> ' + storeName + ' &nbsp;&nbsp;|&nbsp;&nbsp; ' +
+'    <strong>Printed:</strong> ' + new Date().toLocaleDateString('en-IN') + ' ' + new Date().toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit'}) + '\n' +
+'</div>\n' +
+'</td></tr></thead><tbody><tr><td>\n' +
+'\n' +
+'<table class="data-table">\n' +
+'<thead>' + columnHeadHtml + '</thead>\n' +
+'<tbody>' + bodyHtml + '</tbody>\n' +
+'</table>\n' +
+'\n' +
+'</td></tr></tbody></table>\n' +
+'\n' +
+'<script>\n' +
+'    window.addEventListener("load", function() {\n' +
+'        setTimeout(function() { window.print(); }, 300);\n' +
+'    });\n' +
+'<\/script>\n' +
+'</body>\n' +
+'</html>');
     printWindow.document.close();
 }
 </script>

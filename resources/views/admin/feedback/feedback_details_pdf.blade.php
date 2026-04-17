@@ -1,356 +1,262 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
     <meta charset="utf-8">
-    <title>Faculty Feedback Detailed Report</title>
+    <title>Faculty Feedback with Comments — All Details | LBSNAA</title>
     <style>
         @page {
-            margin: 15px 10px;
-            header: html_header;
-            footer: html_footer;
+            margin: 10mm 8mm;
+        }
+
+        * {
+            box-sizing: border-box;
         }
 
         body {
-            font-family: Arial, sans-serif;
-            font-size: 8px;
-            color: #333;
+            font-family: "Segoe UI", Arial, sans-serif;
+            font-size: 7px;
+            color: #212529;
             margin: 0;
             padding: 0;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
 
-        .header {
-            text-align: center;
+        .print-header {
+            width: 100%;
+            border-bottom: 3px solid #004a93;
+            padding-bottom: 8px;
             margin-bottom: 10px;
-            border-bottom: 2px solid #af2910;
-            padding-bottom: 5px;
         }
 
-        .title {
-            color: #af2910;
-            font-size: 14px;
-            font-weight: bold;
-            margin-bottom: 3px;
-        }
-
-        .subtitle {
-            font-size: 10px;
-            font-weight: bold;
-            margin-bottom: 3px;
-        }
-
-        .timestamp {
-            font-size: 8px;
-            color: #666;
-            font-style: italic;
-        }
-
-        .filters {
-            background-color: #f8f9fa;
-            border: 1px solid #ddd;
-            padding: 6px;
-            margin-bottom: 8px;
-            font-size: 7px;
-            border-radius: 3px;
-        }
-
-        .filters table {
+        .print-header table {
             width: 100%;
             border-collapse: collapse;
         }
 
-        .filters td {
-            padding: 1px 3px;
-            vertical-align: top;
+        .print-header img {
+            height: 42px;
+            width: auto;
+            object-fit: contain;
+            display: block;
         }
 
-        .filter-label {
-            font-weight: bold;
-            color: #af2910;
-            white-space: nowrap;
-            width: 15%;
+        .header-text .line1 {
+            font-size: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #004a93;
+            font-weight: 700;
+            margin: 0;
+            padding: 0;
+        }
+
+        .header-text .line2 {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #1a1a1a;
+            margin: 2px 0 0;
+            padding: 0;
+        }
+
+        .header-text .line3 {
+            font-size: 8px;
+            color: #555;
+            margin: 2px 0 0;
+            padding: 0;
+        }
+
+        .report-title-block {
+            text-align: center;
+            margin-bottom: 8px;
+        }
+
+        .report-title-block h1 {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin: 0;
+            color: #1a1a1a;
+        }
+
+        .report-meta {
+            font-size: 7px;
+            line-height: 1.5;
+            margin: 0 0 10px;
+            color: #333;
+            text-align: center;
         }
 
         .main-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 7px;
-            margin-top: 5px;
+            font-size: 6.5px;
+            margin-top: 4px;
         }
 
         .main-table th {
-            background-color: #af2910;
-            color: white;
-            font-weight: bold;
+            background-color: #004a93;
+            color: #fff;
+            font-weight: 700;
             padding: 4px 2px;
             text-align: center;
-            border: 1px solid #af2910;
+            border: 1px solid #004a93;
             vertical-align: middle;
+        }
+
+        .main-table th.text-left {
+            text-align: left;
         }
 
         .main-table td {
             padding: 3px 2px;
-            border: 1px solid #ddd;
+            border: 1px solid #bbb;
             vertical-align: top;
             word-wrap: break-word;
         }
 
-        .main-table tr:nth-child(even) {
-            background-color: #f9f9f9;
+        .main-table tbody tr:nth-child(even) {
+            background-color: #f9fafb;
         }
 
-        .main-table tr:hover {
-            background-color: #f5f5f5;
-        }
-
-        .sno {
-            text-align: center;
-            width: 3%;
-            font-weight: bold;
-        }
-
-        .course-name {
-            width: 10%;
-        }
-
-        .course-status {
-            width: 6%;
-            text-align: center;
-        }
-
-        .faculty-name {
-            width: 10%;
-        }
-
-        .faculty-type {
-            width: 6%;
-            text-align: center;
-        }
-
-        .topic {
-            width: 12%;
-        }
-
-        .session-date {
-            width: 6%;
-            text-align: center;
-        }
-
-        .session-time {
-            width: 8%;
-            text-align: center;
-        }
-
-        .ot-name {
-            width: 10%;
-        }
-
-        .ot-code {
-            width: 6%;
-            text-align: center;
-        }
-
-        .content-rating,
-        .presentation-rating {
-            width: 5%;
-            text-align: center;
-            font-weight: bold;
-        }
-
-        .remarks {
-            width: 15%;
-        }
-
-        .feedback-date {
-            width: 8%;
-            text-align: center;
-        }
-
-        .badge {
-            display: inline-block;
-            padding: 1px 4px;
-            font-size: 7px;
-            border-radius: 8px;
-            text-align: center;
-            min-width: 40px;
-        }
-
-        .badge-current {
-            background-color: #d1e7dd;
-            color: #0f5132;
-            border: 1px solid #badbcc;
-        }
-
-        .badge-archived {
-            background-color: #f8d7da;
-            color: #842029;
-            border: 1px solid #f5c2c7;
-        }
-
-        .badge-internal {
-            background-color: #cfe2ff;
-            color: #084298;
-            border: 1px solid #b6d4fe;
-        }
-
-        .badge-guest {
-            background-color: #fff3cd;
-            color: #664d03;
-            border: 1px solid #ffecb5;
-        }
-
-        .rating-badge {
-            display: inline-block;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-weight: bold;
-            min-width: 18px;
-            text-align: center;
-        }
-
-        /* Column-specific styles */
         .text-center {
             text-align: center;
         }
 
-        .text-left {
-            text-align: left;
+        .rating-badge {
+            display: inline-block;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-weight: 700;
+            min-width: 16px;
+            text-align: center;
+            font-size: 6.5px;
         }
 
-        /* Ensure table fits on page */
+        .page-footer {
+            margin-top: 10px;
+            padding-top: 6px;
+            border-top: 1px solid #dee2e6;
+            font-size: 7px;
+            color: #666;
+            text-align: center;
+        }
+
         table {
             page-break-inside: auto;
-        }
-
-        tr {
-            page-break-inside: avoid;
-            page-break-after: auto;
         }
 
         thead {
             display: table-header-group;
         }
 
-        tfoot {
-            display: table-footer-group;
-        }
-
-        /* Compact row height */
         tr {
-            height: 20px;
-        }
-
-        /* Page number in footer */
-        .page-number {
-            text-align: right;
-            font-size: 8px;
-            color: #666;
+            page-break-inside: avoid;
         }
     </style>
 </head>
 
 <body>
-    <!-- Header for each page -->
-    <htmlpageheader name="header">
-        <div class="header">
-            <div class="title">Faculty Feedback Detailed Report - All Individual Responses</div>
-            <div class="subtitle">Sargam | Lal Bahadur Shastri Institute of Management</div>
-            <div class="timestamp">Report Generated: {{ $export_date }}</div>
-        </div>
 
-        <div class="filters">
-            <table>
-                <tr>
-                    <td class="filter-label">Course Status:</td>
-                    <td width="25%">{{ $filters['course_status'] }}</td>
-                    <td class="filter-label">Program:</td>
-                    <td width="25%">{{ $filters['program'] }}</td>
-                    <td class="filter-label">Total Records:</td>
-                    <td width="10%">{{ $filters['total_records'] }}</td>
-                </tr>
-                <tr>
-                    <td class="filter-label">Faculty Name:</td>
-                    <td>{{ $filters['faculty_name'] }}</td>
-                    <td class="filter-label">Faculty Type:</td>
-                    <td>{{ $filters['faculty_type'] }}</td>
-                    <td class="filter-label">Date Range:</td>
-                    <td>{{ $filters['date_range'] }}</td>
-                </tr>
-            </table>
-        </div>
-    </htmlpageheader>
+    <div class="print-header">
+        <table>
+            <tr>
+                <td style="width: 52px; vertical-align: middle;">
+                    @if (!empty($emblem_src))
+                        <img src="{{ $emblem_src }}" alt="Emblem">
+                    @endif
+                </td>
+                <td class="header-text" style="vertical-align: middle; padding: 0 8px;">
+                    <p class="line1">Government of India</p>
+                    <p class="line2">OFFICER'S MESS LBSNAA MUSSOORIE</p>
+                    <p class="line3">Lal Bahadur Shastri National Academy of Administration</p>
+                </td>
+                <td style="width: 52px; vertical-align: middle; text-align: right;">
+                    @if (!empty($logo_src))
+                        <img src="{{ $logo_src }}" alt="LBSNAA Logo">
+                    @endif
+                </td>
+            </tr>
+        </table>
+    </div>
 
-    <!-- Content -->
+    <div class="report-title-block">
+        <h1>Faculty Feedback with Comments — All Details</h1>
+    </div>
+
+    <div class="report-meta">
+        <strong>Program:</strong> {{ $filters['program'] }}
+        &nbsp;|&nbsp; <strong>Course status:</strong> {{ $filters['course_status'] }}
+        &nbsp;|&nbsp; <strong>Dates:</strong> {{ $filters['date_range'] }}
+        &nbsp;|&nbsp; <strong>Faculty:</strong> {{ $filters['faculty_name'] }}
+        &nbsp;|&nbsp; <strong>Faculty type:</strong> {{ $filters['faculty_type'] }}
+        &nbsp;|&nbsp; <strong>Total records:</strong> {{ $filters['total_records'] }}
+        &nbsp;|&nbsp; <strong>Printed:</strong> {{ $export_date }}
+    </div>
+
     <table class="main-table">
         <thead>
             <tr>
-                <th class="sno">S.No.</th>
-                <th class="course-name">Course Name</th>
-                {{-- <th class="course-status">Course Status</th> --}}
-                <th class="faculty-name">Faculty Name</th>
-                {{-- <th class="faculty-type">Faculty Type</th> --}}
-                <th class="ot-name">OT Name</th>
-                <th class="topic">Topic</th>
-                <th class="ot-code">OT Code</th>
-                <th class="content-rating">Content</th>
-                <th class="presentation-rating">Presentation</th>
-                <th class="remarks">Remarks</th>
-                <th class="session-date">Session Date</th>
-                <th class="session-time">Session Time</th>
-                <th class="feedback-date">Feedback Date</th>
+                <th style="width: 2.5%;">#</th>
+                <th class="text-left" style="width: 9%;">Course</th>
+                <th style="width: 4%;">Status</th>
+                <th class="text-left" style="width: 8%;">Faculty</th>
+                <th style="width: 4%;">Type</th>
+                <th class="text-left" style="width: 9%;">Topic</th>
+                <th class="text-left" style="width: 6%;">Session Dt.</th>
+                <th class="text-left" style="width: 7%;">Session Time</th>
+                <th class="text-left" style="width: 8%;">OT Name</th>
+                <th style="width: 4%;">OT Code</th>
+                <th style="width: 3.5%;">Cont.</th>
+                <th style="width: 3.5%;">Pres.</th>
+                <th class="text-left" style="width: 14%;">Remarks</th>
+                <th style="width: 7%;">FB Date</th>
             </tr>
         </thead>
         <tbody>
             @foreach ($data as $item)
                 <tr>
-                    <td class="sno text-center">{{ $item['S.No.'] }}</td>
-                    <td class="course-name">{{ $item['Course Name'] }}</td>
-                    <td class="faculty-name">{{ $item['Faculty Name'] }}</td>
-                    <td class="ot-name">{{ $item['OT Name'] }}</td>
-                    <td class="topic">{{ $item['Topic'] }}</td>
-                    <td class="ot-code text-center">{{ $item['OT Code'] }}</td>
-                    <td class="content-rating text-center">
+                    <td class="text-center">{{ $item['S.No.'] }}</td>
+                    <td>{{ $item['Course Name'] }}</td>
+                    <td class="text-center">{{ $item['Course Status'] }}</td>
+                    <td>{{ $item['Faculty Name'] }}</td>
+                    <td class="text-center">{{ $item['Faculty Type'] }}</td>
+                    <td>{{ $item['Topic'] }}</td>
+                    <td class="text-center">{{ $item['Session Date'] }}</td>
+                    <td class="text-center">{{ $item['Session Time'] }}</td>
+                    <td>{{ $item['OT Name'] }}</td>
+                    <td class="text-center">{{ $item['OT Code'] }}</td>
+                    <td class="text-center">
                         @php
-                            $contentRating = $item['Content Rating'];
-                            $bgColor = isset($rating_colors[$contentRating])
-                                ? $rating_colors[$contentRating]
-                                : '#ffffff';
-                            $textColor = $contentRating == '3' ? '#000000' : '#ffffff';
+                            $contentRating = (string) ($item['Content Rating'] ?? '');
+                            $bgColor = $rating_colors[$contentRating] ?? '#e9ecef';
+                            $textColor = $contentRating === '3' ? '#000000' : '#ffffff';
                         @endphp
                         <span class="rating-badge"
-                            style="background-color: {{ $bgColor }}; color: {{ $textColor }};">
-                            {{ $contentRating }}
-                        </span>
+                            style="background-color: {{ $bgColor }}; color: {{ $textColor }};">{{ $contentRating }}</span>
                     </td>
-                    <td class="presentation-rating text-center">
+                    <td class="text-center">
                         @php
-                            $presentationRating = $item['Presentation Rating'];
-                            $bgColor = isset($rating_colors[$presentationRating])
-                                ? $rating_colors[$presentationRating]
-                                : '#ffffff';
-                            $textColor = $presentationRating == '3' ? '#000000' : '#ffffff';
+                            $presentationRating = (string) ($item['Presentation Rating'] ?? '');
+                            $bgColor2 = $rating_colors[$presentationRating] ?? '#e9ecef';
+                            $textColor2 = $presentationRating === '3' ? '#000000' : '#ffffff';
                         @endphp
                         <span class="rating-badge"
-                            style="background-color: {{ $bgColor }}; color: {{ $textColor }};">
-                            {{ $presentationRating }}
-                        </span>
+                            style="background-color: {{ $bgColor2 }}; color: {{ $textColor2 }};">{{ $presentationRating }}</span>
                     </td>
-                    <td class="remarks">{{ $item['Remarks'] }}</td>
-                    <td class="session-date text-center">{{ $item['Session Date'] }}</td>
-                    <td class="session-time text-center">{{ $item['Session Time'] }}</td>
-                    <td class="feedback-date text-center">{{ $item['Feedback Date'] }}</td>
+                    <td>{{ $item['Remarks'] }}</td>
+                    <td class="text-center">{{ $item['Feedback Date'] }}</td>
                 </tr>
             @endforeach
         </tbody>
     </table>
 
-    <!-- Footer for each page -->
-    <htmlpagefooter name="footer">
-        <div style="text-align: center; font-size: 8px; color: #666; padding-top: 5px; border-top: 1px solid #ddd;">
-            Confidential - For Internal Use Only | Generated by Sargam Faculty Feedback System
-            <div class="page-number">Page {PAGENO} of {nbpg}</div>
-        </div>
-    </htmlpagefooter>
+    <div class="page-footer">
+        Confidential — For internal use only | LBSNAA Mussoorie | Sargam Faculty Feedback
+    </div>
 </body>
 
 </html>

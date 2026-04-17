@@ -36,7 +36,7 @@
                 <div class="row mb-3">
                     <div class="col-md-6">
                         <label for="employee_name" class="form-label">Employee Name <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control other-estate-no-special" id="employee_name" name="employee_name" value="{{ old('employee_name', $prefill['employee_name'] ?? '') }}" required maxlength="500" title="Only letters, numbers, spaces, hyphen, apostrophe and dot are allowed.">
+                        <input type="text" class="form-control" id="employee_name" name="employee_name" value="{{ old('employee_name', $prefill['employee_name'] ?? '') }}" required maxlength="500">
                         <div class="text-danger small field-error" data-field="employee_name" role="alert">@error('employee_name'){{ $message }}@enderror</div>
                     </div>
                     <div class="col-md-6">

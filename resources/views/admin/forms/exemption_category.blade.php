@@ -6,6 +6,7 @@
 <link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.css" rel="stylesheet" />
 
 <div class="container-fluid">
+    <x-breadcrum title="Exemption Master" />
     <div class="card" style="border-left:4px solid #004a93;">
         <div class="card-body">
             <div class="row">

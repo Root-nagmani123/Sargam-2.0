@@ -40,6 +40,7 @@ use App\Http\Controllers\Admin\{
     WhosWhoController,
     EstateController,
     QuickLinkController,
+    TimetableReportController,
 };
 use App\Http\Controllers\Dashboard\Calendar1Controller;
 use App\Http\Controllers\Admin\MemoNoticeController;
@@ -64,6 +65,7 @@ use App\Http\Controllers\Admin\IssueManagement\{
 use App\Http\Controllers\Admin\EmployeeIDCardRequestController;
 use App\Http\Controllers\Admin\DuplicateIDCardRequestController;
 use App\Http\Controllers\Admin\FamilyIDCardRequestController;
+use App\Http\Controllers\Admin\BirthdayWishController;
 
 
 Route::get('clear-cache', function () {
@@ -111,6 +113,12 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard/students/{id}/detail', [UserController::class, 'studentDetail'])->name('admin.dashboard.students.detail');
     Route::get('/directory/lbsnaa', [DirectoryController::class, 'lbsnaa'])->name('admin.directory.lbsnaa');
     Route::get('/directory/ot', [DirectoryController::class, 'ot'])->name('admin.directory.ot');
+
+    // Birthday Wish Routes
+    Route::get('/birthday-wishes', [BirthdayWishController::class, 'index'])->name('admin.birthday-wish.index');
+    Route::post('/birthday-wishes/send-email', [BirthdayWishController::class, 'sendEmail'])->name('admin.birthday-wish.send-email');
+    Route::post('/birthday-wishes/send-bulk-email', [BirthdayWishController::class, 'sendBulkEmail'])->name('admin.birthday-wish.send-bulk-email');
+    Route::post('/birthday-wishes/send-notification', [BirthdayWishController::class, 'sendNotification'])->name('admin.birthday-wish.send-notification');
 
     // Dashboard Statistics (Batch Profile)
     // NOTE: Currently served by a Blade view; replace with controller when business logic is ready.
@@ -423,6 +431,14 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/event-delete/{id}', [CalendarController::class, 'delete_event'])->name('calendar.event.delete');
 
         Route::get('/get-week', [CalendarController::class, 'weeklyTimetable'])->name('getWeek');
+    });
+
+    // Timetable Report
+    Route::prefix('timetable-report')->name('timetable-report.')->group(function () {
+        Route::get('/', [TimetableReportController::class, 'index'])->name('index');
+        Route::get('/data', [TimetableReportController::class, 'data'])->name('data');
+        Route::get('/export-pdf', [TimetableReportController::class, 'exportPdf'])->name('pdf');
+        Route::get('/export-excel', [TimetableReportController::class, 'exportExcel'])->name('excel');
     });
 
     // Area of Expertise
@@ -963,7 +979,37 @@ Route::middleware(['auth'])->group(function () {
     // Report walal route
 
     Route::get('/faculty_view', function () {
-        return view('admin.feedback.faculty_view');
+        $courseType = request('course_type', 'current');
+        $data_course_id = get_Role_by_course();
+
+        $programsQuery = \DB::table('course_master')
+            ->select('pk as id', 'course_name', 'active_inactive', 'end_date');
+
+        if ($courseType === 'current') {
+            $programsQuery->where('active_inactive', 1)
+                ->whereDate('end_date', '>=', \Carbon\Carbon::today());
+        } else {
+            $programsQuery->where(function ($q) {
+                $q->where('active_inactive', 0)
+                    ->orWhereDate('end_date', '<', \Carbon\Carbon::today());
+            });
+        }
+
+        if (!empty($data_course_id)) {
+            $programsQuery->whereIn('pk', $data_course_id);
+        }
+
+        $programs = $programsQuery->orderBy('course_name')->pluck('course_name', 'id');
+
+        // Auto-select the latest active course (by end_date desc)
+        $currentProgram = \DB::table('course_master')
+            ->where('active_inactive', 1)
+            ->whereDate('end_date', '>=', \Carbon\Carbon::today())
+            ->when(!empty($data_course_id), fn($q) => $q->whereIn('pk', $data_course_id))
+            ->orderBy('end_date', 'desc')
+            ->value('pk');
+
+        return view('admin.feedback.faculty_view', compact('programs', 'currentProgram'));
     })->name('admin.feedback.faculty_view');
 
     Route::get('/feedback_details', function () {
@@ -1042,18 +1088,24 @@ Route::middleware(['auth'])->group(function () {
     // Feedback Database Routes
     Route::prefix('faculty')->group(function () {
         Route::get('/database', [FeedbackController::class, 'database'])->name('admin.feedback.database');
+        Route::get('/database/courses', [FeedbackController::class, 'getDatabaseCourses'])->name('admin.feedback.database.courses');
         Route::get('/database/data', [FeedbackController::class, 'getDatabaseData'])->name('admin.feedback.database.data');
         Route::get('/database/topics', [FeedbackController::class, 'getTopicsForCourse'])->name('admin.feedback.database.topics');
         Route::get('/database/export', [FeedbackController::class, 'exportDatabase'])->name('admin.feedback.database.export');
+        Route::get('/database/print', [FeedbackController::class, 'printFeedbackDatabase'])->name('admin.feedback.database.print');
+        Route::get('/database/export-pdf', [FeedbackController::class, 'exportFeedbackDatabasePdf'])->name('admin.feedback.database.export.pdf');
+        Route::get('/database/export-excel', [FeedbackController::class, 'exportFeedbackDatabaseExcel'])->name('admin.feedback.database.export.excel');
     });
     Route::get('/feedback_average', [FeedbackController::class, 'showFacultyAverage'])->name('feedback.average');
     Route::post('/faculty_view', [FeedbackController::class, 'facultyView'])->name('admin.feedback.faculty_view');
     Route::get('/faculty_view/suggestions', [FeedbackController::class, 'getFacultySuggestions'])->name('feedback.faculty_suggestions');
     Route::post('/faculty_view/export', [FeedbackController::class, 'exportFacultyFeedback'])->name('admin.feedback.faculty_view.export');
+    Route::get('/faculty_view/print', [FeedbackController::class, 'printFacultyFeedback'])->name('admin.feedback.faculty_view.print');
     Route::get('/feedback_details', [FeedbackController::class, 'feedbackDetails'])->name('admin.feedback.feedback_details');
     Route::post('/feedback_details/export', [FeedbackController::class, 'exportFeedbackDetails'])->name('admin.feedback.feedback_details.export');
     Route::get('/feedback_average/export-excel', [FeedbackController::class, 'exportExcel'])->name('feedback.average.export.excel');
     Route::get('/feedback_average/export-pdf', [FeedbackController::class, 'exportPdf'])->name('feedback.average.export.pdf');
+    Route::get('/feedback_average/print', [FeedbackController::class, 'printFacultyAverage'])->name('feedback.average.print');
 });
 
 Route::get('/student-faculty-feedback', [CalendarController::class, 'studentFacultyFeedback'])->name('feedback.get.studentFacultyFeedback');
@@ -1076,6 +1128,10 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::get('/feedback/pending-students/datatable', [FeedbackController::class, 'pendingStudentsDataTable'])
         ->name('feedback.pending.datatable');
 
+    // Grouped student data for accordion view
+    Route::get('/feedback/pending-students/grouped', [FeedbackController::class, 'pendingStudentsGroupedData'])
+        ->name('feedback.pending.grouped');
+
     // Sessions by course (AJAX)
     Route::get('/get-sessions-by-course', [FeedbackController::class, 'getSessionsByCourse'])
         ->name('get.sessions.by.course');
@@ -1086,6 +1142,13 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
 
     Route::post('/feedback/pending-students/export/excel', [FeedbackController::class, 'exportPendingStudentsExcel'])
         ->name('feedback.export.excel');
+
+    Route::post('/feedback/pending-students/export/excel-detailed', [FeedbackController::class, 'exportPendingStudentsExcelDetailed'])
+        ->name('feedback.export.excel.detailed');
+
+    // Print Route
+    Route::get('/feedback/pending-students/print', [FeedbackController::class, 'printPendingStudents'])
+        ->name('feedback.print');
 });
 
 //feedback count wise summary
@@ -1103,6 +1166,9 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
 
     Route::post('/feedback/pending-summary/export/excel', [FeedbackController::class, 'exportPendingSummaryExcel'])
         ->name('feedback.summary.export.excel');
+
+    Route::post('/feedback/pending-summary/export/excel-detailed', [FeedbackController::class, 'exportPendingSummaryExcelDetailed'])
+        ->name('feedback.summary.export.excel.detailed');
 });
 // For getting sessions by course (reuse the existing one)
 Route::get('/get-sessions-by-course', [FeedbackController::class, 'getSessionsByCourse'])

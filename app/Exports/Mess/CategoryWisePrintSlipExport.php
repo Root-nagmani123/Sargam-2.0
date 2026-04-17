@@ -83,12 +83,40 @@ class CategoryWisePrintSlipExport implements FromCollection, WithStyles, WithEve
                 $rows[] = ['Slip No.', 'Item Name', 'Request Date', 'Quantity', 'Price', 'Amount', 'Remark'];
 
                 $sectionTotal = 0.0;
+                $combinedSlipNo = mess_combined_bill_slip_no(
+                    trim((string) ($first->client_name ?? ($first->clientTypeCategory?->client_name ?? ''))),
+                    (string) ($first->client_type_slug ?? 'employee')
+                );
+                $combinedRemarks = $sectionVouchers
+                    ->map(fn ($v) => trim((string) ($v->remarks ?? '')))
+                    ->filter()
+                    ->unique()
+                    ->implode('; ');
+                if ($combinedRemarks === '') {
+                    $combinedRemarks = '—';
+                }
+                $firstSectionRow = true;
 
                 foreach ($sectionVouchers as $voucher) {
-                    $requestNo = $voucher->request_no ?? ('SV-' . str_pad($voucher->id ?? $voucher->pk ?? 0, 6, '0', STR_PAD_LEFT));
                     $requestDate = $voucher->issue_date ? $voucher->issue_date->format('d-m-Y') : 'N/A';
 
-                    foreach ($voucher->items as $itemIndex => $item) {
+                    if ($voucher->items->isEmpty()) {
+                        $row = ['', '', '', '', '', '', ''];
+                        if ($firstSectionRow) {
+                            $row[0] = $combinedSlipNo;
+                            $row[6] = $combinedRemarks;
+                            $firstSectionRow = false;
+                        }
+                        $row[1] = '—';
+                        $row[2] = $requestDate;
+                        $row[3] = '—';
+                        $row[4] = '—';
+                        $row[5] = '—';
+                        $rows[] = $row;
+                        continue;
+                    }
+
+                    foreach ($voucher->items as $item) {
                         $issueQty = (float) ($item->quantity ?? 0);
                         $returnQty = (float) ($item->return_quantity ?? 0);
                         $netQty = max(0, $issueQty - $returnQty);
@@ -105,9 +133,10 @@ class CategoryWisePrintSlipExport implements FromCollection, WithStyles, WithEve
                             : $requestDate;
 
                         $row = ['', '', '', '', '', '', ''];
-                        if ($itemIndex === 0) {
-                            $row[0] = $requestNo;
-                            $row[6] = $voucher->remarks ?? '—';
+                        if ($firstSectionRow) {
+                            $row[0] = $combinedSlipNo;
+                            $row[6] = $combinedRemarks;
+                            $firstSectionRow = false;
                         }
                         $row[1] = $itemName;
                         $row[2] = $itemIssueDateFormatted;
