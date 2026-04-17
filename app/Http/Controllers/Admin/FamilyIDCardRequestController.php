@@ -183,6 +183,24 @@ class FamilyIDCardRequestController extends Controller
         ]);
     }
 
+    /**
+     * Logged-in employee may only use Contractual path (same payroll rule as Employee ID Card create).
+     * payroll === 0 → Permanent (may choose Permanent or Contractual on family form); otherwise → Contractual only.
+     */
+    private function familyIdcardIsLoggedInContractualOnly(): bool
+    {
+        $authUserId = Auth::user()->user_id ?? null;
+        if (! $authUserId) {
+            return false;
+        }
+        $emp = EmployeeMaster::where('pk', $authUserId)->orWhere('pk_old', $authUserId)->first();
+        if (! $emp || ! Schema::hasColumn('employee_master', 'payroll')) {
+            return false;
+        }
+
+        return (int) ($emp->payroll ?? 0) !== 0;
+    }
+
     public function create()
     {
         $userDepartmentName = null;
@@ -225,11 +243,18 @@ class FamilyIDCardRequestController extends Controller
             }
         }
 
+        // Same payroll rule as Employee ID Card create: payroll === 0 = Permanent (may choose Permanent or Contractual); else Contractual only.
+        $familyIdcardContractualEmployeeOnly = false;
+        if ($authEmp && Schema::hasColumn('employee_master', 'payroll')) {
+            $familyIdcardContractualEmployeeOnly = (int) ($authEmp->payroll ?? 0) !== 0;
+        }
+
         return view('admin.family_idcard.create', [
             'userDepartmentName' => $userDepartmentName,
             'defaultEmployeeIdPermanent' => $defaultEmployeeIdPermanent,
             'defaultEmployeeIdContractual' => $defaultEmployeeIdContractual,
             'defaultDesignation' => $defaultDesignation,
+            'familyIdcardContractualEmployeeOnly' => $familyIdcardContractualEmployeeOnly,
         ]);
     }
 
@@ -402,7 +427,18 @@ class FamilyIDCardRequestController extends Controller
             'members.*.valid_to' => 'nullable|date',
         ];
 
+        $contractualOnly = $this->familyIdcardIsLoggedInContractualOnly();
+        if (! $contractualOnly) {
+            $rules['employee_type'] = ['required', 'in:Permanent Employee,Contractual Employee'];
+        }
+
         $request->validate($rules);
+
+        if ($contractualOnly && $request->filled('employee_type') && $request->input('employee_type') !== 'Contractual Employee') {
+            throw ValidationException::withMessages([
+                'employee_type' => 'Your account may only submit family ID card requests as Contractual Employee.',
+            ]);
+        }
 
         // Valid To must not be less than Valid From for each member
         $members = $request->input('members', []);
@@ -457,7 +493,9 @@ class FamilyIDCardRequestController extends Controller
 
         $employeeId = $request->input('employee_id');
         $createdBy = Auth::user()->user_id;
-        $employeeType = $request->input('employee_type', 'Permanent Employee');
+        $employeeType = $contractualOnly
+            ? 'Contractual Employee'
+            : $request->input('employee_type', 'Permanent Employee');
         $count = 0;
         $nextPk = (int) SecurityFamilyIdApply::max('pk') + 1;
         $groupPhotoPath = null;
@@ -491,7 +529,7 @@ class FamilyIDCardRequestController extends Controller
             $fmlIdApply = 'FMD' . str_pad((string) $nextPk, 5, '0', STR_PAD_LEFT);
             $nextPk++;
 
-            SecurityFamilyIdApply::create([
+            $memberRow = [
                 'fml_id_apply' => $fmlIdApply,
                 'family_name' => $name,
                 'family_relation' => !empty($member['relation']) ? $member['relation'] : null,
@@ -504,8 +542,11 @@ class FamilyIDCardRequestController extends Controller
                 'family_photo' => $groupPhotoPath,
                 'employee_dob' => !empty($member['dob']) ? $member['dob'] : null,
                 'emp_id_apply' => $employeeId,
-               
-            ]);
+            ];
+            if (Schema::hasColumn('security_family_id_apply', 'employee_type')) {
+                $memberRow['employee_type'] = $employeeType;
+            }
+            SecurityFamilyIdApply::create($memberRow);
             $count++;
         }
 

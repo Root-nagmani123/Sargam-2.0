@@ -19,21 +19,30 @@
     <form action="{{ route('admin.family_idcard.store') }}" method="POST" enctype="multipart/form-data" class="needs-validation" id="familyIdcardForm" novalidate>
         @csrf
     
-        <!-- Employee Type: Government / Contractual -->
+        @php
+            $familyIdcardContractualEmployeeOnly = $familyIdcardContractualEmployeeOnly ?? false;
+        @endphp
+        <!-- Employee Type: Permanent / Contractual (Permanent staff may choose either; Contractual-only accounts see Contractual only) -->
         <div class="card border-0 shadow-sm mb-4">
             <div class="card-body py-4 px-4">
-                <div class="d-flex flex-wrap gap-4 align-items-center">
-                    <div class="form-check mb-0">
-                        <input class="form-check-input" type="radio" name="employee_type" id="emp_type_govt" value="Permanent Employee"
-                               {{ old('employee_type', 'Permanent Employee') == 'Permanent Employee' ? 'checked' : '' }} required>
-                        <label class="form-check-label" for="emp_type_govt">Permanent Employee</label>
+                @if($familyIdcardContractualEmployeeOnly)
+                    <p class="fw-semibold text-dark mb-1">Employee type</p>
+                    <p class="mb-0 text-muted small">Your profile is classified as <strong>Contractual</strong>. You may submit this request only as <strong>Contractual Employee</strong>.</p>
+                    <input type="hidden" name="employee_type" value="Contractual Employee">
+                @else
+                    <div class="d-flex flex-wrap gap-4 align-items-center">
+                        <div class="form-check mb-0">
+                            <input class="form-check-input" type="radio" name="employee_type" id="emp_type_govt" value="Permanent Employee"
+                                   {{ old('employee_type', 'Permanent Employee') == 'Permanent Employee' ? 'checked' : '' }} required>
+                            <label class="form-check-label" for="emp_type_govt">Permanent Employee</label>
+                        </div>
+                        <div class="form-check mb-0">
+                            <input class="form-check-input" type="radio" name="employee_type" id="emp_type_cont" value="Contractual Employee"
+                                   {{ old('employee_type') == 'Contractual Employee' ? 'checked' : '' }} required>
+                            <label class="form-check-label" for="emp_type_cont">Contractual Employee</label>
+                        </div>
                     </div>
-                    <div class="form-check mb-0">
-                        <input class="form-check-input" type="radio" name="employee_type" id="emp_type_cont" value="Contractual Employee"
-                               {{ old('employee_type') == 'Contractual Employee' ? 'checked' : '' }} required>
-                        <label class="form-check-label" for="emp_type_cont">Contractual Employee</label>
-                    </div>
-                </div>
+                @endif
             </div>
         </div>
 
@@ -355,10 +364,18 @@
 (function() {
     'use strict';
 
+    var familyIdcardContractualOnly = @json($familyIdcardContractualEmployeeOnly ?? false);
+
+    function fmlIsContractualMode() {
+        if (familyIdcardContractualOnly) return true;
+        var contRad = document.getElementById('emp_type_cont');
+        return !!(contRad && contRad.checked);
+    }
+
     // Employee type toggle: Contractual = editable employee fields; Permanent = locked defaults
     function toggleFmlApprovalAuthority() {
         var contRad = document.getElementById('emp_type_cont');
-        if (!contRad) return;
+        if (!familyIdcardContractualOnly && !contRad) return;
         var empIdInp = document.getElementById('employee_id');
         var desigInp = document.getElementById('designation');
         var sectionInp = document.getElementById('section');
@@ -366,7 +383,7 @@
         var nameDisp = document.getElementById('fml_contractual_employee_display_name');
         var hint = document.getElementById('fmlContractualLookupHint');
 
-        if (contRad.checked) {
+        if (fmlIsContractualMode()) {
             if (empIdInp) { empIdInp.readOnly = false; empIdInp.classList.remove('bg-light'); }
             if (desigInp) { desigInp.readOnly = false; desigInp.classList.remove('bg-light'); }
             if (sectionInp) { sectionInp.readOnly = false; sectionInp.classList.remove('bg-light'); }
@@ -389,7 +406,7 @@
             var idPerm = row.getAttribute('data-employee-id-permanent') || '';
             var idCont = row.getAttribute('data-employee-id-contractual') || '';
             var desig = row.getAttribute('data-designation') || '';
-            if (contRad.checked) {
+            if (fmlIsContractualMode()) {
                 empIdInp.value = idCont;
                 desigInp.value = desig;
             } else {
@@ -398,8 +415,10 @@
             }
         }
     }
-    document.getElementById('emp_type_govt')?.addEventListener('change', toggleFmlApprovalAuthority);
-    document.getElementById('emp_type_cont')?.addEventListener('change', toggleFmlApprovalAuthority);
+    if (!familyIdcardContractualOnly) {
+        document.getElementById('emp_type_govt')?.addEventListener('change', toggleFmlApprovalAuthority);
+        document.getElementById('emp_type_cont')?.addEventListener('change', toggleFmlApprovalAuthority);
+    }
     toggleFmlApprovalAuthority();
 
     // Contractual: autofill from employee_master and/or security_con_oth_id_apply (lookup endpoint)
@@ -421,8 +440,7 @@
     }
 
     function applyFmlContractualEmployeeLookup() {
-        var cont = document.getElementById('emp_type_cont');
-        if (!cont || !cont.checked) return;
+        if (!fmlIsContractualMode()) return;
         var idInp = document.getElementById('employee_id');
         var desig = document.getElementById('designation');
         var section = document.getElementById('section');
@@ -467,14 +485,14 @@
     var empIdForLookup = document.getElementById('employee_id');
     if (empIdForLookup) {
         empIdForLookup.addEventListener('blur', function () {
-            if (document.getElementById('emp_type_cont') && document.getElementById('emp_type_cont').checked) {
+            if (fmlIsContractualMode()) {
                 applyFmlContractualEmployeeLookup();
             }
         });
         empIdForLookup.addEventListener('keydown', function (e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                if (document.getElementById('emp_type_cont') && document.getElementById('emp_type_cont').checked) {
+                if (fmlIsContractualMode()) {
                     applyFmlContractualEmployeeLookup();
                 }
             }
