@@ -34,7 +34,7 @@
                         $color = $colors[$index % count($colors)];
                     @endphp
 
-                    <div class="col-6">
+                    <div class="col-md-6 col-12">
                         <div class="card">
                             <div class="card-body text-center">
                                 <div class="icon-circle" style="background-color: {{ $color['bg'] }};">

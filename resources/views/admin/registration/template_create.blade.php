@@ -31,9 +31,19 @@
         <!-- Form -->
         <div class="card mt-3">
             <div class="card-body">
+                @if ($errors->any())
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <ul class="mb-0">
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                @endif
                 <form action="{{ route('forms.template.store') }}" method="POST">
                     <!-- Add this hidden input to carry the template ID -->
-                    @if (request()->has('template'))
+                    @if (request()->filled('template'))
                         <input type="hidden" name="template_id" value="{{ request()->query('template') }}">
                     @endif
                     @csrf

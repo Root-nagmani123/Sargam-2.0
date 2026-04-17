@@ -449,8 +449,8 @@ table>thead{
 $user = Auth::user();
 $isAdminSummary = hasRole('Admin');
 $daysOld = $isAdminSummary ? 10 : null;
-$notifications = $user ? notification()->getNotifications($user->user_id, 10, false, $daysOld) : collect();
-$notificationBadgeCount = $user
+$notifications = ($user && $user->user_id) ? notification()->getNotifications($user->user_id, 10, false, $daysOld) : collect();
+$notificationBadgeCount = ($user && $user->user_id)
     ? ($isAdminSummary ? notification()->getUnreadCount($user->user_id, $daysOld) : $notifications->count())
     : 0;
 $notices = get_notice_notification_by_role();

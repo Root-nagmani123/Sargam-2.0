@@ -211,18 +211,42 @@ class FormController extends Controller
     // }
     public function cloneForm($templateId, Request $request)
     {
+        // Phase 1: Collect the entire tree of forms to clone BEFORE any inserts
+        // This prevents infinite loops when the cloned form becomes a child of the template
+        $formsToClone = [];
+        $collectStack = [$templateId];
 
-        $stack = [];
+        while (!empty($collectStack)) {
+            $formId = array_pop($collectStack);
+            if (isset($formsToClone[$formId])) continue; // already collected
+
+            $form = DB::table('local_form')->where('id', $formId)->first();
+            if (!$form) continue;
+
+            $formsToClone[$formId] = $form;
+
+            $children = DB::table('local_form')->where('parent_id', $formId)->pluck('id');
+            foreach ($children as $childId) {
+                $collectStack[] = $childId;
+            }
+        }
+
+        // Phase 2: Clone all collected forms
         $map = []; // Map old form IDs to new ones
+        $stack = [];
 
-        // Push root form first
         $stack[] = [
             'formId' => $templateId,
             'newParentId' => null,
             'isRoot' => true
         ];
+
         DB::beginTransaction();
         $currentSortOrder = DB::table('local_form')->max('sortorder') ?? 0;
+
+        // Use the parent form's dates for all children
+        $rootCourseSdate = $request->course_sdate ?? $formsToClone[$templateId]->course_sdate;
+        $rootCourseEdate = $request->course_edate ?? $formsToClone[$templateId]->course_edate;
 
         while (!empty($stack)) {
             $current = array_pop($stack);
@@ -230,29 +254,24 @@ class FormController extends Controller
             $newParentId = $current['newParentId'];
             $isRoot = $current['isRoot'];
 
-            $form = DB::table('local_form')->where('id', $formId)->first();
+            $form = $formsToClone[$formId] ?? null;
             if (!$form) continue;
 
-            // Increment sort order before inserting
             $currentSortOrder++;
 
-            // Handle names and values (only override for root)
             $name         = $isRoot ? ($request->name ?? $form->name) : $form->name;
             $shortname    = $isRoot ? ($request->shortname ?? $form->shortname) : $form->shortname;
             $description  = $isRoot ? ($request->description ?? $form->description) : $form->description;
-            $course_sdate = $isRoot ? ($request->course_sdate ?? $form->course_sdate) : $form->course_sdate;
-            $course_edate = $isRoot ? ($request->course_edate ?? $form->course_edate) : $form->course_edate;
             $visible      = $isRoot ? ($request->has('visible') ? 1 : $form->visible) : $form->visible;
-            $parent_id    = $request->parent_id;
+            $parent_id    = $isRoot ? ($request->parent_id ?? null) : $newParentId;
 
-            // Insert cloned form
             $newFormId = DB::table('local_form')->insertGetId([
-                'parent_id'    => $parent_id ?? null,
+                'parent_id'    => $parent_id,
                 'name'         => $name,
                 'shortname'    => $shortname,
                 'description'  => $description,
-                'course_sdate' => $course_sdate,
-                'course_edate' => $course_edate,
+                'course_sdate' => $rootCourseSdate,
+                'course_edate' => $rootCourseEdate,
                 'visible'      => $visible,
                 'sortorder'    => $currentSortOrder,
                 'created_at'   => now(),
@@ -300,22 +319,21 @@ class FormController extends Controller
                 ]);
             }
 
-            // Push children forms to stack (to process next)
-            $children = DB::table('local_form')->where('parent_id', $formId)->get();
-            foreach ($children as $child) {
-                $stack[] = [
-                    'formId' => $child->id,
-                    // 'newParentId' => $newFormId,
-                    'newParentId' => $parent_id ?? null,
-                    'isRoot' => false
-                ];
+            // Push only pre-collected children to stack
+            foreach ($formsToClone as $fId => $f) {
+                if ($f->parent_id == $formId && !isset($map[$fId])) {
+                    $stack[] = [
+                        'formId' => $fId,
+                        'newParentId' => $newFormId,
+                        'isRoot' => false
+                    ];
+                }
             }
 
-            // Map old ID → new ID
             $map[$formId] = $newFormId;
         }
         DB::commit();
-        return $map[$templateId] ?? null; // return the cloned root form ID
+        return $map[$templateId] ?? null;
     }
 
     public function template_store(Request $request)
@@ -323,16 +341,15 @@ class FormController extends Controller
 
         try {
             $templateId = $request->input('template_id');
-            // dump($templateId);
             if (!$templateId) {
-                throw new \Exception("Template ID not provided.");
+                throw new \Exception("Template ID not provided. Please select a template first.");
             }
 
             $response = $this->cloneForm($templateId, $request);
             return redirect()->route('forms.index')->with('success', 'Form and subforms cloned successfully!');
         } catch (\Exception $e) {
-            // DB::rollBack();
-            return back()->withErrors(['error' => $e->getMessage()]);
+            DB::rollBack();
+            return back()->withErrors(['error' => $e->getMessage()])->withInput();
         }
     }
 
