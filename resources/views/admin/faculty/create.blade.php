@@ -440,7 +440,7 @@ input.is-invalid {
                                        <!-- PDF Preview -->
                            <div class="d-flex align-items-start mt-2">
                             <iframe id="documentPreviewPDF" class="d-none border"
-                                    style="width: 200px; height: 200px; border-radius: 6px;"></iframe>
+                                    style="width: 100%; max-width: 200px; height: 200px; border-radius: 6px;"></iframe>
                         </div>
 
                     <!-- Existing Document Link -->
@@ -461,7 +461,7 @@ input.is-invalid {
                             <div id="education_fields" class="my-4"></div>
 
                             <div class="row degree-row" id="education_fields">
-                                <div class="col-3">
+                                <div class="col-12 col-sm-6 col-md-3">
 
                                     <x-input
                                         name="degree[]"
@@ -472,7 +472,7 @@ input.is-invalid {
                                         />
 
                                 </div>
-                                <div class="col-3">
+                                <div class="col-12 col-sm-6 col-md-3">
                                     <x-input
                                         name="university_institution_name[]"
                                         label="University/Institution Name :"
@@ -480,7 +480,7 @@ input.is-invalid {
                                         formLabelClass="form-label"
                                         />
                                 </div>
-                                <div class="col-3">
+                                <div class="col-12 col-sm-6 col-md-3">
                                     {{-- <x-input
                                         type="number"
                                         name="year_of_passing[]"
@@ -502,7 +502,7 @@ input.is-invalid {
                                         helperSmallText="Select the year of passing"
                                     />
                                 </div>
-                                <div class="col-3">
+                                <div class="col-12 col-sm-6 col-md-3">
                                     <x-input
                                         type="number"
                                         min="0"
@@ -514,7 +514,7 @@ input.is-invalid {
                                         />
 
                                 </div>
-                                <div class="col-3 mt-3">
+                                <div class="col-12 col-sm-6 col-md-3 mt-3">
 
                                     <x-input
                                         type="file"
@@ -546,7 +546,7 @@ input.is-invalid {
                             <hr>
                             <div id="experience_fields_wrapper" class="my-4"></div>
                             <div class="row experience-row" id="experience_fields">
-                                <div class="col-3">
+                                <div class="col-12 col-sm-6 col-md-3">
                                     <x-input
                                         name="experience[]"
                                         label="Years of Experience :"
@@ -554,7 +554,7 @@ input.is-invalid {
                                         formLabelClass="form-label"
                                         />
                                 </div>
-                                <div class="col-3">
+                                <div class="col-12 col-sm-6 col-md-3">
 
                                     <x-input
                                         name="specialization[]"
@@ -564,7 +564,7 @@ input.is-invalid {
                                         />
 
                                 </div>
-                                <div class="col-3">
+                                <div class="col-12 col-sm-6 col-md-3">
                                     <x-input
                                         name="institution[]"
                                         label="Previous Institutions :"
@@ -572,7 +572,7 @@ input.is-invalid {
                                         formLabelClass="form-label"
                                         />
                                 </div>
-                                <div class="col-3">
+                                <div class="col-12 col-sm-6 col-md-3">
                                     <x-input
                                         name="position[]"
                                         label="Position Held :"
@@ -581,7 +581,7 @@ input.is-invalid {
                                         />
 
                                 </div>
-                                <div class="col-3 mt-3">
+                                <div class="col-12 col-sm-6 col-md-3 mt-3">
                                     <x-input
                                         type="number"
                                         name="duration[]"
@@ -591,7 +591,7 @@ input.is-invalid {
                                         min="0"
                                         />
                                 </div>
-                                <div class="col-3 mt-3">
+                                <div class="col-12 col-sm-6 col-md-3 mt-3">
                                     <x-input
                                         name="work[]"
                                         label="Nature of Work :"
@@ -670,7 +670,7 @@ input.is-invalid {
                             <h4 class="card-title">Other information</h4>
                             <hr>
                             <div class="row">
-                                <div class="col-6">
+                                <div class="col-12 col-md-6">
 
                                     <x-input
                                         type="file"
@@ -689,7 +689,7 @@ input.is-invalid {
                                 <div class="existing-research mt-2"></div>
 
                                 </div>
-                                <div class="col-6">
+                                <div class="col-12 col-md-6">
 
                                     <x-input
                                         type="file"
@@ -705,7 +705,7 @@ input.is-invalid {
                                 </div>
                                 <div class="existing-membership mt-2"></div>
                                 </div>
-                                <div class="col-6 mt-3">
+                                <div class="col-12 col-md-6 mt-3">
 
                                     <x-input
                                         type="file"
@@ -723,7 +723,7 @@ input.is-invalid {
                                 <div class="existing-reference mt-2"></div>
 
                                 </div>
-                                <div class="col-6 mt-3">
+                                <div class="col-12 col-md-6 mt-3">
                                     <x-input
                                         type="date"
                                         name="joiningdate"
@@ -731,6 +731,8 @@ input.is-invalid {
                                         placeholder="Joining Date"
                                         formLabelClass="form-label"
 										value="{{ $value ?? '' }}"
+                                        required
+                                        :labelRequired="true"
                                         />
 
                                 </div>
@@ -760,6 +762,7 @@ input.is-invalid {
                        id="success2-radio" value="2" >
                      <label class="form-check-label" for="success2-radio">Private Sector</label>
                      </div>
+                     <div id="current-sector-error-placeholder"></div>
                        </div>
                 </div>
 
@@ -859,18 +862,36 @@ $(document).ready(function () {
 
     // Check Email
     $('input[name="email"]').on('blur', function () {
-        let email = $(this).val();
-        if (email) {
-            checkUnique('email', email, $(this));
+        let email = $(this).val().trim();
+        $(this).nextAll('.unique-error, .faculty-error-msg').remove(); // Clear all error messages
+        if (!email) return;
+        // Strict email format: must contain exactly one @, with text before and a valid domain after
+        let emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            $(this).addClass('is-invalid');
+            $(this).after('<small class="text-danger unique-error">Please enter a valid email address (e.g. name@example.com)</small>');
+            return;
         }
+        $(this).removeClass('is-invalid');
+        checkUnique('email', email, $(this));
     });
 
     // Check Mobile
     $('input[name="mobile"]').on('blur', function () {
-        let mobile = $(this).val();
-        if (mobile) {
-            checkUnique('mobile', mobile, $(this));
+        let mobile = $(this).val().trim();
+        $(this).nextAll('.unique-error, .faculty-error-msg').remove(); // Clear all error messages
+        if (!mobile) return;
+        // Must be exactly 10 digits
+        let mobileRegex = /^[0-9]{10}$/;
+        if (!mobileRegex.test(mobile)) {
+            $(this).addClass('is-invalid mobile-duplicate');
+            $(this).after('<small class="text-danger unique-error">Mobile number must be exactly 10 digits</small>');
+            isMobileDuplicate = true;
+            return;
         }
+        $(this).removeClass('is-invalid mobile-duplicate');
+        isMobileDuplicate = false;
+        checkUnique('mobile', mobile, $(this));
     });
 
     /*
@@ -894,33 +915,24 @@ $(document).ready(function () {
                 value: value
             },
             success: function (response) {
-                inputElement.next('.unique-error').remove(); // remove old messages
-                 inputElement.removeClass('mobile-duplicate');
+                inputElement.nextAll('.unique-error, .faculty-error-msg').remove(); // remove all error/success messages
+                inputElement.removeClass('mobile-duplicate is-invalid');
 
                 if (response.exists) {
                     inputElement.after('<small class="text-danger unique-error">' + response.message + '</small>');
-                   // inputElement.addClass('is-invalid');
-                     inputElement.addClass('is-invalid mobile-duplicate');
+                    inputElement.addClass('is-invalid mobile-duplicate');
 
-			/*if (type === 'mobile') {
-                    isMobileDuplicate = true;
-                    $("#saveFacultyForm").prop('disabled', true);
-                }
-				*/
-				if (type === 'mobile') {
-					isMobileDuplicate = true;
-					toastr.warning("Mobile exists. You can update other details.");
-				}
-
+                    if (type === 'mobile') {
+                        isMobileDuplicate = true;
+                        toastr.warning("Mobile exists. You can update other details.");
+                    }
                 } else {
                     inputElement.after('<small class="text-success unique-error">' + response.message + '</small>');
                     inputElement.removeClass('is-invalid');
 
                     if (type === 'mobile') {
-                    isMobileDuplicate = false;
-                    $("#saveFacultyForm").prop('disabled', false);
-
-
+                        isMobileDuplicate = false;
+                        $("#saveFacultyForm").prop('disabled', false);
                     }
                 }
             }

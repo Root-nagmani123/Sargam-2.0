@@ -7,6 +7,11 @@
     <title>Sale Voucher Report - OFFICER'S MESS LBSNAA MUSSOORIE</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
+        html, body {
+            height: auto !important;
+            min-height: 0 !important;
+        }
+
         body {
             font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
             font-size: 13px;
@@ -16,16 +21,39 @@
 
         .print-page-wrap {
             page-break-after: auto;
+            break-inside: auto;
+            page-break-inside: auto;
         }
 
         .print-page-break {
             page-break-after: always;
+            break-after: page;
         }
 
         .print-grand-total-block {
             display: block;
             margin-top: 12px;
             page-break-inside: avoid;
+            break-inside: avoid;
+        }
+
+        /* Long tables: allow split (avoid was causing blank pages) */
+        .print-slip-section {
+            page-break-inside: auto;
+            break-inside: auto;
+            margin-bottom: 14px;
+        }
+
+        .report-buyer-client-banner {
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+
+        .print-slip-table thead {
+            display: table-header-group;
+        }
+        .print-slip-table tfoot {
+            display: table-footer-group;
         }
 
         .report-mess-title {
@@ -240,8 +268,14 @@
             }
 
             .print-slip-section {
-                page-break-inside: avoid;
+                page-break-inside: auto;
+                break-inside: auto;
                 margin-bottom: 14px;
+            }
+
+            .report-buyer-client-banner {
+                page-break-inside: avoid;
+                break-inside: avoid;
             }
 
             .print-grand-total-block {

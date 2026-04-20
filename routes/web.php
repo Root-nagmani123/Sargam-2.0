@@ -325,6 +325,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('details/{id}', 'getFacultyDetails')->name('details');
         Route::get('download/{id}', 'downloadPDF')->name('download');
 
+        Route::post('generate-faculty-code', 'generateFacultyCodeAjax')->name('generate.code');
         // Static view
         Route::get('print-blank', function () {
             return view('admin.faculty.blank-print');
@@ -531,6 +532,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/export', 'export')->name('export');
         Route::get('/create', 'create')->name('create');
+        Route::get('/lookup/by-id-card', 'lookupByIdCard')->name('lookup.by_id_card');
         Route::post('/store', 'store')->name('store');
         Route::get('/show/{id}', 'show')->name('show');
         Route::get('/edit/{id}', 'edit')->name('edit');
@@ -645,16 +647,18 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
     Route::prefix('admin/duplicate-idcard')->name('admin.duplicate_idcard.')->controller(DuplicateIDCardRequestController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/create', 'create')->name('create');
-        Route::get('/{id}/edit', 'edit')->name('edit');
-        Route::post('/store', 'store')->name('store');
-        Route::post('/{id}/update', 'update')->name('update');
         Route::get('/lookup/by-card-number', 'lookupByCardNumber')->name('lookup');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/{id}/edit', 'edit')->name('edit');
+        Route::post('/{id}/update', 'update')->name('update');
+        Route::delete('/{id}', 'destroy')->name('destroy');
     });
 
     // Family ID Card Request Routes (admin/family-idcard)
     Route::prefix('admin/family-idcard')->name('admin.family_idcard.')->controller(FamilyIDCardRequestController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/create', 'create')->name('create');
+        Route::get('/lookup-employee-by-id', 'lookupEmployeeByIdForCreate')->name('lookup.employee_by_id');
         Route::post('/store', 'store')->name('store');
         Route::get('/export', 'export')->name('export');
         Route::get('/members/{id}', 'members')->name('members');
@@ -963,7 +967,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/mark-all-read', 'markAllAsRead')->name('mark-all-read');
     });
 
-    //change password work here 
+    //change password work here
     Route::get('/change_password', [UserController::class, 'change_password'])->name('admin.password.change_password');
 
     Route::post('/submit_change_password', [UserController::class, 'submit_change_password'])->name('admin.password.submit_change_password');

@@ -1095,7 +1095,7 @@ class EmployeeIDCardApprovalController extends Controller
                 ? DB::table('department_master')->whereIn('pk', $deptPks)->pluck('department_name', 'pk')->all()
                 : [];
             foreach ($dupContRowsForPage as $r) {
-                $requestedSection = null;
+            $requestedSection = null;
                 if (! empty($r->section) && isset($deptMap[(int) $r->section])) {
                     $requestedSection = $deptMap[(int) $r->section];
                 }
@@ -1107,24 +1107,24 @@ class EmployeeIDCardApprovalController extends Controller
                 };
                 $applyKey = (string) ($r->emp_id_apply ?? '');
                 $dupContDtoByApply[$applyKey] = (object) [
-                    'id' => 'c-' . $r->emp_id_apply,
-                    'employee_type' => 'Contractual Employee',
-                    'name' => $r->employee_name ?? '--',
-                    'designation' => $r->designation_name ?? '--',
-                    'father_name' => $r->father_name ?? null,
-                    'id_card_number' => $r->id_card_no,
+                'id' => 'c-' . $r->emp_id_apply,
+                'employee_type' => 'Contractual Employee',
+                'name' => $r->employee_name ?? '--',
+                'designation' => $r->designation_name ?? '--',
+                'father_name' => $r->father_name ?? null,
+                'id_card_number' => $r->id_card_no,
                     'card_type' => $dupContCardLabels[$applyKey] ?? '--',
-                    'date_of_birth' => $r->employee_dob,
-                    'blood_group' => $r->blood_group,
-                    'mobile_number' => $r->mobile_no,
-                    'telephone_number' => null,
-                    'id_card_valid_from' => $r->card_valid_from,
-                    'id_card_valid_upto' => $r->card_valid_to,
-                    'photo' => $r->id_photo_path,
-                    'created_at' => isset($r->created_date) ? \Carbon\Carbon::parse($r->created_date) : null,
-                    'requested_by' => null,
-                    'requested_section' => $requestedSection,
-                    'request_type' => 'duplicate',
+                'date_of_birth' => $r->employee_dob,
+                'blood_group' => $r->blood_group,
+                'mobile_number' => $r->mobile_no,
+                'telephone_number' => null,
+                'id_card_valid_from' => $r->card_valid_from,
+                'id_card_valid_upto' => $r->card_valid_to,
+                'photo' => $r->id_photo_path,
+                'created_at' => isset($r->created_date) ? \Carbon\Carbon::parse($r->created_date) : null,
+                'requested_by' => null,
+                'requested_section' => $requestedSection,
+                'request_type' => 'duplicate',
                     'status' => $status,
                 ];
             }
@@ -1976,6 +1976,16 @@ class EmployeeIDCardApprovalController extends Controller
                         'modified_date' => now()->format('Y-m-d H:i:s'),
                     ]);
                 DB::table('security_con_oth_id_apply')->where('pk', $contPk)->update(['id_status' => 2]);
+
+                $rowFinal = DB::table('security_con_oth_id_apply')->where('pk', $contPk)->first();
+                $idCardNo = trim((string) ($rowFinal->id_card_no ?? ''));
+                if ($idCardNo !== '' && $rowFinal) {
+                    $benef = IdCardSecurityMapper::resolveContractualBeneficiaryEmployee($rowFinal);
+                    if ($benef && ! empty($benef->pk)) {
+                        DB::table('employee_master')->where('pk', (int) $benef->pk)->update(['emp_id' => $idCardNo]);
+                    }
+                }
+
                 DB::commit();
             } catch (\Throwable $e) {
                 DB::rollBack();
@@ -1999,9 +2009,9 @@ class EmployeeIDCardApprovalController extends Controller
             // return redirect()->route('admin.security.employee_idcard_approval.approval3')
             //     ->with('success', 'Contractual ID Card request approved at Level 3. ID card is now fully approved.');
 
-            return redirect()->route('admin.security.employee_idcard_approval.approval3')
+                    return redirect()->route('admin.security.employee_idcard_approval.approval3')
                 ->with('success', 'Contractual ID Card request approved successfully at final level.');
-        }
+    }
 
         // Permanent regular ID Card request (emp_id_apply string, primary key on security_parm_id_apply)
         $row = SecurityParmIdApply::with('employee')->findOrFail($empIdApply);
@@ -2052,9 +2062,22 @@ class EmployeeIDCardApprovalController extends Controller
             // Do not block core approval if logging fails
         }
 
-        // Final approval: mark ID card as Approved
-        $row->id_status = SecurityParmIdApply::ID_STATUS_APPROVED;
-        $row->save();
+        // Final approval: mark ID card as Approved and sync generated number to employee_master.emp_id
+        DB::beginTransaction();
+        try {
+            $row->id_status = SecurityParmIdApply::ID_STATUS_APPROVED;
+            $row->save();
+            $idCardNo = trim((string) ($row->id_card_no ?? ''));
+            if ($idCardNo !== '' && ! empty($row->employee_master_pk)) {
+                DB::table('employee_master')
+                    ->where('pk', (int) $row->employee_master_pk)
+                    ->update(['emp_id' => $idCardNo]);
+            }
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Unable to complete final approval. Please try again.');
+        }
 
         return redirect()->route('admin.security.employee_idcard_approval.approval3')
             ->with('success', 'Request approved successfully at Level 3. ID card is now fully approved.');

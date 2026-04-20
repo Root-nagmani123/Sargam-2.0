@@ -8,11 +8,15 @@ use Illuminate\Http\Request;
 use App\Models\FrontPage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
 use App\Models\PathPage;
 use App\Models\PathPageFaq;
 use App\Models\ExemptionCategory;
 use App\Models\FoundationCourseStatus;
+use App\Models\User;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
+use Illuminate\Http\UploadedFile;
 use Carbon\Carbon;
 
 
@@ -256,39 +260,219 @@ class FrontPageController extends Controller
         $regName = trim($request->reg_name);
 
         // Fetch user record from user_credentials
-        $user = DB::table('user_credentials')
-            ->where('user_name', $regName)
+        $user = User::where('user_name', $regName)
             ->where('Active_inactive', 1)
             ->first();
 
         // Check if user exists and password matches
         if ($user && Hash::check($request->reg_password, $user->jbp_password)) {
-            // You may store user session here (optional)
+
+            // Log in via Laravel Auth
+            Auth::login($user);
+
+            // Find the first visible form
             $form = DB::table('local_form')
                 ->where('visible', 1)
                 ->orderBy('id')
                 ->first();
 
             if (!$form) {
-                return back()->withErrors(['form_error' => 'No active form available.'])->withInput();
+                return redirect()->route('fc.choose.path')->with('success', 'Login successful!');
             }
 
-            // Step 5: Store user session (optional)
-            session([
-                'fc_user_id' => $user->pk,
-                'fc_user_name' => $user->user_name
-            ]);
-
-            // Step 6: Redirect with form id
-            // return redirect()->route('forms.show', $form->id) // Assuming you have a route named 'forms.show'
-            //     ->with('success', 'Login successful!');
-            // return redirect()->route('fc.register_form')->with('success', 'Login successful!');
-            return redirect()->route('forms.show', ['formId' => 30])->with('success', 'Login successful!');
+            // Redirect to the form page
+            return redirect()->route('forms.show', ['formId' => $form->id])->with('success', 'Login successful!');
         }
 
 
         // If invalid credentials
         return back()->withErrors(['login' => 'Invalid username or password.'])->withInput();
+    }
+
+    // FC Form Show (session-based auth for FC users)
+    public function fcFormShow($formId)
+    {
+        $form = DB::table('local_form')->where('id', $formId)->first();
+        if (!$form) abort(404, 'Form not found');
+
+        $parentFormId = ($form->parent_id && $form->parent_id != 0) ? $form->parent_id : $form->id;
+
+        $childForms = DB::table('local_form')
+            ->where('parent_id', $parentFormId)
+            ->where('visible', 1)
+            ->orderBy('sortorder')
+            ->get();
+
+        if (($form->parent_id == 0 || $form->parent_id == null) && $childForms->isNotEmpty()) {
+            return redirect()->route('fc.form.show', $childForms->first()->id);
+        }
+
+        $fields = DB::table('form_data')
+            ->where('formid', $form->id)
+            ->orderBy('id')
+            ->orderBy('row_index')
+            ->orderBy('col_index')
+            ->get();
+
+        $fieldsBySection = [];
+        $gridFields = [];
+        foreach ($fields as $field) {
+            if ($field->format === 'table') {
+                $fieldsBySection[$field->section_id][$field->row_index][$field->col_index] = $field;
+            } else {
+                $gridFields[$field->section_id][] = $field;
+            }
+        }
+
+        $sections = DB::table('form_sections')
+            ->where('formid', $form->id)
+            ->get();
+
+        $headersBySection = [];
+        foreach ($fields as $field) {
+            if ($field->format === 'table') {
+                $headersBySection[$field->section_id][$field->col_index] = $field->header;
+            }
+        }
+
+        $fcUserId = session('fc_user_id');
+        $submissions = DB::table('fc_registration_master')
+            ->where('formid', $form->id)
+            ->where('uid', $fcUserId)
+            ->get()
+            ->keyBy('fieldname');
+
+        $data = DB::table('registration_logo')->first();
+        $fcMode = true;
+
+        return view('admin.forms.show', compact(
+            'form', 'data', 'childForms', 'sections',
+            'fieldsBySection', 'gridFields', 'headersBySection',
+            'submissions', 'fcMode'
+        ));
+    }
+
+    // FC Form Submit (session-based auth for FC users)
+    public function fcFormSubmit(Request $request, $formId)
+    {
+        try {
+            $userId = session('fc_user_id');
+            $timestamp = now()->timestamp;
+
+            $existingSubmission = DB::table('fc_registration_master')
+                ->where('formid', $formId)
+                ->where('uid', $userId)
+                ->first();
+
+            $dynamicFields = [];
+            foreach ($request->all() as $key => $value) {
+                if (Str::startsWith($key, 'field_')) {
+                    if ($value instanceof UploadedFile) {
+                        $request->validate([$key => 'file|mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx|max:5120']);
+                        $filename = time() . '_' . $value->getClientOriginalName();
+                        $path = $value->storeAs('form-uploads', $filename, 'public');
+                        $dynamicFields[Str::replaceFirst('field_', '', $key)] = $path;
+                    } elseif (is_array($value)) {
+                        $dynamicFields[Str::replaceFirst('field_', '', $key)] = implode(',', $value);
+                    } else {
+                        $dynamicFields[Str::replaceFirst('field_', '', $key)] = $value;
+                    }
+                }
+            }
+
+            if (!empty($dynamicFields)) {
+                $dynamicFields['formid'] = $formId;
+                $dynamicFields['uid'] = $userId;
+                $dynamicFields['timecreated'] = $timestamp;
+
+                if ($existingSubmission) {
+                    DB::table('fc_registration_master')
+                        ->where('formid', $formId)
+                        ->where('uid', $userId)
+                        ->update($dynamicFields);
+                } else {
+                    DB::table('fc_registration_master')->insert($dynamicFields);
+                }
+            }
+
+            $tableDataInserted = false;
+            $headers_table_data_values = [];
+            foreach ($request->all() as $key => $value) {
+                if (preg_match('/^header_(\d+)_(\d+)$/', $key, $matches)) {
+                    $sectionId = (int)$matches[1];
+                    $colIndex = (int)$matches[2];
+                    $headers_table_data_values[$sectionId]['headers'][$colIndex] = $value;
+                }
+                if (preg_match('/^table_(\d+)_(\d+)_(\d+)$/', $key, $matches)) {
+                    $sectionId = (int)$matches[1];
+                    $rowIndex = (int)$matches[2];
+                    $colIndex = (int)$matches[3];
+                    $headers_table_data_values[$sectionId]['values'][$rowIndex][$colIndex] = $value;
+                }
+            }
+
+            DB::table('form_submission_tabledata')
+                ->where('formid', $formId)
+                ->where('uid', $userId)
+                ->delete();
+
+            foreach ($headers_table_data_values as $sectionId => $sectionData) {
+                $headers = $sectionData['headers'] ?? [];
+                $values = $sectionData['values'] ?? [];
+                foreach ($values as $rowIndex => $cols) {
+                    foreach ($cols as $colIndex => $columnValue) {
+                        $columnKey = $headers[$colIndex] ?? 'column_' . $colIndex;
+                        $fieldType = 'text';
+                        $filePath = null;
+                        $valueKey = "table_{$sectionId}_{$rowIndex}_{$colIndex}";
+
+                        if ($request->hasFile($valueKey)) {
+                            $filePath = $request->file($valueKey)->store('form-uploads' . $formId . $userId, 'public');
+                            $fieldType = 'file';
+                            $columnValue = null;
+                        } elseif (is_array($columnValue)) {
+                            $fieldType = 'checkbox';
+                            $columnValue = implode(',', array_map('trim', $columnValue));
+                        } elseif (in_array($columnValue, ['on', 'off', '1', '0'], true)) {
+                            $fieldType = 'checkbox';
+                            $columnValue = ($columnValue === 'on' || $columnValue === '1') ? 1 : 0;
+                        } elseif (preg_match('/^\d{4}-\d{2}-\d{2}$/', $columnValue)) {
+                            $fieldType = 'date';
+                        } elseif (filter_var($columnValue, FILTER_VALIDATE_EMAIL)) {
+                            $fieldType = 'email';
+                        } elseif (in_array($columnValue, ['male', 'female', 'other'], true)) {
+                            $fieldType = 'radio';
+                        } elseif (strlen($columnValue) > 100) {
+                            $fieldType = 'textarea';
+                        }
+
+                        DB::table('form_submission_tabledata')->insert([
+                            'formid' => $formId,
+                            'uid' => $userId,
+                            'section_id' => $sectionId,
+                            'row_index' => $rowIndex,
+                            'col_index' => $colIndex,
+                            'column_key' => $columnKey,
+                            'field_type' => $fieldType,
+                            'column_value' => $columnValue,
+                            'file_path' => $filePath,
+                            'timecreated' => $timestamp,
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                        $tableDataInserted = true;
+                    }
+                }
+            }
+
+            if (!$dynamicFields && !$tableDataInserted) {
+                return redirect()->back()->with('error', 'Nothing to submit.');
+            }
+
+            return redirect()->back()->with('success', 'Form submitted successfully!');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'An error occurred while submitting the form. Please try again later.');
+        }
     }
 
     //choose path

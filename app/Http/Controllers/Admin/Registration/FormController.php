@@ -23,7 +23,7 @@ use Illuminate\Http\UploadedFile;
 
 class FormController extends Controller
 {
-    public function index(Request $request)
+     public function index(Request $request)
     {
         $query = DB::table('local_form')->where('visible', 1);
 
@@ -35,7 +35,7 @@ class FormController extends Controller
         $forms = $query
             ->orderBy('parent_id')
             ->orderBy('sortorder')
-            ->paginate(10);
+            ->get();
 
 
         // Group forms by parent_id (null or 0 for parents)
@@ -44,7 +44,9 @@ class FormController extends Controller
         });
         $forms_parent = DB::table('local_form')
             ->where('visible', 1)
-            ->whereNull('parent_id') // Only parent forms
+            ->where(function ($q) {
+                $q->whereNull('parent_id')->orWhere('parent_id', 0);
+            })
             ->orderBy('name')
             ->get();
 
@@ -103,7 +105,14 @@ class FormController extends Controller
             ->whereNull('parent_id')  // ONLY parent forms
             ->orderBy('name')
             ->get();
-        return view('admin.registration.template_create', compact('forms'));
+
+        // Pre-fill from selected template
+        $template = null;
+        if (request()->has('template')) {
+            $template = DB::table('local_form')->where('id', request()->query('template'))->first();
+        }
+
+        return view('admin.registration.template_create', compact('forms', 'template'));
     }
 
 
@@ -202,18 +211,42 @@ class FormController extends Controller
     // }
     public function cloneForm($templateId, Request $request)
     {
+        // Phase 1: Collect the entire tree of forms to clone BEFORE any inserts
+        // This prevents infinite loops when the cloned form becomes a child of the template
+        $formsToClone = [];
+        $collectStack = [$templateId];
 
-        $stack = [];
+        while (!empty($collectStack)) {
+            $formId = array_pop($collectStack);
+            if (isset($formsToClone[$formId])) continue; // already collected
+
+            $form = DB::table('local_form')->where('id', $formId)->first();
+            if (!$form) continue;
+
+            $formsToClone[$formId] = $form;
+
+            $children = DB::table('local_form')->where('parent_id', $formId)->pluck('id');
+            foreach ($children as $childId) {
+                $collectStack[] = $childId;
+            }
+        }
+
+        // Phase 2: Clone all collected forms
         $map = []; // Map old form IDs to new ones
+        $stack = [];
 
-        // Push root form first
         $stack[] = [
             'formId' => $templateId,
             'newParentId' => null,
             'isRoot' => true
         ];
+
         DB::beginTransaction();
         $currentSortOrder = DB::table('local_form')->max('sortorder') ?? 0;
+
+        // Use the parent form's dates for all children
+        $rootCourseSdate = $request->course_sdate ?? $formsToClone[$templateId]->course_sdate;
+        $rootCourseEdate = $request->course_edate ?? $formsToClone[$templateId]->course_edate;
 
         while (!empty($stack)) {
             $current = array_pop($stack);
@@ -221,29 +254,24 @@ class FormController extends Controller
             $newParentId = $current['newParentId'];
             $isRoot = $current['isRoot'];
 
-            $form = DB::table('local_form')->where('id', $formId)->first();
+            $form = $formsToClone[$formId] ?? null;
             if (!$form) continue;
 
-            // Increment sort order before inserting
             $currentSortOrder++;
 
-            // Handle names and values (only override for root)
             $name         = $isRoot ? ($request->name ?? $form->name) : $form->name;
             $shortname    = $isRoot ? ($request->shortname ?? $form->shortname) : $form->shortname;
             $description  = $isRoot ? ($request->description ?? $form->description) : $form->description;
-            $course_sdate = $isRoot ? ($request->course_sdate ?? $form->course_sdate) : $form->course_sdate;
-            $course_edate = $isRoot ? ($request->course_edate ?? $form->course_edate) : $form->course_edate;
             $visible      = $isRoot ? ($request->has('visible') ? 1 : $form->visible) : $form->visible;
-            $parent_id    = $request->parent_id;
+            $parent_id    = $isRoot ? ($request->parent_id ?? null) : $newParentId;
 
-            // Insert cloned form
             $newFormId = DB::table('local_form')->insertGetId([
-                'parent_id'    => $parent_id ?? null,
+                'parent_id'    => $parent_id,
                 'name'         => $name,
                 'shortname'    => $shortname,
                 'description'  => $description,
-                'course_sdate' => $course_sdate,
-                'course_edate' => $course_edate,
+                'course_sdate' => $rootCourseSdate,
+                'course_edate' => $rootCourseEdate,
                 'visible'      => $visible,
                 'sortorder'    => $currentSortOrder,
                 'created_at'   => now(),
@@ -291,22 +319,21 @@ class FormController extends Controller
                 ]);
             }
 
-            // Push children forms to stack (to process next)
-            $children = DB::table('local_form')->where('parent_id', $formId)->get();
-            foreach ($children as $child) {
-                $stack[] = [
-                    'formId' => $child->id,
-                    // 'newParentId' => $newFormId,
-                    'newParentId' => $parent_id ?? null,
-                    'isRoot' => false
-                ];
+            // Push only pre-collected children to stack
+            foreach ($formsToClone as $fId => $f) {
+                if ($f->parent_id == $formId && !isset($map[$fId])) {
+                    $stack[] = [
+                        'formId' => $fId,
+                        'newParentId' => $newFormId,
+                        'isRoot' => false
+                    ];
+                }
             }
 
-            // Map old ID → new ID
             $map[$formId] = $newFormId;
         }
         DB::commit();
-        return $map[$templateId] ?? null; // return the cloned root form ID
+        return $map[$templateId] ?? null;
     }
 
     public function template_store(Request $request)
@@ -314,16 +341,15 @@ class FormController extends Controller
 
         try {
             $templateId = $request->input('template_id');
-            // dump($templateId);
             if (!$templateId) {
-                throw new \Exception("Template ID not provided.");
+                throw new \Exception("Template ID not provided. Please select a template first.");
             }
 
             $response = $this->cloneForm($templateId, $request);
             return redirect()->route('forms.index')->with('success', 'Form and subforms cloned successfully!');
         } catch (\Exception $e) {
-            // DB::rollBack();
-            return back()->withErrors(['error' => $e->getMessage()]);
+            DB::rollBack();
+            return back()->withErrors(['error' => $e->getMessage()])->withInput();
         }
     }
 
@@ -584,6 +610,11 @@ class FormController extends Controller
             ->orderBy('sortorder')
             ->get();
 
+        // If this is a parent form and it has children, redirect to first child
+        if (($form->parent_id == 0 || $form->parent_id == null) && $childForms->isNotEmpty()) {
+            return redirect()->route('forms.show', $childForms->first()->id);
+        }
+
         // Check fields for the current form
         $fields = DB::table('form_data')
             ->where('formid', $form->id)
@@ -591,21 +622,6 @@ class FormController extends Controller
             ->orderBy('row_index')
             ->orderBy('col_index')
             ->get();
-
-        // If this is a parent form with no fields, but children exist,
-        // switch to first child form and load its fields instead
-        if (($form->parent_id == 0 || $form->parent_id == null) && $fields->isEmpty() && $childForms->isNotEmpty()) {
-            // Switch form to first child
-            $form = $childForms->first();
-
-            // Reload fields for first child form
-            $fields = DB::table('form_data')
-                ->where('formid', $form->id)
-                ->orderBy('id')
-                ->orderBy('row_index')
-                ->orderBy('col_index')
-                ->get();
-        }
 
         // Group fields for display (table and grid)
         $fieldsBySection = [];
@@ -825,9 +841,12 @@ class FormController extends Controller
     {
         $form = DB::table('local_form')->where('id', $id)->first();
 
-        if (!$form) return back()->with('error', 'Form not found.');
+        if (!$form) {
+            return response()->json(['success' => false, 'message' => 'Form not found.'], 404);
+        }
 
         $above = DB::table('local_form')
+            ->where('parent_id', $form->parent_id)
             ->where('sortorder', '<', $form->sortorder)
             ->orderByDesc('sortorder')
             ->first();
@@ -839,16 +858,19 @@ class FormController extends Controller
             });
         }
 
-        return back()->with('success', 'Form moved up successfully.');
+        return response()->json(['success' => true, 'message' => 'Form moved up successfully.']);
     }
 
     public function moveDown($id)
     {
         $form = DB::table('local_form')->where('id', $id)->first();
 
-        if (!$form) return back()->with('error', 'Form not found.');
+        if (!$form) {
+            return response()->json(['success' => false, 'message' => 'Form not found.'], 404);
+        }
 
         $below = DB::table('local_form')
+            ->where('parent_id', $form->parent_id)
             ->where('sortorder', '>', $form->sortorder)
             ->orderBy('sortorder')
             ->first();
@@ -860,7 +882,7 @@ class FormController extends Controller
             });
         }
 
-        return back()->with('success', 'Form moved down successfully.');
+        return response()->json(['success' => true, 'message' => 'Form moved down successfully.']);
     }
 
 
