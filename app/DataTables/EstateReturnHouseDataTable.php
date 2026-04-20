@@ -3,7 +3,10 @@
 namespace App\DataTables;
 
 use Illuminate\Database\Query\Builder as QueryBuilder;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Schema;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
@@ -13,6 +16,135 @@ use Yajra\DataTables\Facades\DataTables;
 
 class EstateReturnHouseDataTable extends DataTable
 {
+    /**
+     * Server-side JSON (ESTATE_UPDATE_METER_READING_CACHE_*). Keys: estate_rh:v1:…
+     */
+    public function ajax(): JsonResponse
+    {
+        $draw = (int) $this->request()->input('draw', 0);
+        $fingerprint = $this->returnHouseDataTableCacheFingerprint();
+        $cacheKey = 'estate_rh:v1:' . md5(json_encode($fingerprint));
+
+        $payload = $this->rememberEstateListingCache($cacheKey, function () {
+            $resp = parent::ajax();
+            $data = $resp->getData(true);
+            if (! is_array($data)) {
+                return ['__passthrough' => true, 'body' => $resp->getContent()];
+            }
+            unset($data['draw']);
+
+            return $data;
+        });
+
+        if (isset($payload['__passthrough']) && $payload['__passthrough']) {
+            $decoded = json_decode((string) ($payload['body'] ?? ''), true);
+
+            return is_array($decoded)
+                ? new JsonResponse(array_merge($decoded, ['draw' => $draw]))
+                : parent::ajax();
+        }
+
+        $payload['draw'] = $draw;
+
+        return new JsonResponse($payload);
+    }
+
+    /**
+     * @template T
+     *
+     * @param  callable(): T  $callback
+     * @return T
+     */
+    private function rememberEstateListingCache(string $cacheKey, callable $callback)
+    {
+        $enabled = ! in_array(strtolower((string) env('ESTATE_UPDATE_METER_READING_CACHE_ENABLED', 'true')), ['0', 'false', 'no', 'off'], true);
+        $ttl = max(30, (int) env('ESTATE_UPDATE_METER_READING_CACHE_SECONDS', 300));
+        $storeName = (string) env('ESTATE_UPDATE_METER_READING_CACHE_STORE', env('ESTATE_BILL_REPORT_GRID_CACHE_STORE', 'redis'));
+        $repository = array_key_exists($storeName, config('cache.stores', []))
+            ? \Illuminate\Support\Facades\Cache::store($storeName)
+            : \Illuminate\Support\Facades\Cache::store(config('cache.default'));
+        if (! $enabled) {
+            return $callback();
+        }
+        try {
+            return $repository->remember($cacheKey, $ttl, $callback);
+        } catch (\Throwable $e) {
+            Log::warning('Return house DataTable: cache store failed, using DB only.', [
+                'store' => $storeName,
+                'message' => $e->getMessage(),
+            ]);
+
+            return $callback();
+        }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function returnHouseDataTableCacheFingerprint(): array
+    {
+        $r = $this->request();
+        $columns = $r->input('columns', []);
+        $colSearch = [];
+        if (is_array($columns)) {
+            foreach ($columns as $c) {
+                if (! is_array($c)) {
+                    continue;
+                }
+                $colSearch[] = [
+                    'data' => $c['data'] ?? '',
+                    'sv' => trim((string) data_get($c, 'search.value', '')),
+                ];
+            }
+        }
+
+        $searchRaw = '';
+        if ($r && is_array($r->get('search'))) {
+            $searchRaw = strtolower((string) ($r->get('search')['value'] ?? ''));
+        }
+
+        $user = Auth::user();
+        $isPrivileged = hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin');
+        $empScope = ['t' => 'all'];
+        if (! $isPrivileged && $user) {
+            $ids = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null) ?: [];
+            $ids = array_values(array_unique(array_map('intval', $ids)));
+            sort($ids, SORT_NUMERIC);
+            $empScope = ['t' => 'emp', 'ids' => $ids];
+        } elseif (! $isPrivileged) {
+            $empScope = ['t' => 'emp', 'ids' => []];
+        }
+
+        $metaMtime = 0;
+        $metaFile = 'estate/return-house-meta.json';
+        if (Storage::disk('local')->exists($metaFile)) {
+            try {
+                $metaMtime = (int) Storage::disk('local')->lastModified($metaFile);
+            } catch (\Throwable $e) {
+                $metaMtime = 0;
+            }
+        }
+
+        return [
+            'start' => (int) $r->input('start', 0),
+            'len' => $r->input('length', 10),
+            'q' => $searchRaw,
+            'order' => $r->input('order', []),
+            'cols' => $colSearch,
+            'priv' => $isPrivileged ? 1 : 0,
+            'emp' => $empScope,
+            'meta' => $metaMtime,
+            'sch' => [
+                'ust_ut' => Schema::hasColumn('estate_unit_sub_type_master', 'estate_unit_type_master_pk') ? 1 : 0,
+                'epd_rhs' => Schema::hasColumn('estate_possession_details', 'return_home_status') ? 1 : 0,
+                'epd_rem' => Schema::hasColumn('estate_possession_details', 'remarks') ? 1 : 0,
+                'epo_up' => Schema::hasColumn('estate_possession_other', 'upload_document') ? 1 : 0,
+                'epo_nc' => Schema::hasColumn('estate_possession_other', 'noc_document') ? 1 : 0,
+                'epo_rem' => Schema::hasColumn('estate_possession_other', 'remarks') ? 1 : 0,
+            ],
+        ];
+    }
+
     public function dataTable(QueryBuilder $query)
     {
         $meta = $this->returnHouseMetaByPk();
