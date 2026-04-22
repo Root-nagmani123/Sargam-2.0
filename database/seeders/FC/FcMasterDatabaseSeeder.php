@@ -1,10 +1,17 @@
 <?php
 
-namespace Database\Seeders;
+namespace Database\Seeders\FC;
 
+use Database\Seeders\MctpTravelModeMasterSeeder;
+use Database\Seeders\SportsMasterSeeder;
+use Database\Seeders\TravelTypeMasterSeeder;
 use Illuminate\Database\Seeder;
 
-class DatabaseSeeder extends Seeder
+/**
+ * Runs all FC master-data seeders under database/seeders/FC/.
+ * Invoke: php artisan db:seed --class=Database\\Seeders\\FC\\FcMasterDatabaseSeeder --force
+ */
+class FcMasterDatabaseSeeder extends Seeder
 {
     public function run(): void
     {
