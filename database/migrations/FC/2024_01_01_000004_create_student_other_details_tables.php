@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\MigrationSchema;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -9,7 +10,7 @@ return new class extends Migration
     public function up(): void
     {
         // ─── Qualification Details ───────────────────────────────────
-        Schema::create('student_master_qualification_details', function (Blueprint $table) {
+        MigrationSchema::createIfMissing('student_master_qualification_details', function (Blueprint $table) {
             $table->id();
             $table->string('username', 100);
             $table->unsignedBigInteger('qualification_id')->nullable();
@@ -24,7 +25,7 @@ return new class extends Migration
         });
 
         // ─── Higher Educational Details ──────────────────────────────
-        Schema::create('student_master_higher_educational_details', function (Blueprint $table) {
+        MigrationSchema::createIfMissing('student_master_higher_educational_details', function (Blueprint $table) {
             $table->id();
             $table->string('username', 100);
             $table->string('degree_type', 100)->nullable();           // PG / PhD / PG Diploma etc.
@@ -36,7 +37,7 @@ return new class extends Migration
         });
 
         // ─── Employment Details ──────────────────────────────────────
-        Schema::create('student_master_employment_details', function (Blueprint $table) {
+        MigrationSchema::createIfMissing('student_master_employment_details', function (Blueprint $table) {
             $table->id();
             $table->string('username', 100);
             $table->string('organisation_name', 300)->nullable();
@@ -51,7 +52,7 @@ return new class extends Migration
         });
 
         // ─── Spouse Details ──────────────────────────────────────────
-        Schema::create('student_master_spouse_masters', function (Blueprint $table) {
+        MigrationSchema::createIfMissing('student_master_spouse_masters', function (Blueprint $table) {
             $table->id();
             $table->string('username', 100)->unique();
             $table->string('spouse_name', 200)->nullable();
@@ -64,7 +65,7 @@ return new class extends Migration
         });
 
         // ─── Language Known ──────────────────────────────────────────
-        Schema::create('student_master_language_knowns', function (Blueprint $table) {
+        MigrationSchema::createIfMissing('student_master_language_knowns', function (Blueprint $table) {
             $table->id();
             $table->string('username', 100);
             $table->unsignedBigInteger('language_id')->nullable();
@@ -78,7 +79,7 @@ return new class extends Migration
         });
 
         // ─── Hindi Knowledge ─────────────────────────────────────────
-        Schema::create('student_knowledge_hindi_masters', function (Blueprint $table) {
+        MigrationSchema::createIfMissing('student_knowledge_hindi_masters', function (Blueprint $table) {
             $table->id();
             $table->string('username', 100)->unique();
             $table->string('medium_of_study', 100)->nullable();
@@ -89,7 +90,7 @@ return new class extends Migration
         });
 
         // ─── Hobbies & Skills ────────────────────────────────────────
-        Schema::create('student_master_hobbies_details', function (Blueprint $table) {
+        MigrationSchema::createIfMissing('student_master_hobbies_details', function (Blueprint $table) {
             $table->id();
             $table->string('username', 100)->unique();
             $table->text('hobbies')->nullable();
@@ -99,7 +100,7 @@ return new class extends Migration
         });
 
         // ─── Skill Details ───────────────────────────────────────────
-        Schema::create('student_skill_details_masters', function (Blueprint $table) {
+        MigrationSchema::createIfMissing('student_skill_details_masters', function (Blueprint $table) {
             $table->id();
             $table->string('username', 100);
             $table->string('skill_name', 200)->nullable();
@@ -109,7 +110,7 @@ return new class extends Migration
         });
 
         // ─── Academic Distinction ────────────────────────────────────
-        Schema::create('student_master_academic_distinctions', function (Blueprint $table) {
+        MigrationSchema::createIfMissing('student_master_academic_distinctions', function (Blueprint $table) {
             $table->id();
             $table->string('username', 100);
             $table->string('distinction_type', 200)->nullable();       // Gold Medal / Rank / Prize etc.
@@ -120,7 +121,7 @@ return new class extends Migration
         });
 
         // ─── Sports Fitness (Coach/Teacher) ──────────────────────────
-        Schema::create('student_sports_fitness_teach_masters', function (Blueprint $table) {
+        MigrationSchema::createIfMissing('student_sports_fitness_teach_masters', function (Blueprint $table) {
             $table->id();
             $table->string('username', 100);
             $table->unsignedBigInteger('sport_id')->nullable();
@@ -133,7 +134,7 @@ return new class extends Migration
         });
 
         // ─── Sports Training (Coach/Teacher) ─────────────────────────
-        Schema::create('student_sports_trg_teach_masters', function (Blueprint $table) {
+        MigrationSchema::createIfMissing('student_sports_trg_teach_masters', function (Blueprint $table) {
             $table->id();
             $table->string('username', 100);
             $table->unsignedBigInteger('sport_id')->nullable();
@@ -146,7 +147,7 @@ return new class extends Migration
         });
 
         // ─── Module Details ──────────────────────────────────────────
-        Schema::create('student_master_module_masters', function (Blueprint $table) {
+        MigrationSchema::createIfMissing('student_master_module_masters', function (Blueprint $table) {
             $table->id();
             $table->string('username', 100)->unique();
             $table->string('chosen_module', 100)->nullable();
@@ -155,7 +156,7 @@ return new class extends Migration
         });
 
         // ─── Student Exempted (Medical/Physical exemption) ───────────
-        Schema::create('student_master_exempted_masters', function (Blueprint $table) {
+        MigrationSchema::createIfMissing('student_master_exempted_masters', function (Blueprint $table) {
             $table->id();
             $table->string('username', 100)->unique();
             $table->tinyInteger('is_exempted')->default(0);
@@ -165,7 +166,7 @@ return new class extends Migration
         });
 
         // ─── FC Scale Master (scale of pay etc.) ─────────────────────
-        Schema::create('student_fc_scale_masters', function (Blueprint $table) {
+        MigrationSchema::createIfMissing('student_fc_scale_masters', function (Blueprint $table) {
             $table->id();
             $table->string('username', 100)->unique();
             $table->string('pay_level', 50)->nullable();
@@ -175,7 +176,7 @@ return new class extends Migration
         });
 
         // ─── Student Confirm Master ───────────────────────────────────
-        Schema::create('student_confirm_masters', function (Blueprint $table) {
+        MigrationSchema::createIfMissing('student_confirm_masters', function (Blueprint $table) {
             $table->id();
             $table->string('username', 100)->unique();
             $table->tinyInteger('declaration_accepted')->default(0);
@@ -185,7 +186,7 @@ return new class extends Migration
         });
 
         // ─── Registration Status (incomplete tracking) ────────────────
-        Schema::create('student_master_incomplet_masters', function (Blueprint $table) {
+        MigrationSchema::createIfMissing('student_master_incomplet_masters', function (Blueprint $table) {
             $table->id();
             $table->string('username', 100)->unique();
             $table->string('incomplete_reason', 500)->nullable();

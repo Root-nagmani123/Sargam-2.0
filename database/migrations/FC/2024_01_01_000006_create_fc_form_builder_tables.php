@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\MigrationSchema;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -9,7 +10,7 @@ return new class extends Migration
     public function up(): void
     {
         // Steps definition (Step 1, Step 2, Step 3, Bank, Documents)
-        Schema::create('fc_form_steps', function (Blueprint $table) {
+        MigrationSchema::createIfMissing('fc_form_steps', function (Blueprint $table) {
             $table->id();
             $table->string('step_name', 100);
             $table->string('step_slug', 50)->unique();
@@ -24,7 +25,7 @@ return new class extends Migration
         });
 
         // Fields within each step (flat, non-repeatable)
-        Schema::create('fc_form_fields', function (Blueprint $table) {
+        MigrationSchema::createIfMissing('fc_form_fields', function (Blueprint $table) {
             $table->id();
             $table->foreignId('step_id')->constrained('fc_form_steps')->cascadeOnDelete();
             $table->string('field_name', 100);
@@ -52,7 +53,7 @@ return new class extends Migration
         });
 
         // Repeatable field groups (for Step 3 sub-tabs)
-        Schema::create('fc_form_field_groups', function (Blueprint $table) {
+        MigrationSchema::createIfMissing('fc_form_field_groups', function (Blueprint $table) {
             $table->id();
             $table->foreignId('step_id')->constrained('fc_form_steps')->cascadeOnDelete();
             $table->string('group_name', 100);
@@ -67,7 +68,7 @@ return new class extends Migration
         });
 
         // Fields within repeatable groups
-        Schema::create('fc_form_group_fields', function (Blueprint $table) {
+        MigrationSchema::createIfMissing('fc_form_group_fields', function (Blueprint $table) {
             $table->id();
             $table->foreignId('group_id')->constrained('fc_form_field_groups')->cascadeOnDelete();
             $table->string('field_name', 100);

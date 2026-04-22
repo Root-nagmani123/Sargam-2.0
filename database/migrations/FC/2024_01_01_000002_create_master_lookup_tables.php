@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\MigrationSchema;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -9,7 +10,7 @@ return new class extends Migration
     public function up(): void
     {
         // Session Master (e.g. FC-2024, FC-2025)
-        Schema::create('session_masters', function (Blueprint $table) {
+        MigrationSchema::createIfMissing('session_masters', function (Blueprint $table) {
             $table->id();
             $table->string('session_name', 100);
             $table->string('session_code', 20)->unique();
@@ -19,24 +20,24 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        // Service Master (IAS, IPS, IFS, IRS, etc.)
-        // Schema::create('service_masters', function (Blueprint $table) {
-        //     $table->id();
-        //     $table->string('service_name', 100);
-        //     $table->string('service_code', 20)->unique();
-        //     $table->timestamps();
-        // });
+        // Service Master (IAS, IPS, IFS, IRS, etc.) — required before any FKs or seeders that reference it
+        MigrationSchema::createIfMissing('service_masters', function (Blueprint $table) {
+            $table->id();
+            $table->string('service_name', 100);
+            $table->string('service_code', 20)->unique();
+            $table->timestamps();
+        });
 
-        // State Master
-        // Schema::create('state_masters', function (Blueprint $table) {
-        //     $table->id();
-        //     $table->string('state_name', 100);
-        //     $table->string('state_code', 10)->unique();
-        //     $table->timestamps();
-        // });
+        // State Master — must exist before state_district_masters (FK below)
+        MigrationSchema::createIfMissing('state_masters', function (Blueprint $table) {
+            $table->id();
+            $table->string('state_name', 100);
+            $table->string('state_code', 10)->unique();
+            $table->timestamps();
+        });
 
         // State District Master
-        Schema::create('state_district_masters', function (Blueprint $table) {
+        MigrationSchema::createIfMissing('state_district_masters', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('state_id');
             $table->string('district_name', 100);
@@ -61,7 +62,7 @@ return new class extends Migration
         // });
 
         // Religion Master
-        Schema::create('religion_masters', function (Blueprint $table) {
+        MigrationSchema::createIfMissing('religion_masters', function (Blueprint $table) {
             $table->id();
             $table->string('religion_name', 100);
             $table->timestamps();
@@ -89,14 +90,14 @@ return new class extends Migration
         // });
 
         // Language Master
-        Schema::create('language_master', function (Blueprint $table) {
+        MigrationSchema::createIfMissing('language_master', function (Blueprint $table) {
             $table->id();
             $table->string('language_name', 100);
             $table->timestamps();
         });
 
         // Job Type Master
-        Schema::create('job_type_masters', function (Blueprint $table) {
+        MigrationSchema::createIfMissing('job_type_masters', function (Blueprint $table) {
             $table->id();
             $table->string('job_type_name', 100);
             $table->timestamps();
@@ -110,7 +111,7 @@ return new class extends Migration
         // });
 
         // Institute Master
-        Schema::create('institu_masters', function (Blueprint $table) {
+        MigrationSchema::createIfMissing('institu_masters', function (Blueprint $table) {
             $table->id();
             $table->string('institute_name', 200);
             $table->string('institute_code', 20)->nullable();
@@ -118,28 +119,28 @@ return new class extends Migration
         });
 
         // Subject Master
-        Schema::create('subject_masters', function (Blueprint $table) {
+        MigrationSchema::createIfMissing('subject_masters', function (Blueprint $table) {
             $table->id();
             $table->string('subject_name', 150);
             $table->timestamps();
         });
 
         // Travel Type Master
-        Schema::create('travel_type_masters', function (Blueprint $table) {
+        MigrationSchema::createIfMissing('travel_type_masters', function (Blueprint $table) {
             $table->id();
             $table->string('travel_type_name', 100);
             $table->timestamps();
         });
 
         // ECM Master (Entry Check Master)
-        Schema::create('ecm_masters', function (Blueprint $table) {
+        MigrationSchema::createIfMissing('ecm_masters', function (Blueprint $table) {
             $table->id();
             $table->string('ecm_name', 100);
             $table->timestamps();
         });
 
         // Vision Statement
-        Schema::create('vision_statements', function (Blueprint $table) {
+        MigrationSchema::createIfMissing('vision_statements', function (Blueprint $table) {
             $table->id();
             $table->text('statement');
             $table->tinyInteger('is_active')->default(1);
@@ -147,35 +148,35 @@ return new class extends Migration
         });
 
         // Cloth Size Master
-        Schema::create('student_cloth_size_masters', function (Blueprint $table) {
+        MigrationSchema::createIfMissing('student_cloth_size_masters', function (Blueprint $table) {
             $table->id();
             $table->string('size_label', 20);
             $table->timestamps();
         });
 
         // Shoes Size Master
-        Schema::create('student_shoes_size_masters', function (Blueprint $table) {
+        MigrationSchema::createIfMissing('student_shoes_size_masters', function (Blueprint $table) {
             $table->id();
             $table->string('size_label', 20);
             $table->timestamps();
         });
 
         // Sports Master
-        Schema::create('sports_masters', function (Blueprint $table) {
+        MigrationSchema::createIfMissing('sports_masters', function (Blueprint $table) {
             $table->id();
             $table->string('sport_name', 100);
             $table->timestamps();
         });
 
         // MCTP Travel Mode Master
-        Schema::create('mctp_travel_mode_masters', function (Blueprint $table) {
+        MigrationSchema::createIfMissing('mctp_travel_mode_masters', function (Blueprint $table) {
             $table->id();
             $table->string('travel_mode_name', 100);
             $table->timestamps();
         });
 
         // Pick Up Drop Type Master
-        Schema::create('pick_up_drop_type_masters', function (Blueprint $table) {
+        MigrationSchema::createIfMissing('pick_up_drop_type_masters', function (Blueprint $table) {
             $table->id();
             $table->string('type_name', 100);
             $table->timestamps();
@@ -204,8 +205,8 @@ return new class extends Migration
         // Schema::dropIfExists('category_masters');
         // Schema::dropIfExists('country_masters');
         Schema::dropIfExists('state_district_masters');
-        // Schema::dropIfExists('state_masters');
-        // Schema::dropIfExists('service_masters');
+        Schema::dropIfExists('state_masters');
+        Schema::dropIfExists('service_masters');
         Schema::dropIfExists('session_masters');
     }
 };

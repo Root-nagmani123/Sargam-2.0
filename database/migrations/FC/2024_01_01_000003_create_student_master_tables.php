@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\MigrationSchema;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -11,7 +12,7 @@ return new class extends Migration
         // ─────────────────────────────────────────────────────────────
         // STEP 1: Basic Registration (StudentMasterFirst)
         // ─────────────────────────────────────────────────────────────
-        Schema::create('student_master_firsts', function (Blueprint $table) {
+        MigrationSchema::createIfMissing('student_master_firsts', function (Blueprint $table) {
             $table->id();
             $table->string('username', 100)->unique();                 // same as jbp_users.username
             $table->string('roll_no', 50)->nullable();
@@ -37,7 +38,7 @@ return new class extends Migration
         // ─────────────────────────────────────────────────────────────
         // STEP 2: Personal Details (StudentMasterSecond)
         // ─────────────────────────────────────────────────────────────
-        Schema::create('student_master_seconds', function (Blueprint $table) {
+        MigrationSchema::createIfMissing('student_master_seconds', function (Blueprint $table) {
             $table->id();
             $table->string('username', 100)->unique();
             $table->unsignedBigInteger('category_id')->nullable();
@@ -83,7 +84,7 @@ return new class extends Migration
         // ─────────────────────────────────────────────────────────────
         // Consolidated StudentMaster (used for reporting / admin view)
         // ─────────────────────────────────────────────────────────────
-        Schema::create('student_masters', function (Blueprint $table) {
+        MigrationSchema::createIfMissing('student_masters', function (Blueprint $table) {
             $table->id();
             $table->string('username', 100)->unique();
             $table->unsignedBigInteger('session_id')->nullable();
