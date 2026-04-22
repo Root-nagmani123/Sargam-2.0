@@ -745,7 +745,7 @@
                     });
 
                     toastr.success("Profile updated successfully!");
-                    window.location.href = "{{ route('member.profile.edit', Auth::user()->user_id) }}";
+                    window.location.href = "{{ Auth::user()->user_id ? route('member.profile.edit', Auth::user()->user_id) : url('/dashboard') }}";
                 } catch (e) {
                     const status = e.status;
                     const errors = e.responseJSON?.errors || {};

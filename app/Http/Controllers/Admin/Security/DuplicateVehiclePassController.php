@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Security;
 
 use App\Http\Controllers\Controller;
+use App\Support\IdCardSecurityMapper;
 use App\Models\EmployeeMaster;
 use App\Models\SecVehicleType;
 use App\Models\VehiclePassDuplicateApplyTwfw;
@@ -204,6 +205,18 @@ class DuplicateVehiclePassController extends Controller
                 ]);
         }
 
+        $canonicalForCap = IdCardSecurityMapper::resolveCanonicalEmployeeMasterPk((int) $validated['emp_master_pk']);
+        if ($canonicalForCap) {
+            IdCardSecurityMapper::assertPassValidityWithinApprovedEmployeeIdCard(
+                $canonicalForCap,
+                null,
+                $validated['start_date'],
+                $validated['end_date'],
+                'start_date',
+                'end_date'
+            );
+        }
+
         $emp = EmployeeMaster::find($validated['emp_master_pk']);
         $idCardNumber = $validated['id_card_number'] ?: ($emp->emp_id ?? '');
 
@@ -295,6 +308,18 @@ class DuplicateVehiclePassController extends Controller
             'reason_for_duplicate' => ['required', 'string', 'max:100'],
             'doc_upload' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048'],
         ]);
+
+        $canonicalForCap = IdCardSecurityMapper::resolveCanonicalEmployeeMasterPk((int) $validated['emp_master_pk']);
+        if ($canonicalForCap) {
+            IdCardSecurityMapper::assertPassValidityWithinApprovedEmployeeIdCard(
+                $canonicalForCap,
+                null,
+                $validated['start_date'],
+                $validated['end_date'],
+                'start_date',
+                'end_date'
+            );
+        }
 
         $emp = EmployeeMaster::find($validated['emp_master_pk']);
         $idCardNumber = $validated['id_card_number'] ?: ($emp->emp_id ?? '');

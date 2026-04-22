@@ -19,21 +19,30 @@
     <form action="{{ route('admin.family_idcard.store') }}" method="POST" enctype="multipart/form-data" class="needs-validation" id="familyIdcardForm" novalidate>
         @csrf
     
-        <!-- Employee Type: Government / Contractual -->
+        @php
+            $familyIdcardContractualEmployeeOnly = $familyIdcardContractualEmployeeOnly ?? false;
+        @endphp
+        <!-- Employee Type: Permanent / Contractual (Permanent staff may choose either; Contractual-only accounts see Contractual only) -->
         <div class="card border-0 shadow-sm mb-4">
             <div class="card-body py-4 px-4">
-                <div class="d-flex flex-wrap gap-4 align-items-center">
-                    <div class="form-check mb-0">
-                        <input class="form-check-input" type="radio" name="employee_type" id="emp_type_govt" value="Permanent Employee"
-                               {{ old('employee_type', 'Permanent Employee') == 'Permanent Employee' ? 'checked' : '' }} required>
-                        <label class="form-check-label" for="emp_type_govt">Permanent Employee</label>
+                @if($familyIdcardContractualEmployeeOnly)
+                    <p class="fw-semibold text-dark mb-1">Employee type</p>
+                    <p class="mb-0 text-muted small">Your profile is classified as <strong>Contractual</strong>. You may submit this request only as <strong>Contractual Employee</strong>.</p>
+                    <input type="hidden" name="employee_type" value="Contractual Employee">
+                @else
+                    <div class="d-flex flex-wrap gap-4 align-items-center">
+                        <div class="form-check mb-0">
+                            <input class="form-check-input" type="radio" name="employee_type" id="emp_type_govt" value="Permanent Employee"
+                                   {{ old('employee_type', 'Permanent Employee') == 'Permanent Employee' ? 'checked' : '' }} required>
+                            <label class="form-check-label" for="emp_type_govt">Permanent Employee</label>
+                        </div>
+                        <div class="form-check mb-0">
+                            <input class="form-check-input" type="radio" name="employee_type" id="emp_type_cont" value="Contractual Employee"
+                                   {{ old('employee_type') == 'Contractual Employee' ? 'checked' : '' }} required>
+                            <label class="form-check-label" for="emp_type_cont">Contractual Employee</label>
+                        </div>
                     </div>
-                    <div class="form-check mb-0">
-                        <input class="form-check-input" type="radio" name="employee_type" id="emp_type_cont" value="Contractual Employee"
-                               {{ old('employee_type') == 'Contractual Employee' ? 'checked' : '' }} required>
-                        <label class="form-check-label" for="emp_type_cont">Contractual Employee</label>
-                    </div>
-                </div>
+                @endif
             </div>
         </div>
 
@@ -48,7 +57,6 @@
                     $oldDesignation = old('designation', $defaultDesignation ?? '');
                     $oldCardType = old('card_type', 'Family');
                     $oldSection = old('section', $userDepartmentName ?? 'NIELIT');
-                    $oldApprovalAuthority = old('approval_authority', $defaultApprovalAuthorityPk ?? '');
                 @endphp
 
                 <div class="row g-3 mb-4" data-employee-id-permanent="{{ e($defaultEmployeeIdPermanent ?? '') }}" data-employee-id-contractual="{{ e($defaultEmployeeIdContractual ?? '') }}" data-designation="{{ e($defaultDesignation ?? '') }}">
@@ -62,6 +70,17 @@
                                placeholder="Enter your ID Card No."
                                required
                                @if($isPermanent) readonly @endif>
+                        <div id="fmlContractualLookupHint" class="small mt-1 d-none" role="status"></div>
+                        <div class="mt-2 {{ $isPermanent ? 'd-none' : '' }}" id="fmlContractualNameWrap">
+                            <label class="form-label small fw-semibold text-muted mb-1">Employee name <span class="fw-normal">(from master, not submitted)</span></label>
+                            <input type="text"
+                                   class="form-control form-control-sm bg-light"
+                                   id="fml_contractual_employee_display_name"
+                                   readonly
+                                   autocomplete="off"
+                                   tabindex="-1"
+                                   placeholder="Enter Employee ID above — autofill on blur / Enter">
+                        </div>
                         @error('employee_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-md-6">
@@ -95,19 +114,6 @@
                                required
                                @if($isPermanent) readonly @endif>
                         @error('section')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                    </div>
-                    <!-- Approval Authority: shown only when Contractual -->
-                    <div class="col-md-6 fml-approval-authority-wrap" id="fmlApprovalAuthorityWrap" style="display: none;">
-                        <label for="approval_authority" class="form-label">Approval Authority <span class="text-danger">*</span></label>
-                        <select name="approval_authority" id="approval_authority" class="form-select">
-                            <option value="">-- Select Authority --</option>
-                            @foreach($approvalAuthorityEmployees ?? [] as $emp)
-                                @php $empName = trim(($emp->first_name ?? '') . ' ' . ($emp->last_name ?? '')); @endphp
-                                <option value="{{ $emp->pk }}" {{ $oldApprovalAuthority == $emp->pk ? 'selected' : '' }}>{{ $empName }}{{ $emp->designation ? ' (' . $emp->designation->designation_name . ')' : '' }}</option>
-                            @endforeach
-                        </select>
-                        <small class="text-muted">Approval authority on behalf of your section</small>
-                        @error('approval_authority')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-12">
                         <label class="form-label">Upload Group Photo <span class="text-danger">*</span></label>
@@ -358,40 +364,81 @@
 (function() {
     'use strict';
 
-    // Employee type toggle: show Approval Authority when Contractual; update Employee ID & Designation
+    var familyIdcardContractualOnly = @json($familyIdcardContractualEmployeeOnly ?? false);
+    var familyCapPermanentYmd = @json($familyIdCardCapPermanentYmd ?? null);
+    var familyCapContractualYmd = @json($familyIdCardCapContractualYmd ?? null);
+
+    function currentFamilyIdCardCapYmd() {
+        if (familyIdcardContractualOnly) {
+            return familyCapContractualYmd;
+        }
+        var perm = document.getElementById('emp_type_govt');
+        var cont = document.getElementById('emp_type_cont');
+        if (cont && cont.checked) {
+            return familyCapContractualYmd;
+        }
+        if (perm && perm.checked) {
+            return familyCapPermanentYmd;
+        }
+        return familyCapPermanentYmd || familyCapContractualYmd;
+    }
+
+    function applyFamilyMemberIdCardDateCaps() {
+        var cap = currentFamilyIdCardCapYmd();
+        var nodes = document.querySelectorAll('#familyMembersBody input[name$="[valid_from]"], #familyMembersBody input[name$="[valid_to]"]');
+        nodes.forEach(function (inp) {
+            if (!cap) {
+                inp.removeAttribute('max');
+                return;
+            }
+            inp.setAttribute('max', cap);
+            if (inp.value && inp.value > cap) {
+                inp.value = '';
+            }
+        });
+    }
+
+    function fmlIsContractualMode() {
+        if (familyIdcardContractualOnly) return true;
+        var contRad = document.getElementById('emp_type_cont');
+        return !!(contRad && contRad.checked);
+    }
+
+    // Employee type toggle: Contractual = editable employee fields; Permanent = locked defaults
     function toggleFmlApprovalAuthority() {
         var contRad = document.getElementById('emp_type_cont');
-        var wrap = document.getElementById('fmlApprovalAuthorityWrap');
-        var sel = document.getElementById('approval_authority');
-        if (!contRad || !wrap || !sel) return;
+        if (!familyIdcardContractualOnly && !contRad) return;
         var empIdInp = document.getElementById('employee_id');
         var desigInp = document.getElementById('designation');
         var sectionInp = document.getElementById('section');
+        var nameWrap = document.getElementById('fmlContractualNameWrap');
+        var nameDisp = document.getElementById('fml_contractual_employee_display_name');
+        var hint = document.getElementById('fmlContractualLookupHint');
 
-        if (contRad.checked) {
-            wrap.style.display = 'block';
-            sel.disabled = false;
-            sel.required = true;
-            // Contractual: allow editing employee fields
+        if (fmlIsContractualMode()) {
             if (empIdInp) { empIdInp.readOnly = false; empIdInp.classList.remove('bg-light'); }
             if (desigInp) { desigInp.readOnly = false; desigInp.classList.remove('bg-light'); }
             if (sectionInp) { sectionInp.readOnly = false; sectionInp.classList.remove('bg-light'); }
+            if (nameWrap) nameWrap.classList.remove('d-none');
         } else {
-            wrap.style.display = 'none';
-            sel.disabled = true;
-            sel.required = false;
-            sel.value = '';
             // Permanent: lock employee fields (non-editable)
             if (empIdInp) { empIdInp.readOnly = true; empIdInp.classList.add('bg-light'); }
             if (desigInp) { desigInp.readOnly = true; desigInp.classList.add('bg-light'); }
             if (sectionInp) { sectionInp.readOnly = true; sectionInp.classList.add('bg-light'); }
+            if (nameWrap) nameWrap.classList.add('d-none');
+            if (nameDisp) nameDisp.value = '';
+            if (hint) {
+                hint.textContent = '';
+                hint.classList.add('d-none');
+                hint.classList.remove('text-success', 'text-danger', 'text-muted');
+            }
         }
         var row = document.querySelector('.row.g-3.mb-4[data-employee-id-permanent]');
         if (row && empIdInp && desigInp) {
             var idPerm = row.getAttribute('data-employee-id-permanent') || '';
             var idCont = row.getAttribute('data-employee-id-contractual') || '';
             var desig = row.getAttribute('data-designation') || '';
-            if (contRad.checked) {
+            if (fmlIsContractualMode()) {
                 empIdInp.value = idCont;
                 desigInp.value = desig;
             } else {
@@ -400,9 +447,96 @@
             }
         }
     }
-    document.getElementById('emp_type_govt')?.addEventListener('change', toggleFmlApprovalAuthority);
-    document.getElementById('emp_type_cont')?.addEventListener('change', toggleFmlApprovalAuthority);
+    if (!familyIdcardContractualOnly) {
+        document.getElementById('emp_type_govt')?.addEventListener('change', function () {
+            toggleFmlApprovalAuthority();
+            applyFamilyMemberIdCardDateCaps();
+        });
+        document.getElementById('emp_type_cont')?.addEventListener('change', function () {
+            toggleFmlApprovalAuthority();
+            applyFamilyMemberIdCardDateCaps();
+        });
+    }
     toggleFmlApprovalAuthority();
+    applyFamilyMemberIdCardDateCaps();
+
+    // Contractual: autofill from employee_master and/or security_con_oth_id_apply (lookup endpoint)
+    var fmlLookupAbort = null;
+    var fmlLookupUrl = @json(route('admin.family_idcard.lookup.employee_by_id'));
+
+    function setFmlLookupHint(message, kind) {
+        var el = document.getElementById('fmlContractualLookupHint');
+        if (!el) return;
+        if (!message) {
+            el.textContent = '';
+            el.classList.add('d-none');
+            el.classList.remove('text-success', 'text-danger', 'text-muted');
+            return;
+        }
+        el.classList.remove('d-none', 'text-success', 'text-danger', 'text-muted');
+        el.classList.add(kind === 'error' ? 'text-danger' : (kind === 'success' ? 'text-success' : 'text-muted'));
+        el.textContent = message;
+    }
+
+    function applyFmlContractualEmployeeLookup() {
+        if (!fmlIsContractualMode()) return;
+        var idInp = document.getElementById('employee_id');
+        var desig = document.getElementById('designation');
+        var section = document.getElementById('section');
+        var nameDisp = document.getElementById('fml_contractual_employee_display_name');
+        if (!idInp) return;
+        var idVal = (idInp.value || '').trim();
+        if (!idVal) {
+            setFmlLookupHint('', '');
+            if (nameDisp) nameDisp.value = '';
+            return;
+        }
+        if (fmlLookupAbort) {
+            try { fmlLookupAbort.abort(); } catch (e) {}
+        }
+        fmlLookupAbort = new AbortController();
+        setFmlLookupHint('Looking up employee…', 'muted');
+        var url = fmlLookupUrl + (fmlLookupUrl.indexOf('?') >= 0 ? '&' : '?') + 'employee_id=' + encodeURIComponent(idVal);
+        fetch(url, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+            signal: fmlLookupAbort.signal
+        }).then(function (r) {
+            return r.json().then(function (body) { return { ok: r.ok, body: body }; });
+        }).then(function (res) {
+            if (!res.ok || !res.body.success || !res.body.data) {
+                var msg = (res.body && res.body.message) ? res.body.message : 'No match in employee master or contractual ID applications.';
+                setFmlLookupHint(msg, 'error');
+                if (nameDisp) nameDisp.value = '';
+                return;
+            }
+            var d = res.body.data;
+            if (nameDisp) nameDisp.value = d.employee_name || '';
+            if (desig) desig.value = d.designation || '';
+            if (section && d.department) section.value = d.department;
+            if (d.emp_id && idInp) idInp.value = d.emp_id;
+            setFmlLookupHint('Name and designation loaded (employee master or contractual ID application). You can edit before save.', 'success');
+        }).catch(function (err) {
+            if (err && err.name === 'AbortError') return;
+            setFmlLookupHint('Lookup failed. Try again.', 'error');
+        });
+    }
+
+    var empIdForLookup = document.getElementById('employee_id');
+    if (empIdForLookup) {
+        empIdForLookup.addEventListener('blur', function () {
+            if (fmlIsContractualMode()) {
+                applyFmlContractualEmployeeLookup();
+            }
+        });
+        empIdForLookup.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (fmlIsContractualMode()) {
+                    applyFmlContractualEmployeeLookup();
+                }
+            }
+        });
+    }
 
     var tbody = document.getElementById('familyMembersBody');
     var addBtn = document.getElementById('addFamilyMemberBtn');
@@ -691,12 +825,14 @@
     
     // Apply date restrictions on page load
     applyDateRestrictions();
-    
+    applyFamilyMemberIdCardDateCaps();
+
     // Reapply restrictions after adding new rows
     var originalAddRow = addRow;
     addRow = function() {
         originalAddRow();
         applyDateRestrictions();
+        applyFamilyMemberIdCardDateCaps();
     };
 
     // Group photo: preview and remove

@@ -133,10 +133,12 @@
             </i>
 
             @php
-                $unreadCount = notification()->getUnreadCount(
-                    Auth::user()->user_id ?? 0,
-                    hasRole('Admin') ? 10 : null
-                );
+                $unreadCount = (Auth::user() && Auth::user()->user_id)
+                    ? notification()->getUnreadCount(
+                        Auth::user()->user_id,
+                        hasRole('Admin') ? 10 : null
+                    )
+                    : 0;
             @endphp
 
             @if($unreadCount > 0)
@@ -164,12 +166,14 @@
 
             <div id="notificationList" class="notification-list">
                 @php
-                    $notifications = notification()->getNotifications(
-                        Auth::user()->user_id ?? 0,
-                        10,
-                        false,
-                        hasRole('Admin') ? 10 : null
-                    );
+                    $notifications = (Auth::user() && Auth::user()->user_id)
+                        ? notification()->getNotifications(
+                            Auth::user()->user_id,
+                            10,
+                            false,
+                            hasRole('Admin') ? 10 : null
+                        )
+                        : collect();
                 @endphp
 
                 @if($notifications->count() > 0)
@@ -263,7 +267,9 @@
                             aria-controls="notificationOffcanvasMobile" aria-label="Notifications" title="Notifications">
                             <i class="material-icons material-symbols-rounded" aria-hidden="true">notifications_active</i>
                             @php
-                            $unreadCountMobile = notification()->getUnreadCount(Auth::user()->user_id ?? 0);
+                            $unreadCountMobile = (Auth::user() && Auth::user()->user_id)
+                                ? notification()->getUnreadCount(Auth::user()->user_id)
+                                : 0;
                             @endphp
                             @if($unreadCountMobile > 0)
                             <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 9px;">
@@ -291,12 +297,14 @@
                 <div class="offcanvas-body p-0 overflow-y-auto notification-mobile-list" style="max-height: calc(70vh - 60px);">
                     <div id="notificationListMobile">
                         @php
-                        $notificationsMobile = notification()->getNotifications(
-                            Auth::user()->user_id ?? 0,
-                            10,
-                            false,
-                            hasRole('Admin') ? 10 : null
-                        );
+                        $notificationsMobile = (Auth::user() && Auth::user()->user_id)
+                            ? notification()->getNotifications(
+                                Auth::user()->user_id,
+                                10,
+                                false,
+                                hasRole('Admin') ? 10 : null
+                            )
+                            : collect();
                         @endphp
                         @if($notificationsMobile->count() > 0)
                         @foreach($notificationsMobile as $notification)

@@ -5,7 +5,10 @@ namespace App\Support;
 use App\Models\SecurityParmIdApply;
 use App\Models\SecurityParmIdApplyApproval;
 use App\Models\SecurityFamilyIdApply;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\ValidationException;
 use stdClass;
 
 /**
@@ -709,5 +712,299 @@ class IdCardSecurityMapper
         }
         
         return $dto;
+    }
+
+    /**
+     * Resolve employee_master.pk from a stored pk or pk_old / session user id.
+     */
+    public static function resolveCanonicalEmployeeMasterPk(int|string|null $pkOrOld): ?int
+    {
+        if ($pkOrOld === null || $pkOrOld === '') {
+            return null;
+        }
+        $q = DB::table('employee_master')->where('pk', $pkOrOld);
+        if (Schema::hasColumn('employee_master', 'pk_old')) {
+            $q->orWhere('pk_old', $pkOrOld);
+        }
+        $row = $q->first(['pk']);
+
+        return $row ? (int) $row->pk : null;
+    }
+
+    /**
+     * employee_master.pk values that may appear as security_parm_id_apply.employee_master_pk or security_con_oth_id_apply.created_by.
+     *
+     * @return list<int>
+     */
+    private static function employeeLinkedPksForIdCardEndDate(int $canonicalPk): array
+    {
+        if ($canonicalPk <= 0) {
+            return [];
+        }
+        $hasPkOld = Schema::hasColumn('employee_master', 'pk_old');
+        $cols = $hasPkOld ? ['pk', 'pk_old'] : ['pk'];
+        $row = DB::table('employee_master')->where('pk', $canonicalPk)->first($cols);
+        if (! $row) {
+            return [$canonicalPk];
+        }
+        $ids = [(int) ($row->pk ?? $canonicalPk)];
+        if ($hasPkOld && isset($row->pk_old) && (int) $row->pk_old > 0 && (int) $row->pk_old !== (int) ($row->pk ?? 0)) {
+            $ids[] = (int) $row->pk_old;
+        }
+
+        return array_values(array_unique(array_filter($ids, fn ($v) => (int) $v > 0)));
+    }
+
+    /**
+     * Latest calendar end of approved permanent ID validity: main apply table plus approved duplicate/extension rows.
+     */
+    private static function maxApprovedPermanentCardValidToEnd(array $linkedPks): ?Carbon
+    {
+        if ($linkedPks === []) {
+            return null;
+        }
+        $dates = [];
+
+        $mainDates = DB::table('security_parm_id_apply')
+            ->whereIn('employee_master_pk', $linkedPks)
+            ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
+            ->whereNotNull('card_valid_to')
+            ->pluck('card_valid_to');
+        foreach ($mainDates as $d) {
+            if ($d !== null && (string) $d !== '') {
+                $dates[] = Carbon::parse($d)->startOfDay();
+            }
+        }
+
+        if (Schema::hasTable('security_dup_perm_id_apply')) {
+            $dupDates = DB::table('security_dup_perm_id_apply')
+                ->whereIn('employee_master_pk', $linkedPks)
+                ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
+                ->whereNotNull('card_valid_to')
+                ->pluck('card_valid_to');
+            foreach ($dupDates as $d) {
+                if ($d !== null && (string) $d !== '') {
+                    $dates[] = Carbon::parse($d)->startOfDay();
+                }
+            }
+        }
+
+        if ($dates === []) {
+            return null;
+        }
+
+        return collect($dates)->max();
+    }
+
+    /**
+     * Latest calendar end of approved contractual ID validity: main apply table plus approved duplicate/extension rows.
+     */
+    private static function maxApprovedContractualCardValidToEnd(array $linkedPks): ?Carbon
+    {
+        if ($linkedPks === []) {
+            return null;
+        }
+        $dates = [];
+
+        $mainDates = DB::table('security_con_oth_id_apply')
+            ->whereIn('created_by', $linkedPks)
+            ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
+            ->whereNotNull('card_valid_to')
+            ->pluck('card_valid_to');
+        foreach ($mainDates as $d) {
+            if ($d !== null && (string) $d !== '') {
+                $dates[] = Carbon::parse($d)->startOfDay();
+            }
+        }
+
+        if (Schema::hasTable('security_dup_other_id_apply')) {
+            $dupDates = DB::table('security_dup_other_id_apply')
+                ->whereIn('created_by', $linkedPks)
+                ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
+                ->whereNotNull('card_valid_to')
+                ->pluck('card_valid_to');
+            foreach ($dupDates as $d) {
+                if ($d !== null && (string) $d !== '') {
+                    $dates[] = Carbon::parse($d)->startOfDay();
+                }
+            }
+        }
+
+        if ($dates === []) {
+            return null;
+        }
+
+        return collect($dates)->max();
+    }
+
+    /**
+     * True if an approved permanent or contractual row exists with no card_valid_to (treated as open-ended validity).
+     */
+    public static function hasOpenEndedApprovedEmployeeIdCard(?int $canonicalEmployeePk, ?string $employeeTypeFilter = null): bool
+    {
+        if (! $canonicalEmployeePk || $canonicalEmployeePk <= 0) {
+            return false;
+        }
+        $linked = self::employeeLinkedPksForIdCardEndDate($canonicalEmployeePk);
+        if ($linked === []) {
+            return false;
+        }
+
+        if ($employeeTypeFilter === null || $employeeTypeFilter === 'Permanent Employee') {
+            $open = DB::table('security_parm_id_apply')
+                ->whereIn('employee_master_pk', $linked)
+                ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
+                ->whereNull('card_valid_to')
+                ->exists();
+            if ($open) {
+                return true;
+            }
+            if (Schema::hasTable('security_dup_perm_id_apply')) {
+                $openDup = DB::table('security_dup_perm_id_apply')
+                    ->whereIn('employee_master_pk', $linked)
+                    ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
+                    ->whereNull('card_valid_to')
+                    ->exists();
+                if ($openDup) {
+                    return true;
+                }
+            }
+        }
+
+        if ($employeeTypeFilter === null || $employeeTypeFilter === 'Contractual Employee') {
+            $open = DB::table('security_con_oth_id_apply')
+                ->whereIn('created_by', $linked)
+                ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
+                ->whereNull('card_valid_to')
+                ->exists();
+            if ($open) {
+                return true;
+            }
+            if (Schema::hasTable('security_dup_other_id_apply')) {
+                $openDup = DB::table('security_dup_other_id_apply')
+                    ->whereIn('created_by', $linked)
+                    ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
+                    ->whereNull('card_valid_to')
+                    ->exists();
+                if ($openDup) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Effective approved Employee ID card "valid to" end date for caps (vehicle pass, family ID card).
+     * Includes approved extension/duplicate rows so a later extended end date is honoured.
+     * When $employeeTypeFilter is Permanent or Contractual, only that source is used.
+     * When null (e.g. vehicle pass without type), returns the earlier of the two maxima when both exist (stricter cap).
+     */
+    public static function approvedEmployeeIdCardValidityEnd(?int $canonicalEmployeePk, ?string $employeeTypeFilter = null): ?Carbon
+    {
+        if (! $canonicalEmployeePk || $canonicalEmployeePk <= 0) {
+            return null;
+        }
+        $linked = self::employeeLinkedPksForIdCardEndDate($canonicalEmployeePk);
+        if ($linked === []) {
+            return null;
+        }
+
+        $candidates = [];
+
+        if ($employeeTypeFilter === null || $employeeTypeFilter === 'Permanent Employee') {
+            $permMax = self::maxApprovedPermanentCardValidToEnd($linked);
+            if ($permMax !== null) {
+                $candidates[] = $permMax;
+            }
+        }
+
+        if ($employeeTypeFilter === null || $employeeTypeFilter === 'Contractual Employee') {
+            $contMax = self::maxApprovedContractualCardValidToEnd($linked);
+            if ($contMax !== null) {
+                $candidates[] = $contMax;
+            }
+        }
+
+        if ($candidates === []) {
+            return null;
+        }
+
+        return count($candidates) === 1
+            ? $candidates[0]
+            : collect($candidates)->min();
+    }
+
+    /**
+     * Enforce vehicle / duplicate vehicle pass validity dates within approved Employee ID card end date.
+     *
+     * @param  string|null  $familyEmployeeTypeOnly  null = consider permanent + contractual and use stricter cap
+     *
+     * @throws ValidationException
+     */
+    public static function assertPassValidityWithinApprovedEmployeeIdCard(
+        ?int $canonicalEmployeePk,
+        ?string $familyEmployeeTypeOnly,
+        string $validFromYmd,
+        string $validToYmd,
+        string $fromFieldKey,
+        string $toFieldKey
+    ): void {
+        $cap = self::approvedEmployeeIdCardValidityEnd($canonicalEmployeePk, $familyEmployeeTypeOnly);
+        if ($cap === null) {
+            return;
+        }
+        $capDay = $cap->copy()->startOfDay();
+        $label = $capDay->format('d/m/Y');
+        $from = Carbon::parse($validFromYmd)->startOfDay();
+        $to = Carbon::parse($validToYmd)->startOfDay();
+        if ($from->gt($capDay)) {
+            throw ValidationException::withMessages([
+                $fromFieldKey => "Valid From cannot be after your Employee ID card validity end date ({$label}).",
+            ]);
+        }
+        if ($to->gt($capDay)) {
+            throw ValidationException::withMessages([
+                $toFieldKey => "Valid To cannot be later than your Employee ID card validity end date ({$label}).",
+            ]);
+        }
+    }
+
+    /**
+     * Same cap as {@see assertPassValidityWithinApprovedEmployeeIdCard} but allows either date to be empty (family members).
+     *
+     * @throws ValidationException
+     */
+    public static function assertOptionalDatePairWithinApprovedIdCardEnd(
+        ?int $canonicalApplicantPk,
+        ?string $employeeType,
+        ?string $fromYmd,
+        ?string $toYmd,
+        string $fromFieldKey,
+        string $toFieldKey
+    ): void {
+        $cap = self::approvedEmployeeIdCardValidityEnd($canonicalApplicantPk, $employeeType);
+        if ($cap === null) {
+            return;
+        }
+        $capDay = $cap->copy()->startOfDay();
+        $label = $capDay->format('d/m/Y');
+        if ($fromYmd !== null && trim((string) $fromYmd) !== '') {
+            $from = Carbon::parse($fromYmd)->startOfDay();
+            if ($from->gt($capDay)) {
+                throw ValidationException::withMessages([
+                    $fromFieldKey => "Valid From cannot be after your Employee ID card validity end date ({$label}).",
+                ]);
+            }
+        }
+        if ($toYmd !== null && trim((string) $toYmd) !== '') {
+            $to = Carbon::parse($toYmd)->startOfDay();
+            if ($to->gt($capDay)) {
+                throw ValidationException::withMessages([
+                    $toFieldKey => "Valid To cannot be later than your Employee ID card validity end date ({$label}).",
+                ]);
+            }
+        }
     }
 }

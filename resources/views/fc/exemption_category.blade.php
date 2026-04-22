@@ -5,6 +5,12 @@
 @section('content')
     <main class="flex-grow-1">
         <div class="container py-4 py-md-5">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item active" style="font-size: 20px;">Home</li>
+                    <li class="breadcrumb-item" aria-current="page" style="font-size: 20px;">Exemption Category</li>
+                </ol>
+            </nav>
 
             <header class="text-center mb-4 mb-lg-5">
                 <h1 class="h2 fw-bold text-primary mb-3">Select Exemption Category</h1>
