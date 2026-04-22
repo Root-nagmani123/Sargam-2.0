@@ -1,0 +1,168 @@
+/* ─── LBSNAARP FC Registration – Custom Styles ───────────────────────── */
+/* Mirrors: custom.css + newtheme.css + home.css from original Spring Boot app */
+
+:root {
+    --lbs-primary:   #1a3c6e;
+    --lbs-secondary: #2e6da4;
+    --lbs-accent:    #f0a500;
+    --lbs-light:     #f4f7fb;
+    --lbs-success:   #198754;
+}
+
+/* ── Body ────────────────────────────────────────────────────────────── */
+body {
+    font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 0.9rem;
+    background-color: var(--lbs-light);
+    color: #333;
+}
+
+/* ── Navbar ──────────────────────────────────────────────────────────── */
+.navbar {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+}
+.navbar .nav-link {
+    font-size: 0.82rem;
+    padding: 0.4rem 0.7rem;
+    border-radius: 5px;
+    transition: background 0.15s;
+}
+.navbar .nav-link:hover,
+.navbar .nav-link.active {
+    background: rgba(255,255,255,0.15);
+}
+
+/* ── Cards ───────────────────────────────────────────────────────────── */
+.card {
+    border-radius: 10px !important;
+    transition: box-shadow 0.2s;
+}
+.card:hover {
+    box-shadow: 0 4px 18px rgba(26,60,110,0.12) !important;
+}
+.card-header {
+    font-size: 0.88rem;
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────────── */
+.btn {
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+.btn-primary {
+    background-color: var(--lbs-primary);
+    border-color: var(--lbs-primary);
+}
+.btn-primary:hover {
+    background-color: var(--lbs-secondary);
+    border-color: var(--lbs-secondary);
+}
+
+/* ── Form controls ───────────────────────────────────────────────────── */
+.form-control,
+.form-select {
+    border-radius: 6px;
+    font-size: 0.85rem;
+    border-color: #c8d6e5;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--lbs-secondary);
+    box-shadow: 0 0 0 0.2rem rgba(46,109,164,0.2);
+}
+.form-label {
+    margin-bottom: 0.3rem;
+    color: #444;
+}
+
+/* ── Section headings inside forms ───────────────────────────────────── */
+.section-heading {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #6c757d;
+    font-weight: 700;
+    border-bottom: 1px solid #dee2e6;
+    padding-bottom: 0.4rem;
+    margin-bottom: 1rem;
+}
+
+/* ── Tab navigation (Step 3) ─────────────────────────────────────────── */
+.nav-tabs .nav-link {
+    font-size: 0.8rem;
+    color: #555;
+    border-radius: 6px 6px 0 0;
+    padding: 0.4rem 0.8rem;
+}
+.nav-tabs .nav-link.active {
+    color: var(--lbs-primary);
+    font-weight: 600;
+    border-bottom-color: #fff;
+}
+
+/* ── Step indicator ──────────────────────────────────────────────────── */
+.step-circle {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.8rem;
+    flex-shrink: 0;
+}
+.step-circle.done    { background: var(--lbs-success); color: #fff; }
+.step-circle.active  { background: var(--lbs-primary); color: #fff; }
+.step-circle.pending { background: #dee2e6; color: #999; }
+
+/* ── Progress bar ────────────────────────────────────────────────────── */
+.progress { border-radius: 6px; }
+.progress-bar { transition: width 0.6s ease; }
+
+/* ── Dynamic rows (repeating field groups in Step 3) ─────────────────── */
+.dynamic-row {
+    transition: background 0.15s;
+}
+.dynamic-row:hover {
+    background: #eef3fa !important;
+}
+
+/* ── Alerts ──────────────────────────────────────────────────────────── */
+.alert { border-radius: 8px; font-size: 0.85rem; }
+
+/* ── Tables ──────────────────────────────────────────────────────────── */
+.table { font-size: 0.85rem; }
+.table thead th {
+    background-color: var(--lbs-primary);
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.8rem;
+    border: none;
+}
+.table tbody tr:hover { background-color: #f0f6ff; }
+
+/* ── Badges ──────────────────────────────────────────────────────────── */
+.badge { font-size: 0.7rem; font-weight: 600; }
+
+/* ── Footer ──────────────────────────────────────────────────────────── */
+footer {
+    font-size: 0.78rem;
+    border-top: 1px solid #dee2e6;
+    margin-top: 2rem;
+}
+
+/* ── Print styles ────────────────────────────────────────────────────── */
+@media print {
+    .navbar, footer, .btn, .alert { display: none !important; }
+    .card { box-shadow: none !important; border: 1px solid #dee2e6 !important; }
+    body { background: #fff; }
+}
+
+/* ── Responsive tweaks ───────────────────────────────────────────────── */
+@media (max-width: 768px) {
+    .card-body { padding: 1rem; }
+    .nav-tabs .nav-link { font-size: 0.72rem; padding: 0.3rem 0.5rem; }
+}

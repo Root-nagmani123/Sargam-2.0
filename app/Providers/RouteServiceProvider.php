@@ -54,6 +54,9 @@ class RouteServiceProvider extends ServiceProvider
             Route::middleware('web')
                 ->namespace($this->namespace)
                 ->group(base_path('routes/fc_route.php'));
+                 Route::middleware('web')
+                ->namespace($this->namespace)
+                ->group(base_path('routes/fc_registration.php'));
         });
     }
 

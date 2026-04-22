@@ -50,6 +50,15 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
     ];
 
+    /**
+     * Accessor: FC registration code uses $user->username.
+     * Map it to the existing user_name column.
+     */
+    public function getUsernameAttribute(): ?string
+    {
+        return $this->getAttributes()['user_name'] ?? null;
+    }
+
     public function getAuthIdentifierName()
     {
         return 'pk';

@@ -34,9 +34,34 @@ function getEmployeeIdsForUser($userId)
     return array_map('strval', $ids);
 }
 
+/**
+ * Public URL for a file stored on the default public disk (storage/app/public) or an absolute URL.
+ * Handles DB values like "uploads/user/photo.jpg", "storage/uploads/...", or full http(s) URLs.
+ */
 function view_file_link($path)
 {
-    return $path ? asset('storage/' . $path) : null;
+    if ($path === null || $path === '') {
+        return null;
+    }
+    if (! is_string($path)) {
+        return null;
+    }
+    $path = trim(str_replace('\\', '/', $path));
+    if ($path === '') {
+        return null;
+    }
+    if (preg_match('#^https?://#i', $path)) {
+        return $path;
+    }
+    $path = ltrim($path, '/');
+    if (str_starts_with($path, 'public/')) {
+        $path = substr($path, strlen('public/'));
+    }
+    if (str_starts_with($path, 'storage/')) {
+        return asset($path);
+    }
+
+    return asset('storage/' . $path);
 }
 
 function format_date($date, $format = 'd-m-Y')
@@ -340,3 +365,49 @@ if (!function_exists('notification')) {
 
         return $courseval;
     }
+
+if (! function_exists('fc_registration_progress_view')) {
+    /**
+     * Normalize FC registration $progress for dashboard/status Blade (legacy code sometimes passed a bare int percentage).
+     *
+     * @param  array|string|int|float|null  $progress
+     * @return array{done:int,total:int,percentage:int,steps:array<string,bool>}
+     */
+    function fc_registration_progress_view($progress): array
+    {
+        $keys = ['step1', 'step2', 'step3', 'bank', 'travel', 'documents', 'confirmed'];
+        $defaults = array_fill_keys($keys, false);
+
+        if (is_array($progress)) {
+            $steps = $progress['steps'] ?? [];
+            if (! is_array($steps)) {
+                $steps = [];
+            }
+            $steps = array_merge($defaults, $steps);
+            $total = count($keys);
+            $done = collect($steps)->filter()->count();
+            $percentage = $progress['percentage'] ?? null;
+            if ($percentage === null || $percentage === '') {
+                $percentage = $total > 0 ? (int) round($done / $total * 100) : 0;
+            } else {
+                $percentage = (int) $percentage;
+            }
+
+            return [
+                'done'       => $done,
+                'total'      => (int) ($progress['total'] ?? $total),
+                'percentage' => max(0, min(100, $percentage)),
+                'steps'      => $steps,
+            ];
+        }
+
+        $pct = is_numeric($progress) ? (int) $progress : 0;
+
+        return [
+            'done'       => 0,
+            'total'      => count($keys),
+            'percentage' => max(0, min(100, $pct)),
+            'steps'      => $defaults,
+        ];
+    }
+}

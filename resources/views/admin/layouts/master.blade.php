@@ -554,6 +554,8 @@
                 str_starts_with($path, 'admin/notice') || str_starts_with($path, 'attendance') ||
                 str_starts_with($path, 'security') || str_starts_with($path, 'ot_notice') ||
                 str_starts_with($path, 'forms') || str_starts_with($path, 'registration') ||
+                str_starts_with($path, 'fc-reg') || str_starts_with($path, 'admin/reports') ||
+                str_starts_with($path, 'admin/travel') ||
                 str_starts_with($path, 'mdo_escrot') || str_starts_with($path, 'student_medical') ||
                 str_starts_with($path, 'medical_exception') || str_starts_with($path, 'memo_discipline') ||
                 str_starts_with($path, 'country') || str_starts_with($path, 'state') || str_starts_with($path, 'city') ||
