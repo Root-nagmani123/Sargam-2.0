@@ -240,12 +240,16 @@ document.addEventListener('DOMContentLoaded', function() {
         const bodyWrapper = document.querySelector('.body-wrapper');
         if (!bodyWrapper) return;
         
-        const allBodyPanes = bodyWrapper.querySelectorAll('.tab-pane');
+        // Only target direct child tab-panes of #mainNavbarContent, not nested tabs inside page content
+        const mainContent = bodyWrapper.querySelector('#mainNavbarContent');
+        if (!mainContent) return;
+        
+        const allBodyPanes = mainContent.querySelectorAll(':scope > .tab-pane');
         allBodyPanes.forEach(function(pane) {
             pane.classList.remove('show', 'active');
         });
         
-        const targetPane = bodyWrapper.querySelector(targetId + '.tab-pane');
+        const targetPane = mainContent.querySelector(':scope > ' + targetId + '.tab-pane');
         if (targetPane) {
             targetPane.classList.add('show', 'active');
             console.log('Body wrapper pane activated:', targetId);
@@ -303,8 +307,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const bodyWrapper = document.querySelector('.body-wrapper');
         if (!bodyWrapper) return;
         
+        // Only check top-level layout tab-panes inside #mainNavbarContent, not nested tabs in page content
+        const mainContent = bodyWrapper.querySelector('#mainNavbarContent');
+        if (!mainContent) return;
+        
         // Find which tab-pane has actual content
-        const tabPanes = bodyWrapper.querySelectorAll('.tab-pane');
+        const tabPanes = mainContent.querySelectorAll(':scope > .tab-pane');
         let activeTabId = null;
         
         tabPanes.forEach(function(pane) {
