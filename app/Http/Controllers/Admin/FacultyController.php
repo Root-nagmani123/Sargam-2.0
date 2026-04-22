@@ -14,6 +14,7 @@ use App\Models\{Country, State, City, District, FacultyMaster, FacultyQualificat
 use App\DataTables\FacultyDataTable;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Log;
+use App\Models\AppellationMaster;
 
 class FacultyController extends Controller
 {
@@ -31,12 +32,16 @@ class FacultyController extends Controller
         $district           = District::pluck('district_name', 'pk')->toArray();
         $city               = City::pluck('city_name', 'pk')->toArray();
 
+        $appellationMasterList = AppellationMaster::where('active_inactive', 1)
+            ->pluck('appettation_name', 'pk')
+            ->toArray();
+
         $years = [];
         for ($i = date('Y'); $i >= 1950; $i--) {
             $years[$i] = $i;
         }
 
-        return view("admin.faculty.create", compact('faculties', 'country', 'state', 'city', 'district', 'facultyTypeList', 'years'));
+        return view("admin.faculty.create", compact('faculties', 'country', 'state', 'city', 'district', 'facultyTypeList', 'years', 'appellationMasterList'));
     }
 
     /**
@@ -68,12 +73,20 @@ class FacultyController extends Controller
                     'message' => 'Faculty sector is required and must be 1 or 2.'
                 ], 422);
             }
+
+         $appellationName = null;
+            if ($request->appellation) {
+                $appellationName = AppellationMaster::where('pk', $request->appellation)->value('appettation_name');
+            }
+
             $facultyDetails = [
                 'faculty_type' => $request->facultyType,
+                'appellation' => $request->appellation,
                 'first_name' => $request->firstName,
                 'middle_name' => $request->middlename,
                 'last_name' => $request->lastname,
                 'full_name' => trim(
+                    ($appellationName ? $appellationName . ' ' : '') .
                     $request->firstName . ' ' .
                     ($request->middlename ? $request->middlename . ' ' : '') .
                     $request->lastname
@@ -546,13 +559,17 @@ class FacultyController extends Controller
         $state      = State::pluck('state_name', 'pk')->toArray();
         $district   = District::pluck('district_name', 'pk')->toArray();
         $city       = City::pluck('city_name', 'pk')->toArray();
+        $appellationMasterList = AppellationMaster::where('active_inactive', 1)
+            ->pluck('appettation_name', 'pk')
+            ->toArray();
+
         $years = [];
         for ($i = date('Y'); $i >= 1950; $i--) {
             $years[$i] = $i;
         }
 
         $facultExpertise = $faculty->facultyExpertiseMap->isNotEmpty() ? $faculty->facultyExpertiseMap->pluck('faculty_expertise_pk')->toArray() : [];
-        return view('admin.faculty.edit', compact('faculties', 'faculty', 'country', 'state', 'district', 'city', 'facultExpertise', 'years'));
+        return view('admin.faculty.edit', compact('faculties', 'faculty', 'country', 'state', 'district', 'city', 'facultExpertise', 'years','appellationMasterList'));
     }
 
     public function update(Request $request)
@@ -576,12 +593,24 @@ class FacultyController extends Controller
             # Step : 1
             // Store Faculty Details
 
+             // Get the display name for the appellation
+            $appellationName = null;
+            if ($request->appellation) {
+                $appellationName = AppellationMaster::where('pk', $request->appellation)->value('appettation_name');
+            }
+
             $facultyDetails = [
                 'faculty_type'  => $request->facultyType,
+                'appellation'   => $request->appellation,
                 'first_name'    => $request->firstName,
                 'middle_name'   => $request->middlename,
                 'last_name'     => $request->lastname,
-                'full_name'     => $request->fullname,
+               'full_name'     => trim(
+                    ($appellationName ? $appellationName . ' ' : '') .
+                    $request->firstName . ' ' .
+                    ($request->middlename ? $request->middlename . ' ' : '') .
+                    $request->lastname
+                ),
                 'gender'        => $request->gender,
                 'landline_no'   => $request->landline,
                 'mobile_no'        => $request->mobile,

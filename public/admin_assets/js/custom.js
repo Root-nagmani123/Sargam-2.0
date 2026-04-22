@@ -325,16 +325,25 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     function updateFullName() {
+        // Get the display name (text) of the selected appellation, not the value (pk)
+        let appellation = $('select[name="appellation"] option:selected').text().trim();
         const first = $('input[name="firstName"]').val().trim();
         const middle = $('input[name="middlename"]').val().trim();
         const last = $('input[name="lastname"]').val().trim();
 
         // Construct full name, skipping empty values
-        const fullName = [first, middle, last].filter(Boolean).join(' ');
-        $('input[name="fullname"]').val(fullName);
+        /*const fullName = [first, middle, last].filter(Boolean).join(' ');
+        $('input[name="fullname"]').val(fullName);*/
+
+
+        let fullname = [appellation, first, middle, last].filter(Boolean).join(' ');
+        $('input[name="fullname"]').val(fullname);
     }
 
-    $('input[name="firstName"], input[name="middlename"], input[name="lastname"]').on('input', updateFullName);
+    //$('input[name="firstName"], input[name="middlename"], input[name="lastname"]').on('input', updateFullName);
+
+    $('select[name="appellation"], input[name="firstName"], input[name="middlename"], input[name="lastname"]')
+.on('keyup change', updateFullName);
 
     $('#saveFacultyForm').click(function (e) {
         const $btn = $(this);
@@ -347,10 +356,13 @@ document.addEventListener('DOMContentLoaded', function () {
         $('input, select').removeClass('is-invalid');
         $('span.faculty-error-msg').remove();
 
+
+
         // Client-side pre-validation for required fields
         let clientErrors = false;
         const requiredSelects = [
             { name: 'facultytype', label: 'Faculty Type' },
+             { name: 'appellation', label: 'Appellation' },
             { name: 'gender',      label: 'Gender' },
             { name: 'country',     label: 'Country' },
             { name: 'state',       label: 'State' },
@@ -391,6 +403,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         let facultyType = $('select[name="facultytype"]').val();
+        let appellation = $('select[name="appellation"]').val();
         let firstName = $('input[name="firstName"]').val();
         let middleName = $('input[name="middlename"]').val();
         let lastName = $('input[name="lastname"]').val();
@@ -415,6 +428,7 @@ document.addEventListener('DOMContentLoaded', function () {
         let faculty_pa = $('input[name="faculty_pa"]').val();
 
         formData.append('facultyType', facultyType);
+        formData.append('appellation', appellation);
         formData.append('firstName', firstName);
         formData.append('middlename', middleName);
         formData.append('lastname', lastName);
@@ -594,8 +608,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     var facultyIndexPath = $('meta[name="faculty-index-path"]').attr('content');
 
                     var redirectUrl = facultyIndexPath || routes.facultyIndexUrl;
-                    var msg = encodeURIComponent(response.message || 'Faculty saved successfully');
-                    window.location.href = redirectUrl + (redirectUrl.indexOf('?') === -1 ? '?' : '&') + 'toast=' + msg;
+                    sessionStorage.setItem('facultyToast', response.message || 'Faculty saved successfully');
+                    window.location.href = redirectUrl;
                 } else {
                     Swal.fire({
                         icon: 'error',
