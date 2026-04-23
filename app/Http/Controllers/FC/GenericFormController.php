@@ -7,13 +7,17 @@ use App\Models\FC\FcForm;
 use App\Models\FC\FcFormStep;
 use App\Models\FC\FcFormFieldGroup;
 use App\Services\FC\DynamicFormService;
+use App\Services\FC\RegistrationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class GenericFormController extends Controller
 {
-    public function __construct(private DynamicFormService $formService) {}
+    public function __construct(
+        private DynamicFormService $formService,
+        private RegistrationService $registrationService,
+    ) {}
 
     // ── Form Dashboard — list steps for a form ───────────────────────
     public function formDashboard(FcForm $form)
@@ -40,7 +44,14 @@ class GenericFormController extends Controller
             }
         }
 
-        return view('forms.dashboard', compact('form', 'steps', 'stepStatus'));
+        $registrationProgress = null;
+        if ($form->form_slug === 'fc-registration') {
+            $registrationProgress = fc_registration_progress_view(
+                $this->registrationService->getProgress($username)
+            );
+        }
+
+        return view('forms.dashboard', compact('form', 'steps', 'stepStatus', 'registrationProgress'));
     }
 
     // ── Show a step ──────────────────────────────────────────────────

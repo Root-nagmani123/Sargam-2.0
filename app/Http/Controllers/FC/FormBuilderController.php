@@ -213,13 +213,13 @@ class FormBuilderController extends Controller
 
     private function validateFieldData(Request $request): array
     {
-        // Fallback: if target_column is empty, use field_name
-        if (!$request->filled('target_column') && $request->filled('field_name')) {
+        // Target column always matches field name (DB column created with same name if missing)
+        if ($request->filled('field_name')) {
             $request->merge(['target_column' => $request->input('field_name')]);
         }
 
         return $request->validate([
-            'field_name'           => 'required|string|max:100',
+            'field_name'           => ['required', 'string', 'max:100', 'regex:/^[a-zA-Z_][a-zA-Z0-9_]*$/'],
             'label'                => 'required|string|max:200',
             'field_type'           => 'required|in:text,number,email,date,select,radio,checkbox,textarea,file,hidden',
             'target_table'         => 'nullable|string|max:100',
@@ -244,12 +244,12 @@ class FormBuilderController extends Controller
 
     private function validateGroupFieldData(Request $request): array
     {
-        if (!$request->filled('target_column') && $request->filled('field_name')) {
+        if ($request->filled('field_name')) {
             $request->merge(['target_column' => $request->input('field_name')]);
         }
 
         return $request->validate([
-            'field_name'           => 'required|string|max:100',
+            'field_name'           => ['required', 'string', 'max:100', 'regex:/^[a-zA-Z_][a-zA-Z0-9_]*$/'],
             'label'                => 'required|string|max:200',
             'field_type'           => 'required|in:text,number,email,date,select,radio,checkbox,textarea,file,hidden',
             'target_column'        => 'required|string|max:100',

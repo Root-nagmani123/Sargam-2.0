@@ -2,13 +2,8 @@
 <div class="row g-3">
     <div class="col-md-6">
         <label class="form-label small fw-semibold">Field Name (DB Column) <span class="text-danger">*</span></label>
-        <select name="field_name" class="form-select form-select-sm field-name-select2" required>
-            <option value="">-- Select column --</option>
-            @if(isset($field) && $field && $field->field_name)
-                <option value="{{ $field->field_name }}" selected>{{ $field->field_name }}</option>
-            @endif
-        </select>
-        <small class="text-muted">Select from columns of the step's target table</small>
+        <input type="text" name="field_name" class="form-control form-control-sm field-name-input" value="{{ isset($field) && $field ? $field->field_name : '' }}" required placeholder="e.g. emergency_contact_phone" autocomplete="off">
+        <small class="text-muted">A matching column is created on the target table if it does not exist (snake_case recommended).</small>
     </div>
     <div class="col-md-6">
         <label class="form-label small fw-semibold">Label <span class="text-danger">*</span></label>
@@ -28,11 +23,7 @@
         <input type="text" name="target_table" class="form-control form-control-sm" value="{{ $field->target_table ?? '' }}" placeholder="Leave blank for step default">
     </div>
     @endif
-    <div class="col-md-4">
-        <label class="form-label small fw-semibold">Target Column <span class="text-danger">*</span></label>
-        <input type="text" name="target_column" class="form-control form-control-sm target-column-input" value="{{ $field->target_column ?? '' }}" required placeholder="Auto-filled from field name">
-        <small class="text-muted">Auto-set from selected field name (editable)</small>
-    </div>
+    <input type="hidden" name="target_column" class="target-column-sync" value="{{ $field->target_column ?? '' }}">
     <div class="col-md-8">
         <label class="form-label small fw-semibold">Validation Rules</label>
         <input type="text" name="validation_rules" class="form-control form-control-sm" value="{{ $field->validation_rules ?? '' }}" placeholder="e.g. required|string|max:200">
