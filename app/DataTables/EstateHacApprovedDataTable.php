@@ -3,6 +3,7 @@
 namespace App\DataTables;
 
 use App\Models\EstateHacApprovedRow;
+use App\Support\RedisBackedCache;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
@@ -61,10 +62,8 @@ class EstateHacApprovedDataTable extends DataTable
     {
         $enabled = ! in_array(strtolower((string) env('ESTATE_UPDATE_METER_READING_CACHE_ENABLED', 'true')), ['0', 'false', 'no', 'off'], true);
         $ttl = max(30, (int) env('ESTATE_UPDATE_METER_READING_CACHE_SECONDS', 300));
-        $storeName = (string) env('ESTATE_UPDATE_METER_READING_CACHE_STORE', env('ESTATE_BILL_REPORT_GRID_CACHE_STORE', 'redis'));
-        $repository = array_key_exists($storeName, config('cache.stores', []))
-            ? \Illuminate\Support\Facades\Cache::store($storeName)
-            : \Illuminate\Support\Facades\Cache::store(config('cache.default'));
+        $storeName = RedisBackedCache::estateUpdateMeterReadingStoreName();
+        $repository = RedisBackedCache::repositoryForStore($storeName);
         if (! $enabled) {
             return $callback();
         }

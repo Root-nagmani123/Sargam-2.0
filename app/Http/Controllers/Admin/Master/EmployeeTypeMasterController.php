@@ -47,6 +47,8 @@ class EmployeeTypeMasterController extends Controller
 
         $message = $id ? 'Employee Type updated successfully.' : 'Employee Type created successfully.';
 
+        EmployeeTypeMasterDataTable::bumpListingCacheEpoch();
+
         return redirect()->route('master.employee.type.index')->with('success', $message);
 
     }

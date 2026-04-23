@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers\Admin;
 
+use App\DataTables\MemberDataTable;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -12,7 +13,6 @@ use App\Http\Requests\Admin\Member\{
     StoreMemberStep5Request,
 };
 use App\Models\{EmployeeMaster, EmployeeRoleMapping, UserCredential, City};
-use App\DataTables\MemberDataTable;
 use App\Exports\MemberExport;
 use Maatwebsite\Excel\Facades\Excel;
 class MemberController extends Controller
@@ -266,6 +266,8 @@ class MemberController extends Controller
             return response()->json(['error' => 'Failed to save data'], 500);
         }
 
+        MemberDataTable::bumpListingCacheEpoch();
+
         return response()->json([
             'message' => "Step $step validated and data saved.",
             'pk' => $responseData->pk
@@ -320,6 +322,8 @@ class MemberController extends Controller
                 ]);
             }
         }
+
+        MemberDataTable::bumpListingCacheEpoch();
 
         return response()->json(['message' => 'Member successfully created']);
     }
@@ -378,6 +382,8 @@ class MemberController extends Controller
                 ]);
             }
         }
+
+        MemberDataTable::bumpListingCacheEpoch();
 
         return response()->json(['message' => 'Member successfully updated']);
     }
@@ -461,6 +467,8 @@ class MemberController extends Controller
             return response()->json(['error' => 'Failed to save data'], 500);
         }
 
+        MemberDataTable::bumpListingCacheEpoch();
+
         return response()->json([
             'message' => "Step $step validated and data saved.",
             'pk' => $responseData->pk
@@ -489,6 +497,8 @@ class MemberController extends Controller
 
             // Delete the member
             $member->delete();
+
+            MemberDataTable::bumpListingCacheEpoch();
 
             return redirect()->route('member.index')->with('success', 'Member deleted successfully.');
         } catch (\Exception $e) {

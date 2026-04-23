@@ -96,6 +96,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Redis-backed heavy caches (optional single store name)
+    |--------------------------------------------------------------------------
+    |
+    | When set, this Laravel cache store name is used for all callers that use
+    | App\Support\RedisBackedCache (Estate listings, bill grid, etc.). When
+    | empty, legacy ESTATE_*_CACHE_STORE env vars keep their previous behaviour.
+    |
+    */
+
+    'redis_backed_unified_store' => env('REDIS_BACKED_CACHE_STORE'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Cache Key Prefix
     |--------------------------------------------------------------------------
     |

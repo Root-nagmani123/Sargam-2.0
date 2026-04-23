@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\DataTables\Master\EmployeeTypeMasterDataTable;
 use App\DataTables\UserCredentialsDataTable;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\User\StoreUserRequest;
@@ -1554,6 +1555,10 @@ public function toggleStatus(Request $request)
     DB::table($request->table)
         ->where($idColumn, $id)
         ->update([$column => $status]);
+
+    if ($table === 'employee_type_master') {
+        EmployeeTypeMasterDataTable::bumpListingCacheEpoch();
+    }
 
     $newState = ((int) $status === 1) ? 'Active' : 'Inactive';
     session()->flash('success', "Status updated to {$newState}.");

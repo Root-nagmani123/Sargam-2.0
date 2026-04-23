@@ -12,6 +12,7 @@ use App\DataTables\EstateReturnHouseDataTable;
 use App\DataTables\EstateRequestPutInHacDataTable;
 use App\DataTables\EstateHacApprovedDataTable;
 use App\Http\Controllers\Controller;
+use App\Support\RedisBackedCache;
 use App\Models\EstateChangeHomeReqDetails;
 use App\Models\EstateMonthReadingDetailsOther;
 use App\Models\EstateHomeRequestDetails;
@@ -6060,10 +6061,8 @@ class EstateController extends Controller
     {
         $enabled = ! in_array(strtolower((string) env('ESTATE_UPDATE_METER_READING_CACHE_ENABLED', 'true')), ['0', 'false', 'no', 'off'], true);
         $ttl = max(30, (int) env('ESTATE_UPDATE_METER_READING_CACHE_SECONDS', 300));
-        $storeName = (string) env('ESTATE_UPDATE_METER_READING_CACHE_STORE', env('ESTATE_BILL_REPORT_GRID_CACHE_STORE', 'redis'));
-        $repository = array_key_exists($storeName, config('cache.stores', []))
-            ? \Illuminate\Support\Facades\Cache::store($storeName)
-            : \Illuminate\Support\Facades\Cache::store(config('cache.default'));
+        $storeName = RedisBackedCache::estateUpdateMeterReadingStoreName();
+        $repository = RedisBackedCache::repositoryForStore($storeName);
 
         return [$enabled, $ttl, $repository, $storeName];
     }
@@ -10809,10 +10808,8 @@ class EstateController extends Controller
 
         $cacheEnabled = ! in_array(strtolower((string) env('ESTATE_LIST_METER_READING_CACHE_ENABLED', 'true')), ['0', 'false', 'no', 'off'], true);
         $cacheTtl = max(30, (int) env('ESTATE_LIST_METER_READING_CACHE_SECONDS', 300));
-        $cacheStoreName = (string) env('ESTATE_LIST_METER_READING_CACHE_STORE', env('ESTATE_BILL_REPORT_GRID_CACHE_STORE', 'redis'));
-        $cacheRepository = array_key_exists($cacheStoreName, config('cache.stores', []))
-            ? Cache::store($cacheStoreName)
-            : Cache::store(config('cache.default'));
+        $cacheStoreName = RedisBackedCache::estateListMeterReadingStoreName();
+        $cacheRepository = RedisBackedCache::repositoryForStore($cacheStoreName);
 
         $loadPayload = function () use (
             $billMonth,
@@ -11183,7 +11180,8 @@ class EstateController extends Controller
      * Data mapping: estate_month_reading_details (LBSNA) + estate_month_reading_details_other (Other).
      *
      * Caching: Redis (or CACHE default) keyed by bill month, RBAC scope, and DataTables params. Tune via .env:
-     * ESTATE_BILL_REPORT_GRID_CACHE_ENABLED, ESTATE_BILL_REPORT_GRID_CACHE_SECONDS, ESTATE_BILL_REPORT_GRID_CACHE_STORE.
+     * ESTATE_BILL_REPORT_GRID_CACHE_ENABLED, ESTATE_BILL_REPORT_GRID_CACHE_SECONDS, ESTATE_BILL_REPORT_GRID_CACHE_STORE,
+     * or project-wide REDIS_BACKED_CACHE_STORE (see App\Support\RedisBackedCache).
      */
     public function getBillReportGridData(Request $request)
     {
@@ -11266,10 +11264,8 @@ class EstateController extends Controller
 
         $cacheEnabled = ! in_array(strtolower((string) env('ESTATE_BILL_REPORT_GRID_CACHE_ENABLED', 'true')), ['0', 'false', 'no', 'off'], true);
         $cacheTtl = max(30, (int) env('ESTATE_BILL_REPORT_GRID_CACHE_SECONDS', 300));
-        $cacheStoreName = (string) env('ESTATE_BILL_REPORT_GRID_CACHE_STORE', 'redis');
-        $cacheRepository = array_key_exists($cacheStoreName, config('cache.stores', []))
-            ? Cache::store($cacheStoreName)
-            : Cache::store(config('cache.default'));
+        $cacheStoreName = RedisBackedCache::estateBillReportGridStoreName();
+        $cacheRepository = RedisBackedCache::repositoryForStore($cacheStoreName);
 
         $loadPayload = function () use (
             $billMonthVariants,

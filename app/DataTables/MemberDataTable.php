@@ -2,7 +2,9 @@
 
 namespace App\DataTables;
 
+use App\Support\DataTableRedisCache;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
+use Illuminate\Http\JsonResponse;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Yajra\DataTables\Html\Button;
@@ -14,6 +16,35 @@ use App\Models\EmployeeMaster;
 
 class MemberDataTable extends DataTable
 {
+    private const LISTING_CACHE_EPOCH_KEY = 'member_dt_list_epoch';
+
+    /**
+     * Bump after any change that should refresh the /member listing (create, edit steps, update, delete).
+     */
+    public static function bumpListingCacheEpoch(): void
+    {
+        DataTableRedisCache::bumpListEpoch(self::LISTING_CACHE_EPOCH_KEY, 'MemberDataTable');
+    }
+
+    /**
+     * Server-side JSON for /member listing. Tune via .env: MEMBER_DATATABLE_CACHE_*.
+     * Cached HTML rows contain CSRF; tokens are refreshed in {@see DataTableRedisCache::refreshCsrfInDataTablePayload()}.
+     */
+    public function ajax(): JsonResponse
+    {
+        return DataTableRedisCache::serveCachedAjax(
+            $this->request(),
+            'member_dt:v1:',
+            self::LISTING_CACHE_EPOCH_KEY,
+            [
+                'enabled' => 'MEMBER_DATATABLE_CACHE_ENABLED',
+                'seconds' => 'MEMBER_DATATABLE_CACHE_SECONDS',
+            ],
+            'MemberDataTable',
+            fn () => parent::ajax()
+        );
+    }
+
     /**
      * Build DataTable class.
      *

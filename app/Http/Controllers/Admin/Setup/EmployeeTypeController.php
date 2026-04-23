@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin\Setup;
 
+use App\DataTables\Master\EmployeeTypeMasterDataTable;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\EmployeeTypeMaster;
@@ -51,6 +52,8 @@ class EmployeeTypeController extends Controller
         $model->active_inactive = 1;
         $model->save();
 
+        EmployeeTypeMasterDataTable::bumpListingCacheEpoch();
+
         if ($request->ajax()) {
             return response()->json([
                 'success' => true,
@@ -83,6 +86,8 @@ class EmployeeTypeController extends Controller
         $model->category_type_name = $validated['employee_type_name'];
         $model->save();
 
+        EmployeeTypeMasterDataTable::bumpListingCacheEpoch();
+
         if ($request->ajax()) {
             return response()->json([
                 'success' => true,
@@ -103,6 +108,9 @@ class EmployeeTypeController extends Controller
         try { $pk = decrypt($id); } catch (\Exception $e) { abort(404); }
         $model = EmployeeTypeMaster::findOrFail($pk);
         $model->delete();
+
+        EmployeeTypeMasterDataTable::bumpListingCacheEpoch();
+
         if ($request->ajax()) {
             return response()->json(['success'=>true,'deleted'=>true]);
         }
