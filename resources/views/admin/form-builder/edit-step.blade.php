@@ -502,113 +502,40 @@
 
 @push('scripts')
 <script>
-// ── Select2: Load columns from target table ──────────────────────
-const COLUMNS_API = '{{ route("fc-reg.admin.forms.api.table-columns") }}';
 const STEP_TARGET_TABLE = '{{ $step->target_table }}';
-let columnsCache = {};
 
-function loadColumnsForSelect(selectEl, tableName, selectedValue) {
-    const $select = $(selectEl);
-    if (!tableName) return;
+function syncTargetColumnFromFieldName(form) {
+    const nameInput = form.querySelector('.field-name-input');
+    const hidden = form.querySelector('.target-column-sync');
+    if (nameInput && hidden) {
+        hidden.value = (nameInput.value || '').trim();
+    }
+}
 
-    // Check cache
-    if (columnsCache[tableName]) {
-        populateSelect($select, columnsCache[tableName], selectedValue);
+function bindFieldNameSync(form) {
+    const nameInput = form.querySelector('.field-name-input');
+    if (!nameInput || nameInput.dataset.syncBound === '1') {
         return;
     }
-
-    $.get(COLUMNS_API, { table: tableName }, function(data) {
-        columnsCache[tableName] = data;
-        populateSelect($select, data, selectedValue);
+    nameInput.dataset.syncBound = '1';
+    nameInput.addEventListener('input', function() {
+        syncTargetColumnFromFieldName(form);
     });
-}
-
-function populateSelect($select, columns, selectedValue) {
-    $select.empty().append('<option value="">-- Select column --</option>');
-    columns.forEach(function(col) {
-        const option = new Option(col.text + ' (' + col.type + ')', col.id, false, col.id === selectedValue);
-        $select.append(option);
-    });
-    $select.trigger('change.select2');
-}
-
-function initSelect2ForModal(modalEl) {
-    const $modal = $(modalEl);
-    $modal.find('.field-name-select2').each(function() {
-        const $sel = $(this);
-        if ($sel.hasClass('select2-hidden-accessible')) {
-            $sel.select2('destroy');
+    nameInput.addEventListener('blur', function() {
+        syncTargetColumnFromFieldName(form);
+        const labelInput = form.querySelector('[name="label"]');
+        const raw = (nameInput.value || '').trim();
+        if (labelInput && !labelInput.value && raw) {
+            labelInput.value = raw.replace(/_/g, ' ').replace(/\bid\b/gi, 'ID')
+                .replace(/\b\w/g, function(c) { return c.toUpperCase(); });
         }
-        $sel.select2({
-            theme: 'bootstrap-5',
-            width: '100%',
-            placeholder: '-- Select column --',
-            allowClear: true,
-            dropdownParent: $modal
-        });
-
-        // Auto-fill target_column and generate label
-        $sel.off('select2:select').on('select2:select', function(e) {
-            const val = e.params.data.id;
-            const form = this.closest('form');
-            const targetCol = form.querySelector('[name="target_column"]');
-            if (targetCol) targetCol.value = val;
-
-            // Auto-generate label from column name (full_name → Full Name)
-            const labelInput = form.querySelector('[name="label"]');
-            if (labelInput && !labelInput.value) {
-                labelInput.value = val.replace(/_/g, ' ').replace(/\bid\b/gi, 'ID')
-                    .replace(/\b\w/g, c => c.toUpperCase());
-            }
-        });
-
-        $sel.off('select2:clear').on('select2:clear', function() {
-            const form = this.closest('form');
-            const targetCol = form.querySelector('[name="target_column"]');
-            if (targetCol) targetCol.value = '';
-        });
     });
 }
 
-// ── Init on modal open ───────────────────────────────────────────
-document.querySelectorAll('.modal').forEach(function(modal) {
-    modal.addEventListener('shown.bs.modal', function() {
-        initSelect2ForModal(this);
-
-        // Load columns for the step's target table
-        this.querySelectorAll('.field-name-select2').forEach(function(sel) {
-            const form = sel.closest('form');
-            // Use custom target_table if set, otherwise step default
-            const customTable = form.querySelector('[name="target_table"]');
-            const table = (customTable && customTable.value) ? customTable.value : STEP_TARGET_TABLE;
-            const currentVal = sel.value || '';
-            loadColumnsForSelect(sel, table, currentVal);
-        });
-    });
-});
-
-// ── Fallback: copy field_name to target_column on form submit ────
 document.querySelectorAll('#addFieldModal form, #editFieldModal form, #groupFieldModal form').forEach(function(form) {
+    bindFieldNameSync(form);
     form.addEventListener('submit', function() {
-        const sel = form.querySelector('.field-name-select2');
-        const targetCol = form.querySelector('[name="target_column"]');
-        if (sel && targetCol && !targetCol.value && sel.value) {
-            targetCol.value = sel.value;
-        }
-    });
-});
-
-// ── When target_table changes, reload columns ────────────────────
-document.querySelectorAll('[name="target_table"]').forEach(function(input) {
-    input.addEventListener('change', function() {
-        const form = this.closest('form');
-        const sel = form.querySelector('.field-name-select2');
-        if (sel) {
-            const table = this.value || STEP_TARGET_TABLE;
-            loadColumnsForSelect(sel, table, '');
-            const targetCol = form.querySelector('[name="target_column"]');
-            if (targetCol) targetCol.value = '';
-        }
+        syncTargetColumnFromFieldName(form);
     });
 });
 
@@ -618,6 +545,7 @@ function editField(field) {
     form.action = '{{ url("fc-reg/admin/form-builder/fields") }}/' + field.id;
 
     const inputs = {
+        field_name: field.field_name,
         label: field.label, field_type: field.field_type,
         target_table: field.target_table, target_column: field.target_column,
         validation_rules: field.validation_rules, placeholder: field.placeholder,
@@ -631,22 +559,11 @@ function editField(field) {
         const el = form.querySelector(`[name="${k}"]`);
         if (el) el.value = v || '';
     }
+    syncTargetColumnFromFieldName(form);
     form.querySelector('[name="is_required"]').checked = !!field.is_required;
     form.querySelector('[name="is_active"]').checked = field.is_active !== false && field.is_active !== 0;
 
-    // Show the modal (Select2 will init on shown.bs.modal, then we load columns with selected value)
-    const modalEl = document.getElementById('editFieldModal');
-    const modal = new bootstrap.Modal(modalEl);
-
-    // After modal opens, load columns with existing field_name selected
-    modalEl.addEventListener('shown.bs.modal', function handler() {
-        const table = field.target_table || STEP_TARGET_TABLE;
-        const sel = form.querySelector('.field-name-select2');
-        loadColumnsForSelect(sel, table, field.field_name);
-        modalEl.removeEventListener('shown.bs.modal', handler);
-    });
-
-    modal.show();
+    new bootstrap.Modal(document.getElementById('editFieldModal')).show();
 }
 
 function moveField(fieldId, direction) {
@@ -671,28 +588,11 @@ function openAddGroupFieldModal(groupId) {
     document.getElementById('groupFieldModalTitle').textContent = 'Add Group Field';
     document.getElementById('gfSubmitBtn').textContent = 'Add Field';
     form.querySelectorAll('input[type=text], input[type=number], textarea').forEach(el => el.value = '');
+    form.querySelectorAll('.target-column-sync').forEach(el => { el.value = ''; });
     form.querySelectorAll('input[type=checkbox]').forEach(el => el.checked = false);
     form.querySelector('[name="css_class"]').value = 'col-md-6';
     const isActiveEl = form.querySelector('[name="is_active"]');
     if (isActiveEl) isActiveEl.checked = true;
-
-    // Clear Select2
-    const $sel = $(form).find('.field-name-select2');
-    if ($sel.length) {
-        $sel.val('').trigger('change');
-    }
-
-    // Find group's target table to load correct columns
-    @if($step->fieldGroups->isNotEmpty())
-    const groupMap = {!! json_encode($step->fieldGroups->pluck('target_table', 'id')) !!};
-    const groupTable = groupMap[groupId] || STEP_TARGET_TABLE;
-    const modalEl = document.getElementById('groupFieldModal');
-    modalEl.addEventListener('shown.bs.modal', function handler() {
-        const sel = form.querySelector('.field-name-select2');
-        loadColumnsForSelect(sel, groupTable, '');
-        modalEl.removeEventListener('shown.bs.modal', handler);
-    });
-    @endif
 
     new bootstrap.Modal(document.getElementById('groupFieldModal')).show();
 }
@@ -704,6 +604,7 @@ function editGroupField(field) {
     document.getElementById('groupFieldModalTitle').textContent = 'Edit Group Field';
     document.getElementById('gfSubmitBtn').textContent = 'Update Field';
     const inputs = {
+        field_name: field.field_name,
         label: field.label, field_type: field.field_type,
         target_column: field.target_column, validation_rules: field.validation_rules,
         placeholder: field.placeholder, options_json: field.options_json,
@@ -714,26 +615,12 @@ function editGroupField(field) {
         const el = form.querySelector(`[name="${k}"]`);
         if (el) el.value = v || '';
     }
+    syncTargetColumnFromFieldName(form);
     form.querySelector('[name="is_required"]').checked = !!field.is_required;
     const isActiveEl = form.querySelector('[name="is_active"]');
     if (isActiveEl) isActiveEl.checked = field.is_active !== false && field.is_active !== 0;
 
-    // Show modal, then load columns with field_name selected
-    const modalEl = document.getElementById('groupFieldModal');
-    modalEl.addEventListener('shown.bs.modal', function handler() {
-        // Find group's target table
-        @if($step->fieldGroups->isNotEmpty())
-        const groupMap = {!! json_encode($step->fieldGroups->pluck('target_table', 'id')) !!};
-        const groupTable = groupMap[field.group_id] || STEP_TARGET_TABLE;
-        @else
-        const groupTable = STEP_TARGET_TABLE;
-        @endif
-        const sel = form.querySelector('.field-name-select2');
-        loadColumnsForSelect(sel, groupTable, field.field_name);
-        modalEl.removeEventListener('shown.bs.modal', handler);
-    });
-
-    new bootstrap.Modal(modalEl).show();
+    new bootstrap.Modal(document.getElementById('groupFieldModal')).show();
 }
 
 function editDocMaster(doc) {
