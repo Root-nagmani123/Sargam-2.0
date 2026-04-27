@@ -3,6 +3,7 @@
 
 @section('setup_content')
 <div class="container-fluid px-3">
+    <x-breadcrum title="FC Activities - Home"></x-breadcrum>
     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
         <h4 class="fw-bold mb-0" style="color:#1a3c6e;">Post-Arrival Activities</h4>
         <div class="d-flex gap-2 flex-wrap">
@@ -79,7 +80,7 @@
 
     <div class="card border-0 shadow-sm">
         <div class="table-responsive">
-            <table class="table table-sm table-hover mb-0">
+            <table class="table table-sm table-hover mb-0 js-fc-datatable" data-export-title="FC Post-Arrival Activities">
                 <thead class="table-light">
                     <tr>
                         <th>#</th><th>Name</th><th>OT Code</th><th>Course</th><th>Activity</th><th>Value</th><th>Date/Time</th><th>Action</th>
@@ -112,6 +113,8 @@
     </div>
 </div>
 @endsection
+
+@include('admin.fc-activities.partials.datatable-tools')
 
 @push('scripts')
 <script>
