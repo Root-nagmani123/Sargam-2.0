@@ -33,7 +33,7 @@ class FacultyRequest extends FormRequest
             'facultyType' => 'required|exists:faculty_type_master,pk',
             'country' => 'required|exists:country_master,pk',
             'current_sector' => 'required|integer|in:1,2',
-            'joiningdate' => 'required|date',
+            //'joiningdate' => 'required|date',
             'email' => 'nullable|email:rfc,dns',
             'alternativeEmail' => 'nullable|email:rfc,dns',
             'mobile' => ['nullable', 'digits:10'],
@@ -108,7 +108,7 @@ class FacultyRequest extends FormRequest
             // 'researchpublications.required' => 'Research publications are required',
             // 'professionalmemberships.required' => 'Professional memberships are required',
             // 'recommendationdetails.required' => 'Recommendation details are required',
-            'joiningdate.required' => 'Joining date is required',
+           // 'joiningdate.required' => 'Joining date is required',
         ];
     }
 }

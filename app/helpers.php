@@ -41,6 +41,9 @@ function view_file_link($path)
 
 function format_date($date, $format = 'd-m-Y')
 {
+     if (empty($date) || $date == '0000-00-00') {
+        return '-'; // or return '';
+    }
     return \Carbon\Carbon::parse($date)->format($format);
 }
 
@@ -178,12 +181,12 @@ function canSeeMessSelfServiceSetup(): bool
 function get_Role_by_course()
 {
     $user = Auth::user();
-    
+
     // Return empty array if user is not authenticated
     if (!$user) {
         return [];
     }
-    
+
     $sessionRoles = Session::get('user_roles', []);
     if (empty($sessionRoles)) {
         return [];
@@ -221,12 +224,12 @@ function service_find()
 function employee_designation_search()
 {
     $user = Auth::user();
-    
+
     // Return null if user is not authenticated
     if (!$user) {
         return null;
     }
-    
+
     // print_r($user);
     $cacheKey = 'employee_designation_' . $user->user_id;
     $designation = Cache::remember($cacheKey, 600, function () use ($user) {
@@ -240,12 +243,12 @@ function employee_designation_search()
 function get_profile_pic()
 {
     $user = Auth::user();
-    
+
     // Return default image if user is not authenticated
     if (!$user) {
         return 'https://images.unsplash.com/photo-1650110002977-3ee8cc5eac91?q=80&w=737&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
     }
-    
+
     $cacheKey = 'profile_pic_' . $user->user_id;
     if ($user->user_category == 'S') {
 
@@ -282,12 +285,12 @@ if (!function_exists('get_notice_notification_by_role')) {
     function get_notice_notification_by_role()
     {
         $user = Auth::user();
-        
+
         // Return empty collection if user is not authenticated
         if (!$user) {
             return collect([]);
         }
-        
+
         $sessionRoles = Session::get('user_roles', []);
 
         $roleStaffFaculty = ['Internal Faculty', 'Guest Faculty', 'Training', 'Staff'];
@@ -340,7 +343,7 @@ if (!function_exists('get_notice_notification_by_role')) {
 
 /**
  * Get NotificationService instance
- * 
+ *
  * @return \App\Services\NotificationService
  */
 if (!function_exists('notification')) {
