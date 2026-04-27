@@ -212,6 +212,30 @@
                                                     ID Card</span>
                                             </a>
                                         </li>
+                                        @if (!hasRole('Security Card') && !hasRole('Admin Security'))
+                                        <li class="sidebar-item">
+                                            <a class="sidebar-link {{ request()->routeIs('admin.security.employee_idcard_approval.approval1') ? 'active' : '' }}"
+                                                href="{{ route('admin.security.employee_idcard_approval.approval1') }}">
+                                                <span class="hide-menu small small-sm-normal text-nowrap">Id Card Approval</span>
+                                            </a>
+                                        </li>
+                                        @endif
+                                        @if (hasRole('Security Card'))
+                                        <li class="sidebar-item">
+                                            <a class="sidebar-link {{ request()->routeIs('admin.security.employee_idcard_approval.approval2') ? 'active' : '' }}"
+                                                href="{{ route('admin.security.employee_idcard_approval.approval2') }}">
+                                                <span class="hide-menu small small-sm-normal text-nowrap">Id Card Approval</span>
+                                            </a>
+                                        </li>
+                                        @endif
+                                        @if (hasRole('Admin Security'))
+                                        <li class="sidebar-item">
+                                            <a class="sidebar-link {{ request()->routeIs('admin.security.employee_idcard_approval.approval3') ? 'active' : '' }}"
+                                                href="{{ route('admin.security.employee_idcard_approval.approval3') }}">
+                                                <span class="hide-menu small small-sm-normal text-nowrap">Id Card Approval</span>
+                                            </a>
+                                        </li>
+                                        @endif
 
                                     </ul>
 
