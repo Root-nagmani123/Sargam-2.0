@@ -455,6 +455,10 @@
                     .trim());
                 let parent = activeLink.closest('.collapse');
                 while (parent) {
+                    if (parent.getAttribute('data-sidebar-no-auto-expand') === 'true') {
+                        parent = parent.parentElement.closest('.collapse');
+                        continue;
+                    }
                     console.log('Expanding collapse:', parent.id);
                     parent.classList.add('show', 'in');
                     parent.style.display = 'block';

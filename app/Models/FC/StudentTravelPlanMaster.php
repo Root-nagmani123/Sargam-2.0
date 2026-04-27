@@ -9,32 +9,25 @@ class StudentTravelPlanMaster extends Model
     protected $table = 'student_travel_plan_masters';
 
     protected $fillable = [
-        'username', 'joining_date', 'joining_time', 'travel_type_id', 'travel_mode_id',
-        'from_city', 'to_city', 'travel_date', 'train_flight_no', 'pickup_required', 'pickup_type_id',
+        'username', 'joining_date', 'joining_time',
+        'pickup_type_id',
         'needs_pickup', 'pickup_from_location', 'pickup_datetime',
         'needs_drop', 'drop_type_id', 'drop_to_location', 'drop_datetime',
         'departure_city', 'departure_state', 'special_requirements', 'is_submitted',
+        'fc_travel_arrival_slot_id', 'mode_of_journey', 'journey_vehicle_no', 'academy_arrival_date',
+        'arrival_time_dehradun', 'require_academy_vehicle',
     ];
 
     protected $casts = [
         'joining_date'    => 'date',
-        'travel_date'     => 'date',
         'pickup_datetime' => 'datetime',
         'drop_datetime'   => 'datetime',
         'needs_pickup'    => 'boolean',
         'needs_drop'      => 'boolean',
         'is_submitted'    => 'boolean',
+        'academy_arrival_date'  => 'date',
+        'require_academy_vehicle' => 'boolean',
     ];
-
-    public function travelType()
-    {
-        return $this->belongsTo(TravelTypeMaster::class, 'travel_type_id');
-    }
-
-    public function travelMode()
-    {
-        return $this->belongsTo(MctpTravelModeMaster::class, 'travel_mode_id');
-    }
 
     public function pickupType()
     {
@@ -51,5 +44,53 @@ class StudentTravelPlanMaster extends Model
         return $this->hasMany(MctpStudentTravelPlanDetail::class, 'travel_plan_id')
             ->orderByRaw('leg_number IS NULL, leg_number')
             ->orderBy('id');
+    }
+
+    public function fcArrivalSlot()
+    {
+        return $this->belongsTo(FcTravelArrivalSlot::class, 'fc_travel_arrival_slot_id');
+    }
+
+    /**
+     * Normalize DB/driver values for the submitted flag (reports use raw query rows).
+     */
+    public static function interpretIsSubmitted(mixed $value): bool
+    {
+        if ($value === null || $value === '') {
+            return false;
+        }
+        if (is_bool($value)) {
+            return $value;
+        }
+        if (is_int($value) || is_float($value)) {
+            return (int) $value === 1;
+        }
+        $s = strtolower(trim((string) $value));
+
+        return in_array($s, ['1', 'true', 'yes', 'y', 'on'], true);
+    }
+
+    /**
+     * Normalize DB/driver values (0/1, "1", tinyint, null) for UI and reports.
+     */
+    public static function interpretRequiresAcademyVehicle(mixed $value): bool
+    {
+        if ($value === null || $value === '') {
+            return false;
+        }
+        if (is_bool($value)) {
+            return $value;
+        }
+        if (is_int($value) || is_float($value)) {
+            return (int) $value === 1;
+        }
+        $s = strtolower(trim((string) $value));
+
+        return in_array($s, ['1', 'true', 'yes', 'y', 'on'], true);
+    }
+
+    public function requiresAcademyVehicleYes(): bool
+    {
+        return self::interpretRequiresAcademyVehicle($this->getRawOriginal('require_academy_vehicle'));
     }
 }

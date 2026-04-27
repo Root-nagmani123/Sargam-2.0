@@ -198,6 +198,131 @@
                     </a>
                 </li>
             </ul>
+
+            <!-- ======= FC REG (routes/fc_registration.php) — Admin ======= -->
+            <li class="sidebar-item mt-2"
+                style="background: #4077ad;
+                border-radius: 30px 0px 0px 30px;
+                width: 100%;
+                box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+                min-width: 250px;">
+                <a class="sidebar-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
+                    href="#collapseFcRegAdmin" role="button" aria-expanded="false" aria-controls="collapseFcRegAdmin">
+                    <span class="fw-bold">FC Reg — Admin</span>
+                    <i class="material-icons menu-icon material-symbols-rounded toggle-icon"
+                        style="font-size: 24px; transition: transform 0.3s ease;">keyboard_arrow_right</i>
+                </a>
+            </li>
+            <ul class="collapse list-unstyled ps-3" id="collapseFcRegAdmin" data-sidebar-no-auto-expand="true">
+                <li class="sidebar-item {{ request()->routeIs('fc-reg.admin.form-builder.*') ? 'active' : '' }}">
+                    <a class="sidebar-link {{ request()->routeIs('fc-reg.admin.form-builder.*') ? 'active' : '' }}"
+                        href="{{ route('fc-reg.admin.form-builder.index') }}">
+                        <span class="hide-menu small small-sm-normal text-nowrap">Form Builder</span>
+                    </a>
+                </li>
+                <li class="sidebar-item {{ request()->routeIs('fc-reg.admin.forms.*') ? 'active' : '' }}">
+                    <a class="sidebar-link {{ request()->routeIs('fc-reg.admin.forms.*') ? 'active' : '' }}"
+                        href="{{ route('fc-reg.admin.forms.index') }}">
+                        <span class="hide-menu small small-sm-normal text-nowrap">Form Management</span>
+                    </a>
+                </li>
+                <li class="sidebar-item {{ request()->routeIs('fc-reg.admin.activities.*') && !request()->routeIs('fc-reg.admin.activities.reports.*', 'fc-reg.admin.activities.medical.*', 'fc-reg.admin.activities.status.*') ? 'active' : '' }}">
+                    <a class="sidebar-link {{ request()->routeIs('fc-reg.admin.activities.*') && !request()->routeIs('fc-reg.admin.activities.reports.*', 'fc-reg.admin.activities.medical.*', 'fc-reg.admin.activities.status.*') ? 'active' : '' }}"
+                        href="{{ route('fc-reg.admin.activities.index') }}">
+                        <span class="hide-menu small small-sm-normal text-nowrap">Activities</span>
+                    </a>
+                </li>
+                <li class="sidebar-item {{ request()->routeIs('fc-reg.admin.activities.status.all') ? 'active' : '' }}">
+                    <a class="sidebar-link {{ request()->routeIs('fc-reg.admin.activities.status.all') ? 'active' : '' }}"
+                        href="{{ route('fc-reg.admin.activities.status.all') }}">
+                        <span class="hide-menu small small-sm-normal text-nowrap">Activities — All status (combined)</span>
+                    </a>
+                </li>
+                <li class="sidebar-item {{ request()->routeIs('fc-reg.admin.activities.reports.*') ? 'active' : '' }}">
+                    <a class="sidebar-link {{ request()->routeIs('fc-reg.admin.activities.reports.*') ? 'active' : '' }}"
+                        href="{{ route('fc-reg.admin.activities.reports.summary') }}">
+                        <span class="hide-menu small small-sm-normal text-nowrap">Activity Reports</span>
+                    </a>
+                </li>
+                <li class="sidebar-item {{ request()->routeIs('fc-reg.admin.activities.medical.*') ? 'active' : '' }}">
+                    <a class="sidebar-link {{ request()->routeIs('fc-reg.admin.activities.medical.*') ? 'active' : '' }}"
+                        href="{{ route('fc-reg.admin.activities.medical.index') }}">
+                        <span class="hide-menu small small-sm-normal text-nowrap">Activities Medical</span>
+                    </a>
+                </li>
+                <li class="sidebar-item {{ request()->routeIs('admin.travel.*') ? 'active' : '' }}">
+                    <a class="sidebar-link {{ request()->routeIs('admin.travel.*') ? 'active' : '' }}"
+                        href="{{ route('admin.travel.index') }}">
+                        <span class="hide-menu small small-sm-normal text-nowrap">Travel Plans (Admin)</span>
+                    </a>
+                </li>
+                <li class="sidebar-item {{ request()->routeIs('admin.reports.*') ? 'active' : '' }}">
+                    <a class="sidebar-link {{ request()->routeIs('admin.reports.*') ? 'active' : '' }}"
+                        href="{{ route('admin.reports.overview') }}">
+                        <span class="hide-menu small small-sm-normal text-nowrap">FC Reports</span>
+                    </a>
+                </li>
+            </ul>
+
+            <!-- ======= FC ACTIVITY STATUS (separate from FC Reg — Admin) ======= -->
+            <li class="sidebar-item mt-2"
+                style="background: #4077ad;
+                border-radius: 30px 0px 0px 30px;
+                width: 100%;
+                box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+                min-width: 250px;">
+                <a class="sidebar-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
+                    href="#collapseFcActivityStatus" role="button" aria-expanded="false"
+                    aria-controls="collapseFcActivityStatus">
+                    <span class="fw-bold">FC Activity Status</span>
+                    <i class="material-icons menu-icon material-symbols-rounded toggle-icon"
+                        style="font-size: 24px; transition: transform 0.3s ease;">keyboard_arrow_right</i>
+                </a>
+            </li>
+            <ul class="collapse list-unstyled ps-3" id="collapseFcActivityStatus" data-sidebar-no-auto-expand="true">
+                <li class="sidebar-item {{ request()->routeIs('fc-reg.admin.activities.status.admin') ? 'active' : '' }}">
+                    <a class="sidebar-link {{ request()->routeIs('fc-reg.admin.activities.status.admin') ? 'active' : '' }}"
+                        href="{{ route('fc-reg.admin.activities.status.admin') }}">
+                        <span class="hide-menu small small-sm-normal text-nowrap">Admin</span>
+                    </a>
+                </li>
+                <li class="sidebar-item {{ request()->routeIs('fc-reg.admin.activities.status.security') ? 'active' : '' }}">
+                    <a class="sidebar-link {{ request()->routeIs('fc-reg.admin.activities.status.security') ? 'active' : '' }}"
+                        href="{{ route('fc-reg.admin.activities.status.security') }}">
+                        <span class="hide-menu small small-sm-normal text-nowrap">Security</span>
+                    </a>
+                </li>
+                <li class="sidebar-item {{ request()->routeIs('fc-reg.admin.activities.status.it') ? 'active' : '' }}">
+                    <a class="sidebar-link {{ request()->routeIs('fc-reg.admin.activities.status.it') ? 'active' : '' }}"
+                        href="{{ route('fc-reg.admin.activities.status.it') }}">
+                        <span class="hide-menu small small-sm-normal text-nowrap">IT</span>
+                    </a>
+                </li>
+                <li class="sidebar-item {{ request()->routeIs('fc-reg.admin.activities.status.training') ? 'active' : '' }}">
+                    <a class="sidebar-link {{ request()->routeIs('fc-reg.admin.activities.status.training') ? 'active' : '' }}"
+                        href="{{ route('fc-reg.admin.activities.status.training') }}">
+                        <span class="hide-menu small small-sm-normal text-nowrap">Training</span>
+                    </a>
+                </li>
+                <li class="sidebar-item {{ request()->routeIs('fc-reg.admin.activities.status.medical') ? 'active' : '' }}">
+                    <a class="sidebar-link {{ request()->routeIs('fc-reg.admin.activities.status.medical') ? 'active' : '' }}"
+                        href="{{ route('fc-reg.admin.activities.status.medical') }}">
+                        <span class="hide-menu small small-sm-normal text-nowrap">Medical</span>
+                    </a>
+                </li>
+                <li class="sidebar-item {{ request()->routeIs('fc-reg.admin.activities.status.shop') ? 'active' : '' }}">
+                    <a class="sidebar-link {{ request()->routeIs('fc-reg.admin.activities.status.shop') ? 'active' : '' }}"
+                        href="{{ route('fc-reg.admin.activities.status.shop') }}">
+                        <span class="hide-menu small small-sm-normal text-nowrap">Shop</span>
+                    </a>
+                </li>
+                <li class="sidebar-item {{ request()->routeIs('fc-reg.admin.activities.status.all') ? 'active' : '' }}">
+                    <a class="sidebar-link {{ request()->routeIs('fc-reg.admin.activities.status.all') ? 'active' : '' }}"
+                        href="{{ route('fc-reg.admin.activities.status.all') }}">
+                        <span class="hide-menu small small-sm-normal text-nowrap">All (combined)</span>
+                    </a>
+                </li>
+            </ul>
         @endif
 
     </ul>
