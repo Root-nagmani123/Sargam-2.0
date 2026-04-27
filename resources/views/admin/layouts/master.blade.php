@@ -559,7 +559,7 @@
                 str_starts_with($path, 'country') || str_starts_with($path, 'state') || str_starts_with($path, 'city') ||
                 str_starts_with($path, 'stream') || str_starts_with($path, 'subject') || str_starts_with($path, 'Venue-Master') ||
                 str_starts_with($path, 'batch') || str_starts_with($path, 'curriculum') || str_starts_with($path, 'mapping') ||
-                str_starts_with($path, 'admin/master') || str_contains($path, 'breadcrumb-showcase') || str_starts_with($path, 'password') ||
+                str_starts_with($path, 'admin/master') || str_starts_with($path, 'master/') || str_contains($path, 'breadcrumb-showcase') || str_starts_with($path, 'password') ||
                 request()->routeIs('calendar.index') || request()->routeIs('feedback.*') || str_starts_with($path, 'calendar') ||
                 str_starts_with($path, 'expertise') || str_starts_with($path, 'faculty_notice') || str_starts_with($path, 'faculty_mdo')
             ) {
