@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Duplicate Vehicle Pass Request - Sargam')
-@section('setup_content')
+@section('content')
 <div class="container-fluid duplicate-vehicle-pass-print-area">
     {{-- Print-only header: visible only when printing --}}
     <div class="print-only-header">

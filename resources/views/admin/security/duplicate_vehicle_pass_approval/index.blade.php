@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Vehicle Pass Approvals')
-@section('setup_content')
+@section('content')
 <div class="container-fluid">
     <x-breadcrum title="Vehicle Pass Approvals"></x-breadcrum>
     <div class="card" style="border-left:4px solid #004a93;">
