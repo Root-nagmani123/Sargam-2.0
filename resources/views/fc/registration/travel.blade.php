@@ -1,5 +1,8 @@
 @extends('admin.layouts.master')
 @section('title', 'Travel Plan – FC Registration')
+@php
+    $username = auth()->user()->username;
+@endphp
 
 @section('setup_content')
 <div class="row justify-content-center">
@@ -10,7 +13,7 @@
     <div class="card border-0 shadow-sm" style="border-radius:10px;">
         <div class="card-header bg-white border-bottom py-3 px-4">
             <h5 class="fw-bold mb-0" style="color:#1a3c6e;">
-                <i class="bi bi-train-front me-2"></i>Travel Plan — Joining Details
+                <i class="bi bi-train-front me-2"></i>Travel Plan — Joining (Joining Date report)
             </h5>
             @if($step1)<small class="text-muted">{{ $step1->full_name }}</small>@endif
             @if($plan?->is_submitted)
@@ -30,184 +33,123 @@
 
         @php
             $readOnly = $plan?->is_submitted;
-            $rows = count($legRows) ? $legRows : [[]];
         @endphp
 
         @if($readOnly)
             <p class="text-muted small mb-3">Your travel plan is on file. To change it, contact the academy office.</p>
             <dl class="row small mb-0">
-                <dt class="col-sm-3">Joining date</dt><dd class="col-sm-9">{{ $plan->joining_date?->format('d M Y') ?? '—' }}</dd>
-                <dt class="col-sm-3">Journey type</dt><dd class="col-sm-9">{{ $plan->travelType?->travel_type_name ?? '—' }}</dd>
-                <dt class="col-sm-3">From</dt><dd class="col-sm-9">{{ $plan->departure_city ?? '—' }}, {{ $plan->departure_state ?? '' }}</dd>
-                <dt class="col-sm-3">Pickup</dt><dd class="col-sm-9">{{ $plan->needs_pickup ? 'Yes — '.($plan->pickup_from_location ?? '') : 'No' }}</dd>
+                <dt class="col-sm-3">Name</dt><dd class="col-sm-9">{{ $step1->full_name ?? '—' }}</dd>
+                <dt class="col-sm-3">Code</dt><dd class="col-sm-9">{{ $displayCode ?? '—' }}</dd>
+                <dt class="col-sm-3">Mobile</dt><dd class="col-sm-9">{{ $step1->mobile_no ?? '—' }}</dd>
+                <dt class="col-sm-3">Arrival date</dt><dd class="col-sm-9">{{ $plan->joining_date?->format('d M Y') ?? '—' }}</dd>
+                <dt class="col-sm-3">Slot &amp; time</dt><dd class="col-sm-9">
+                    {{ $plan->fcArrivalSlot?->slot_label ?? '—' }}
+                    @if($plan->fcArrivalSlot?->time_start && $plan->fcArrivalSlot?->time_end)
+                        <span class="text-muted">(
+                            {{ \Illuminate\Support\Str::substr($plan->fcArrivalSlot->time_start, 0, 5) }}–{{ \Illuminate\Support\Str::substr($plan->fcArrivalSlot->time_end, 0, 5) }}
+                        )</span>
+                    @endif
+                </dd>
+                <dt class="col-sm-3">Mode of journey</dt><dd class="col-sm-9">{{ $plan->mode_of_journey ?? '—' }}</dd>
+                <dt class="col-sm-3">Flight / Train / Vehicle no.</dt><dd class="col-sm-9">{{ $plan->journey_vehicle_no ?? '—' }}</dd>
+                <dt class="col-sm-3">Date of arrival at Academy</dt><dd class="col-sm-9">{{ $plan->academy_arrival_date?->format('d M Y') ?? '—' }}</dd>
+                <dt class="col-sm-3">Arrival time at Dehradun (Airport)</dt><dd class="col-sm-9">{{ $plan->arrival_time_dehradun ?? '—' }}</dd>
+                <dt class="col-sm-3">Require academy vehicle</dt>
+                <dd class="col-sm-9">{{ $plan->requiresAcademyVehicleYes() ? 'Yes' : 'No' }}</dd>
             </dl>
-            @if($plan->legs->isNotEmpty())
-                <h6 class="mt-3 small fw-bold text-muted">Journey legs</h6>
-                <div class="table-responsive">
-                    <table class="table table-sm table-bordered mb-0" style="font-size:12px;">
-                        <thead class="table-light"><tr><th>#</th><th>From</th><th>To</th><th>Mode</th><th>Date</th></tr></thead>
-                        <tbody>
-                        @foreach($plan->legs as $lg)
-                            <tr>
-                                <td>{{ $lg->leg_number ?? $lg->leg_no }}</td>
-                                <td>{{ $lg->from_station }}</td>
-                                <td>{{ $lg->to_station }}</td>
-                                <td>{{ $lg->travelMode?->travel_mode_name ?? $lg->travel_mode ?? '—' }}</td>
-                                <td>{{ $lg->travel_date?->format('d M Y') ?? '—' }}</td>
-                            </tr>
-                        @endforeach
-                        </tbody>
-                    </table>
-                </div>
+            @if($plan->special_requirements)
+                <p class="small mt-2"><span class="text-muted">Remarks:</span> {{ $plan->special_requirements }}</p>
             @endif
             <div class="mt-4 d-flex gap-2">
                 <a href="{{ route('fc-reg.registration.documents') }}" class="btn btn-primary"><i class="bi bi-file-earmark-arrow-up me-1"></i>Continue to Documents</a>
                 <a href="{{ route('fc-reg.dashboard') }}" class="btn btn-outline-secondary">Dashboard</a>
             </div>
         @else
+        <p class="text-muted small">Fields follow the <strong>Joining Date</strong> report format. Choose an <strong>arrival time slot</strong> managed by the academy. Save a draft, then submit.</p>
         <form method="POST" action="{{ route('fc-reg.registration.travel.save') }}" id="travelDraftForm">
             @csrf
-
-            <h6 class="text-uppercase text-muted fw-semibold mb-3 border-bottom pb-2" style="font-size:.72rem;letter-spacing:1px;">
-                1. Joining Details at Mussoorie
-            </h6>
-            <div class="row g-3 mb-4">
-                <div class="col-md-3">
-                    <label class="form-label small fw-semibold">Expected Date of Arrival <span class="text-danger">*</span></label>
-                    <input type="date" name="joining_date" class="form-control"
-                           value="{{ old('joining_date', $plan?->joining_date?->format('Y-m-d')) }}" required>
+            <div class="row g-3 mb-3">
+                <div class="col-md-4">
+                    <label class="form-label small fw-semibold">Arrival date <span class="text-danger">*</span></label>
+                    <input type="date" name="joining_date" class="form-control" required
+                           value="{{ old('joining_date', $plan?->joining_date?->format('Y-m-d')) }}">
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label small fw-semibold">Expected Time</label>
+                <div class="col-md-3">
+                    <label class="form-label small fw-semibold">Expected time (optional)</label>
                     <input type="time" name="joining_time" class="form-control"
                            value="{{ old('joining_time', $plan?->joining_time) }}">
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label small fw-semibold">Journey Type <span class="text-danger">*</span></label>
-                    <select name="travel_type_id" class="form-select" required>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label small fw-semibold">Arrival time slot <span class="text-danger">*</span></label>
+                <select name="fc_travel_arrival_slot_id" class="form-select" required>
+                    <option value="">-- Select slot --</option>
+                    @forelse($slots as $s)
+                        @php
+                            $sel = (string) old('fc_travel_arrival_slot_id', $plan?->fc_travel_arrival_slot_id) === (string) $s->id;
+                            $noRoom = ! $s->hasRoomForUser($username) && ! $sel;
+                            $cap = $s->max_capacity;
+                            $other = $s->countOtherBookings($username);
+                            $left = $cap ? max(0, (int) $cap - $other) : null;
+                        @endphp
+                        <option value="{{ $s->id }}" {{ $sel ? 'selected' : '' }} @if($noRoom) disabled @endif>
+                            {{ $s->slot_label }}
+                            @if($s->time_start && $s->time_end)
+                                ({{ \Illuminate\Support\Str::substr($s->time_start, 0, 5) }}–{{ \Illuminate\Support\Str::substr($s->time_end, 0, 5) }})
+                            @endif
+                            @if($left !== null) — {{ $left }} left @endif
+                        </option>
+                    @empty
+                        <option value="" disabled>No slots available — please contact the academy</option>
+                    @endforelse
+                </select>
+                <div class="form-text">Slots and capacity are set by the office in Admin → Travel slots.</div>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-4">
+                    <label class="form-label small fw-semibold">Mode of journey <span class="text-danger">*</span></label>
+                    <select name="mode_of_journey" class="form-select" required>
                         <option value="">-- Select --</option>
-                        @foreach($travelTypes as $tt)
-                            <option value="{{ $tt->id }}" {{ (string) old('travel_type_id', $plan?->travel_type_id) === (string) $tt->id ? 'selected' : '' }}>
-                                {{ $tt->travel_type_name }}
-                            </option>
+                        @foreach(['By Air', 'By Road', 'By Train'] as $m)
+                            <option value="{{ $m }}" {{ old('mode_of_journey', $plan?->mode_of_journey) === $m ? 'selected' : '' }}>{{ $m }}</option>
                         @endforeach
                     </select>
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label small fw-semibold">Departing City <span class="text-danger">*</span></label>
-                    <input type="text" name="departure_city" class="form-control" required
-                           value="{{ old('departure_city', $plan?->departure_city) }}" placeholder="e.g. New Delhi">
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label small fw-semibold">Departing State <span class="text-danger">*</span></label>
-                    <input type="text" name="departure_state" class="form-control" required
-                           value="{{ old('departure_state', $plan?->departure_state) }}" placeholder="e.g. Delhi">
+                <div class="col-md-4">
+                    <label class="form-label small fw-semibold">Flight / Train / Vehicle no.</label>
+                    <input type="text" name="journey_vehicle_no" class="form-control" maxlength="200"
+                           value="{{ old('journey_vehicle_no', $plan?->journey_vehicle_no) }}">
                 </div>
             </div>
 
-            <h6 class="text-uppercase text-muted fw-semibold mb-3 border-bottom pb-2" style="font-size:.72rem;letter-spacing:1px;">
-                2. Pick-up from Station / Airport
-            </h6>
-            <div class="row g-3 mb-1">
-                <div class="col-12">
-                    <div class="form-check">
-                        <input type="checkbox" name="needs_pickup" value="1" class="form-check-input" id="needsPickup"
-                               {{ old('needs_pickup', $plan?->needs_pickup) ? 'checked' : '' }}
-                               onchange="toggleSection('pickupSection', this.checked)">
-                        <label class="form-check-label fw-semibold small" for="needsPickup">
-                            I need a pick-up from station / airport / bus stand
-                        </label>
-                    </div>
+            <div class="row g-3 mb-3">
+                <div class="col-md-4">
+                    <label class="form-label small fw-semibold">Date of arrival at Academy</label>
+                    <input type="date" name="academy_arrival_date" class="form-control"
+                           value="{{ old('academy_arrival_date', $plan?->academy_arrival_date?->format('Y-m-d')) }}">
                 </div>
-            </div>
-            <div id="pickupSection" class="row g-3 mb-4 mt-1 ps-3"
-                 style="display:{{ old('needs_pickup', $plan?->needs_pickup) ? 'flex' : 'none' }};flex-wrap:wrap;">
-                <div class="col-md-3">
-                    <label class="form-label small fw-semibold">Pick-up Type</label>
-                    <select name="pickup_type_id" class="form-select">
-                        <option value="">-- Select --</option>
-                        @foreach($pickupTypes as $pt)
-                            <option value="{{ $pt->id }}" {{ (string) old('pickup_type_id', $plan?->pickup_type_id) === (string) $pt->id ? 'selected' : '' }}>
-                                {{ $pt->type_name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label small fw-semibold">Pick-up From</label>
-                    <input type="text" name="pickup_from_location" class="form-control"
-                           value="{{ old('pickup_from_location', $plan?->pickup_from_location) }}"
-                           placeholder="e.g. Dehradun Railway Station">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label small fw-semibold">Pick-up Date &amp; Time</label>
-                    <input type="datetime-local" name="pickup_datetime" class="form-control"
-                           value="{{ old('pickup_datetime', $plan?->pickup_datetime?->format('Y-m-d\TH:i')) }}">
+                <div class="col-md-4">
+                    <label class="form-label small fw-semibold">Arrival time at Dehradun (Airport)</label>
+                    <input type="text" name="arrival_time_dehradun" class="form-control" maxlength="120" placeholder="e.g. 6:00 AM"
+                           value="{{ old('arrival_time_dehradun', $plan?->arrival_time_dehradun) }}">
                 </div>
             </div>
 
-            <h6 class="text-uppercase text-muted fw-semibold mb-3 border-bottom pb-2" style="font-size:.72rem;letter-spacing:1px;">
-                3. Drop to Station / Airport (departure from Mussoorie)
-            </h6>
-            <div class="row g-3 mb-1">
-                <div class="col-12">
-                    <div class="form-check">
-                        <input type="checkbox" name="needs_drop" value="1" class="form-check-input" id="needsDrop"
-                               {{ old('needs_drop', $plan?->needs_drop) ? 'checked' : '' }}
-                               onchange="toggleSection('dropSection', this.checked)">
-                        <label class="form-check-label fw-semibold small" for="needsDrop">
-                            I need a drop to station / airport / bus stand on departure
-                        </label>
-                    </div>
-                </div>
+            <div class="form-check mb-3">
+                <input type="checkbox" name="require_academy_vehicle" value="1" class="form-check-input" id="reqVeh"
+                    {{ old('require_academy_vehicle', $plan?->require_academy_vehicle) ? 'checked' : '' }}>
+                <label class="form-check-label small" for="reqVeh">I require a vehicle from Dehradun (Airport) / station</label>
             </div>
-            <div id="dropSection" class="row g-3 mb-4 mt-1 ps-3"
-                 style="display:{{ old('needs_drop', $plan?->needs_drop) ? 'flex' : 'none' }};flex-wrap:wrap;">
-                <div class="col-md-3">
-                    <label class="form-label small fw-semibold">Drop Type</label>
-                    <select name="drop_type_id" class="form-select">
-                        <option value="">-- Select --</option>
-                        @foreach($pickupTypes as $pt)
-                            <option value="{{ $pt->id }}" {{ (string) old('drop_type_id', $plan?->drop_type_id) === (string) $pt->id ? 'selected' : '' }}>
-                                {{ $pt->type_name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label small fw-semibold">Drop To</label>
-                    <input type="text" name="drop_to_location" class="form-control"
-                           value="{{ old('drop_to_location', $plan?->drop_to_location) }}"
-                           placeholder="e.g. Jolly Grant Airport">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label small fw-semibold">Drop Date &amp; Time</label>
-                    <input type="datetime-local" name="drop_datetime" class="form-control"
-                           value="{{ old('drop_datetime', $plan?->drop_datetime?->format('Y-m-d\TH:i')) }}">
-                </div>
-            </div>
-
-            <h6 class="text-uppercase text-muted fw-semibold mb-3 border-bottom pb-2" style="font-size:.72rem;letter-spacing:1px;">
-                4. Journey details (leg by leg)
-            </h6>
-
-            <div id="legsContainer">
-                @foreach($rows as $i => $leg)
-                    @include('fc.registration.partials.travel-leg-row', ['leg' => $leg, 'i' => $i, 'travelModes' => $travelModes])
-                @endforeach
-            </div>
-
-            <button type="button" class="btn btn-sm btn-outline-primary mt-2 mb-4" id="addLegBtn">
-                <i class="bi bi-plus-circle me-1"></i>Add Another Journey Leg
-            </button>
 
             <div class="mb-4">
-                <label class="form-label small fw-semibold">Special Requirements / Remarks</label>
-                <textarea name="special_requirements" class="form-control" rows="3"
-                          placeholder="Wheelchair, medical equipment, other needs…">{{ old('special_requirements', $plan?->special_requirements) }}</textarea>
+                <label class="form-label small fw-semibold">Remarks (optional)</label>
+                <textarea name="special_requirements" class="form-control" rows="2" maxlength="1000"
+                          placeholder="Special needs…">{{ old('special_requirements', $plan?->special_requirements) }}</textarea>
             </div>
 
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 border-top pt-3">
+            <div class="d-flex justify-content-between flex-wrap gap-2 border-top pt-3">
                 <a href="{{ route('fc-reg.registration.bank') }}" class="btn btn-outline-secondary btn-sm">
                     <i class="bi bi-arrow-left me-1"></i>Back to Bank
                 </a>
@@ -217,9 +159,9 @@
             </div>
         </form>
 
-        @if($plan && $plan->legs->isNotEmpty())
+        @if($plan && $plan->fc_travel_arrival_slot_id && $plan->joining_date && $plan->mode_of_journey)
             <form method="POST" action="{{ route('fc-reg.registration.travel.submit') }}" class="mt-3 d-flex justify-content-end"
-                  onsubmit="return confirm('Submit your travel plan? After submission you can continue to document upload.');">
+                  onsubmit="return confirm('Submit your travel plan? You can then upload documents.');">
                 @csrf
                 <button type="submit" class="btn btn-success px-4">
                     <i class="bi bi-send-check me-1"></i>Submit Travel Plan
@@ -232,61 +174,5 @@
 
 </div>
 </div>
+{{-- Legacy (pre–Apr 2026) full travel form: see Git history for `resources/views/fc/registration/travel.blade.php` and `TravelPlanController@save` with multi-leg MCTP details. --}}
 @endsection
-
-@push('scripts')
-@if(empty($readOnly))
-@php
-    $modesForJs = $travelModes->map(function ($m) {
-        return ['id' => $m->id, 'name' => $m->travel_mode_name];
-    })->values();
-@endphp
-<script>
-function toggleSection(id, show) {
-    var el = document.getElementById(id);
-    if (el) el.style.display = show ? 'flex' : 'none';
-}
-var legCount = {{ count($rows) }};
-document.getElementById('addLegBtn')?.addEventListener('click', function () {
-    var i = legCount++;
-    var modes = @json($modesForJs);
-    var opts = modes.map(function (m) {
-        return '<option value="' + m.id + '">' + (m.name || '').replace(/</g, '') + '</option>';
-    }).join('');
-    var html = '<div class="leg-row border rounded p-3 mb-2 bg-light position-relative">' +
-        '<button type="button" class="btn-close position-absolute top-0 end-0 m-2" onclick="this.closest(\'.leg-row\').remove()" title="Remove leg"></button>' +
-        '<div class="row-label mb-2 small text-muted fw-semibold">Leg ' + (i + 1) + '</div>' +
-        '<div class="row g-2">' +
-        '<div class="col-md-2"><label class="form-label small">From City *</label>' +
-        '<input type="text" name="legs[' + i + '][from_city]" class="form-control form-control-sm" required placeholder="Departure city"></div>' +
-        '<div class="col-md-2"><label class="form-label small">To City *</label>' +
-        '<input type="text" name="legs[' + i + '][to_city]" class="form-control form-control-sm" required placeholder="Arrival city"></div>' +
-        '<div class="col-md-2"><label class="form-label small">Mode *</label>' +
-        '<select name="legs[' + i + '][travel_mode_id]" class="form-select form-select-sm" required>' +
-        '<option value="">--</option>' + opts + '</select></div>' +
-        '<div class="col-md-2"><label class="form-label small">Travel Date</label>' +
-        '<input type="date" name="legs[' + i + '][travel_date]" class="form-control form-control-sm"></div>' +
-        '<div class="col-md-1"><label class="form-label small">Dep.</label>' +
-        '<input type="time" name="legs[' + i + '][departure_time]" class="form-control form-control-sm"></div>' +
-        '<div class="col-md-1"><label class="form-label small">Arr.</label>' +
-        '<input type="time" name="legs[' + i + '][arrival_time]" class="form-control form-control-sm"></div>' +
-        '<div class="col-md-2"><label class="form-label small">Train/Flight No.</label>' +
-        '<input type="text" name="legs[' + i + '][train_flight_bus_no]" class="form-control form-control-sm"></div>' +
-        '<div class="col-md-3"><label class="form-label small">Train/Flight Name</label>' +
-        '<input type="text" name="legs[' + i + '][train_flight_name]" class="form-control form-control-sm"></div>' +
-        '<div class="col-md-2"><label class="form-label small">Class</label>' +
-        '<select name="legs[' + i + '][class_of_travel]" class="form-select form-select-sm">' +
-        '<option value="">--</option>' +
-        ['3AC','2AC','1AC','Sleeper','Economy','Business','General'].map(function (c) {
-            return '<option value="' + c + '">' + c + '</option>';
-        }).join('') + '</select></div>' +
-        '<div class="col-md-2"><label class="form-label small">Ticket No.</label>' +
-        '<input type="text" name="legs[' + i + '][ticket_no]" class="form-control form-control-sm"></div>' +
-        '<div class="col-md-2"><label class="form-label small">Amount (₹)</label>' +
-        '<input type="number" name="legs[' + i + '][ticket_amount]" class="form-control form-control-sm" min="0" step="0.01"></div>' +
-        '</div></div>';
-    document.getElementById('legsContainer').insertAdjacentHTML('beforeend', html);
-});
-</script>
-@endif
-@endpush

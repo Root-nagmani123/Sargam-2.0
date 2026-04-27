@@ -32,6 +32,7 @@ class FcMasterDatabaseSeeder extends Seeder
             TravelTypeMasterSeeder::class,
             MctpTravelModeMasterSeeder::class,
             FcJoiningDocumentMasterSeeder::class,
+            FcActivityMasterSeeder::class,
             AdminUserSeeder::class,
         ]);
     }

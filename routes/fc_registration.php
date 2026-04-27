@@ -1,6 +1,12 @@
 <?php
 
 use App\Http\Controllers\FC\{
+    FcActivityController,
+    FcActivityHomeController,
+    FcActivityMedicalController,
+    FcActivityReportController,
+    FcActivityStatusController,
+    FcTravelArrivalSlotController,
     RegistrationStep1Controller,
     RegistrationStep2Controller,
     RegistrationStep3Controller,
@@ -125,6 +131,49 @@ Route::middleware(['auth'])->prefix('fc-reg/admin')->name('fc-reg.admin.')->grou
         Route::delete('/steps/{step}',         [FormManagementController::class, 'deleteStep'])->name('step.delete');
         Route::post('/steps/reorder',          [FormManagementController::class, 'reorderSteps'])->name('step.reorder');
     });
+
+    // ── FC Post-Arrival Activities ───────────────────────────────────────
+    Route::prefix('activities')->name('activities.')->group(function () {
+        Route::get('/', [FcActivityHomeController::class, 'index'])->name('index');
+
+        Route::post('/', [FcActivityController::class, 'store'])->name('store');
+        Route::post('/medical-bulk', [FcActivityController::class, 'storeMedicalBulk'])->name('store-medical-bulk');
+        Route::get('/{activityId}/edit', [FcActivityController::class, 'edit'])->name('edit');
+        Route::put('/{activityId}', [FcActivityController::class, 'update'])->name('update');
+        Route::delete('/{activityId}', [FcActivityController::class, 'destroy'])->name('destroy');
+
+        Route::prefix('ajax')->name('ajax.')->group(function () {
+            Route::get('/courses', [FcActivityHomeController::class, 'ajaxCourses'])->name('courses');
+            Route::get('/ots', [FcActivityHomeController::class, 'ajaxOts'])->name('ots');
+            Route::get('/ot-name', [FcActivityHomeController::class, 'ajaxOtName'])->name('ot-name');
+            Route::get('/house', [FcActivityHomeController::class, 'ajaxHouse'])->name('house');
+            Route::get('/activities', [FcActivityHomeController::class, 'ajaxActivities'])->name('activities');
+            Route::get('/ots-edit', [FcActivityController::class, 'ajaxOtsForEdit'])->name('ots-edit');
+        });
+
+        Route::prefix('status')->name('status.')->group(function () {
+            Route::get('/admin', [FcActivityStatusController::class, 'admin'])->name('admin');
+            Route::get('/security', [FcActivityStatusController::class, 'security'])->name('security');
+            Route::get('/it', [FcActivityStatusController::class, 'it'])->name('it');
+            Route::get('/training', [FcActivityStatusController::class, 'training'])->name('training');
+            Route::get('/medical', [FcActivityStatusController::class, 'medical'])->name('medical');
+            Route::get('/shop', [FcActivityStatusController::class, 'shop'])->name('shop');
+            Route::get('/all', [FcActivityStatusController::class, 'all'])->name('all');
+        });
+
+        Route::prefix('reports')->name('reports.')->group(function () {
+            Route::get('/summary', [FcActivityReportController::class, 'summary'])->name('summary');
+            Route::get('/department/{dept}', [FcActivityReportController::class, 'byDepartment'])->name('department');
+            Route::get('/not-joined', [FcActivityReportController::class, 'notJoined'])->name('not-joined');
+            Route::get('/service-wise', [FcActivityReportController::class, 'serviceWise'])->name('service-wise');
+        });
+
+        Route::prefix('medical')->name('medical.')->group(function () {
+            Route::get('/', [FcActivityMedicalController::class, 'index'])->name('index');
+            Route::get('/report', [FcActivityMedicalController::class, 'show'])->name('show');
+            Route::post('/upload', [FcActivityMedicalController::class, 'upload'])->name('upload');
+        });
+    });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -140,9 +189,16 @@ Route::middleware(['auth'])->prefix('fc-reg/forms')->name('fc-reg.forms.')->grou
 
 // ── FC Travel plans (admin) ────────────────────────────────────
 Route::middleware(['auth'])->prefix('admin/travel')->name('admin.travel.')->group(function () {
-    Route::get('/',                   [TravelPlanReportController::class, 'index'])->name('index');
-    Route::get('/student/{username}', [TravelPlanReportController::class, 'show'])->name('show');
-    Route::get('/export/pickup',      [TravelPlanReportController::class, 'exportPickup'])->name('export.pickup');
+    Route::get('/',                    [TravelPlanReportController::class, 'index'])->name('index');
+    Route::get('/student/{username}',[TravelPlanReportController::class, 'show'])->name('show');
+    Route::get('/export/pickup',     [TravelPlanReportController::class, 'exportPickup'])->name('export.pickup');
+    Route::get('/export/joining',   [TravelPlanReportController::class, 'exportJoiningReport'])->name('export.joining');
+    Route::prefix('slots')->name('slots.')->group(function () {
+        Route::get('/',              [FcTravelArrivalSlotController::class, 'index'])->name('index');
+        Route::post('/',              [FcTravelArrivalSlotController::class, 'store'])->name('store');
+        Route::put('/{slot}',         [FcTravelArrivalSlotController::class, 'update'])->name('update');
+        Route::delete('/{slot}',     [FcTravelArrivalSlotController::class, 'destroy'])->name('destroy');
+    });
 });
 
 // ── Report Routes ─────────────────────────────────────────────
@@ -153,6 +209,7 @@ Route::middleware(['auth'])->prefix('admin/reports')->name('admin.reports.')->gr
 
     // Individual student full profile
     Route::get('/student/{username}', [ReportController::class, 'studentDetail'])->name('student');
+    Route::get('/student/{username}/pdf', [ReportController::class, 'studentDetailPdf'])->name('student.pdf');
 
     // Aggregated reports
     Route::get('/by-service',   [ReportController::class, 'byService'])->name('service');
