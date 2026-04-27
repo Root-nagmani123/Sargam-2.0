@@ -14,9 +14,14 @@
                 </ol>
             </nav>
         </div>
-        <button onclick="window.print()" class="btn btn-sm btn-outline-secondary">
-            <i class="bi bi-printer me-1"></i>Print
-        </button>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{{ route('admin.reports.student.pdf', ['username' => $username]) }}" class="btn btn-sm btn-primary" target="_blank" rel="noopener">
+                <i class="bi bi-file-earmark-pdf me-1"></i>Download PDF
+            </a>
+            <button type="button" onclick="window.print()" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-printer me-1"></i>Print
+            </button>
+        </div>
     </div>
 
     {{-- Profile Header --}}
