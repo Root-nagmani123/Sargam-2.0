@@ -100,8 +100,8 @@
 
                                             @endif
 
-                                            @if(canSeeLowStockAlert())
-                                            <li class="mini-nav-item" id="setup-mini-9">
+                                            @if(canSeeMessSelfServiceSetup())
+                                            <li class="mini-nav-item {{ request()->is('admin/mess*') ? 'selected' : '' }}" id="setup-mini-9">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3">
                                                     <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">

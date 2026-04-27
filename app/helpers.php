@@ -155,6 +155,26 @@ function canSeeLowStockAlert()
     return false;
 }
 
+/**
+ * Setup sidebar: Mess (self-service my bills + full Mess Management when applicable).
+ * Aligns with staff-facing modules such as Estate self-service roles.
+ */
+function canSeeMessSelfServiceSetup(): bool
+{
+    if (canSeeLowStockAlert()) {
+        return true;
+    }
+
+    return hasRole('Staff')
+        || hasRole('Student-OT')
+        || hasRole('Doctor')
+        || hasRole('Guest Faculty')
+        || hasRole('Internal Faculty')
+        || hasRole('Training-Induction')
+        || hasRole('Training-MCTP')
+        || hasRole('IST');
+}
+
 function get_Role_by_course()
 {
     $user = Auth::user();
