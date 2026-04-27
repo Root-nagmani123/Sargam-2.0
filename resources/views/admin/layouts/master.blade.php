@@ -539,20 +539,41 @@
             $path = request()->path();
             if (request()->routeIs('admin.dashboard') || request()->routeIs('admin.dashboard.*')) {
                 $activeNavTab = '#home';
-            } elseif (request()->routeIs('admin.estate.*')) {
-                $activeNavTab = '#tab-setup';
             } elseif (
-                request()->routeIs('admin.employee_idcard.*') || request()->routeIs('admin.issue-management*') ||
+                // Modules moved from Setup to Home
+                request()->routeIs('admin.estate.*') ||
                 request()->routeIs('admin.mess.*') ||
+                request()->routeIs('admin.issue-management*') ||
+                request()->routeIs('admin.issue-categories.*') ||
+                request()->routeIs('admin.issue-sub-categories.*') ||
+                request()->routeIs('admin.issue-priorities.*') ||
+                request()->routeIs('admin.issue-escalation-matrix.*') ||
+                request()->routeIs('admin.employee_idcard.*') ||
+                request()->routeIs('admin.duplicate_idcard.*') ||
+                request()->routeIs('admin.family_idcard.*') ||
+                request()->routeIs('admin.security.*') ||
+                str_starts_with($path, 'admin/estate') ||
+                str_starts_with($path, 'admin/mess') ||
+                str_starts_with($path, 'admin/issue-management') ||
+                str_starts_with($path, 'admin/issue-categories') ||
+                str_starts_with($path, 'admin/issue-sub-categories') ||
+                str_starts_with($path, 'admin/issue-priorities') ||
+                str_starts_with($path, 'admin/issue-escalation-matrix') ||
+                str_starts_with($path, 'admin/employee-idcard') ||
+                str_starts_with($path, 'admin/duplicate-idcard') ||
+                str_starts_with($path, 'admin/family-idcard') ||
+                str_starts_with($path, 'security/')
+            ) {
+                $activeNavTab = '#home';
+            } elseif (
                 request()->routeIs('member.*') || request()->routeIs('faculty.*') || request()->routeIs('programme.*') ||
                 request()->routeIs('admin.roles.*') || request()->routeIs('admin.users.*') ||
                 str_starts_with($path, 'setup/') || str_starts_with($path, 'admin/setup') ||
-                str_starts_with($path, 'admin/employee-idcard') || str_starts_with($path, 'admin/issue-management') ||
                 str_starts_with($path, 'courseAttendanceNoticeMap') || str_starts_with($path, 'course_memo') ||
                 str_starts_with($path, 'building_floor') || str_starts_with($path, 'group_mapping') ||
                 str_starts_with($path, 'course-repository') || str_starts_with($path, 'feedback') || str_starts_with($path, 'admin/feedback') ||
                 str_starts_with($path, 'admin/notice') || str_starts_with($path, 'attendance') ||
-                str_starts_with($path, 'security') || str_starts_with($path, 'ot_notice') ||
+                str_starts_with($path, 'ot_notice') ||
                 str_starts_with($path, 'forms') || str_starts_with($path, 'registration') ||
                 str_starts_with($path, 'mdo_escrot') || str_starts_with($path, 'student_medical') ||
                 str_starts_with($path, 'medical_exception') || str_starts_with($path, 'memo_discipline') ||
