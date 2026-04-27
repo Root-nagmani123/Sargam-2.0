@@ -7,10 +7,16 @@
         <h4 class="fw-bold mb-0" style="color:#1a3c6e;">
             <i class="bi bi-train-front me-2"></i>FC Travel Plans
         </h4>
-        <div class="d-flex gap-2">
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{{ route('admin.travel.slots.index') }}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-clock-history me-1"></i>Manage arrival slots
+            </a>
             <a href="{{ route('admin.travel.export.pickup') }}" class="btn btn-sm btn-success">
                 <i class="bi bi-file-earmark-spreadsheet me-1"></i>Export Pickup List
             </a>
+            <button type="button" class="btn btn-sm btn-success" id="btnExportJoining" title="Download styled Excel (.xlsx) with current filters">
+                <i class="bi bi-file-earmark-excel me-1"></i>Export Excel (filters)
+            </button>
         </div>
     </div>
 
@@ -31,87 +37,105 @@
         @endforeach
     </div>
 
-    <form method="GET" class="card border-0 shadow-sm mb-3 px-3 py-2">
+    <div class="card border-0 shadow-sm mb-3 px-3 py-3">
         <div class="row g-2 align-items-end">
-            <div class="col-md-3">
-                <select name="session_id" class="form-select form-select-sm">
-                    <option value="">All Sessions</option>
+            <div class="col-md-2">
+                <label class="form-label small mb-0">Session</label>
+                <select id="f_session_id" class="form-select form-select-sm">
+                    <option value="">All</option>
                     @foreach($sessions as $s)
-                        <option value="{{ $s->id }}" {{ request('session_id') == $s->id ? 'selected' : '' }}>{{ $s->session_name }}</option>
+                        <option value="{{ $s->id }}">{{ $s->session_name }}</option>
                     @endforeach
                 </select>
             </div>
             <div class="col-md-2">
-                <select name="submitted" class="form-select form-select-sm">
-                    <option value="">All Status</option>
-                    <option value="yes" {{ request('submitted') == 'yes' ? 'selected' : '' }}>Submitted</option>
-                    <option value="no" {{ request('submitted') == 'no' ? 'selected' : '' }}>Draft</option>
+                <label class="form-label small mb-0">Slot</label>
+                <select id="f_slot_id" class="form-select form-select-sm">
+                    <option value="">All</option>
+                    @foreach($slots as $sl)
+                        <option value="{{ $sl->id }}">{{ $sl->slot_label }}</option>
+                    @endforeach
                 </select>
             </div>
             <div class="col-md-2">
-                <div class="form-check mt-3">
-                    <input type="checkbox" name="pickup" value="1" class="form-check-input" id="fPickup" {{ request('pickup') ? 'checked' : '' }}>
-                    <label class="form-check-label small" for="fPickup">Needs Pickup</label>
-                </div>
+                <label class="form-label small mb-0">Status</label>
+                <select id="f_submitted" class="form-select form-select-sm">
+                    <option value="">All</option>
+                    <option value="yes">Submitted</option>
+                    <option value="no">Draft</option>
+                </select>
             </div>
-            <div class="col-md-3">
-                <input type="text" name="search" class="form-control form-control-sm" placeholder="Name / Username" value="{{ request('search') }}">
+            <div class="col-md-2">
+                <label class="form-label small mb-0">Mode</label>
+                <select id="f_mode" class="form-select form-select-sm">
+                    <option value="">All</option>
+                    @foreach($modes as $m)
+                        <option value="{{ $m }}">{{ $m }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small mb-0">Academy vehicle</label>
+                <select id="f_vehicle" class="form-select form-select-sm">
+                    <option value="">All</option>
+                    <option value="yes">Yes</option>
+                    <option value="no">No</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small mb-0">Arrival from</label>
+                <input type="date" id="f_date_from" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small mb-0">Arrival to</label>
+                <input type="date" id="f_date_to" class="form-control form-control-sm">
             </div>
             <div class="col-auto">
-                <button type="submit" class="btn btn-sm btn-primary">Filter</button>
-                <a href="{{ route('admin.travel.index') }}" class="btn btn-sm btn-outline-secondary ms-1">Reset</a>
+                <button type="button" class="btn btn-sm btn-primary" id="btnApplyFilters">Apply filters</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="btnResetFilters">Reset</button>
             </div>
         </div>
-    </form>
+    </div>
 
     <div class="card border-0 shadow-sm" style="border-radius:8px;">
         <div class="table-responsive">
-            <table class="table table-hover table-sm mb-0" style="font-size:12px;">
-                <thead class="table-dark">
-                    <tr>
-                        <th class="px-3">#</th>
-                        <th>Username</th>
-                        <th>Full Name</th>
-                        <th>Service</th>
-                        <th>Journey Type</th>
-                        <th>Joining Date</th>
-                        <th class="text-center">Pickup</th>
-                        <th class="text-center">Drop</th>
-                        <th class="text-center">Submitted</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                @forelse($plans as $idx => $p)
-                    <tr>
-                        <td class="px-3">{{ $plans->firstItem() + $idx }}</td>
-                        <td><code style="font-size:10px">{{ $p->username }}</code></td>
-                        <td>{{ $p->full_name }}</td>
-                        <td><span class="badge bg-primary-subtle text-primary" style="font-size:10px">{{ $p->service_code ?? '—' }}</span></td>
-                        <td>{{ $p->travel_type_name ?? '—' }}</td>
-                        <td>{{ $p->joining_date ?? '—' }}</td>
-                        <td class="text-center">{{ $p->needs_pickup ? '✓' : '—' }}</td>
-                        <td class="text-center">{{ $p->needs_drop ? '✓' : '—' }}</td>
-                        <td class="text-center">
-                            @if($p->is_submitted)
-                                <span class="badge bg-success" style="font-size:10px">Yes</span>
-                            @else
-                                <span class="badge bg-warning text-dark" style="font-size:10px">Draft</span>
-                            @endif
-                        </td>
-                        <td>
-                            <a href="{{ route('admin.travel.show', $p->username) }}" class="btn btn-xs btn-outline-primary py-0 px-2" style="font-size:11px">
-                                <i class="bi bi-eye"></i>
-                            </a>
-                        </td>
-                    </tr>
-                @empty
-                    <tr><td colspan="10" class="text-center text-muted py-3">No travel plans found.</td></tr>
-                @endforelse
-                </tbody>
-            </table>
+            {!! $dataTable->table(['class' => 'table table-hover table-sm mb-0', 'style' => 'font-size:12px;']) !!}
         </div>
-        <div class="card-footer bg-white py-2 px-3">{{ $plans->links() }}</div>
     </div>
 </div>
 @endsection
+
+@push('scripts')
+    {!! $dataTable->scripts() !!}
+    <script>
+(function () {
+    function applyAndReload() {
+        if (window.jQuery && $.fn.DataTable && $.fn.DataTable.isDataTable('#fcTravelPlanReportTable')) {
+            $('#fcTravelPlanReportTable').DataTable().ajax.reload();
+        }
+    }
+    document.getElementById('btnApplyFilters')?.addEventListener('click', applyAndReload);
+    document.getElementById('btnResetFilters')?.addEventListener('click', function () {
+        document.getElementById('f_session_id').value = '';
+        document.getElementById('f_slot_id').value = '';
+        document.getElementById('f_submitted').value = '';
+        document.getElementById('f_mode').value = '';
+        document.getElementById('f_vehicle').value = '';
+        document.getElementById('f_date_from').value = '';
+        document.getElementById('f_date_to').value = '';
+        applyAndReload();
+    });
+    document.getElementById('btnExportJoining')?.addEventListener('click', function () {
+        const p = new URLSearchParams();
+        p.set('filter_session_id', document.getElementById('f_session_id')?.value || '');
+        p.set('filter_slot_id', document.getElementById('f_slot_id')?.value || '');
+        p.set('filter_submitted', document.getElementById('f_submitted')?.value || '');
+        p.set('filter_mode', document.getElementById('f_mode')?.value || '');
+        p.set('filter_vehicle', document.getElementById('f_vehicle')?.value || '');
+        p.set('date_from', document.getElementById('f_date_from')?.value || '');
+        p.set('date_to', document.getElementById('f_date_to')?.value || '');
+        window.location.href = '{{ route('admin.travel.export.joining') }}?' + p.toString();
+    });
+})();
+    </script>
+@endpush

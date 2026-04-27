@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\FC;
 
 use App\Http\Controllers\Controller;
+use App\Services\FC\FcStudentRegistrationPdfBuilder;
 use App\Models\FC\{
     StudentMasterFirst, StudentMasterSecond, StudentMaster,
     SessionMaster, ServiceMaster, StateMaster, CategoryMaster,
@@ -13,6 +14,9 @@ use App\Models\FC\{
 };
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Symfony\Component\Process\Process;
 
 class ReportController extends Controller
 {
@@ -138,6 +142,379 @@ class ReportController extends Controller
             'username','step1','step2','master','bank',
             'documents','confirmation','qualifications','employments','languages'
         ));
+    }
+
+    /**
+     * Bilingual “descriptive profile” PDF — prefers headless Chrome when available, else Dompdf.
+     * Noto is embedded via data: URLs so fonts actually load (Dompdf ignores many file:// @font-face paths).
+     */
+    public function studentDetailPdf(string $username)
+    {
+        $step1 = StudentMasterFirst::where('username', $username)
+            ->with(['session', 'service', 'allottedState'])
+            ->first();
+        abort_unless($step1, 404, "Student '{$username}' not found.");
+
+        $step2 = StudentMasterSecond::where('username', $username)
+            ->with(['category', 'religion', 'permState', 'presState', 'fatherProfession'])
+            ->first();
+        $master = StudentMaster::where('username', $username)->first();
+        $bank = NewRegistrationBankDetailsMaster::where('username', $username)->first();
+        $qualifications = DB::table('student_master_qualification_details')
+            ->leftJoin('qualification_masters', 'student_master_qualification_details.qualification_id', '=', 'qualification_masters.id')
+            ->leftJoin('board_name_masters', 'student_master_qualification_details.board_id', '=', 'board_name_masters.id')
+            ->where('student_master_qualification_details.username', $username)
+            ->select('student_master_qualification_details.*', 'qualification_masters.qualification_name', 'board_name_masters.board_name')
+            ->get();
+        $employments = DB::table('student_master_employment_details')
+            ->leftJoin('job_type_masters', 'student_master_employment_details.job_type_id', '=', 'job_type_masters.id')
+            ->where('student_master_employment_details.username', $username)
+            ->select('student_master_employment_details.*', 'job_type_masters.job_type_name')
+            ->get();
+        $languages = DB::table('student_master_language_knowns')
+            ->leftJoin('language_masters', 'student_master_language_knowns.language_id', '=', 'language_masters.id')
+            ->where('student_master_language_knowns.username', $username)
+            ->select('student_master_language_knowns.*', 'language_masters.language_name')
+            ->get();
+
+        $builder = new FcStudentRegistrationPdfBuilder(
+            $step1,
+            $step2,
+            $master,
+            $bank,
+            collect($qualifications),
+            collect($employments),
+            collect($languages),
+            $username,
+        );
+        $sections = $this->fcStudentPdfSanitizeSections($builder->sections());
+        $printedAt = $this->fcPdfSanitizeText(now()->format('d/m/Y H:i'));
+        $photoDataUri = $this->fcRegistrationPhotoDataUri($step1->photo_path);
+
+        $pdfFontFaceCss = $this->fcRegistrationEmbeddedFontFaceCss();
+        $pdfFontFamilyCss = $pdfFontFaceCss !== ''
+            ? "'FcRegPdf', 'DejaVu Sans', sans-serif"
+            : "'DejaVu Sans', sans-serif";
+
+        $viewData = [
+            'sections' => $sections,
+            'username' => $this->fcPdfSanitizeText($username),
+            'step1' => $step1,
+            'pdfFullName' => $this->fcPdfSanitizeText((string) ($step1->full_name ?? '')),
+            'printedAt' => $printedAt,
+            'photoDataUri' => $photoDataUri,
+            'pdfFontFaceCss' => $pdfFontFaceCss,
+            'pdfFontFamilyCss' => $pdfFontFamilyCss,
+        ];
+
+        $html = view('fc.report.student-detail-pdf', $viewData)->render();
+
+        $filename = 'FC_Registration_'.$username.'_'.now()->format('Ymd_His').'.pdf';
+        $engine = strtolower((string) env('FC_REGISTRATION_PDF_ENGINE', 'auto'));
+
+        if ($engine !== 'dompdf' && ($engine === 'chrome' || $engine === 'auto')) {
+            $chromePdf = $this->fcRegistrationPdfRenderChrome($html);
+            if ($chromePdf !== null) {
+                return response($chromePdf, 200, [
+                    'Content-Type' => 'application/pdf',
+                    'Content-Disposition' => 'inline; filename="'.$filename.'"',
+                ]);
+            }
+        }
+
+        return Pdf::loadHTML($html)
+            ->setOption('isRemoteEnabled', true)
+            ->setOption('isFontSubsettingEnabled', false)
+            ->setPaper('a4', 'portrait')
+            ->addInfo(['Title' => 'FC Registration - '.$username])
+            ->stream($filename);
+    }
+
+    /**
+     * Embed Noto Sans Devanagari as data: URLs so Dompdf/Chrome both load glyphs (file:// @font-face often fails in Dompdf).
+     */
+    private function fcRegistrationEmbeddedFontFaceCss(): string
+    {
+        $dir = resource_path('fonts/mpdf');
+        $regular = $dir.'/NotoSansDevanagari-Regular.ttf';
+        if (! is_file($regular) || ! is_readable($regular)) {
+            return '';
+        }
+        $rData = base64_encode((string) file_get_contents($regular));
+        $css = '@font-face{font-family:\'FcRegPdf\';font-style:normal;font-weight:400;src:url(data:font/ttf;charset=utf-8;base64,'.$rData.') format(\'truetype\');}';
+        $bold = $dir.'/NotoSansDevanagari-Bold.ttf';
+        if (is_file($bold) && is_readable($bold)) {
+            $bData = base64_encode((string) file_get_contents($bold));
+            $css .= '@font-face{font-family:\'FcRegPdf\';font-style:normal;font-weight:700;src:url(data:font/ttf;charset=utf-8;base64,'.$bData.') format(\'truetype\');}';
+        }
+
+        return $css;
+    }
+
+    private function fcRegistrationChromeBinary(): ?string
+    {
+        $fromEnv = env('FC_REGISTRATION_CHROME_BIN');
+        if (is_string($fromEnv) && $fromEnv !== '' && @is_executable($fromEnv)) {
+            return $fromEnv;
+        }
+        foreach ([
+            '/usr/bin/google-chrome-stable',
+            '/usr/bin/google-chrome',
+            '/usr/bin/chromium',
+            '/usr/bin/chromium-browser',
+            '/snap/bin/chromium',
+        ] as $path) {
+            if (@is_executable($path)) {
+                return $path;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Headless Chrome print-to-PDF (best Hindi + Latin shaping). Returns null on failure.
+     */
+    private function fcRegistrationPdfRenderChrome(string $html): ?string
+    {
+        $bin = $this->fcRegistrationChromeBinary();
+        if ($bin === null) {
+            return null;
+        }
+
+        $work = storage_path('app/temp/fc-pdf');
+        if (! is_dir($work)) {
+            mkdir($work, 0755, true);
+        }
+
+        $id = uniqid('fcreg_', true);
+        $htmlPath = $work.'/'.$id.'.html';
+        $pdfPath = $work.'/'.$id.'.pdf';
+
+        if (file_put_contents($htmlPath, $html) === false) {
+            return null;
+        }
+
+        $fileUri = 'file://'.str_replace('\\', '/', $htmlPath);
+
+        $cmd = [
+            $bin,
+            '--headless=new',
+            '--disable-gpu',
+            '--no-sandbox',
+            '--disable-dev-shm-usage',
+            '--no-pdf-header-footer',
+            '--virtual-time-budget=25000',
+            '--print-to-pdf='.$pdfPath,
+            $fileUri,
+        ];
+
+        try {
+            $process = new Process($cmd);
+            $process->setTimeout(120);
+            $process->run();
+            if (! $process->isSuccessful()) {
+                Log::warning('FC registration PDF: Chrome headless failed', [
+                    'exit' => $process->getExitCode(),
+                    'err' => $process->getErrorOutput(),
+                ]);
+                @unlink($htmlPath);
+                @unlink($pdfPath);
+
+                return null;
+            }
+        } catch (\Throwable $e) {
+            Log::warning('FC registration PDF: Chrome exception', ['message' => $e->getMessage()]);
+            @unlink($htmlPath);
+            @unlink($pdfPath);
+
+            return null;
+        }
+
+        @unlink($htmlPath);
+
+        if (! is_file($pdfPath)) {
+            @unlink($pdfPath);
+
+            return null;
+        }
+
+        $binary = file_get_contents($pdfPath);
+        @unlink($pdfPath);
+
+        return $binary === false ? null : $binary;
+    }
+
+    /**
+     * PDF-safe text: strip problematic invisibles (keep U+200C/U+200D for Hindi shaping),
+     * fold “smart” punctuation to ASCII (PDF engines often show .notdef boxes for these).
+     */
+    private function fcPdfSanitizeText(string $s): string
+    {
+        if ($s === '') {
+            return '';
+        }
+        if (function_exists('mb_check_encoding') && ! mb_check_encoding($s, 'UTF-8')) {
+            $s = mb_convert_encoding($s, 'UTF-8', 'UTF-8') ?: $s;
+        }
+
+        $s = str_replace(["\r\n", "\r", "\n", "\t"], ' ', $s);
+
+        // BOM, ZWSP, LRM/RLM, bidi controls, word joiner, isolate chars — NOT U+200C/U+200D (needed for Devanagari).
+        $s = preg_replace('/[\x{FEFF}\x{200B}\x{200E}\x{200F}\x{202A}-\x{202E}\x{2060}\x{2066}-\x{2069}]/u', '', $s) ?? $s;
+
+        // Unicode spaces → ASCII space
+        $s = preg_replace('/[\x{00A0}\x{2000}-\x{200A}\x{202F}\x{205F}\x{3000}]/u', ' ', $s) ?? $s;
+
+        $s = str_replace("\xC2\xAD", '', $s); // soft hyphen
+
+        // Dash / minus family → ASCII hyphen (U+2014 em dash is a common tofu source in PDF engines)
+        $s = preg_replace('/[\x{2010}\x{2011}\x{2012}\x{2013}\x{2014}\x{2015}\x{2212}\x{FE58}\x{FE63}\x{FF0D}]/u', '-', $s) ?? $s;
+
+        // Smart quotes → ASCII
+        $s = str_replace(
+            ["\u{2018}", "\u{2019}", "\u{201A}", "\u{201B}", "\u{2032}", "\u{2035}"],
+            "'",
+            $s
+        );
+        $s = str_replace(
+            ["\u{201C}", "\u{201D}", "\u{201E}", "\u{201F}", "\u{00AB}", "\u{00BB}", "\u{2039}", "\u{203A}"],
+            '"',
+            $s
+        );
+
+        $s = str_replace("\u{2026}", '...', $s);
+
+        // Bullets / operators that often lack glyphs in embedded fonts
+        $s = preg_replace('/[\x{2022}\x{2023}\x{25AA}\x{25CF}\x{2219}\x{00B7}\x{30FB}]/u', '*', $s) ?? $s;
+        $s = preg_replace('/[\x{2713}\x{2714}\x{2611}\x{2610}\x{2717}\x{2718}]/u', 'Y', $s) ?? $s;
+
+        // Private-use / variation selectors (Word etc. can inject PUA that renders as boxes)
+        $s = preg_replace('/[\x{E000}-\x{F8FF}\x{FE00}-\x{FE0F}]/u', '', $s) ?? $s;
+
+        // C0 controls (except we already removed tab/newline)
+        $s = preg_replace('/[\x{0000}-\x{0008}\x{000B}\x{000C}\x{000E}-\x{001F}\x{007F}]/u', '', $s) ?? $s;
+
+        $s = preg_replace('/ +/u', ' ', $s) ?? $s;
+
+        if (class_exists(\Normalizer::class)) {
+            $n = \Normalizer::normalize(trim($s), \Normalizer::FORM_C);
+
+            return ($n !== false && $n !== null) ? $n : trim($s);
+        }
+
+        return trim($s);
+    }
+
+    /**
+     * @param  list<array<string,mixed>>  $sections
+     * @return list<array<string,mixed>>
+     */
+    private function fcStudentPdfSanitizeSections(array $sections): array
+    {
+        foreach ($sections as &$sec) {
+            if (($sec['type'] ?? '') === 'fields' && ! empty($sec['rows'])) {
+                foreach ($sec['rows'] as &$row) {
+                    $row['en'] = $this->fcPdfSanitizeText((string) ($row['en'] ?? ''));
+                    $row['hi'] = $this->fcPdfSanitizeText((string) ($row['hi'] ?? ''));
+                    $row['value'] = $this->fcPdfSanitizeScalar($row['value'] ?? null);
+                }
+                unset($row);
+            } elseif (($sec['type'] ?? '') === 'table' && ! empty($sec['body'])) {
+                foreach ($sec['body'] as &$tr) {
+                    foreach ($tr as $i => $cell) {
+                        $tr[$i] = $this->fcPdfSanitizeScalar($cell);
+                    }
+                }
+                unset($tr);
+            }
+            if (! empty($sec['columns']) && is_array($sec['columns'])) {
+                foreach ($sec['columns'] as $i => $col) {
+                    $sec['columns'][$i] = $this->fcPdfSanitizeText((string) $col);
+                }
+            }
+            if (! empty($sec['head_hi']) && is_array($sec['head_hi'])) {
+                foreach ($sec['head_hi'] as $i => $h) {
+                    $sec['head_hi'][$i] = $this->fcPdfSanitizeText((string) $h);
+                }
+            }
+            $sec['title_en'] = $this->fcPdfSanitizeText((string) ($sec['title_en'] ?? ''));
+            $sec['title_hi'] = $this->fcPdfSanitizeText((string) ($sec['title_hi'] ?? ''));
+        }
+        unset($sec);
+
+        return $sections;
+    }
+
+    private function fcPdfSanitizeScalar(mixed $v): mixed
+    {
+        if ($v === null || is_bool($v) || is_int($v) || is_float($v)) {
+            return $v;
+        }
+
+        return $this->fcPdfSanitizeText((string) $v);
+    }
+
+    /**
+     * Embed trainee photo (downscaled for PDF) when file exists on public disk.
+     */
+    private function fcRegistrationPhotoDataUri(?string $path): ?string
+    {
+        if ($path === null || $path === '') {
+            return null;
+        }
+        $path = trim(str_replace('\\', '/', (string) $path));
+        $path = ltrim($path, '/');
+        if (str_starts_with($path, 'public/')) {
+            $path = substr($path, strlen('public/'));
+        }
+        if (str_starts_with($path, 'storage/')) {
+            $path = substr($path, strlen('storage/'));
+        }
+        $full = storage_path('app/public/'.$path);
+        if (! is_file($full)) {
+            return null;
+        }
+        $mime = @mime_content_type($full) ?: 'image/jpeg';
+        if (! str_starts_with((string) $mime, 'image/')) {
+            return null;
+        }
+
+        $binary = (string) file_get_contents($full);
+        if (function_exists('imagecreatefromstring')) {
+            $src = @imagecreatefromstring($binary);
+            if ($src !== false) {
+                $w = imagesx($src);
+                $h = imagesy($src);
+                $maxW = 110;
+                $maxH = 140;
+                if ($w > 0 && $h > 0 && ($w > $maxW || $h > $maxH)) {
+                    $scale = min($maxW / $w, $maxH / $h);
+                    $nw = max(1, (int) round($w * $scale));
+                    $nh = max(1, (int) round($h * $scale));
+                    $dst = imagecreatetruecolor($nw, $nh);
+                    if ($dst !== false) {
+                        if ($mime === 'image/png' || $mime === 'image/gif') {
+                            imagealphablending($dst, false);
+                            imagesavealpha($dst, true);
+                            $transparent = imagecolorallocatealpha($dst, 255, 255, 255, 127);
+                            imagefilledrectangle($dst, 0, 0, $nw, $nh, $transparent);
+                        } else {
+                            imagefill($dst, 0, 0, imagecolorallocate($dst, 255, 255, 255));
+                        }
+                        imagecopyresampled($dst, $src, 0, 0, 0, 0, $nw, $nh, $w, $h);
+                        ob_start();
+                        imagejpeg($dst, null, 88);
+                        $binary = (string) ob_get_clean();
+                        $mime = 'image/jpeg';
+                        imagedestroy($dst);
+                    }
+                }
+                imagedestroy($src);
+            }
+        }
+
+        return 'data:'.$mime.';base64,'.base64_encode($binary);
     }
 
     // ── 3. Service-wise Report ────────────────────────────────────────

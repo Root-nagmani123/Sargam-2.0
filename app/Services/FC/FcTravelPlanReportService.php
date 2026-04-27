@@ -1,0 +1,142 @@
+<?php
+
+namespace App\Services\FC;
+
+use App\Models\FC\FcTravelArrivalSlot;
+use App\Models\FC\SessionMaster;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Query\Builder;
+
+class FcTravelPlanReportService
+{
+    /**
+     * Base query for FC travel plan report (matches admin export & DataTable).
+     */
+    public static function baseQuery(): Builder
+    {
+        return DB::table('student_travel_plan_masters as tp')
+            ->leftJoin('student_master_firsts as s1', 'tp.username', '=', 's1.username')
+            ->leftJoin('student_masters as sm', 'sm.username', '=', 'tp.username')
+            ->leftJoin('fc_travel_arrival_slots as fslot', 'tp.fc_travel_arrival_slot_id', '=', 'fslot.id')
+            ->leftJoin('service_masters as svc', 's1.service_id', '=', 'svc.id')
+            ->select([
+                'tp.username',
+                'tp.joining_date',
+                'tp.mode_of_journey',
+                'tp.journey_vehicle_no',
+                'tp.academy_arrival_date',
+                'tp.arrival_time_dehradun',
+                'tp.require_academy_vehicle',
+                'tp.is_submitted',
+                'tp.needs_pickup',
+                's1.full_name',
+                'sm.full_name as sm_full_name',
+                DB::raw('COALESCE(NULLIF(TRIM(s1.roll_no), \'\'), sm.roll_no, s1.roll_no) AS roll_no'),
+                's1.mobile_no',
+                's1.session_id',
+                'fslot.slot_label',
+                'fslot.time_start',
+                'fslot.time_end',
+                DB::raw('COALESCE(svc.service_code, sm.service_code) AS service_code'),
+            ]);
+    }
+
+    public static function applyFilters($query, Request $request): void
+    {
+        if ($request->filled('filter_session_id')) {
+            $query->where('s1.session_id', (int) $request->filter_session_id);
+        }
+
+        if ($request->filled('filter_slot_id')) {
+            $query->where('tp.fc_travel_arrival_slot_id', (int) $request->filter_slot_id);
+        }
+
+        $sub = strtolower(trim((string) $request->input('filter_submitted', '')));
+        if ($sub === 'yes') {
+            $query->where('tp.is_submitted', 1);
+        } elseif ($sub === 'no') {
+            $query->where(function ($q) {
+                $q->where('tp.is_submitted', 0)->orWhereNull('tp.is_submitted');
+            });
+        }
+
+        if ($request->filled('filter_mode') && $request->filter_mode !== '') {
+            $query->where('tp.mode_of_journey', $request->filter_mode);
+        }
+
+        if ($request->filled('filter_vehicle') && $request->filter_vehicle !== '') {
+            $v = $request->filter_vehicle;
+            if ($v === 'yes') {
+                $query->where('tp.require_academy_vehicle', 1);
+            } elseif ($v === 'no') {
+                $query->where(function ($q) {
+                    $q->whereNull('tp.require_academy_vehicle')->orWhere('tp.require_academy_vehicle', 0);
+                });
+            }
+        }
+
+        // Rows with no joining_date yet (typical drafts) must not be dropped by arrival range.
+        if ($request->filled('date_from')) {
+            $query->where(function ($q) use ($request) {
+                $q->whereNull('tp.joining_date')
+                    ->orWhereDate('tp.joining_date', '>=', $request->date_from);
+            });
+        }
+        if ($request->filled('date_to')) {
+            $query->where(function ($q) use ($request) {
+                $q->whereNull('tp.joining_date')
+                    ->orWhereDate('tp.joining_date', '<=', $request->date_to);
+            });
+        }
+
+        $search = trim((string) $request->input('search.value', ''));
+        if ($search !== '') {
+            $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $search) . '%';
+            $query->where(function ($q) use ($like) {
+                $q->where('tp.username', 'like', $like)
+                    ->orWhere('s1.full_name', 'like', $like)
+                    ->orWhere('sm.full_name', 'like', $like)
+                    ->orWhere('s1.roll_no', 'like', $like)
+                    ->orWhere('s1.mobile_no', 'like', $like)
+                    ->orWhere('sm.roll_no', 'like', $like);
+            });
+        }
+    }
+
+    /**
+     * Human-readable filter summary for Excel/print headers.
+     */
+    public static function exportFilterDescription(Request $request): string
+    {
+        $bits = [];
+        if ($request->filled('filter_session_id')) {
+            $s = SessionMaster::find((int) $request->filter_session_id);
+            $bits[] = 'Session: '.($s?->session_name ?? $request->filter_session_id);
+        }
+        if ($request->filled('filter_slot_id')) {
+            $sl = FcTravelArrivalSlot::find((int) $request->filter_slot_id);
+            $bits[] = 'Slot: '.($sl?->slot_label ?? $request->filter_slot_id);
+        }
+        $sub = strtolower(trim((string) $request->input('filter_submitted', '')));
+        if ($sub === 'yes') {
+            $bits[] = 'Status: Submitted';
+        } elseif ($sub === 'no') {
+            $bits[] = 'Status: Draft';
+        }
+        if ($request->filled('filter_mode') && $request->filter_mode !== '') {
+            $bits[] = 'Mode: '.$request->filter_mode;
+        }
+        if ($request->filled('filter_vehicle') && $request->filter_vehicle !== '') {
+            $bits[] = 'Academy vehicle: '.($request->filter_vehicle === 'yes' ? 'Yes' : 'No');
+        }
+        if ($request->filled('date_from')) {
+            $bits[] = 'Arrival from: '.$request->date_from;
+        }
+        if ($request->filled('date_to')) {
+            $bits[] = 'Arrival to: '.$request->date_to;
+        }
+
+        return $bits !== [] ? implode(' | ', $bits) : 'No filters applied (all plans)';
+    }
+}
