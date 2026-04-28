@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Pending Family ID Card Approvals')
-@section('setup_content')
+@section('content')
 @php
     $familyApprovalReturn = in_array(request('return'), ['approval2', 'approval3'], true) ? request('return') : null;
     $familyMembersQs = ['from' => 'family_approval'];

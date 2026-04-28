@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'ID Card Approval Details')
-@section('setup_content')
+@section('content')
 @php
     $stage = isset($stage) ? (int) $stage : (int) request()->get('stage');
     if (!in_array($stage, [1, 2, 3], true)) {

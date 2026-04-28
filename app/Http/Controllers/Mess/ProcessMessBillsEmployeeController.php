@@ -123,40 +123,12 @@ class ProcessMessBillsEmployeeController extends Controller
         }
         $this->applyBuyerNameFilter($kitchenIssueQuery, $buyerNames);
 
-        // Union both queries – load all rows for date range so DataTables can search/sort client-side
-        $unionQuery = $dateRangeQuery->union($kitchenIssueQuery);
-        $rows = DB::table(DB::raw("({$unionQuery->toSql()}) as combined_bills"))
-            ->mergeBindings($unionQuery->getQuery())
-            ->orderBy('issue_date', 'desc')
-            ->orderBy('id', 'desc')
-            ->limit(5000)
-            ->get();
-
-        // Load full models for each row so we can group by buyer (DR: only line items inside the filter range, like Sale Voucher Report)
-        $bills = $rows->map(function ($bill) use ($dateFrom, $dateTo) {
-            if ($bill->source_type === 'date_range') {
-                $model = SellingVoucherDateRangeReport::with([
-                    'store',
-                    'clientTypeCategory',
-                    'items' => function ($itemQ) use ($dateFrom, $dateTo) {
-                        $this->applySvDateRangeReportItemsIssueDateConstraint($itemQ, $dateFrom, $dateTo);
-                    },
-                    'items.itemSubcategory',
-                ])->find($bill->id);
-                if ($model) {
-                    $model->setAttribute('source_type', 'date_range');
-                }
-                return $model;
-            }
-            $model = KitchenIssueMaster::with(['store', 'clientTypeCategory', 'items'])->where('pk', $bill->id)->first();
-            if ($model) {
-                $model->setAttribute('source_type', 'kitchen_issue');
-            }
-            return $model;
-        })->filter()->values();
-
-        // Group by buyer so one combined bill per user (Selling Voucher + Selling Voucher with Date Range)
-        $combinedBills = $this->groupBillsByBuyer($bills);
+        [$combinedBills, $bills] = $this->queryAndGroupBillsForProcessIndex(
+            $dateFrom,
+            $dateTo,
+            $dateRangeQuery,
+            $kitchenIssueQuery
+        );
 
         // Distinct buyer names per type for filters (Employee / OT / Course / Other / Section etc.)
         $bySlug = $bills->groupBy(function ($bill) {
@@ -285,6 +257,169 @@ class ProcessMessBillsEmployeeController extends Controller
             'sectionBuyerNames',
             'allBuyerNames'
         ));
+    }
+
+    /**
+     * Self-service: current user's combined mess bills for the selected period (same date logic as Process Mess Bills).
+     */
+    public function myBillsIndex(Request $request)
+    {
+        abort_unless(\canSeeMessSelfServiceSetup(), 403);
+
+        $dateFrom = $request->filled('date_from') ? $this->parseDate($request->date_from) : now()->startOfMonth()->format('Y-m-d');
+        $dateTo = $request->filled('date_to') ? $this->parseDate($request->date_to) : now()->endOfMonth()->format('Y-m-d');
+
+        $authUid = (int) (auth()->user()->user_id ?? 0);
+        $authLinkedUserIds = $this->authLinkedUserIdsForMessSelfService();
+        if ($authUid <= 0) {
+            $combinedBills = collect();
+            $effectiveDateFrom = $request->filled('date_from') ? $request->date_from : now()->startOfMonth()->format('d-m-Y');
+            $effectiveDateTo = $request->filled('date_to') ? $request->date_to : now()->endOfMonth()->format('d-m-Y');
+            $effectiveDateFromYmd = $dateFrom;
+            $effectiveDateToYmd = $dateTo;
+            $stats = [
+                'total_bills' => 0,
+                'paid_count' => 0,
+                'unpaid_count' => 0,
+                'total_amount' => 0.0,
+            ];
+
+            return view('mess.my-bills.index', compact(
+                'combinedBills',
+                'effectiveDateFrom',
+                'effectiveDateTo',
+                'effectiveDateFromYmd',
+                'effectiveDateToYmd',
+                'stats'
+            ));
+        }
+
+        $nameCandidates = $this->messBillBuyerNameCandidatesForCurrentUser();
+        $nameLikePatterns = $this->buildMessSelfServiceClientNameLikePatterns($nameCandidates);
+
+        $dateRangeQuery = SellingVoucherDateRangeReport::query()
+            ->select([
+                'id',
+                'client_name',
+                'issue_date',
+                'client_type_slug',
+                'client_type_pk',
+                'total_amount',
+                'payment_type',
+                'status',
+                'store_id',
+                DB::raw("'date_range' as source_type"),
+            ])
+            ->whereIn('client_type_slug', self::ALLOWED_CLIENT_SLUGS);
+        $dateRangeQuery->whereIn('status', $this->sellingVoucherDateRangeReportSaleVoucherStatuses());
+        $this->applySellingVoucherDateRangeItemIssueDateFilter($dateRangeQuery, $dateFrom, $dateTo);
+        $this->applyMyBillsClientNameOrStubFalse($dateRangeQuery, $nameLikePatterns);
+
+        $kitchenIssueQuery = KitchenIssueMaster::query()
+            ->select([
+                'pk as id',
+                'client_name',
+                'issue_date',
+                DB::raw("CASE client_type WHEN 1 THEN 'employee' WHEN 2 THEN 'ot' WHEN 3 THEN 'course' WHEN 4 THEN 'other' END as client_type_slug"),
+                'client_type_pk',
+                DB::raw('NULL as total_amount'),
+                'payment_type',
+                'status',
+                'store_id',
+                DB::raw("'kitchen_issue' as source_type"),
+            ])
+            ->whereIn('client_type', self::ALLOWED_KITCHEN_CLIENT_TYPES)
+            ->whereIn('kitchen_issue_type', self::KITCHEN_MESS_SELLING_ISSUE_TYPES);
+        if ($dateFrom) {
+            $kitchenIssueQuery->where('issue_date', '>=', $dateFrom);
+        }
+        if ($dateTo) {
+            $kitchenIssueQuery->where('issue_date', '<=', $dateTo);
+        }
+        $this->applyMyBillsKitchenClientNameOrClientId($kitchenIssueQuery, $nameLikePatterns, $authLinkedUserIds);
+
+        [$combinedBills, $unusedBills] = $this->queryAndGroupBillsForProcessIndex(
+            $dateFrom,
+            $dateTo,
+            $dateRangeQuery,
+            $kitchenIssueQuery
+        );
+
+        $combinedBills = $combinedBills
+            ->filter(function ($cb) use ($authLinkedUserIds) {
+                $rid = $this->resolveReceiverUserIdFromAnyBill($cb->bills->all());
+                return $rid !== null && in_array((int) $rid, $authLinkedUserIds, true);
+            })
+            ->values();
+
+        $effectiveDateFrom = $request->filled('date_from') ? $request->date_from : now()->startOfMonth()->format('d-m-Y');
+        $effectiveDateTo = $request->filled('date_to') ? $request->date_to : now()->endOfMonth()->format('d-m-Y');
+        $effectiveDateFromYmd = $dateFrom;
+        $effectiveDateToYmd = $dateTo;
+
+        $stats = [
+            'total_bills' => $combinedBills->count(),
+            'paid_count' => $combinedBills->where('status', 2)->count(),
+            'unpaid_count' => $combinedBills->count() - $combinedBills->where('status', 2)->count(),
+            'total_amount' => (float) $combinedBills->sum('total'),
+        ];
+
+        return view('mess.my-bills.index', compact(
+            'combinedBills',
+            'effectiveDateFrom',
+            'effectiveDateTo',
+            'effectiveDateFromYmd',
+            'effectiveDateToYmd',
+            'stats'
+        ));
+    }
+
+    /**
+     * Union SV date-range + kitchen rows, hydrate models, group into one combined bill per buyer+type.
+     *
+     * @return array{0: \Illuminate\Support\Collection, 1: \Illuminate\Support\Collection}
+     */
+    private function queryAndGroupBillsForProcessIndex(
+        string $dateFrom,
+        string $dateTo,
+        $dateRangeQuery,
+        $kitchenIssueQuery
+    ): array {
+        $unionQuery = $dateRangeQuery->union($kitchenIssueQuery);
+        $rows = DB::table(DB::raw("({$unionQuery->toSql()}) as combined_bills"))
+            ->mergeBindings($unionQuery->getQuery())
+            ->orderBy('issue_date', 'desc')
+            ->orderBy('id', 'desc')
+            ->limit(5000)
+            ->get();
+
+        $bills = $rows->map(function ($bill) use ($dateFrom, $dateTo) {
+            if ($bill->source_type === 'date_range') {
+                $model = SellingVoucherDateRangeReport::with([
+                    'store',
+                    'clientTypeCategory',
+                    'items' => function ($itemQ) use ($dateFrom, $dateTo) {
+                        $this->applySvDateRangeReportItemsIssueDateConstraint($itemQ, $dateFrom, $dateTo);
+                    },
+                    'items.itemSubcategory',
+                ])->find($bill->id);
+                if ($model) {
+                    $model->setAttribute('source_type', 'date_range');
+                }
+
+                return $model;
+            }
+            $model = KitchenIssueMaster::with(['store', 'clientTypeCategory', 'items'])->where('pk', $bill->id)->first();
+            if ($model) {
+                $model->setAttribute('source_type', 'kitchen_issue');
+            }
+
+            return $model;
+        })->filter()->values();
+
+        $combinedBills = $this->groupBillsByBuyer($bills);
+
+        return [$combinedBills, $bills];
     }
 
     /**
@@ -652,6 +787,7 @@ class ProcessMessBillsEmployeeController extends Controller
             if (empty($bills)) {
                 abort(404, 'No bills found for this buyer in the selected date range.');
             }
+            $this->assertCurrentUserCanAccessBills($bills);
             $items = [];
             $totalAmount = 0.0;
             $paidAmount = 0.0;
@@ -805,6 +941,8 @@ class ProcessMessBillsEmployeeController extends Controller
             }
         }
 
+        $this->assertCurrentUserCanAccessSingleBill($bill, $isDateRange);
+
         $totalAmount = (float) $bill->net_total;
         $paidAmount = $this->getBillPaidAmount($bill, $isDateRange);
         $dueAmount = max(0, $totalAmount - $paidAmount);
@@ -875,6 +1013,13 @@ class ProcessMessBillsEmployeeController extends Controller
             $bills = $this->resolveCombinedBillBills($request, $id);
             if (empty($bills)) {
                 return response()->json(['error' => 'No bills found for this buyer in the selected date range.'], 404);
+            }
+            if (!$this->currentUserCanAdminMessBills()) {
+                $rid = $this->resolveReceiverUserIdFromAnyBill($bills);
+                $uid = (int) (auth()->user()->user_id ?? 0);
+                if ($rid === null || $rid <= 0 || (int) $rid !== $uid) {
+                    return response()->json(['error' => 'You do not have access to this bill.'], 403);
+                }
             }
             $items = [];
             $totalAmount = 0.0;
@@ -998,6 +1143,15 @@ class ProcessMessBillsEmployeeController extends Controller
         }
 
         [$bill, $isDateRange] = $this->resolveBillById($id);
+
+        if (!$this->currentUserCanAdminMessBills()) {
+            $isKitchen = !$isDateRange;
+            $rid = $this->getReceiverUserIdForBill($bill, $isKitchen);
+            $uid = (int) (auth()->user()->user_id ?? 0);
+            if ($rid === null || $rid <= 0 || (int) $rid !== $uid) {
+                return response()->json(['error' => 'You do not have access to this bill.'], 403);
+            }
+        }
 
         $storeName = $bill->resolved_store_name ?? '—';
         $rawClientName = $bill->client_name ?? ($bill->clientTypeCategory->client_name ?? '—');
@@ -1500,7 +1654,16 @@ class ProcessMessBillsEmployeeController extends Controller
      */
     private function sanitizeBuyerNameForUserLookup(string $name): string
     {
-        $normalized = preg_replace('/\([^)]*\)/', '', $name) ?? $name;
+        $normalized = (string) $name;
+
+        // Remove nested parenthesized suffixes safely, e.g. "AWADH DABAS (Training (Induction))".
+        do {
+            $before = $normalized;
+            $normalized = preg_replace('/\([^()]*\)/', '', $normalized) ?? $normalized;
+        } while ($normalized !== $before);
+
+        // If malformed text leaves stray brackets, strip those too.
+        $normalized = str_replace(['(', ')'], ' ', $normalized);
         $normalized = preg_replace('/\s+/', ' ', $normalized) ?? $normalized;
         return trim((string) $normalized);
     }
@@ -1908,5 +2071,222 @@ class ProcessMessBillsEmployeeController extends Controller
                 $q->orWhere('client_name', 'like', '%' . $name . '%');
             }
         });
+    }
+
+    private function escapeSqlLikeValue(string $value): string
+    {
+        return str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $value);
+    }
+
+    /**
+     * LIKE patterns for My Mess Bills: same words with any run of spaces between
+     * (e.g. bill text "Vipul  Tomar (Medical…)" vs master name "Vipul Tomar").
+     *
+     * @param  array<int, string>  $baseNames
+     * @return array<int, string>
+     */
+    private function buildMessSelfServiceClientNameLikePatterns(array $baseNames): array
+    {
+        $patterns = [];
+        foreach ($baseNames as $name) {
+            $name = trim((string) $name);
+            if ($name === '') {
+                continue;
+            }
+            $norm = preg_replace('/\s+/u', ' ', $name) ?? $name;
+            $patterns[] = '%' . $this->escapeSqlLikeValue($norm) . '%';
+            $words = preg_split('/\s+/u', $norm, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+            if (count($words) >= 2) {
+                $escaped = array_map(fn ($w) => $this->escapeSqlLikeValue($w), $words);
+                $patterns[] = '%' . implode('%', $escaped) . '%';
+            } elseif (count($words) === 1) {
+                $patterns[] = '%' . $this->escapeSqlLikeValue($words[0]) . '%';
+            }
+        }
+
+        return array_values(array_unique($patterns));
+    }
+
+    private function applyMyBillsClientNameOrStubFalse($query, array $likePatterns): void
+    {
+        if ($likePatterns === []) {
+            $query->whereRaw('0 = 1');
+
+            return;
+        }
+        $query->where(function ($q) use ($likePatterns) {
+            foreach ($likePatterns as $pat) {
+                $q->orWhere('client_name', 'like', $pat);
+            }
+        });
+    }
+
+    private function applyMyBillsKitchenClientNameOrClientId($query, array $likePatterns, array $authLinkedUserIds): void
+    {
+        $query->where(function ($outer) use ($likePatterns, $authLinkedUserIds) {
+            if ($likePatterns !== []) {
+                $outer->where(function ($q) use ($likePatterns) {
+                    foreach ($likePatterns as $pat) {
+                        $q->orWhere('client_name', 'like', $pat);
+                    }
+                });
+            }
+            if ($authLinkedUserIds !== []) {
+                $outer->orWhere(function ($q) use ($authLinkedUserIds) {
+                    $q->whereIn('client_type', [
+                        KitchenIssueMaster::CLIENT_EMPLOYEE,
+                        KitchenIssueMaster::CLIENT_OT,
+                        KitchenIssueMaster::CLIENT_COURSE,
+                    ])->whereIn('client_id', $authLinkedUserIds);
+                });
+            }
+            if ($likePatterns === [] && $authLinkedUserIds === []) {
+                $outer->whereRaw('0 = 1');
+            }
+        });
+    }
+
+    /**
+     * Return all user_ids that can represent the current logged-in person in mess mappings
+     * (handles employee_master.pk and employee_master.pk_old swaps).
+     *
+     * @return array<int, int>
+     */
+    private function authLinkedUserIdsForMessSelfService(): array
+    {
+        $uid = (int) (auth()->user()->user_id ?? 0);
+        if ($uid <= 0) {
+            return [];
+        }
+
+        $linked = [$uid];
+        try {
+            $user = auth()->user();
+            if (($user->user_category ?? '') !== 'S') {
+                $employee = EmployeeMaster::query()
+                    ->where(function ($q) use ($uid) {
+                        $q->where('pk', $uid);
+                        if (Schema::hasColumn('employee_master', 'pk_old')) {
+                            $q->orWhere('pk_old', $uid);
+                        }
+                    })
+                    ->first(['pk', 'pk_old']);
+
+                if ($employee) {
+                    $pk = isset($employee->pk) ? (int) $employee->pk : 0;
+                    $pkOld = isset($employee->pk_old) ? (int) $employee->pk_old : 0;
+                    if ($pk > 0) {
+                        $linked[] = $pk;
+                    }
+                    if ($pkOld > 0) {
+                        $linked[] = $pkOld;
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            // Fall back to current user_id only.
+        }
+
+        return array_values(array_unique(array_filter($linked, fn ($id) => (int) $id > 0)));
+    }
+
+    private function currentUserCanAdminMessBills(): bool
+    {
+        return canSeeLowStockAlert() || hasRole('Admin');
+    }
+
+    /**
+     * @param  array<int, KitchenIssueMaster|SellingVoucherDateRangeReport>  $bills
+     */
+    private function assertCurrentUserCanAccessBills(array $bills): void
+    {
+        if ($this->currentUserCanAdminMessBills()) {
+            return;
+        }
+        $rid = $this->resolveReceiverUserIdFromAnyBill($bills);
+        $uid = (int) (auth()->user()->user_id ?? 0);
+        if ($rid === null || $rid <= 0 || (int) $rid !== $uid) {
+            abort(403);
+        }
+    }
+
+    private function assertCurrentUserCanAccessSingleBill($bill, bool $isDateRange): void
+    {
+        if ($this->currentUserCanAdminMessBills()) {
+            return;
+        }
+        $isKitchen = !($bill instanceof SellingVoucherDateRangeReport);
+        $rid = $this->getReceiverUserIdForBill($bill, $isKitchen);
+        $uid = (int) (auth()->user()->user_id ?? 0);
+        if ($rid === null || $rid <= 0 || (int) $rid !== $uid) {
+            abort(403);
+        }
+    }
+
+    /**
+     * Display names to narrow mess bill queries for the logged-in portal user.
+     *
+     * @return array<int, string>
+     */
+    private function messBillBuyerNameCandidatesForCurrentUser(): array
+    {
+        $user = auth()->user();
+        if (!$user || empty($user->user_id)) {
+            return [];
+        }
+        $uid = (int) $user->user_id;
+        $names = [];
+
+        if (($user->user_category ?? '') === 'S' && Schema::hasTable('student_master')) {
+            $s = DB::table('student_master')->where('pk', $uid)->first(['first_name', 'middle_name', 'last_name', 'display_name']);
+            if ($s) {
+                if (!empty($s->display_name)) {
+                    $names[] = trim((string) $s->display_name);
+                }
+                $full = trim(implode(' ', array_filter([
+                    trim((string) ($s->first_name ?? '')),
+                    trim((string) ($s->middle_name ?? '')),
+                    trim((string) ($s->last_name ?? '')),
+                ], fn ($p) => $p !== '')));
+                if ($full !== '') {
+                    $names[] = $full;
+                }
+            }
+        } else {
+            $empQuery = EmployeeMaster::query()->where(function ($q) use ($uid) {
+                $q->where('pk', $uid);
+                if (Schema::hasColumn('employee_master', 'pk_old')) {
+                    $q->orWhere('pk_old', $uid);
+                }
+            });
+            $e = $empQuery->first(['first_name', 'middle_name', 'last_name']);
+            if ($e) {
+                $full = trim(implode(' ', array_filter([
+                    trim((string) ($e->first_name ?? '')),
+                    trim((string) ($e->middle_name ?? '')),
+                    trim((string) ($e->last_name ?? '')),
+                ], fn ($p) => $p !== '')));
+                if ($full !== '') {
+                    $names[] = $full;
+                }
+            }
+            if (Schema::hasColumn('user_credentials', 'name')) {
+                $n = DB::table('user_credentials')->where('user_id', $uid)->value('name');
+                if ($n !== null && trim((string) $n) !== '') {
+                    $names[] = trim((string) $n);
+                }
+            }
+        }
+
+        $extra = [];
+        foreach ($names as $n) {
+            $s = $this->sanitizeBuyerNameForUserLookup($n);
+            if ($s !== '' && $s !== $n) {
+                $extra[] = $s;
+            }
+        }
+        $names = array_merge($names, $extra);
+
+        return array_values(array_unique(array_filter(array_map('trim', $names), fn ($n) => $n !== '')));
     }
 }

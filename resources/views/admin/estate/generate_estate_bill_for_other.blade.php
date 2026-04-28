@@ -2,7 +2,7 @@
 
 @section('title', 'Generate Estate Bill for Other - Sargam')
 
-@section('setup_content')
+@section('content')
 <div class="container-fluid px-2 px-sm-3 px-md-4">
     <x-breadcrum title="Generate Estate Bill for Other"></x-breadcrum>
     <x-session_message />
