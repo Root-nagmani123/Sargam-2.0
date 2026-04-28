@@ -916,7 +916,7 @@ $selectedStores = collect((array) request()->input('store', []))
                                         @foreach($otCourses ?? [] as $course)
                                         <option value="{{ $course->pk }}"
                                             data-course-name="{{ e($course->course_name) }}">
-                                            {{ e($course->course_name) }}</option>
+                                            {{ e($course->course_name) }} [{{ (int)($course->active_inactive ?? 0) === 1 ? 'Active' : 'Archived' }}]</option>
                                         @endforeach
                                     </select>
                                     <select id="drCourseSelect" class="form-select " style="display:none;">
@@ -924,7 +924,7 @@ $selectedStores = collect((array) request()->input('store', []))
                                         @foreach($otCourses ?? [] as $course)
                                         <option value="{{ $course->pk }}"
                                             data-course-name="{{ e($course->course_name) }}">
-                                            {{ e($course->course_name) }}</option>
+                                            {{ e($course->course_name) }} [{{ (int)($course->active_inactive ?? 0) === 1 ? 'Active' : 'Archived' }}]</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -963,7 +963,7 @@ $selectedStores = collect((array) request()->input('store', []))
                                     <select id="drCourseNameSelect" class="form-select " style="display:none;">
                                         <option value="">Select Course</option>
                                         @foreach($otCourses ?? [] as $course)
-                                        <option value="{{ $course->pk }}">{{ e($course->course_name) }}</option>
+                                        <option value="{{ $course->pk }}">{{ e($course->course_name) }} [{{ (int)($course->active_inactive ?? 0) === 1 ? 'Active' : 'Archived' }}]</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -1429,7 +1429,7 @@ $selectedStores = collect((array) request()->input('store', []))
                                         @foreach($otCourses ?? [] as $course)
                                         <option value="{{ $course->pk }}"
                                             data-course-name="{{ e($course->course_name) }}">
-                                            {{ e($course->course_name) }}</option>
+                                            {{ e($course->course_name) }} [{{ (int)($course->active_inactive ?? 0) === 1 ? 'Active' : 'Archived' }}]</option>
                                         @endforeach
                                     </select>
                                     <select id="editDrCourseSelect" class="form-select " style="display:none;">
@@ -1437,7 +1437,7 @@ $selectedStores = collect((array) request()->input('store', []))
                                         @foreach($otCourses ?? [] as $course)
                                         <option value="{{ $course->pk }}"
                                             data-course-name="{{ e($course->course_name) }}">
-                                            {{ e($course->course_name) }}</option>
+                                            {{ e($course->course_name) }} [{{ (int)($course->active_inactive ?? 0) === 1 ? 'Active' : 'Archived' }}]</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -1475,7 +1475,7 @@ $selectedStores = collect((array) request()->input('store', []))
                                     <select id="editDrCourseNameSelect" class="form-select " style="display:none;">
                                         <option value="">Select Course</option>
                                         @foreach($otCourses ?? [] as $course)
-                                        <option value="{{ $course->pk }}">{{ e($course->course_name) }}</option>
+                                        <option value="{{ $course->pk }}">{{ e($course->course_name) }} [{{ (int)($course->active_inactive ?? 0) === 1 ? 'Active' : 'Archived' }}]</option>
                                         @endforeach
                                     </select>
                                 </div>
