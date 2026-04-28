@@ -28,8 +28,9 @@
 
     </p>
       @if(! hasRole('Student-OT') && Auth::user() && Auth::user()->user_id)  
-    <a href="{{ route('member.profile.edit', Auth::user()->user_id) }}" class="text-white fw-bold">Edit Profile</a><span class="mx-2 text-white">|</span> <a href="{{ route('admin.password.change_password') }}" class="text-white fw-bold">Change
-        Password</a>
+    <a href="#" class="text-white fw-bold">Edit Profile</a><span class="mx-2 text-white"></span> 
+    {{-- <a href="{{ route('admin.password.change_password') }}" class="text-white fw-bold">Change
+        Password</a> --}}
         @endif
 </div>
 <hr class="my-2">

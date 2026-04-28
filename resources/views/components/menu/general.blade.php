@@ -29,12 +29,12 @@
 
                             @auth
                             <!-- Profile Management Link -->
-                            <li class="sidebar-item">
+                            {{-- <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('member.profile.edit') ? 'active' : '' }}"
                                     href="#">
                                     <span class="hide-menu small small-sm-normal text-nowrap">Edit Profile</span>
                                 </a>
-                            </li>
+                            </li> --}}
                             @endauth
 
                             @if(hasRole('Admin') || hasRole('Training-Induction'))

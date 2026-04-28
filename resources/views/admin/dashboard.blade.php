@@ -657,7 +657,7 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                         <div class="min-w-0">
                             <p class="small text-body-secondary mb-1 text-truncate">Upcoming Events</p>
                             <div class="dashboard-stat-value fw-semibold text-warning-emphasis">2</div>
-                            <span class="stat-link-hint text-warning small">View <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
+                            {{-- <span class="stat-link-hint text-warning small">View <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span> --}}
                         </div>
                         <span class="stat-icon flex-shrink-0" aria-hidden="true"><span class="material-icons material-symbols-rounded">campaign</span></span>
                     </div>
