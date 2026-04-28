@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Purchase Order Details')
-@section('setup_content')
+@section('content')
 <div class="container-fluid">
     <x-breadcrum title="Purchase Order Details"></x-breadcrum>
 

@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Mess Stores')
-@section('setup_content')
+@section('content')
 @php
     $storeTypes = \App\Models\Mess\Store::storeTypes();
     $canDeleteStore = hasRole('Admin') || hasRole('Mess-Admin');

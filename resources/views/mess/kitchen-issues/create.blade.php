@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'ADD Selling Voucher')
-@section('setup_content')
+@section('content')
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h4>ADD Selling Voucher</h4>

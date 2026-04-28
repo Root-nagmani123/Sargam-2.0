@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Stock Purchase Details Report')
-@section('setup_content')
+@section('content')
 @php
     $selectedVendorIds = $selectedVendors->pluck('id')->map(fn ($id) => (int) $id)->all();
     $selectedStoreIds = $selectedStores->pluck('id')->map(fn ($id) => (int) $id)->all();

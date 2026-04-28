@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Create Material Request')
-@section('setup_content')
+@section('content')
 <div class="container-fluid">
     <h4>Create Material Request</h4>
     <form method="POST" action="{{ route('admin.mess.materialrequests.store') }}" id="materialRequestForm">

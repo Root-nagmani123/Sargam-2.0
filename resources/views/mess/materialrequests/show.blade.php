@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Material Request Details')
-@section('setup_content')
+@section('content')
 <div class="container-fluid">
     <h4>Material Request Details</h4>
     <div class="card">

@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Category Item Master')
-@section('setup_content')
+@section('content')
 @php
     $categoryTypes = \App\Models\Mess\ItemCategory::categoryTypes();
     $selectedCategoryType = $categoryTypeFilter ?? request('category_type', '');

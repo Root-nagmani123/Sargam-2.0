@@ -56,7 +56,7 @@
     }
 </style>
 @endpush
-@section('setup_content')
+@section('content')
 @php
     $selectedCategoryId = $categoryIdFilter ?? request('category_id', '');
     $canDeleteItemSubcategory = hasRole('Admin') || hasRole('Mess-Admin');

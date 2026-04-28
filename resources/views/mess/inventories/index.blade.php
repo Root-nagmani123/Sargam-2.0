@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Mess Inventory')
-@section('setup_content')
+@section('content')
 <div class="container-fluid">
     <h4>Mess Inventory</h4>
     <a href="{{ route('admin.mess.inventories.create') }}" class="btn btn-primary mb-3">Add Inventory</a>

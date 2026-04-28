@@ -2,7 +2,7 @@
 
 @section('title', 'Material Management - Sargam | Lal Bahadur')
 
-@section('setup_content')
+@section('content')
 <div class="container-fluid">
     <x-breadcrum title="Material Management" />
     <div class="datatables">

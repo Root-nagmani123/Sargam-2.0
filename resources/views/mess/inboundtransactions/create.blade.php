@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Record Goods Receipt')
-@section('setup_content')
+@section('content')
 <div class="container-fluid">
     <h4>Record Goods Receipt</h4>
     <form method="POST" action="{{ route('admin.mess.inboundtransactions.store') }}">

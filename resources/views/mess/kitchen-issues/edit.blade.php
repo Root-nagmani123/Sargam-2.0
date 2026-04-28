@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Edit Material Management')
-@section('setup_content')
+@section('content')
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h4>Edit Material Management #{{ $kitchenIssue->pk }}</h4>

@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Add Mess Store')
-@section('setup_content')
+@section('content')
 <div class="container-fluid">
     <div class="card">
         <div class="card-body">

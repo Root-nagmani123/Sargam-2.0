@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Inbound Transaction Details')
-@section('setup_content')
+@section('content')
 <div class="container-fluid">
     <h4>Inbound Transaction Details</h4>
     <div class="card">

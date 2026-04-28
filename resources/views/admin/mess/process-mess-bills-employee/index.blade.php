@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Process Mess Bills')
-@section('setup_content')
+@section('content')
 <div class="container-fluid py-3 py-md-4 process-mess-bills-employee-report">
     <x-breadcrum title="Process Mess Bills"></x-breadcrum>
     {{-- Report Header (Print Only) --}}

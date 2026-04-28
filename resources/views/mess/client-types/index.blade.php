@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Client Types Master')
-@section('setup_content')
+@section('content')
 @php
     $clientTypeOptions = \App\Models\Mess\ClientType::clientTypes();
     $canDeleteClientType = hasRole('Admin') || hasRole('Mess-Admin');

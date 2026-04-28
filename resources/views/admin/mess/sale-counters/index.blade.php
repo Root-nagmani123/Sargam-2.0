@@ -2,7 +2,7 @@
 
 @section('title', 'Sale Counters - Sargam | Lal Bahadur')
 
-@section('setup_content')
+@section('content')
 <div class="container-fluid">
     <x-breadcrum title="Sale Counters" />
     <div class="datatables">

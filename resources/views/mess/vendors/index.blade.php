@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Mess Vendors')
-@section('setup_content')
+@section('content')
 @php
     $canDeleteVendor = hasRole('Admin') || hasRole('Mess-Admin');
 @endphp

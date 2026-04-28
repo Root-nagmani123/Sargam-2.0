@@ -2,7 +2,7 @@
 
 @section('title', 'Vendor Mapping - Sargam | Lal Bahadur')
 
-@section('setup_content')
+@section('content')
 <div class="container-fluid">
     <x-breadcrum title="Vendor Mapping" />
     <div class="datatables">

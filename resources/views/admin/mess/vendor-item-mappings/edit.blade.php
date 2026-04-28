@@ -2,7 +2,7 @@
 
 @section('title', 'Edit Vendor Mapping - Sargam | Lal Bahadur')
 
-@section('setup_content')
+@section('content')
 <div class="card" style="border-left: 4px solid #004a93;">
     <div class="card-header">
         <h5 class="mb-0">

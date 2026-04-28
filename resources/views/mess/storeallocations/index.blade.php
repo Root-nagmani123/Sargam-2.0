@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Mess Store Allocation')
-@section('setup_content')
+@section('content')
 @php
     $canDeleteStoreAllocation = hasRole('Admin') || hasRole('Mess-Admin');
 @endphp

@@ -2,7 +2,7 @@
 
 @section('title', 'Menu Rate List - Sargam | Lal Bahadur')
 
-@section('setup_content')
+@section('content')
 <div class="container-fluid">
     <x-breadcrum title="Menu Rate List" />
     <div class="datatables">

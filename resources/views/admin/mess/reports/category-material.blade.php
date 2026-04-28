@@ -2,7 +2,7 @@
 
 @section('title', 'Category Wise Material Report - Sargam | Lal Bahadur')
 
-@section('setup_content')
+@section('content')
 <div class="container-fluid">
     <x-breadcrum title="Category Wise Material Report" />
     <div class="datatables">

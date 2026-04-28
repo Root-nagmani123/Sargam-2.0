@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Add Mess Store Allocation')
-@section('setup_content')
+@section('content')
 <div class="container-fluid">
     <h4>Add Mess Store Allocation</h4>
     <form method="POST" action="{{ route('admin.mess.storeallocations.store') }}">

@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Stock Summary Report')
-@section('setup_content')
+@section('content')
 @php
     /** @var array<int> $storeIds */
     $storeIds = $storeIds ?? [];

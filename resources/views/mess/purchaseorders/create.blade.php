@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Create Purchase Order')
-@section('setup_content')
+@section('content')
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
         <div>

@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Add Mess Event')
-@section('setup_content')
+@section('content')
 <div class="container-fluid">
     <h4>Add Mess Event</h4>
     <form method="POST" action="{{ route('admin.mess.events.store') }}">

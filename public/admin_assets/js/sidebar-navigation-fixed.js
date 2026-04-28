@@ -299,6 +299,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // ==========================================
     
     function detectAndActivateCurrentTab() {
+        const path = (window.location && window.location.pathname ? window.location.pathname : '').toLowerCase();
+        // Mess module is intentionally hosted under Home tab; don't override server-resolved tab.
+        if (path.startsWith('/admin/mess') || path.startsWith('/mess/')) {
+            return;
+        }
+
         // Check which @section is being used on this page
         const bodyWrapper = document.querySelector('.body-wrapper');
         if (!bodyWrapper) return;

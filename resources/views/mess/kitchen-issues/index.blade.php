@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Selling Voucher')
-@section('setup_content')
+@section('content')
 @php
     $canDeleteSellingVoucher = hasRole('Admin') || hasRole('Mess-Admin');
 @endphp

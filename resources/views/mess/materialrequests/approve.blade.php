@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Approve Material Request')
-@section('setup_content')
+@section('content')
 <div class="container-fluid">
     <h4>Approve/Reject Material Request</h4>
     <form method="POST" action="{{ route('admin.mess.materialrequests.processApproval', $materialRequest->id) }}">

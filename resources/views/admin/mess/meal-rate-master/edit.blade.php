@@ -2,7 +2,7 @@
 
 @section('title', 'Edit Meal Rate - Sargam | Lal Bahadur')
 
-@section('setup_content')
+@section('content')
 <div class="container-fluid">
     <x-breadcrum title="Meal Rate Master" />
     <div class="card" style="border-left: 4px solid #004a93;">

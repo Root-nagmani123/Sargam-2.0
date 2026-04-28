@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Mess Events')
-@section('setup_content')
+@section('content')
 <div class="container-fluid">
     <h4>Mess Events</h4>
     <a href="{{ route('admin.mess.events.create') }}" class="btn btn-primary mb-3">Add Event</a>

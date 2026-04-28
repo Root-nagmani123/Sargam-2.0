@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Add Inventory')
-@section('setup_content')
+@section('content')
 <div class="container-fluid">
     <h4>Add Inventory</h4>
     <form method="POST" action="{{ route('admin.mess.inventories.store') }}">
