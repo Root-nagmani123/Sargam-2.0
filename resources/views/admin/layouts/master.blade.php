@@ -585,7 +585,11 @@
                 str_starts_with($path, 'expertise') || str_starts_with($path, 'faculty_notice') || str_starts_with($path, 'faculty_mdo')
             ) {
                 $activeNavTab = '#tab-setup';
-            } elseif (str_starts_with($path, 'communications') || request()->routeIs('*communications*')) {
+            } elseif (
+                str_starts_with($path, 'communications') ||
+                request()->routeIs('*communications*') ||
+                request()->routeIs('admin.birthday-wish.*')
+            ) {
                 $activeNavTab = '#tab-communications';
             } elseif (str_starts_with($path, 'academics') || request()->routeIs('*academics*')) {
                 $activeNavTab = '#tab-academics';
