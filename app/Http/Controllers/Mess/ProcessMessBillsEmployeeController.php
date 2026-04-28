@@ -2137,7 +2137,7 @@ class ProcessMessBillsEmployeeController extends Controller
 
     private function currentUserCanAdminMessBills(): bool
     {
-        return canSeeLowStockAlert() || hasRole('Admin');
+        return canSeeLowStockAlert();
     }
 
     /**

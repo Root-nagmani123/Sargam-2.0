@@ -135,15 +135,16 @@ function hasRole($role)
 }
 
 /**
- * Whether the current user can see the low stock alert (Admin, Mess Staff role, or employee in Officers Mess department).
+ * Whether the current user can access full Mess Management
+ * (Mess Staff/Mess Admin role, or employee in Officers Mess department).
  */
 function canSeeLowStockAlert()
 {
     $user = Auth::user();
     if (!$user) return false;
 
-    if (hasRole('Admin')) return true;
     if (hasRole('Mess Staff') || hasRole('mess staff')) return true;
+    if (hasRole('Mess Admin') || hasRole('mess admin')) return true;
 
     // Mess staff dropdown list = employees in Officers Mess department; show alert to them when they login
     if (isset($user->user_category) && $user->user_category === 'E' && !empty($user->user_id)) {
