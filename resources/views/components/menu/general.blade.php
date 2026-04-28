@@ -31,7 +31,7 @@
                             <!-- Profile Management Link -->
                             <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('member.profile.edit') ? 'active' : '' }}"
-                                    href="{{ (Auth::check() && Auth::user()->user_id) ? route('member.profile.edit', Auth::user()->user_id) : '#' }}">
+                                    href="#">
                                     <span class="hide-menu small small-sm-normal text-nowrap">Edit Profile</span>
                                 </a>
                             </li>
@@ -47,7 +47,7 @@
                             </li>
                             @endif
                             <!-- Notice Notification Route -->
-                            <li class="sidebar-item"><a class="sidebar-link" href="{{ route('admin.notice.index') }}">
+                            <li class="sidebar-item"><a class="sidebar-link" href="#">
                                     <span class="hide-menu small small-sm-normal text-nowrap">Notice
                                         Notifications</span>
                                 </a></li>
