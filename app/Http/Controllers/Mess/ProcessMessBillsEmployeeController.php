@@ -270,6 +270,7 @@ class ProcessMessBillsEmployeeController extends Controller
         $dateTo = $request->filled('date_to') ? $this->parseDate($request->date_to) : now()->endOfMonth()->format('Y-m-d');
 
         $authUid = (int) (auth()->user()->user_id ?? 0);
+        $authLinkedUserIds = $this->authLinkedUserIdsForMessSelfService();
         if ($authUid <= 0) {
             $combinedBills = collect();
             $effectiveDateFrom = $request->filled('date_from') ? $request->date_from : now()->startOfMonth()->format('d-m-Y');
@@ -335,7 +336,7 @@ class ProcessMessBillsEmployeeController extends Controller
         if ($dateTo) {
             $kitchenIssueQuery->where('issue_date', '<=', $dateTo);
         }
-        $this->applyMyBillsKitchenClientNameOrClientId($kitchenIssueQuery, $nameLikePatterns, $authUid);
+        $this->applyMyBillsKitchenClientNameOrClientId($kitchenIssueQuery, $nameLikePatterns, $authLinkedUserIds);
 
         [$combinedBills, $unusedBills] = $this->queryAndGroupBillsForProcessIndex(
             $dateFrom,
@@ -345,8 +346,9 @@ class ProcessMessBillsEmployeeController extends Controller
         );
 
         $combinedBills = $combinedBills
-            ->filter(function ($cb) use ($authUid) {
-                return $this->resolveReceiverUserIdFromAnyBill($cb->bills->all()) === $authUid;
+            ->filter(function ($cb) use ($authLinkedUserIds) {
+                $rid = $this->resolveReceiverUserIdFromAnyBill($cb->bills->all());
+                return $rid !== null && in_array((int) $rid, $authLinkedUserIds, true);
             })
             ->values();
 
@@ -1652,7 +1654,16 @@ class ProcessMessBillsEmployeeController extends Controller
      */
     private function sanitizeBuyerNameForUserLookup(string $name): string
     {
-        $normalized = preg_replace('/\([^)]*\)/', '', $name) ?? $name;
+        $normalized = (string) $name;
+
+        // Remove nested parenthesized suffixes safely, e.g. "AWADH DABAS (Training (Induction))".
+        do {
+            $before = $normalized;
+            $normalized = preg_replace('/\([^()]*\)/', '', $normalized) ?? $normalized;
+        } while ($normalized !== $before);
+
+        // If malformed text leaves stray brackets, strip those too.
+        $normalized = str_replace(['(', ')'], ' ', $normalized);
         $normalized = preg_replace('/\s+/', ' ', $normalized) ?? $normalized;
         return trim((string) $normalized);
     }
@@ -2110,9 +2121,9 @@ class ProcessMessBillsEmployeeController extends Controller
         });
     }
 
-    private function applyMyBillsKitchenClientNameOrClientId($query, array $likePatterns, int $authUid): void
+    private function applyMyBillsKitchenClientNameOrClientId($query, array $likePatterns, array $authLinkedUserIds): void
     {
-        $query->where(function ($outer) use ($likePatterns, $authUid) {
+        $query->where(function ($outer) use ($likePatterns, $authLinkedUserIds) {
             if ($likePatterns !== []) {
                 $outer->where(function ($q) use ($likePatterns) {
                     foreach ($likePatterns as $pat) {
@@ -2120,19 +2131,63 @@ class ProcessMessBillsEmployeeController extends Controller
                     }
                 });
             }
-            if ($authUid > 0) {
-                $outer->orWhere(function ($q) use ($authUid) {
+            if ($authLinkedUserIds !== []) {
+                $outer->orWhere(function ($q) use ($authLinkedUserIds) {
                     $q->whereIn('client_type', [
                         KitchenIssueMaster::CLIENT_EMPLOYEE,
                         KitchenIssueMaster::CLIENT_OT,
                         KitchenIssueMaster::CLIENT_COURSE,
-                    ])->where('client_id', $authUid);
+                    ])->whereIn('client_id', $authLinkedUserIds);
                 });
             }
-            if ($likePatterns === [] && $authUid <= 0) {
+            if ($likePatterns === [] && $authLinkedUserIds === []) {
                 $outer->whereRaw('0 = 1');
             }
         });
+    }
+
+    /**
+     * Return all user_ids that can represent the current logged-in person in mess mappings
+     * (handles employee_master.pk and employee_master.pk_old swaps).
+     *
+     * @return array<int, int>
+     */
+    private function authLinkedUserIdsForMessSelfService(): array
+    {
+        $uid = (int) (auth()->user()->user_id ?? 0);
+        if ($uid <= 0) {
+            return [];
+        }
+
+        $linked = [$uid];
+        try {
+            $user = auth()->user();
+            if (($user->user_category ?? '') !== 'S') {
+                $employee = EmployeeMaster::query()
+                    ->where(function ($q) use ($uid) {
+                        $q->where('pk', $uid);
+                        if (Schema::hasColumn('employee_master', 'pk_old')) {
+                            $q->orWhere('pk_old', $uid);
+                        }
+                    })
+                    ->first(['pk', 'pk_old']);
+
+                if ($employee) {
+                    $pk = isset($employee->pk) ? (int) $employee->pk : 0;
+                    $pkOld = isset($employee->pk_old) ? (int) $employee->pk_old : 0;
+                    if ($pk > 0) {
+                        $linked[] = $pk;
+                    }
+                    if ($pkOld > 0) {
+                        $linked[] = $pkOld;
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            // Fall back to current user_id only.
+        }
+
+        return array_values(array_unique(array_filter($linked, fn ($id) => (int) $id > 0)));
     }
 
     private function currentUserCanAdminMessBills(): bool
