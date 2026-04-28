@@ -74,4 +74,10 @@ class FacultyMaster extends Model
     {
         $this->attributes['current_department_name'] = $value;
     }*/
+
+   public function createdByUser()
+    {
+        return $this->belongsTo(EmployeeMaster::class, 'created_by', 'pk');
+    } 
+        
 }
