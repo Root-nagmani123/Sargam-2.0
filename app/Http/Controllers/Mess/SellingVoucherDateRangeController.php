@@ -184,12 +184,10 @@ class SellingVoucherDateRangeController extends Controller
             ->filter(fn($e) => $e->full_name !== '—')
             ->values();
 
-        $otCourses = CourseMaster::where('active_inactive', 1)
-            ->where(function ($q) {
-                $q->whereNull('end_date')->orWhere('end_date', '>=', now()->toDateString());
-            })
+        // All courses (active + archived) for Client Name dropdown; label in UI via active_inactive
+        $otCourses = CourseMaster::orderByDesc('active_inactive')
             ->orderBy('course_name')
-            ->get(['pk', 'course_name']);
+            ->get(['pk', 'course_name', 'active_inactive']);
         $messStaff = $officersMessDept
             ? EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn($q) => $q->where('status', 1))
                 ->where('department_master_pk', $officersMessDept->pk)

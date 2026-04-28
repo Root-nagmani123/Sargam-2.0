@@ -115,12 +115,10 @@ class KitchenIssueController extends Controller
             ->orderBy('pk', 'desc')
             ->get();
 
-        $otCourses = CourseMaster::where('active_inactive', 1)
-            ->where(function ($q) {
-                $q->whereNull('end_date')->orWhere('end_date', '>=', now()->toDateString());
-            })
+        // All courses (active + archived) for Client Name dropdown; label in UI via active_inactive
+        $otCourses = CourseMaster::orderByDesc('active_inactive')
             ->orderBy('course_name')
-            ->get(['pk', 'course_name']);
+            ->get(['pk', 'course_name', 'active_inactive']);
 
         // Get active stores and sub-stores
         $stores = Store::active()->get(['id', 'store_name'])->map(function ($store) {

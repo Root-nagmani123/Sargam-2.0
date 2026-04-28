@@ -80,7 +80,7 @@
                         <select id="courseMasterPk" name="course_master_pk[]" class="form-select w-100 cw-report-multiselect" multiple data-placeholder="All courses">
                             @isset($otCourses)
                                 @foreach($otCourses as $course)
-                                    <option value="{{ $course->pk }}" @selected(in_array((int) $course->pk, $selCoursePks, true))>{{ $course->course_name }}</option>
+                                    <option value="{{ $course->pk }}" @selected(in_array((int) $course->pk, $selCoursePks, true))>{{ $course->course_name }} [{{ (int)($course->active_inactive ?? 0) === 1 ? 'Active' : 'Archived' }}]</option>
                                 @endforeach
                             @endisset
                         </select>
@@ -520,7 +520,7 @@ document.addEventListener('DOMContentLoaded', function() {
     var otCourseOptions = [
         @if(isset($otCourses))
             @foreach($otCourses as $course)
-                { value: '{{ $course->pk }}', text: @json($course->course_name) },
+                { value: '{{ $course->pk }}', text: @json($course->course_name . ' [' . ((int)($course->active_inactive ?? 0) === 1 ? 'Active' : 'Archived') . ']') },
             @endforeach
         @endif
     ];
