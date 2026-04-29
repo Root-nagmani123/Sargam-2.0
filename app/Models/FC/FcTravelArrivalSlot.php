@@ -10,10 +10,11 @@ class FcTravelArrivalSlot extends Model
     protected $table = 'fc_travel_arrival_slots';
 
     protected $fillable = [
-        'slot_label', 'time_start', 'time_end', 'max_capacity', 'is_active', 'sort_order',
+        'slot_date', 'slot_label', 'time_start', 'time_end', 'max_capacity', 'is_active', 'sort_order',
     ];
 
     protected $casts = [
+        'slot_date'     => 'date',
         'is_active'     => 'boolean',
         'max_capacity'  => 'integer',
         'sort_order'    => 'integer',
@@ -33,9 +34,12 @@ class FcTravelArrivalSlot extends Model
 
     public function hasRoomForUser(?string $username): bool
     {
-        // null or 0 = no cap (admin can set count as needed)
-        if ($this->max_capacity === null || (int) $this->max_capacity < 1) {
+        // null = no cap; 0 = closed/unavailable.
+        if ($this->max_capacity === null) {
             return true;
+        }
+        if ((int) $this->max_capacity < 1) {
+            return false;
         }
         $n = $username
             ? $this->countOtherBookings($username)
