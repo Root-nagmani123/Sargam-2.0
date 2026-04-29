@@ -115,12 +115,17 @@ class KitchenIssueController extends Controller
             ->orderBy('pk', 'desc')
             ->get();
 
-        $otCourses = CourseMaster::where('active_inactive', 1)
-            ->where(function ($q) {
-                $q->whereNull('end_date')->orWhere('end_date', '>=', now()->toDateString());
-            })
+        // All courses (active + archived) for Client Name dropdown; label in UI via active_inactive.
+        // Course end date before today is treated as archived (same idea as course list filters).
+        $otCourses = CourseMaster::orderByDesc('active_inactive')
             ->orderBy('course_name')
-            ->get(['pk', 'course_name']);
+            ->get(['pk', 'course_name', 'active_inactive', 'end_date']);
+        $today = Carbon::today();
+        $otCourses->each(function ($course) use ($today) {
+            if (filled($course->end_date) && Carbon::parse($course->end_date)->lt($today)) {
+                $course->active_inactive = 0;
+            }
+        });
 
         // Get active stores and sub-stores
         $stores = Store::active()->get(['id', 'store_name'])->map(function ($store) {

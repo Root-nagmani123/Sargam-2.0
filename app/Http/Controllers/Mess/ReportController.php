@@ -1505,6 +1505,8 @@ class ReportController extends Controller
                 } elseif ($toDate) {
                     $itemQ->whereDate('issue_date', '<=', $toDate);
                 }
+                $itemQ->orderBy('issue_date', 'desc')
+                    ->orderBy('id', 'desc');
             },
             'items.itemSubcategory',
         ]);
@@ -1641,12 +1643,10 @@ class ReportController extends Controller
             });
         });
 
-        $otCourses = CourseMaster::where('active_inactive', 1)
-            ->where(function ($q) {
-                $q->whereNull('end_date')->orWhere('end_date', '>=', now()->toDateString());
-            })
+        // All courses so archived vouchers still resolve course_name in report header (CLIENT TYPE [...])
+        $otCourses = CourseMaster::orderByDesc('active_inactive')
             ->orderBy('course_name')
-            ->get(['pk', 'course_name']);
+            ->get(['pk', 'course_name', 'active_inactive']);
 
         $grandTotal = $vouchers->sum(function ($voucher) {
             return $voucher->items->sum(function ($item) {
@@ -1717,12 +1717,9 @@ class ReportController extends Controller
                     ->filter(fn ($e) => $e->full_name !== '—')
                     ->values()
                 : collect();
-            $otCourses = CourseMaster::where('active_inactive', 1)
-                ->where(function ($q) {
-                    $q->whereNull('end_date')->orWhere('end_date', '>=', now()->toDateString());
-                })
+            $otCourses = CourseMaster::orderByDesc('active_inactive')
                 ->orderBy('course_name')
-                ->get(['pk', 'course_name']);
+                ->get(['pk', 'course_name', 'active_inactive']);
 
             return view('admin.mess.reports.category-wise-print-slip', compact(
                 'groupedSections',
