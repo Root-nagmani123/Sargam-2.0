@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'My Mess Bills')
-@section('setup_content')
+@section('content')
 @php
     $dateFromDisplay = $effectiveDateFrom ?? now()->startOfMonth()->format('d-m-Y');
     $dateToDisplay = $effectiveDateTo ?? now()->endOfMonth()->format('d-m-Y');

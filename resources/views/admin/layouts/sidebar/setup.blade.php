@@ -100,50 +100,6 @@
 
                                             @endif
 
-                                            @if(canSeeMessSelfServiceSetup())
-                                            <li class="mini-nav-item {{ request()->is('admin/mess*') ? 'selected' : '' }}" id="setup-mini-9">
-                                                <a href="javascript:void(0)"
-                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3">
-                                                    <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
-                                                        <i class="material-icons menu-icon material-symbols-rounded">restaurant_menu</i>
-                                                    </span>
-                                                    <span class="mini-nav-title sidebar-google-label">Mess Management</span>
-                                                </a>
-                                            </li>
-
-                                            @endif
-                                            @if(! hasRole('Student-OT') && !$isContractualEmployee)
-                                            <li class="mini-nav-item {{ request()->is('security*') ? 'selected' : '' }}" id="mini-9">
-                                                <a href="javascript:void(0)"
-                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center">
-                                                    <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
-                                                        <i class="material-icons menu-icon material-symbols-rounded">shield</i>
-                                                    </span>
-                                                    <span class="mini-nav-title sidebar-google-label">Security</span>
-                                                </a>
-                                            </li>
-                                            <li class="mini-nav-item {{ request()->is('admin/issue-management*') || request()->is('admin/issue-categories*') || request()->is('admin/issue-sub-categories*') ? 'selected' : '' }}" id="mini-10">
-                                                <a href="javascript:void(0)"
-                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center">
-                                                    <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
-                                                        <i class="material-icons menu-icon material-symbols-rounded">report_problem</i>
-                                                    </span>
-                                                    <span class="mini-nav-title sidebar-google-label">Centcom</span>
-                                                </a>
-                                            </li>
-                                            @endif
-
-                                            @if(hasRole('Admin') || hasRole('Super Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST') || hasRole('Estate') || hasRole('HAC Person') || hasRole('Staff') || hasRole('Student-OT') || hasRole('Doctor') || hasRole('Guest Faculty') || hasRole('Internal Faculty'))
-                                            <li class="mini-nav-item {{ request()->is('admin/estate*') ? 'selected' : '' }}" id="mini-11">
-                                                <a href="javascript:void(0)"
-                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center">
-                                                    <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
-                                                        <i class="material-icons menu-icon material-symbols-rounded">house</i>
-                                                    </span>
-                                                    <span class="mini-nav-title sidebar-google-label">Estate Management</span>
-                                                </a>
-                                            </li>
-                                            @endif
                                         </div>
                                     </div>
                                 </div>
@@ -184,27 +140,14 @@
                     <!-- ---------------------------------- -->
                     <x-menu.setup_mappings />
 
-                    <!-- Issue Management (CENTCOM) -->
-                    <!-- ---------------------------------- -->
-                    <x-menu.setup_issue_management />
-
                     <!-- Forms -->
                     <!-- ---------------------------------- -->
                     <x-menu.fc-sidebar />
 
-                    <!-- Mess Management -->
-                    <!-- ---------------------------------- -->
-                    <x-menu.setup_mess_management />
-
                     <!-- Security Management (Vehicle & Visitor Pass) -->
                     <!-- ---------------------------------- -->
-                    @if(!$isContractualEmployee)
-                        <x-menu.setup_security_management />
-                    @endif
-
                     <!-- Estate Management -->
                     <!-- ---------------------------------- -->
-                    <x-menu.setup_estate_management />
 
                 </div>
             </div>

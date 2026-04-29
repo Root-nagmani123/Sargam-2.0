@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Edit Family ID Card - Sargam')
-@section('setup_content')
+@section('content')
 <div class="container-fluid family-idcard-create-page">
     <x-breadcrum title="Edit Family ID Card Request"></x-breadcrum>
     @php $canRemoveMembers = $can_remove_members ?? true; @endphp

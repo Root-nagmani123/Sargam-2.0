@@ -57,8 +57,6 @@
                 label="Joining Date :"
                 placeholder="Joining Date"
                 formLabelClass="form-label"
-                required
-                :labelRequired="true"
                 value="{{ optional($faculty->joining_date)->format('Y-m-d') }}"
             />
         </div>

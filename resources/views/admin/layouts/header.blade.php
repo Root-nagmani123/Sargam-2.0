@@ -1601,8 +1601,8 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Determine initial tab.
-    // Prefer tab inferred from current URL + sidebar links,
-    // then server route tab, then localStorage fallback.
+    // Prefer server route tab first (source of truth),
+    // then infer from sidebar links, then localStorage fallback.
     function inferTabFromSidebarByUrl() {
         const current = new URL(window.location.href);
         const currentPath = current.pathname.replace(/\/+$/, '');
@@ -1658,12 +1658,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const hasInferredTab = !!document.querySelector(`[data-bs-toggle="tab"][href="${inferredTab}"]`);
     let initial = '#home';
 
-    if (hasInferredTab) {
-        initial = inferredTab;
-        console.log('Initial tab from sidebar URL match:', initial);
-    } else if (hasRouteTab) {
+    if (hasRouteTab) {
         initial = routeTab;
         console.log('Initial tab from route:', initial);
+    } else if (hasInferredTab) {
+        initial = inferredTab;
+        console.log('Initial tab from sidebar URL match:', initial);
     } else if (hasSavedTab) {
         initial = savedTab;
         console.log('Initial tab from storage fallback:', initial);

@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Edit Vehicle Pass Application - Security Management')
-@section('setup_content')
+@section('content')
 <div class="container-fluid">
     <div class="card" style="border-left:4px solid #004a93;">
         <div class="card-header bg-white">

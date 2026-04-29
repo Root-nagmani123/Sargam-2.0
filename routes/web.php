@@ -45,6 +45,7 @@ use App\Http\Controllers\Admin\{
 use App\Http\Controllers\Dashboard\Calendar1Controller;
 use App\Http\Controllers\Admin\MemoNoticeController;
 use App\Http\Controllers\Admin\Master\DisciplineMasterController;
+use App\Http\Controllers\Admin\Master\AppellationMasterController;
 use App\Http\Controllers\Admin\FeedbackController;
 use App\Http\Controllers\Admin\Estate\{
     EstateCampusController,
@@ -770,6 +771,16 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
     Route::get('/attendance_send_notice/{group_pk}/{course_pk}/{timetable_pk}', [CourseAttendanceNoticeMapController::class, 'view_all_notice_list'])->name('attendance.send_notice');
     Route::post('/notice_direct_save', [CourseAttendanceNoticeMapController::class, 'notice_direct_save'])->name('notice.direct.save');
 
+
+     // Appellation Master
+
+Route::prefix('admin/appellation')->name('master.appellation.')->middleware('auth')->group(function () {
+    Route::get('/', [AppellationMasterController::class, 'index'])->name('index');
+    Route::get('create', [AppellationMasterController::class, 'create'])->name('create');
+    Route::get('edit/{id}', [AppellationMasterController::class, 'edit'])->name('edit');
+    Route::post('store', [AppellationMasterController::class, 'store'])->name('store');
+    Route::delete('delete/{id}', [AppellationMasterController::class, 'destroy'])->name('delete');
+});
 
     Route::prefix('admin/discipline')->name('master.discipline.')->group(function () {
         Route::get('/', [DisciplineMasterController::class, 'index'])->name('index');
