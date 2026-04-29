@@ -26,15 +26,12 @@
         </div>
 
         <div class="card-body p-4">
-            @if(!$step1)
-                <div class="alert alert-warning small py-2 mb-3">No FC step-1 record (<code>student_master_firsts</code>) for this username. Name and mobile come from <code>student_masters</code> when available, otherwise the username is shown.</div>
-            @endif
             <dl class="row small mb-0">
                 <dt class="col-sm-3">Name</dt><dd class="col-sm-9">{{ $displayName ?? '—' }}</dd>
                 <dt class="col-sm-3">Code</dt><dd class="col-sm-9">{{ $displayCode ?? '—' }}</dd>
                 <dt class="col-sm-3">Mobile</dt><dd class="col-sm-9">{{ $displayMobile ?? '—' }}</dd>
                 <dt class="col-sm-3">Arrival date</dt><dd class="col-sm-9">{{ $plan->joining_date?->format('d M Y') ?? '—' }}</dd>
-                <dt class="col-sm-3">Slot &amp; time</dt><dd class="col-sm-9">
+                <dt class="col-sm-3">Activity slot</dt><dd class="col-sm-9">
                     {{ $plan->fcArrivalSlot?->slot_label ?? '—' }}
                     @if($plan->fcArrivalSlot?->time_start && $plan->fcArrivalSlot?->time_end)
                         <span class="text-muted">(
@@ -44,8 +41,7 @@
                 </dd>
                 <dt class="col-sm-3">Mode of journey</dt><dd class="col-sm-9">{{ $plan->mode_of_journey ?? '—' }}</dd>
                 <dt class="col-sm-3">Flight / Train / Vehicle no.</dt><dd class="col-sm-9">{{ $plan->journey_vehicle_no ?? '—' }}</dd>
-                <dt class="col-sm-3">Date of arrival at Academy</dt><dd class="col-sm-9">{{ $plan->academy_arrival_date?->format('d M Y') ?? '—' }}</dd>
-                <dt class="col-sm-3">Arrival time at Dehradun (Airport)</dt><dd class="col-sm-9">{{ $plan->arrival_time_dehradun ?? '—' }}</dd>
+                <dt class="col-sm-3">Arrival time at Dehradun</dt><dd class="col-sm-9">{{ $plan->arrival_time_dehradun ?? '—' }}</dd>
                 <dt class="col-sm-3">Require academy vehicle</dt>
                 <dd class="col-sm-9">{{ $plan->requiresAcademyVehicleYes() ? 'Yes' : 'No' }}</dd>
             </dl>
@@ -55,6 +51,9 @@
 
             <div class="mt-4">
                 <a href="{{ route('admin.travel.index') }}" class="btn btn-outline-secondary btn-sm">Back to list</a>
+                <a href="{{ route('admin.travel.edit', $username) }}" class="btn btn-primary btn-sm ms-2">
+                    <i class="bi bi-pencil-square me-1"></i>Edit
+                </a>
             </div>
         </div>
     </div>
