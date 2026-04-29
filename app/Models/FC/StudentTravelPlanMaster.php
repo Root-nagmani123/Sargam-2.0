@@ -10,34 +10,17 @@ class StudentTravelPlanMaster extends Model
 
     protected $fillable = [
         'username', 'joining_date', 'joining_time',
-        'pickup_type_id',
-        'needs_pickup', 'pickup_from_location', 'pickup_datetime',
-        'needs_drop', 'drop_type_id', 'drop_to_location', 'drop_datetime',
-        'departure_city', 'departure_state', 'special_requirements', 'is_submitted',
+        'special_requirements', 'is_submitted',
         'fc_travel_arrival_slot_id', 'mode_of_journey', 'journey_vehicle_no', 'academy_arrival_date',
         'arrival_time_dehradun', 'require_academy_vehicle',
     ];
 
     protected $casts = [
         'joining_date'    => 'date',
-        'pickup_datetime' => 'datetime',
-        'drop_datetime'   => 'datetime',
-        'needs_pickup'    => 'boolean',
-        'needs_drop'      => 'boolean',
         'is_submitted'    => 'boolean',
         'academy_arrival_date'  => 'date',
         'require_academy_vehicle' => 'boolean',
     ];
-
-    public function pickupType()
-    {
-        return $this->belongsTo(PickUpDropTypeMaster::class, 'pickup_type_id');
-    }
-
-    public function dropType()
-    {
-        return $this->belongsTo(PickUpDropTypeMaster::class, 'drop_type_id');
-    }
 
     public function legs()
     {

@@ -23,13 +23,12 @@
         <th>Code</th>
         <th>Mobile</th>
         <th>Arrival date</th>
-        <th>Slot</th>
-        <th>Time (slot)</th>
+        <th>Activity slot</th>
+        <th>Activity slot<br>time</th>
         <th>Mode of journey</th>
-        <th>Flight/Train/Vehicle no.</th>
-        <th>Date of arrival at Academy</th>
-        <th>Arrival time at Dehradun (Airport)</th>
-        <th>Require academy vehicle?</th>
+        <th>Flight No / Train No /<br>Vehicle No</th>
+        <th>Arrival time at Dehradun<br>Airport/Railway Station</th>
+        <th>Whether Require Academy Vehicle<br>From Dehradun Airport/Railway Station to Academy</th>
         <th>Service</th>
         <th>Submitted</th>
     </tr>
@@ -45,7 +44,6 @@
             <td>{{ $row['time_slot'] }}</td>
             <td>{{ $row['mode'] }}</td>
             <td>{{ $row['vehicle_no'] }}</td>
-            <td>{{ $row['academy_date'] }}</td>
             <td>{{ $row['dehradun_time'] }}</td>
             <td>{{ $row['require_vehicle'] }}</td>
             <td>{{ $row['service'] }}</td>

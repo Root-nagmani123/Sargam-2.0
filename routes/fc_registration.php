@@ -191,7 +191,8 @@ Route::middleware(['auth'])->prefix('fc-reg/forms')->name('fc-reg.forms.')->grou
 Route::middleware(['auth'])->prefix('admin/travel')->name('admin.travel.')->group(function () {
     Route::get('/',                    [TravelPlanReportController::class, 'index'])->name('index');
     Route::get('/student/{username}',[TravelPlanReportController::class, 'show'])->name('show');
-    Route::get('/export/pickup',     [TravelPlanReportController::class, 'exportPickup'])->name('export.pickup');
+    Route::get('/student/{username}/edit', [TravelPlanReportController::class, 'edit'])->name('edit');
+    Route::put('/student/{username}', [TravelPlanReportController::class, 'update'])->name('update');
     Route::get('/export/joining',   [TravelPlanReportController::class, 'exportJoiningReport'])->name('export.joining');
     Route::prefix('slots')->name('slots.')->group(function () {
         Route::get('/',              [FcTravelArrivalSlotController::class, 'index'])->name('index');

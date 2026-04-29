@@ -18,7 +18,7 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class FcTravelJoiningReportExport implements FromView, WithStyles, WithEvents, WithTitle
 {
-    public const COL_COUNT = 14;
+    public const COL_COUNT = 13;
 
     /** Rows before the table column-header row (titles + blank spacer). */
     protected int $headerRows = 6;
@@ -68,7 +68,6 @@ class FcTravelJoiningReportExport implements FromView, WithStyles, WithEvents, W
                 'time_slot'        => $timeSlot,
                 'mode'             => (string) ($r->mode_of_journey ?? ''),
                 'vehicle_no'       => (string) ($r->journey_vehicle_no ?? ''),
-                'academy_date'     => $r->academy_arrival_date ? \Carbon\Carbon::parse($r->academy_arrival_date)->format('Y-m-d') : '',
                 'dehradun_time'    => (string) ($r->arrival_time_dehradun ?? ''),
                 'require_vehicle'  => StudentTravelPlanMaster::interpretRequiresAcademyVehicle($r->require_academy_vehicle ?? null) ? 'Yes' : 'No',
                 'service'          => (string) ($r->service_code ?? ''),
@@ -111,6 +110,7 @@ class FcTravelJoiningReportExport implements FromView, WithStyles, WithEvents, W
                 'allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => '002244']],
             ],
         ]);
+        $sheet->getRowDimension($dataStart)->setRowHeight(34);
 
         if ($lastRow >= $dataRowStart) {
             $sheet->getStyle("A{$dataRowStart}:{$lastCol}{$lastRow}")->applyFromArray([
@@ -121,8 +121,8 @@ class FcTravelJoiningReportExport implements FromView, WithStyles, WithEvents, W
             ]);
         }
 
-        // S.No., dates, slot time, mode, academy date, require vehicle, submitted
-        $centerCols = ['A', 'E', 'G', 'H', 'J', 'L', 'N'];
+        // S.No., dates, slot time, mode, require vehicle, submitted
+        $centerCols = ['A', 'E', 'G', 'H', 'K', 'M'];
         foreach ($centerCols as $col) {
             if ($lastRow >= $dataStart) {
                 $sheet->getStyle("{$col}{$dataStart}:{$col}{$lastRow}")
@@ -132,7 +132,7 @@ class FcTravelJoiningReportExport implements FromView, WithStyles, WithEvents, W
 
         $sheet->getStyle("A{$dataRowStart}:{$lastCol}{$lastRow}")->getFont()->setSize(10);
 
-        $widths = [6, 22, 12, 14, 12, 18, 12, 14, 18, 16, 18, 14, 12, 10];
+        $widths = [6, 22, 12, 14, 13, 20, 16, 16, 24, 24, 26, 12, 10];
         foreach ($widths as $i => $w) {
             $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($i + 1))->setWidth($w);
         }
