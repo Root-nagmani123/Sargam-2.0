@@ -2,6 +2,7 @@
 
 namespace App\Models\FC;
 
+use App\Support\FcEncryptedFormId;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -27,4 +28,35 @@ class FcForm extends Model
             ->where('is_active', 1)
             ->orderBy('step_number');
     }
+
+    /**
+     * Public + admin URLs use encrypted id instead of raw integer.
+     *
+     * {@inheritdoc}
+     */
+    public function getRouteKey(): mixed
+    {
+        if ($this->getKey() === null) {
+            return parent::getRouteKey();
+        }
+
+        return FcEncryptedFormId::encode((int) $this->getKey());
+    }
+
+    /**
+     * Resolve implicit route binding from encrypted URL token only.
+     *
+     * {@inheritdoc}
+     */
+    public function resolveRouteBinding($value, $field = null)
+    {
+        try {
+            $id = FcEncryptedFormId::decode((string) $value);
+        } catch (\InvalidArgumentException) {
+            abort(404);
+        }
+
+        return $this->where('id', $id)->firstOrFail();
+    }
 }
+
