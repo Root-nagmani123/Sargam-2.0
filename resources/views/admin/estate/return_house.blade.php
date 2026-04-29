@@ -2,7 +2,7 @@
 
 @section('title', 'Return House - Sargam')
 
-@section('setup_content')
+@section('content')
 <style>
     .form-check-label-border { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border: 1px solid var(--bs-border-color, #dee2e6); border-radius: 0.5rem; cursor: pointer; transition: border-color .15s, background-color .15s; }
     .form-check-label-border:hover { border-color: var(--bs-primary); }

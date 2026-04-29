@@ -2,7 +2,7 @@
 
 @section('title', 'Add Approved Request House - Sargam')
 
-@section('setup_content')
+@section('content')
 <div class="container-fluid px-2 px-sm-3 px-md-4">
     <x-breadcrum title="Add Approved Request House" />
 

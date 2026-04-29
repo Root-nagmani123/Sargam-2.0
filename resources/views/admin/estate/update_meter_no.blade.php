@@ -2,7 +2,7 @@
 
 @section('title', 'Update Meter No. - Sargam')
 
-@section('setup_content')
+@section('content')
 @php
     $qYear = request('bill_year');
     $qMonth = request('bill_month');

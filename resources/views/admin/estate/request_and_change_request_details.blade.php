@@ -2,7 +2,7 @@
 
 @section('title', 'Request for House & Change Request Details - Sargam')
 
-@section('setup_content')
+@section('content')
 <div class="container-fluid px-2 px-sm-3 px-md-4">
     <x-breadcrum title="Request for House & Change Request Details" />
     <x-estate-workflow-stepper current="request-for-estate" />
