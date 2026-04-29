@@ -12,7 +12,6 @@ use App\Models\FC\StudentTravelPlanMaster;
 use App\Exports\FcTravelJoiningReportExport;
 use App\Services\FC\FcTravelPlanReportService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 
 class TravelPlanReportController extends Controller
@@ -25,8 +24,10 @@ class TravelPlanReportController extends Controller
         $summary = [
             'total'     => StudentTravelPlanMaster::count(),
             'submitted' => StudentTravelPlanMaster::where('is_submitted', 1)->count(),
-            'pickup'    => StudentTravelPlanMaster::where('needs_pickup', 1)->count(),
-            'drop'      => StudentTravelPlanMaster::where('needs_drop', 1)->count(),
+            'vehicle_yes' => StudentTravelPlanMaster::where('require_academy_vehicle', 1)->count(),
+            'vehicle_no'  => StudentTravelPlanMaster::where(function ($q) {
+                $q->where('require_academy_vehicle', 0)->orWhereNull('require_academy_vehicle');
+            })->count(),
         ];
 
         return $dataTable->render('admin.travel.index', compact('sessions', 'slots', 'modes', 'summary'));
@@ -60,6 +61,78 @@ class TravelPlanReportController extends Controller
         ));
     }
 
+    public function edit(string $username)
+    {
+        $plan = StudentTravelPlanMaster::where('username', $username)->firstOrFail();
+        $slots = FcTravelArrivalSlot::query()
+            ->where('is_active', true)
+            ->whereNotNull('slot_date')
+            ->orderBy('slot_date')
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get();
+        $availableDates = $slots
+            ->pluck('slot_date')
+            ->filter()
+            ->map(fn ($d) => $d instanceof \Carbon\CarbonInterface ? $d->format('Y-m-d') : (string) $d)
+            ->unique()
+            ->values();
+
+        $step1 = StudentMasterFirst::where('username', $username)->first();
+        $studentMaster = StudentMaster::where('username', $username)->first();
+        $displayName = trim((string) ($step1?->full_name ?? ''))
+            ?: (trim((string) ($studentMaster?->full_name ?? '')) ?: $username);
+
+        return view('admin.travel.edit', compact(
+            'plan',
+            'username',
+            'slots',
+            'availableDates',
+            'displayName'
+        ));
+    }
+
+    public function update(Request $request, string $username)
+    {
+        $plan = StudentTravelPlanMaster::where('username', $username)->firstOrFail();
+
+        $validated = $request->validate([
+            'joining_date'              => 'required|date',
+            'fc_travel_arrival_slot_id' => 'required|exists:fc_travel_arrival_slots,id',
+            'mode_of_journey'           => 'required|string|in:By Air,By Road,By Train',
+            'journey_vehicle_no'        => 'required|string|max:200',
+            'arrival_time_dehradun'     => 'required|string|max:120',
+            'require_academy_vehicle'   => 'required|boolean',
+            'special_requirements'      => 'nullable|string|max:1000',
+        ]);
+
+        $slot = FcTravelArrivalSlot::where('id', $validated['fc_travel_arrival_slot_id'])
+            ->where('is_active', true)
+            ->first();
+        if (! $slot) {
+            return back()->withInput()->with('error', 'The selected time slot is not available.');
+        }
+        if (! $slot->slot_date || $slot->slot_date->format('Y-m-d') !== $validated['joining_date']) {
+            return back()->withInput()->with('error', 'Please select a slot for the chosen arrival date.');
+        }
+        if (! $slot->hasRoomForUser($username)) {
+            return back()->withInput()->with('error', 'This time slot is full. Please pick another slot.');
+        }
+
+        $plan->update([
+            'joining_date'              => $validated['joining_date'],
+            'fc_travel_arrival_slot_id' => $validated['fc_travel_arrival_slot_id'],
+            'mode_of_journey'           => $validated['mode_of_journey'],
+            'journey_vehicle_no'        => $validated['journey_vehicle_no'],
+            'arrival_time_dehradun'     => $validated['arrival_time_dehradun'],
+            'require_academy_vehicle'   => $request->boolean('require_academy_vehicle'),
+            'special_requirements'      => $validated['special_requirements'] ?? null,
+        ]);
+
+        return redirect()->route('admin.travel.show', $username)
+            ->with('success', 'Travel plan updated successfully.');
+    }
+
     public function exportJoiningReport(Request $request)
     {
         $q = FcTravelPlanReportService::baseQuery();
@@ -75,45 +148,4 @@ class TravelPlanReportController extends Controller
         );
     }
 
-    public function exportPickup()
-    {
-        $headers = [
-            'Content-Type'        => 'text/csv',
-            'Content-Disposition' => 'attachment; filename=pickup_list_'.now()->format('Ymd').'.csv',
-        ];
-
-        return response()->stream(function () {
-            $out = fopen('php://output', 'w');
-            fputcsv($out, ['#', 'Username', 'Full Name', 'Service', 'Pickup From', 'Pickup Date/Time', 'Mobile']);
-
-            $rows = DB::table('student_travel_plan_masters as tp')
-                ->join('student_master_firsts as s1', 'tp.username', '=', 's1.username')
-                ->leftJoin('service_masters as svc', 's1.service_id', '=', 'svc.id')
-                ->where('tp.needs_pickup', 1)
-                ->where('tp.is_submitted', 1)
-                ->orderBy('tp.pickup_datetime')
-                ->select(
-                    'tp.username',
-                    'tp.pickup_from_location',
-                    'tp.pickup_datetime',
-                    's1.full_name',
-                    's1.mobile_no',
-                    'svc.service_code'
-                )
-                ->get();
-
-            foreach ($rows as $i => $r) {
-                fputcsv($out, [
-                    $i + 1,
-                    $r->username,
-                    $r->full_name,
-                    $r->service_code ?? '',
-                    $r->pickup_from_location ?? '',
-                    $r->pickup_datetime ?? '',
-                    $r->mobile_no,
-                ]);
-            }
-            fclose($out);
-        }, 200, $headers);
-    }
 }

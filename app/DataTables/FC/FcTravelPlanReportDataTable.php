@@ -30,7 +30,6 @@ class FcTravelPlanReportDataTable extends DataTable
             ->editColumn('mobile_no', fn ($row) => ($row->mobile_no !== null && (string) $row->mobile_no !== '') ? e($row->mobile_no) : '—')
             ->editColumn('roll_no', fn ($row) => ($row->roll_no !== null && (string) $row->roll_no !== '') ? $row->roll_no : '—')
             ->editColumn('joining_date', fn ($row) => $row->joining_date ? \Carbon\Carbon::parse($row->joining_date)->format('d-m-Y') : '—')
-            ->editColumn('academy_arrival_date', fn ($row) => $row->academy_arrival_date ? \Carbon\Carbon::parse($row->academy_arrival_date)->format('d-m-Y') : '—')
             ->editColumn('mode_of_journey', fn ($row) => $row->mode_of_journey ? $row->mode_of_journey : '—')
             ->editColumn('journey_vehicle_no', fn ($row) => $row->journey_vehicle_no ? $row->journey_vehicle_no : '—')
             ->editColumn('arrival_time_dehradun', fn ($row) => $row->arrival_time_dehradun ? $row->arrival_time_dehradun : '—')
@@ -58,9 +57,13 @@ class FcTravelPlanReportDataTable extends DataTable
                     : '<span class="badge bg-warning text-dark">Draft</span>';
             })
             ->addColumn('action', function ($row) {
-                $url = route('admin.travel.show', $row->username);
+                $showUrl = route('admin.travel.show', $row->username);
+                $editUrl = route('admin.travel.edit', $row->username);
 
-                return '<a href="'.e($url).'" class="btn btn-xs btn-outline-primary py-0 px-2" style="font-size:11px"><i class="bi bi-eye"></i></a>';
+                return '<div class="d-flex gap-1">'
+                    .'<a href="'.e($showUrl).'" class="btn btn-xs btn-outline-primary py-0 px-2" style="font-size:11px" title="View"><i class="bi bi-eye"></i></a>'
+                    .'<a href="'.e($editUrl).'" class="btn btn-xs btn-outline-success py-0 px-2" style="font-size:11px" title="Edit"><i class="bi bi-pencil"></i></a>'
+                    .'</div>';
             })
             ->rawColumns(['full_name', 'slot_display', 'require_academy_vehicle', 'is_submitted', 'action'])
             ->orderColumn('full_name', 'COALESCE(NULLIF(TRIM(s1.full_name), \'\'), NULLIF(TRIM(sm.full_name), \'\'), tp.username) $1')
@@ -69,7 +72,6 @@ class FcTravelPlanReportDataTable extends DataTable
             ->orderColumn('joining_date', 'tp.joining_date $1')
             ->orderColumn('mode_of_journey', 'tp.mode_of_journey $1')
             ->orderColumn('journey_vehicle_no', 'tp.journey_vehicle_no $1')
-            ->orderColumn('academy_arrival_date', 'tp.academy_arrival_date $1')
             ->orderColumn('arrival_time_dehradun', 'tp.arrival_time_dehradun $1')
             ->orderColumn('service_code', 'COALESCE(svc.service_code, sm.service_code) $1')
             ->orderColumn('is_submitted', 'tp.is_submitted $1')
@@ -89,7 +91,6 @@ class FcTravelPlanReportDataTable extends DataTable
         $ajaxData = "function (d) {
             d.filter_session_id = document.getElementById('f_session_id') ? document.getElementById('f_session_id').value : '';
             d.filter_slot_id = document.getElementById('f_slot_id') ? document.getElementById('f_slot_id').value : '';
-            d.filter_submitted = document.getElementById('f_submitted') ? document.getElementById('f_submitted').value : '';
             d.filter_mode = document.getElementById('f_mode') ? document.getElementById('f_mode').value : '';
             d.filter_vehicle = document.getElementById('f_vehicle') ? document.getElementById('f_vehicle').value : '';
             d.date_from = document.getElementById('f_date_from') ? document.getElementById('f_date_from').value : '';
@@ -129,15 +130,14 @@ class FcTravelPlanReportDataTable extends DataTable
             Column::make('roll_no')->title('Code'),
             Column::make('mobile_no')->title('Mobile'),
             Column::make('joining_date')->title('Arrival date'),
-            Column::computed('slot_display')->title('Slot & time')->orderable(false)->searchable(false),
+            Column::computed('slot_display')->title('Activity slot')->orderable(false)->searchable(false),
             Column::make('mode_of_journey')->title('Mode of journey'),
             Column::make('journey_vehicle_no')->title('Flight/Train/Vehicle no.'),
-            Column::make('academy_arrival_date')->title('Date of arrival at Academy'),
-            Column::make('arrival_time_dehradun')->title('Arrival time at Dehradun (Airport)'),
+            Column::make('arrival_time_dehradun')->title('Arrival time at Dehradun'),
             Column::make('require_academy_vehicle')->title('Require academy vehicle?')->searchable(false),
             Column::make('service_code')->title('Service'),
             Column::make('is_submitted')->title('Submitted')->searchable(false),
-            Column::computed('action')->title('')->orderable(false)->searchable(false)->width('50px'),
+            Column::computed('action')->title('Action')->orderable(false)->searchable(false)->width('92px'),
         ];
     }
 }

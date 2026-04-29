@@ -25,11 +25,9 @@ class FcTravelPlanReportService
                 'tp.joining_date',
                 'tp.mode_of_journey',
                 'tp.journey_vehicle_no',
-                'tp.academy_arrival_date',
                 'tp.arrival_time_dehradun',
                 'tp.require_academy_vehicle',
                 'tp.is_submitted',
-                'tp.needs_pickup',
                 's1.full_name',
                 'sm.full_name as sm_full_name',
                 DB::raw('COALESCE(NULLIF(TRIM(s1.roll_no), \'\'), sm.roll_no, s1.roll_no) AS roll_no'),
@@ -50,15 +48,6 @@ class FcTravelPlanReportService
 
         if ($request->filled('filter_slot_id')) {
             $query->where('tp.fc_travel_arrival_slot_id', (int) $request->filter_slot_id);
-        }
-
-        $sub = strtolower(trim((string) $request->input('filter_submitted', '')));
-        if ($sub === 'yes') {
-            $query->where('tp.is_submitted', 1);
-        } elseif ($sub === 'no') {
-            $query->where(function ($q) {
-                $q->where('tp.is_submitted', 0)->orWhereNull('tp.is_submitted');
-            });
         }
 
         if ($request->filled('filter_mode') && $request->filter_mode !== '') {
@@ -117,12 +106,6 @@ class FcTravelPlanReportService
         if ($request->filled('filter_slot_id')) {
             $sl = FcTravelArrivalSlot::find((int) $request->filter_slot_id);
             $bits[] = 'Slot: '.($sl?->slot_label ?? $request->filter_slot_id);
-        }
-        $sub = strtolower(trim((string) $request->input('filter_submitted', '')));
-        if ($sub === 'yes') {
-            $bits[] = 'Status: Submitted';
-        } elseif ($sub === 'no') {
-            $bits[] = 'Status: Draft';
         }
         if ($request->filled('filter_mode') && $request->filter_mode !== '') {
             $bits[] = 'Mode: '.$request->filter_mode;
