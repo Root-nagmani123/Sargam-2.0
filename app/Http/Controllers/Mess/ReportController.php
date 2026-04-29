@@ -1505,6 +1505,8 @@ class ReportController extends Controller
                 } elseif ($toDate) {
                     $itemQ->whereDate('issue_date', '<=', $toDate);
                 }
+                $itemQ->orderBy('issue_date', 'asc')
+                    ->orderBy('id', 'asc');
             },
             'items.itemSubcategory',
         ]);
@@ -1541,7 +1543,7 @@ class ReportController extends Controller
         } else {
             $svQuery->whereHas('items');
         }
-        $svVouchers = $svQuery->orderBy('issue_date', 'desc')->get();
+        $svVouchers = $svQuery->orderBy('issue_date', 'asc')->get();
         foreach ($svVouchers as $v) {
             $v->request_no = 'SV-' . str_pad($v->id, 6, '0', STR_PAD_LEFT);
         }
@@ -1578,7 +1580,7 @@ class ReportController extends Controller
                 }
             });
         }
-        $kiVouchers = $kiQuery->orderBy('issue_date', 'desc')->get();
+        $kiVouchers = $kiQuery->orderBy('issue_date', 'asc')->get();
         $slugMap = self::kitchenIssueClientTypeToSlug();
         foreach ($kiVouchers as $v) {
             $v->request_no = 'KI-' . str_pad($v->pk, 6, '0', STR_PAD_LEFT);
@@ -1592,7 +1594,7 @@ class ReportController extends Controller
                     return in_array($v->client_type_slug ?? null, $slugs, true);
                 });
             })
-            ->sortByDesc(function ($v) {
+            ->sortBy(function ($v) {
                 return $v->issue_date ? $v->issue_date->format('Y-m-d') : '';
             })
             ->values();
