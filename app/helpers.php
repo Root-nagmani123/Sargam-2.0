@@ -102,6 +102,49 @@ function mess_combined_bill_slip_no(string $buyerName, string $clientTypeSlug): 
     return 'CB-' . date('Ymd') . '-' . str_pad((string) $num, 5, '0', STR_PAD_LEFT);
 }
 
+/**
+ * One buyer-section on the Sale Voucher Report may contain multiple voucher records that share the same slip no.
+ * Flatten to display rows and sort by line request date (item issue_date, else voucher issue_date) descending.
+ *
+ * @param  \Illuminate\Support\Collection<int, mixed>  $sectionVouchers
+ * @return \Illuminate\Support\Collection<int, object{kind: string, voucher: mixed, item?: mixed, sortDate: mixed, sortId: int}>
+ */
+function mess_cw_slip_section_display_rows(\Illuminate\Support\Collection $sectionVouchers): \Illuminate\Support\Collection
+{
+    $rows = collect();
+    foreach ($sectionVouchers as $voucher) {
+        $voucherRequestDate = $voucher->issue_date ?? null;
+        if ($voucher->items->isEmpty()) {
+            $rows->push((object) [
+                'kind' => 'empty',
+                'voucher' => $voucher,
+                'sortDate' => $voucherRequestDate,
+                'sortId' => (int) $voucher->getKey(),
+            ]);
+            continue;
+        }
+        foreach ($voucher->items as $item) {
+            $rows->push((object) [
+                'kind' => 'item',
+                'voucher' => $voucher,
+                'item' => $item,
+                'sortDate' => $item->issue_date ?? $voucherRequestDate,
+                'sortId' => (int) $item->getKey(),
+            ]);
+        }
+    }
+
+    return $rows->sort(function ($a, $b) {
+        $tsA = $a->sortDate ? \Carbon\Carbon::parse($a->sortDate)->startOfDay()->timestamp : 0;
+        $tsB = $b->sortDate ? \Carbon\Carbon::parse($b->sortDate)->startOfDay()->timestamp : 0;
+        if ($tsA !== $tsB) {
+            return $tsB <=> $tsA;
+        }
+
+        return $b->sortId <=> $a->sortId;
+    })->values();
+}
+
 function createDirectory($path)
 {
     $directory = public_path('storage/' . $path);
