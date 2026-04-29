@@ -96,7 +96,7 @@ class FacultyDataTable extends DataTable
             })
             ->addColumn('created_by', function($row) {
                 return $row->createdByUser?->name ?? 'N/A';
-            })        
+            })
 
             ->filter(function ($query) {
                 $searchValue = request()->input('search.value');
@@ -123,7 +123,7 @@ class FacultyDataTable extends DataTable
     {
         // return $model->newQuery();
         return $model->orderBy('pk', 'desc')->newQuery();
-      
+
     }
 
     /**
@@ -192,15 +192,15 @@ class FacultyDataTable extends DataTable
                 ->orderable(false),
 
             Column::make('last_update')
-                ->title('Last Updated')
+                ->title('Modified Date')
                 ->addClass('text-center')
                 ->searchable(false)
                 ->orderable(false),
             Column::make('created_by')
-                ->title('Updated By')
+                ->title('Modified By')
                 ->addClass('text-center')
-                ->searchable(false)
-                ->orderable(false),    
+                ->searchable(true)
+                ->orderable(false),
             Column::computed('status')
                 ->exportable(false)
                 ->printable(false)
