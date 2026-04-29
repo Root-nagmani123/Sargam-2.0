@@ -184,10 +184,17 @@ class SellingVoucherDateRangeController extends Controller
             ->filter(fn($e) => $e->full_name !== '—')
             ->values();
 
-        // All courses (active + archived) for Client Name dropdown; label in UI via active_inactive
+        // All courses (active + archived) for Client Name dropdown; label in UI via active_inactive.
+        // Course end date before today is treated as archived (same idea as course list filters).
         $otCourses = CourseMaster::orderByDesc('active_inactive')
             ->orderBy('course_name')
-            ->get(['pk', 'course_name', 'active_inactive']);
+            ->get(['pk', 'course_name', 'active_inactive', 'end_date']);
+        $today = Carbon::today();
+        $otCourses->each(function ($course) use ($today) {
+            if (filled($course->end_date) && Carbon::parse($course->end_date)->lt($today)) {
+                $course->active_inactive = 0;
+            }
+        });
         $messStaff = $officersMessDept
             ? EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn($q) => $q->where('status', 1))
                 ->where('department_master_pk', $officersMessDept->pk)
