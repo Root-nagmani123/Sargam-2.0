@@ -2,8 +2,9 @@
 
 namespace App\DataTables;
 
-use App\Models\Faculty;
+use App\Support\DataTableRedisCache;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
+use Illuminate\Http\JsonResponse;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Yajra\DataTables\Html\Button;
@@ -15,6 +16,31 @@ use App\Models\FacultyMaster;
 
 class FacultyDataTable extends DataTable
 {
+    private const LISTING_CACHE_EPOCH_KEY = 'faculty_dt_list_epoch';
+
+    public static function bumpListingCacheEpoch(): void
+    {
+        DataTableRedisCache::bumpListEpoch(self::LISTING_CACHE_EPOCH_KEY, 'FacultyDataTable');
+    }
+
+    /**
+     * Server-side JSON for /faculty listing. .env: FACULTY_DATATABLE_CACHE_*.
+     */
+    public function ajax(): JsonResponse
+    {
+        return DataTableRedisCache::serveCachedAjax(
+            $this->request(),
+            'faculty_dt:v1:',
+            self::LISTING_CACHE_EPOCH_KEY,
+            [
+                'enabled' => 'FACULTY_DATATABLE_CACHE_ENABLED',
+                'seconds' => 'FACULTY_DATATABLE_CACHE_SECONDS',
+            ],
+            'FacultyDataTable',
+            fn () => parent::ajax()
+        );
+    }
+
     /**
      * Build DataTable class.
      *
@@ -106,7 +132,7 @@ class FacultyDataTable extends DataTable
     /**
      * Get query source of dataTable.
      *
-     * @param \App\Models\Faculty $model
+     * @param \App\Models\FacultyMaster $model
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function query(FacultyMaster $model): QueryBuilder

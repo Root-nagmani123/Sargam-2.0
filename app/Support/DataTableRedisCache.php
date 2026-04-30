@@ -5,19 +5,22 @@ namespace App\Support;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Yajra\DataTables\Utilities\Request as DataTablesUtilitiesRequest;
 
 /**
- * Shared DataTables server-side JSON caching (Redis / Laravel cache store via RedisBackedCache).
- * New listings: call {@see self::serveCachedAjax()} from ajax() and {@see self::bumpListEpoch()} after mutations.
+ * Shared listing cache helpers (Redis / Laravel cache store via RedisBackedCache).
+ * DataTables: {@see self::serveCachedAjax()} + {@see self::bumpListEpoch()}.
+ * Plain Blade + paginator: {@see self::remember()} with a per-page cache key + {@see self::bumpListEpoch()}.
  */
 final class DataTableRedisCache
 {
     /**
+     * @param  Request|DataTablesUtilitiesRequest  $request  Yajra DataTable exposes {@see DataTablesUtilitiesRequest}, not {@see Request}
      * @param  array{enabled: string, seconds: string}  $envKeys  Full .env key names, e.g. MEMBER_DATATABLE_CACHE_ENABLED
      * @param  callable(): JsonResponse  $parentAjax  Typically `fn () => parent::ajax()`
      */
     public static function serveCachedAjax(
-        Request $request,
+        Request|DataTablesUtilitiesRequest $request,
         string $v1KeyPrefix,
         string $listEpochKey,
         array $envKeys,
@@ -89,9 +92,10 @@ final class DataTableRedisCache
     }
 
     /**
+     * @param  Request|DataTablesUtilitiesRequest  $r
      * @return array<string, mixed>
      */
-    public static function requestFingerprint(Request $r, int $epoch): array
+    public static function requestFingerprint(Request|DataTablesUtilitiesRequest $r, int $epoch): array
     {
         $columns = $r->input('columns', []);
         $colSearch = [];
@@ -158,15 +162,21 @@ final class DataTableRedisCache
             if (! is_array($row)) {
                 continue;
             }
+            $dataTokenReplacement = 'data-token="' . e($token) . '"';
             foreach ($row as $key => $val) {
-                if (! is_string($val) || ! str_contains($val, 'name="_token"')) {
+                if (! is_string($val)) {
                     continue;
                 }
-                $payload['data'][$i][$key] = preg_replace(
-                    '/name="_token" value="[^"]*"/',
-                    $replacement,
-                    $val
-                ) ?? $val;
+                $updated = $val;
+                if (str_contains($updated, 'name="_token"')) {
+                    $updated = preg_replace('/name="_token" value="[^"]*"/', $replacement, $updated) ?? $updated;
+                }
+                if (str_contains($updated, 'data-token="')) {
+                    $updated = preg_replace('/data-token="[^"]*"/', $dataTokenReplacement, $updated) ?? $updated;
+                }
+                if ($updated !== $val) {
+                    $payload['data'][$i][$key] = $updated;
+                }
             }
         }
 

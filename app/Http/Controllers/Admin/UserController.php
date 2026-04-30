@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\DataTables\FacultyDataTable;
 use App\DataTables\Master\EmployeeTypeMasterDataTable;
+use App\Http\Controllers\Admin\Master\FacultyExpertiseMasterController;
+use App\Http\Controllers\Admin\Master\FacultyTypeMasterController;
 use App\DataTables\UserCredentialsDataTable;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\User\StoreUserRequest;
@@ -1558,6 +1561,15 @@ public function toggleStatus(Request $request)
 
     if ($table === 'employee_type_master') {
         EmployeeTypeMasterDataTable::bumpListingCacheEpoch();
+    }
+    if ($table === 'faculty_expertise_master') {
+        FacultyExpertiseMasterController::bumpListCacheEpoch();
+    }
+    if ($table === 'faculty_master') {
+        FacultyDataTable::bumpListingCacheEpoch();
+    }
+    if ($table === 'faculty_type_master') {
+        FacultyTypeMasterController::bumpListCacheEpoch();
     }
 
     $newState = ((int) $status === 1) ? 'Active' : 'Inactive';

@@ -50,6 +50,32 @@ class EstateController extends Controller
     }
 
     /**
+     * Designation shown on estate flows: designation_master.designation_name for the employee_pk (canonical or pk_old match), else fallback to stored estate_home_request_details.emp_designation.
+     */
+    private function estateRequestDesignationLabel(?int $employeePk, string $storedEmpDesignation = ''): string
+    {
+        $stored = trim($storedEmpDesignation);
+        if ($employeePk === null || $employeePk === 0) {
+            return $stored !== '' ? $stored : '—';
+        }
+
+        $row = DB::table('employee_master as e')
+            ->leftJoin('designation_master as d', 'e.designation_master_pk', '=', 'd.pk')
+            ->where(function ($q) use ($employeePk) {
+                $q->where('e.pk', $employeePk);
+                if (Schema::hasColumn('employee_master', 'pk_old')) {
+                    $q->orWhere('e.pk_old', $employeePk);
+                }
+            })
+            ->select(DB::raw("COALESCE(NULLIF(TRIM(d.designation_name), ''), '') as designation_label"))
+            ->first();
+
+        $fromMaster = $row ? trim((string) ($row->designation_label ?? '')) : '';
+
+        return $fromMaster !== '' ? $fromMaster : ($stored !== '' ? $stored : '—');
+    }
+
+    /**
      * Meter number is missing or zero (used when falling back to estate_update_reading.old_meter_no_*).
      */
     private function estateMeterNoIsEmpty($value): bool
@@ -1526,13 +1552,18 @@ class EstateController extends Controller
         $hacStatusMap = [0 => 'HAC not done', 1 => 'HAC approved'];
         $changeStatusMap = [0 => 'No change request', 1 => 'Change request raised'];
 
+        $empDesignationLabel = $this->estateRequestDesignationLabel(
+            isset($homeReq->employee_pk) ? (int) $homeReq->employee_pk : null,
+            (string) ($homeReq->emp_designation ?? '')
+        );
+
         $requestForHouse = (object) [
             'pk' => (int) $homeReq->pk,
             'req_id' => $homeReq->req_id ?? '—',
             'req_date' => $homeReq->req_date ? \Carbon\Carbon::parse($homeReq->req_date)->format('d-m-Y') : '—',
             'emp_name' => $homeReq->emp_name ?? '—',
             'employee_id' => $homeReq->employee_id ?? '—',
-            'emp_designation' => $homeReq->emp_designation ?? '—',
+            'emp_designation' => $empDesignationLabel,
             'pay_scale' => $homeReq->pay_scale ?? '—',
             'doj_pay_scale' => $homeReq->doj_pay_scale ? \Carbon\Carbon::parse($homeReq->doj_pay_scale)->format('d-m-Y') : '—',
             'doj_academic' => $homeReq->doj_academic ? \Carbon\Carbon::parse($homeReq->doj_academic)->format('d-m-Y') : '—',
@@ -1705,7 +1736,10 @@ class EstateController extends Controller
             'request_date' => $homeReq->req_date ? \Carbon\Carbon::parse($homeReq->req_date)->format('d-m-Y') : '—',
             'name' => $homeReq->emp_name ?? '—',
             'emp_id' => $homeReq->employee_id ?? '—',
-            'designation' => $homeReq->emp_designation ?? '—',
+            'designation' => $this->estateRequestDesignationLabel(
+                isset($homeReq->employee_pk) ? (int) $homeReq->employee_pk : null,
+                (string) ($homeReq->emp_designation ?? '')
+            ),
             'pay_scale' => $homeReq->pay_scale ?? '—',
             'doj_pay_scale' => $homeReq->doj_pay_scale ? \Carbon\Carbon::parse($homeReq->doj_pay_scale)->format('d-m-Y') : '—',
             'doj_academy' => $homeReq->doj_academic ? \Carbon\Carbon::parse($homeReq->doj_academic)->format('d-m-Y') : '—',
@@ -8874,6 +8908,7 @@ class EstateController extends Controller
             ->orWhere('ehm.house_no', 'like', $likeToken)
             ->orWhere('ehrd.emp_name', 'like', $likeToken)
             ->orWhere('ehrd.emp_designation', 'like', $likeToken)
+            ->orWhere('d_emp.designation_name', 'like', $likeToken)
             ->orWhere('ehrd.employee_id', 'like', $likeToken)
             ->orWhere('emrd.bill_month', 'like', $likeToken)
             ->orWhere('emrd.bill_year', 'like', $likeToken)
@@ -9026,7 +9061,7 @@ class EstateController extends Controller
             'ehm.estate_unit_sub_type_master_pk as unit_sub_type_pk',
             'ehrd.emp_name',
             'ehrd.employee_id',
-            'ehrd.emp_designation',
+            DB::raw("COALESCE(NULLIF(TRIM(d_emp.designation_name), ''), NULLIF(TRIM(ehrd.emp_designation), '')) as emp_designation"),
             'eust.unit_sub_type',
             'ehm.water_charge as ehm_water_charge',
             'ehm.licence_fee as ehm_licence_fee',
@@ -9038,6 +9073,14 @@ class EstateController extends Controller
         $query = DB::table('estate_month_reading_details as emrd')
             ->join('estate_possession_details as epd', 'emrd.estate_possession_details_pk', '=', 'epd.pk')
             ->join('estate_home_request_details as ehrd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
+            ->leftJoin('employee_master as e_emp', function ($join) {
+                if (Schema::hasColumn('employee_master', 'pk_old')) {
+                    $join->whereRaw('(ehrd.employee_pk = e_emp.pk OR ehrd.employee_pk = e_emp.pk_old)');
+                } else {
+                    $join->on('ehrd.employee_pk', '=', 'e_emp.pk');
+                }
+            })
+            ->leftJoin('designation_master as d_emp', 'e_emp.designation_master_pk', '=', 'd_emp.pk')
             ->leftJoin('estate_house_master as ehm', 'epd.estate_house_master_pk', '=', 'ehm.pk')
             ->leftJoin('estate_unit_sub_type_master as eust', 'ehm.estate_unit_sub_type_master_pk', '=', 'eust.pk')
             ->select($selectCols);
@@ -9119,7 +9162,7 @@ class EstateController extends Controller
     /**
      * Generate Estate Bill / Estate Bill Summary - filters and list of bill cards.
      *
-     * Redis/file cache: ESTATE_UPDATE_METER_READING_CACHE_* for bill list when a bill month is selected (keys: estate_geb_lbs:v1:…).
+     * Redis/file cache: ESTATE_UPDATE_METER_READING_CACHE_* for bill list when a bill month is selected (keys: estate_geb_lbs:v2:…).
      */
     public function generateEstateBill(Request $request)
     {
@@ -9179,7 +9222,7 @@ class EstateController extends Controller
                 'ln' => Schema::hasColumn('employee_master', 'last_name') ? 1 : 0,
             ];
 
-            $cacheKey = 'estate_geb_lbs:v1:' . md5(json_encode([
+            $cacheKey = 'estate_geb_lbs:v2:' . md5(json_encode([
                 'bm' => $billMonth,
                 'ust' => $ustKey,
                 'q' => $search,
@@ -9638,7 +9681,7 @@ class EstateController extends Controller
                 'ehm.licence_fee as ehm_licence_fee',
                 'ehrd.emp_name',
                 'ehrd.employee_id',
-                'ehrd.emp_designation',
+                DB::raw("COALESCE(NULLIF(TRIM(d_emp.designation_name), ''), NULLIF(TRIM(ehrd.emp_designation), '')) as emp_designation"),
                 'eust.unit_sub_type',
             ];
             if ($hasEpdReading2Print) {
@@ -9647,6 +9690,14 @@ class EstateController extends Controller
             return DB::table('estate_month_reading_details as emrd')
                 ->join('estate_possession_details as epd', 'emrd.estate_possession_details_pk', '=', 'epd.pk')
                 ->join('estate_home_request_details as ehrd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
+                ->leftJoin('employee_master as e_emp', function ($join) {
+                    if (Schema::hasColumn('employee_master', 'pk_old')) {
+                        $join->whereRaw('(ehrd.employee_pk = e_emp.pk OR ehrd.employee_pk = e_emp.pk_old)');
+                    } else {
+                        $join->on('ehrd.employee_pk', '=', 'e_emp.pk');
+                    }
+                })
+                ->leftJoin('designation_master as d_emp', 'e_emp.designation_master_pk', '=', 'd_emp.pk')
                 ->leftJoin('estate_house_master as ehm', 'epd.estate_house_master_pk', '=', 'ehm.pk')
                 ->leftJoin('estate_unit_sub_type_master as eust', 'ehm.estate_unit_sub_type_master_pk', '=', 'eust.pk')
                 ->select($cols);
@@ -9993,7 +10044,7 @@ class EstateController extends Controller
                 'ehm.estate_unit_sub_type_master_pk as unit_sub_type_pk',
                 'ehrd.emp_name',
                 'ehrd.employee_id',
-                'ehrd.emp_designation',
+                DB::raw("COALESCE(NULLIF(TRIM(d_emp.designation_name), ''), NULLIF(TRIM(ehrd.emp_designation), '')) as emp_designation"),
                 'eust.unit_sub_type',
                 'ehm.water_charge as ehm_water_charge',
                 'ehm.licence_fee as ehm_licence_fee',
@@ -10012,6 +10063,14 @@ class EstateController extends Controller
             $query = DB::table('estate_month_reading_details as emrd')
                 ->join('estate_possession_details as epd', 'emrd.estate_possession_details_pk', '=', 'epd.pk')
                 ->join('estate_home_request_details as ehrd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
+                ->leftJoin('employee_master as e_emp', function ($join) {
+                    if (Schema::hasColumn('employee_master', 'pk_old')) {
+                        $join->whereRaw('(ehrd.employee_pk = e_emp.pk OR ehrd.employee_pk = e_emp.pk_old)');
+                    } else {
+                        $join->on('ehrd.employee_pk', '=', 'e_emp.pk');
+                    }
+                })
+                ->leftJoin('designation_master as d_emp', 'e_emp.designation_master_pk', '=', 'd_emp.pk')
                 ->leftJoin('estate_house_master as ehm', 'epd.estate_house_master_pk', '=', 'ehm.pk')
                 ->leftJoin('estate_unit_sub_type_master as eust', 'ehm.estate_unit_sub_type_master_pk', '=', 'eust.pk')
                 ->select($selectCols);
@@ -10119,7 +10178,7 @@ class EstateController extends Controller
                 'ehm.estate_unit_sub_type_master_pk as unit_sub_type_pk',
                 'ehrd.emp_name',
                 'ehrd.employee_id',
-                'ehrd.emp_designation',
+                DB::raw("COALESCE(NULLIF(TRIM(d_emp.designation_name), ''), NULLIF(TRIM(ehrd.emp_designation), '')) as emp_designation"),
                 'eust.unit_sub_type',
                 'ehm.water_charge as ehm_water_charge',
                 'ehm.licence_fee as ehm_licence_fee',
@@ -10138,6 +10197,14 @@ class EstateController extends Controller
             $query = DB::table('estate_month_reading_details as emrd')
                 ->join('estate_possession_details as epd', 'emrd.estate_possession_details_pk', '=', 'epd.pk')
                 ->join('estate_home_request_details as ehrd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
+                ->leftJoin('employee_master as e_emp', function ($join) {
+                    if (Schema::hasColumn('employee_master', 'pk_old')) {
+                        $join->whereRaw('(ehrd.employee_pk = e_emp.pk OR ehrd.employee_pk = e_emp.pk_old)');
+                    } else {
+                        $join->on('ehrd.employee_pk', '=', 'e_emp.pk');
+                    }
+                })
+                ->leftJoin('designation_master as d_emp', 'e_emp.designation_master_pk', '=', 'd_emp.pk')
                 ->leftJoin('estate_house_master as ehm', 'epd.estate_house_master_pk', '=', 'ehm.pk')
                 ->leftJoin('estate_unit_sub_type_master as eust', 'ehm.estate_unit_sub_type_master_pk', '=', 'eust.pk')
                 ->select($selectCols);
@@ -10309,7 +10376,7 @@ class EstateController extends Controller
             : ['t' => 'emp', 'ids' => $restrictedEmployeeIdsSorted];
 
         if (! $isDataTables) {
-            return 'estate_lmr:v1:lg:' . md5(json_encode([
+            return 'estate_lmr:v4:lg:' . md5(json_encode([
                 $normalizedBillMonth,
                 $blockIdNormalized,
                 $employeeTypeFingerprint,
@@ -10318,7 +10385,7 @@ class EstateController extends Controller
             ]));
         }
 
-        return 'estate_lmr:v1:dt:' . md5(json_encode([
+        return 'estate_lmr:v4:dt:' . md5(json_encode([
             $normalizedBillMonth,
             $blockIdNormalized,
             $employeeTypeFingerprint,
@@ -10451,10 +10518,11 @@ class EstateController extends Controller
                 foreach ($rows as $r) {
                     $m1 = $r->curr_month_elec_red ?? $r->last_month_elec_red;
                     $m2 = $r->curr_month_elec_red2 ?? $r->last_month_elec_red2;
+                    $designationOther = trim((string) ($r->emp_designation ?? ''));
                     $data[] = [
                         'sno' => $sno++,
                         'name' => $r->emp_name ?? 'N/A',
-                        'employee_type' => 'Other Employee',
+                        'designation' => $designationOther !== '' ? $designationOther : 'N/A',
                         'section' => $r->section ?? 'N/A',
                         'unit_type' => $r->unit_type ?? 'N/A',
                         'unit_sub_type' => $r->unit_sub_type ?? 'N/A',
@@ -10486,7 +10554,13 @@ class EstateController extends Controller
             }, function ($q) {
                 $q->leftJoin('estate_unit_type_master as ut', 'ehm.estate_unit_master_pk', '=', 'ut.pk');
             })
-            ->leftJoin('employee_master as em', 'ehrd.employee_pk', '=', 'em.' . $this->estateEmployeePkColumn())
+            ->leftJoin('employee_master as em', function ($join) {
+                $join->on('ehrd.employee_pk', '=', 'em.pk');
+                if (Schema::hasColumn('employee_master', 'pk_old')) {
+                    $join->orOn('ehrd.employee_pk', '=', 'em.pk_old');
+                }
+            })
+            ->leftJoin('designation_master as d_lmr', 'em.designation_master_pk', '=', 'd_lmr.pk')
             ->leftJoin('employee_type_master as etm', 'em.emp_type', '=', 'etm.pk')
             ->leftJoin('department_master as dm', 'em.department_master_pk', '=', 'dm.pk')
             ->where(function ($q) use ($billMonthStr, $billMonthShortStr, $billMonthNumStr, $billMonthNumPadded) {
@@ -10535,6 +10609,7 @@ class EstateController extends Controller
                         ->orWhere('dm.department_name', 'like', $like)
                         ->orWhere('etm.category_type_name', 'like', $like)
                         ->orWhere('ehrd.emp_designation', 'like', $like)
+                        ->orWhere('d_lmr.designation_name', 'like', $like)
                         ->orWhere('ehrd.remarks', 'like', $like);
                 });
             }
@@ -10545,7 +10620,7 @@ class EstateController extends Controller
             $orderMap = [
                 0 => 'b.block_name',
                 1 => 'ehrd.emp_name',
-                2 => 'etm.category_type_name',
+                2 => 'emp_designation',
                 3 => null, // section: COALESCE(dept, designation, remarks) — ordered below
                 4 => 'ut.unit_type',
                 5 => 'ust.unit_sub_type',
@@ -10557,7 +10632,7 @@ class EstateController extends Controller
             $orderBy = $orderMap[$orderCol] ?? 'b.block_name';
             if ($orderCol === 3) {
                 $query->orderByRaw(
-                    "COALESCE(NULLIF(TRIM(dm.department_name), ''), NULLIF(TRIM(ehrd.emp_designation), ''), NULLIF(TRIM(ehrd.remarks), '')) {$orderDir}"
+                    "COALESCE(NULLIF(TRIM(dm.department_name), ''), NULLIF(TRIM(d_lmr.designation_name), ''), NULLIF(TRIM(ehrd.emp_designation), ''), NULLIF(TRIM(ehrd.remarks), '')) {$orderDir}"
                 )->orderBy('emrd.house_no', 'asc');
             } else {
                 $query->orderBy($orderBy, $orderDir)->orderBy('emrd.house_no', 'asc');
@@ -10572,10 +10647,9 @@ class EstateController extends Controller
                     'emrd.last_month_elec_red',
                     'emrd.last_month_elec_red2',
                     'ehrd.emp_name',
-                    'ehrd.emp_designation',
-                    'etm.category_type_name as employee_type',
+                    DB::raw("COALESCE(NULLIF(TRIM(d_lmr.designation_name), ''), NULLIF(TRIM(ehrd.emp_designation), '')) as emp_designation"),
                     // Section: department is often unset on employee_master; fall back like bill/return-house UIs.
-                    DB::raw("COALESCE(NULLIF(TRIM(dm.department_name), ''), NULLIF(TRIM(ehrd.emp_designation), ''), NULLIF(TRIM(ehrd.remarks), '')) as section"),
+                    DB::raw("COALESCE(NULLIF(TRIM(dm.department_name), ''), NULLIF(TRIM(d_lmr.designation_name), ''), NULLIF(TRIM(ehrd.emp_designation), ''), NULLIF(TRIM(ehrd.remarks), '')) as section"),
                     'ut.unit_type',
                     'ust.unit_sub_type',
                     'b.block_name as building_name',
@@ -10590,10 +10664,11 @@ class EstateController extends Controller
             foreach ($rows as $r) {
                 $m1 = $r->curr_month_elec_red ?? $r->last_month_elec_red;
                 $m2 = $r->curr_month_elec_red2 ?? $r->last_month_elec_red2;
+                $designationLbsnaa = trim((string) ($r->emp_designation ?? ''));
                 $data[] = [
                     'sno' => $sno++,
                     'name' => $r->emp_name ?? 'N/A',
-                    'employee_type' => $r->employee_type ?? $r->emp_designation ?? 'N/A',
+                    'designation' => $designationLbsnaa !== '' ? $designationLbsnaa : 'N/A',
                     'section' => $r->section ?? 'N/A',
                     'unit_type' => $r->unit_type ?? 'N/A',
                     'unit_sub_type' => $r->unit_sub_type ?? 'N/A',
@@ -10623,9 +10698,8 @@ class EstateController extends Controller
                 'emrd.last_month_elec_red',
                 'emrd.last_month_elec_red2',
                 'ehrd.emp_name',
-                'ehrd.emp_designation',
-                'etm.category_type_name as employee_type',
-                DB::raw("COALESCE(NULLIF(TRIM(dm.department_name), ''), NULLIF(TRIM(ehrd.emp_designation), ''), NULLIF(TRIM(ehrd.remarks), '')) as section"),
+                DB::raw("COALESCE(NULLIF(TRIM(d_lmr.designation_name), ''), NULLIF(TRIM(ehrd.emp_designation), '')) as emp_designation"),
+                DB::raw("COALESCE(NULLIF(TRIM(dm.department_name), ''), NULLIF(TRIM(d_lmr.designation_name), ''), NULLIF(TRIM(ehrd.emp_designation), ''), NULLIF(TRIM(ehrd.remarks), '')) as section"),
                 'ut.unit_type',
                 'ust.unit_sub_type',
                 'b.block_name as building_name',
@@ -10659,6 +10733,7 @@ class EstateController extends Controller
                     'emro.last_month_elec_red',
                     'emro.last_month_elec_red2',
                     'eor.emp_name',
+                    'eor.designation',
                     'eor.section',
                     'ut.unit_type',
                     'ust.unit_sub_type',
@@ -10684,10 +10759,11 @@ class EstateController extends Controller
             foreach ($rows as $r) {
                 $m1 = $r->curr_month_elec_red ?? $r->last_month_elec_red;
                 $m2 = $r->curr_month_elec_red2 ?? $r->last_month_elec_red2;
+                $designationLegacyOth = trim((string) ($r->designation ?? ''));
                 $data[] = [
                     'sno' => $sno++,
                     'name' => $r->emp_name ?? 'N/A',
-                    'employee_type' => 'Other Employee',
+                    'designation' => $designationLegacyOth !== '' ? $designationLegacyOth : 'N/A',
                     'section' => $r->section ?? 'N/A',
                     'unit_type' => $r->unit_type ?? 'N/A',
                     'unit_sub_type' => $r->unit_sub_type ?? 'N/A',
@@ -10702,10 +10778,11 @@ class EstateController extends Controller
             foreach ($rows as $r) {
                 $m1 = $r->curr_month_elec_red ?? $r->last_month_elec_red;
                 $m2 = $r->curr_month_elec_red2 ?? $r->last_month_elec_red2;
+                $designationLegacyLbsnaa = trim((string) ($r->emp_designation ?? ''));
                 $data[] = [
                     'sno' => $sno++,
                     'name' => $r->emp_name ?? 'N/A',
-                    'employee_type' => $r->employee_type ?? $r->emp_designation ?? 'N/A',
+                    'designation' => $designationLegacyLbsnaa !== '' ? $designationLegacyLbsnaa : 'N/A',
                     'section' => $r->section ?? 'N/A',
                     'unit_type' => $r->unit_type ?? 'N/A',
                     'unit_sub_type' => $r->unit_sub_type ?? 'N/A',
@@ -10949,7 +11026,13 @@ class EstateController extends Controller
                     ->whereRaw('CONVERT(LOWER(TRIM(COALESCE(ehm_bn.house_no, \'\'))) USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(LOWER(TRIM(COALESCE(emrd.house_no, \'\'))) USING utf8mb4) COLLATE utf8mb4_unicode_ci');
             })
             ->leftJoin('estate_block_master as b', 'ehm.estate_block_master_pk', '=', 'b.pk')
-            ->leftJoin('employee_master as em', 'ehrd.employee_pk', '=', 'em.' . $this->estateEmployeePkColumn())
+            ->leftJoin('employee_master as em', function ($join) {
+                $join->on('ehrd.employee_pk', '=', 'em.pk');
+                if (Schema::hasColumn('employee_master', 'pk_old')) {
+                    $join->orOn('ehrd.employee_pk', '=', 'em.pk_old');
+                }
+            })
+            ->leftJoin('designation_master as d_lmr', 'em.designation_master_pk', '=', 'd_lmr.pk')
             ->leftJoin('employee_type_master as etm', 'em.emp_type', '=', 'etm.pk')
             ->leftJoin('department_master as dm', 'em.department_master_pk', '=', 'dm.pk')
             ->where(function ($q) use ($billMonthVariants) {
@@ -10976,7 +11059,7 @@ class EstateController extends Controller
                 DB::raw("COALESCE(NULLIF(TRIM(etm.category_type_name), ''), 'LBSNA Employee') as employee_type"),
                 'ehrd.emp_name as name',
                 // Section: same fallbacks as getReturnHouseRequestDetails — dept is often unset on employee_master.
-                DB::raw("COALESCE(NULLIF(TRIM(dm.department_name), ''), NULLIF(TRIM(ehrd.emp_designation), ''), NULLIF(TRIM(ehrd.remarks), '')) as section"),
+                DB::raw("COALESCE(NULLIF(TRIM(dm.department_name), ''), NULLIF(TRIM(d_lmr.designation_name), ''), NULLIF(TRIM(ehrd.emp_designation), ''), NULLIF(TRIM(ehrd.remarks), '')) as section"),
                 'b.block_name as building_name',
                 'emrd.house_no',
                 'emrd.from_date',
@@ -11539,7 +11622,7 @@ class EstateController extends Controller
      * Returns active possessions missing a monthly reading row for that bill_month/bill_year:
      * LBSNAA (estate_month_reading_details) and other employees (estate_month_reading_details_other).
      *
-     * Redis/file cache: ESTATE_UPDATE_METER_READING_CACHE_* (keys: estate_pmr:v1:…).
+     * Redis/file cache: ESTATE_UPDATE_METER_READING_CACHE_* (keys: estate_pmr:v2:…).
      */
     public function getPendingMeterReadingData(Request $request)
     {
@@ -11603,7 +11686,7 @@ class EstateController extends Controller
         $hasEpoReading2 = Schema::hasTable('estate_possession_other')
             && Schema::hasColumn('estate_possession_other', 'meter_reading_oth1');
 
-        $cacheKey = 'estate_pmr:v1:' . md5(json_encode([
+        $cacheKey = 'estate_pmr:v2:' . md5(json_encode([
             'bm' => $billMonthStr,
             'by' => $billYearStr,
             'y' => $year,
@@ -11670,13 +11753,19 @@ class EstateController extends Controller
         bool $hasEmroReading2,
         bool $hasEpoReading2
     ): array {
+        $employeeTypeRegular = $hasEhrdRemarks
+            ? DB::raw(
+                'COALESCE(NULLIF(TRIM(d_emp.designation_name), \'\'), NULLIF(TRIM(ehrd.emp_designation), \'\'), NULLIF(TRIM(ehrd.remarks), \'\'), NULL) as employee_type'
+            )
+            : DB::raw(
+                'COALESCE(NULLIF(TRIM(d_emp.designation_name), \'\'), NULLIF(TRIM(ehrd.emp_designation), \'\'), NULL) as employee_type'
+            );
+
         $epdSelect = [
             'epd.pk as possession_pk',
             'ehm.house_no',
             'ehrd.emp_name',
-            $hasEhrdRemarks
-                ? DB::raw("COALESCE(NULLIF(TRIM(ehrd.emp_designation), ''), NULLIF(TRIM(ehrd.remarks), ''), NULL) as employee_type")
-                : 'ehrd.emp_designation as employee_type',
+            $employeeTypeRegular,
             'epd.electric_meter_reading as epd_electric_meter_reading',
         ];
         if ($hasEpdReading2) {
@@ -11686,6 +11775,14 @@ class EstateController extends Controller
         $pending = DB::table('estate_possession_details as epd')
             ->join('estate_house_master as ehm', 'epd.estate_house_master_pk', '=', 'ehm.pk')
             ->join('estate_home_request_details as ehrd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
+            ->leftJoin('employee_master as e_emp', function ($join) {
+                if (Schema::hasColumn('employee_master', 'pk_old')) {
+                    $join->whereRaw('(ehrd.employee_pk = e_emp.pk OR ehrd.employee_pk = e_emp.pk_old)');
+                } else {
+                    $join->on('ehrd.employee_pk', '=', 'e_emp.pk');
+                }
+            })
+            ->leftJoin('designation_master as d_emp', 'e_emp.designation_master_pk', '=', 'd_emp.pk')
             ->leftJoin('estate_month_reading_details as emrd', function ($join) use ($billMonthStr, $billYearStr) {
                 $join->on('emrd.estate_possession_details_pk', '=', 'epd.pk')
                     ->whereRaw('emrd.bill_month = ? AND emrd.bill_year = ?', [$billMonthStr, $billYearStr]);
@@ -12229,7 +12326,13 @@ class EstateController extends Controller
             // Active LBSNAA possessions: return_home_status = 0 and (estate_change_id = -1 OR NULL — new allotments set null)
             $lbsnaaQuery = DB::table('estate_possession_details as epd')
                 ->join('estate_home_request_details as ehrd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
-                ->leftJoin('employee_master as em', 'ehrd.employee_pk', '=', 'em.' . $this->estateEmployeePkColumn())
+                ->leftJoin('employee_master as em', function ($join) {
+                    $join->on('ehrd.employee_pk', '=', 'em.pk');
+                    if (Schema::hasColumn('employee_master', 'pk_old')) {
+                        $join->orOn('ehrd.employee_pk', '=', 'em.pk_old');
+                    }
+                })
+                ->leftJoin('designation_master as d_hs', 'em.designation_master_pk', '=', 'd_hs.pk')
                 ->whereIn('epd.estate_house_master_pk', $housePks)
                 ->whereNotNull('epd.estate_house_master_pk')
                 ->where(function ($q) {
@@ -12243,7 +12346,7 @@ class EstateController extends Controller
                     'epd.allotment_date',
                     'epd.possession_date',
                     DB::raw('COALESCE(NULLIF(TRIM(ehrd.emp_name), \'\'), CONCAT(COALESCE(em.first_name, \'\'), \' \', COALESCE(em.last_name, \'\'))) as allottee_name'),
-                    'ehrd.emp_designation as section_designation',
+                    DB::raw("COALESCE(NULLIF(TRIM(d_hs.designation_name), ''), NULLIF(TRIM(ehrd.emp_designation), '')) as section_designation"),
                     $hasEmployeeMobile ? 'em.mobile as mobile_number' : DB::raw('NULL as mobile_number'),
                     'epd.pk as possession_pk'
                 )

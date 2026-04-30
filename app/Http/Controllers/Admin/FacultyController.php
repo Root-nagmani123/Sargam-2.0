@@ -257,6 +257,8 @@ class FacultyController extends Controller
 
             DB::commit();
 
+            FacultyDataTable::bumpListingCacheEpoch();
+
             return response()->json([
                 'status' => true,
                 'message' => $isUpdate ? 'Faculty updated successfully' : 'Faculty created successfully',
@@ -785,7 +787,10 @@ class FacultyController extends Controller
                 }
             }
             DB::commit();
-           return response()->json([
+
+            FacultyDataTable::bumpListingCacheEpoch();
+
+            return response()->json([
                 'status' => true,
                 'message' => 'Faculty updated successfully',
                 'data' => $faculty
@@ -1030,6 +1035,8 @@ class FacultyController extends Controller
             $faculty->delete();
 
             DB::commit();
+
+            FacultyDataTable::bumpListingCacheEpoch();
 
             return response()->json([
                 'status' => true,

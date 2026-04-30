@@ -18,14 +18,14 @@ use Yajra\DataTables\Services\DataTable;
 class EstatePossessionDetailsDataTable extends DataTable
 {
     /**
-     * Server-side JSON (ESTATE_UPDATE_METER_READING_CACHE_*). Keys: estate_epd:v1:…
+     * Server-side JSON (ESTATE_UPDATE_METER_READING_CACHE_*). Keys: estate_epd:v2:…
      * Cached rows may embed CSRF in delete forms; token is refreshed on cache hit.
      */
     public function ajax(): JsonResponse
     {
         $draw = (int) $this->request()->input('draw', 0);
         $fingerprint = $this->possessionDetailsDataTableCacheFingerprint();
-        $cacheKey = 'estate_epd:v1:' . md5(json_encode($fingerprint));
+        $cacheKey = 'estate_epd:v2:' . md5(json_encode($fingerprint));
 
         $payload = $this->rememberEstateListingCache($cacheKey, function () {
             $resp = parent::ajax();
@@ -263,6 +263,7 @@ class EstatePossessionDetailsDataTable extends DataTable
                         ->orWhere('ehrd.emp_name', 'like', $searchLike)
                         ->orWhere('ehrd.employee_id', 'like', $searchLike)
                         ->orWhere('ehrd.emp_designation', 'like', $searchLike)
+                        ->orWhere('d_emp.designation_name', 'like', $searchLike)
                         ->orWhere('ec.campus_name', 'like', $searchLike)
                         ->orWhere('eb.block_name', 'like', $searchLike)
                         ->orWhere('eut.unit_type', 'like', $searchLike)
@@ -285,6 +286,14 @@ class EstatePossessionDetailsDataTable extends DataTable
         $query = $model->newQuery()
             ->from('estate_home_request_details as ehrd')
             ->join('estate_possession_details as epd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
+            ->leftJoin('employee_master as e_emp', function ($join) {
+                if (Schema::hasColumn('employee_master', 'pk_old')) {
+                    $join->whereRaw('(ehrd.employee_pk = e_emp.pk OR ehrd.employee_pk = e_emp.pk_old)');
+                } else {
+                    $join->on('ehrd.employee_pk', '=', 'e_emp.pk');
+                }
+            })
+            ->leftJoin('designation_master as d_emp', 'e_emp.designation_master_pk', '=', 'd_emp.pk')
             ->leftJoin('estate_house_master as ehm', 'epd.estate_house_master_pk', '=', 'ehm.pk')
             ->leftJoin('estate_campus_master as ec', 'ehm.estate_campus_master_pk', '=', 'ec.pk')
             ->leftJoin('estate_block_master as eb', 'ehm.estate_block_master_pk', '=', 'eb.pk')
@@ -300,7 +309,7 @@ class EstatePossessionDetailsDataTable extends DataTable
                 'ehrd.req_id as request_id',
                 'ehrd.emp_name',
                 'ehrd.employee_id',
-                'ehrd.emp_designation',
+                DB::raw("COALESCE(NULLIF(TRIM(d_emp.designation_name), ''), NULLIF(TRIM(ehrd.emp_designation), '')) as emp_designation"),
                 'ec.campus_name as estate_name',
                 'eb.block_name as building_name',
                 'eut.unit_type',
