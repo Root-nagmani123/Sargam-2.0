@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Family ID Card Approval - List pending family ID card requests and approve/reject.
@@ -17,22 +18,27 @@ use Illuminate\Support\Facades\DB;
  */
 class FamilyIDCardApprovalController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $user = Auth::user();
-        $currentEmployeePk = $user->user_id ?? $user->pk ?? null;
-
-        $search = trim(request()->get('search', ''));
-        $dateFrom = request()->get('date_from');
-        $dateTo = request()->get('date_to');
+        $search = trim($request->get('search', ''));
+        $dateFrom = $request->get('date_from');
+        $dateTo = $request->get('date_to');
 
         $isLevel1 = hasRole('Security Card') && !hasRole('Admin Security');
         $isLevel2 = hasRole('Admin Security') && !hasRole('Security Card');
 
-        // Base query: ALL family ID card requests (Pending / Approved / Rejected), with approval history
-        // Requirement: Both Security Card (Level 1) and Admin Security (Level 2) should see ALL records,
-        // with actionability controlled by can_approve flags only.
-        $baseQuery = SecurityFamilyIdApply::with('approvals')->orderBy('created_date', 'desc');
+        // Base query: ALL family ID card requests (Pending / Approved / Rejected).
+        // Keep selected columns minimal to reduce payload and memory pressure.
+        $baseQuery = SecurityFamilyIdApply::query()
+            ->select([
+                'fml_id_apply',
+                'emp_id_apply',
+                'created_by',
+                'created_date',
+                'id_status',
+                'id_card_generate_date',
+            ])
+            ->orderBy('created_date', 'desc');
 
         // Date filters on created_date
         if (!empty($dateFrom)) {
@@ -79,14 +85,31 @@ class FamilyIDCardApprovalController extends Controller
             }
         }
 
-        $groupList = $groups->map(function ($rows) use ($creators, $isLevel1, $isLevel2) {
+        // Aggregate approval flags in one query (avoids loading approvals relation for every row)
+        $allFmlIds = $pendingRows->pluck('fml_id_apply')->filter()->unique()->values();
+        $approvalFlagMap = collect();
+        if ($allFmlIds->isNotEmpty()) {
+            $approvalFlagMap = DB::table('security_family_id_apply_approval')
+                ->select(
+                    'security_fm_id_apply_pk',
+                    DB::raw('MAX(CASE WHEN status = 1 THEN 1 ELSE 0 END) as has_level1'),
+                    DB::raw('MAX(CASE WHEN status = 2 THEN 1 ELSE 0 END) as has_level2')
+                )
+                ->whereIn('security_fm_id_apply_pk', $allFmlIds->all())
+                ->groupBy('security_fm_id_apply_pk')
+                ->get()
+                ->keyBy('security_fm_id_apply_pk');
+        }
+
+        $groupList = $groups->map(function ($rows) use ($creators, $isLevel1, $isLevel2, $approvalFlagMap) {
             $first = $rows->sortBy('fml_id_apply')->first();
             $creatorName = $creators[(string) ($first->created_by ?? '')] ?? ('User #' . ($first->created_by ?? '--'));
 
             // Determine phase/status
             $statusInt = (int) ($first->id_status ?? 1); // 1=Pending,2=Approved,3=Rejected
-            $hasLevel1 = $first->approvals && $first->approvals->where('status', 1)->isNotEmpty();
-            $hasLevel2 = $first->approvals && $first->approvals->where('status', 2)->isNotEmpty();
+            $approvalFlags = $approvalFlagMap->get((string) ($first->fml_id_apply ?? ''));
+            $hasLevel1 = $approvalFlags ? (bool) ($approvalFlags->has_level1 ?? false) : false;
+            $hasLevel2 = $approvalFlags ? (bool) ($approvalFlags->has_level2 ?? false) : false;
 
             $phaseLabel = 'Pending (Level 1)';
             $phaseClass = 'warning';
@@ -149,19 +172,85 @@ class FamilyIDCardApprovalController extends Controller
             })->values();
         }
 
-        $perPage = 10;
-        $page = (int) request()->get('page', 1);
-        $paginator = new LengthAwarePaginator(
-            $groupList->forPage($page, $perPage)->values(),
-            $groupList->count(),
+        $perPage = (int) $request->get('per_page', 10);
+        $perPage = in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 10;
+
+        $newPage = max(1, (int) $request->get('new_page', 1));
+        $forPage = max(1, (int) $request->get('for_page', 1));
+        $issuedPage = max(1, (int) $request->get('issued_page', 1));
+        $rejectPage = max(1, (int) $request->get('reject_page', 1));
+
+        $newGroupsList = $groupList->filter(function ($g) {
+            $isApproved = ((int) ($g->status_int ?? 1) === 2) && ((bool) ($g->has_level2 ?? false));
+            $isRejected = ((int) ($g->status_int ?? 1) === 3);
+            return !$isApproved && !$isRejected && ((int) ($g->status_int ?? 1) === 1) && (($g->can_approve ?? false) === true);
+        })->values();
+
+        $processedGroupsList = $groupList->filter(function ($g) {
+            $isApproved = ((int) ($g->status_int ?? 1) === 2) && ((bool) ($g->has_level2 ?? false));
+            $isRejected = ((int) ($g->status_int ?? 1) === 3);
+            return !$isApproved && !$isRejected && (((int) ($g->status_int ?? 1) !== 1) || (($g->can_approve ?? false) !== true));
+        })->values();
+
+        // Issued tab should contain only finally approved records.
+        $issuedGroupsList = $groupList->filter(function ($g) {
+            return ((int) ($g->status_int ?? 1) === 2) && ((bool) ($g->has_level2 ?? false));
+        })->values()->map(function ($g) {
+            $memberFirst = isset($g->members) ? $g->members->sortBy('fml_id_apply')->first() : null;
+            $g->id_card_physical_print_done = Schema::hasColumn('security_family_id_apply', 'id_card_generate_date')
+                && $memberFirst
+                && ! empty($memberFirst->id_card_generate_date);
+
+            return $g;
+        });
+
+        $rejectedGroupsList = $groupList->filter(function ($g) {
+            return ((int) ($g->status_int ?? 1) === 3);
+        })->values();
+
+        $newFamilyGroups = new LengthAwarePaginator(
+            $newGroupsList->forPage($newPage, $perPage)->values(),
+            $newGroupsList->count(),
             $perPage,
-            $page,
-            ['path' => request()->url(), 'pageName' => 'page']
+            $newPage,
+            ['path' => $request->url(), 'pageName' => 'new_page', 'query' => $request->query()]
         );
-        $paginator->withQueryString();
+        $processedFamilyGroups = new LengthAwarePaginator(
+            $processedGroupsList->forPage($forPage, $perPage)->values(),
+            $processedGroupsList->count(),
+            $perPage,
+            $forPage,
+            ['path' => $request->url(), 'pageName' => 'for_page', 'query' => $request->query()]
+        );
+        $issuedFamilyGroups = new LengthAwarePaginator(
+            $issuedGroupsList->forPage($issuedPage, $perPage)->values(),
+            $issuedGroupsList->count(),
+            $perPage,
+            $issuedPage,
+            ['path' => $request->url(), 'pageName' => 'issued_page', 'query' => $request->query()]
+        );
+        $rejectedFamilyGroups = new LengthAwarePaginator(
+            $rejectedGroupsList->forPage($rejectPage, $perPage)->values(),
+            $rejectedGroupsList->count(),
+            $perPage,
+            $rejectPage,
+            ['path' => $request->url(), 'pageName' => 'reject_page', 'query' => $request->query()]
+        );
+
+        $activeTab = $request->get('tab', 'new');
+        if ($activeTab === 'archive') {
+            $activeTab = 'issued';
+        }
+        if (!in_array($activeTab, ['new', 'for_approval', 'issued', 'rejected'], true)) {
+            $activeTab = 'new';
+        }
 
         return view('admin.security.family_idcard_approval.index', [
-            'groups' => $paginator,
+            'newFamilyGroups' => $newFamilyGroups,
+            'processedFamilyGroups' => $processedFamilyGroups,
+            'issuedFamilyGroups' => $issuedFamilyGroups,
+            'rejectedFamilyGroups' => $rejectedFamilyGroups,
+            'activeTab' => $activeTab,
             'search' => $search,
             'dateFrom' => $dateFrom,
             'dateTo' => $dateTo,

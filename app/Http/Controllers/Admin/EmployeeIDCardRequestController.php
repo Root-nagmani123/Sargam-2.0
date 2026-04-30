@@ -42,6 +42,11 @@ class EmployeeIDCardRequestController extends Controller
             $filter = 'all';
         }
 
+        $listStatus = $request->get('list_status', 'all');
+        if (! in_array($listStatus, ['all', 'pending', 'approved', 'rejected'], true)) {
+            $listStatus = 'all';
+        }
+
         // Permanent
         $permQuery = SecurityParmIdApply::select($columns)->with($with)->orderBy('created_date', 'desc');
         if (!hasRole('Admin') && !hasRole('SuperAdmin')) {
@@ -57,12 +62,6 @@ class EmployeeIDCardRequestController extends Controller
                 $permQuery->where('created_by', $currentUserId);
             }
         }
-        if ($filter === 'active') {
-            $permQuery->where('id_status', SecurityParmIdApply::ID_STATUS_PENDING);
-        } elseif ($filter === 'archive') {
-            $permQuery->whereIn('id_status', [SecurityParmIdApply::ID_STATUS_APPROVED, SecurityParmIdApply::ID_STATUS_REJECTED]);
-        }
-        $permRows = $permQuery->get();
 
         // Contractual
         $contCols = ['pk', 'emp_id_apply', 'employee_name', 'designation_name', 'id_status', 'depart_approval_status', 'department_approval_emp_pk', 'created_date', 'card_valid_from', 'card_valid_to', 'id_card_no', 'id_photo_path', 'mobile_no', 'telephone_no', 'blood_group', 'permanent_type', 'perm_sub_type', 'remarks', 'created_by', 'employee_dob', 'vender_name', 'father_name', 'doc_path'];
@@ -79,11 +78,10 @@ class EmployeeIDCardRequestController extends Controller
                 $contQuery->where('created_by', $currentUserId);
             }
         }
-        if ($filter === 'active') {
-            $contQuery->where('id_status', 1);
-        } elseif ($filter === 'archive') {
-            $contQuery->whereIn('id_status', [2, 3]);
-        }
+
+        static::applyEmployeeIdcardListStatusFilters($permQuery, $contQuery, $filter, $listStatus);
+
+        $permRows = $permQuery->get();
         $contRows = $contQuery->get();
 
         $permDto = $permRows->map(fn ($r) => IdCardSecurityMapper::toEmployeeRequestDto($r));
@@ -254,10 +252,48 @@ class EmployeeIDCardRequestController extends Controller
             'duplicationRequests' => $duplicationRequests,
             'extensionRequests' => $extensionRequests,
             'filter' => $filter,
+            'list_status' => $listStatus,
             'dateFrom' => $dateFrom ?? '',
             'dateTo' => $dateTo ?? '',
             'search' => $search ?? '',
         ]);
+    }
+
+    /**
+     * Apply id_status for employee ID card list (permanent Eloquent + contractual query builder).
+     * When list_status is pending/approved/rejected it overrides filter for status; otherwise filter (active/archive/all) applies.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $permQuery
+     * @param  \Illuminate\Database\Query\Builder  $contQuery
+     */
+    private static function applyEmployeeIdcardListStatusFilters($permQuery, $contQuery, string $filter, string $listStatus): void
+    {
+        if ($listStatus === 'pending') {
+            $permQuery->where('id_status', SecurityParmIdApply::ID_STATUS_PENDING);
+            $contQuery->where('id_status', 1);
+
+            return;
+        }
+        if ($listStatus === 'approved') {
+            $permQuery->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED);
+            $contQuery->where('id_status', 2);
+
+            return;
+        }
+        if ($listStatus === 'rejected') {
+            $permQuery->where('id_status', SecurityParmIdApply::ID_STATUS_REJECTED);
+            $contQuery->where('id_status', 3);
+
+            return;
+        }
+
+        if ($filter === 'active') {
+            $permQuery->where('id_status', SecurityParmIdApply::ID_STATUS_PENDING);
+            $contQuery->where('id_status', 1);
+        } elseif ($filter === 'archive') {
+            $permQuery->whereIn('id_status', [SecurityParmIdApply::ID_STATUS_APPROVED, SecurityParmIdApply::ID_STATUS_REJECTED]);
+            $contQuery->whereIn('id_status', [2, 3]);
+        }
     }
 
     /**
@@ -1818,21 +1854,18 @@ class EmployeeIDCardRequestController extends Controller
             $filter = 'all';
         }
 
-        $permQuery = SecurityParmIdApply::select($columns)->with($with)->orderBy('created_date', 'desc');
-        if ($filter === 'active') {
-            $permQuery->where('id_status', SecurityParmIdApply::ID_STATUS_PENDING);
-        } elseif ($filter === 'archive') {
-            $permQuery->whereIn('id_status', [SecurityParmIdApply::ID_STATUS_APPROVED, SecurityParmIdApply::ID_STATUS_REJECTED]);
+        $listStatus = $request->get('list_status', 'all');
+        if (! in_array($listStatus, ['all', 'pending', 'approved', 'rejected'], true)) {
+            $listStatus = 'all';
         }
-        $permRows = $permQuery->get();
 
+        $permQuery = SecurityParmIdApply::select($columns)->with($with)->orderBy('created_date', 'desc');
         $contCols = ['pk', 'emp_id_apply', 'employee_name', 'designation_name', 'id_status', 'depart_approval_status', 'department_approval_emp_pk', 'created_date', 'card_valid_from', 'card_valid_to', 'id_card_no', 'id_photo_path', 'mobile_no', 'telephone_no', 'blood_group', 'permanent_type', 'perm_sub_type', 'remarks', 'created_by', 'employee_dob', 'vender_name', 'father_name', 'doc_path'];
         $contQuery = DB::table('security_con_oth_id_apply')->select($contCols)->orderBy('created_date', 'desc');
-        if ($filter === 'active') {
-            $contQuery->where('id_status', 1);
-        } elseif ($filter === 'archive') {
-            $contQuery->whereIn('id_status', [2, 3]);
-        }
+
+        static::applyEmployeeIdcardListStatusFilters($permQuery, $contQuery, $filter, $listStatus);
+
+        $permRows = $permQuery->get();
         $contRows = $contQuery->get();
 
         $permDto = $permRows->map(fn ($r) => IdCardSecurityMapper::toEmployeeRequestDto($r));

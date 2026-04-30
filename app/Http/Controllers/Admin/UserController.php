@@ -298,17 +298,24 @@ class UserController extends Controller
             ]);
         }
 
-        $todayFamilyApprovals = $this->getTodayPendingFamilyApprovalsCount();
-        $todayVehicleApprovals = $this->getTodayPendingVehicleApprovalsCount();
+        $todayFamilyApprovals = $this->getTodayPendingFamilyApprovalsCount(true);
+        $fullFamilyApprovals = $this->getTodayPendingFamilyApprovalsCount(false);
+        $todayVehicleApprovals = $this->getTodayPendingVehicleApprovalsCount(true);
+        $fullVehicleApprovals = $this->getTodayPendingVehicleApprovalsCount(false);
         $todayIdCardRequests = $this->getTodayPendingIdCardRequestsCount();
-        $todayPendingSplit = $this->getTodayPendingIdCardRequestsSplit();
+        $todayPendingSplit = $this->getTodayPendingIdCardRequestsSplit(true);
         $todayPendingPermanentIdCardRequests = (int) ($todayPendingSplit['perm'] ?? 0);
         $todayPendingContractualIdCardRequests = (int) ($todayPendingSplit['cont'] ?? 0);
+        $fullPendingSplit = $this->getTodayPendingIdCardRequestsSplit(false);
+        $fullPendingPermanentIdCardRequests = (int) ($fullPendingSplit['perm'] ?? 0);
+        $fullPendingContractualIdCardRequests = (int) ($fullPendingSplit['cont'] ?? 0);
         $todayApproval1Split = $this->getTodayPendingSecurityApproval1Split();
         $todayApproval1IdCardRequests = (int) ($todayApproval1Split['idcard'] ?? 0);
         $todayApproval1DuplicateIdCardRequests = (int) ($todayApproval1Split['duplicate'] ?? 0);
-        $todayDuplicatePermIdCardRequests = $this->getTodayDuplicatePermanentIdCardRequestsCount();
-        $todayDuplicateContractualIdCardRequests = $this->getTodayDuplicateContractualIdCardRequestsCount();
+        $todayDuplicatePermIdCardRequests = $this->getTodayDuplicatePermanentIdCardRequestsCount(true);
+        $todayDuplicateContractualIdCardRequests = $this->getTodayDuplicateContractualIdCardRequestsCount(true);
+        $fullDuplicatePermIdCardRequests = $this->getTodayDuplicatePermanentIdCardRequestsCount(false);
+        $fullDuplicateContractualIdCardRequests = $this->getTodayDuplicateContractualIdCardRequestsCount(false);
 
         return view('admin.dashboard', compact(
             'year',
@@ -330,14 +337,20 @@ class UserController extends Controller
             'totalStudents',
             'isCCorACC',
             'todayFamilyApprovals',
+            'fullFamilyApprovals',
             'todayVehicleApprovals',
+            'fullVehicleApprovals',
             'todayIdCardRequests',
             'todayPendingPermanentIdCardRequests',
             'todayPendingContractualIdCardRequests',
+            'fullPendingPermanentIdCardRequests',
+            'fullPendingContractualIdCardRequests',
             'todayApproval1IdCardRequests',
             'todayApproval1DuplicateIdCardRequests',
             'todayDuplicatePermIdCardRequests',
-            'todayDuplicateContractualIdCardRequests'
+            'todayDuplicateContractualIdCardRequests',
+            'fullDuplicatePermIdCardRequests',
+            'fullDuplicateContractualIdCardRequests'
         ));
     }
 
@@ -347,8 +360,10 @@ class UserController extends Controller
      * - cont: pending Contractual ID cards
      *
      * Logic matches existing getTodayPendingIdCardRequestsCount(), but returns both parts separately.
+     *
+     * @param  bool  $todayOnly  When true, only applications created today; when false, all dates (full pending).
      */
-    private function getTodayPendingIdCardRequestsSplit(): array
+    private function getTodayPendingIdCardRequestsSplit(bool $todayOnly = true): array
     {
         $user = Auth::user();
         if (! $user) {
@@ -371,16 +386,18 @@ class UserController extends Controller
         }
 
         if ($isApproval2) {
-            $permCount = (int) DB::table('security_parm_id_apply as spa')
-                ->whereBetween('spa.created_date', [$start, $end])
+            $permQuery = DB::table('security_parm_id_apply as spa')
                 ->where('spa.id_status', SecurityParmIdApply::ID_STATUS_PENDING)
                 ->whereNotExists(function ($q) {
                     $q->select(DB::raw(1))
                         ->from('security_parm_id_apply_approval as a')
                         ->whereColumn('a.security_parm_id_apply_pk', 'spa.emp_id_apply')
                         ->where('a.status', 2);
-                })
-                ->count();
+                });
+            if ($todayOnly) {
+                $permQuery->whereBetween('spa.created_date', [$start, $end]);
+            }
+            $permCount = (int) $permQuery->count();
 
             $contPendingIds = DB::table('security_con_oth_id_apply_approval')
                 ->where('status', 0)
@@ -388,28 +405,32 @@ class UserController extends Controller
 
             $contCount = 0;
             if ($contPendingIds->isNotEmpty()) {
-                $contCount = (int) DB::table('security_con_oth_id_apply as sco')
-                    ->whereBetween('sco.created_date', [$start, $end])
+                $contQuery = DB::table('security_con_oth_id_apply as sco')
                     ->where('sco.id_status', 1)
                     ->where('sco.depart_approval_status', 2)
-                    ->whereIn('sco.emp_id_apply', $contPendingIds)
-                    ->count();
+                    ->whereIn('sco.emp_id_apply', $contPendingIds);
+                if ($todayOnly) {
+                    $contQuery->whereBetween('sco.created_date', [$start, $end]);
+                }
+                $contCount = (int) $contQuery->count();
             }
 
             return ['perm' => $permCount, 'cont' => $contCount];
         }
 
         // Approval III final pending
-        $permFinalPending = (int) DB::table('security_parm_id_apply as spa')
-            ->whereBetween('spa.created_date', [$start, $end])
+        $permFinalQuery = DB::table('security_parm_id_apply as spa')
             ->where('spa.id_status', SecurityParmIdApply::ID_STATUS_PENDING)
             ->whereExists(function ($q) {
                 $q->select(DB::raw(1))
                     ->from('security_parm_id_apply_approval as a')
                     ->whereColumn('a.security_parm_id_apply_pk', 'spa.emp_id_apply')
                     ->where('a.status', 2);
-            })
-            ->count();
+            });
+        if ($todayOnly) {
+            $permFinalQuery->whereBetween('spa.created_date', [$start, $end]);
+        }
+        $permFinalPending = (int) $permFinalQuery->count();
 
         $contRecommendedIds = DB::table('security_con_oth_id_apply_approval')
             ->where('status', 1)
@@ -422,13 +443,15 @@ class UserController extends Controller
         $contFinalPending = 0;
         if ($contRecommendedIds->isNotEmpty()) {
             $contQuery = DB::table('security_con_oth_id_apply as sco')
-                ->whereBetween('sco.created_date', [$start, $end])
                 ->where('sco.id_status', 1)
                 ->where('sco.depart_approval_status', 2)
                 ->whereIn('sco.emp_id_apply', $contRecommendedIds);
 
             if ($contFinalDoneIds->isNotEmpty()) {
                 $contQuery->whereNotIn('sco.emp_id_apply', $contFinalDoneIds);
+            }
+            if ($todayOnly) {
+                $contQuery->whereBetween('sco.created_date', [$start, $end]);
             }
 
             $contFinalPending = (int) $contQuery->count();
@@ -437,7 +460,10 @@ class UserController extends Controller
         return ['perm' => $permFinalPending, 'cont' => $contFinalPending];
     }
 
-    private function getTodayPendingFamilyApprovalsCount(): int
+    /**
+     * @param  bool  $todayOnly  When false, counts all actionable pending family ID requests (any date).
+     */
+    private function getTodayPendingFamilyApprovalsCount(bool $todayOnly = true): int
     {
         $user = Auth::user();
         if (! $user) {
@@ -450,9 +476,11 @@ class UserController extends Controller
             return 0;
         }
 
-        $rows = SecurityFamilyIdApply::with('approvals')
-            ->whereDate('created_date', Carbon::today())
-            ->get();
+        $q = SecurityFamilyIdApply::with('approvals');
+        if ($todayOnly) {
+            $q->whereDate('created_date', Carbon::today());
+        }
+        $rows = $q->get();
 
         if ($rows->isEmpty()) {
             return 0;
@@ -489,7 +517,10 @@ class UserController extends Controller
         return $count;
     }
 
-    private function getTodayPendingVehicleApprovalsCount(): int
+    /**
+     * @param  bool  $todayOnly  When false, counts all actionable pending vehicle pass requests (any date).
+     */
+    private function getTodayPendingVehicleApprovalsCount(bool $todayOnly = true): int
     {
         $user = Auth::user();
         if (! $user) {
@@ -504,13 +535,14 @@ class UserController extends Controller
 
         $today = Carbon::today();
 
-        $twRows = VehiclePassTWApply::with('approvals')
-            ->whereDate('created_date', $today)
-            ->get();
-
-        $fwRows = VehiclePassFWApply::with('approvals')
-            ->whereDate('created_date', $today)
-            ->get();
+        $twQ = VehiclePassTWApply::with('approvals');
+        $fwQ = VehiclePassFWApply::with('approvals');
+        if ($todayOnly) {
+            $twQ->whereDate('created_date', $today);
+            $fwQ->whereDate('created_date', $today);
+        }
+        $twRows = $twQ->get();
+        $fwRows = $fwQ->get();
 
         $rows = $twRows->map(function ($r) {
             $r->kind = 'tw';
@@ -618,7 +650,10 @@ class UserController extends Controller
         return ['idcard' => $idcardCount, 'duplicate' => $duplicateCount];
     }
 
-    private function getTodayDuplicatePermanentIdCardRequestsCount(): int
+    /**
+     * @param  bool  $todayOnly  When false, counts all pending duplicate permanent ID requests for this approval level.
+     */
+    private function getTodayDuplicatePermanentIdCardRequestsCount(bool $todayOnly = true): int
     {
         $user = Auth::user();
         if (! $user) {
@@ -636,8 +671,10 @@ class UserController extends Controller
 
         // Permanent Duplicate (security_dup_perm_id_apply)
         $base = DB::table('security_dup_perm_id_apply as dup')
-            ->whereBetween('dup.created_date', [$start, $end])
             ->where('dup.id_status', 1);
+        if ($todayOnly) {
+            $base->whereBetween('dup.created_date', [$start, $end]);
+        }
 
         if ($isApproval2) {
             // Actionable at Approval II = not yet recommended
@@ -667,7 +704,10 @@ class UserController extends Controller
         return (int) $base->count();
     }
 
-    private function getTodayDuplicateContractualIdCardRequestsCount(): int
+    /**
+     * @param  bool  $todayOnly  When false, counts all pending duplicate contractual ID requests for this approval level.
+     */
+    private function getTodayDuplicateContractualIdCardRequestsCount(bool $todayOnly = true): int
     {
         $user = Auth::user();
         if (! $user) {
@@ -685,9 +725,11 @@ class UserController extends Controller
 
         // Contractual Duplicate (security_dup_other_id_apply with depart_approval_status = 2)
         $base = DB::table('security_dup_other_id_apply as duo')
-            ->whereBetween('duo.created_date', [$start, $end])
             ->where('duo.id_status', 1)
             ->where('depart_approval_status', 2);
+        if ($todayOnly) {
+            $base->whereBetween('duo.created_date', [$start, $end]);
+        }
 
         if ($isApproval2) {
             // Actionable at Approval II = not yet recommended

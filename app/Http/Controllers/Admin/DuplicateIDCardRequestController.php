@@ -172,6 +172,102 @@ class DuplicateIDCardRequestController extends Controller
         return view('admin.duplicate_idcard.create', compact('me', 'idProofOptions', 'data', 'userDepartmentName', 'approvalAuthorityEmployees', 'lockedIdCardType'));
     }
 
+    /** Admin-type roles may request duplicates for cards outside their section. */
+    private function duplicateIdCardBypassesSameSectionRestriction(): bool
+    {
+        return hasRole('Admin') || hasRole('Super Admin') || hasRole('SuperAdmin');
+    }
+
+    /**
+     * Department PK of the employee the original ID belongs to (permanent beneficiary, contractual applicant, family sponsor).
+     */
+    private function beneficiaryDepartmentMasterPkForDuplicateCard(string $cardType, string $cardNoTrim): ?int
+    {
+        if ($cardNoTrim === '') {
+            return null;
+        }
+
+        if ($cardType === 'Permanent') {
+            $row = SecurityParmIdApply::with('employee')->where('id_card_no', $cardNoTrim)->first();
+            if (!$row) {
+                return null;
+            }
+            $emp = $row->employee;
+            if (!$emp) {
+                $empId = $row->employee_master_pk ?: $row->created_by;
+                if ($empId) {
+                    $emp = EmployeeMaster::findByIdOrPkOld($empId);
+                }
+            }
+
+            return $emp?->department_master_pk ?? null;
+        }
+
+        if ($cardType === 'Contractual') {
+            $row = DB::table('security_con_oth_id_apply')
+                ->where(function ($q) use ($cardNoTrim) {
+                    $q->where('id_card_no', $cardNoTrim)
+                        ->orWhereRaw('TRIM(COALESCE(id_card_no, "")) = ?', [$cardNoTrim]);
+                })
+                ->orderByRaw('CASE WHEN id_status = 2 THEN 0 ELSE 1 END')
+                ->orderByDesc('created_date')
+                ->first();
+            if (!$row || empty($row->created_by)) {
+                return null;
+            }
+            $emp = EmployeeMaster::findByIdOrPkOld((int) $row->created_by);
+
+            return $emp?->department_master_pk ?? null;
+        }
+
+        if ($cardType === 'Family') {
+            $row = SecurityFamilyIdApply::where(function ($q) use ($cardNoTrim) {
+                $q->where('id_card_no', $cardNoTrim)
+                    ->orWhereRaw('TRIM(COALESCE(id_card_no, "")) = ?', [$cardNoTrim])
+                    ->orWhere('fml_id_apply', $cardNoTrim);
+            })
+                ->orderByRaw('CASE WHEN id_status = 2 THEN 0 ELSE 1 END')
+                ->orderByDesc('created_date')
+                ->first();
+            if (!$row || empty($row->created_by)) {
+                return null;
+            }
+            $emp = EmployeeMaster::findByIdOrPkOld((int) $row->created_by);
+
+            return $emp?->department_master_pk ?? null;
+        }
+
+        return null;
+    }
+
+    /**
+     * @return string|null Error message when not allowed; null when OK or restriction bypassed.
+     */
+    private function duplicateSameSectionViolationMessage(?int $requesterEmpCredentialId, string $cardType, string $cardNo): ?string
+    {
+        if ($this->duplicateIdCardBypassesSameSectionRestriction() || ! $requesterEmpCredentialId) {
+            return null;
+        }
+
+        $cardNoTrim = trim($cardNo);
+        $authEmp = EmployeeMaster::findByIdOrPkOld($requesterEmpCredentialId);
+        if (! $authEmp) {
+            return null;
+        }
+        $authDept = $authEmp->department_master_pk;
+        $benefDept = $this->beneficiaryDepartmentMasterPkForDuplicateCard($cardType, $cardNoTrim);
+
+        if ($benefDept === null) {
+            return 'This ID card holder’s department could not be confirmed. Duplicate requests are limited to cards linked to employees in your section.';
+        }
+
+        if ($authDept === null || (int) $authDept !== (int) $benefDept) {
+            return 'You can request a duplicate only for ID cards of employees who belong to your section (department).';
+        }
+
+        return null;
+    }
+
     /**
      * Prefetch existing ID card details (permanent / contractual / family) by card number for Duplicate ID Card form.
      */
@@ -184,6 +280,16 @@ class DuplicateIDCardRequestController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'ID Card Number is required.',
+            ], 422);
+        }
+
+        $user = Auth::user();
+        $requesterId = $user->user_id ?? $user->pk ?? null;
+        $blocked = $this->duplicateSameSectionViolationMessage((int) $requesterId, $type, $cardNo);
+        if ($blocked !== null) {
+            return response()->json([
+                'success' => false,
+                'message' => $blocked,
             ], 422);
         }
 
@@ -735,6 +841,13 @@ class DuplicateIDCardRequestController extends Controller
         }
 
         $validated = $request->validate($baseRules);
+
+        $blockedSection = $this->duplicateSameSectionViolationMessage((int) $employeePk, (string) $validated['id_card_type'], (string) $validated['id_card_number']);
+        if ($blockedSection !== null) {
+            throw ValidationException::withMessages([
+                'id_card_number' => $blockedSection,
+            ]);
+        }
 
         // Enforce logged-in user's allowed duplicate type:
         // payroll=0 -> Permanent only, otherwise Contractual only.

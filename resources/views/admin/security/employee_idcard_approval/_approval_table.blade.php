@@ -116,7 +116,7 @@
                                 <span class="badge {{ $statusBadgeClass }}"
                                       @if($statusLabel === 'Approved') title="Please collect your ID card from security section" @endif>{{ $statusLabel }}</span>
                                 <small class="text-muted">No further actions available</small>
-                                @if($approvalStage === 2 && $statusLabel === 'Approved')
+                                @if($approvalStage === 2 && $statusLabel === 'Approved' && empty($req->id_card_physical_print_done ?? false))
                                     <form action="{{ route('admin.security.employee_idcard_approval.markGenerated', $encryptedId) }}" method="POST" class="d-inline mt-1 archive-check-form">
                                         @csrf
                                         <div class="form-check form-check-inline m-0">
@@ -199,7 +199,7 @@
 
                 const confirmed = (typeof Swal !== 'undefined')
                     ? null
-                    : window.confirm('Are you sure? This approved record will be moved to archive.');
+                    : window.confirm('Mark this approved request as card printed / physically issued?');
 
                 if (confirmed === false) {
                     checkbox.checked = false;
@@ -208,11 +208,11 @@
 
                 if (typeof Swal !== 'undefined') {
                     Swal.fire({
-                        title: 'card print?',
-                        text: 'This approved record will be removed from this list.',
+                        title: 'Card printed?',
+                        text: 'Mark this record as physically issued (date will be recorded).',
                         icon: 'warning',
                         showCancelButton: true,
-                        confirmButtonText: 'Yes, move',
+                        confirmButtonText: 'Yes, mark issued',
                         cancelButtonText: 'Cancel'
                     }).then((result) => {
                         if (result.isConfirmed) {

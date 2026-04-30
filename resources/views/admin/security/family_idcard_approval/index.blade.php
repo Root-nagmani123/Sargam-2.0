@@ -1,5 +1,5 @@
 @extends('admin.layouts.master')
-@section('title', 'Pending Family ID Card Approvals')
+@section('title', 'Requested Family ID')
 @section('content')
 @php
     $familyApprovalReturn = in_array(request('return'), ['approval2', 'approval3'], true) ? request('return') : null;
@@ -10,11 +10,11 @@
     $familyMembersQueryString = '?' . http_build_query($familyMembersQs);
 @endphp
 <div class="container-fluid">
-    <x-breadcrum title="Pending Family ID Card Approvals"></x-breadcrum>
+    <x-breadcrum title="Requested Family ID"></x-breadcrum>
     <div class="card" style="border-left:4px solid #004a93;">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h4 class="mb-0">Pending Family ID Card Approvals</h4>
+                <h4 class="mb-0">Requested Family ID</h4>
             </div>
 
             @if(session('success'))
@@ -33,7 +33,8 @@
 
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-body">
-                    <form method="GET" action="{{ route('admin.security.family_idcard_approval.index') }}" class="row g-3 align-items-end">
+                    <form method="GET" action="{{ route('admin.security.family_idcard_approval.index') }}" id="filterForm" class="row g-3 align-items-end">
+                        <input type="hidden" id="activeTabInput" name="tab" value="{{ $activeTab ?? 'new' }}">
                         @if($familyApprovalReturn)
                             <input type="hidden" name="return" value="{{ $familyApprovalReturn }}">
                         @endif
@@ -43,15 +44,23 @@
                                    placeholder="Search by Submitted By / Employee ID"
                                    value="{{ $search ?? request('search', '') }}">
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label for="date_from" class="form-label">Applied From</label>
                             <input type="date" name="date_from" id="date_from" class="form-control"
                                    value="{{ $dateFrom ?? request('date_from') }}">
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label for="date_to" class="form-label">Applied To</label>
                             <input type="date" name="date_to" id="date_to" class="form-control"
                                    value="{{ $dateTo ?? request('date_to') }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label for="per_page" class="form-label">Show Entries</label>
+                            <select name="per_page" id="per_page" class="form-select">
+                                @foreach([10, 25, 50, 100] as $n)
+                                    <option value="{{ $n }}" {{ (int) request('per_page', 10) === $n ? 'selected' : '' }}>{{ $n }}</option>
+                                @endforeach
+                            </select>
                         </div>
                         <div class="col-md-2 d-flex gap-2">
                             <button type="submit" class="btn btn-primary w-100">
@@ -66,75 +75,86 @@
                 </div>
             </div>
 
-            <div class="table-responsive">
-                <table class="table text-nowrap mb-0">
-                    <thead>
-                        <tr>
-                            <th>Submitted By</th>
-                            <th>Employee Type</th>
-                            <th>Employee ID</th>
-                            <th>Member Count</th>
-                            <th>Status</th>
-                            <th>Applied On</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($groups as $group)
-                            <tr>
-                                <td><strong>{{ $group->submitted_by ?? '--' }}</strong></td>
-                                <td>
-                                    @if(isset($group->employee_type) && $group->employee_type === 'Contractual Employee')
-                                        <span class="badge bg-warning">Contractual</span>
-                                    @else
-                                        <span class="badge bg-info">Permanent</span>
-                                    @endif
-                                </td>
-                                <td><code>{{ $group->emp_id_apply ?? '--' }}</code></td>
-                                <td>
-                                    <span class="badge bg-primary">{{ $group->member_count }}</span>
-                                </td>
-                                <td>
-                                    <span class="badge bg-{{ $group->phase_class ?? 'secondary' }}"
-                                          title="{{ $group->phase_label ?? 'Unknown' }}">
-                                        {{ $group->phase_label ?? 'Unknown' }}
-                                    </span>
-                                </td>
-                                <td>{{ $group->created_date ? \Carbon\Carbon::parse($group->created_date)->format('d-m-Y H:i') : '--' }}</td>
-                                <td>
-                                    <div class="d-flex gap-2 flex-wrap">
-                                        <a href="{{ route('admin.family_idcard.members', $group->first_id) }}{{ $familyMembersQueryString }}"
-                                           class="btn  btn-outline-info bg-transparent border-0 text-primary p-0" title="View Members">
-                                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i>
-                                        </a>
-                                        @if($group->can_approve ?? false)
-                                            <form action="{{ route('admin.security.family_idcard_approval.approve_group', encrypt($group->first_id)) }}" method="POST" class="d-inline">
-                                                @csrf
-                                                <button type="submit" class="btn  btn-outline-success bg-transparent border-0 text-primary p-0" title="Approve"
-                                                        onclick="return confirm('Are you sure you want to approve?')">
-                                                    <i class="material-icons material-symbols-rounded" style="font-size:18px;">check_circle</i>
-                                                </button>
-                                            </form>
-                                            <button type="button" class="btn  btn-outline-danger bg-transparent border-0 text-primary p-0" title="Reject"
-                                                    data-encrypted-id="{{ encrypt($group->first_id) }}"
-                                                    data-member-count="{{ $group->member_count }}"
-                                                    onclick="openRejectModal(this)">
-                                                <i class="material-icons material-symbols-rounded" style="font-size:18px;">cancel</i>
-                                            </button>
-                                        @endif
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="5" class="text-center text-muted py-4">No pending Family ID Card applications found.</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-            <div class="mt-3">
-                {{ $groups->links() }}
+            <ul class="nav nav-pills mb-3 approval2-tabs flex-wrap" id="familyApprovalTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button type="button" class="nav-link {{ ($activeTab ?? 'new') === 'new' ? 'active' : '' }}" id="fam-new-tab" data-bs-toggle="tab" data-bs-target="#fam-new-panel"
+                            role="tab" data-tab-key="new" aria-selected="{{ ($activeTab ?? 'new') === 'new' ? 'true' : 'false' }}">
+                        New Request
+                        <span class="badge bg-white text-primary ms-1">{{ $newFamilyGroups->total() }}</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button type="button" class="nav-link {{ ($activeTab ?? 'new') === 'for_approval' ? 'active' : '' }}" id="fam-for-tab" data-bs-toggle="tab" data-bs-target="#fam-for-panel"
+                            role="tab" data-tab-key="for_approval" aria-selected="{{ ($activeTab ?? 'new') === 'for_approval' ? 'true' : 'false' }}">
+                        processed request
+                        <span class="badge bg-secondary ms-1">{{ $processedFamilyGroups->total() }}</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button type="button" class="nav-link {{ ($activeTab ?? 'new') === 'issued' ? 'active' : '' }}" id="fam-issued-tab" data-bs-toggle="tab" data-bs-target="#fam-issued-panel"
+                            role="tab" data-tab-key="issued" aria-selected="{{ ($activeTab ?? 'new') === 'issued' ? 'true' : 'false' }}">
+                        <i class="material-icons material-symbols-rounded" style="font-size:16px;vertical-align:middle;">verified</i>
+                        Verified Issued
+                        <span class="badge bg-secondary ms-1">{{ $issuedFamilyGroups->total() }}</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button type="button" class="nav-link {{ ($activeTab ?? 'new') === 'rejected' ? 'active' : '' }}" id="fam-rejected-tab" data-bs-toggle="tab" data-bs-target="#fam-rejected-panel"
+                            role="tab" data-tab-key="rejected" aria-selected="{{ ($activeTab ?? 'new') === 'rejected' ? 'true' : 'false' }}">
+                        <i class="material-icons material-symbols-rounded" style="font-size:16px;vertical-align:middle;">cancel</i>
+                        Rejected
+                        <span class="badge bg-secondary ms-1">{{ $rejectedFamilyGroups->total() }}</span>
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content">
+                <div class="tab-pane {{ ($activeTab ?? 'new') === 'new' ? 'show active' : '' }}" id="fam-new-panel" role="tabpanel"
+                     style="{{ ($activeTab ?? 'new') === 'new' ? 'display:block;' : 'display:none;' }}">
+                    @include('admin.security.family_idcard_approval._family_approval_table', ['groups' => $newFamilyGroups, 'familyMembersQueryString' => $familyMembersQueryString])
+                    <div class="mt-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <small class="text-muted">Showing {{ $newFamilyGroups->firstItem() ?? 0 }} to {{ $newFamilyGroups->lastItem() ?? 0 }} of {{ $newFamilyGroups->total() }} entries</small>
+                        {{ $newFamilyGroups->appends(array_merge(request()->query(), ['tab' => 'new']))->links() }}
+                    </div>
+                </div>
+                <div class="tab-pane {{ ($activeTab ?? 'new') === 'for_approval' ? 'show active' : '' }}" id="fam-for-panel" role="tabpanel"
+                     style="{{ ($activeTab ?? 'new') === 'for_approval' ? 'display:block;' : 'display:none;' }}">
+                    @include('admin.security.family_idcard_approval._family_approval_table', ['groups' => $processedFamilyGroups, 'familyMembersQueryString' => $familyMembersQueryString])
+                    <div class="mt-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <small class="text-muted">Showing {{ $processedFamilyGroups->firstItem() ?? 0 }} to {{ $processedFamilyGroups->lastItem() ?? 0 }} of {{ $processedFamilyGroups->total() }} entries</small>
+                        {{ $processedFamilyGroups->appends(array_merge(request()->query(), ['tab' => 'for_approval']))->links() }}
+                    </div>
+                </div>
+                <div class="tab-pane {{ ($activeTab ?? 'new') === 'issued' ? 'show active' : '' }}" id="fam-issued-panel" role="tabpanel"
+                     style="{{ ($activeTab ?? 'new') === 'issued' ? 'display:block;' : 'display:none;' }}">
+                    @if($issuedFamilyGroups->total() === 0)
+                        <div class="text-center text-muted py-5">
+                            <i class="material-icons material-symbols-rounded" style="font-size:48px;opacity:.3;">verified</i>
+                            <p class="mt-2 mb-0">No verified / issued records found.</p>
+                        </div>
+                    @else
+                        @include('admin.security.family_idcard_approval._family_approval_table', ['groups' => $issuedFamilyGroups, 'familyMembersQueryString' => $familyMembersQueryString])
+                        <div class="mt-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <small class="text-muted">Showing {{ $issuedFamilyGroups->firstItem() ?? 0 }} to {{ $issuedFamilyGroups->lastItem() ?? 0 }} of {{ $issuedFamilyGroups->total() }} entries</small>
+                            {{ $issuedFamilyGroups->appends(array_merge(request()->query(), ['tab' => 'issued']))->links() }}
+                        </div>
+                    @endif
+                </div>
+                <div class="tab-pane {{ ($activeTab ?? 'new') === 'rejected' ? 'show active' : '' }}" id="fam-rejected-panel" role="tabpanel"
+                     style="{{ ($activeTab ?? 'new') === 'rejected' ? 'display:block;' : 'display:none;' }}">
+                    @if($rejectedFamilyGroups->total() === 0)
+                        <div class="text-center text-muted py-5">
+                            <i class="material-icons material-symbols-rounded" style="font-size:48px;opacity:.3;">cancel</i>
+                            <p class="mt-2 mb-0">No rejected records found.</p>
+                        </div>
+                    @else
+                        @include('admin.security.family_idcard_approval._family_approval_table', ['groups' => $rejectedFamilyGroups, 'familyMembersQueryString' => $familyMembersQueryString])
+                        <div class="mt-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <small class="text-muted">Showing {{ $rejectedFamilyGroups->firstItem() ?? 0 }} to {{ $rejectedFamilyGroups->lastItem() ?? 0 }} of {{ $rejectedFamilyGroups->total() }} entries</small>
+                            {{ $rejectedFamilyGroups->appends(array_merge(request()->query(), ['tab' => 'rejected']))->links() }}
+                        </div>
+                    @endif
+                </div>
             </div>
         </div>
     </div>
@@ -167,16 +187,112 @@
 </div>
 @endsection
 
+@push('styles')
+<style>
+.approval2-tabs .nav-link {
+    color: #495057;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    padding: 0.45rem 0.9rem;
+    font-weight: 500;
+}
+.approval2-tabs .nav-link:hover {
+    color: #004a93;
+    background-color: #f1f5f9;
+}
+.approval2-tabs .nav-link.active {
+    background-color: #004a93;
+    color: #fff;
+    border-color: #004a93;
+}
+.approval2-tabs .nav-link.active .badge {
+    background-color: #fff !important;
+    color: #004a93 !important;
+}
+</style>
+@endpush
+
 @push('scripts')
 <script>
 function openRejectModal(btn) {
-    const encryptedId = btn.getAttribute('data-encrypted-id');
-    const memberCount = btn.getAttribute('data-member-count') || 'all';
-    const url = "{{ route('admin.security.family_idcard_approval.reject_group', ':id') }}".replace(':id', encryptedId);
+    var encryptedId = btn.getAttribute('data-encrypted-id');
+    var memberCount = btn.getAttribute('data-member-count') || 'all';
+    var url = "{{ route('admin.security.family_idcard_approval.reject_group', ':id') }}".replace(':id', encryptedId);
     document.getElementById('rejectForm').action = url;
     document.getElementById('reject_remarks').value = '';
     document.getElementById('rejectMemberInfo').textContent = 'This will reject ' + memberCount + ' family member(s) in this application.';
     new bootstrap.Modal(document.getElementById('rejectModal')).show();
 }
+
+document.addEventListener('DOMContentLoaded', function () {
+    var perPage = document.getElementById('per_page');
+    if (perPage) {
+        perPage.addEventListener('change', function () {
+            document.getElementById('filterForm').submit();
+        });
+    }
+
+    try {
+        var url = new URL(window.location.href);
+        var tab = url.searchParams.get('tab');
+        var validTabs = ['new', 'for_approval', 'issued', 'rejected'];
+        if (tab === 'archive') { tab = 'issued'; }
+        var tabKey = validTabs.indexOf(tab) !== -1 ? tab : 'new';
+        var tabInput = document.getElementById('activeTabInput');
+        if (tabInput) tabInput.value = tabKey;
+
+        var tabBtns = {
+            new: document.getElementById('fam-new-tab'),
+            for_approval: document.getElementById('fam-for-tab'),
+            issued: document.getElementById('fam-issued-tab'),
+            rejected: document.getElementById('fam-rejected-tab'),
+        };
+        var panels = {
+            new: document.getElementById('fam-new-panel'),
+            for_approval: document.getElementById('fam-for-panel'),
+            issued: document.getElementById('fam-issued-panel'),
+            rejected: document.getElementById('fam-rejected-panel'),
+        };
+        validTabs.forEach(function (key) {
+            var isActive = key === tabKey;
+            if (tabBtns[key]) {
+                tabBtns[key].classList.toggle('active', isActive);
+                tabBtns[key].setAttribute('aria-selected', isActive ? 'true' : 'false');
+            }
+            if (panels[key]) {
+                panels[key].classList.toggle('show', isActive);
+                panels[key].classList.toggle('active', isActive);
+                panels[key].style.display = isActive ? 'block' : 'none';
+            }
+        });
+    } catch (e) {}
+});
+
+document.querySelectorAll('#familyApprovalTabs .nav-link').forEach(function (btn) {
+    btn.addEventListener('shown.bs.tab', function () {
+        var tabKey = this.dataset.tabKey || 'new';
+        var tabInput = document.getElementById('activeTabInput');
+        if (tabInput) tabInput.value = tabKey;
+        var panels = {
+            new: document.getElementById('fam-new-panel'),
+            for_approval: document.getElementById('fam-for-panel'),
+            issued: document.getElementById('fam-issued-panel'),
+            rejected: document.getElementById('fam-rejected-panel'),
+        };
+        ['new', 'for_approval', 'issued', 'rejected'].forEach(function (key) {
+            if (panels[key]) {
+                var isActive = key === tabKey;
+                panels[key].style.display = isActive ? 'block' : 'none';
+                panels[key].classList.toggle('show', isActive);
+                panels[key].classList.toggle('active', isActive);
+            }
+        });
+        try {
+            var url = new URL(window.location.href);
+            url.searchParams.set('tab', tabKey);
+            window.history.replaceState({}, '', url.toString());
+        } catch (e) {}
+    });
+});
 </script>
 @endpush

@@ -47,6 +47,9 @@
                         </div>
                         @error('id_card_number')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         <small class="text-muted d-block">Enter existing ID card number and click Fetch to auto-fill employee details.</small>
+                        @if(!empty($userDepartmentName))
+                            <small class="text-muted d-block mt-1">Duplicate requests are allowed only for ID cards of employees in your section: <strong>{{ $userDepartmentName }}</strong>.</small>
+                        @endif
                     </div>
 
                     <div class="col-md-4">

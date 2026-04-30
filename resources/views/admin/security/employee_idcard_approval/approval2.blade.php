@@ -1,12 +1,12 @@
 @extends('admin.layouts.master')
-@section('title', 'Approval II - Employee ID Card Requests')
+@section('title', 'Requested ID Card')
 @section('content')
 <div class="container-fluid">
-    @include('components.breadcrum', ['title' => 'Approval II - Employee ID Card'])
+    @include('components.breadcrum', ['title' => 'Requested ID Card'])
     <div class="card" style="border-left:4px solid #004a93;">
         <div class="card-body">
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
-                <h4 class="mb-0">Approval II</h4>
+                <h4 class="mb-0">Requested ID Card</h4>
                 <div class="d-flex flex-wrap gap-2 align-items-center">
                   {{--  <a href="{{ route('admin.security.employee_idcard_approval.approval1') }}" class="btn btn-outline-primary btn-sm">
                         <i class="material-icons material-symbols-rounded" style="font-size:18px;vertical-align:middle;">arrow_back</i>
@@ -27,20 +27,19 @@
                 <div class="card-body">
                     <form method="GET" action="{{ route('admin.security.employee_idcard_approval.approval2') }}" id="filterForm" class="mb-0">
                         <div class="row g-3 align-items-end">
-                            <div class="col-md-4">
+                            <div class="col-xl-4 col-lg-4 col-md-6">
                                 <label for="search" class="form-label">Search</label>
-                                <input type="text" name="search" id="search" class="form-control" placeholder="Search by Employee Name, ID Card No..." value="{{ request('search', '') }}">
+                                <input type="text" name="search" id="search" class="form-control" placeholder="Search by name, designation, ID no/type, request type, contact, date..." value="{{ request('search', '') }}">
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-xl-2 col-lg-3 col-md-6">
                                 <label class="form-label">Request Date From</label>
                                 <input type="date" name="date_from" class="form-control" value="{{ request('date_from', '2026-03-01') }}">
-                                <small class="text-muted">Default: 01-03-2026 (you can select older date).</small>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-xl-2 col-lg-3 col-md-6">
                                 <label class="form-label">Request Date To</label>
                                 <input type="date" name="date_to" class="form-control" value="{{ request('date_to') }}">
                             </div>
-                            <div class="col-md-2">
+                            <div class="col-xl-2 col-lg-2 col-md-3">
                                 <label for="per_page" class="form-label">Show Entries</label>
                                 <select name="per_page" id="per_page" class="form-select">
                                     @foreach([10, 25, 50, 100] as $n)
@@ -48,7 +47,7 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="col-md-3 d-flex gap-2">
+                            <div class="col-xl-2 col-lg-12 col-md-9 d-flex gap-2 justify-content-lg-start justify-content-md-end">
                                 <button type="submit" class="btn btn-primary flex-grow-1">
                                     <i class="material-icons material-symbols-rounded" style="font-size:18px;">search</i> Search
                                 </button>
@@ -91,7 +90,7 @@
 
             <input type="hidden" id="activeTabInput" name="tab" value="{{ $activeTab ?? 'new' }}" form="filterForm">
 
-            <ul class="nav nav-pills mb-3 approval2-tabs" id="approval2Tabs" role="tablist">
+            <ul class="nav nav-pills mb-3 approval2-tabs flex-wrap" id="approval2Tabs" role="tablist">
                 <li class="nav-item" role="presentation">
                     <button class="nav-link {{ ($activeTab ?? 'new') === 'new' ? 'active' : '' }}" id="new-request-tab" data-bs-toggle="tab" data-bs-target="#new-request-panel" type="button" role="tab" aria-controls="new-request-panel" aria-selected="{{ ($activeTab ?? 'new') === 'new' ? 'true' : 'false' }}" data-tab-key="new">
                         New Request
@@ -105,10 +104,17 @@
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link {{ ($activeTab ?? 'new') === 'archive' ? 'active' : '' }}" id="archive-tab" data-bs-toggle="tab" data-bs-target="#archive-panel" type="button" role="tab" aria-controls="archive-panel" aria-selected="{{ ($activeTab ?? 'new') === 'archive' ? 'true' : 'false' }}" data-tab-key="archive">
-                        <i class="material-icons material-symbols-rounded" style="font-size:16px;vertical-align:middle;">archive</i>
-                        Archive
-                        <span class="badge bg-secondary ms-1">{{ $archiveRequests->total() }}</span>
+                    <button class="nav-link {{ ($activeTab ?? 'new') === 'issued' ? 'active' : '' }}" id="issued-tab" data-bs-toggle="tab" data-bs-target="#issued-panel" type="button" role="tab" aria-controls="issued-panel" aria-selected="{{ ($activeTab ?? 'new') === 'issued' ? 'true' : 'false' }}" data-tab-key="issued">
+                        <i class="material-icons material-symbols-rounded" style="font-size:16px;vertical-align:middle;">verified</i>
+                        Issued
+                        <span class="badge bg-secondary ms-1">{{ $issuedRequests->total() }}</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link {{ ($activeTab ?? 'new') === 'rejected' ? 'active' : '' }}" id="rejected-tab" data-bs-toggle="tab" data-bs-target="#rejected-panel" type="button" role="tab" aria-controls="rejected-panel" aria-selected="{{ ($activeTab ?? 'new') === 'rejected' ? 'true' : 'false' }}" data-tab-key="rejected">
+                        <i class="material-icons material-symbols-rounded" style="font-size:16px;vertical-align:middle;">cancel</i>
+                        Rejected
+                        <span class="badge bg-secondary ms-1">{{ $rejectedRequests->total() }}</span>
                     </button>
                 </li>
             </ul>
@@ -129,18 +135,34 @@
                     </div>
                 </div>
 
-                {{-- Archive: Rejected + Moved-to-archive records --}}
-                <div class="tab-pane {{ ($activeTab ?? 'new') === 'archive' ? 'show active' : '' }}" id="archive-panel" role="tabpanel" aria-labelledby="archive-tab" style="{{ ($activeTab ?? 'new') === 'archive' ? 'display:block;' : 'display:none;' }}">
-                    @if($archiveRequests->total() === 0)
+                {{-- Issued: all approved rows (Permanent / Duplicate / Contractual). Card print confirms physical issue. --}}
+                <div class="tab-pane {{ ($activeTab ?? 'new') === 'issued' ? 'show active' : '' }}" id="issued-panel" role="tabpanel" aria-labelledby="issued-tab" style="{{ ($activeTab ?? 'new') === 'issued' ? 'display:block;' : 'display:none;' }}">
+                    @if($issuedRequests->total() === 0)
                         <div class="text-center text-muted py-5">
-                            <i class="material-icons material-symbols-rounded" style="font-size:48px;opacity:.3;">archive</i>
-                            <p class="mt-2 mb-0">No archived records found.</p>
+                            <i class="material-icons material-symbols-rounded" style="font-size:48px;opacity:.3;">verified</i>
+                            <p class="mt-2 mb-0">No issued records found.</p>
                         </div>
                     @else
-                        @include('admin.security.employee_idcard_approval._approval_table', ['requests' => $archiveRequests, 'approvalStage' => 0])
+                        @include('admin.security.employee_idcard_approval._approval_table', ['requests' => $issuedRequests, 'approvalStage' => 2])
                         <div class="mt-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
-                            <small class="text-muted">Showing {{ $archiveRequests->firstItem() ?? 0 }} to {{ $archiveRequests->lastItem() ?? 0 }} of {{ $archiveRequests->total() }} entries</small>
-                            {{ $archiveRequests->appends(array_merge(request()->query(), ['tab' => 'archive']))->links() }}
+                            <small class="text-muted">Showing {{ $issuedRequests->firstItem() ?? 0 }} to {{ $issuedRequests->lastItem() ?? 0 }} of {{ $issuedRequests->total() }} entries</small>
+                            {{ $issuedRequests->appends(array_merge(request()->query(), ['tab' => 'issued']))->links() }}
+                        </div>
+                    @endif
+                </div>
+
+                {{-- Rejected only --}}
+                <div class="tab-pane {{ ($activeTab ?? 'new') === 'rejected' ? 'show active' : '' }}" id="rejected-panel" role="tabpanel" aria-labelledby="rejected-tab" style="{{ ($activeTab ?? 'new') === 'rejected' ? 'display:block;' : 'display:none;' }}">
+                    @if($rejectedRequests->total() === 0)
+                        <div class="text-center text-muted py-5">
+                            <i class="material-icons material-symbols-rounded" style="font-size:48px;opacity:.3;">cancel</i>
+                            <p class="mt-2 mb-0">No rejected records found.</p>
+                        </div>
+                    @else
+                        @include('admin.security.employee_idcard_approval._approval_table', ['requests' => $rejectedRequests, 'approvalStage' => 2])
+                        <div class="mt-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <small class="text-muted">Showing {{ $rejectedRequests->firstItem() ?? 0 }} to {{ $rejectedRequests->lastItem() ?? 0 }} of {{ $rejectedRequests->total() }} entries</small>
+                            {{ $rejectedRequests->appends(array_merge(request()->query(), ['tab' => 'rejected']))->links() }}
                         </div>
                     @endif
                 </div>
@@ -208,7 +230,8 @@ document.addEventListener('DOMContentLoaded', function () {
     try {
         var url = new URL(window.location.href);
         var tab = url.searchParams.get('tab');
-        var validTabs = ['new', 'for_approval', 'archive'];
+        var validTabs = ['new', 'for_approval', 'issued', 'rejected'];
+        if (tab === 'archive') { tab = 'issued'; }
         var tabKey = validTabs.indexOf(tab) !== -1 ? tab : 'new';
         var tabInput = document.getElementById('activeTabInput');
         if (tabInput) tabInput.value = tabKey;
@@ -216,12 +239,14 @@ document.addEventListener('DOMContentLoaded', function () {
         var tabBtns = {
             'new': document.getElementById('new-request-tab'),
             'for_approval': document.getElementById('for-approval-tab'),
-            'archive': document.getElementById('archive-tab'),
+            'issued': document.getElementById('issued-tab'),
+            'rejected': document.getElementById('rejected-tab'),
         };
         var panels = {
             'new': document.getElementById('new-request-panel'),
             'for_approval': document.getElementById('for-approval-panel'),
-            'archive': document.getElementById('archive-panel'),
+            'issued': document.getElementById('issued-panel'),
+            'rejected': document.getElementById('rejected-panel'),
         };
 
         validTabs.forEach(function (key) {
@@ -262,9 +287,10 @@ document.querySelectorAll('#approval2Tabs .nav-link').forEach(function(btn) {
         var panels = {
             'new': document.getElementById('new-request-panel'),
             'for_approval': document.getElementById('for-approval-panel'),
-            'archive': document.getElementById('archive-panel'),
+            'issued': document.getElementById('issued-panel'),
+            'rejected': document.getElementById('rejected-panel'),
         };
-        ['new', 'for_approval', 'archive'].forEach(function (key) {
+        ['new', 'for_approval', 'issued', 'rejected'].forEach(function (key) {
             if (panels[key]) {
                 var isActive = key === tabKey;
                 panels[key].style.display = isActive ? 'block' : 'none';

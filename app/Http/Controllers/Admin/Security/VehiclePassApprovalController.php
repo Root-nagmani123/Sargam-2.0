@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class VehiclePassApprovalController extends Controller
 {
@@ -22,28 +23,36 @@ class VehiclePassApprovalController extends Controller
      * - numeric = regular vehicle pass (VehiclePassTWApply)
      * - dup-<pk> = duplicate vehicle pass (VehiclePassDuplicateApplyTwfw)
      */
-    public function index()
+    public function index(Request $request)
     {
-        $user = Auth::user();
         $isLevel1 = hasRole('Security Card') && !hasRole('Admin Security');
         $isLevel2 = hasRole('Admin Security') && !hasRole('Security Card');
 
-        $search = trim(request()->get('search', ''));
-        $dateFrom = request()->get('date_from');
-        $dateTo = request()->get('date_to');
-        $wheeler = request()->get('wheeler', 'tw'); // tw, fw, all
+        $search = trim($request->get('search', ''));
+        $dateFrom = $request->get('date_from');
+        $dateTo = $request->get('date_to');
+        $wheeler = $request->get('wheeler', 'tw');
 
-        // Two Wheeler applications (regular only) - no heavy relations here
-        $twQuery = VehiclePassTWApply::with(['vehicleType'])
+        $twHasApplicantName = Schema::hasColumn('vehicle_pass_tw_apply', 'applicant_name');
+        $fwHasApplicantName = Schema::hasColumn('vehicle_pass_fw_apply', 'applicant_name');
+
+        // Two Wheeler applications (regular only)
+        $twQuery = VehiclePassTWApply::with([
+            'vehicleType',
+            'employee' => function ($q) {
+                $q->select(['pk', 'emp_id', 'first_name', 'last_name']);
+            },
+        ])
             ->orderBy('created_date', 'desc');
 
-        // Apply filters to TW
         if ($search !== '') {
             $twQuery->where(function ($q) use ($search) {
                 $like = '%' . $search . '%';
                 $q->where('employee_id_card', 'like', $like)
-                    ->orWhere('vehicle_no', 'like', $like)
-                    ->orWhere('applicant_name', 'like', $like);
+                    ->orWhere('vehicle_no', 'like', $like);
+                if ($twHasApplicantName) {
+                    $q->orWhere('applicant_name', 'like', $like);
+                }
             });
         }
         if (!empty($dateFrom)) {
@@ -62,16 +71,22 @@ class VehiclePassApprovalController extends Controller
         }
 
         // Four Wheeler applications (regular only)
-        $fwQuery = VehiclePassFWApply::with(['vehicleType'])
+        $fwQuery = VehiclePassFWApply::with([
+            'vehicleType',
+            'employee' => function ($q) {
+                $q->select(['pk', 'emp_id', 'first_name', 'last_name']);
+            },
+        ])
             ->orderBy('created_date', 'desc');
 
-        // Apply filters to FW
         if ($search !== '') {
             $fwQuery->where(function ($q) use ($search) {
                 $like = '%' . $search . '%';
                 $q->where('employee_id_card', 'like', $like)
-                    ->orWhere('vehicle_no', 'like', $like)
-                    ->orWhere('applicant_name', 'like', $like);
+                    ->orWhere('vehicle_no', 'like', $like);
+                if ($fwHasApplicantName) {
+                    $q->orWhere('applicant_name', 'like', $like);
+                }
             });
         }
         if (!empty($dateFrom)) {
@@ -89,26 +104,18 @@ class VehiclePassApprovalController extends Controller
             }
         }
 
-        // Load rows based on wheeler filter (with DB-level pagination when not mixing)
         $twRows = collect();
         $fwRows = collect();
 
-        $perPage = 10;
-        $page = (int) request()->get('page', 1);
-
         if ($wheeler === 'tw') {
-            $total = (clone $twQuery)->count();
-            $twRows = $twQuery->forPage($page, $perPage)->get();
+            $twRows = $twQuery->get();
         } elseif ($wheeler === 'fw') {
-            $total = (clone $fwQuery)->count();
-            $fwRows = $fwQuery->forPage($page, $perPage)->get();
-        } else { // all
+            $fwRows = $fwQuery->get();
+        } else {
             $twRows = $twQuery->get();
             $fwRows = $fwQuery->get();
-            $total = $twRows->count() + $fwRows->count();
         }
 
-        // Compute approval stats only for rows on this page (or filtered set)
         $vehicleKeys = $twRows->pluck('vehicle_tw_pk')
             ->merge($fwRows->pluck('vehicle_fw_pk'))
             ->filter()
@@ -118,18 +125,18 @@ class VehiclePassApprovalController extends Controller
         $approvalStats = collect();
         if ($vehicleKeys->isNotEmpty()) {
             $approvalStats = VehiclePassTWApplyApproval::select(
-                    'vehicle_TW_pk',
-                    DB::raw('MAX(CASE WHEN status = 1 OR veh_recommend_status = 1 THEN 1 ELSE 0 END) as has_level1'),
-                    DB::raw('MAX(CASE WHEN status = 2 THEN 1 ELSE 0 END) as has_level2')
-                )
+                'vehicle_TW_pk',
+                DB::raw('MAX(CASE WHEN status = 1 OR veh_recommend_status = 1 THEN 1 ELSE 0 END) as has_level1'),
+                DB::raw('MAX(CASE WHEN status = 2 THEN 1 ELSE 0 END) as has_level2')
+            )
                 ->whereIn('vehicle_TW_pk', $vehicleKeys)
                 ->groupBy('vehicle_TW_pk')
                 ->get()
                 ->keyBy('vehicle_TW_pk');
         }
 
-        $mapFn = function ($r, string $kind) use ($isLevel1, $isLevel2, $approvalStats) {
-            $statusInt = (int) ($r->vech_card_status ?? 1); // 1=Pending,2=Approved,3=Rejected
+        $mapFn = function ($r, string $kind) use ($isLevel1, $isLevel2, $approvalStats, $twHasApplicantName, $fwHasApplicantName) {
+            $statusInt = (int) ($r->vech_card_status ?? 1);
             $vehicleKey = $kind === 'tw' ? $r->vehicle_tw_pk : $r->vehicle_fw_pk;
             $stat = $approvalStats->get($vehicleKey);
             $hasLevel1 = $stat ? (bool) ($stat->has_level1 ?? false) : false;
@@ -143,26 +150,33 @@ class VehiclePassApprovalController extends Controller
             } elseif ($statusInt === 3) {
                 $phaseLabel = 'Rejected';
                 $phaseClass = 'danger';
-            } elseif ($statusInt === 1 && $hasLevel1 && ! $hasLevel2) {
+            } elseif ($statusInt === 1 && $hasLevel1 && !$hasLevel2) {
                 $phaseLabel = 'Pending Final Approval';
                 $phaseClass = 'primary';
             }
 
             $canApprove = false;
             if ($statusInt === 1) {
-                if ($isLevel1 && ! $hasLevel1) {
+                if ($isLevel1 && !$hasLevel1) {
                     $canApprove = true;
-                } elseif ($isLevel2 && $hasLevel1 && ! $hasLevel2) {
+                } elseif ($isLevel2 && $hasLevel1 && !$hasLevel2) {
                     $canApprove = true;
                 }
             }
 
-            $employeeName = method_exists($r, 'getDisplayNameAttribute')
-                ? ($r->display_name ?? $r->employee_id_card ?? '--')
-                : ($r->employee_id_card ?? '--');
+            $employeeName = $r->employee_id_card ?? '--';
+            if (isset($r->employee) && $r->employee) {
+                $resolved = trim((string) (($r->employee->first_name ?? '') . ' ' . ($r->employee->last_name ?? '')));
+                if ($resolved !== '') {
+                    $employeeName = $resolved . ($r->employee_id_card ? ' (' . $r->employee_id_card . ')' : '');
+                }
+            } elseif (($kind === 'tw' && $twHasApplicantName) || ($kind === 'fw' && $fwHasApplicantName)) {
+                $fallbackName = trim((string) ($r->applicant_name ?? ''));
+                if ($fallbackName !== '') {
+                    $employeeName = $fallbackName . ($r->employee_id_card ? ' (' . $r->employee_id_card . ')' : '');
+                }
+            }
 
-            // Vehicle type label should clearly indicate wheeler type based on source table,
-            // not rely on legacy sec_vehicle_type description.
             $vehicleTypeLabel = $kind === 'tw' ? 'Two Wheeler' : 'Four Wheeler';
 
             return (object) [
@@ -190,34 +204,79 @@ class VehiclePassApprovalController extends Controller
             return $d->created_date ? (\Carbon\Carbon::parse($d->created_date)->timestamp ?? 0) : 0;
         })->values();
 
-        // For Level 2 (Admin Security), show only records where Level 1 is completed
         if ($isLevel2) {
             $merged = $merged->filter(function ($d) {
                 return (bool) ($d->has_level1 ?? false);
             })->values();
         }
 
-        // When wheeler is tw or fw we already applied DB-level pagination,
-        // so $merged already contains only current page items.
-        // For "all" we paginate in memory.
-        if ($wheeler === 'all') {
-            $items = $merged->forPage($page, $perPage)->values();
-            $totalItems = $merged->count();
-        } else {
-            $items = $merged->values();
-            $totalItems = $total ?? $merged->count();
-        }
+        $perPage = (int) $request->get('per_page', 10);
+        $perPage = in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 10;
 
-        $pendingApplications = new LengthAwarePaginator(
-            $items,
-            $totalItems,
+        $newPage = max(1, (int) $request->get('new_page', 1));
+        $forPage = max(1, (int) $request->get('for_page', 1));
+        $issuedPage = max(1, (int) $request->get('issued_page', 1));
+        $rejectPage = max(1, (int) $request->get('reject_page', 1));
+
+        $newList = $merged->filter(function ($d) {
+            $isApproved = (($d->status_int ?? 1) === 2) && (($d->has_level2 ?? false) === true);
+            $isRejected = (($d->status_int ?? 1) === 3);
+            return !$isApproved && !$isRejected && (($d->status_int ?? 1) === 1) && (($d->can_approve ?? false) === true);
+        })->values();
+
+        $processedList = $merged->filter(function ($d) {
+            $isApproved = (($d->status_int ?? 1) === 2) && (($d->has_level2 ?? false) === true);
+            $isRejected = (($d->status_int ?? 1) === 3);
+            return !$isApproved && !$isRejected && ((($d->status_int ?? 1) !== 1) || (($d->can_approve ?? false) !== true));
+        })->values();
+
+        // Issued tab should show only finally approved records.
+        $issuedList = $merged->filter(fn ($d) => (($d->status_int ?? 1) === 2) && (($d->has_level2 ?? false) === true))->values();
+        $rejectedList = $merged->filter(fn ($d) => ($d->status_int ?? 1) === 3)->values();
+
+        $newApplications = new LengthAwarePaginator(
+            $newList->forPage($newPage, $perPage)->values(),
+            $newList->count(),
             $perPage,
-            $page,
-            ['path' => request()->url(), 'query' => request()->query()]
+            $newPage,
+            ['path' => $request->url(), 'pageName' => 'new_page', 'query' => $request->query()]
+        );
+        $processedApplications = new LengthAwarePaginator(
+            $processedList->forPage($forPage, $perPage)->values(),
+            $processedList->count(),
+            $perPage,
+            $forPage,
+            ['path' => $request->url(), 'pageName' => 'for_page', 'query' => $request->query()]
+        );
+        $issuedApplications = new LengthAwarePaginator(
+            $issuedList->forPage($issuedPage, $perPage)->values(),
+            $issuedList->count(),
+            $perPage,
+            $issuedPage,
+            ['path' => $request->url(), 'pageName' => 'issued_page', 'query' => $request->query()]
+        );
+        $rejectedApplications = new LengthAwarePaginator(
+            $rejectedList->forPage($rejectPage, $perPage)->values(),
+            $rejectedList->count(),
+            $perPage,
+            $rejectPage,
+            ['path' => $request->url(), 'pageName' => 'reject_page', 'query' => $request->query()]
         );
 
+        $activeTab = $request->get('tab', 'new');
+        if ($activeTab === 'archive') {
+            $activeTab = 'issued';
+        }
+        if (!in_array($activeTab, ['new', 'for_approval', 'issued', 'rejected'], true)) {
+            $activeTab = 'new';
+        }
+
         return view('admin.security.vehicle_pass_approval.index', [
-            'pendingApplications' => $pendingApplications,
+            'newApplications' => $newApplications,
+            'processedApplications' => $processedApplications,
+            'issuedApplications' => $issuedApplications,
+            'rejectedApplications' => $rejectedApplications,
+            'activeTab' => $activeTab,
             'search' => $search,
             'dateFrom' => $dateFrom,
             'dateTo' => $dateTo,

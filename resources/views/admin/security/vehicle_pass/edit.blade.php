@@ -106,17 +106,12 @@
                     <div class="col-md-6">
                         <div class="mb-3">
                             <label for="vehicle_type" class="form-label">Vehicle Type <span class="text-danger">*</span></label>
-                            <div class="d-flex gap-2 align-items-start">
-                                <select name="vehicle_type" id="vehicle_type" class="form-select flex-grow-1 @error('vehicle_type') is-invalid @enderror" required>
-                                    <option value="">Select</option>
-                                    @foreach($vehicleTypes as $vt)
-                                        <option value="{{ $vt->pk }}" {{ (old('vehicle_type', $vehiclePass->vehicle_type) == $vt->pk) ? 'selected' : '' }}>{{ $vt->vehicle_type }}</option>
-                                    @endforeach
-                                </select>
-                                <button type="button" class="btn btn-outline-primary btn-sm flex-shrink-0" id="addVehicleTypeBtn" title="Add new vehicle type">
-                                    <i class="material-icons material-symbols-rounded" style="font-size:20px;">add</i>
-                                </button>
-                            </div>
+                            <select name="vehicle_type" id="vehicle_type" class="form-select @error('vehicle_type') is-invalid @enderror" required>
+                                <option value="">Select</option>
+                                @foreach($vehicleTypes as $vt)
+                                    <option value="{{ $vt->pk }}" {{ (old('vehicle_type', $vehiclePass->vehicle_type) == $vt->pk) ? 'selected' : '' }}>{{ $vt->vehicle_type }}</option>
+                                @endforeach
+                            </select>
                             @error('vehicle_type')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
                     </div>
@@ -240,36 +235,6 @@
                     </div>
                 </div>
             </form>
-        </div>
-    </div>
-</div>
-
-{{-- Modal: Add new vehicle type --}}
-<div class="modal fade" id="addVehicleTypeModal" tabindex="-1" aria-labelledby="addVehicleTypeModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="addVehicleTypeModalLabel">Add New Vehicle Type</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div id="addVehicleTypeError" class="alert alert-danger d-none" role="alert"></div>
-                <form id="addVehicleTypeForm">
-                    @csrf
-                    <div class="mb-3">
-                        <label for="new_vehicle_type_name" class="form-label">Vehicle Type <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="new_vehicle_type_name" name="vehicle_type" placeholder="e.g. Car, Two Wheeler" maxlength="100" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="new_vehicle_type_description" class="form-label">Description (optional)</label>
-                        <textarea class="form-control" id="new_vehicle_type_description" name="description" rows="2" placeholder="Optional description"></textarea>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="addVehicleTypeSubmit">Save</button>
-            </div>
         </div>
     </div>
 </div>
@@ -495,71 +460,6 @@ $(document).ready(function() {
             if (editPreview) editPreview.classList.add('d-none');
             if (editPlaceholder) editPlaceholder.classList.remove('d-none');
         });
-    }
-
-    // Add new vehicle type (modal + AJAX)
-    var addVehicleTypeBtn = document.getElementById('addVehicleTypeBtn');
-    var addVehicleTypeModal = document.getElementById('addVehicleTypeModal');
-    var addVehicleTypeForm = document.getElementById('addVehicleTypeForm');
-    var addVehicleTypeSubmit = document.getElementById('addVehicleTypeSubmit');
-    var addVehicleTypeError = document.getElementById('addVehicleTypeError');
-    var vehicleTypeSelect = document.getElementById('vehicle_type');
-    if (addVehicleTypeBtn && addVehicleTypeModal && vehicleTypeSelect) {
-        addVehicleTypeBtn.addEventListener('click', function() {
-            addVehicleTypeError.classList.add('d-none');
-            addVehicleTypeError.textContent = '';
-            if (addVehicleTypeForm) addVehicleTypeForm.reset();
-            var modal = new bootstrap.Modal(addVehicleTypeModal);
-            modal.show();
-        });
-        if (addVehicleTypeSubmit) {
-            addVehicleTypeSubmit.addEventListener('click', function() {
-                var nameInput = document.getElementById('new_vehicle_type_name');
-                var descInput = document.getElementById('new_vehicle_type_description');
-                if (!nameInput || !nameInput.value.trim()) {
-                    addVehicleTypeError.textContent = 'Vehicle type name is required.';
-                    addVehicleTypeError.classList.remove('d-none');
-                    return;
-                }
-                addVehicleTypeError.classList.add('d-none');
-                addVehicleTypeSubmit.disabled = true;
-                var formData = new FormData();
-                formData.append('_token', document.querySelector('input[name="_token"]') ? document.querySelector('input[name="_token"]').value : '');
-                formData.append('vehicle_type', nameInput.value.trim());
-                formData.append('description', descInput ? descInput.value.trim() : '');
-                fetch('{{ route("admin.security.vehicle_type.store") }}', {
-                    method: 'POST',
-                    body: formData,
-                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
-                }).then(function(r) {
-                    return r.json().then(function(data) {
-                        if (!r.ok) {
-                            var msg = data.message || 'Could not add vehicle type.';
-                            if (data.errors && data.errors.vehicle_type && data.errors.vehicle_type[0]) {
-                                msg = data.errors.vehicle_type[0];
-                            }
-                            addVehicleTypeError.textContent = msg;
-                            addVehicleTypeError.classList.remove('d-none');
-                            addVehicleTypeSubmit.disabled = false;
-                            return;
-                        }
-                        if (data.success && data.data) {
-                            var opt = document.createElement('option');
-                            opt.value = data.data.pk;
-                            opt.textContent = data.data.vehicle_type;
-                            opt.selected = true;
-                            vehicleTypeSelect.appendChild(opt);
-                            bootstrap.Modal.getInstance(addVehicleTypeModal).hide();
-                        }
-                        addVehicleTypeSubmit.disabled = false;
-                    });
-                }).catch(function() {
-                    addVehicleTypeSubmit.disabled = false;
-                    addVehicleTypeError.textContent = 'Request failed. Please try again.';
-                    addVehicleTypeError.classList.remove('d-none');
-                });
-            });
-        }
     }
 
     // Date guards: block past dates and keep valid_to >= valid_from

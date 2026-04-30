@@ -64,6 +64,7 @@
                     $oldDob = old('date_of_birth', '');
                     $oldAcademy = old('academy_joining', '');
                     $oldIdValid = old('id_card_valid_upto', '');
+                    $defaultIdCardValidUptoOneYear = now()->addYear()->format('Y-m-d');
                     $oldMobile = old('mobile_number', '');
                     $oldBlood = old('blood_group', '');
                 @endphp
@@ -262,7 +263,7 @@
                         </div>
                         <div class="col-md-6">
                             <label for="id_card_valid_upto_cont" class="form-label">ID Card Valid Upto <span class="text-danger">*</span></label>
-                            <input type="date" name="id_card_valid_upto" id="id_card_valid_upto_cont" class="form-control idcard-cont-field " value="{{ $oldIdValid }}" min="{{ now()->format('Y-m-d') }}" required>
+                            <input type="date" name="id_card_valid_upto" id="id_card_valid_upto_cont" class="form-control idcard-cont-field " value="{{ old('id_card_valid_upto', $defaultIdCardValidUptoOneYear) }}" min="{{ now()->format('Y-m-d') }}" required>
                         </div>
                         <div class="col-md-6">
                             <label for="mobile_number_cont" class="form-label">Mobile Number <span class="text-danger">*</span></label>
@@ -584,6 +585,8 @@
             var el = document.getElementById(id);
             if (el) el.disabled = false;
         });
+        var vuOthers = document.getElementById('id_card_valid_upto_cont');
+        if (vuOthers) vuOthers.value = idcardValidUptoOneYearFromToday();
         idcardSyncDocumentsRequired();
     }
 
@@ -611,6 +614,10 @@
         if (photoPerm) photoPerm.required = false;
         if (photoCont) photoCont.required = true;
         idcardSyncDocumentsRequired();
+        var vuOnContShow = document.getElementById('id_card_valid_upto_cont');
+        if (vuOnContShow && (!vuOnContShow.value || vuOnContShow.value.trim() === '')) {
+            vuOnContShow.value = idcardValidUptoOneYearFromToday();
+        }
     }
 
     permRad.addEventListener('change', function() {
@@ -663,6 +670,10 @@
         if (bloodCont) bloodCont.value = '';
         idcardDisableAutofillExceptStep();
         idcardSyncDocumentsRequired();
+        var vuContReset = document.getElementById('id_card_valid_upto_cont');
+        if (vuContReset && contractualView.style.display !== 'none') {
+            vuContReset.value = idcardValidUptoOneYearFromToday();
+        }
     }
 
     function idcardDisableAutofillExceptStep() {
@@ -763,6 +774,16 @@
             });
     }
 
+    /** Default ID Card Valid Upto = same calendar date, one year from today (browser local date). */
+    function idcardValidUptoOneYearFromToday() {
+        var d = new Date();
+        d.setFullYear(d.getFullYear() + 1);
+        var y = d.getFullYear();
+        var m = String(d.getMonth() + 1).padStart(2, '0');
+        var day = String(d.getDate()).padStart(2, '0');
+        return y + '-' + m + '-' + day;
+    }
+
     function idcardLoadMe() {
         var step = idcardGetStepFields();
         var rf = step.requestFor.value;
@@ -786,7 +807,7 @@
                     set('academy_joining_perm', emp.academy_joining);
                     set('mobile_number_perm', emp.mobile_number);
                     set('telephone_number_perm', emp.telephone_number);
-                    set('id_card_valid_upto_perm', emp.id_card_valid_upto);
+                    set('id_card_valid_upto_perm', emp.id_card_valid_upto || idcardValidUptoOneYearFromToday());
                 } else {
                     set('name_cont', emp.name);
                     set('designation_cont', emp.designation);
@@ -794,7 +815,7 @@
                     set('father_name_cont', emp.father_name);
                     set('academy_joining_cont', emp.academy_joining);
                     set('mobile_number_cont', emp.mobile_number);
-                    set('id_card_valid_upto_cont', emp.id_card_valid_upto);
+                    set('id_card_valid_upto_cont', idcardValidUptoOneYearFromToday());
                 }
                 idcardEnableOnlyPhotoAndBlood(!!step.isPerm);
             })
