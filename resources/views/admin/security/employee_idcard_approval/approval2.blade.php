@@ -33,7 +33,7 @@
                             </div>
                             <div class="col-xl-2 col-lg-3 col-md-6">
                                 <label class="form-label">Request Date From</label>
-                                <input type="date" name="date_from" class="form-control" value="{{ request('date_from', '2026-03-01') }}">
+                                <input type="date" name="date_from" class="form-control" value="{{ request('date_from', \App\Http\Controllers\Admin\Security\EmployeeIDCardApprovalController::DEFAULT_REQUEST_DATE_FROM) }}">
                             </div>
                             <div class="col-xl-2 col-lg-3 col-md-6">
                                 <label class="form-label">Request Date To</label>

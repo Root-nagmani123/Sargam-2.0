@@ -35,22 +35,25 @@
                     <td>{{ $req->card_type ?? '--' }}</td>
                     
                     <td class="text-center">
+                        @php
+                            $empTypeShort = match ($req->employee_type ?? null) {
+                                'Permanent Employee' => 'Permanent',
+                                'Contractual Employee' => 'Contractual',
+                                default => null,
+                            };
+                        @endphp
                         @if(isset($req->request_type) && $req->request_type === 'duplicate')
-                            @php
-                                $empType = $req->employee_type ?? null;
-                                $empTypeShort = match ($empType) {
-                                    'Permanent Employee' => 'Permanent',
-                                    'Contractual Employee' => 'Contractual',
-                                    default => null,
-                                };
-                            @endphp
                             @if($empTypeShort)
                                 <span class="badge bg-info">Duplicate ({{ $empTypeShort }})</span>
                             @else
                                 <span class="badge bg-info">Duplicate</span>
                             @endif
                         @else
-                            <span class="badge bg-secondary">Fresh</span>
+                            @if($empTypeShort)
+                                <span class="badge bg-secondary">Fresh ({{ $empTypeShort }})</span>
+                            @else
+                                <span class="badge bg-secondary">Fresh</span>
+                            @endif
                         @endif
                     </td>
                     <td class="text-center">

@@ -24,6 +24,11 @@ use Illuminate\Pagination\LengthAwarePaginator;
 class EmployeeIDCardApprovalController extends Controller
 {
     /**
+     * Default “Request Date From” on Approval II (and dashboard “total pending” counts for the same scope).
+     */
+    public const DEFAULT_REQUEST_DATE_FROM = '2026-03-01';
+
+    /**
      * Approval I: Only contractual employee requests where current user is the Approval Authority.
      * Includes:
      *  - security_con_oth_id_apply (Contractual regular ID Card requests)
@@ -196,7 +201,7 @@ class EmployeeIDCardApprovalController extends Controller
     {
         // Default filter: show records from 01-03-2026 onward unless user selects another date.
         if (!$request->filled('date_from')) {
-            $request->merge(['date_from' => '2026-03-01']);
+            $request->merge(['date_from' => self::DEFAULT_REQUEST_DATE_FROM]);
         }
 
         $user = Auth::user();
@@ -884,13 +889,13 @@ class EmployeeIDCardApprovalController extends Controller
      */
     private function approval2RequestTypeSearchPhrases(object $dto): array
     {
-        if (isset($dto->request_type) && $dto->request_type === 'duplicate') {
-            $short = match ($dto->employee_type ?? null) {
-                'Permanent Employee' => 'Permanent',
-                'Contractual Employee' => 'Contractual',
-                default => '',
-            };
+        $short = match ($dto->employee_type ?? null) {
+            'Permanent Employee' => 'Permanent',
+            'Contractual Employee' => 'Contractual',
+            default => '',
+        };
 
+        if (isset($dto->request_type) && $dto->request_type === 'duplicate') {
             $out = ['Duplicate', 'duplicate'];
             if ($short !== '') {
                 $out[] = 'Duplicate (' . $short . ')';
@@ -901,7 +906,14 @@ class EmployeeIDCardApprovalController extends Controller
             return $out;
         }
 
-        return ['Fresh', 'fresh'];
+        $out = ['Fresh', 'fresh'];
+        if ($short !== '') {
+            $out[] = 'Fresh (' . $short . ')';
+            $out[] = $short;
+            $out[] = mb_strtolower($short, 'UTF-8');
+        }
+
+        return $out;
     }
 
     /**
