@@ -4,7 +4,10 @@ namespace App\Http\Controllers\Admin\Registration;
 
 // namespace App\Models;
 use App\Http\Controllers\Controller;
+use App\Services\FC\FcRegistrationIntentService;
+use App\Support\FcEncryptedFormId;
 use Illuminate\Http\Request;
+use App\Models\FC\FcForm;
 use App\Models\FrontPage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -22,6 +25,11 @@ use Carbon\Carbon;
 
 class FrontPageController extends Controller
 {
+    public function __construct(
+        private FcRegistrationIntentService $fcRegistrationIntent
+    ) {
+    }
+
     public function index()
     {
         $data = FrontPage::first(); // fetch latest/only record
@@ -65,15 +73,37 @@ class FrontPageController extends Controller
         return redirect()->back()->with('success', 'Front Page content saved successfully.');
     }
     // foundation page
-    public function foundationIndex()
+    public function foundationIndex(Request $request)
     {
+        $this->fcRegistrationIntent->ingestFormQuery($request);
         $data = FrontPage::first(); // Fetch the first row from front_pages table
-        return view('fc.front_page', compact('data'));
+        $intentQuery = $this->intentQueryForFcFormLinks();
+        $programmeIntentLabel = $this->resolvedIntendedProgrammeName();
+
+        return view('fc.front_page', compact('data', 'intentQuery', 'programmeIntentLabel'));
+    }
+
+    /**
+     * Public programme name for the active intended form (never the raw id).
+     */
+    private function resolvedIntendedProgrammeName(): ?string
+    {
+        $id = session(FcRegistrationIntentService::SESSION_FORM_ID);
+        if (! is_numeric($id) || (int) $id < 1) {
+            return null;
+        }
+
+        return FcForm::query()
+            ->whereKey((int) $id)
+            ->where('is_active', true)
+            ->value('form_name');
     }
 
     //Authentication method
-    public function authindex()
+    public function authindex(Request $request)
     {
+        $this->fcRegistrationIntent->ingestFormQuery($request);
+
         return view('fc.login');
     }
 
@@ -113,8 +143,8 @@ class FrontPageController extends Controller
 
 
         if ($alreadyRegistered) {
-            return redirect()->route('fc.choose.path')->with([
-                'warning' => 'You have already registered. Please proceed with exemption or contact support.'
+            return redirect()->route('fc.choose.path', $this->intentQueryForFcFormLinks())->with([
+                'warning' => 'You have already registered. Please proceed with exemption or contact support.',
             ]);
         }
 
@@ -143,14 +173,16 @@ class FrontPageController extends Controller
         //     'success' => 'You have been successfully authenticated. Please create your credentials.'
         // ]);
 
-        return redirect()->route('credential.registration.create')->with([
-            'sweet_success' => 'You have been successfully authenticated. Please create your credentials.'
+        return redirect()->route('credential.registration.create', $this->intentQueryForFcFormLinks())->with([
+            'sweet_success' => 'You have been successfully authenticated. Please create your credentials.',
         ]);
     }
 
     // Show the registration form
-    public function credential_index()
+    public function credential_index(Request $request)
     {
+        $this->fcRegistrationIntent->ingestFormQuery($request);
+
         return view('fc.credentials'); // Adjust blade path if needed
     }
 
@@ -238,12 +270,14 @@ class FrontPageController extends Controller
         );
 
         // return redirect()->route('fc.login')->with('success', 'Credentials created successfully.');
-        return redirect()->route('fc.login')->with('sweet_success', 'Credentials created successfully.');
+        return redirect()->route('fc.login', $this->intentQueryForFcFormLinks())->with('sweet_success', 'Credentials created successfully.');
     }
 
     // Show the login form
-    public function showLoginForm()
+    public function showLoginForm(Request $request)
     {
+        $this->fcRegistrationIntent->ingestFormQuery($request);
+
         return view('fc.fc_login'); // Adjust to your login blade path
     }
 
@@ -267,21 +301,16 @@ class FrontPageController extends Controller
         // Check if user exists and password matches
         if ($user && Hash::check($request->reg_password, $user->jbp_password)) {
 
-            // Log in via Laravel Auth
+            $intentFormId = session(FcRegistrationIntentService::SESSION_FORM_ID);
+            $intentSetAt = session(FcRegistrationIntentService::SESSION_FORM_SET_AT);
+            $intentFormId = is_numeric($intentFormId) ? (int) $intentFormId : null;
+            $intentSetAt = is_numeric($intentSetAt) ? (int) $intentSetAt : null;
+
+            $this->fcRegistrationIntent->forgetIntent();
+
             Auth::login($user);
 
-            // Find the first visible form
-            $form = DB::table('local_form')
-                ->where('visible', 1)
-                ->orderBy('id')
-                ->first();
-
-            if (!$form) {
-                return redirect()->route('fc.choose.path')->with('success', 'Login successful!');
-            }
-
-            // Redirect to the form page
-            return redirect()->route('forms.show', ['formId' => $form->id])->with('success', 'Login successful!');
+            return $this->fcRegistrationIntent->redirectAfterFcWebLogin($intentFormId, $intentSetAt);
         }
 
 
@@ -486,8 +515,10 @@ class FrontPageController extends Controller
     // }
 
 
-    public function choosePath()
+    public function choosePath(Request $request)
     {
+        $this->fcRegistrationIntent->ingestFormQuery($request);
+
         $pathPage = PathPage::first();
 
         // Defaults
@@ -519,7 +550,22 @@ class FrontPageController extends Controller
             }
         }
 
-        return view('fc.path', compact('pathPage', 'showRegistration', 'showExemption'));
+        $intentQuery = $this->intentQueryForFcFormLinks();
+
+        return view('fc.path', compact('pathPage', 'showRegistration', 'showExemption', 'intentQuery'));
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function intentQueryForFcFormLinks(): array
+    {
+        $id = session(FcRegistrationIntentService::SESSION_FORM_ID);
+        if (! is_numeric($id) || (int) $id < 1) {
+            return [];
+        }
+
+        return ['form' => FcEncryptedFormId::encode((int) $id)];
     }
 
 
@@ -959,7 +1005,7 @@ class FrontPageController extends Controller
             ]);
 
         // return redirect()->route('fc.login')->with('success', 'Password reset successful. Please login with new credentials.');
-        return redirect()->route('fc.login')
+        return redirect()->route('fc.login', $this->intentQueryForFcFormLinks())
             ->with('sweet_success', 'Password reset successful. Please login with new credentials.');
     }
 

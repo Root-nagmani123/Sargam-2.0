@@ -23,6 +23,14 @@
                 </h4>
             </div>
 
+            @if (! empty($programmeIntentLabel))
+                <div class="alert alert-info border-0 shadow-sm py-2 px-3 small mb-4 mx-auto" style="max-width: 42rem;" role="status">
+                    <span class="fw-semibold" style="color: #084298;">Programme link recognised.</span>
+                    After you complete sign-in, you will continue to
+                    <span class="fw-semibold">{{ $programmeIntentLabel }}</span>.
+                </div>
+            @endif
+
             <div class="row g-3">
                 <!-- Course Duration -->
                 <div class="col-md-6">
@@ -109,7 +117,7 @@
             </p>
         </div>
          <div class="text-center mt-4">
-            <a href="{{ route('fc.choose.path') }}" class="btn btn-primary px-4"
+            <a href="{{ route('fc.choose.path', $intentQuery ?? []) }}" class="btn btn-primary px-4"
                 style="background-color: #004a93; border: #004a93;">
                 Click Here to Proceed
             </a>
