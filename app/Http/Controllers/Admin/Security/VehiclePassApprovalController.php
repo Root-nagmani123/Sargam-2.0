@@ -25,8 +25,11 @@ class VehiclePassApprovalController extends Controller
      */
     public function index(Request $request)
     {
-        $isLevel1 = hasRole('Security Card') && !hasRole('Admin Security');
-        $isLevel2 = hasRole('Admin Security') && !hasRole('Security Card');
+        $hasSecurityCard = hasRole('Security Card');
+        $hasAdminSecurity = hasRole('Admin Security');
+        $isLevel1Only = $hasSecurityCard && ! $hasAdminSecurity;
+        $isLevel2Only = $hasAdminSecurity && ! $hasSecurityCard;
+        $hasBothApprovalRoles = $hasSecurityCard && $hasAdminSecurity;
 
         $search = trim($request->get('search', ''));
         $dateFrom = $request->get('date_from');
@@ -135,7 +138,7 @@ class VehiclePassApprovalController extends Controller
                 ->keyBy('vehicle_TW_pk');
         }
 
-        $mapFn = function ($r, string $kind) use ($isLevel1, $isLevel2, $approvalStats, $twHasApplicantName, $fwHasApplicantName) {
+        $mapFn = function ($r, string $kind) use ($isLevel1Only, $isLevel2Only, $hasBothApprovalRoles, $approvalStats, $twHasApplicantName, $fwHasApplicantName) {
             $statusInt = (int) ($r->vech_card_status ?? 1);
             $vehicleKey = $kind === 'tw' ? $r->vehicle_tw_pk : $r->vehicle_fw_pk;
             $stat = $approvalStats->get($vehicleKey);
@@ -157,9 +160,9 @@ class VehiclePassApprovalController extends Controller
 
             $canApprove = false;
             if ($statusInt === 1) {
-                if ($isLevel1 && !$hasLevel1) {
+                if (! $hasLevel1 && ($isLevel1Only || $hasBothApprovalRoles)) {
                     $canApprove = true;
-                } elseif ($isLevel2 && $hasLevel1 && !$hasLevel2) {
+                } elseif ($hasLevel1 && ! $hasLevel2 && ($isLevel2Only || $hasBothApprovalRoles)) {
                     $canApprove = true;
                 }
             }
@@ -204,7 +207,7 @@ class VehiclePassApprovalController extends Controller
             return $d->created_date ? (\Carbon\Carbon::parse($d->created_date)->timestamp ?? 0) : 0;
         })->values();
 
-        if ($isLevel2) {
+        if ($isLevel2Only) {
             $merged = $merged->filter(function ($d) {
                 return (bool) ($d->has_level1 ?? false);
             })->values();
@@ -224,10 +227,18 @@ class VehiclePassApprovalController extends Controller
             return !$isApproved && !$isRejected && (($d->status_int ?? 1) === 1) && (($d->can_approve ?? false) === true);
         })->values();
 
+        // "Other stage" only after Level 1 is done; excludes plain Level-1 pending rows.
         $processedList = $merged->filter(function ($d) {
             $isApproved = (($d->status_int ?? 1) === 2) && (($d->has_level2 ?? false) === true);
             $isRejected = (($d->status_int ?? 1) === 3);
-            return !$isApproved && !$isRejected && ((($d->status_int ?? 1) !== 1) || (($d->can_approve ?? false) !== true));
+            if ($isApproved || $isRejected || (int) ($d->status_int ?? 1) !== 1) {
+                return false;
+            }
+            if (!((bool) ($d->has_level1 ?? false))) {
+                return false;
+            }
+
+            return (($d->can_approve ?? false) !== true);
         })->values();
 
         // Issued tab should show only finally approved records.

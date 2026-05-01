@@ -75,38 +75,49 @@
                 </div>
             </div>
 
-            <ul class="nav nav-pills mb-3 approval2-tabs flex-wrap" id="familyApprovalTabs" role="tablist">
+            <ul class="nav nav-pills mb-2 approval2-tabs flex-wrap" id="familyApprovalTabs" role="tablist">
                 <li class="nav-item" role="presentation">
                     <button type="button" class="nav-link {{ ($activeTab ?? 'new') === 'new' ? 'active' : '' }}" id="fam-new-tab" data-bs-toggle="tab" data-bs-target="#fam-new-panel"
-                            role="tab" data-tab-key="new" aria-selected="{{ ($activeTab ?? 'new') === 'new' ? 'true' : 'false' }}">
-                        New Request
-                        <span class="badge bg-white text-primary ms-1">{{ $newFamilyGroups->total() }}</span>
+                            role="tab" data-tab-key="new" aria-selected="{{ ($activeTab ?? 'new') === 'new' ? 'true' : 'false' }}"
+                            title="Applications waiting for your approve or reject action at this stage.">
+                        <i class="material-icons material-symbols-rounded d-inline align-middle" style="font-size:18px;">assignment_turned_in</i>
+                        <span class="align-middle">Pending — your action</span>
+                        <span class="badge rounded-pill bg-white text-primary ms-1">{{ $newFamilyGroups->total() }}</span>
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
                     <button type="button" class="nav-link {{ ($activeTab ?? 'new') === 'for_approval' ? 'active' : '' }}" id="fam-for-tab" data-bs-toggle="tab" data-bs-target="#fam-for-panel"
-                            role="tab" data-tab-key="for_approval" aria-selected="{{ ($activeTab ?? 'new') === 'for_approval' ? 'true' : 'false' }}">
-                        processed request
-                        <span class="badge bg-secondary ms-1">{{ $processedFamilyGroups->total() }}</span>
+                            role="tab" data-tab-key="for_approval" aria-selected="{{ ($activeTab ?? 'new') === 'for_approval' ? 'true' : 'false' }}"
+                            title="Shows only requests where Level 1 is already approved. Waiting for final approval, or view-only until the other officer acts.">
+                        <i class="material-icons material-symbols-rounded d-inline align-middle" style="font-size:18px;">hourglass_top</i>
+                        <span class="align-middle">Pending — other stage</span>
+                        <span class="badge rounded-pill bg-warning text-dark ms-1">{{ $processedFamilyGroups->total() }}</span>
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
                     <button type="button" class="nav-link {{ ($activeTab ?? 'new') === 'issued' ? 'active' : '' }}" id="fam-issued-tab" data-bs-toggle="tab" data-bs-target="#fam-issued-panel"
-                            role="tab" data-tab-key="issued" aria-selected="{{ ($activeTab ?? 'new') === 'issued' ? 'true' : 'false' }}">
-                        <i class="material-icons material-symbols-rounded" style="font-size:16px;vertical-align:middle;">verified</i>
-                        Verified Issued
-                        <span class="badge bg-secondary ms-1">{{ $issuedFamilyGroups->total() }}</span>
+                            role="tab" data-tab-key="issued" aria-selected="{{ ($activeTab ?? 'new') === 'issued' ? 'true' : 'false' }}"
+                            title="Fully approved / issued family ID requests.">
+                        <i class="material-icons material-symbols-rounded d-inline align-middle" style="font-size:18px;">check_circle</i>
+                        <span class="align-middle">Approved</span>
+                        <span class="badge rounded-pill bg-success ms-1">{{ $issuedFamilyGroups->total() }}</span>
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
                     <button type="button" class="nav-link {{ ($activeTab ?? 'new') === 'rejected' ? 'active' : '' }}" id="fam-rejected-tab" data-bs-toggle="tab" data-bs-target="#fam-rejected-panel"
-                            role="tab" data-tab-key="rejected" aria-selected="{{ ($activeTab ?? 'new') === 'rejected' ? 'true' : 'false' }}">
-                        <i class="material-icons material-symbols-rounded" style="font-size:16px;vertical-align:middle;">cancel</i>
-                        Rejected
-                        <span class="badge bg-secondary ms-1">{{ $rejectedFamilyGroups->total() }}</span>
+                            role="tab" data-tab-key="rejected" aria-selected="{{ ($activeTab ?? 'new') === 'rejected' ? 'true' : 'false' }}"
+                            title="Applications rejected at any stage.">
+                        <i class="material-icons material-symbols-rounded d-inline align-middle" style="font-size:18px;">cancel</i>
+                        <span class="align-middle">Rejected</span>
+                        <span class="badge rounded-pill bg-danger ms-1">{{ $rejectedFamilyGroups->total() }}</span>
                     </button>
                 </li>
             </ul>
+            <p class="small text-muted mb-3 border-start border-3 border-primary ps-2">
+                <strong>Pending — your action</strong> = you can approve or reject now at your level.
+                <strong>Pending — other stage</strong> = Level 1 is already done; application is waiting for final approval or is read-only here (no plain Level 1 queue in this tab).
+                <strong>Approved</strong> and <strong>Rejected</strong> are final outcomes.
+            </p>
 
             <div class="tab-content">
                 <div class="tab-pane {{ ($activeTab ?? 'new') === 'new' ? 'show active' : '' }}" id="fam-new-panel" role="tabpanel"
@@ -130,7 +141,7 @@
                     @if($issuedFamilyGroups->total() === 0)
                         <div class="text-center text-muted py-5">
                             <i class="material-icons material-symbols-rounded" style="font-size:48px;opacity:.3;">verified</i>
-                            <p class="mt-2 mb-0">No verified / issued records found.</p>
+                            <p class="mt-2 mb-0">No approved records in this tab.</p>
                         </div>
                     @else
                         @include('admin.security.family_idcard_approval._family_approval_table', ['groups' => $issuedFamilyGroups, 'familyMembersQueryString' => $familyMembersQueryString])
@@ -206,8 +217,20 @@
     border-color: #004a93;
 }
 .approval2-tabs .nav-link.active .badge {
-    background-color: #fff !important;
+    background-color: rgba(255,255,255,0.95) !important;
     color: #004a93 !important;
+}
+.approval2-tabs .nav-link.active .badge.bg-success {
+    background-color: #198754 !important;
+    color: #fff !important;
+}
+.approval2-tabs .nav-link.active .badge.bg-danger {
+    background-color: #dc3545 !important;
+    color: #fff !important;
+}
+.approval2-tabs .nav-link.active .badge.bg-warning {
+    background-color: #ffc107 !important;
+    color: #212529 !important;
 }
 </style>
 @endpush

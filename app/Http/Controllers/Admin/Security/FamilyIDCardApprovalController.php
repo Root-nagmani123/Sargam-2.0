@@ -24,8 +24,12 @@ class FamilyIDCardApprovalController extends Controller
         $dateFrom = $request->get('date_from');
         $dateTo = $request->get('date_to');
 
-        $isLevel1 = hasRole('Security Card') && !hasRole('Admin Security');
-        $isLevel2 = hasRole('Admin Security') && !hasRole('Security Card');
+        $hasSecurityCard = hasRole('Security Card');
+        $hasAdminSecurity = hasRole('Admin Security');
+        // Mutual exclusivity: "only L1", "only L2", or BOTH (must still get can_approve for the current stage).
+        $isLevel1Only = $hasSecurityCard && ! $hasAdminSecurity;
+        $isLevel2Only = $hasAdminSecurity && ! $hasSecurityCard;
+        $hasBothApprovalRoles = $hasSecurityCard && $hasAdminSecurity;
 
         // Base query: ALL family ID card requests (Pending / Approved / Rejected).
         // Keep selected columns minimal to reduce payload and memory pressure.
@@ -101,7 +105,7 @@ class FamilyIDCardApprovalController extends Controller
                 ->keyBy('security_fm_id_apply_pk');
         }
 
-        $groupList = $groups->map(function ($rows) use ($creators, $isLevel1, $isLevel2, $approvalFlagMap) {
+        $groupList = $groups->map(function ($rows) use ($creators, $isLevel1Only, $isLevel2Only, $hasBothApprovalRoles, $approvalFlagMap) {
             $first = $rows->sortBy('fml_id_apply')->first();
             $creatorName = $creators[(string) ($first->created_by ?? '')] ?? ('User #' . ($first->created_by ?? '--'));
 
@@ -127,10 +131,10 @@ class FamilyIDCardApprovalController extends Controller
             // Can current role approve this group?
             $canApprove = false;
             if ($statusInt === 1) {
-                if ($isLevel1 && ! $hasLevel1) {
+                if (! $hasLevel1 && ($isLevel1Only || $hasBothApprovalRoles)) {
                     // Level 1: Pending and no L1 approval yet
                     $canApprove = true;
-                } elseif ($isLevel2 && $hasLevel1 && ! $hasLevel2) {
+                } elseif ($hasLevel1 && ! $hasLevel2 && ($isLevel2Only || $hasBothApprovalRoles)) {
                     // Level 2: L1 done, final approval pending
                     $canApprove = true;
                 }
@@ -164,9 +168,9 @@ class FamilyIDCardApprovalController extends Controller
             })->values();
         }
 
-        // For Security Admin (Level 2), show only records where Level 1 is completed
-        // i.e. recommendation given (has_level1 = true). Pending Level 1 rows are hidden.
-        if ($isLevel2) {
+        // For Admin Security *only* (no Security Card), hide L1 queue — they only act after L1.
+        // Users with BOTH roles see the full list so L1-pending rows still get can_approve.
+        if ($isLevel2Only) {
             $groupList = $groupList->filter(function ($g) {
                 return (bool) ($g->has_level1 ?? false);
             })->values();
@@ -186,10 +190,19 @@ class FamilyIDCardApprovalController extends Controller
             return !$isApproved && !$isRejected && ((int) ($g->status_int ?? 1) === 1) && (($g->can_approve ?? false) === true);
         })->values();
 
+        // "Other stage" = application still pending but Level 1 already done; not actionable by this user (e.g. waiting final).
+        // Never show plain "Pending (Level 1)" here — those stay in "your action" or drop out if not actionable.
         $processedGroupsList = $groupList->filter(function ($g) {
             $isApproved = ((int) ($g->status_int ?? 1) === 2) && ((bool) ($g->has_level2 ?? false));
             $isRejected = ((int) ($g->status_int ?? 1) === 3);
-            return !$isApproved && !$isRejected && (((int) ($g->status_int ?? 1) !== 1) || (($g->can_approve ?? false) !== true));
+            if ($isApproved || $isRejected || (int) ($g->status_int ?? 1) !== 1) {
+                return false;
+            }
+            if (!((bool) ($g->has_level1 ?? false))) {
+                return false;
+            }
+
+            return (($g->can_approve ?? false) !== true);
         })->values();
 
         // Issued tab should contain only finally approved records.

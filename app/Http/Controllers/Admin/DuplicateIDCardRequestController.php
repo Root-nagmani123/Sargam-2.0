@@ -169,13 +169,64 @@ class DuplicateIDCardRequestController extends Controller
         ];
 
         $data = [];
-        return view('admin.duplicate_idcard.create', compact('me', 'idProofOptions', 'data', 'userDepartmentName', 'approvalAuthorityEmployees', 'lockedIdCardType'));
+        $prefetchedPermanentCardNo = $me ? $this->resolveLatestApprovedPermanentIdCardNumber($me) : null;
+
+        return view('admin.duplicate_idcard.create', compact(
+            'me',
+            'idProofOptions',
+            'data',
+            'userDepartmentName',
+            'approvalAuthorityEmployees',
+            'lockedIdCardType',
+            'prefetchedPermanentCardNo'
+        ));
     }
 
-    /** Admin-type roles may request duplicates for cards outside their section. */
+    /**
+     * Active permanent ID card number for the logged-in employee (latest approved security_parm_id_apply row).
+     */
+    private function resolveLatestApprovedPermanentIdCardNumber(EmployeeMaster $me): ?string
+    {
+        $row = SecurityParmIdApply::query()
+            ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
+            ->whereNotNull('id_card_no')
+            ->where('id_card_no', '!=', '')
+            ->where(function ($q) use ($me) {
+                $q->where('employee_master_pk', $me->pk);
+                if ($me->pk_old !== null && $me->pk_old !== '') {
+                    $q->orWhere('employee_master_pk', $me->pk_old);
+                }
+            })
+            ->orderByDesc('created_date')
+            ->first(['id_card_no']);
+
+        if ($row && trim((string) $row->id_card_no) !== '') {
+            return trim((string) $row->id_card_no);
+        }
+
+        return null;
+    }
+
+    /** Only top-level super-admin roles may request duplicates outside their own department. */
     private function duplicateIdCardBypassesSameSectionRestriction(): bool
     {
-        return hasRole('Admin') || hasRole('Super Admin') || hasRole('SuperAdmin');
+        return hasRole('Super Admin') || hasRole('SuperAdmin');
+    }
+
+    /**
+     * Permanent card number must resolve to an approved issue so department / holder are unambiguous.
+     */
+    private function resolveApprovedPermanentParmApplyForCardNumber(string $cardNoTrim): ?SecurityParmIdApply
+    {
+        if ($cardNoTrim === '') {
+            return null;
+        }
+
+        return SecurityParmIdApply::with('employee')
+            ->where('id_card_no', $cardNoTrim)
+            ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
+            ->orderByDesc('created_date')
+            ->first();
     }
 
     /**
@@ -188,7 +239,7 @@ class DuplicateIDCardRequestController extends Controller
         }
 
         if ($cardType === 'Permanent') {
-            $row = SecurityParmIdApply::with('employee')->where('id_card_no', $cardNoTrim)->first();
+            $row = $this->resolveApprovedPermanentParmApplyForCardNumber($cardNoTrim);
             if (!$row) {
                 return null;
             }
@@ -245,15 +296,24 @@ class DuplicateIDCardRequestController extends Controller
      */
     private function duplicateSameSectionViolationMessage(?int $requesterEmpCredentialId, string $cardType, string $cardNo): ?string
     {
-        if ($this->duplicateIdCardBypassesSameSectionRestriction() || ! $requesterEmpCredentialId) {
+        if ($this->duplicateIdCardBypassesSameSectionRestriction()) {
             return null;
         }
 
         $cardNoTrim = trim($cardNo);
-        $authEmp = EmployeeMaster::findByIdOrPkOld($requesterEmpCredentialId);
-        if (! $authEmp) {
+        if ($cardNoTrim === '') {
             return null;
         }
+
+        if (! $requesterEmpCredentialId) {
+            return 'Duplicate requests can only be submitted by logged-in employees with a linked staff profile.';
+        }
+
+        $authEmp = EmployeeMaster::findByIdOrPkOld($requesterEmpCredentialId);
+        if (! $authEmp) {
+            return 'Duplicate requests can only be submitted by logged-in employees with a valid employee record.';
+        }
+
         $authDept = $authEmp->department_master_pk;
         $benefDept = $this->beneficiaryDepartmentMasterPkForDuplicateCard($cardType, $cardNoTrim);
 
@@ -262,7 +322,7 @@ class DuplicateIDCardRequestController extends Controller
         }
 
         if ($authDept === null || (int) $authDept !== (int) $benefDept) {
-            return 'You can request a duplicate only for ID cards of employees who belong to your section (department).';
+            return 'You can request a duplicate only for ID cards of employees who belong to your department (section). Requests for other departments are not allowed.';
         }
 
         return null;
@@ -293,11 +353,9 @@ class DuplicateIDCardRequestController extends Controller
             ], 422);
         }
 
-        // Permanent ID Cards
+        // Permanent ID Cards (issued / approved rows only — same scope as department check)
         if ($type === 'Permanent') {
-            $row = SecurityParmIdApply::with(['employee.designation'])
-                ->where('id_card_no', $cardNo)
-                ->first();
+            $row = $this->resolveApprovedPermanentParmApplyForCardNumber($cardNo)?->loadMissing(['employee.designation']);
             if (!$row) {
                 return response()->json([
                     'success' => false,
@@ -576,6 +634,7 @@ class DuplicateIDCardRequestController extends Controller
             'edit_id' => $id,
             'data' => $data,
             'existing_docs' => $existing_docs,
+            'prefetchedPermanentCardNo' => null,
         ]);
     }
 

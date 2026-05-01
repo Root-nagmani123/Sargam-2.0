@@ -63,8 +63,8 @@
                     $oldDesignation = old('designation', '');
                     $oldDob = old('date_of_birth', '');
                     $oldAcademy = old('academy_joining', '');
-                    $oldIdValid = old('id_card_valid_upto', '');
                     $defaultIdCardValidUptoOneYear = now()->addYear()->format('Y-m-d');
+                    $oldIdValid = old('id_card_valid_upto', $defaultIdCardValidUptoOneYear);
                     $oldMobile = old('mobile_number', '');
                     $oldBlood = old('blood_group', '');
                 @endphp
@@ -210,7 +210,7 @@
                 <!-- ========== CONTRACTUAL EMPLOYEE VIEW ========== -->
                 <div id="contractual-view" class="idcard-view-fields" style="display: none;">
                     <div class="row g-3">
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <label for="card_type_cont" class="form-label">Card Type <span class="text-danger">*</span></label>
                             <select name="card_type" id="card_type_cont" class="form-select idcard-cont-field idcard-step-field" required disabled>
                                 <option value="">Select Card Type</option>
@@ -219,23 +219,15 @@
                                 @endforeach
                             </select>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <label for="sub_type_cont" class="form-label">Sub Type <span class="text-danger">*</span></label>
                             <select name="sub_type" id="sub_type_cont" class="form-select idcard-cont-field idcard-step-field" required disabled>
                                 <option value="">Select Sub Type</option>
                             </select>
                         </div>
-                        <div class="col-md-4">
-                            <label for="request_for_cont" class="form-label">Request For <span class="text-danger">*</span></label>
-                            <select name="request_for" id="request_for_cont" class="form-select idcard-cont-field idcard-step-field" required disabled>
-                                <option value="">---Select---</option>
-                                @if(($lockedEmployeeType ?? null) === 'Contractual Employee')
-                                    <option value="Own ID Card" {{ $oldRequestFor == 'Own ID Card' ? 'selected' : '' }}>Own ID Card</option>
-                                @else
-                                    {{-- Permanent (or other) users choosing Contractual: request is for someone else --}}
-                                    <option value="Others ID Card" {{ $oldRequestFor == 'Others ID Card' ? 'selected' : '' }}>Others ID Card</option>
-                                @endif
-                            </select>
+                        <div class="col-12">
+                            <input type="hidden" name="request_for" id="request_for_cont" value="{{ old('request_for', 'Others ID Card') }}" class="idcard-cont-field idcard-step-field" autocomplete="off">
+                            <p class="small text-muted mb-0">Contractual new ID card is always <strong>Others ID Card</strong> — enter the beneficiary&rsquo;s details below.</p>
                         </div>
                         <div class="col-12 duplication-extension-field" id="duplicationExtensionCont" style="display:none;">
                         </div>
@@ -655,8 +647,13 @@
         var step = idcardGetStepFields();
         step.subType.innerHTML = '<option value="">Select Sub Type</option>';
         step.subType.disabled = true;
-        step.requestFor.disabled = true;
-        step.requestFor.value = '';
+        if (step.isPerm) {
+            step.requestFor.disabled = true;
+            step.requestFor.value = '';
+        } else {
+            step.requestFor.disabled = false;
+            step.requestFor.value = 'Others ID Card';
+        }
         var autofillFields = (step.isPerm ? permanentView : contractualView).querySelectorAll('.idcard-autofill-field');
         autofillFields.forEach(function(el) {
             el.disabled = true;
@@ -721,7 +718,12 @@
         if (!cardType) {
             step.subType.innerHTML = '<option value="">Select Sub Type</option>';
             step.subType.disabled = true;
-            step.requestFor.disabled = true;
+            if (step.isPerm) {
+                step.requestFor.disabled = true;
+            } else {
+                step.requestFor.disabled = false;
+                step.requestFor.value = 'Others ID Card';
+            }
             return;
         }
         fetch(subTypesUrl + '?card_type=' + encodeURIComponent(cardType) + '&employee_type=' + encodeURIComponent(employeeType))
@@ -736,7 +738,12 @@
                 });
                 step.subType.disabled = false;
                 step.subType.value = '';
-                step.requestFor.disabled = true;
+                if (step.isPerm) {
+                    step.requestFor.disabled = true;
+                } else {
+                    step.requestFor.value = 'Others ID Card';
+                    step.requestFor.disabled = false;
+                }
                 if (step.isPerm && permanentView.style.display !== 'none') {
                     var oldSubPerm = @json(old('sub_type', ''));
                     var oldRfPerm = @json(old('request_for', ''));
@@ -753,18 +760,13 @@
                 }
                 if (!step.isPerm && contractualView.style.display !== 'none') {
                     var oldSub = @json(old('sub_type', ''));
-                    var oldRf = @json(old('request_for', ''));
+                    step.requestFor.value = 'Others ID Card';
+                    step.requestFor.disabled = false;
                     if (oldSub) {
                         step.subType.value = oldSub;
-                        step.requestFor.disabled = !step.subType.value;
                     }
-                    if (oldRf) {
-                        step.requestFor.value = oldRf;
-                    }
-                    if (step.requestFor.value === 'Others ID Card' && step.subType.value) {
+                    if (step.subType.value) {
                         idcardContractualOthersEnableManualEntry(false);
-                    } else if (step.requestFor.value === 'Own ID Card' && step.subType.value) {
-                        idcardLoadMe();
                     }
                 }
             })
@@ -840,32 +842,14 @@
     document.getElementById('sub_type_cont').addEventListener('change', function() {
         if (contractualView.style.display !== 'none') {
             var rf = document.getElementById('request_for_cont');
-            rf.disabled = !document.getElementById('sub_type_cont').value;
-            if (!rf.disabled && !rf.value) {
-                var firstOpt = Array.from(rf.options).find(function(o) { return o.value; });
-                if (firstOpt) rf.value = firstOpt.value;
-            }
-            if (rf.value === 'Own ID Card') {
-                idcardLoadMe();
-            } else if (rf.value === 'Others ID Card') {
+            if (rf) rf.value = 'Others ID Card';
+            if (document.getElementById('sub_type_cont').value) {
                 idcardContractualOthersEnableManualEntry(true);
             }
         }
     });
     document.getElementById('request_for_perm').addEventListener('change', function() {
         if (permanentView.style.display !== 'none') idcardLoadMe();
-    });
-    document.getElementById('request_for_cont').addEventListener('change', function() {
-        if (contractualView.style.display !== 'none') {
-            if (this.value === 'Own ID Card') {
-                idcardLoadMe();
-                var sec = document.getElementById('section_cont'); if (sec) sec.disabled = false;
-                var app = document.getElementById('approval_authority_cont'); if (app) app.disabled = false;
-                var ven = document.getElementById('vendor_organization_name_cont'); if (ven) ven.disabled = false;
-            } else if (this.value === 'Others ID Card') {
-                idcardContractualOthersEnableManualEntry(true);
-            }
-        }
     });
 
     idcardDisableAutofillExceptStep();
@@ -896,14 +880,14 @@
         }
     } else {
         document.getElementById('sub_type_cont').disabled = true;
-        document.getElementById('request_for_cont').disabled = true;
-        if (document.getElementById('card_type_cont').value) idcardLoadSubTypes();
-        var sfcInit = document.getElementById('request_for_cont');
-        var stcInit = document.getElementById('sub_type_cont');
-        if (sfcInit && stcInit && stcInit.value && sfcInit.value === 'Own ID Card') {
-            idcardLoadMe();
+        var rfcInit = document.getElementById('request_for_cont');
+        if (rfcInit) {
+            rfcInit.value = 'Others ID Card';
+            rfcInit.disabled = false;
         }
-        if (sfcInit && stcInit && stcInit.value && sfcInit.value === 'Others ID Card') {
+        if (document.getElementById('card_type_cont').value) idcardLoadSubTypes();
+        var stcInit = document.getElementById('sub_type_cont');
+        if (rfcInit && stcInit && stcInit.value) {
             idcardContractualOthersEnableManualEntry(false);
         }
     }
@@ -927,7 +911,6 @@
         idcardSyncDocumentsRequired();
     }
     document.getElementById('request_for_perm').addEventListener('change', toggleDuplicationExtension);
-    document.getElementById('request_for_cont').addEventListener('change', toggleDuplicationExtension);
     toggleDuplicationExtension();
 
     document.getElementById('duplication_reason_modal').addEventListener('change', function() {

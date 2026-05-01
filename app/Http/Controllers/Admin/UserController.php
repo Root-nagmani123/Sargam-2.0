@@ -25,6 +25,7 @@ use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 use App\Models\StudentMedicalExemption;
 use App\Models\MDOEscotDutyMap;
@@ -386,6 +387,14 @@ class UserController extends Controller
         }
 
         if ($isApproval2) {
+            // Match Approval II list: actionable “new request” contractual rows exclude L2-done
+            // (security_con_oth_id_apply_approval status=1, recommend_status=1). Rows with status=0 for
+            // Level 3 would incorrectly match legacy “pending ids with status 0”.
+            $contHasA2Recommended = DB::table('security_con_oth_id_apply_approval')
+                ->where('status', 1)
+                ->where('recommend_status', 1)
+                ->pluck('security_parm_id_apply_pk');
+
             $permQuery = DB::table('security_parm_id_apply as spa')
                 ->where('spa.id_status', SecurityParmIdApply::ID_STATUS_PENDING)
                 ->whereNotExists(function ($q) {
@@ -394,26 +403,27 @@ class UserController extends Controller
                         ->whereColumn('a.security_parm_id_apply_pk', 'spa.emp_id_apply')
                         ->where('a.status', 2);
                 });
+            if (Schema::hasColumn('security_parm_id_apply', 'id_card_generate_date')) {
+                $permQuery->whereNull('spa.id_card_generate_date');
+            }
             if ($todayOnly) {
                 $permQuery->whereBetween('spa.created_date', [$start, $end]);
             }
             $permCount = (int) $permQuery->count();
 
-            $contPendingIds = DB::table('security_con_oth_id_apply_approval')
-                ->where('status', 0)
-                ->pluck('security_parm_id_apply_pk');
-
-            $contCount = 0;
-            if ($contPendingIds->isNotEmpty()) {
-                $contQuery = DB::table('security_con_oth_id_apply as sco')
-                    ->where('sco.id_status', 1)
-                    ->where('sco.depart_approval_status', 2)
-                    ->whereIn('sco.emp_id_apply', $contPendingIds);
-                if ($todayOnly) {
-                    $contQuery->whereBetween('sco.created_date', [$start, $end]);
-                }
-                $contCount = (int) $contQuery->count();
+            $contQuery = DB::table('security_con_oth_id_apply as sco')
+                ->where('sco.id_status', 1)
+                ->where('sco.depart_approval_status', 2);
+            if (Schema::hasColumn('security_con_oth_id_apply', 'id_card_generate_date')) {
+                $contQuery->whereNull('sco.id_card_generate_date');
             }
+            if ($contHasA2Recommended->isNotEmpty()) {
+                $contQuery->whereNotIn('sco.emp_id_apply', $contHasA2Recommended);
+            }
+            if ($todayOnly) {
+                $contQuery->whereBetween('sco.created_date', [$start, $end]);
+            }
+            $contCount = (int) $contQuery->count();
 
             return ['perm' => $permCount, 'cont' => $contCount];
         }
@@ -672,6 +682,9 @@ class UserController extends Controller
         // Permanent Duplicate (security_dup_perm_id_apply)
         $base = DB::table('security_dup_perm_id_apply as dup')
             ->where('dup.id_status', 1);
+        if (Schema::hasColumn('security_dup_perm_id_apply', 'id_card_generate_date')) {
+            $base->whereNull('dup.id_card_generate_date');
+        }
         if ($todayOnly) {
             $base->whereBetween('dup.created_date', [$start, $end]);
         }
@@ -727,6 +740,9 @@ class UserController extends Controller
         $base = DB::table('security_dup_other_id_apply as duo')
             ->where('duo.id_status', 1)
             ->where('depart_approval_status', 2);
+        if (Schema::hasColumn('security_dup_other_id_apply', 'id_card_generate_date')) {
+            $base->whereNull('duo.id_card_generate_date');
+        }
         if ($todayOnly) {
             $base->whereBetween('duo.created_date', [$start, $end]);
         }

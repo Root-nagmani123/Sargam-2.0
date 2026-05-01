@@ -538,8 +538,9 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                             <div class="card-body d-flex align-items-center justify-content-between gap-2">
                                 <div>
                                     <p class="small text-dark mb-1">Pending Permanent ID Requests</p>
-                                    <div class="dashboard-stat-value fw-semibold text-primary">{{ $fullPendingPermanentIdCardRequests ?? 0 }}</div>
-                                    <p class="small text-body-secondary mb-1">Today: {{ $todayPendingPermanentIdCardRequests ?? 0 }}</p>
+                                    <p class="small text-body-secondary mb-1">Today</p>
+                                    <div class="dashboard-stat-value fw-semibold text-primary">{{ $todayPendingPermanentIdCardRequests ?? 0 }}</div>
+                                    <p class="small text-dark mb-0">Total pending: {{ $fullPendingPermanentIdCardRequests ?? 0 }}</p>
                                     <span class="stat-link-hint text-primary">Go to approvals <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
                                 </div>
                                 <span class="stat-icon"><span class="material-icons material-symbols-rounded">badge</span></span>
@@ -553,8 +554,9 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                             <div class="card-body d-flex align-items-center justify-content-between gap-2">
                                 <div>
                                     <p class="small text-dark mb-1">Pending Contractual ID Requests</p>
-                                    <div class="dashboard-stat-value fw-semibold text-primary">{{ $fullPendingContractualIdCardRequests ?? 0 }}</div>
-                                    <p class="small text-body-secondary mb-1">Today: {{ $todayPendingContractualIdCardRequests ?? 0 }}</p>
+                                    <p class="small text-body-secondary mb-1">Today</p>
+                                    <div class="dashboard-stat-value fw-semibold text-primary">{{ $todayPendingContractualIdCardRequests ?? 0 }}</div>
+                                    <p class="small text-dark mb-0">Total pending: {{ $fullPendingContractualIdCardRequests ?? 0 }}</p>
                                     <span class="stat-link-hint text-primary">Go to approvals <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
                                 </div>
                                 <span class="stat-icon"><span class="material-icons material-symbols-rounded">badge</span></span>
@@ -568,8 +570,9 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                             <div class="card-body d-flex align-items-center justify-content-between gap-2">
                                 <div>
                                     <p class="small text-dark mb-1">Duplicate Permanent ID Requests</p>
-                                    <div class="dashboard-stat-value fw-semibold text-warning-emphasis">{{ $fullDuplicatePermIdCardRequests ?? 0 }}</div>
-                                    <p class="small text-body-secondary mb-1">Today: {{ $todayDuplicatePermIdCardRequests ?? 0 }}</p>
+                                    <p class="small text-body-secondary mb-1">Today</p>
+                                    <div class="dashboard-stat-value fw-semibold text-warning-emphasis">{{ $todayDuplicatePermIdCardRequests ?? 0 }}</div>
+                                    <p class="small text-dark mb-0">Total pending: {{ $fullDuplicatePermIdCardRequests ?? 0 }}</p>
                                     <span class="stat-link-hint text-warning">Go to approvals <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
                                 </div>
                                 <span class="stat-icon"><span class="material-icons material-symbols-rounded">copy_all</span></span>
@@ -583,8 +586,9 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                             <div class="card-body d-flex align-items-center justify-content-between gap-2">
                                 <div>
                                     <p class="small text-dark mb-1">Duplicate Contractual ID Requests</p>
-                                    <div class="dashboard-stat-value fw-semibold text-warning-emphasis">{{ $fullDuplicateContractualIdCardRequests ?? 0 }}</div>
-                                    <p class="small text-body-secondary mb-1">Today: {{ $todayDuplicateContractualIdCardRequests ?? 0 }}</p>
+                                    <p class="small text-body-secondary mb-1">Today</p>
+                                    <div class="dashboard-stat-value fw-semibold text-warning-emphasis">{{ $todayDuplicateContractualIdCardRequests ?? 0 }}</div>
+                                    <p class="small text-dark mb-0">Total pending: {{ $fullDuplicateContractualIdCardRequests ?? 0 }}</p>
                                     <span class="stat-link-hint text-warning">Go to approvals <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
                                 </div>
                                 <span class="stat-icon"><span class="material-icons material-symbols-rounded">content_copy</span></span>
@@ -598,8 +602,9 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                             <div class="card-body d-flex align-items-center justify-content-between gap-2">
                                 <div>
                                     <p class="small text-dark mb-1">Requested Family ID</p>
-                                    <div class="dashboard-stat-value fw-semibold text-primary">{{ $fullFamilyApprovals ?? 0 }}</div>
-                                    <p class="small text-body-secondary mb-1">Today: {{ $todayFamilyApprovals ?? 0 }}</p>
+                                    <p class="small text-body-secondary mb-1">Today</p>
+                                    <div class="dashboard-stat-value fw-semibold text-primary">{{ $todayFamilyApprovals ?? 0 }}</div>
+                                    <p class="small text-dark mb-0">Total pending: {{ $fullFamilyApprovals ?? 0 }}</p>
                                     <span class="stat-link-hint text-primary">Go to approvals <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
                                 </div>
                                 <span class="stat-icon"><span class="material-icons material-symbols-rounded">diversity_3</span></span>
@@ -613,8 +618,9 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                             <div class="card-body d-flex align-items-center justify-content-between gap-2">
                                 <div>
                                     <p class="small text-dark mb-1">Requested Vehicle Pass</p>
-                                    <div class="dashboard-stat-value fw-semibold text-success">{{ $fullVehicleApprovals ?? 0 }}</div>
-                                    <p class="small text-body-secondary mb-1">Today: {{ $todayVehicleApprovals ?? 0 }}</p>
+                                    <p class="small text-body-secondary mb-1">Today</p>
+                                    <div class="dashboard-stat-value fw-semibold text-success">{{ $todayVehicleApprovals ?? 0 }}</div>
+                                    <p class="small text-dark mb-0">Total pending: {{ $fullVehicleApprovals ?? 0 }}</p>
                                     <span class="stat-link-hint text-success">Go to approvals <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
                                 </div>
                                 <span class="stat-icon"><span class="material-icons material-symbols-rounded">directions_car</span></span>

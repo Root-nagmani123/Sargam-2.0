@@ -46,9 +46,10 @@
                             @endif
                         </div>
                         @error('id_card_number')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                        <small class="text-muted d-block">Enter existing ID card number and click Fetch to auto-fill employee details.</small>
+                        <small class="text-muted d-block">For <strong>Permanent</strong>, your current ID card number is filled automatically when on file (you can change it).</small>
+                        <small class="text-muted d-block">Otherwise enter the number and click <strong>Fetch</strong> to load details.</small>
                         @if(!empty($userDepartmentName))
-                            <small class="text-muted d-block mt-1">Duplicate requests are allowed only for ID cards of employees in your section: <strong>{{ $userDepartmentName }}</strong>.</small>
+                            <small class="text-muted d-block mt-1">You may request a duplicate only for staff in <strong>your department</strong>: <strong>{{ $userDepartmentName }}</strong>. Another department’s card number will be rejected.</small>
                         @endif
                     </div>
 
@@ -308,6 +309,7 @@
         const btnFetch = document.getElementById('btnFetchByCard');
         const cardInput = document.getElementById('id_card_number');
         const typeSelect = document.getElementById('id_card_type');
+        const prefetchedPermanentCardNo = @json($prefetchedPermanentCardNo ?? null);
         if (!btnFetch || !cardInput || !typeSelect) {
             return;
         }
@@ -322,15 +324,18 @@
             alert(message);
         }
 
-        function fetchByCardNumber() {
+        function fetchByCardNumber(options) {
+            options = options || {};
             if (isFetching) {
                 return;
             }
             const cardNo = cardInput.value.trim();
             const type = typeSelect.value || 'Permanent';
             if (!cardNo) {
-                showToast('Please enter ID Card Number first.', true);
-                cardInput.focus();
+                if (!options.suppressCardEmptyPrompt) {
+                    showToast('Please enter ID Card Number first.', true);
+                    cardInput.focus();
+                }
                 return;
             }
             isFetching = true;
@@ -362,7 +367,9 @@
                     setVal('father_name', d.father_name || '');
                     setVal('card_valid_from', d.card_valid_from || '');
                     setVal('card_valid_to', d.card_valid_to || '');
-                    showToast('ID card details fetched successfully. Please select duplicate reason and upload required document.', false);
+                    if (!options.silentSuccess) {
+                        showToast('ID card details fetched successfully. Please select duplicate reason and upload required document.', false);
+                    }
                 })
                 .catch(function () {
                     isFetching = false;
@@ -371,16 +378,31 @@
                 });
         }
 
+        /** When Permanent is chosen, put the user's approved card number on file into the field and load details via lookup. */
+        function applyPermanentIdCardPrefetch() {
+            if (typeSelect.value !== 'Permanent' || !prefetchedPermanentCardNo) {
+                return;
+            }
+            if (cardInput.value.trim() !== '') {
+                return;
+            }
+            cardInput.value = prefetchedPermanentCardNo;
+            fetchByCardNumber({ silentSuccess: true, suppressCardEmptyPrompt: true });
+        }
+
+        typeSelect.addEventListener('change', applyPermanentIdCardPrefetch);
+        applyPermanentIdCardPrefetch();
+
         // Existing behaviour: user can click the fetch button.
         btnFetch.addEventListener('click', function () {
-            fetchByCardNumber();
+            fetchByCardNumber({});
         });
 
         // Trigger on Enter key in the input.
         cardInput.addEventListener('keydown', function (e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                fetchByCardNumber();
+                fetchByCardNumber({});
             }
         });
     }

@@ -706,39 +706,9 @@ class EmployeeIDCardRequestController extends Controller
         if (!$emp) {
             return response()->json(['employee' => null]);
         }
-        $dupPermIdApply = DB::table('security_dup_perm_id_apply')->where('employee_master_pk', $emp->pk)->orWhere('employee_master_pk', $emp->pk_old)->orderBy('pk', 'desc')->first();
-        // Valid upto: from duplicate table first, else from approved main ID card (security_parm_id_apply)
-        $idCardValidUpto = null;
-        if ($dupPermIdApply && !empty($dupPermIdApply->card_valid_to)) {
-            $idCardValidUpto = \Carbon\Carbon::parse($dupPermIdApply->card_valid_to)->format('Y-m-d');
-        } else {
-            $parmApply = DB::table('security_parm_id_apply')
-                ->where('employee_master_pk', $emp->pk)
-                ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
-                ->whereNotNull('card_valid_to')
-                ->orderBy('card_valid_to', 'desc')
-                ->first(['card_valid_to']);
-            if ($parmApply && !empty($parmApply->card_valid_to)) {
-                $idCardValidUpto = \Carbon\Carbon::parse($parmApply->card_valid_to)->format('Y-m-d');
-            }
-        }
-        // Contractual: last approved row for this employee (created_by) may have validity
-        if ($idCardValidUpto === null) {
-            $contApply = DB::table('security_con_oth_id_apply')
-                ->where(function ($q) use ($emp) {
-                    $q->where('created_by', $emp->pk);
-                    if (!empty($emp->pk_old)) {
-                        $q->orWhere('created_by', $emp->pk_old);
-                    }
-                })
-                ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
-                ->whereNotNull('card_valid_to')
-                ->orderByDesc('card_valid_to')
-                ->first(['card_valid_to']);
-            if ($contApply && !empty($contApply->card_valid_to)) {
-                $idCardValidUpto = \Carbon\Carbon::parse($contApply->card_valid_to)->format('Y-m-d');
-            }
-        }
+        // New ID card requests: valid-up-to is always one calendar year from today on this form
+        // (do not reuse an old card's expiry — that caused empty or wrong dates for first-time applicants).
+        $idCardValidUpto = \Carbon\Carbon::today()->addYear()->format('Y-m-d');
         $name = trim($emp->first_name . ' ' . ($emp->middle_name ?? '') . ' ' . ($emp->last_name ?? ''));
         $designation = $emp->designation->designation_name ?? null;
         $dob = $emp->dob ? \Carbon\Carbon::parse($emp->dob)->format('Y-m-d') : null;
@@ -822,6 +792,10 @@ class EmployeeIDCardRequestController extends Controller
             'id_card_valid_upto.after' => 'ID Card Valid Upto date must be a future date.',
             'documents.required' => 'Please upload a supporting document (PDF or DOC, max 5 MB): include appointment letter, joining letter, contract/engagement order, or similar proof as applicable.',
         ]);
+
+        if (($validated['employee_type'] ?? '') === 'Contractual Employee') {
+            $validated['request_for'] = 'Others ID Card';
+        }
 
         $authEmpPk = Auth::user()->user_id ?? Auth::id();
         $authEmpRow = null;
@@ -1434,6 +1408,10 @@ class EmployeeIDCardRequestController extends Controller
         ], [
             'approval_authority.required_if' => 'Approval Authority is required for Contractual Employees.',
         ]);
+
+        if (($validated['employee_type'] ?? '') === 'Contractual Employee') {
+            $validated['request_for'] = 'Others ID Card';
+        }
 
         $res = static::resolveId($id);
         if ($redirectLocked = $this->redirectIfIdCardRequestNotEditableByApplicant($id, $res)) {
