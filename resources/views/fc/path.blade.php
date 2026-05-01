@@ -41,7 +41,7 @@
                         </div>
                         <div class="card-footer bg-transparent border-0 pt-0 px-4 pb-4">
                             @if ($showRegistration)
-                                <a href="{{ route('verify.authindex') }}" class="btn btn-success w-100 rounded-3 py-2 fw-semibold"
+                                <a href="{{ route('verify.authindex', $intentQuery ?? []) }}" class="btn btn-success w-100 rounded-3 py-2 fw-semibold"
                                     style="background-color: #16a32a; border-color: #16a32a;">
                                     Start Registration
                                 </a>
@@ -70,7 +70,7 @@
                         </div>
                         <div class="card-footer bg-transparent border-0 pt-0 px-4 pb-4">
                             @if ($showExemption)
-                                <a href="{{ route('fc.exemption_category.index') }}"
+                                <a href="{{ route('fc.exemption_category.index', $intentQuery ?? []) }}"
                                     class="btn btn-warning w-100 rounded-3 py-2 fw-semibold "
                                     style="background-color: #ea5803; border-color: #ea5803;">
                                     Apply for Exemption
@@ -99,7 +99,7 @@
                             </div>
                         </div>
                         <div class="card-footer bg-transparent border-0 pt-0 px-4 pb-4">
-                            <a href="{{ route('fc.login') }}" class="btn btn-primary w-100 rounded-3 py-2 fw-semibold"
+                            <a href="{{ route('fc.login', $intentQuery ?? []) }}" class="btn btn-primary w-100 rounded-3 py-2 fw-semibold"
                                 style="background-color: #2563eb; border-color: #2563eb;">
                                 Login to Dashboard
                             </a>

@@ -153,14 +153,23 @@
         </div>
     </div>
 
-    {{-- Quick Access: Form URL --}}
+    {{-- Quick Access: URLs for users (same layout for both) --}}
     <div class="card border-0 shadow-sm" style="border-radius:10px;">
         <div class="card-body">
             <h6 class="text-uppercase small fw-bold text-muted mb-2">Form URL for Users</h6>
-            <div class="input-group">
+            <div class="input-group mb-3">
                 <span class="input-group-text"><i class="bi bi-link-45deg"></i></span>
                 <input type="text" class="form-control" readonly value="{{ route('fc-reg.forms.dashboard', $form) }}" id="formUrl">
-                <button class="btn btn-outline-secondary" onclick="navigator.clipboard.writeText(document.getElementById('formUrl').value); this.innerHTML='<i class=\'bi bi-check\'></i> Copied'; setTimeout(()=>this.innerHTML='<i class=\'bi bi-clipboard\'></i> Copy', 2000);">
+                <button type="button" class="btn btn-outline-secondary" onclick="navigator.clipboard.writeText(document.getElementById('formUrl').value); this.innerHTML='<i class=\'bi bi-check\'></i> Copied'; setTimeout(()=>this.innerHTML='<i class=\'bi bi-clipboard\'></i> Copy', 2000);">
+                    <i class="bi bi-clipboard"></i> Copy
+                </button>
+            </div>
+
+            <h6 class="text-uppercase small fw-bold text-muted mb-2">Landing Page URL for Users</h6>
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-link-45deg"></i></span>
+                <input type="text" class="form-control" readonly value="{{ route('frontpage.index', ['form' => $form->getRouteKey()]) }}" id="landingUrl">
+                <button type="button" class="btn btn-outline-secondary" onclick="navigator.clipboard.writeText(document.getElementById('landingUrl').value); this.innerHTML='<i class=\'bi bi-check\'></i> Copied'; setTimeout(()=>this.innerHTML='<i class=\'bi bi-clipboard\'></i> Copy', 2000);">
                     <i class="bi bi-clipboard"></i> Copy
                 </button>
             </div>
