@@ -522,6 +522,33 @@ class DuplicateIDCardRequestController extends Controller
         ];
 
         $me = null;
+        $lockedIdCardType = null;
+        $userDepartmentName = null;
+        $approvalAuthorityEmployees = collect();
+
+        if ($employeePk) {
+            $me = EmployeeMaster::with(['designation', 'department'])
+                ->where('pk', $employeePk)
+                ->orWhere('pk_old', $employeePk)
+                ->first();
+
+            if ($me && \Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'payroll')) {
+                $lockedIdCardType = ((int) ($me->payroll ?? 0) === 0) ? null : 'Contractual';
+            }
+
+            if ($me && $me->department_master_pk) {
+                $userDepartmentName = $me->department->department_name ?? null;
+
+                $approvalAuthorityEmployees = EmployeeMaster::with('designation')
+                    ->where('department_master_pk', $me->department_master_pk)
+                    ->when(\Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'payroll'), fn ($q) => $q->where('payroll', 0))
+                    ->when(\Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'status'), fn ($q) => $q->where('status', 1))
+                    ->orderBy('first_name')
+                    ->orderBy('last_name')
+                    ->get(['pk', 'first_name', 'last_name', 'designation_master_pk']);
+            }
+        }
+
         $data = [];
         $existing_docs = ['aadhar_doc' => null];
 
@@ -605,6 +632,26 @@ class DuplicateIDCardRequestController extends Controller
                     $bloodGroup = $parent;
                 }
             }
+
+            $sectionDisplayName = $userDepartmentName;
+            if (! empty($row->section)) {
+                $nameFromPk = DB::table('department_master')->where('pk', $row->section)->value('department_name');
+                if ($nameFromPk) {
+                    $sectionDisplayName = $nameFromPk;
+                }
+            }
+            $approverPk = ! empty($row->department_approval_emp_pk) ? (int) $row->department_approval_emp_pk : null;
+
+            if ($approverPk && ! $approvalAuthorityEmployees->contains('pk', $approverPk)) {
+                $extraApprover = EmployeeMaster::with('designation')
+                    ->where('pk', $approverPk)
+                    ->orWhere('pk_old', $approverPk)
+                    ->first(['pk', 'first_name', 'last_name', 'designation_master_pk']);
+                if ($extraApprover) {
+                    $approvalAuthorityEmployees = $approvalAuthorityEmployees->push($extraApprover)->unique('pk')->values();
+                }
+            }
+
             $data = [
                 'id_card_type' => $row->card_type ?: 'Contractual',
                 'id_card_number' => $row->id_card_no,
@@ -619,6 +666,8 @@ class DuplicateIDCardRequestController extends Controller
                 'card_valid_to' => $row->card_valid_to ? $row->card_valid_to->format('Y-m-d') : '',
                 'id_proof' => (int) ($row->id_proof ?? 1),
                 'photo_path' => $row->id_photo_path,
+                'section' => $sectionDisplayName,
+                'approval_authority' => $approverPk,
             ];
             $existing_docs = [
                 'aadhar_doc' => $row->aadhar_doc ?? null,
@@ -635,6 +684,9 @@ class DuplicateIDCardRequestController extends Controller
             'data' => $data,
             'existing_docs' => $existing_docs,
             'prefetchedPermanentCardNo' => null,
+            'userDepartmentName' => $userDepartmentName,
+            'approvalAuthorityEmployees' => $approvalAuthorityEmployees,
+            'lockedIdCardType' => $lockedIdCardType,
         ]);
     }
 
@@ -650,7 +702,19 @@ class DuplicateIDCardRequestController extends Controller
             abort(403);
         }
 
-        $validated = $request->validate([
+        $row = str_starts_with($id, 'DUP')
+            ? SecurityDupPermIdApply::where('emp_id_apply', $id)->first()
+            : SecurityDupOtherIdApply::where('emp_id_apply', $id)->first();
+
+        if (!$row || (int) $row->created_by !== (int) $employeePk) {
+            abort(404);
+        }
+        if (! $this->duplicateApplicantMayEdit($id)) {
+            return redirect()->route('admin.duplicate_idcard.index')
+                ->with('error', 'This request can no longer be updated because an approval action has been taken or it is no longer pending.');
+        }
+
+        $rules = [
             'card_reason' => 'required|string|max:255',
             'card_valid_from' => 'nullable|date',
             'card_valid_to' => 'nullable|date|after_or_equal:card_valid_from',
@@ -664,19 +728,22 @@ class DuplicateIDCardRequestController extends Controller
             'new_employee_name' => 'nullable|string|max:100',
             'name_proof' => 'nullable|file|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120',
             'designation_order' => 'nullable|file|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120',
+        ];
+
+        if ($request->input('card_reason') === 'Card Lost') {
+            $hasStoredPayment = trim((string) ($row->payment_receipt ?? '')) !== '';
+            if (! $hasStoredPayment) {
+                $rules['payment_receipt'] = 'required|file|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120';
+            }
+        }
+
+        $validated = $request->validate($rules, [
+            'payment_receipt.required' => 'Payment receipt is required when the reason is Card Lost.',
         ]);
 
         $cardReason = $validated['card_reason'];
 
         if (str_starts_with($id, 'DUP')) {
-            $row = SecurityDupPermIdApply::where('emp_id_apply', $id)->first();
-            if (!$row || (int) $row->created_by !== (int) $employeePk) {
-                abort(404);
-            }
-            if (! $this->duplicateApplicantMayEdit($id)) {
-                return redirect()->route('admin.duplicate_idcard.index')
-                    ->with('error', 'This request can no longer be updated because an approval action has been taken or it is no longer pending.');
-            }
             $updates = ['card_reason' => $cardReason];
             if ($request->filled('card_valid_from')) {
                 $updates['card_valid_from'] = $request->card_valid_from;
@@ -737,14 +804,6 @@ class DuplicateIDCardRequestController extends Controller
             }
             $row->update($updates);
         } else {
-            $row = SecurityDupOtherIdApply::where('emp_id_apply', $id)->first();
-            if (!$row || (int) $row->created_by !== (int) $employeePk) {
-                abort(404);
-            }
-            if (! $this->duplicateApplicantMayEdit($id)) {
-                return redirect()->route('admin.duplicate_idcard.index')
-                    ->with('error', 'This request can no longer be updated because an approval action has been taken or it is no longer pending.');
-            }
             $updates = ['card_reason' => $cardReason];
             if ($request->filled('card_valid_from')) {
                 $updates['card_valid_from'] = $request->card_valid_from;
@@ -889,7 +948,7 @@ class DuplicateIDCardRequestController extends Controller
             $baseRules['damage_doc'] = 'required|file|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120';
         } elseif ($cardReason === 'Card Lost') {
             $baseRules['fir_doc'] = 'required|file|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120';
-            // Payment receipt is optional for Card Lost; no required rule.
+            $baseRules['payment_receipt'] = 'required|file|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120';
         } elseif ($cardReason === 'Service Extended') {
             $baseRules['service_ext'] = 'required|file|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120';
         } elseif ($cardReason === 'Change in Name') {
@@ -899,7 +958,9 @@ class DuplicateIDCardRequestController extends Controller
             $baseRules['designation_order'] = 'required|file|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120';
         }
 
-        $validated = $request->validate($baseRules);
+        $validated = $request->validate($baseRules, [
+            'payment_receipt.required' => 'Payment receipt is required when the reason is Card Lost.',
+        ]);
 
         $blockedSection = $this->duplicateSameSectionViolationMessage((int) $employeePk, (string) $validated['id_card_type'], (string) $validated['id_card_number']);
         if ($blockedSection !== null) {
