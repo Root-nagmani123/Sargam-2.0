@@ -4,6 +4,9 @@
 <div class="container-fluid px-3">
     <x-breadcrum title="FC Activities - Joining Report"></x-breadcrum>
     <h4 class="fw-bold mb-3" style="color:#1a3c6e;">Joining Status</h4>
+    @if(!empty($warning))
+        <div class="alert alert-warning py-2 small">{{ $warning }}</div>
+    @endif
     <p class="small text-muted mb-2">Joined: {{ $joinedCount }} | Not Joined: {{ $notJoinedCount }}</p>
     <div class="card border-0 shadow-sm"><div class="table-responsive">
         <table class="table table-sm table-hover mb-0 js-fc-datatable" data-export-title="FC Activities - Joining Status">

@@ -1,5 +1,5 @@
 {{-- Modern & Elegant Breadcrumb Component --}}
-@props(['title' => 'Page', 'variant' => 'glass', 'items' => null, 'section' => null])
+@props(['title' => 'Page', 'variant' => 'glass', 'items' => null, 'section' => null, 'showStatusPill' => true])
 @php
     $variant = $variant ?? 'glass';
     $routeName = request()->route()?->getName();
@@ -230,13 +230,15 @@
                     </div>
                 </div>
 
-                {{-- Status pill --}}
-                <div class="breadcrumb-status d-none d-xl-flex align-items-center flex-shrink-0">
-                    <span class="badge rounded-pill text-primary-emphasis bg-primary-subtle border border-primary-subtle px-3 py-2 d-inline-flex align-items-center gap-2 fw-semibold lh-sm">
-                        <i class="material-icons material-symbols-rounded fs-6" aria-hidden="true">check_circle</i>
-                        <span>Active</span>
-                    </span>
-                </div>
+                @if ($showStatusPill)
+                    {{-- Neutral status pill (Bootstrap Icons; avoids Material ligature showing as plain text) --}}
+                    <div class="breadcrumb-status d-none d-xl-flex align-items-center flex-shrink-0">
+                        <span class="badge rounded-pill text-secondary-emphasis bg-secondary-subtle border border-secondary-subtle px-3 py-2 d-inline-flex align-items-center gap-2 fw-semibold lh-sm">
+                            <i class="bi bi-check2-circle fs-6" aria-hidden="true"></i>
+                            <span>Active</span>
+                        </span>
+                    </div>
+                @endif
             </div>
         </div>
     </div>
