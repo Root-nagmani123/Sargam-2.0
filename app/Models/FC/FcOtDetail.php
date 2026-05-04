@@ -26,6 +26,14 @@ class FcOtDetail extends Model
         'housen',
         'service',
         'status',
+        'consultation_required',
+        'consultation_required_at',
+        'consultation_marked_by',
+    ];
+
+    protected $casts = [
+        'consultation_required' => 'boolean',
+        'consultation_required_at' => 'datetime',
     ];
 
     public function activities()

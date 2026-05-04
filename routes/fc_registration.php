@@ -2,7 +2,9 @@
 
 use App\Http\Controllers\FC\{
     FcActivityController,
+    FcActivityDepartmentController,
     FcActivityHomeController,
+    FcActivityMasterManageController,
     FcActivityMedicalController,
     FcActivityReportController,
     FcActivityStatusController,
@@ -48,6 +50,7 @@ Route::middleware(['auth'])->prefix('fc-reg')->name('fc-reg.')->group(function (
         Route::post('/step3/hobbies',          [RegistrationStep3Controller::class, 'saveHobbies'])->name('step3.hobbies');
         Route::post('/step3/distinctions',     [RegistrationStep3Controller::class, 'saveDistinctions'])->name('step3.distinctions');
         Route::post('/step3/sports',           [RegistrationStep3Controller::class, 'saveSports'])->name('step3.sports');
+        Route::post('/step3/pre-medical-history', [RegistrationStep3Controller::class, 'savePreMedicalHistory'])->name('step3.pre-medical-history');
         Route::post('/step3/module',           [RegistrationStep3Controller::class, 'saveModuleChoice'])->name('step3.module');
         Route::post('/step3/group/{group}',    [RegistrationStep3Controller::class, 'saveGroup'])->name('step3.save-group');
 
@@ -114,6 +117,14 @@ Route::middleware(['auth'])->prefix('fc-reg/admin')->name('fc-reg.admin.')->grou
     });
 
     // ── Form Management (Create / Edit / Delete forms) ───────────────
+    // ── Post-arrival setup (coordinators: departments + activity master CRUD)
+    Route::prefix('activity-setup')->middleware(['fc.activity.coordinator'])->name('activity-setup.')->group(function () {
+        Route::get('departments/data', [FcActivityDepartmentController::class, 'dataTable'])->name('departments.data');
+        Route::get('masters/data', [FcActivityMasterManageController::class, 'dataTable'])->name('masters.data');
+        Route::resource('departments', FcActivityDepartmentController::class)->except(['show', 'create', 'edit']);
+        Route::resource('masters', FcActivityMasterManageController::class)->except(['show', 'create', 'edit']);
+    });
+
     Route::prefix('forms')->name('forms.')->group(function () {
         Route::get('/',                        [FormManagementController::class, 'index'])->name('index');
         Route::get('/create',                  [FormManagementController::class, 'create'])->name('create');
@@ -137,10 +148,6 @@ Route::middleware(['auth'])->prefix('fc-reg/admin')->name('fc-reg.admin.')->grou
         Route::get('/', [FcActivityHomeController::class, 'index'])->name('index');
 
         Route::post('/', [FcActivityController::class, 'store'])->name('store');
-        Route::post('/medical-bulk', [FcActivityController::class, 'storeMedicalBulk'])->name('store-medical-bulk');
-        Route::get('/{activityId}/edit', [FcActivityController::class, 'edit'])->name('edit');
-        Route::put('/{activityId}', [FcActivityController::class, 'update'])->name('update');
-        Route::delete('/{activityId}', [FcActivityController::class, 'destroy'])->name('destroy');
 
         Route::prefix('ajax')->name('ajax.')->group(function () {
             Route::get('/courses', [FcActivityHomeController::class, 'ajaxCourses'])->name('courses');
@@ -148,31 +155,37 @@ Route::middleware(['auth'])->prefix('fc-reg/admin')->name('fc-reg.admin.')->grou
             Route::get('/ot-name', [FcActivityHomeController::class, 'ajaxOtName'])->name('ot-name');
             Route::get('/house', [FcActivityHomeController::class, 'ajaxHouse'])->name('house');
             Route::get('/activities', [FcActivityHomeController::class, 'ajaxActivities'])->name('activities');
-            Route::get('/ots-edit', [FcActivityController::class, 'ajaxOtsForEdit'])->name('ots-edit');
         });
 
         Route::prefix('status')->name('status.')->group(function () {
-            Route::get('/admin', [FcActivityStatusController::class, 'admin'])->name('admin');
-            Route::get('/security', [FcActivityStatusController::class, 'security'])->name('security');
-            Route::get('/it', [FcActivityStatusController::class, 'it'])->name('it');
-            Route::get('/training', [FcActivityStatusController::class, 'training'])->name('training');
-            Route::get('/medical', [FcActivityStatusController::class, 'medical'])->name('medical');
-            Route::get('/shop', [FcActivityStatusController::class, 'shop'])->name('shop');
-            Route::get('/all', [FcActivityStatusController::class, 'all'])->name('all');
+            Route::get('/', [FcActivityStatusController::class, 'picker'])->name('index');
+            Route::get('/grid/{deptCode}', [FcActivityStatusController::class, 'departmentGrid'])->name('grid');
+            Route::get('/matrix', [FcActivityStatusController::class, 'matrix'])
+                ->middleware(['fc.activity.matrix'])
+                ->name('matrix');
         });
 
         Route::prefix('reports')->name('reports.')->group(function () {
             Route::get('/summary', [FcActivityReportController::class, 'summary'])->name('summary');
-            Route::get('/department/{dept}', [FcActivityReportController::class, 'byDepartment'])->name('department');
+            Route::get('/by-activity/{menuid}', [FcActivityReportController::class, 'byActivity'])->name('by-activity');
             Route::get('/not-joined', [FcActivityReportController::class, 'notJoined'])->name('not-joined');
             Route::get('/service-wise', [FcActivityReportController::class, 'serviceWise'])->name('service-wise');
         });
 
         Route::prefix('medical')->name('medical.')->group(function () {
             Route::get('/', [FcActivityMedicalController::class, 'index'])->name('index');
+            Route::get('/data', [FcActivityMedicalController::class, 'dataTable'])->name('data');
+            Route::get('/export/print', [FcActivityMedicalController::class, 'exportPrint'])->name('export.print');
+            Route::get('/export/pdf', [FcActivityMedicalController::class, 'exportPdf'])->name('export.pdf');
+            Route::get('/export/excel', [FcActivityMedicalController::class, 'exportExcel'])->name('export.excel');
+            Route::post('/consultation', [FcActivityMedicalController::class, 'updateConsultation'])->name('consultation');
+            Route::get('/pre-history', [FcActivityMedicalController::class, 'preHistoryPreview'])->name('pre-history');
             Route::get('/report', [FcActivityMedicalController::class, 'show'])->name('show');
             Route::post('/upload', [FcActivityMedicalController::class, 'upload'])->name('upload');
         });
+
+        Route::put('/{activityId}', [FcActivityController::class, 'update'])->name('update');
+        Route::delete('/{activityId}', [FcActivityController::class, 'destroy'])->name('destroy');
     });
 });
 

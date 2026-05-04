@@ -19,15 +19,6 @@ class FcOtActivity extends Model
         'status',
     ];
 
-    public const DEPT_ACTIVITY = [
-        'admin' => 'joined',
-        'security' => 'idcard',
-        'it' => 'biometric',
-        'trg' => 'trgind',
-        'medical' => 'height',
-        'shop' => 'souvenir',
-    ];
-
     public function ot()
     {
         return $this->belongsTo(FcOtDetail::class, 'username', 'username');

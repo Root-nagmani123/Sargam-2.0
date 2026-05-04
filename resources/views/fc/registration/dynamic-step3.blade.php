@@ -13,11 +13,20 @@
             @endif
         </div>
         <div class="card-body">
-            {{-- Group Tabs --}}
-            <ul class="nav nav-tabs mb-3" id="step3Tabs" role="tablist">
+            {{-- Group Tabs (pre-medical is fixed first tab; builder-driven groups follow) --}}
+            <ul class="nav nav-tabs mb-3 flex-wrap" id="step3Tabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active text-nowrap" id="tab-premed-setup-btn"
+                            data-bs-toggle="tab" data-bs-target="#tab-premed-setup" type="button" role="tab">
+                        @if($completedPreMedical ?? false)
+                            <i class="bi bi-check-circle-fill me-1 text-success"></i>
+                        @endif
+                        <i class="bi bi-heart-pulse me-1"></i>Pre-medical history
+                    </button>
+                </li>
                 @foreach($groups as $gi => $group)
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link {{ $gi === 0 ? 'active' : '' }} {{ ($completedGroups[$group->group_name] ?? false) ? 'text-success' : '' }}"
+                        <button class="nav-link {{ ($completedGroups[$group->group_name] ?? false) ? 'text-success' : '' }}"
                                 id="tab-{{ $group->group_name }}-btn"
                                 data-bs-toggle="tab"
                                 data-bs-target="#tab-{{ $group->group_name }}"
@@ -33,6 +42,9 @@
 
             {{-- Tab Content --}}
             <div class="tab-content" id="step3TabContent">
+                <div class="tab-pane fade show active" id="tab-premed-setup" role="tabpanel" aria-labelledby="tab-premed-setup-btn">
+                    @include('fc.registration.partials.pre-medical-history-form', ['preMedicalFormLayout' => 'dynamic'])
+                </div>
                 @foreach($groups as $gi => $group)
                     @php
                         $rows         = $existingRows[$group->group_name] ?? collect();
@@ -43,7 +55,7 @@
                             ? $group->activeGroupFields
                             : $group->groupFields;
                     @endphp
-                    <div class="tab-pane fade {{ $gi === 0 ? 'show active' : '' }}" id="tab-{{ $group->group_name }}" role="tabpanel">
+                    <div class="tab-pane fade" id="tab-{{ $group->group_name }}" role="tabpanel">
                         <form method="POST" action="{{ route('fc-reg.registration.step3.save-group', $group->id) }}">
                             @csrf
 
@@ -91,9 +103,9 @@
                                         <i class="bi bi-arrow-left me-1"></i>Previous Tab
                                     </button>
                                 @else
-                                    <a href="{{ route('fc-reg.registration.step2') }}" class="btn btn-outline-secondary">
-                                        <i class="bi bi-arrow-left me-1"></i>Back to Step 2
-                                    </a>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="document.getElementById('tab-premed-setup-btn').click()">
+                                        <i class="bi bi-arrow-left me-1"></i>Previous Tab
+                                    </button>
                                 @endif
 
                                 <button type="submit" class="btn btn-primary">

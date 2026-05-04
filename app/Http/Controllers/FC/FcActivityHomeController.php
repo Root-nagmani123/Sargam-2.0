@@ -7,6 +7,7 @@ use App\Models\FC\FcActivityMaster;
 use App\Models\FC\FcOtActivity;
 use App\Models\FC\FcOtDetail;
 use App\Models\FC\SessionMaster;
+use App\Services\FC\FcPostArrivalAccessService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -14,17 +15,36 @@ use Illuminate\View\View;
 
 class FcActivityHomeController extends Controller
 {
+    public function __construct(private FcPostArrivalAccessService $access)
+    {
+    }
+
     public function index(): View
     {
         $user = Auth::user();
 
-        $activities = FcOtActivity::with(['ot', 'activityMaster'])
+        $deptIds = $this->access->departmentIdsForActivityEntry();
+        $q = FcOtActivity::query()
+            ->with(['ot', 'activityMaster.department'])
             ->where('submitedby', $user->username)
             ->where('status', 1)
-            ->latest('id')
-            ->get();
+            ->latest('id');
+        if ($deptIds !== null) {
+            if ($deptIds === []) {
+                $q->whereRaw('0 = 1');
+            } else {
+                $q->whereHas('activityMaster', fn ($q2) => $q2->whereIn('department_id', $deptIds));
+            }
+        }
 
-        return view('admin.fc-activities.home.index', compact('activities', 'user'));
+        $activities = $q->get();
+
+        return view('admin.fc-activities.home.index', [
+            'activities' => $activities,
+            'user' => $user,
+            'showSetupLinks' => $this->access->canManageActivitySetup(),
+            'canAccessMedical' => $this->access->canAccessMedicalModule(),
+        ]);
     }
 
     public function ajaxCourses(): JsonResponse
@@ -33,6 +53,7 @@ class FcActivityHomeController extends Controller
             ->where('is_active', 1)
             ->selectRaw('session_name as c_code, session_name as c_name')
             ->get();
+
         return response()->json($courses);
     }
 
@@ -40,12 +61,14 @@ class FcActivityHomeController extends Controller
     {
         $course = $request->query('course', '');
         $ots = FcOtDetail::active()->byCourse($course)->select('username', 'otname', 'otcode')->orderBy('otname')->get();
+
         return response()->json($ots);
     }
 
     public function ajaxOtName(Request $request): JsonResponse
     {
         $otcode = $request->query('otcode', '');
+        $course = trim((string) $request->query('course', ''));
         $ot = FcOtDetail::where('otcode', $otcode)->first();
 
         if (! $ot) {
@@ -55,7 +78,7 @@ class FcActivityHomeController extends Controller
         return response()->json([
             'name' => $ot->otname,
             'username' => $ot->username,
-            'warning' => $ot->hasPreHistory(),
+            'warning' => $course !== '' ? $ot->hasPreHistory($course) : $ot->hasPreHistory(),
         ]);
     }
 
@@ -63,9 +86,10 @@ class FcActivityHomeController extends Controller
     {
         $otcode = $request->query('otcode', '');
         $ot = FcOtDetail::where('otcode', $otcode)->select('house', 'housen')->first();
+
         return response()->json([
-            'house' => $ot->house ?? '',
-            'housen' => $ot->housen ?? '',
+            'house' => $ot?->house ?? '',
+            'housen' => $ot?->housen ?? '',
         ]);
     }
 
@@ -73,19 +97,18 @@ class FcActivityHomeController extends Controller
     {
         $ccode = trim((string) $request->query('ccode', ''));
 
-        $activities = FcActivityMaster::active()
-            ->when($ccode !== '', function ($q) use ($ccode) {
-                // Course names are session labels; trim-match avoids whitespace mismatches.
-                $q->whereRaw('TRIM(ccode) = ?', [$ccode]);
-            })
-            ->select('menuid', 'menun')
+        $base = FcActivityMaster::query()
+            ->active()
+            ->forDepartmentIds($this->access->departmentIdsForActivityEntry())
+            ->ordered()
+            ->select(['menuid', 'menun', 'entry_policy']);
+
+        $activities = (clone $base)
+            ->when($ccode !== '', fn ($q) => $q->forCourse($ccode))
             ->get();
 
-        // Safe fallback: if no exact course match, show all active activities.
         if ($activities->isEmpty()) {
-            $activities = FcActivityMaster::active()
-                ->select('menuid', 'menun')
-                ->get();
+            $activities = (clone $base)->get();
         }
 
         return response()->json($activities);
