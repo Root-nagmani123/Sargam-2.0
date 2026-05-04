@@ -996,8 +996,9 @@ class IdCardSecurityMapper
 
     /**
      * Printed / active ID card number for an employee: approved rows from main + duplicate ID tables.
-     * Chooses the number on the row with the latest card_valid_to (open-ended null treated as last).
-     * Use for vehicle pass autofill so duplicate-issued numbers (e.g. 27071987AAKA) replace stale emp_id (e.g. GAO00100).
+     * First matches Duplicate ID Card create: latest approved security_parm_id_apply row by employee_master_pk only,
+     * so duplicate-application rows (e.g. security_dup_perm_id_apply with newer created_date and emp_id-shaped numbers)
+     * do not override the main permanent card number. Then falls back to dup_perm / contractual sources as before.
      *
      * @return string|null  null = caller may fall back to employee_master.emp_id
      */
@@ -1009,6 +1010,24 @@ class IdCardSecurityMapper
         $linked = self::employeeLinkedPksForIdCardEndDate($canonicalEmployeePk);
         if ($linked === []) {
             return null;
+        }
+
+        // Same rule as DuplicateIDCardRequestController::resolveLatestApprovedPermanentIdCardNumber — parm table only, pk/pk_old.
+        $tblParmPrimary = 'security_parm_id_apply';
+        if (Schema::hasTable($tblParmPrimary) && Schema::hasColumn($tblParmPrimary, 'id_card_no')) {
+            $row = DB::table($tblParmPrimary)
+                ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
+                ->whereNotNull('id_card_no')
+                ->where('id_card_no', '!=', '')
+                ->whereIn('employee_master_pk', $linked)
+                ->orderByDesc('created_date')
+                ->first(['id_card_no']);
+            if ($row) {
+                $no = trim((string) ($row->id_card_no ?? ''));
+                if ($no !== '') {
+                    return $no;
+                }
+            }
         }
 
         $candidates = [];
