@@ -939,6 +939,264 @@ class IdCardSecurityMapper
     }
 
     /**
+     * Printed / active ID card number for an employee: approved rows from main + duplicate ID tables.
+     * Chooses the number on the row with the latest card_valid_to (open-ended null treated as last).
+     * Use for vehicle pass autofill so duplicate-issued numbers (e.g. 27071987AAKA) replace stale emp_id (e.g. GAO00100).
+     *
+     * @return string|null  null = caller may fall back to employee_master.emp_id
+     */
+    public static function resolvedDisplayIdCardNumberForEmployee(?int $canonicalEmployeePk): ?string
+    {
+        if (! $canonicalEmployeePk || $canonicalEmployeePk <= 0) {
+            return null;
+        }
+        $linked = self::employeeLinkedPksForIdCardEndDate($canonicalEmployeePk);
+        if ($linked === []) {
+            return null;
+        }
+
+        $candidates = [];
+
+        $pushRow = function (?string $no, $validTo, $created) use (&$candidates): void {
+            if ($no === null) {
+                return;
+            }
+            $no = trim((string) $no);
+            if ($no === '') {
+                return;
+            }
+            $end = null;
+            if ($validTo !== null && (string) $validTo !== '') {
+                try {
+                    $end = Carbon::parse($validTo)->startOfDay();
+                } catch (\Throwable $e) {
+                    $end = null;
+                }
+            }
+            $cd = null;
+            if ($created !== null && (string) $created !== '') {
+                try {
+                    $cd = Carbon::parse($created);
+                } catch (\Throwable $e) {
+                    $cd = null;
+                }
+            }
+            $candidates[] = ['no' => $no, 'end' => $end, 'created' => $cd];
+        };
+
+        // Permanent — main issue
+        if (Schema::hasTable('security_parm_id_apply') && Schema::hasColumn('security_parm_id_apply', 'id_card_no')) {
+            $rows = DB::table('security_parm_id_apply')
+                ->whereIn('employee_master_pk', $linked)
+                ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
+                ->whereNotNull('id_card_no')
+                ->where('id_card_no', '!=', '')
+                ->get(['id_card_no', 'card_valid_to', 'created_date']);
+            foreach ($rows as $r) {
+                $pushRow($r->id_card_no ?? null, $r->card_valid_to ?? null, $r->created_date ?? null);
+            }
+        }
+
+        // Permanent — duplicate / extension
+        if (Schema::hasTable('security_dup_perm_id_apply') && Schema::hasColumn('security_dup_perm_id_apply', 'id_card_no')) {
+            $rows = DB::table('security_dup_perm_id_apply')
+                ->whereIn('employee_master_pk', $linked)
+                ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
+                ->whereNotNull('id_card_no')
+                ->where('id_card_no', '!=', '')
+                ->get(['id_card_no', 'card_valid_to', 'created_date']);
+            foreach ($rows as $r) {
+                $pushRow($r->id_card_no ?? null, $r->card_valid_to ?? null, $r->created_date ?? null);
+            }
+        }
+
+        // Contractual — main + duplicate (created_by = employee master pk / pk_old)
+        foreach (['security_con_oth_id_apply', 'security_dup_other_id_apply'] as $tbl) {
+            if (! Schema::hasTable($tbl) || ! Schema::hasColumn($tbl, 'id_card_no') || ! Schema::hasColumn($tbl, 'created_by')) {
+                continue;
+            }
+            $rows = DB::table($tbl)
+                ->whereIn('created_by', $linked)
+                ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
+                ->whereNotNull('id_card_no')
+                ->where('id_card_no', '!=', '')
+                ->get(['id_card_no', 'card_valid_to', 'created_date']);
+            foreach ($rows as $r) {
+                $pushRow($r->id_card_no ?? null, $r->card_valid_to ?? null, $r->created_date ?? null);
+            }
+        }
+
+        if ($candidates === []) {
+            return null;
+        }
+
+        usort($candidates, function (array $a, array $b): int {
+            $ae = $a['end'];
+            $be = $b['end'];
+            $at = $ae ? $ae->timestamp : PHP_INT_MAX;
+            $bt = $be ? $be->timestamp : PHP_INT_MAX;
+            if ($at !== $bt) {
+                return $bt <=> $at;
+            }
+            $ac = $a['created'] ? $a['created']->timestamp : 0;
+            $bc = $b['created'] ? $b['created']->timestamp : 0;
+
+            return $bc <=> $ac;
+        });
+
+        return $candidates[0]['no'];
+    }
+
+    /**
+     * Resolve canonical employee_master pk from a printed ID / emp code / pk string (vehicle pass "Others" cap when emp_master_pk is missing).
+     * Walks the same sources as vehicle pass ID lookup: employee_master, parm tables, duplicate permanent, contractual, duplicate other.
+     */
+    public static function resolveCanonicalFromPrintedIdCardNumber(string $lookup): ?int
+    {
+        $lookup = trim($lookup);
+        if ($lookup === '') {
+            return null;
+        }
+
+        $em = DB::table('employee_master as em')
+            ->where(function ($q) use ($lookup) {
+                $q->where('em.emp_id', $lookup)
+                    ->orWhereRaw('TRIM(em.emp_id) = ?', [trim($lookup)]);
+                if (ctype_digit($lookup)) {
+                    $q->orWhere('em.pk', $lookup);
+                    if (Schema::hasColumn('employee_master', 'pk_old')) {
+                        $q->orWhere('em.pk_old', $lookup);
+                    }
+                }
+            })
+            ->orderBy('em.pk')
+            ->first(['em.pk']);
+        if ($em) {
+            return self::resolveCanonicalEmployeeMasterPk((int) $em->pk);
+        }
+
+        foreach (['security_parm_id_apply', 'security_parm_oth_id_apply'] as $table) {
+            if (! Schema::hasTable($table)) {
+                continue;
+            }
+            $parts = [];
+            $bindings = [];
+            if (Schema::hasColumn($table, 'id_card_no')) {
+                $parts[] = '(id_card_no = ? OR TRIM(COALESCE(id_card_no, "")) = ?)';
+                $bindings[] = $lookup;
+                $bindings[] = trim($lookup);
+            }
+            if (Schema::hasColumn($table, 'emp_id_apply')) {
+                $parts[] = '(emp_id_apply = ? OR TRIM(COALESCE(emp_id_apply, "")) = ?)';
+                $bindings[] = $lookup;
+                $bindings[] = trim($lookup);
+            }
+            if ($parts === []) {
+                continue;
+            }
+            $orderCol = Schema::hasColumn($table, 'created_date') ? 'created_date' : (Schema::hasColumn($table, 'pk') ? 'pk' : 'emp_id_apply');
+            $row = DB::table($table)
+                ->whereRaw('('.implode(' OR ', $parts).')', $bindings)
+                ->orderByDesc($orderCol)
+                ->first();
+            if ($row) {
+                if (Schema::hasColumn($table, 'employee_master_pk') && ! empty($row->employee_master_pk)) {
+                    return self::resolveCanonicalEmployeeMasterPk((int) $row->employee_master_pk);
+                }
+                if (Schema::hasColumn($table, 'emp_id_apply') && $row->emp_id_apply !== null && (string) $row->emp_id_apply !== '') {
+                    $em2 = DB::table('employee_master')
+                        ->where(function ($q) use ($row) {
+                            $v = trim((string) $row->emp_id_apply);
+                            $q->where('emp_id', $v)->orWhereRaw('TRIM(emp_id) = ?', [$v]);
+                        })
+                        ->orderBy('pk')
+                        ->first(['pk']);
+                    if ($em2) {
+                        return self::resolveCanonicalEmployeeMasterPk((int) $em2->pk);
+                    }
+                }
+            }
+        }
+
+        if (Schema::hasTable('security_dup_perm_id_apply') && Schema::hasColumn('security_dup_perm_id_apply', 'id_card_no')) {
+            $orderDup = Schema::hasColumn('security_dup_perm_id_apply', 'created_date') ? 'created_date' : 'emp_id_apply';
+            $row = DB::table('security_dup_perm_id_apply')
+                ->where(function ($q) use ($lookup) {
+                    $q->where('id_card_no', $lookup)->orWhereRaw('TRIM(COALESCE(id_card_no, "")) = ?', [trim($lookup)]);
+                })
+                ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
+                ->orderByDesc($orderDup)
+                ->first();
+            if ($row && Schema::hasColumn('security_dup_perm_id_apply', 'employee_master_pk') && ! empty($row->employee_master_pk)) {
+                return self::resolveCanonicalEmployeeMasterPk((int) $row->employee_master_pk);
+            }
+        }
+
+        if (Schema::hasTable('security_con_oth_id_apply')) {
+            $conParts = [];
+            $conBindings = [];
+            if (Schema::hasColumn('security_con_oth_id_apply', 'id_card_no')) {
+                $conParts[] = '(id_card_no = ? OR TRIM(COALESCE(id_card_no, "")) = ?)';
+                $conBindings[] = $lookup;
+                $conBindings[] = trim($lookup);
+            }
+            if (Schema::hasColumn('security_con_oth_id_apply', 'emp_id_apply')) {
+                $conParts[] = '(emp_id_apply = ? OR TRIM(COALESCE(emp_id_apply, "")) = ?)';
+                $conBindings[] = $lookup;
+                $conBindings[] = trim($lookup);
+            }
+            if ($conParts !== []) {
+                $conOrder = Schema::hasColumn('security_con_oth_id_apply', 'created_date') ? 'created_date' : 'pk';
+                $con = DB::table('security_con_oth_id_apply')
+                    ->whereRaw('('.implode(' OR ', $conParts).')', $conBindings)
+                    ->orderByDesc($conOrder)
+                    ->first();
+                if ($con) {
+                    if (Schema::hasColumn('security_con_oth_id_apply', 'employee_master_pk') && ! empty($con->employee_master_pk)) {
+                        return self::resolveCanonicalEmployeeMasterPk((int) $con->employee_master_pk);
+                    }
+                    if (Schema::hasColumn('security_con_oth_id_apply', 'created_by') && ! empty($con->created_by)) {
+                        return self::resolveCanonicalEmployeeMasterPk((int) $con->created_by);
+                    }
+                    if (Schema::hasColumn('security_con_oth_id_apply', 'emp_id_apply') && $con->emp_id_apply !== null && (string) $con->emp_id_apply !== '') {
+                        $em3 = DB::table('employee_master')
+                            ->where(function ($q) use ($con) {
+                                $v = trim((string) $con->emp_id_apply);
+                                $q->where('emp_id', $v)->orWhereRaw('TRIM(emp_id) = ?', [$v]);
+                            })
+                            ->orderBy('pk')
+                            ->first(['pk']);
+                        if ($em3) {
+                            return self::resolveCanonicalEmployeeMasterPk((int) $em3->pk);
+                        }
+                    }
+                }
+            }
+        }
+
+        if (Schema::hasTable('security_dup_other_id_apply') && Schema::hasColumn('security_dup_other_id_apply', 'id_card_no')) {
+            $orderO = Schema::hasColumn('security_dup_other_id_apply', 'created_date') ? 'created_date' : 'emp_id_apply';
+            $row = DB::table('security_dup_other_id_apply')
+                ->where(function ($q) use ($lookup) {
+                    $q->where('id_card_no', $lookup)->orWhereRaw('TRIM(COALESCE(id_card_no, "")) = ?', [trim($lookup)]);
+                })
+                ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
+                ->orderByDesc($orderO)
+                ->first();
+            if ($row) {
+                if (Schema::hasColumn('security_dup_other_id_apply', 'employee_master_pk') && ! empty($row->employee_master_pk)) {
+                    return self::resolveCanonicalEmployeeMasterPk((int) $row->employee_master_pk);
+                }
+                if (Schema::hasColumn('security_dup_other_id_apply', 'created_by') && ! empty($row->created_by)) {
+                    return self::resolveCanonicalEmployeeMasterPk((int) $row->created_by);
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Enforce vehicle / duplicate vehicle pass validity dates within approved Employee ID card end date.
      *
      * @param  string|null  $familyEmployeeTypeOnly  null = consider permanent + contractual and use stricter cap
@@ -968,7 +1226,7 @@ class IdCardSecurityMapper
         }
         if ($to->gt($capDay)) {
             throw ValidationException::withMessages([
-                $toFieldKey => "Valid To cannot be later than your Employee ID card validity end date ({$label}).",
+                $toFieldKey => "End date cannot be later than this employee's approved ID card validity end date ({$label}), including new or duplicate ID cards.",
             ]);
         }
     }
@@ -1004,7 +1262,7 @@ class IdCardSecurityMapper
             $to = Carbon::parse($toYmd)->startOfDay();
             if ($to->gt($capDay)) {
                 throw ValidationException::withMessages([
-                    $toFieldKey => "Valid To cannot be later than your Employee ID card validity end date ({$label}).",
+                    $toFieldKey => "End date cannot be later than this employee's approved ID card validity end date ({$label}), including new or duplicate ID cards.",
                 ]);
             }
         }

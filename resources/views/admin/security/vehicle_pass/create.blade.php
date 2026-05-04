@@ -607,6 +607,21 @@
         });
         toDateInput.addEventListener('change', syncVehicleDateConstraints);
     }
+
+    var vehiclePassForm = document.getElementById('vehiclePassForm');
+    if (vehiclePassForm && toDateInput) {
+        vehiclePassForm.addEventListener('submit', function (ev) {
+            var capY = (typeof effectiveVehiclePassIdCardCapYmd === 'function') ? effectiveVehiclePassIdCardCapYmd() : null;
+            if (capY && toDateInput.value && toDateInput.value > capY) {
+                ev.preventDefault();
+                if (typeof toastr !== 'undefined') {
+                    toastr.error('End date cannot be later than this employee\'s ID card validity end date.');
+                } else {
+                    alert('End date cannot be later than this employee\'s ID card validity end date.');
+                }
+            }
+        });
+    }
 })();
 </script>
 @endpush

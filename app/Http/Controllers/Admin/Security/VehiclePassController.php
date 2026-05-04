@@ -147,12 +147,21 @@ class VehiclePassController extends Controller
             return null;
         }
 
+        $empIdDisplay = $emp->emp_id ?? '';
+        $canonical = IdCardSecurityMapper::resolveCanonicalEmployeeMasterPk((int) $emp->pk);
+        if ($canonical) {
+            $resolvedNo = IdCardSecurityMapper::resolvedDisplayIdCardNumberForEmployee($canonical);
+            if (is_string($resolvedNo) && $resolvedNo !== '') {
+                $empIdDisplay = $resolvedNo;
+            }
+        }
+
         return (object) [
             'pk' => $emp->pk,
             'name' => trim($emp->first_name . ' ' . ($emp->last_name ?? '')),
             'designation' => $emp->designation->designation_name ?? '',
             'department' => $emp->department->department_name ?? '',
-            'emp_id' => $emp->emp_id ?? '',
+            'emp_id' => $empIdDisplay,
         ];
     }
 
@@ -534,8 +543,17 @@ class VehiclePassController extends Controller
         $canonicalForCap = null;
         if (in_array($applicantType, ['employee', 'government_vehicle'], true)) {
             $canonicalForCap = IdCardSecurityMapper::resolveCanonicalEmployeeMasterPk($employeePk);
-        } elseif ($applicantType === 'others' && $empMasterPk) {
-            $canonicalForCap = IdCardSecurityMapper::resolveCanonicalEmployeeMasterPk((int) $empMasterPk);
+        } elseif ($applicantType === 'others') {
+            $othersEmpPk = isset($validated['emp_master_pk']) ? (int) $validated['emp_master_pk'] : 0;
+            if ($othersEmpPk > 0) {
+                $canonicalForCap = IdCardSecurityMapper::resolveCanonicalEmployeeMasterPk($othersEmpPk);
+            }
+            if (! $canonicalForCap) {
+                $idCardRaw = trim((string) ($validated['employee_id_card'] ?? ''));
+                if ($idCardRaw !== '') {
+                    $canonicalForCap = IdCardSecurityMapper::resolveCanonicalFromPrintedIdCardNumber($idCardRaw);
+                }
+            }
         }
         if ($canonicalForCap) {
             IdCardSecurityMapper::assertPassValidityWithinApprovedEmployeeIdCard(
@@ -819,8 +837,17 @@ class VehiclePassController extends Controller
         $canonicalForCap = null;
         if (in_array($applicantType, ['employee', 'government_vehicle'], true)) {
             $canonicalForCap = IdCardSecurityMapper::resolveCanonicalEmployeeMasterPk($employeePk);
-        } elseif ($applicantType === 'others' && $empMasterPk) {
-            $canonicalForCap = IdCardSecurityMapper::resolveCanonicalEmployeeMasterPk((int) $empMasterPk);
+        } elseif ($applicantType === 'others') {
+            $othersEmpPk = isset($validated['emp_master_pk']) ? (int) $validated['emp_master_pk'] : 0;
+            if ($othersEmpPk > 0) {
+                $canonicalForCap = IdCardSecurityMapper::resolveCanonicalEmployeeMasterPk($othersEmpPk);
+            }
+            if (! $canonicalForCap) {
+                $idCardRaw = trim((string) ($validated['employee_id_card'] ?? ''));
+                if ($idCardRaw !== '') {
+                    $canonicalForCap = IdCardSecurityMapper::resolveCanonicalFromPrintedIdCardNumber($idCardRaw);
+                }
+            }
         }
         if ($canonicalForCap) {
             IdCardSecurityMapper::assertPassValidityWithinApprovedEmployeeIdCard(
