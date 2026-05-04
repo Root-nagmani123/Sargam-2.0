@@ -18,11 +18,29 @@
             $oldValidFrom = old('veh_card_valid_from', $todayYmd);
             $oldValidTo = old('vech_card_valid_to', now()->addYear()->format('Y-m-d'));
             $idCap = $idCardValidityCapYmd ?? null;
-            if ($idCap && $oldValidTo > $idCap) {
-                $oldValidTo = $idCap;
+
+            // Keep range on/after today so min="" and value="" never disagree (avoids broken native date pickers).
+            if ($oldValidFrom < $todayYmd) {
+                $oldValidFrom = $todayYmd;
             }
-            if ($idCap && $oldValidFrom > $idCap) {
-                $oldValidFrom = $idCap;
+            if ($oldValidTo < $todayYmd) {
+                $oldValidTo = $todayYmd;
+            }
+            if ($oldValidTo < $oldValidFrom) {
+                $oldValidTo = $oldValidFrom;
+            }
+
+            // End-of-ID-card cap only when the cap is still in the future; never set max < min in the browser.
+            if ($idCap && $idCap >= $todayYmd) {
+                if ($oldValidTo > $idCap) {
+                    $oldValidTo = $idCap;
+                }
+                if ($oldValidFrom > $idCap) {
+                    $oldValidFrom = $todayYmd;
+                }
+                if ($oldValidTo < $oldValidFrom) {
+                    $oldValidTo = $oldValidFrom;
+                }
             }
             if (in_array($oldApplicantType, ['employee', 'government_vehicle']) && isset($currentUserEmployee) && $currentUserEmployee) {
                 if ($oldIdCard === '') {
@@ -491,7 +509,8 @@
         }
 
         var capY = (typeof effectiveVehiclePassIdCardCapYmd === 'function') ? effectiveVehiclePassIdCardCapYmd() : null;
-        if (capY) {
+        // If cap is before today, do not set max: it would be less than min and the browser date UI breaks.
+        if (capY && capY >= todayYmd) {
             fromDateInput.setAttribute('max', capY);
             toDateInput.setAttribute('max', capY);
             if (fromDateInput.value && fromDateInput.value > capY) {

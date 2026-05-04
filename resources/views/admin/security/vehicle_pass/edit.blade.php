@@ -492,7 +492,7 @@ $(document).ready(function() {
         }
 
         var capY = (typeof editEffectiveIdCardCapYmd === 'function') ? editEffectiveIdCardCapYmd() : null;
-        if (capY) {
+        if (capY && capY >= todayYmd) {
             fromEl.setAttribute('max', capY);
             toEl.setAttribute('max', capY);
             if (fromEl.value && fromEl.value > capY) {
