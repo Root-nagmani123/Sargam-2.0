@@ -1,5 +1,10 @@
-@if(canSeeLowStockAlert())
-<nav class="sidebar-nav scroll-sidebar" id="menu-right-setup-mini-9" data-simplebar=""
+@props([
+    'panelDomId' => 'menu-right-setup-mini-9',
+    'forceSelfServiceOnly' => false,
+])
+
+@if(canSeeLowStockAlert() && ! $forceSelfServiceOnly)
+<nav class="sidebar-nav scroll-sidebar" id="{{ $panelDomId }}" data-simplebar=""
     data-mess-module="{{ request()->is('admin/mess*') ? '1' : '0' }}">
     <ul class="sidebar-menu" id="sidebarnav">
         <!-- ======= MASTER DATA ======= -->
@@ -130,13 +135,6 @@
                     <span class="hide-menu small small-sm-normal text-nowrap">Process Mess Bills</span>
                 </a>
             </li>
-            @if(canSeeMessSelfServiceSetup())
-            <li class="sidebar-item">
-                <a class="sidebar-link {{ request()->routeIs('admin.mess.my-bills.index') ? 'active' : '' }}" href="{{ route('admin.mess.my-bills.index') }}">
-                    <span class="hide-menu small small-sm-normal text-nowrap">My Mess Bills</span>
-                </a>
-            </li>
-            @endif
         </ul>
 
         <!-- ======= REPORTS ======= -->
@@ -210,8 +208,8 @@
         </ul>
     </ul>
 </nav>
-@elseif(canSeeMessSelfServiceSetup())
-<nav class="sidebar-nav scroll-sidebar" id="menu-right-setup-mini-9" data-simplebar=""
+@else
+<nav class="sidebar-nav scroll-sidebar" id="{{ $panelDomId }}" data-simplebar=""
     data-mess-module="{{ request()->is('admin/mess*') ? '1' : '0' }}">
     <ul class="sidebar-menu" id="sidebarnav">
         <li class="sidebar-item"
@@ -238,7 +236,7 @@
 document.addEventListener('keydown', function (e) {
     if (e.key !== 'Tab' || e.shiftKey) return;
 
-    var nav = document.getElementById('menu-right-setup-mini-9');
+    var nav = document.getElementById(@json($panelDomId));
     if (!nav || nav.dataset.messModule !== '1') return;
 
     var active = document.activeElement;

@@ -9,26 +9,37 @@
                     style="height: 100%; overflow: hidden scroll;">
                     <div class="simplebar-content" style="padding: 20px 0px 20px 24px">
                         <ul class="sidebar-menu list-unstyled mb-0" id="sidebarnav">
-                            <!-- ---------------------------------- -->
-                            <!-- Issue Management / CENTCOM -->
-                            <!-- ---------------------------------- -->
-                            @if (!hasRole('Student-OT'))
-                            <li class="sidebar-item mb-2">
-                                <a class="sidebar-link d-flex align-items-center rounded-pill px-3 py-2 text-decoration-none" href="{{ route('admin.issue-management.index') }}">
-                                    <span class="hide-menu small small-sm-normal text-nowrap">All Issues</span>
+                            <li class="sidebar-item mt-2">
+                                <a class="sidebar-link d-flex justify-content-between align-items-center"
+                                    data-bs-toggle="collapse" href="#centcomLinksCollapse" role="button"
+                                    aria-expanded="true" aria-controls="centcomLinksCollapse">
+                                    <span class="hide-menu fw-bold small small-sm-normal text-nowrap">Centcom Links</span>
+                                    <i class="material-icons menu-icon material-symbols-rounded"
+                                        style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
                                 </a>
+                                <ul class="collapse show list-unstyled ps-3" id="centcomLinksCollapse">
+                                    @if (!hasRole('Student-OT'))
+                                    <li class="sidebar-item mb-2">
+                                        <a class="sidebar-link d-flex align-items-center rounded-pill px-3 py-2 text-decoration-none {{ request()->routeIs('admin.issue-management.index') ? 'active' : '' }}"
+                                            href="{{ route('admin.issue-management.index') }}">
+                                            <span class="hide-menu small small-sm-normal text-nowrap">All Issues</span>
+                                        </a>
+                                    </li>
+                                    <li class="sidebar-item mb-2">
+                                        <a class="sidebar-link d-flex align-items-center rounded-pill px-3 py-2 text-decoration-none {{ request()->routeIs('admin.issue-management.centcom') ? 'active' : '' }}"
+                                            href="{{ route('admin.issue-management.centcom') }}">
+                                            <span class="hide-menu small small-sm-normal text-nowrap">CENTCOM - Assigned Complaints</span>
+                                        </a>
+                                    </li>
+                                    <li class="sidebar-item mb-2">
+                                        <a class="sidebar-link d-flex align-items-center rounded-pill px-3 py-2 text-decoration-none {{ request()->routeIs('admin.issue-management.create') ? 'active' : '' }}"
+                                            href="{{ route('admin.issue-management.create') }}">
+                                            <span class="hide-menu small small-sm-normal text-nowrap">Log New Issue</span>
+                                        </a>
+                                    </li>
+                                    @endif
+                                </ul>
                             </li>
-                            <li class="sidebar-item mb-2">
-                                <a class="sidebar-link d-flex align-items-center rounded-pill px-3 py-2 text-decoration-none" href="{{ route('admin.issue-management.centcom') }}">
-                                    <span class="hide-menu small small-sm-normal text-nowrap">CENTCOM -  Assigned Complaints</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item mb-2">
-                                <a class="sidebar-link d-flex align-items-center rounded-pill px-3 py-2 text-decoration-none" href="{{ route('admin.issue-management.create') }}">
-                                    <span class="hide-menu small small-sm-normal text-nowrap">Log New Issue</span>
-                                </a>
-                            </li>
-                            @endif
                             @if(hasRole('Admin') || hasRole('SuperAdmin'))
                             <li class="sidebar-item mb-2">
                                 <a class="sidebar-link d-flex align-items-center rounded-pill px-3 py-2 text-decoration-none" href="{{ route('admin.issue-categories.index') }}">

@@ -12,6 +12,14 @@
                 $isContractualEmployee = $emp && (int) ($emp->payroll ?? 0) !== 0;
             }
         }
+        $canSeeAcademicSetupMenu = hasRole('Admin')
+            || hasRole('Training-Induction')
+            || hasRole('Training-MCTP')
+            || hasRole('IST')
+            || hasRole('Internal Faculty')
+            || hasRole('Guest Faculty')
+            || hasRole('Doctor')
+            || hasRole('Student-OT');
     @endphp
     <div class="vh-100 d-flex flex-column overflow-hidden">
         <!-- ---------------------------------- -->
@@ -40,6 +48,7 @@
                                     <div class="simplebar-content-wrapper" tabindex="0" role="region"
                                         aria-label="scrollable content" style="height: 100%; overflow: hidden scroll;">
                                         <div class="simplebar-content" style="padding: 0px;">
+                                            @if($canSeeAcademicSetupMenu)
                                             <li class="mini-nav-item {{ request()->is('academic*') ? 'selected' : '' }}" id="setup-mini-4">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3">
@@ -49,6 +58,7 @@
                                                     <span class="mini-nav-title sidebar-google-label">Academic</span>
                                                 </a>
                                             </li>
+                                            @endif
 
                                             @if(
                                                 hasRole('Admin')
@@ -73,6 +83,28 @@
                                                         <i class="material-icons menu-icon material-symbols-rounded">user_attributes</i>
                                                     </span>
                                                     <span class="mini-nav-title sidebar-google-label">Users</span>
+                                                </a>
+                                            </li>
+                                            @endif
+                                            @if(canSeeLowStockAlert())
+                                            <li class="mini-nav-item {{ request()->is('admin/mess*') ? 'selected' : '' }}" id="setup-mini-mess">
+                                                <a href="javascript:void(0)"
+                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3">
+                                                    <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
+                                                        <i class="material-icons menu-icon material-symbols-rounded">restaurant_menu</i>
+                                                    </span>
+                                                    <span class="mini-nav-title sidebar-google-label">Mess Management</span>
+                                                </a>
+                                            </li>
+                                            @endif
+                                            @if(hasRole('Admin') || hasRole('Super Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST') || hasRole('Estate') || hasRole('HAC Person') || hasRole('Staff') || hasRole('Student-OT') || hasRole('Doctor') || hasRole('Guest Faculty') || hasRole('Internal Faculty'))
+                                            <li class="mini-nav-item {{ request()->is('admin/estate*') ? 'selected' : '' }}" id="setup-mini-11">
+                                                <a href="javascript:void(0)"
+                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3">
+                                                    <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
+                                                        <i class="material-icons menu-icon material-symbols-rounded">house</i>
+                                                    </span>
+                                                    <span class="mini-nav-title sidebar-google-label">Estate Management</span>
                                                 </a>
                                             </li>
                                             @endif
@@ -122,7 +154,9 @@
                     <!-- ---------------------------------- -->
                     <!-- Academic -->
                     <!-- ---------------------------------- -->
+                    @if($canSeeAcademicSetupMenu)
                     <x-menu.setup_academic />
+                    @endif
 
                     <!-- ---------------------------------- -->
                     <!-- Academic -->
@@ -144,10 +178,15 @@
                     <!-- ---------------------------------- -->
                     <x-menu.fc-sidebar />
 
+                    @if(canSeeLowStockAlert())
+                    <x-menu.setup_mess_management panel-dom-id="menu-right-setup-mini-mess" />
+                    @endif
+
                     <!-- Security Management (Vehicle & Visitor Pass) -->
                     <!-- ---------------------------------- -->
                     <!-- Estate Management -->
                     <!-- ---------------------------------- -->
+                    <x-menu.setup_estate_management panel-dom-id="menu-right-setup-mini-11" />
 
                 </div>
             </div>

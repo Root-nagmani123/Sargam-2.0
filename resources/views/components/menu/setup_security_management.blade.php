@@ -9,6 +9,43 @@
                     style="height: 100%; overflow: hidden scroll;">
                     <div class="simplebar-content" style="padding: 20px 0px 20px 24px">
                         <ul class="sidebar-menu list-unstyled mb-0" id="sidebarnav">
+                            <li class="sidebar-item mt-2">
+                                <a class="sidebar-link d-flex justify-content-between align-items-center"
+                                    data-bs-toggle="collapse" href="#securityRequestsCollapse" role="button"
+                                    aria-expanded="true" aria-controls="securityRequestsCollapse">
+                                    <span class="hide-menu fw-bold small small-sm-normal text-nowrap">Security Request Links</span>
+                                    <i class="material-icons menu-icon material-symbols-rounded"
+                                        style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
+                                </a>
+                                <ul class="collapse show list-unstyled ps-3" id="securityRequestsCollapse">
+                                    <li class="sidebar-item">
+                                        <a class="sidebar-link {{ request()->routeIs('admin.employee_idcard.*') ? 'active' : '' }}"
+                                            href="{{ route('admin.employee_idcard.index') }}">
+                                            <span class="hide-menu small small-sm-normal text-nowrap">ID Card List</span>
+                                        </a>
+                                    </li>
+
+                                    <li class="sidebar-item">
+                                        <a class="sidebar-link {{ request()->routeIs('admin.duplicate_idcard.*') ? 'active' : '' }}"
+                                            href="{{ route('admin.duplicate_idcard.index') }}">
+                                            <span class="hide-menu small small-sm-normal text-nowrap">Request Duplicate ID Card</span>
+                                        </a>
+                                    </li>
+                                    <li class="sidebar-item">
+                                        <a class="sidebar-link {{ request()->routeIs('admin.security.vehicle_pass.*') ? 'active' : '' }}"
+                                            href="{{ route('admin.security.vehicle_pass.index') }}">
+                                            <span class="hide-menu small small-sm-normal text-nowrap">Vehicle Pass Request</span>
+                                        </a>
+                                    </li>
+
+                                    <li class="sidebar-item">
+                                        <a class="sidebar-link {{ request()->routeIs('admin.family_idcard.*') ? 'active' : '' }}"
+                                            href="{{ route('admin.family_idcard.index') }}">
+                                            <span class="hide-menu small small-sm-normal text-nowrap">Request Family ID Card</span>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </li>
                            
                             {{--<li class="sidebar-item">
                                 <a class="sidebar-link" href="{{ route('admin.employee_idcard.create') }}">

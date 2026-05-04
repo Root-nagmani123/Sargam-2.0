@@ -1,5 +1,6 @@
 @php
     $isContractualEmployee = false;
+    $showHomeEstateMini = hasRole('Admin') || hasRole('Super Admin') || hasRole('Estate');
     $authUser = \Illuminate\Support\Facades\Auth::user();
     if ($authUser && \Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'payroll')) {
         $userId = $authUser->user_id ?? $authUser->pk ?? null;
@@ -51,30 +52,34 @@
                                                     <span class="mini-nav-title sidebar-google-label">General</span>
                                                 </a>
                                             </li>
-                                            @if(hasRole('Admin') || hasRole('Super Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST') || hasRole('Estate') || hasRole('HAC Person') || hasRole('Staff') || hasRole('Student-OT') || hasRole('Doctor') || hasRole('Guest Faculty') || hasRole('Internal Faculty'))
-                                            <li class="mini-nav-item {{ request()->is('admin/estate*') ? 'selected' : '' }}" id="mini-11">
-                                                <a href="javascript:void(0)"
-                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3">
-                                                    <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
-                                                        <i class="material-icons menu-icon material-symbols-rounded">house</i>
-                                                    </span>
-                                                    <span class="mini-nav-title sidebar-google-label">Estate Management</span>
-                                                </a>
-                                            </li>
-                                            @endif
-                                            @if(canSeeMessSelfServiceSetup())
                                             <li class="mini-nav-item {{ request()->is('admin/mess*') ? 'selected' : '' }}" id="setup-mini-9">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3">
                                                     <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
                                                         <i class="material-icons menu-icon material-symbols-rounded">restaurant_menu</i>
                                                     </span>
-                                                    <span class="mini-nav-title sidebar-google-label">Mess Management</span>
+                                                    <span class="mini-nav-title sidebar-google-label">Mess</span>
+                                                </a>
+                                            </li>
+                                            @if($showHomeEstateMini)
+                                            <li class="mini-nav-item {{ request()->is('admin/estate*') && request('scope') === 'self' ? 'selected' : '' }}" id="mini-11">
+                                                <a href="javascript:void(0)"
+                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3">
+                                                    <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
+                                                        <i class="material-icons menu-icon material-symbols-rounded">house</i>
+                                                    </span>
+                                                    <span class="mini-nav-title sidebar-google-label">Estate</span>
                                                 </a>
                                             </li>
                                             @endif
                                             @if(! hasRole('Student-OT') && ! $isContractualEmployee)
-                                            <li class="mini-nav-item {{ request()->is('security*') ? 'selected' : '' }}" id="mini-9">
+                                            <li class="mini-nav-item {{ request()->is('admin/security*')
+                                                || request()->routeIs('admin.security.*')
+                                                || request()->routeIs('admin.employee_idcard.*')
+                                                || request()->routeIs('admin.duplicate_idcard.*')
+                                                || request()->routeIs('admin.family_idcard.*')
+                                                || request()->routeIs('admin.security.vehicle_pass.*')
+                                                ? 'selected' : '' }}" id="mini-9">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3">
                                                     <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
@@ -117,8 +122,10 @@
                     <!-- Dashboard -->
                     <!-- ---------------------------------- -->
                     <x-menu.general />
-                    <x-menu.setup_estate_management />
-                    <x-menu.setup_mess_management />
+                    <x-menu.setup_mess_management :force-self-service-only="canSeeLowStockAlert()" />
+                    @if($showHomeEstateMini)
+                    <x-menu.home_estate_management />
+                    @endif
                     @if(! hasRole('Student-OT') && ! $isContractualEmployee)
                     <x-menu.setup_security_management />
                     <x-menu.setup_issue_management />

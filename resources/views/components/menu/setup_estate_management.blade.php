@@ -1,4 +1,8 @@
-<nav class="sidebar-nav d-block simplebar-scrollable-y" id="menu-right-mini-11" data-simplebar="init">
+@props([
+    'panelDomId' => 'menu-right-mini-11',
+])
+
+<nav class="sidebar-nav d-block simplebar-scrollable-y" id="{{ $panelDomId }}" data-simplebar="init">
     <div class="simplebar-wrapper" style="margin: 0px -20px -24px;">
         <div class="simplebar-height-auto-observer-wrapper">
             <div class="simplebar-height-auto-observer"></div>
