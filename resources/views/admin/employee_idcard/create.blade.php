@@ -612,13 +612,141 @@
         }
     }
 
+    /** Full wipe of both Permanent and Contractual fields + uploads + dup modal (used when switching employee type). */
+    function idcardResetEntireForm() {
+        var empPk = document.getElementById('employee_master_pk_input');
+        if (empPk) empPk.value = '';
+
+        ['duplication_reason_modal', 'id_card_number_modal', 'id_card_valid_from_modal', 'id_card_valid_upto_modal'].forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        var firM = document.getElementById('fir_receipt_modal');
+        if (firM) {
+            firM.value = '';
+            clearDocPreviewModal('firReceiptPlaceholder', 'firReceiptPreview', 'firReceiptFileName');
+        }
+        var payM = document.getElementById('payment_receipt_modal');
+        if (payM) {
+            payM.value = '';
+            clearDocPreviewModal('paymentReceiptPlaceholder', 'paymentReceiptPreview', 'paymentReceiptFileName');
+        }
+        var dsp = document.getElementById('duplicationSummaryPerm');
+        var dsc = document.getElementById('duplicationSummaryCont');
+        if (dsp) dsp.textContent = '';
+        if (dsc) dsc.textContent = '';
+
+        function clearContainerFields(container) {
+            if (!container) return;
+            container.querySelectorAll('input, select, textarea').forEach(function(el) {
+                if (el.type === 'file') {
+                    el.value = '';
+                    return;
+                }
+                if (el.tagName === 'SELECT') {
+                    el.selectedIndex = 0;
+                    return;
+                }
+                el.value = '';
+            });
+        }
+        clearContainerFields(permanentView);
+        clearContainerFields(contractualView);
+
+        var rfc = document.getElementById('request_for_cont');
+        if (rfc) rfc.value = 'Others ID Card';
+
+        ['sub_type_perm', 'sub_type_cont'].forEach(function(id) {
+            var st = document.getElementById(id);
+            if (st) {
+                st.innerHTML = '<option value="">Select Sub Type</option>';
+                st.disabled = true;
+            }
+        });
+
+        var ppm = document.getElementById('photo_perm');
+        if (ppm) ppm.value = '';
+        clearPhotoPreview('photoPlaceholderPerm', 'photoPreviewPerm', 'photoPreviewImgPerm');
+        var pcm = document.getElementById('photo_cont');
+        if (pcm) pcm.value = '';
+        clearPhotoPreview('photoPlaceholderCont', 'photoPreviewCont', 'photoPreviewImgCont');
+        var jlp = document.getElementById('joining_letter_perm');
+        if (jlp) jlp.value = '';
+        clearDocPreview('joiningLetterPlaceholderPerm', 'joiningLetterPreviewPerm', 'joiningLetterFileNamePerm');
+        var jls = document.getElementById('joiningLetterSuccessPerm');
+        var jlst = document.getElementById('joiningLetterSuccessTextPerm');
+        if (jls) jls.classList.add('d-none');
+        if (jlst) jlst.textContent = 'Joining document selected — will be uploaded on submit.';
+        var jlc = document.getElementById('joining_letter_cont');
+        if (jlc) jlc.value = '';
+        clearDocPreview('joiningLetterPlaceholderCont', 'joiningLetterPreviewCont', 'joiningLetterFileNameCont');
+        var jlsc = document.getElementById('joiningLetterSuccessCont');
+        if (jlsc) jlsc.classList.add('d-none');
+        var doc = document.getElementById('documents');
+        if (doc) doc.value = '';
+        clearDocPreview('documentsPlaceholder', 'documentsPreview', 'documentsFileName');
+        var ds = document.getElementById('documentsSuccess');
+        var dst = document.getElementById('documentsSuccessText');
+        if (ds) ds.classList.add('d-none');
+        if (dst) dst.textContent = 'Document selected — will be uploaded on submit.';
+
+        var vuC = document.getElementById('id_card_valid_upto_cont');
+        if (vuC) vuC.value = idcardValidUptoOneYearFromToday();
+
+        toggleDuplicationExtension();
+    }
+
+    function idcardApplyFileInputAvailability() {
+        ['photo_perm', 'photo_cont', 'joining_letter_perm', 'joining_letter_cont', 'documents'].forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el && el.type === 'file') el.disabled = true;
+        });
+        if (permanentView.style.display !== 'none') {
+            ['photo_perm', 'joining_letter_perm'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el && el.type === 'file') el.disabled = false;
+            });
+        } else {
+            ['photo_cont', 'documents'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el && el.type === 'file') el.disabled = false;
+            });
+        }
+        idcardSyncDocumentsRequired();
+    }
+
     permRad.addEventListener('change', function() {
+        if (!permRad.checked) return;
+        idcardResetEntireForm();
         showPermanent();
         idcardResetFlow();
+        idcardApplyFileInputAvailability();
+        document.getElementById('sub_type_perm').disabled = true;
+        document.getElementById('request_for_perm').disabled = true;
+        if (document.getElementById('card_type_perm').value) idcardLoadSubTypes();
+        var sfp = document.getElementById('request_for_perm');
+        var stp = document.getElementById('sub_type_perm');
+        if (sfp && stp && stp.value && sfp.value === 'Own ID Card') {
+            idcardLoadMe();
+        }
     });
     contRad.addEventListener('change', function() {
+        if (!contRad.checked) return;
+        idcardResetEntireForm();
         showContractual();
         idcardResetFlow();
+        idcardApplyFileInputAvailability();
+        document.getElementById('sub_type_cont').disabled = true;
+        var rfcI = document.getElementById('request_for_cont');
+        if (rfcI) {
+            rfcI.value = 'Others ID Card';
+            rfcI.disabled = false;
+        }
+        if (document.getElementById('card_type_cont').value) idcardLoadSubTypes();
+        var stc = document.getElementById('sub_type_cont');
+        if (rfcI && stc && stc.value) {
+            idcardContractualOthersEnableManualEntry(false);
+        }
     });
     if (lockedEmployeeType === 'Permanent Employee') {
         permRad.checked = true;
@@ -853,22 +981,7 @@
     });
 
     idcardDisableAutofillExceptStep();
-    [ 'photo_perm', 'photo_cont', 'joining_letter_perm', 'joining_letter_cont', 'documents' ].forEach(function(id) {
-        var el = document.getElementById(id);
-        if (el && el.type === 'file') el.disabled = true;
-    });
-    if (permanentView.style.display !== 'none') {
-        [ 'photo_perm', 'joining_letter_perm' ].forEach(function(id) {
-            var el = document.getElementById(id);
-            if (el && el.type === 'file') el.disabled = false;
-        });
-    } else {
-        [ 'photo_cont', 'documents' ].forEach(function(id) {
-            var el = document.getElementById(id);
-            if (el && el.type === 'file') el.disabled = false;
-        });
-    }
-    idcardSyncDocumentsRequired();
+    idcardApplyFileInputAvailability();
     if (permanentView.style.display !== 'none') {
         document.getElementById('sub_type_perm').disabled = true;
         document.getElementById('request_for_perm').disabled = true;

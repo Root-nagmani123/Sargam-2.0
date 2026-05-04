@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Exports\VehiclePassExport;
 use App\Support\IdCardSecurityMapper;
 use App\Models\VehiclePassTWApply;
+use App\Models\VehiclePassFWApply;
 use App\Models\SecVehicleType;
 use App\Models\EmployeeMaster;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -286,6 +287,14 @@ class VehiclePassController extends Controller
             );
         }
 
+        if ($employeePk && $this->applicantHasBlockingDuplicateVehicleNumber((int) $employeePk, $validated['vehicle_no'])) {
+            return redirect()->back()
+                ->withInput()
+                ->withErrors([
+                    'vehicle_no' => 'You already have a pending or approved request for this vehicle number. You can apply again only after that request is rejected.',
+                ]);
+        }
+
         $govVeh = $applicantType === 'government_vehicle' ? 1 : 0;
 
         // Handle file upload
@@ -563,6 +572,14 @@ class VehiclePassController extends Controller
             );
         }
 
+        if ($employeePk && $this->applicantHasBlockingDuplicateVehicleNumber((int) $employeePk, $validated['vehicle_no'], $vehiclePass->vehicle_tw_pk)) {
+            return redirect()->back()
+                ->withInput()
+                ->withErrors([
+                    'vehicle_no' => 'You already have a pending or approved request for this vehicle number. You can apply again only after that request is rejected.',
+                ]);
+        }
+
         $govVeh = $applicantType === 'government_vehicle' ? 1 : 0;
 
         // Handle file upload
@@ -653,6 +670,67 @@ class VehiclePassController extends Controller
      * dono tables me vehicle_req_id UNIQUE hona chahiye aur
      * last row ke vehicle_req_id se +1 hokr next request banega.
      */
+    /**
+     * Normalize plate for duplicate detection (case, spaces, hyphens ignored).
+     */
+    private function normalizeVehicleNumberForDuplicateCheck(string $vehicleNo): string
+    {
+        return strtoupper(preg_replace('/[\s\-]+/', '', trim($vehicleNo)));
+    }
+
+    /**
+     * Employee master pk / pk_old values that may appear in veh_created_by for the logged-in user.
+     *
+     * @return list<int>
+     */
+    private function vehiclePassDuplicateCheckCreatedByKeys(int $employeePk): array
+    {
+        $keys = [$employeePk];
+        $em = EmployeeMaster::query()
+            ->where('pk', $employeePk)
+            ->orWhere('pk_old', $employeePk)
+            ->first(['pk', 'pk_old']);
+        if ($em) {
+            $keys[] = (int) $em->pk;
+            if (! empty($em->pk_old)) {
+                $keys[] = (int) $em->pk_old;
+            }
+        }
+
+        return array_values(array_unique(array_filter($keys)));
+    }
+
+    /**
+     * True when this submitter already has another TW or FW pass for the same vehicle number
+     * in Pending (1) or Approved (2). Rejected (3) does not block a new request.
+     */
+    private function applicantHasBlockingDuplicateVehicleNumber(int $employeePk, string $vehicleNo, ?string $excludeVehicleTwPk = null): bool
+    {
+        $createdByKeys = $this->vehiclePassDuplicateCheckCreatedByKeys($employeePk);
+        $norm = $this->normalizeVehicleNumberForDuplicateCheck($vehicleNo);
+
+        $twBlocks = VehiclePassTWApply::query()
+            ->whereIn('veh_created_by', $createdByKeys)
+            ->whereIn('vech_card_status', [1, 2])
+            ->when($excludeVehicleTwPk, fn ($q) => $q->where('vehicle_tw_pk', '!=', $excludeVehicleTwPk))
+            ->pluck('vehicle_no')
+            ->contains(fn ($stored) => $this->normalizeVehicleNumberForDuplicateCheck((string) $stored) === $norm);
+
+        if ($twBlocks) {
+            return true;
+        }
+
+        if (! Schema::hasTable('vehicle_pass_fw_apply')) {
+            return false;
+        }
+
+        return VehiclePassFWApply::query()
+            ->whereIn('veh_created_by', $createdByKeys)
+            ->whereIn('vech_card_status', [1, 2])
+            ->pluck('vehicle_no')
+            ->contains(fn ($stored) => $this->normalizeVehicleNumberForDuplicateCheck((string) $stored) === $norm);
+    }
+
     private function generateVehicleReqId($vehicleTypePk)
     {
         // Get max vehicle_req_id from two-wheeler table

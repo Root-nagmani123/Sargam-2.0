@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Admin;
 
 use App\DataTables\UserCredentialsDataTable;
 use App\Http\Controllers\Controller;
-use App\Http\Controllers\Admin\Security\EmployeeIDCardApprovalController;
 use App\Http\Requests\Admin\User\StoreUserRequest;
 use App\Http\Requests\Admin\User\UpdateUserRequest;
 use App\Models\User;
@@ -363,7 +362,7 @@ class UserController extends Controller
      *
      * Logic matches existing getTodayPendingIdCardRequestsCount(), but returns both parts separately.
      *
-     * @param  bool  $todayOnly  When true, only applications created today; when false, pending from {@see EmployeeIDCardApprovalController::DEFAULT_REQUEST_DATE_FROM} onward (same floor as Approval II default “Request Date From”).
+     * @param  bool  $todayOnly  When true, only applications created today; when false, all actionable pending at this approval level (any request date).
      */
     private function getTodayPendingIdCardRequestsSplit(bool $todayOnly = true): array
     {
@@ -378,9 +377,6 @@ class UserController extends Controller
 
         $start = Carbon::today()->startOfDay()->toDateTimeString();
         $end = Carbon::today()->endOfDay()->toDateTimeString();
-        $listDateFromStart = $todayOnly
-            ? null
-            : Carbon::parse(EmployeeIDCardApprovalController::DEFAULT_REQUEST_DATE_FROM)->startOfDay()->toDateTimeString();
 
         $isApproval2 = hasRole('Security Card') && !hasRole('Admin Security');
         $isApproval3 = hasRole('Admin Security') && !hasRole('Security Card');
@@ -412,8 +408,6 @@ class UserController extends Controller
             }
             if ($todayOnly) {
                 $permQuery->whereBetween('spa.created_date', [$start, $end]);
-            } elseif ($listDateFromStart) {
-                $permQuery->where('spa.created_date', '>=', $listDateFromStart);
             }
             $permCount = (int) $permQuery->count();
 
@@ -428,8 +422,6 @@ class UserController extends Controller
             }
             if ($todayOnly) {
                 $contQuery->whereBetween('sco.created_date', [$start, $end]);
-            } elseif ($listDateFromStart) {
-                $contQuery->where('sco.created_date', '>=', $listDateFromStart);
             }
             $contCount = (int) $contQuery->count();
 
@@ -447,8 +439,6 @@ class UserController extends Controller
             });
         if ($todayOnly) {
             $permFinalQuery->whereBetween('spa.created_date', [$start, $end]);
-        } elseif ($listDateFromStart) {
-            $permFinalQuery->where('spa.created_date', '>=', $listDateFromStart);
         }
         $permFinalPending = (int) $permFinalQuery->count();
 
@@ -472,8 +462,6 @@ class UserController extends Controller
             }
             if ($todayOnly) {
                 $contQuery->whereBetween('sco.created_date', [$start, $end]);
-            } elseif ($listDateFromStart) {
-                $contQuery->where('sco.created_date', '>=', $listDateFromStart);
             }
 
             $contFinalPending = (int) $contQuery->count();
@@ -673,7 +661,7 @@ class UserController extends Controller
     }
 
     /**
-     * @param  bool  $todayOnly  When false, counts pending duplicate permanent requests from {@see EmployeeIDCardApprovalController::DEFAULT_REQUEST_DATE_FROM} onward (same as Approval II default date filter).
+     * @param  bool  $todayOnly  When false, counts all actionable pending duplicate permanent requests (any date).
      */
     private function getTodayDuplicatePermanentIdCardRequestsCount(bool $todayOnly = true): int
     {
@@ -699,8 +687,6 @@ class UserController extends Controller
         }
         if ($todayOnly) {
             $base->whereBetween('dup.created_date', [$start, $end]);
-        } else {
-            $base->where('dup.created_date', '>=', Carbon::parse(EmployeeIDCardApprovalController::DEFAULT_REQUEST_DATE_FROM)->startOfDay()->toDateTimeString());
         }
 
         if ($isApproval2) {
@@ -732,7 +718,7 @@ class UserController extends Controller
     }
 
     /**
-     * @param  bool  $todayOnly  When false, counts pending duplicate contractual requests from {@see EmployeeIDCardApprovalController::DEFAULT_REQUEST_DATE_FROM} onward (same as Approval II default date filter).
+     * @param  bool  $todayOnly  When false, counts all actionable pending duplicate contractual requests (any date).
      */
     private function getTodayDuplicateContractualIdCardRequestsCount(bool $todayOnly = true): int
     {
@@ -759,8 +745,6 @@ class UserController extends Controller
         }
         if ($todayOnly) {
             $base->whereBetween('duo.created_date', [$start, $end]);
-        } else {
-            $base->where('duo.created_date', '>=', Carbon::parse(EmployeeIDCardApprovalController::DEFAULT_REQUEST_DATE_FROM)->startOfDay()->toDateTimeString());
         }
 
         if ($isApproval2) {
