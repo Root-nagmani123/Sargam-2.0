@@ -2,7 +2,7 @@
 
 @section('title', 'Birthday Wishes')
 
-@section('content')
+@section('communications_content')
 <style>
 .birthday-wish-page .birthday-person-card {
     border: 1px solid rgba(var(--bs-primary-rgb), 0.15);

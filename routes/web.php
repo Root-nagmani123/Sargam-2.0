@@ -45,6 +45,7 @@ use App\Http\Controllers\Admin\{
 use App\Http\Controllers\Dashboard\Calendar1Controller;
 use App\Http\Controllers\Admin\MemoNoticeController;
 use App\Http\Controllers\Admin\Master\DisciplineMasterController;
+use App\Http\Controllers\Admin\Master\AppellationMasterController;
 use App\Http\Controllers\Admin\FeedbackController;
 use App\Http\Controllers\Admin\Estate\{
     EstateCampusController,
@@ -771,6 +772,16 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
     Route::post('/notice_direct_save', [CourseAttendanceNoticeMapController::class, 'notice_direct_save'])->name('notice.direct.save');
 
 
+     // Appellation Master
+
+Route::prefix('admin/appellation')->name('master.appellation.')->middleware('auth')->group(function () {
+    Route::get('/', [AppellationMasterController::class, 'index'])->name('index');
+    Route::get('create', [AppellationMasterController::class, 'create'])->name('create');
+    Route::get('edit/{id}', [AppellationMasterController::class, 'edit'])->name('edit');
+    Route::post('store', [AppellationMasterController::class, 'store'])->name('store');
+    Route::delete('delete/{id}', [AppellationMasterController::class, 'destroy'])->name('delete');
+});
+
     Route::prefix('admin/discipline')->name('master.discipline.')->group(function () {
         Route::get('/', [DisciplineMasterController::class, 'index'])->name('index');
         Route::get('create', [DisciplineMasterController::class, 'create'])->name('create');
@@ -1294,6 +1305,7 @@ Route::prefix('admin/mess')->name('admin.mess.')->middleware(['auth'])->group(fu
     });
 
     // NEW: Billing & Finance
+    Route::get('my-bills', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'myBillsIndex'])->name('my-bills.index');
     Route::get('process-mess-bills-employee', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'index'])->name('process-mess-bills-employee.index');
     Route::get('process-mess-bills-employee/modal-data', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'modalData'])->name('process-mess-bills-employee.modal-data');
     Route::get('process-mess-bills-employee/{id}/payment-details', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'paymentDetails'])->name('process-mess-bills-employee.payment-details');

@@ -2,7 +2,7 @@
 
 @section('title', 'Change Request For House - Sargam')
 
-@section('setup_content')
+@section('content')
 <div class="container-fluid py-4">
     {{-- Breadcrumb: Home > My Requests / Complaints > Request For House --}}
     <nav aria-label="breadcrumb" class="mb-3">

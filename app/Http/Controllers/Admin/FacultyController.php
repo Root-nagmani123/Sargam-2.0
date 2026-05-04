@@ -109,8 +109,9 @@ class FacultyController extends Controller
                 'PAN_No' => $request->pannumber,
                 'faculty_sector' => $faculty_sector,
                 'faculty_pa' => $request->facultyType == '1' ? $request->faculty_pa : null, // Only save for Internal faculty type
-                'created_by' => Auth::id(),
-                'last_update' => now(),
+                //'created_by' => Auth::id(),
+                'created_by' => Auth::user()->user_id,  // Employee Master PK,
+                //'last_update' => now(),
                 'active_inactive' => 1,
             ];
 
@@ -248,7 +249,7 @@ class FacultyController extends Controller
                     FacultyExpertiseMap::create([
                         'faculty_master_pk' => $faculty->pk,
                         'faculty_expertise_pk' => $expertisePk,
-                        'created_by' => Auth::id() ?? 1,
+                        'created_by' => Auth::user()->user_id ?? 1, // Employee Master PK
                         'created_date' => now(),
                         'updated_date' => now(),
                     ]);
@@ -671,10 +672,10 @@ class FacultyController extends Controller
 
             // Joining Date
             $facultyDetails['joining_date'] = Carbon::parse($request->joiningdate);
-            $facultyDetails['created_by']   = Auth::id();
+            //$facultyDetails['created_by']   = Auth::id();
+            $facultyDetails['created_by']   = Auth::user()->user_id; // Employee Master PK
             $facultyDetails['faculty_sector'] = $request->current_sector;
-
-            $facultyDetails['last_update']   = now();
+            //$facultyDetails['last_update']   = now();
             $facultyDetails['active_inactive'] = 1;
 
             //print_r($facultyDetails);die;
@@ -694,8 +695,9 @@ class FacultyController extends Controller
             if ($facultyTypeChanged || empty($faculty->faculty_code)) {
                 $this->generateFacultyCode($faculty, $request->facultyType);
                 // Directly update the faculty code in the database
-                FacultyMaster::where('pk', $faculty->pk)->update(['faculty_code' => $faculty->faculty_code, 'last_update' => now()]);
-            }
+                //FacultyMaster::where('pk', $faculty->pk)->update(['faculty_code' => $faculty->faculty_code, 'last_update' => now()]);
+            FacultyMaster::where('pk', $faculty->pk)->update(['faculty_code' => $faculty->faculty_code]);
+                }
 
             if ($faculty) {
 
@@ -777,7 +779,7 @@ class FacultyController extends Controller
                         $expertiseDetails[] = [
                             'faculty_master_pk' => $faculty->pk,
                             'faculty_expertise_pk' => $expertise,
-                            'created_by' => 1,
+                            'created_by' => Auth::user()->user_id ?? 1,
                             'created_date' => now(),
                             'updated_date' => now(),
                         ];

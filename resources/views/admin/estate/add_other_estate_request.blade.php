@@ -2,7 +2,7 @@
 
 @section('title', 'Add Other Estate Request - Sargam')
 
-@section('setup_content')
+@section('content')
 <div class="container-fluid">
     <!-- Breadcrumb -->
     <x-breadcrum title="Add Other Estate Request"></x-breadcrum>

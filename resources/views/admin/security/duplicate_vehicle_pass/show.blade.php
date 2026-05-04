@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Duplicate Vehicle Pass Request - Sargam')
-@section('setup_content')
+@section('content')
 <div class="container-fluid duplicate-vehicle-pass-print-area" id="duplicateVehiclePassPrint">
     <div class="no-print mb-3">
         <x-breadcrum title="Duplicate Vehicle Pass Request"></x-breadcrum>

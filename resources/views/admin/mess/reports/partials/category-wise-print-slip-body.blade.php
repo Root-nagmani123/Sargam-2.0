@@ -88,6 +88,9 @@
                         $selectedCourse = $otCourses->firstWhere('pk', $first->client_type_pk ?? null);
                         if ($selectedCourse) {
                             $courseDisplay = $selectedCourse->course_name;
+                            if ((int) ($selectedCourse->active_inactive ?? 0) !== 1) {
+                                $courseDisplay .= ' (Archived)';
+                            }
                         }
                     }
                     $messClientCategory = $first->clientTypeCategory?->client_name ?? null;

@@ -1,3 +1,4 @@
+@if(canSeeLowStockAlert())
 <nav class="sidebar-nav scroll-sidebar" id="menu-right-setup-mini-9" data-simplebar=""
     data-mess-module="{{ request()->is('admin/mess*') ? '1' : '0' }}">
     <ul class="sidebar-menu" id="sidebarnav">
@@ -129,6 +130,13 @@
                     <span class="hide-menu small small-sm-normal text-nowrap">Process Mess Bills</span>
                 </a>
             </li>
+            @if(canSeeMessSelfServiceSetup())
+            <li class="sidebar-item">
+                <a class="sidebar-link {{ request()->routeIs('admin.mess.my-bills.index') ? 'active' : '' }}" href="{{ route('admin.mess.my-bills.index') }}">
+                    <span class="hide-menu small small-sm-normal text-nowrap">My Mess Bills</span>
+                </a>
+            </li>
+            @endif
         </ul>
 
         <!-- ======= REPORTS ======= -->
@@ -202,6 +210,28 @@
         </ul>
     </ul>
 </nav>
+@elseif(canSeeMessSelfServiceSetup())
+<nav class="sidebar-nav scroll-sidebar" id="menu-right-setup-mini-9" data-simplebar=""
+    data-mess-module="{{ request()->is('admin/mess*') ? '1' : '0' }}">
+    <ul class="sidebar-menu" id="sidebarnav">
+        <li class="sidebar-item"
+            style="background: #4077ad;
+            border-radius: 30px 0px 0px 30px;
+            width: 100%;
+            box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+            min-width: 250px;">
+            <span class="sidebar-link d-flex justify-content-between align-items-center text-white fw-bold">
+                <span>Mess</span>
+            </span>
+        </li>
+        <li class="sidebar-item">
+            <a class="sidebar-link {{ request()->routeIs('admin.mess.my-bills.index') ? 'active' : '' }}" href="{{ route('admin.mess.my-bills.index') }}">
+                <span class="hide-menu small small-sm-normal text-nowrap">My Mess Bills</span>
+            </a>
+        </li>
+    </ul>
+</nav>
+@endif
 
 @push('scripts')
 <script>
