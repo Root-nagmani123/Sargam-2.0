@@ -899,7 +899,9 @@ class IdCardSecurityMapper
      * Effective approved Employee ID card "valid to" end date for caps (vehicle pass, family ID card).
      * Includes approved extension/duplicate rows so a later extended end date is honoured.
      * When $employeeTypeFilter is Permanent or Contractual, only that source is used.
-     * When null (e.g. vehicle pass without type), returns the earlier of the two maxima when both exist (stricter cap).
+     * When null (e.g. vehicle pass without type), returns the latest end date among permanent and contractual
+     * maxima so an approved duplicate / contractual extension (e.g. 25-06-2026) is not overridden by an older
+     * still-approved permanent row (e.g. 24-02-2026).
      */
     public static function approvedEmployeeIdCardValidityEnd(?int $canonicalEmployeePk, ?string $employeeTypeFilter = null): ?Carbon
     {
@@ -933,7 +935,7 @@ class IdCardSecurityMapper
 
         return count($candidates) === 1
             ? $candidates[0]
-            : collect($candidates)->min();
+            : collect($candidates)->max();
     }
 
     /**

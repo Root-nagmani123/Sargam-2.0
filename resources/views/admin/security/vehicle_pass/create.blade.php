@@ -42,6 +42,25 @@
                     $oldValidTo = $oldValidFrom;
                 }
             }
+
+            // Fresh defaults when user switches applicant type (same rules as unposted create).
+            $vehiclePassResetValidFrom = $todayYmd;
+            $vehiclePassResetValidTo = now()->addYear()->format('Y-m-d');
+            if ($vehiclePassResetValidTo < $vehiclePassResetValidFrom) {
+                $vehiclePassResetValidTo = $vehiclePassResetValidFrom;
+            }
+            if ($idCap && $idCap >= $todayYmd) {
+                if ($vehiclePassResetValidTo > $idCap) {
+                    $vehiclePassResetValidTo = $idCap;
+                }
+                if ($vehiclePassResetValidFrom > $idCap) {
+                    $vehiclePassResetValidFrom = $todayYmd;
+                }
+                if ($vehiclePassResetValidTo < $vehiclePassResetValidFrom) {
+                    $vehiclePassResetValidTo = $vehiclePassResetValidFrom;
+                }
+            }
+
             if (in_array($oldApplicantType, ['employee', 'government_vehicle']) && isset($currentUserEmployee) && $currentUserEmployee) {
                 if ($oldIdCard === '') {
                     $oldIdCard = $currentUserEmployee->emp_id ?? '';
@@ -338,6 +357,59 @@
     var idCardInput = document.getElementById('employee_id_card');
     var othersLookupHint = document.getElementById('othersIdCardLookupHint');
     var othersLookupAbort = null;
+    var vehiclePassCreateDefaults = {
+        validFrom: @json($vehiclePassResetValidFrom),
+        validTo: @json($vehiclePassResetValidTo),
+    };
+    var lastApplicantType = null;
+
+    function getCurrentApplicantType() {
+        if (applicantTypeEmployee && applicantTypeEmployee.checked) return 'employee';
+        if (applicantTypeGovernment && applicantTypeGovernment.checked) return 'government_vehicle';
+        if (applicantTypeOthers && applicantTypeOthers.checked) return 'others';
+        return 'others';
+    }
+
+    function clearVehiclePassServerValidationUi() {
+        var form = document.getElementById('vehiclePassForm');
+        if (!form) return;
+        form.querySelectorAll('.invalid-feedback.d-block').forEach(function (el) {
+            el.remove();
+        });
+        form.querySelectorAll('.is-invalid').forEach(function (el) {
+            el.classList.remove('is-invalid');
+        });
+        form.classList.remove('was-validated');
+    }
+
+    function resetVehiclePassSharedFieldsOnApplicantSwitch() {
+        var vt = document.getElementById('vehicle_type');
+        var vn = document.getElementById('vehicle_no');
+        if (vt) vt.value = '';
+        if (vn) vn.value = '';
+        var fromEl = document.getElementById('veh_card_valid_from');
+        var toEl = document.getElementById('vech_card_valid_to');
+        if (fromEl) fromEl.value = vehiclePassCreateDefaults.validFrom;
+        if (toEl) toEl.value = vehiclePassCreateDefaults.validTo;
+        var docInput = document.getElementById('doc_upload');
+        if (docInput) docInput.value = '';
+        if (removeBtn) removeBtn.click();
+        if (othersLookupAbort) {
+            try { othersLookupAbort.abort(); } catch (e) {}
+        }
+        othersLookupIdCardCapYmd = null;
+        setOthersLookupHint('', '');
+    }
+
+    function onApplicantTypeRadioChange() {
+        var cur = getCurrentApplicantType();
+        if (lastApplicantType !== null && cur !== lastApplicantType) {
+            clearVehiclePassServerValidationUi();
+            resetVehiclePassSharedFieldsOnApplicantSwitch();
+        }
+        lastApplicantType = cur;
+        updateApplicantTypeFields();
+    }
 
     function setOthersLookupHint(message, kind) {
         if (!othersLookupHint) return;
@@ -460,9 +532,10 @@
         }
     }
 
-    if (applicantTypeEmployee) applicantTypeEmployee.addEventListener('change', updateApplicantTypeFields);
-    if (applicantTypeOthers) applicantTypeOthers.addEventListener('change', updateApplicantTypeFields);
-    if (applicantTypeGovernment) applicantTypeGovernment.addEventListener('change', updateApplicantTypeFields);
+    if (applicantTypeEmployee) applicantTypeEmployee.addEventListener('change', onApplicantTypeRadioChange);
+    if (applicantTypeOthers) applicantTypeOthers.addEventListener('change', onApplicantTypeRadioChange);
+    if (applicantTypeGovernment) applicantTypeGovernment.addEventListener('change', onApplicantTypeRadioChange);
+    lastApplicantType = getCurrentApplicantType();
     updateApplicantTypeFields();
 
     if (idCardInput) {
