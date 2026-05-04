@@ -13,6 +13,8 @@ $selectedStores = collect((array) request()->input('store', []))
 ->map(fn ($value) => (string) $value)
 ->values()
 ->all();
+$selectedReturnStatus = (string) request()->input('return_status', '');
+$selectedClientType = (string) request()->input('client_type', '');
 @endphp
 <div class="container-fluid py-2 py-lg-3">
     <x-breadcrum title="Selling Voucher with Date Range"></x-breadcrum>
@@ -68,6 +70,23 @@ $selectedStores = collect((array) request()->input('store', []))
                                 {{ in_array((string) $store['id'], $selectedStores, true) ? 'selected' : '' }}>
                                 {{ $store['store_name'] }}</option>
                             @endforeach
+                        </select>
+                    </div>
+                    <div class="col-12 col-sm-6 col-lg-4 col-xl-2">
+                        <label class="form-label small fw-semibold text-uppercase mb-1">Client type</label>
+                        <select name="client_type" class="form-select">
+                            <option value="" {{ $selectedClientType === '' ? 'selected' : '' }}>All</option>
+                            @foreach(\App\Models\Mess\ClientType::clientTypes() as $slug => $label)
+                            <option value="{{ $slug }}" {{ $selectedClientType === $slug ? 'selected' : '' }}>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-12 col-sm-6 col-lg-4 col-xl-2">
+                        <label class="form-label small fw-semibold text-uppercase mb-1">Return status</label>
+                        <select name="return_status" class="form-select">
+                            <option value="" {{ $selectedReturnStatus === '' ? 'selected' : '' }}>All</option>
+                            <option value="returned" {{ $selectedReturnStatus === 'returned' ? 'selected' : '' }}>Returned</option>
+                            <option value="not_returned" {{ $selectedReturnStatus === 'not_returned' ? 'selected' : '' }}>Not returned</option>
                         </select>
                     </div>
                     <div class="col-12 col-sm-6 col-lg-4 col-xl-2">

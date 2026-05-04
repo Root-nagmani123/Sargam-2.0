@@ -53,6 +53,14 @@
                             </select>
                         </div>
                         <div class="col-md-2 col-sm-6">
+                            <label class="form-label small text-muted mb-1">Return status</label>
+                            <select name="return_status" id="filter_return_status" class="form-select form-select-sm">
+                                <option value="" {{ request('return_status', '') === '' ? 'selected' : '' }}>All</option>
+                                <option value="returned" {{ request('return_status') === 'returned' ? 'selected' : '' }}>Returned</option>
+                                <option value="not_returned" {{ request('return_status') === 'not_returned' ? 'selected' : '' }}>Not returned</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 col-sm-6">
                             <label class="form-label small text-muted mb-1">Store</label>
                             <select name="store[]" id="filter_store" class="form-select form-select-sm" multiple>
                                 @php
@@ -63,6 +71,25 @@
                                 @endphp
                                 @foreach($stores as $store)
                                     <option value="{{ $store['id'] }}" {{ in_array($store['id'], $selectedStores) ? 'selected' : '' }}>{{ $store['store_name'] }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        @php
+                            $filterClientTypes = [
+                                (string) \App\Models\KitchenIssueMaster::CLIENT_EMPLOYEE => 'Employee',
+                                (string) \App\Models\KitchenIssueMaster::CLIENT_OT => 'OT',
+                                (string) \App\Models\KitchenIssueMaster::CLIENT_COURSE => 'Course',
+                                (string) \App\Models\KitchenIssueMaster::CLIENT_SECTION => 'Section',
+                                (string) \App\Models\KitchenIssueMaster::CLIENT_OTHER => 'Other',
+                            ];
+                            $selectedClientType = (string) request('client_type', '');
+                        @endphp
+                        <div class="col-md-2 col-sm-6">
+                            <label class="form-label small text-muted mb-1">Client type</label>
+                            <select name="client_type" id="filter_client_type" class="form-select form-select-sm">
+                                <option value="" {{ $selectedClientType === '' ? 'selected' : '' }}>All</option>
+                                @foreach($filterClientTypes as $value => $label)
+                                    <option value="{{ $value }}" {{ $selectedClientType === $value ? 'selected' : '' }}>{{ $label }}</option>
                                 @endforeach
                             </select>
                         </div>

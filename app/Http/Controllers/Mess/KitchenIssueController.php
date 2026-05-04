@@ -115,6 +115,11 @@ class KitchenIssueController extends Controller
             ->orderBy('pk', 'desc')
             ->get();
 
+        $kitchenIssues = $this->filterKitchenIssueRowsByReturnStatus(
+            $kitchenIssues,
+            (string) $request->input('return_status', '')
+        );
+
         // All courses (active + archived) for Client Name dropdown; label in UI via active_inactive.
         // Course end date before today is treated as archived (same idea as course list filters).
         $otCourses = CourseMaster::orderByDesc('active_inactive')
@@ -1337,5 +1342,35 @@ class KitchenIssueController extends Controller
         }
 
         return response()->json($items->values());
+    }
+
+    /**
+     * Limit listing rows to items matching return status (uses per-line return_quantity).
+     *
+     * @param  \Illuminate\Support\Collection<int, KitchenIssueMaster>  $kitchenIssues
+     * @return \Illuminate\Support\Collection<int, KitchenIssueMaster>
+     */
+    private function filterKitchenIssueRowsByReturnStatus($kitchenIssues, string $returnStatus)
+    {
+        $returnStatus = strtolower(trim($returnStatus));
+        if ($returnStatus === '' || $returnStatus === 'all') {
+            return $kitchenIssues;
+        }
+
+        $wantReturned = $returnStatus === 'returned';
+        if (! $wantReturned && $returnStatus !== 'not_returned') {
+            return $kitchenIssues;
+        }
+
+        return $kitchenIssues->map(function ($voucher) use ($wantReturned) {
+            $filtered = $voucher->items->filter(function ($item) use ($wantReturned) {
+                $rq = (float) ($item->return_quantity ?? 0);
+
+                return $wantReturned ? $rq > 0 : $rq <= 0;
+            });
+            $voucher->setRelation('items', $filtered);
+
+            return $voucher;
+        })->filter(fn ($voucher) => $voucher->items->isNotEmpty())->values();
     }
 }
