@@ -117,7 +117,9 @@ class VehiclePassController extends Controller
         $sessionPk = $user->user_id ?? $user->pk ?? null;
         $canonical = IdCardSecurityMapper::resolveCanonicalEmployeeMasterPk($sessionPk);
         if ($canonical) {
-            $cap = IdCardSecurityMapper::approvedEmployeeIdCardValidityEnd($canonical, null);
+            $printed = IdCardSecurityMapper::resolvedDisplayIdCardNumberForEmployee($canonical);
+            $cap = IdCardSecurityMapper::effectiveApprovedValidityEndForPrintedIdCardNumber($printed)
+                ?? IdCardSecurityMapper::approvedEmployeeIdCardValidityEnd($canonical, null);
             if ($cap) {
                 $idCardValidityCapYmd = $cap->format('Y-m-d');
             }
@@ -163,6 +165,22 @@ class VehiclePassController extends Controller
             'department' => $emp->department->department_name ?? '',
             'emp_id' => $empIdDisplay,
         ];
+    }
+
+    /**
+     * Prefer security printed ID (same as Duplicate ID / vehicle autofill) over raw employee_master.emp_id for validity caps.
+     */
+    private function printedIdCardNumberForVehiclePassValidityCap(?int $canonicalPk, ?string $employeeIdCardAfterNormalize): ?string
+    {
+        if ($canonicalPk) {
+            $resolved = IdCardSecurityMapper::resolvedDisplayIdCardNumberForEmployee($canonicalPk);
+            if (is_string($resolved) && $resolved !== '') {
+                return $resolved;
+            }
+        }
+        $t = trim((string) ($employeeIdCardAfterNormalize ?? ''));
+
+        return $t !== '' ? $t : null;
     }
 
     /**
@@ -253,7 +271,9 @@ class VehiclePassController extends Controller
         }
 
         $canonicalPk = IdCardSecurityMapper::resolveCanonicalEmployeeMasterPk((int) $em->pk);
-        $idCardCap = $canonicalPk ? IdCardSecurityMapper::approvedEmployeeIdCardValidityEnd($canonicalPk, null) : null;
+        $displayPrinted = ($preferredEmployeeIdCard !== null && $preferredEmployeeIdCard !== '') ? $preferredEmployeeIdCard : (string) $empCode;
+        $idCardCap = IdCardSecurityMapper::effectiveApprovedValidityEndForPrintedIdCardNumber($displayPrinted)
+            ?? ($canonicalPk ? IdCardSecurityMapper::approvedEmployeeIdCardValidityEnd($canonicalPk, null) : null);
 
         return [
             'employee_id_card' => $empCode,
@@ -355,11 +375,11 @@ class VehiclePassController extends Controller
             ? trim((string) ($row->employee_name ?? ''))
             : '';
 
-        $idCardCap = null;
-        if (Schema::hasColumn($table, 'card_valid_to') && ! empty($row->card_valid_to)) {
+        $displayForCap = ($displayId !== null && $displayId !== '') ? $displayId : $lookup;
+        $idCardCap = IdCardSecurityMapper::effectiveApprovedValidityEndForPrintedIdCardNumber($displayForCap);
+        if ($idCardCap === null && Schema::hasColumn($table, 'card_valid_to') && ! empty($row->card_valid_to)) {
             try {
-                $parsed = Carbon::parse($row->card_valid_to);
-                $idCardCap = $parsed;
+                $idCardCap = Carbon::parse($row->card_valid_to)->startOfDay();
             } catch (\Throwable $e) {
                 $idCardCap = null;
             }
@@ -472,10 +492,11 @@ class VehiclePassController extends Controller
             $department = (string) (DB::table('department_master')->where('pk', $con->section)->value('department_name') ?? '');
         }
 
-        $idCardCap = null;
-        if (Schema::hasColumn('security_con_oth_id_apply', 'card_valid_to') && ! empty($con->card_valid_to)) {
+        $displayForCap = ($displayId !== null && $displayId !== '') ? $displayId : $lookup;
+        $idCardCap = IdCardSecurityMapper::effectiveApprovedValidityEndForPrintedIdCardNumber($displayForCap);
+        if ($idCardCap === null && Schema::hasColumn('security_con_oth_id_apply', 'card_valid_to') && ! empty($con->card_valid_to)) {
             try {
-                $idCardCap = Carbon::parse($con->card_valid_to);
+                $idCardCap = Carbon::parse($con->card_valid_to)->startOfDay();
             } catch (\Throwable $e) {
                 $idCardCap = null;
             }
@@ -562,7 +583,8 @@ class VehiclePassController extends Controller
                 $validated['veh_card_valid_from'],
                 $validated['vech_card_valid_to'],
                 'veh_card_valid_from',
-                'vech_card_valid_to'
+                'vech_card_valid_to',
+                $this->printedIdCardNumberForVehiclePassValidityCap($canonicalForCap, $employeeIdCard)
             );
         }
 
@@ -657,7 +679,12 @@ class VehiclePassController extends Controller
             ? IdCardSecurityMapper::resolveCanonicalEmployeeMasterPk((int) $vehiclePass->emp_master_pk)
             : null;
         if ($capPk) {
-            $cap = IdCardSecurityMapper::approvedEmployeeIdCardValidityEnd($capPk, null);
+            $printed = trim((string) ($vehiclePass->employee_id_card ?? ''));
+            if ($printed === '') {
+                $printed = IdCardSecurityMapper::resolvedDisplayIdCardNumberForEmployee($capPk) ?? '';
+            }
+            $cap = IdCardSecurityMapper::effectiveApprovedValidityEndForPrintedIdCardNumber($printed)
+                ?? IdCardSecurityMapper::approvedEmployeeIdCardValidityEnd($capPk, null);
             if ($cap) {
                 $idCardValidityCapYmd = $cap->format('Y-m-d');
             }
@@ -856,7 +883,8 @@ class VehiclePassController extends Controller
                 $validated['veh_card_valid_from'],
                 $validated['vech_card_valid_to'],
                 'veh_card_valid_from',
-                'vech_card_valid_to'
+                'vech_card_valid_to',
+                $this->printedIdCardNumberForVehiclePassValidityCap($canonicalForCap, $employeeIdCard)
             );
         }
 

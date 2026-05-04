@@ -952,6 +952,152 @@ class IdCardSecurityMapper
     }
 
     /**
+     * Same effective "valid to" as Duplicate ID Card fetch (Permanent): main security_parm_id_apply row for this
+     * printed number, merged with security_dup_perm_id_apply (later end date wins). Returns null if no main row.
+     */
+    private static function mergePermanentValidityEndForPrintedCardNumber(string $cardNoTrim): ?Carbon
+    {
+        $cardNoTrim = trim($cardNoTrim);
+        if ($cardNoTrim === '' || ! Schema::hasTable('security_parm_id_apply')) {
+            return null;
+        }
+
+        $row = DB::table('security_parm_id_apply')
+            ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
+            ->where(function ($q) use ($cardNoTrim) {
+                $q->where('id_card_no', $cardNoTrim)
+                    ->orWhereRaw('TRIM(COALESCE(id_card_no, "")) = ?', [$cardNoTrim]);
+            })
+            ->orderByDesc('created_date')
+            ->first(['card_valid_from', 'card_valid_to']);
+
+        if (! $row) {
+            return null;
+        }
+
+        $validTo = $row->card_valid_to ?? null;
+
+        $dup = null;
+        if (Schema::hasTable('security_dup_perm_id_apply')) {
+            $dup = DB::table('security_dup_perm_id_apply')
+                ->where(function ($q) use ($cardNoTrim) {
+                    $q->where('id_card_no', $cardNoTrim)
+                        ->orWhereRaw('TRIM(COALESCE(id_card_no, "")) = ?', [$cardNoTrim]);
+                })
+                ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
+                ->orderByDesc('card_valid_to')
+                ->first(['card_valid_from', 'card_valid_to']);
+        }
+
+        if ($dup) {
+            if (! empty($dup->card_valid_to)) {
+                try {
+                    $mainTo = $validTo ? Carbon::parse($validTo) : null;
+                    $dupTo = Carbon::parse($dup->card_valid_to);
+                    $validTo = ($mainTo && $mainTo->gt($dupTo)) ? $mainTo->format('Y-m-d') : $dupTo->format('Y-m-d');
+                } catch (\Throwable $e) {
+                    $validTo = $dup->card_valid_to ?? $validTo;
+                }
+            } elseif (! $validTo) {
+                $validTo = $dup->card_valid_to ?? null;
+            }
+        }
+
+        if ($validTo === null || (string) $validTo === '') {
+            return null;
+        }
+        try {
+            return Carbon::parse($validTo)->startOfDay();
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    /**
+     * Same effective "valid to" as Duplicate ID Card fetch (Contractual): security_con_oth_id_apply + dup_other merge.
+     */
+    private static function mergeContractualValidityEndForPrintedCardNumber(string $cardNoTrim): ?Carbon
+    {
+        $cardNoTrim = trim($cardNoTrim);
+        if ($cardNoTrim === '' || ! Schema::hasTable('security_con_oth_id_apply')) {
+            return null;
+        }
+
+        $row = DB::table('security_con_oth_id_apply')
+            ->where(function ($q) use ($cardNoTrim) {
+                $q->where('id_card_no', $cardNoTrim)
+                    ->orWhereRaw('TRIM(COALESCE(id_card_no, "")) = ?', [$cardNoTrim]);
+            })
+            ->orderByRaw('CASE WHEN id_status = '.(int) SecurityParmIdApply::ID_STATUS_APPROVED.' THEN 0 ELSE 1 END')
+            ->orderByDesc('created_date')
+            ->first();
+
+        if (! $row) {
+            return null;
+        }
+
+        $validFrom = $row->card_valid_from ?? null;
+        $validTo = $row->card_valid_to ?? null;
+
+        $dup = null;
+        if (Schema::hasTable('security_dup_other_id_apply')) {
+            $dup = DB::table('security_dup_other_id_apply')
+                ->where(function ($q) use ($cardNoTrim) {
+                    $q->where('id_card_no', $cardNoTrim)
+                        ->orWhereRaw('TRIM(COALESCE(id_card_no, "")) = ?', [$cardNoTrim]);
+                })
+                ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
+                ->orderByDesc('card_valid_to')
+                ->first(['card_valid_from', 'card_valid_to']);
+        }
+
+        if ($dup) {
+            $validFrom = $validFrom ?: ($dup->card_valid_from ?? null);
+            if (! empty($dup->card_valid_to)) {
+                try {
+                    $mainTo = $validTo ? Carbon::parse($validTo) : null;
+                    $dupTo = Carbon::parse($dup->card_valid_to);
+                    $validTo = ($mainTo && $mainTo->gt($dupTo)) ? $mainTo->format('Y-m-d') : $dupTo->format('Y-m-d');
+                } catch (\Throwable $e) {
+                    $validTo = $dup->card_valid_to ?? $validTo;
+                }
+            } elseif (! $validTo) {
+                $validTo = $dup->card_valid_to ?? null;
+            }
+        }
+
+        if ($validTo === null || (string) $validTo === '') {
+            return null;
+        }
+        try {
+            return Carbon::parse($validTo)->startOfDay();
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    /**
+     * End date of the approved ID card for this printed number — same merge as Duplicate ID Card "Fetch".
+     * If both a permanent and a contractual chain resolve for the same string, the earlier end date is used (stricter cap).
+     */
+    public static function effectiveApprovedValidityEndForPrintedIdCardNumber(?string $printedNo): ?Carbon
+    {
+        $printedNo = trim((string) $printedNo);
+        if ($printedNo === '') {
+            return null;
+        }
+
+        $perm = self::mergePermanentValidityEndForPrintedCardNumber($printedNo);
+        $cont = self::mergeContractualValidityEndForPrintedCardNumber($printedNo);
+
+        if ($perm !== null && $cont !== null) {
+            return $perm->lte($cont) ? $perm : $cont;
+        }
+
+        return $perm ?? $cont;
+    }
+
+    /**
      * Effective approved Employee ID card "valid to" end date for caps (vehicle pass, family ID card).
      * Includes approved extension/duplicate rows so a later extended end date is honoured.
      * When $employeeTypeFilter is Permanent or Contractual, only that source is used.
@@ -1309,9 +1455,17 @@ class IdCardSecurityMapper
         string $validFromYmd,
         string $validToYmd,
         string $fromFieldKey,
-        string $toFieldKey
+        string $toFieldKey,
+        ?string $printedIdCardNumberForCap = null
     ): void {
-        $cap = self::approvedEmployeeIdCardValidityEnd($canonicalEmployeePk, $familyEmployeeTypeOnly);
+        $cap = null;
+        $printedTrim = trim((string) $printedIdCardNumberForCap);
+        if ($printedTrim !== '') {
+            $cap = self::effectiveApprovedValidityEndForPrintedIdCardNumber($printedTrim);
+        }
+        if ($cap === null) {
+            $cap = self::approvedEmployeeIdCardValidityEnd($canonicalEmployeePk, $familyEmployeeTypeOnly);
+        }
         if ($cap === null) {
             return;
         }

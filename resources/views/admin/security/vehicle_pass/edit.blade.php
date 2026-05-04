@@ -333,6 +333,10 @@ $(document).ready(function() {
                     if (deptEl) deptEl.value = d.department || '';
                     if (empMasterPkInput && d.emp_master_pk) empMasterPkInput.value = String(d.emp_master_pk);
                     window.editOthersLookupIdCardCapYmd = d.id_card_valid_to || null;
+                    var editValidToEl = document.getElementById('vech_card_valid_to');
+                    if (editValidToEl && d.id_card_valid_to && (!editValidToEl.value || editValidToEl.value > d.id_card_valid_to)) {
+                        editValidToEl.value = d.id_card_valid_to;
+                    }
                     if (typeof syncEditDateConstraints === 'function') syncEditDateConstraints();
                     setEditLookupHint(
                         d.id_card_valid_to

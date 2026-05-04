@@ -465,6 +465,10 @@
                 empMasterPkInput.value = String(d.emp_master_pk);
             }
             othersLookupIdCardCapYmd = d.id_card_valid_to || null;
+            var validToEl = document.getElementById('vech_card_valid_to');
+            if (validToEl && d.id_card_valid_to && (!validToEl.value || validToEl.value > d.id_card_valid_to)) {
+                validToEl.value = d.id_card_valid_to;
+            }
             syncVehicleDateConstraints();
             setOthersLookupHint(
                 d.id_card_valid_to
