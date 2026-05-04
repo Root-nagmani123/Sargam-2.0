@@ -11,6 +11,7 @@ use App\Models\FC\{
     StudentMasterHobbiesDetails, StudentSkillDetailsMaster,
     StudentMasterAcademicDistinction, StudentSportsFitnessTeachMaster,
     StudentSportsTrgTeachMaster, StudentMasterModuleMaster,
+    StudentMasterFirst, FcPreHistory,
     QualificationMaster, BoardNameMaster, HighestStreamMaster,
     JobTypeMaster, LanguageMaster, SportsMaster
 };
@@ -58,8 +59,13 @@ class RegistrationStep3Controller extends Controller
             $groupLookups[$group->group_name] = $this->formService->getGroupLookupData($fieldsForLookups);
         }
 
+        $preMedicalCourse = $this->registrationSessionName($username);
+        $preMedical = FcPreHistory::where('userid', $username)->where('course', $preMedicalCourse)->first();
+        $completedPreMedical = $preMedical !== null;
+
         return view('fc.registration.dynamic-step3', compact(
-            'step', 'groups', 'existingRows', 'groupLookups', 'completedGroups'
+            'step', 'groups', 'existingRows', 'groupLookups', 'completedGroups',
+            'preMedical', 'preMedicalCourse', 'completedPreMedical'
         ));
     }
 
@@ -125,9 +131,63 @@ class RegistrationStep3Controller extends Controller
         return view('fc.registration.step3', compact(
             'qualifications','higherEdus','employments','spouse','languages','hindi',
             'hobbies','skills','distinctions','sportsPlayed','sportsTrg','moduleChoice',
+            'preMedical', 'preMedicalCourse',
             'qualificationMasters','boardMasters','streamMasters','jobTypes','languageMasters','sportsMasters',
             'degreeMasters'
         ));
+    }
+
+    /**
+     * Session / course label for FC pre-history (matches fc_pre_history.course used post-arrival).
+     */
+    private function registrationSessionName(string $username): string
+    {
+        $first = StudentMasterFirst::with('session')->where('username', $username)->first();
+
+        return trim((string) ($first?->session?->session_name ?? ''));
+    }
+
+    public function savePreMedicalHistory(Request $request)
+    {
+        $username = Auth::user()->username;
+        $course = $this->registrationSessionName($username);
+
+        $validated = $request->validate([
+            'allergy_illness' => 'nullable|string|max:60000',
+            'prolonged_medication' => 'nullable|string|max:60000',
+            'hospital_history' => 'nullable|string|max:60000',
+            'altitude_illness' => 'nullable|string|max:60000',
+            'additional_info' => 'nullable|string|max:60000',
+            'pre_med_doc' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
+        ]);
+
+        $existing = FcPreHistory::where('userid', $username)->where('course', $course)->first();
+
+        $docPath = $existing?->doc_path;
+        if ($request->hasFile('pre_med_doc') && $request->file('pre_med_doc')->isValid()) {
+            $file = $request->file('pre_med_doc');
+            $stored = $file->storeAs(
+                'fc/pre_history',
+                $username.'_'.uniqid('', true).'.'.$file->getClientOriginalExtension(),
+                'public'
+            );
+            $docPath = 'storage/'.$stored;
+        }
+
+        FcPreHistory::updateOrCreate(
+            ['userid' => $username, 'course' => $course],
+            [
+                'allergy_illness' => $validated['allergy_illness'] ?? null,
+                'prolonged_medication' => $validated['prolonged_medication'] ?? null,
+                'hospital_history' => $validated['hospital_history'] ?? null,
+                'altitude_illness' => $validated['altitude_illness'] ?? null,
+                'additional_info' => $validated['additional_info'] ?? null,
+                'doc_path' => $docPath,
+                'status' => 1,
+            ]
+        );
+
+        return back()->with('success', 'Pre-medical history saved.');
     }
 
     // --- Legacy save methods (kept for backward compatibility) ---

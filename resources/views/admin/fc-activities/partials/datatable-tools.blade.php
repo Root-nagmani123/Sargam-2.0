@@ -236,6 +236,9 @@
                         fixedHeader: false,
                         scrollX: true,
                         autoWidth: false,
+                        responsive: false,
+                        deferRender: true,
+                        processing: true,
                         dom: '<"row align-items-center mb-2"<"col-md-6"l><"col-md-6"f>>rt<"row align-items-center mt-2"<"col-md-5"i><"col-md-7"p>>',
                         buttons: [
                             {
@@ -283,6 +286,10 @@
                     });
 
                     $toolbar.find('.fc-btn-print').on('click', function () {
+                        var n = dt.rows({ search: 'applied' }).count();
+                        if (n > 4000 && !window.confirm('This table has ' + n + ' rows. Printing may take a long time or freeze the tab. Continue?')) {
+                            return;
+                        }
                         var vis = getVisibleColumnIndexes(dt);
                         openBrandedPrintWindow(title, buildFilterSummary(dt), buildPrintableTableHtml(dt, vis), true);
                     });
@@ -291,7 +298,21 @@
                         dt.button('.fc-dt-excel').trigger();
                     });
 
-                    $toolbar.find('.fc-btn-pdf').on('click', async function () {
+                    $toolbar.find('.fc-btn-pdf').on('click', function () {
+                        var $pdfBtn = $(this);
+                        if ($pdfBtn.prop('disabled')) return;
+
+                        var rowCount = dt.rows({ search: 'applied' }).count();
+                        if (rowCount > 4000 && !window.confirm('This export has ' + rowCount + ' rows. PDF generation may freeze the page for a minute or more. Continue?')) {
+                            return;
+                        }
+
+                        var origHtml = $pdfBtn.html();
+                        $pdfBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> PDF…');
+
+                        setTimeout(function () {
+                            (async function () {
+                                try {
                         var vis = getVisibleColumnIndexes(dt);
                         var filterLine = buildFilterSummary(dt);
                         var emblemUrl = '{{ asset("images/ashoka.png") }}';
@@ -367,6 +388,14 @@
                             }
                         };
                         pdfMake.createPdf(docDefinition).download((title || 'report') + '.pdf');
+                                } catch (err) {
+                                    console.error('FC PDF export failed', err);
+                                    window.alert('PDF export failed. Try fewer rows (filter the table) or use Excel.');
+                                } finally {
+                                    $pdfBtn.prop('disabled', false).html(origHtml);
+                                }
+                            })();
+                        }, 50);
                     });
                 }
 

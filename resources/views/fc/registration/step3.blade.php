@@ -12,7 +12,7 @@
             <h5 class="fw-bold mb-0" style="color:#1a3c6e;">
                 <i class="bi bi-journal-text me-2"></i>Step 3: Other Details
             </h5>
-            <small class="text-muted">Qualifications, Employment, Languages, Hobbies, Sports &amp; Module choice</small>
+            <small class="text-muted">Qualifications, employment, pre-medical history, languages, hobbies, sports &amp; module choice</small>
         </div>
 
         <div class="card-body p-0">
@@ -146,6 +146,11 @@
                             <button type="submit" class="btn btn-success"><i class="bi bi-save me-1"></i>Save</button>
                         </div>
                     </form>
+                </div>
+
+                <!-- ── TAB: Pre-medical history ───────────────────── -->
+                <div class="tab-pane fade" id="tab-premed">
+                    @include('fc.registration.partials.pre-medical-history-form')
                 </div>
 
                 <!-- ── TAB: Languages ─────────────────────────────── -->
