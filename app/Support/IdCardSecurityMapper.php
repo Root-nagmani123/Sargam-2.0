@@ -756,6 +756,58 @@ class IdCardSecurityMapper
     }
 
     /**
+     * Permanent parm/dup_perm rows for this employee: employee_master_pk OR created_by (self-service uses created_by).
+     *
+     * @param  \Illuminate\Database\Query\Builder  $query
+     */
+    private static function scopePermanentRowsForLinkedEmployee($query, string $table, array $linkedPks): void
+    {
+        if (! Schema::hasTable($table)) {
+            return;
+        }
+        $hasEmpPk = Schema::hasColumn($table, 'employee_master_pk');
+        $hasCre = Schema::hasColumn($table, 'created_by');
+        if (! $hasEmpPk && ! $hasCre) {
+            return;
+        }
+        if ($hasEmpPk && $hasCre) {
+            $query->where(function ($w) use ($linkedPks) {
+                $w->whereIn('employee_master_pk', $linkedPks)->orWhereIn('created_by', $linkedPks);
+            });
+        } elseif ($hasEmpPk) {
+            $query->whereIn('employee_master_pk', $linkedPks);
+        } else {
+            $query->whereIn('created_by', $linkedPks);
+        }
+    }
+
+    /**
+     * Contractual con/dup_other rows: created_by OR employee_master_pk when column exists.
+     *
+     * @param  \Illuminate\Database\Query\Builder  $query
+     */
+    private static function scopeContractualRowsForLinkedEmployee($query, string $table, array $linkedPks): void
+    {
+        if (! Schema::hasTable($table)) {
+            return;
+        }
+        $hasEmpPk = Schema::hasColumn($table, 'employee_master_pk');
+        $hasCre = Schema::hasColumn($table, 'created_by');
+        if (! $hasCre && ! $hasEmpPk) {
+            return;
+        }
+        if ($hasCre && $hasEmpPk) {
+            $query->where(function ($w) use ($linkedPks) {
+                $w->whereIn('created_by', $linkedPks)->orWhereIn('employee_master_pk', $linkedPks);
+            });
+        } elseif ($hasCre) {
+            $query->whereIn('created_by', $linkedPks);
+        } else {
+            $query->whereIn('employee_master_pk', $linkedPks);
+        }
+    }
+
+    /**
      * Latest calendar end of approved permanent ID validity: main apply table plus approved duplicate/extension rows.
      */
     private static function maxApprovedPermanentCardValidToEnd(array $linkedPks): ?Carbon
@@ -765,23 +817,25 @@ class IdCardSecurityMapper
         }
         $dates = [];
 
-        $mainDates = DB::table('security_parm_id_apply')
-            ->whereIn('employee_master_pk', $linkedPks)
-            ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
-            ->whereNotNull('card_valid_to')
-            ->pluck('card_valid_to');
-        foreach ($mainDates as $d) {
-            if ($d !== null && (string) $d !== '') {
-                $dates[] = Carbon::parse($d)->startOfDay();
+        if (Schema::hasTable('security_parm_id_apply')) {
+            $parmQ = DB::table('security_parm_id_apply')
+                ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
+                ->whereNotNull('card_valid_to');
+            self::scopePermanentRowsForLinkedEmployee($parmQ, 'security_parm_id_apply', $linkedPks);
+            $mainDates = $parmQ->pluck('card_valid_to');
+            foreach ($mainDates as $d) {
+                if ($d !== null && (string) $d !== '') {
+                    $dates[] = Carbon::parse($d)->startOfDay();
+                }
             }
         }
 
         if (Schema::hasTable('security_dup_perm_id_apply')) {
-            $dupDates = DB::table('security_dup_perm_id_apply')
-                ->whereIn('employee_master_pk', $linkedPks)
+            $dupPermQ = DB::table('security_dup_perm_id_apply')
                 ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
-                ->whereNotNull('card_valid_to')
-                ->pluck('card_valid_to');
+                ->whereNotNull('card_valid_to');
+            self::scopePermanentRowsForLinkedEmployee($dupPermQ, 'security_dup_perm_id_apply', $linkedPks);
+            $dupDates = $dupPermQ->pluck('card_valid_to');
             foreach ($dupDates as $d) {
                 if ($d !== null && (string) $d !== '') {
                     $dates[] = Carbon::parse($d)->startOfDay();
@@ -806,23 +860,25 @@ class IdCardSecurityMapper
         }
         $dates = [];
 
-        $mainDates = DB::table('security_con_oth_id_apply')
-            ->whereIn('created_by', $linkedPks)
-            ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
-            ->whereNotNull('card_valid_to')
-            ->pluck('card_valid_to');
-        foreach ($mainDates as $d) {
-            if ($d !== null && (string) $d !== '') {
-                $dates[] = Carbon::parse($d)->startOfDay();
+        if (Schema::hasTable('security_con_oth_id_apply')) {
+            $conQ = DB::table('security_con_oth_id_apply')
+                ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
+                ->whereNotNull('card_valid_to');
+            self::scopeContractualRowsForLinkedEmployee($conQ, 'security_con_oth_id_apply', $linkedPks);
+            $mainDates = $conQ->pluck('card_valid_to');
+            foreach ($mainDates as $d) {
+                if ($d !== null && (string) $d !== '') {
+                    $dates[] = Carbon::parse($d)->startOfDay();
+                }
             }
         }
 
         if (Schema::hasTable('security_dup_other_id_apply')) {
-            $dupDates = DB::table('security_dup_other_id_apply')
-                ->whereIn('created_by', $linkedPks)
+            $dupOthQ = DB::table('security_dup_other_id_apply')
                 ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
-                ->whereNotNull('card_valid_to')
-                ->pluck('card_valid_to');
+                ->whereNotNull('card_valid_to');
+            self::scopeContractualRowsForLinkedEmployee($dupOthQ, 'security_dup_other_id_apply', $linkedPks);
+            $dupDates = $dupOthQ->pluck('card_valid_to');
             foreach ($dupDates as $d) {
                 if ($d !== null && (string) $d !== '') {
                     $dates[] = Carbon::parse($d)->startOfDay();
@@ -851,42 +907,42 @@ class IdCardSecurityMapper
         }
 
         if ($employeeTypeFilter === null || $employeeTypeFilter === 'Permanent Employee') {
-            $open = DB::table('security_parm_id_apply')
-                ->whereIn('employee_master_pk', $linked)
-                ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
-                ->whereNull('card_valid_to')
-                ->exists();
-            if ($open) {
-                return true;
+            if (Schema::hasTable('security_parm_id_apply')) {
+                $q = DB::table('security_parm_id_apply')
+                    ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
+                    ->whereNull('card_valid_to');
+                self::scopePermanentRowsForLinkedEmployee($q, 'security_parm_id_apply', $linked);
+                if ($q->exists()) {
+                    return true;
+                }
             }
             if (Schema::hasTable('security_dup_perm_id_apply')) {
-                $openDup = DB::table('security_dup_perm_id_apply')
-                    ->whereIn('employee_master_pk', $linked)
+                $q = DB::table('security_dup_perm_id_apply')
                     ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
-                    ->whereNull('card_valid_to')
-                    ->exists();
-                if ($openDup) {
+                    ->whereNull('card_valid_to');
+                self::scopePermanentRowsForLinkedEmployee($q, 'security_dup_perm_id_apply', $linked);
+                if ($q->exists()) {
                     return true;
                 }
             }
         }
 
         if ($employeeTypeFilter === null || $employeeTypeFilter === 'Contractual Employee') {
-            $open = DB::table('security_con_oth_id_apply')
-                ->whereIn('created_by', $linked)
-                ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
-                ->whereNull('card_valid_to')
-                ->exists();
-            if ($open) {
-                return true;
+            if (Schema::hasTable('security_con_oth_id_apply')) {
+                $q = DB::table('security_con_oth_id_apply')
+                    ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
+                    ->whereNull('card_valid_to');
+                self::scopeContractualRowsForLinkedEmployee($q, 'security_con_oth_id_apply', $linked);
+                if ($q->exists()) {
+                    return true;
+                }
             }
             if (Schema::hasTable('security_dup_other_id_apply')) {
-                $openDup = DB::table('security_dup_other_id_apply')
-                    ->whereIn('created_by', $linked)
+                $q = DB::table('security_dup_other_id_apply')
                     ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
-                    ->whereNull('card_valid_to')
-                    ->exists();
-                if ($openDup) {
+                    ->whereNull('card_valid_to');
+                self::scopeContractualRowsForLinkedEmployee($q, 'security_dup_other_id_apply', $linked);
+                if ($q->exists()) {
                     return true;
                 }
             }
@@ -984,13 +1040,35 @@ class IdCardSecurityMapper
             $candidates[] = ['no' => $no, 'end' => $end, 'created' => $cd];
         };
 
-        // Permanent — main issue
-        if (Schema::hasTable('security_parm_id_apply') && Schema::hasColumn('security_parm_id_apply', 'id_card_no')) {
-            $rows = DB::table('security_parm_id_apply')
-                ->whereIn('employee_master_pk', $linked)
+        $scopeLinkedOrCreator = static function (string $table) use ($linked): ?\Closure {
+            if (! Schema::hasTable($table)) {
+                return null;
+            }
+            $hasEmpPk = Schema::hasColumn($table, 'employee_master_pk');
+            $hasCreatedBy = Schema::hasColumn($table, 'created_by');
+            if (! $hasEmpPk && ! $hasCreatedBy) {
+                return null;
+            }
+
+            return static function ($w) use ($linked, $hasEmpPk, $hasCreatedBy): void {
+                if ($hasEmpPk && $hasCreatedBy) {
+                    $w->whereIn('employee_master_pk', $linked)->orWhereIn('created_by', $linked);
+                } elseif ($hasEmpPk) {
+                    $w->whereIn('employee_master_pk', $linked);
+                } else {
+                    $w->whereIn('created_by', $linked);
+                }
+            };
+        };
+
+        // Permanent — main issue (employee_master_pk and/or created_by — self-service rows often use created_by)
+        $tblParm = 'security_parm_id_apply';
+        if (Schema::hasTable($tblParm) && Schema::hasColumn($tblParm, 'id_card_no') && ($scope = $scopeLinkedOrCreator($tblParm))) {
+            $rows = DB::table($tblParm)
                 ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
                 ->whereNotNull('id_card_no')
                 ->where('id_card_no', '!=', '')
+                ->where($scope)
                 ->get(['id_card_no', 'card_valid_to', 'created_date']);
             foreach ($rows as $r) {
                 $pushRow($r->id_card_no ?? null, $r->card_valid_to ?? null, $r->created_date ?? null);
@@ -998,28 +1076,29 @@ class IdCardSecurityMapper
         }
 
         // Permanent — duplicate / extension
-        if (Schema::hasTable('security_dup_perm_id_apply') && Schema::hasColumn('security_dup_perm_id_apply', 'id_card_no')) {
-            $rows = DB::table('security_dup_perm_id_apply')
-                ->whereIn('employee_master_pk', $linked)
+        $tblDupPerm = 'security_dup_perm_id_apply';
+        if (Schema::hasTable($tblDupPerm) && Schema::hasColumn($tblDupPerm, 'id_card_no') && ($scope = $scopeLinkedOrCreator($tblDupPerm))) {
+            $rows = DB::table($tblDupPerm)
                 ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
                 ->whereNotNull('id_card_no')
                 ->where('id_card_no', '!=', '')
+                ->where($scope)
                 ->get(['id_card_no', 'card_valid_to', 'created_date']);
             foreach ($rows as $r) {
                 $pushRow($r->id_card_no ?? null, $r->card_valid_to ?? null, $r->created_date ?? null);
             }
         }
 
-        // Contractual — main + duplicate (created_by = employee master pk / pk_old)
+        // Contractual — main + duplicate (beneficiary may be created_by and/or employee_master_pk)
         foreach (['security_con_oth_id_apply', 'security_dup_other_id_apply'] as $tbl) {
-            if (! Schema::hasTable($tbl) || ! Schema::hasColumn($tbl, 'id_card_no') || ! Schema::hasColumn($tbl, 'created_by')) {
+            if (! Schema::hasTable($tbl) || ! Schema::hasColumn($tbl, 'id_card_no') || ! ($scope = $scopeLinkedOrCreator($tbl))) {
                 continue;
             }
             $rows = DB::table($tbl)
-                ->whereIn('created_by', $linked)
                 ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
                 ->whereNotNull('id_card_no')
                 ->where('id_card_no', '!=', '')
+                ->where($scope)
                 ->get(['id_card_no', 'card_valid_to', 'created_date']);
             foreach ($rows as $r) {
                 $pushRow($r->id_card_no ?? null, $r->card_valid_to ?? null, $r->created_date ?? null);
@@ -1030,18 +1109,20 @@ class IdCardSecurityMapper
             return null;
         }
 
+        // Prefer the same rule as Duplicate ID Card create: latest approved application by created_date,
+        // then by validity end (avoids picking an old row with open-ended validity over a newer printed number).
         usort($candidates, function (array $a, array $b): int {
-            $ae = $a['end'];
-            $be = $b['end'];
-            $at = $ae ? $ae->timestamp : PHP_INT_MAX;
-            $bt = $be ? $be->timestamp : PHP_INT_MAX;
-            if ($at !== $bt) {
-                return $bt <=> $at;
-            }
             $ac = $a['created'] ? $a['created']->timestamp : 0;
             $bc = $b['created'] ? $b['created']->timestamp : 0;
+            if ($ac !== $bc) {
+                return $bc <=> $ac;
+            }
+            $ae = $a['end'];
+            $be = $b['end'];
+            $at = $ae ? $ae->timestamp : 0;
+            $bt = $be ? $be->timestamp : 0;
 
-            return $bc <=> $ac;
+            return $bt <=> $at;
         });
 
         return $candidates[0]['no'];
