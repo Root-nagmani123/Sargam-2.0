@@ -35,12 +35,12 @@
                     <span class="fw-semibold">Add Selling Voucher</span>
                 </button>
             </div>
-            <div class="border rounded-3 bg-light p-3">
+            <div class="border rounded-3 bg-light p-3 sv-selling-voucher-filters">
                 <form method="GET" action="{{ route('admin.mess.material-management.index') }}">
-                    <div class="row g-3">
-                        <div class="col-md-2 col-sm-6">
+                    <div class="sv-filter-fields-grid">
+                        <div class="sv-filter-field">
                             <label class="form-label small text-muted mb-1">Status</label>
-                            <select name="status[]" id="filter_status" class="form-select form-select-sm" multiple>
+                            <select name="status[]" id="filter_status" class="form-select form-select-sm w-100" multiple>
                                 @php
                                     $selectedStatuses = request('status', []);
                                     if (!is_array($selectedStatuses)) {
@@ -52,17 +52,17 @@
                                 <option value="4" {{ in_array('4', $selectedStatuses) || in_array(4, $selectedStatuses) ? 'selected' : '' }}>Completed</option>
                             </select>
                         </div>
-                        <div class="col-md-2 col-sm-6">
+                        <div class="sv-filter-field">
                             <label class="form-label small text-muted mb-1">Return status</label>
-                            <select name="return_status" id="filter_return_status" class="form-select form-select-sm">
+                            <select name="return_status" id="filter_return_status" class="form-select form-select-sm w-100">
                                 <option value="" {{ request('return_status', '') === '' ? 'selected' : '' }}>All</option>
                                 <option value="returned" {{ request('return_status') === 'returned' ? 'selected' : '' }}>Returned</option>
                                 <option value="not_returned" {{ request('return_status') === 'not_returned' ? 'selected' : '' }}>Not returned</option>
                             </select>
                         </div>
-                        <div class="col-md-2 col-sm-6">
+                        <div class="sv-filter-field">
                             <label class="form-label small text-muted mb-1">Store</label>
-                            <select name="store[]" id="filter_store" class="form-select form-select-sm" multiple>
+                            <select name="store[]" id="filter_store" class="form-select form-select-sm w-100" multiple>
                                 @php
                                     $selectedStores = request('store', []);
                                     if (!is_array($selectedStores)) {
@@ -84,33 +84,33 @@
                             ];
                             $selectedClientType = (string) request('client_type', '');
                         @endphp
-                        <div class="col-md-2 col-sm-6">
+                        <div class="sv-filter-field">
                             <label class="form-label small text-muted mb-1">Client type</label>
-                            <select name="client_type" id="filter_client_type" class="form-select form-select-sm">
+                            <select name="client_type" id="filter_client_type" class="form-select form-select-sm w-100">
                                 <option value="" {{ $selectedClientType === '' ? 'selected' : '' }}>All</option>
                                 @foreach($filterClientTypes as $value => $label)
                                     <option value="{{ $value }}" {{ $selectedClientType === $value ? 'selected' : '' }}>{{ $label }}</option>
                                 @endforeach
                             </select>
                         </div>
-                        <div class="col-md-2 col-sm-6">
+                        <div class="sv-filter-field">
                             <label class="form-label small text-muted mb-1">Start Date</label>
-                            <input type="date" name="start_date" id="filter_start_date" class="form-control" value="{{ request('start_date') ?? date('Y-m-d') }}">
+                            <input type="date" name="start_date" id="filter_start_date" class="form-control form-control-sm w-100" value="{{ request('start_date') }}">
                         </div>
-                        <div class="col-md-2 col-sm-6">
+                        <div class="sv-filter-field">
                             <label class="form-label small text-muted mb-1">End Date</label>
-                            <input type="date" name="end_date" id="filter_end_date" class="form-control" value="{{ request('end_date') }}" min="{{ request('start_date') ?? date('Y-m-d') }}">
+                            <input type="date" name="end_date" id="filter_end_date" class="form-control form-control-sm w-100" value="{{ request('end_date') }}" @if(request()->filled('start_date')) min="{{ request('start_date') }}" @endif>
                         </div>
-                        <div class="col-md-4 d-flex align-items-end justify-content-md-end gap-2">
-                            <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-1">
-                                <span class="material-symbols-rounded" style="font-size: 1rem;">filter_list</span>
-                                <span>Filter</span>
-                            </button>
-                            <a href="{{ route('admin.mess.material-management.index') }}" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1">
-                                <span class="material-symbols-rounded" style="font-size: 1rem;">refresh</span>
-                                <span>Clear</span>
-                            </a>
-                        </div>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2 justify-content-lg-end align-items-center mt-3 pt-2 border-top border-light-subtle">
+                        <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-1">
+                            <span class="material-symbols-rounded" style="font-size: 1rem;">filter_list</span>
+                            <span>Filter</span>
+                        </button>
+                        <a href="{{ route('admin.mess.material-management.index') }}" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1">
+                            <span class="material-symbols-rounded" style="font-size: 1rem;">refresh</span>
+                            <span>Clear</span>
+                        </a>
                     </div>
                 </form>
             </div>
@@ -258,37 +258,115 @@
 
 {{-- Add Selling Voucher Modal (same UI/UX as Create Purchase Order) --}}
 <style>
-/* Filter dropdowns: Choices.js styling */
+/* Equal-width filter columns (grid); min-width 0 so Choices/Tom shrink inside fr tracks */
+.sv-selling-voucher-filters .sv-filter-fields-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 1rem;
+    align-items: end;
+}
+@media (max-width: 1199.98px) {
+    .sv-selling-voucher-filters .sv-filter-fields-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+@media (max-width: 767.98px) {
+    .sv-selling-voucher-filters .sv-filter-fields-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+@media (max-width: 575.98px) {
+    .sv-selling-voucher-filters .sv-filter-fields-grid {
+        grid-template-columns: 1fr;
+    }
+}
+.sv-selling-voucher-filters .sv-filter-field {
+    min-width: 0;
+}
+.sv-selling-voucher-filters .sv-filter-field .choices {
+    width: 100%;
+    max-width: 100%;
+}
+
+/* All filter fields: same surface, border, focus as theme form-select (admin styles.css) */
+.sv-selling-voucher-filters .form-select,
+.sv-selling-voucher-filters .form-control {
+    background-color: #fff;
+    box-shadow: none;
+    border: var(--bs-border-width) solid #e0e6eb;
+    color: #526b7a;
+}
+.sv-selling-voucher-filters .form-select:focus,
+.sv-selling-voucher-filters .form-control:focus {
+    background-color: #fff;
+    border-color: #b1adff;
+    color: #526b7a;
+    box-shadow: 0 0 0 0.25rem rgba(99, 91, 255, 0.25);
+}
+.sv-selling-voucher-filters input[type="date"].form-control {
+    color-scheme: light;
+}
+.sv-selling-voucher-filters input[type="date"].form-control::-webkit-calendar-picker-indicator {
+    opacity: 0.75;
+}
+
+/* Filter dropdowns: Choices.js — match native form-select-sm + chevron */
 #filter_status + .choices,
 #filter_store + .choices {
     margin-bottom: 0;
 }
 #filter_status + .choices .choices__inner,
 #filter_store + .choices .choices__inner {
-    min-height: calc(1.5em + 0.5rem + 2px);
-    padding: 0.25rem 0.5rem;
-    font-size: 0.875rem;
-    border: 1px solid var(--bs-border-color, #ced4da);
-    border-radius: var(--bs-border-radius-sm, 0.25rem);
-    background-color: var(--bs-body-bg, #fff);
+    min-height: calc(1.5em + 0.5rem + calc(var(--bs-border-width) * 2));
+    padding: 0.25rem 2.25rem 0.25rem 0.5rem;
+    font-size: 0.765625rem;
+    line-height: 1.5;
+    border: var(--bs-border-width) solid #e0e6eb;
+    border-radius: var(--bs-border-radius-sm);
+    background-color: #fff;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.65rem center;
+    background-size: 16px 12px;
+    box-shadow: none;
+    color: #526b7a;
+}
+#filter_status + .choices .choices__placeholder,
+#filter_store + .choices .choices__placeholder {
+    color: #526b7a;
+    opacity: 0.65;
 }
 #filter_status + .choices.is-open .choices__inner,
 #filter_status + .choices.is-focused .choices__inner,
 #filter_store + .choices.is-open .choices__inner,
 #filter_store + .choices.is-focused .choices__inner {
-    border-color: var(--bs-primary, #86b7fe);
-    box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb, 13, 110, 253), 0.25);
+    border-color: #b1adff;
+    box-shadow: 0 0 0 0.25rem rgba(99, 91, 255, 0.25);
 }
 #filter_status + .choices .choices__list--dropdown,
 #filter_store + .choices .choices__list--dropdown {
     z-index: 1050;
-    border: 1px solid var(--bs-border-color, #ced4da);
-    border-radius: var(--bs-border-radius-sm, 0.25rem);
-    font-size: 0.875rem;
+    border: var(--bs-border-width) solid #e0e6eb;
+    border-radius: var(--bs-border-radius-sm);
+    font-size: 0.765625rem;
 }
 #filter_status + .choices .choices__item,
 #filter_store + .choices .choices__item {
-    font-size: 0.875rem;
+    font-size: 0.765625rem;
+    color: #526b7a;
+}
+.sv-selling-voucher-filters #filter_status + .choices .choices__list--multiple .choices__item,
+.sv-selling-voucher-filters #filter_store + .choices .choices__list--multiple .choices__item {
+    background-color: #eef2f5;
+    border: 1px solid #e0e6eb;
+    color: #526b7a;
+    border-radius: var(--bs-border-radius-sm);
+    font-size: 0.7rem;
+    margin-bottom: 0.125rem;
+}
+.sv-selling-voucher-filters #filter_status + .choices .choices__list--multiple .choices__item.is-highlighted,
+.sv-selling-voucher-filters #filter_store + .choices .choices__list--multiple .choices__item.is-highlighted {
+    background-color: #e3e9ee;
 }
 
 #addSellingVoucherModal .modal-dialog,

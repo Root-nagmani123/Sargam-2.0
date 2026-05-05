@@ -46,10 +46,10 @@ $selectedClientType = (string) request()->input('client_type', '');
             </div>
             <hr class="my-4">
             <form method="GET" action="{{ route('admin.mess.selling-voucher-date-range.index') }}">
-                <div class="row g-3 align-items-end">
-                    <div class="col-12 col-sm-6 col-lg-4 col-xl-2">
+                <div class="sv-filter-fields-grid">
+                    <div class="sv-filter-field">
                         <label class="form-label small fw-semibold text-uppercase mb-1">Status</label>
-                        <select name="status[]" class="form-select voucher-filter-multiselect" multiple
+                        <select name="status[]" class="form-select form-select-sm voucher-filter-multiselect w-100" multiple
                             data-placeholder="All Statuses">
                             <option value="" disabled>All</option>
                             <option value="0" {{ in_array('0', $selectedStatuses, true) ? 'selected' : '' }}>Pending
@@ -60,9 +60,9 @@ $selectedClientType = (string) request()->input('client_type', '');
                             </option>
                         </select>
                     </div>
-                    <div class="col-12 col-sm-6 col-lg-4 col-xl-2">
+                    <div class="sv-filter-field">
                         <label class="form-label small fw-semibold text-uppercase mb-1">Store</label>
-                        <select name="store[]" class="form-select voucher-filter-multiselect" multiple
+                        <select name="store[]" class="form-select form-select-sm voucher-filter-multiselect w-100" multiple
                             data-placeholder="All Stores">
                             <option value="" disabled>All</option>
                             @foreach($stores as $store)
@@ -72,44 +72,44 @@ $selectedClientType = (string) request()->input('client_type', '');
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-12 col-sm-6 col-lg-4 col-xl-2">
+                    <div class="sv-filter-field">
                         <label class="form-label small fw-semibold text-uppercase mb-1">Client type</label>
-                        <select name="client_type" class="form-select">
+                        <select name="client_type" class="form-select form-select-sm w-100">
                             <option value="" {{ $selectedClientType === '' ? 'selected' : '' }}>All</option>
                             @foreach(\App\Models\Mess\ClientType::clientTypes() as $slug => $label)
                             <option value="{{ $slug }}" {{ $selectedClientType === $slug ? 'selected' : '' }}>{{ $label }}</option>
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-12 col-sm-6 col-lg-4 col-xl-2">
+                    <div class="sv-filter-field">
                         <label class="form-label small fw-semibold text-uppercase mb-1">Return status</label>
-                        <select name="return_status" class="form-select">
+                        <select name="return_status" class="form-select form-select-sm w-100">
                             <option value="" {{ $selectedReturnStatus === '' ? 'selected' : '' }}>All</option>
                             <option value="returned" {{ $selectedReturnStatus === 'returned' ? 'selected' : '' }}>Returned</option>
                             <option value="not_returned" {{ $selectedReturnStatus === 'not_returned' ? 'selected' : '' }}>Not returned</option>
                         </select>
                     </div>
-                    <div class="col-12 col-sm-6 col-lg-4 col-xl-2">
+                    <div class="sv-filter-field">
                         <label class="form-label small fw-semibold text-uppercase mb-1">Start Date</label>
-                        <input type="date" name="start_date" id="filter_start_date" class="form-control "
-                            value="{{ request('start_date') ?? date('Y-m-d') }}">
+                        <input type="date" name="start_date" id="filter_start_date" class="form-control form-control-sm w-100"
+                            value="{{ request('start_date') }}">
                     </div>
-                    <div class="col-12 col-sm-6 col-lg-4 col-xl-2">
+                    <div class="sv-filter-field">
                         <label class="form-label small fw-semibold text-uppercase mb-1">End Date</label>
-                        <input type="date" name="end_date" id="filter_end_date" class="form-control "
-                            value="{{ request('end_date') }}" min="{{ request('start_date') ?? date('Y-m-d') }}">
+                        <input type="date" name="end_date" id="filter_end_date" class="form-control form-control-sm w-100"
+                            value="{{ request('end_date') }}" @if(request()->filled('start_date')) min="{{ request('start_date') }}" @endif>
                     </div>
-                    <div class="col-12 col-lg-8 col-xl-4 d-flex align-items-end gap-2 flex-wrap">
-                        <button type="submit" class="btn btn-primary  d-inline-flex align-items-center gap-1 px-3">
-                            <i class="material-symbols-rounded" style="font-size: 1rem;">filter_list</i>
-                            <span>Filter</span>
-                        </button>
-                        <a href="{{ route('admin.mess.selling-voucher-date-range.index') }}"
-                            class="btn btn-outline-secondary  d-inline-flex align-items-center gap-1 px-3">
-                            <i class="material-symbols-rounded" style="font-size: 1rem;">refresh</i>
-                            <span>Clear</span>
-                        </a>
-                    </div>
+                </div>
+                <div class="d-flex flex-wrap gap-2 justify-content-lg-end align-items-center mt-3 pt-3 border-top">
+                    <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-1 px-3">
+                        <i class="material-symbols-rounded" style="font-size: 1rem;">filter_list</i>
+                        <span>Filter</span>
+                    </button>
+                    <a href="{{ route('admin.mess.selling-voucher-date-range.index') }}"
+                        class="btn btn-outline-secondary d-inline-flex align-items-center gap-1 px-3">
+                        <i class="material-symbols-rounded" style="font-size: 1rem;">refresh</i>
+                        <span>Clear</span>
+                    </a>
                 </div>
             </form>
         </div>
@@ -371,8 +371,58 @@ $selectedClientType = (string) request()->input('client_type', '');
 .selling-voucher-filter .card-body,
 .selling-voucher-filter .row,
 .selling-voucher-filter .col-12,
+.selling-voucher-filter .col,
+.selling-voucher-filter .sv-filter-fields-grid,
 .selling-voucher-filter .ts-wrapper {
     overflow: visible;
+}
+
+.selling-voucher-filter .sv-filter-fields-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 1rem;
+    align-items: end;
+}
+@media (max-width: 1199.98px) {
+    .selling-voucher-filter .sv-filter-fields-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+@media (max-width: 767.98px) {
+    .selling-voucher-filter .sv-filter-fields-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+@media (max-width: 575.98px) {
+    .selling-voucher-filter .sv-filter-fields-grid {
+        grid-template-columns: 1fr;
+    }
+}
+.selling-voucher-filter .sv-filter-field {
+    min-width: 0;
+}
+.selling-voucher-filter .sv-filter-field .ts-wrapper {
+    width: 100%;
+    max-width: 100%;
+}
+
+/* Filter strip only: same look as admin theme form-select / form-control */
+.selling-voucher-filter .form-select,
+.selling-voucher-filter .form-control {
+    background-color: #fff;
+    box-shadow: none;
+    border: var(--bs-border-width) solid #e0e6eb;
+    color: #526b7a;
+}
+.selling-voucher-filter .form-select:focus,
+.selling-voucher-filter .form-control:focus {
+    background-color: #fff;
+    border-color: #b1adff;
+    color: #526b7a;
+    box-shadow: 0 0 0 0.25rem rgba(99, 91, 255, 0.25);
+}
+.selling-voucher-filter input[type="date"].form-control {
+    color-scheme: light;
 }
 
 .ts-wrapper.choices {
@@ -391,6 +441,27 @@ $selectedClientType = (string) request()->input('client_type', '');
 .ts-wrapper.choices.is-focused .choices__inner {
     border-color: #86b7fe;
     box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.selling-voucher-filter .ts-wrapper.choices .choices__inner {
+    min-height: calc(1.5em + 0.5rem + calc(var(--bs-border-width) * 2));
+    padding: 0.25rem 2.25rem 0.25rem 0.5rem;
+    font-size: 0.765625rem;
+    line-height: 1.5;
+    border: var(--bs-border-width) solid #e0e6eb;
+    border-radius: var(--bs-border-radius-sm);
+    background-color: #fff;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.65rem center;
+    background-size: 16px 12px;
+    box-shadow: none;
+    color: #526b7a;
+}
+.selling-voucher-filter .ts-wrapper.choices.is-open .choices__inner,
+.selling-voucher-filter .ts-wrapper.choices.is-focused .choices__inner {
+    border-color: #b1adff;
+    box-shadow: 0 0 0 0.25rem rgba(99, 91, 255, 0.25);
 }
 
 .ts-wrapper.choices .choices__list--single {
@@ -448,8 +519,7 @@ $selectedClientType = (string) request()->input('client_type', '');
 }
 
 .selling-voucher-filter .ts-wrapper.choices[data-type*="select-multiple"] .choices__inner {
-    min-height: calc(1.5em + 0.75rem + 2px);
-    padding: 0.25rem 0.5rem;
+    min-height: calc(1.5em + 0.5rem + calc(var(--bs-border-width) * 2));
 }
 
 .selling-voucher-filter .choices__list--multiple .choices__item {

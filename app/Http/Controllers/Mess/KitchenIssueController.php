@@ -99,8 +99,8 @@ class KitchenIssueController extends Controller
         }
         // Date filter: support only start_date, only end_date, or both
         if (! $request->filled('start_date') && ! $request->filled('end_date')) {
-            // Match the filter UI default (start date shows today when no query string) so the first load
-            // does not pull the full historical table into memory for client-side DataTables.
+            // First load leaves both date inputs blank; still scope to today so client-side DataTables
+            // is not fed the full historical dataset.
             $query->whereDate('issue_date', now()->toDateString());
         }
         if ($request->filled('start_date')) {
