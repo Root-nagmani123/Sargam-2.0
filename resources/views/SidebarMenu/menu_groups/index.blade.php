@@ -7,6 +7,27 @@
             margin-bottom: 0;
         }
 
+        #MenuGroupModal .modal-content {
+            border: 0;
+            box-shadow: 0 1rem 2rem rgba(2, 32, 71, 0.16) !important;
+        }
+
+        #MenuGroupModal .modal-header {
+            border-bottom: 1px solid #eef2f7 !important;
+            padding: 1rem 1rem 0.85rem;
+        }
+
+        #MenuGroupModal .modal-body {
+            padding: 1rem;
+            background: linear-gradient(180deg, #fafcff 0%, #ffffff 55%);
+        }
+
+        #MenuGroupModal .form-label {
+            font-weight: 600;
+            color: #1f2a37;
+            margin-bottom: 0.4rem;
+        }
+
         /* Do not combine .form-select on .choices__inner — Bootstrap’s chevron + Choices arrow = double arrows.
            Strip any select background chevron; Choices provides its own. */
         #MenuGroupModal .choices .choices__inner,
@@ -25,6 +46,8 @@
             z-index: 2000;
             border-radius: 0.375rem;
             margin-top: 2px;
+            border: 1px solid #d7e1ef;
+            overflow: hidden;
         }
 
         #MenuGroupModal .choices__list--dropdown .choices__input {
@@ -42,6 +65,46 @@
         /* Icon row: keep preview + Choices on one line */
         #MenuGroupModal .menu-group-icon-select-col .choices {
             min-width: 0;
+        }
+
+        #MenuGroupModal .mg-icon-option {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            width: 100%;
+            min-height: 1.5rem;
+        }
+
+        #MenuGroupModal .mg-icon-option .mg-icon-glyph {
+            font-size: 1.15rem;
+            line-height: 1.1;
+            color: #0d6efd;
+            width: 1.2rem;
+            text-align: center;
+            flex: 0 0 1.2rem;
+        }
+
+        #MenuGroupModal .mg-icon-option .mg-icon-label {
+            font-family: var(--bs-font-sans-serif);
+            font-size: 0.92rem;
+            color: #1f2a37;
+            letter-spacing: 0.01em;
+        }
+
+        #MenuGroupModal .choices__list--dropdown .choices__item--choice {
+            padding-top: 0.5rem;
+            padding-bottom: 0.5rem;
+        }
+
+        #MenuGroupModal .choices__list--dropdown .choices__item--choice.is-highlighted {
+            background-color: #edf4ff;
+            color: #0d47a1;
+        }
+
+        #MenuGroupModal .form-control,
+        #MenuGroupModal .form-select {
+            border-color: #d9e2ef;
+            box-shadow: none !important;
         }
     </style>
 @endpush
@@ -174,11 +237,28 @@
             }
         }
 
-        function menuGroupInitChoices(el, placeholderText, searchPlaceholder) {
+        function menuGroupEscapeHtml(value) {
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function menuGroupClassNamesToString(value) {
+            if (Array.isArray(value)) {
+                return value.join(' ');
+            }
+            return String(value || '');
+        }
+
+        function menuGroupInitChoices(el, placeholderText, searchPlaceholder, renderWithIcon) {
             if (!el || typeof window.Choices === 'undefined') {
                 return null;
             }
             menuGroupDestroyChoices(el);
+            var useIconTemplate = !!renderWithIcon;
             var instance = new Choices(el, {
                 removeItemButton: false,
                 shouldSort: false,
@@ -187,8 +267,43 @@
                 placeholder: true,
                 placeholderValue: placeholderText || 'Select…',
                 itemSelectText: '',
-                allowHTML: false,
+                allowHTML: useIconTemplate,
                 shouldFlip: true,
+                callbackOnCreateTemplates: useIconTemplate ? function (template) {
+                    return {
+                        item: function (classNames, data) {
+                            var value = menuGroupEscapeHtml(data.value);
+                            var label = menuGroupEscapeHtml(data.label);
+                            var itemClass = menuGroupClassNamesToString(classNames.item);
+                            var itemSelectableClass = menuGroupClassNamesToString(classNames.itemSelectable);
+                            return template(
+                                '<div class="' + itemClass + ' ' + itemSelectableClass + '" ' +
+                                'data-item data-id="' + data.id + '" data-value="' + value + '" ' +
+                                (data.active ? 'aria-selected="true"' : '') + '>' +
+                                '<span class="mg-icon-option">' +
+                                '<i class="material-icons material-symbols-rounded mg-icon-glyph">' + value + '</i>' +
+                                '<span class="mg-icon-label">' + label + '</span>' +
+                                '</span></div>'
+                            );
+                        },
+                        choice: function (classNames, data) {
+                            var value = menuGroupEscapeHtml(data.value);
+                            var label = menuGroupEscapeHtml(data.label);
+                            var itemClass = menuGroupClassNamesToString(classNames.item);
+                            var itemChoiceClass = menuGroupClassNamesToString(classNames.itemChoice);
+                            return template(
+                                '<div class="' + itemClass + ' ' + itemChoiceClass + '" ' +
+                                'data-select-text="" data-choice ' +
+                                'data-id="' + data.id + '" data-value="' + value + '" ' +
+                                (data.disabled ? 'data-choice-disabled aria-disabled="true"' : 'data-choice-selectable') + '>' +
+                                '<span class="mg-icon-option">' +
+                                '<i class="material-icons material-symbols-rounded mg-icon-glyph">' + value + '</i>' +
+                                '<span class="mg-icon-label">' + label + '</span>' +
+                                '</span></div>'
+                            );
+                        }
+                    };
+                } : null,
                 classNames: {
                     containerInner: ['choices__inner', 'menu-group-choices-inner'],
                     input: ['choices__input', 'form-control', 'form-control-sm', 'border-0', 'shadow-none', 'my-1'],
@@ -274,7 +389,7 @@
             menuGroupDestroyChoices(iconEl);
 
             if (catEl) {
-                menuGroupInitChoices(catEl, 'Type to search categories…', 'Search categories…');
+                menuGroupInitChoices(catEl, 'Type to search categories…', 'Search categories…', false);
                 menuGroupSyncChoices(catEl);
                 $(catEl).off('change.mg').on('change.mg', function () {
                     $(this).valid();
@@ -282,7 +397,7 @@
             }
 
             if (iconEl) {
-                menuGroupInitChoices(iconEl, 'Type to search icons…', 'Search icons…');
+                menuGroupInitChoices(iconEl, 'Type to search icons…', 'Search icons…', true);
                 menuGroupSyncChoices(iconEl);
                 $(iconEl).off('change.mg').on('change.mg', function () {
                     syncIconPreview();
