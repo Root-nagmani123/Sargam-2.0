@@ -53,14 +53,6 @@
                             </select>
                         </div>
                         <div class="sv-filter-field">
-                            <label class="form-label small text-muted mb-1">Return status</label>
-                            <select name="return_status" id="filter_return_status" class="form-select w-100">
-                                <option value="" {{ request('return_status', '') === '' ? 'selected' : '' }}>All</option>
-                                <option value="returned" {{ request('return_status') === 'returned' ? 'selected' : '' }}>Returned</option>
-                                <option value="not_returned" {{ request('return_status') === 'not_returned' ? 'selected' : '' }}>Not returned</option>
-                            </select>
-                        </div>
-                        <div class="sv-filter-field">
                             <label class="form-label small text-muted mb-1">Store</label>
                             <select name="store[]" id="filter_store" class="form-select w-100" multiple>
                                 @php
@@ -91,6 +83,14 @@
                                 @foreach($filterClientTypes as $value => $label)
                                     <option value="{{ $value }}" {{ $selectedClientType === $value ? 'selected' : '' }}>{{ $label }}</option>
                                 @endforeach
+                            </select>
+                        </div>
+                        <div class="sv-filter-field">
+                            <label class="form-label small text-muted mb-1">Return status</label>
+                            <select name="return_status" id="filter_return_status" class="form-select w-100">
+                                <option value="" {{ request('return_status', '') === '' ? 'selected' : '' }}>All</option>
+                                <option value="returned" {{ request('return_status') === 'returned' ? 'selected' : '' }}>Returned</option>
+                                <option value="not_returned" {{ request('return_status') === 'not_returned' ? 'selected' : '' }}>Not returned</option>
                             </select>
                         </div>
                         <div class="sv-filter-field">
