@@ -52,7 +52,7 @@ class KitchenIssueController extends Controller
                 'subStore:id,sub_store_name',
                 'items' => function ($q) {
                     $q->select('pk', 'kitchen_issue_master_pk', 'item_subcategory_id', 'item_name', 'quantity', 'return_quantity')
-                        ->with('itemSubcategory');
+                        ->with(['itemSubcategory:id,name']);
                 },
                 'clientTypeCategory:id,client_name',
                 'course:pk,course_name',
@@ -97,11 +97,10 @@ class KitchenIssueController extends Controller
         if ($request->filled('kitchen_issue_type')) {
             $query->where('kitchen_issue_type', $request->kitchen_issue_type);
         }
-        // Date filter: support only start_date, only end_date, or both
+        // Date filter: support only start_date, only end_date, or both.
+        // For first load (no date selected), keep page responsive by limiting to recent records.
         if (! $request->filled('start_date') && ! $request->filled('end_date')) {
-            // First load leaves both date inputs blank; still scope to today so client-side DataTables
-            // is not fed the full historical dataset.
-            $query->whereDate('issue_date', now()->toDateString());
+            $query->whereDate('issue_date', '>=', now()->subDays(30)->toDateString());
         }
         if ($request->filled('start_date')) {
             $query->where('issue_date', '>=', $request->start_date);
