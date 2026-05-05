@@ -361,6 +361,8 @@
         validFrom: @json($vehiclePassResetValidFrom),
         validTo: @json($vehiclePassResetValidTo),
     };
+    var hasServerOldInput = @json((bool) old('_token'));
+    var isInitialApplicantHydration = true;
     var lastApplicantType = null;
 
     function getCurrentApplicantType() {
@@ -525,15 +527,28 @@
                 setApplicantFields('', '', '', '', false);
             }
         } else {
-            if (empMasterPkInput) empMasterPkInput.value = '';
-            // For "Others" keep fields editable; do not force-readonly
-            setApplicantFields('', '', '', '', false);
+            // On first render after validation error, preserve old input for "Others"/contractual.
+            if (isInitialApplicantHydration && hasServerOldInput) {
+                if (empMasterPkInput) empMasterPkInput.value = empMasterPkInput.value || '';
+                setApplicantFields(
+                    idCardInput ? idCardInput.value : '',
+                    document.getElementById('applicant_name') ? document.getElementById('applicant_name').value : '',
+                    document.getElementById('designation') ? document.getElementById('designation').value : '',
+                    document.getElementById('department') ? document.getElementById('department').value : '',
+                    false
+                );
+            } else {
+                if (empMasterPkInput) empMasterPkInput.value = '';
+                // For "Others" keep fields editable; do not force-readonly
+                setApplicantFields('', '', '', '', false);
+            }
             setOthersLookupHint('', '');
         }
         clearVehiclePassValidToMaxFromIdCard();
         if (typeof syncVehicleDateConstraints === 'function') {
             syncVehicleDateConstraints();
         }
+        isInitialApplicantHydration = false;
     }
 
     if (applicantTypeEmployee) applicantTypeEmployee.addEventListener('change', onApplicantTypeRadioChange);
@@ -541,6 +556,9 @@
     if (applicantTypeGovernment) applicantTypeGovernment.addEventListener('change', onApplicantTypeRadioChange);
     lastApplicantType = getCurrentApplicantType();
     updateApplicantTypeFields();
+    if (hasServerOldInput && applicantTypeOthers && applicantTypeOthers.checked && idCardInput && (idCardInput.value || '').trim() !== '') {
+        applyOthersIdCardLookup();
+    }
 
     if (idCardInput) {
         idCardInput.addEventListener('blur', function () {
