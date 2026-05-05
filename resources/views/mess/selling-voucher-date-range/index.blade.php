@@ -520,6 +520,11 @@ $selectedClientType = (string) request()->input('client_type', '');
 
 .selling-voucher-filter .ts-wrapper.choices[data-type*="select-multiple"] .choices__inner {
     min-height: calc(1.5em + 0.5rem + calc(var(--bs-border-width) * 2));
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.45rem;
 }
 
 .selling-voucher-filter .choices__list--multiple .choices__item {
@@ -528,7 +533,26 @@ $selectedClientType = (string) request()->input('client_type', '');
     border-radius: 0.375rem !important;
     color: #fff !important;
     font-size: 0.8rem !important;
-    margin-bottom: 0;
+    display: inline-flex !important;
+    width: auto !important;
+    max-width: 100%;
+    align-items: center;
+    margin: 0 !important;
+    padding: 0.22rem 0.5rem !important;
+}
+
+.selling-voucher-filter .ts-wrapper.choices[data-type*="select-multiple"] .choices__input--cloned {
+    margin: 0 !important;
+    padding: 0.2rem 0 !important;
+    flex: 1 1 120px;
+    min-width: 120px;
+}
+
+.selling-voucher-filter .ts-wrapper.choices[data-type*="select-multiple"] .choices__list--multiple {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin: 0;
 }
 
 .voucher-icon-btn {
