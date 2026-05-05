@@ -1,4 +1,21 @@
-<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap4.min.css">
+@props([
+    'columns' => [],
+    'filters' => [],
+    'ajaxRoute' => '',
+    'id' => 'data-table',
+    'buttons' => [],
+    'tableClass' => 'table table-bordered',
+    'theadClass' => 'table-default-primary',
+    'tableCaption' => null,
+    'datatableLanguage' => null,
+    // When false, disables DataTables Responsive (no +/- control column); use scroll instead.
+    'enableResponsive' => true,
+])
+@php
+    // Blade may pass string "false" from HTML; force a real boolean for DataTables.
+    $dtUseResponsive = ! \in_array($enableResponsive ?? true, [false, 'false', 0, '0', 'no', 'off'], true);
+@endphp
+{{-- DataTables Bootstrap 5 CSS is loaded in admin pre_header; avoid bootstrap4 here (breaks layout with BS5). --}}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css">
 
 <div class="mb-3">
@@ -76,27 +93,29 @@
 
 
 
-<table class="table table-bordered" id="{{ $id }}">
+<table class="{{ $tableClass }}" id="{{ $id }}">
+    @if (! empty($tableCaption))
+        <caption class="caption-top small text-secondary px-2 py-2 border-bottom border-light bg-light">
+            {{ $tableCaption }}
+        </caption>
+    @endif
     <thead>
-        <tr class="table-default-primary">
-            @foreach($columns as $col)
-                <th>{{ $col['title'] }}</th>
+        <tr class="{{ $theadClass }}">
+            @foreach ($columns as $col)
+                <th scope="col">{{ $col['title'] }}</th>
             @endforeach
         </tr>
     </thead>
 </table>
 
 @push('scripts')
-<!-- Popper.js (SECOND) -->
-<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
-<!-- DataTables JS -->
-<!-- <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script> -->
-<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap4.min.js"></script>
+{{-- jQuery + DataTables Bootstrap 5 are already in admin footer; do not load bootstrap4 integration here. --}}
 <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
 <script>
     $(function () {
+        var tableSelector = '#{{ $id }}';
+
         function applyDate(start = null, end = null) {
             if (!start || !end) {
                 start = moment();
@@ -110,7 +129,9 @@
             $('#from_date').val(start.format('YYYY-MM-DD'));
             $('#to_date').val(end.format('YYYY-MM-DD'));
 
-            table.draw();
+            if ($.fn.dataTable.isDataTable(tableSelector)) {
+                $(tableSelector).DataTable().draw();
+            }
         }
 
         $('#commonDateRange').daterangepicker({
@@ -142,14 +163,39 @@
             $(this).val('');
             $('#from_date').val('');
             $('#to_date').val('');
-            $('#{{ $id }}').DataTable().draw();
+            if ($.fn.dataTable.isDataTable(tableSelector)) {
+                $(tableSelector).DataTable().draw();
+            }
         });
 
-        $('#{{ $id }}').DataTable().destroy();
+        if ($.fn.dataTable.isDataTable(tableSelector)) {
+            $(tableSelector).DataTable().destroy();
+        }
 
-        var table = $('#{{ $id }}').DataTable({
+        var table = $(tableSelector).DataTable({
             processing: true,
             serverSide: true,
+            autoWidth: false,
+            responsive: @json($dtUseResponsive),
+            dom: "<'row mb-3'<'col-md-6'l><'col-md-6'f>>" +
+                 "<'row'<'col-12'tr>>" +
+                 "<'row mt-3'<'col-md-5'i><'col-md-7'p>>",
+            initComplete: function () {
+                try {
+                    $(this.api().table().container()).addClass('dt-length-style-pill');
+                } catch (e) {}
+                @if (! $dtUseResponsive)
+                try {
+                    var api = this.api();
+                    if (api.responsive && typeof api.responsive.disable === 'function') {
+                        api.responsive.disable();
+                    }
+                } catch (e) {}
+                @endif
+            },
+            @if (! empty($datatableLanguage))
+            language: @json($datatableLanguage),
+            @endif
             ajax: {
                 url: '{{ $ajaxRoute }}',
                 data: function(d) {
@@ -178,7 +224,8 @@
                     data: '{{ $col['data'] }}',
                     name: '{{ $col['name'] ?? $col['data'] }}',
                     orderable: {{ isset($col['orderable']) ? ($col['orderable'] ? 'true' : 'false') : 'true' }},
-                    searchable: {{ isset($col['searchable']) ? ($col['searchable'] ? 'true' : 'false') : 'true' }}
+                    searchable: {{ isset($col['searchable']) ? ($col['searchable'] ? 'true' : 'false') : 'true' }}@isset($col['className']),
+                    className: '{{ $col['className'] }}'@endisset
                 },
                 @endforeach
             ]

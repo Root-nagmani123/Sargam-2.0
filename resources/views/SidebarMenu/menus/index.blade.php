@@ -1,38 +1,69 @@
 @extends('admin.layouts.master')
 @section('title', 'Sidebar Menus')
 @section('setup_content')
-<div class="container-fluid">
+<style>
+    /* Flex children (page layout) need min-width:0 or wide DataTables cannot scroll */
+    .sidebar-menus-page .datatables,
+    .sidebar-menus-page .card,
+    .sidebar-menus-page .card-body {
+        min-width: 0;
+    }
+    /* Scroll the real DataTables container (injected as #id_wrapper), not the outer fragment */
+    .sidebar-menus-page #sidebar-menu-table_wrapper {
+        width: 100%;
+        max-width: 100%;
+        -webkit-overflow-scrolling: touch;
+    }
+    @media (max-width: 991.98px) {
+        .sidebar-menus-page #sidebar-menu-table_wrapper {
+            max-height: min(70dvh, 32rem);
+            overflow: auto !important;
+        }
+    }
+    @media (min-width: 992px) {
+        .sidebar-menus-page #sidebar-menu-table_wrapper {
+            overflow-x: auto;
+        }
+    }
+</style>
+<div class="container-fluid py-3 sidebar-menus-page">
     <x-breadcrum title="Sidebar Menus" />
     <x-session_message />
-    <div class="datatables">
-        <div class="card" style="border-left: 4px solid #004a93;">
-            <div class="card-body">
-                <div class="table-responsive">
-                    <div class="row">
-                        <div class="col-6">
-                            <h4>Sidebar Menus</h4>
-                        </div>
-                        <div class="col-6">
-                            <div class="d-flex justify-content-end align-items-center gap-2">
-                                <a href="#" class="btn btn-primary d-flex align-items-center" onclick="MenuGroupModal()">
-                                    <i class="material-icons menu-icon material-symbols-rounded"
-                                        style="font-size: 20px; vertical-align: middle;">add</i>
-                                    Add Menu
-                                </a>
-                            </div>
-                        </div>
+    <section class="datatables" aria-labelledby="sidebar-menus-heading">
+        <div class="card shadow-sm border-0 border-start border-4 border-primary rounded-3">
+            <div class="card-body p-3 p-md-4">
+                <header class="row align-items-center g-3 mb-3 mb-md-4 pb-3 border-bottom border-light">
+                    <div class="col-12 col-md">
+                        <h2 id="sidebar-menus-heading" class="h5 mb-0 fw-semibold text-body">Sidebar Menus</h2>
+                        <p class="small text-secondary mb-0 mt-1 d-none d-md-block">
+                            Use the scrollable area below on phones and tablets to move through all rows and columns.
+                        </p>
                     </div>
-                    <hr>
-                    <x-data-table.table 
+                    <div class="col-12 col-md-auto">
+                        <a href="#" class="btn btn-primary d-inline-flex align-items-center justify-content-center gap-2 w-100 w-md-auto px-4 py-2"
+                            onclick="MenuGroupModal(); return false;">
+                            <i class="material-symbols-rounded fs-5" aria-hidden="true">add</i>
+                            <span>Add Menu</span>
+                        </a>
+                    </div>
+                </header>
+                <p class="small text-secondary d-lg-none mb-2" role="note">
+                    Scroll inside the table area vertically and horizontally to see all rows and columns.
+                </p>
+                <div class="w-100 min-w-0" role="region" aria-label="Sidebar menus listing, scrollable on small screens">
+                    <x-data-table.table
                         :columns="$columns"
-                        :filters="[]" 
-                        ajax-route="{{route('sidebar.menus.index')}}" 
-                        id="sidebar-menu-table" 
+                        :filters="[]"
+                        ajax-route="{{ route('sidebar.menus.index') }}"
+                        id="sidebar-menu-table"
+                        table-class="table align-middle mb-0 text-nowrap"
+                        thead-class="table-light"
+                        :enable-responsive="false"
                     />
                 </div>
             </div>
         </div>
-    </div>
+    </section>
 </div>
 
 <div class="modal fade" id="MenuGroupModal" tabindex="-1" aria-labelledby="MenuGroupModalLabel" data-bs-backdrop="static" aria-modal="true" role="dialog">

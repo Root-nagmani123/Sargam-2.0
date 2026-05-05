@@ -154,11 +154,10 @@ class MenuGroupService
         <div class="d-inline-flex align-items-center gap-2" role="group" aria-label="Category actions">
             <!-- Edit -->
             <a href="javascript:void(0);" 
-            class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1 edit-btn" 
+            class="btn btn-sm btn-primary d-inline-flex align-items-center justify-content-center edit-btn border-0 bg-transparent text-primary" 
             data-item="'.$jsonData.'" 
             aria-label="Edit category">
-                <span class="material-symbols-rounded fs-6" aria-hidden="true">edit</span>
-                <span class="d-none d-md-inline">Edit</span>
+                <i class="material-icons material-symbols-rounded fs-6" aria-hidden="true">edit</i>
             </a>
         ';
 

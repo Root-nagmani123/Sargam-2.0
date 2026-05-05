@@ -1,77 +1,194 @@
 @extends('admin.layouts.master')
 @section('title', 'Sidebar Categories')
 @section('setup_content')
-<div class="container-fluid">
+@php
+    $sidebarCategoryDatatableLang = [
+        'emptyTable' => 'No categories found.',
+        'zeroRecords' => 'No matching categories.',
+        'processing' => 'Loading data…',
+        'search' => 'Search:',
+        'searchPlaceholder' => 'Search categories…',
+        'lengthMenu' => 'Show _MENU_ entries',
+        'info' => 'Showing _START_ to _END_ of _TOTAL_ categories',
+        'infoEmpty' => 'No categories to display',
+        'infoFiltered' => '(filtered from _MAX_ total categories)',
+        'paginate' => [
+            'first' => 'First',
+            'last' => 'Last',
+            'next' => 'Next',
+            'previous' => 'Previous',
+        ],
+    ];
+@endphp
+<style>
+    /* GIGW: minimum touch target ~44×44px, visible keyboard focus */
+    .sidebar-categories-page .btn-gigw-touch {
+        min-height: 2.75rem;
+        min-width: 2.75rem;
+        padding-inline: 1rem;
+    }
+    .sidebar-categories-page .btn-gigw-touch:focus-visible {
+        outline: 3px solid #004a93;
+        outline-offset: 2px;
+        box-shadow: 0 0 0 0.2rem rgba(0, 74, 147, 0.25);
+    }
+    .sidebar-categories-page .modal .btn:focus-visible {
+        outline: 3px solid #004a93;
+        outline-offset: 2px;
+    }
+    .sidebar-categories-page .gigw-table-btn {
+        min-height: 2.75rem;
+        align-items: center;
+    }
+    .sidebar-categories-page .gigw-icon-only-btn {
+        width: 2.75rem;
+        height: 2.75rem;
+        padding: 0;
+    }
+    .sidebar-categories-page .gigw-table-btn:focus-visible {
+        outline: 3px solid #004a93;
+        outline-offset: 2px;
+    }
+    .sidebar-categories-page .gigw-switch-touch {
+        width: 3rem;
+        height: 1.5rem;
+        cursor: pointer;
+    }
+    .sidebar-categories-page .gigw-switch-touch:focus-visible {
+        outline: 3px solid #004a93;
+        outline-offset: 3px;
+    }
+    .sidebar-categories-page #sidebar-category-table_wrapper .dataTables_filter input {
+        min-height: 2.75rem;
+        margin-left: 0.5rem;
+    }
+    .sidebar-categories-page #sidebar-category-table_wrapper .dataTables_length select {
+        min-height: 2.75rem;
+        min-width: 5rem;
+        margin-left: 0.35rem;
+        margin-right: 0.35rem;
+    }
+    .sidebar-categories-page #sidebar-category-table_wrapper .dataTables_paginate .page-link {
+        min-height: 2.75rem;
+        min-width: 2.75rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .sidebar-categories-page #sidebar-category-table_wrapper .dataTables_paginate .page-link:focus-visible {
+        outline: 3px solid #004a93;
+        outline-offset: 2px;
+    }
+    .sidebar-categories-page #sidebar-category-table {
+        --bs-table-striped-bg: rgba(0, 74, 147, 0.04);
+    }
+</style>
+<div class="container-fluid py-3 sidebar-categories-page">
     <x-breadcrum title="Sidebar Categories" />
     <x-session_message />
-    <div class="datatables">
-        <div class="card" style="border-left: 4px solid #004a93;">
-            <div class="card-body">
-                <div class="table-responsive">
-                    <div class="row">
-                        <div class="col-6">
-                            <h4>Sidebar Categories</h4>
-                        </div>
-                        <div class="col-6">
-                            <div class="d-flex justify-content-end align-items-center gap-2">
-                                <a href="#" class="btn btn-primary d-flex align-items-center" onclick="CategoryModal()">
-                                    <i class="material-icons menu-icon material-symbols-rounded"
-                                        style="font-size: 20px; vertical-align: middle;">add</i>
-                                    Add Category
-                                </a>
-                            </div>
-                        </div>
+    <section class="datatables" aria-labelledby="sidebar-categories-heading">
+        <div class="card shadow-sm border-0 border-start border-4 border-primary rounded-3">
+            <div class="card-body p-3 p-md-4">
+                <header class="row align-items-center g-3 mb-3 mb-md-4 pb-3 border-bottom border-light">
+                    <div class="col-12 col-md">
+                        <h2 id="sidebar-categories-heading" class="h5 mb-0 fw-semibold text-body">
+                            Sidebar Categories
+                        </h2>
+                        <p class="small text-secondary mb-0 mt-1">
+                            Manage sidebar menu groups. Use a clear name and a short URL slug.
+                        </p>
                     </div>
-                    <hr>
-                    <x-data-table.table 
+                    <div class="col-12 col-md-auto">
+                        <button type="button"
+                            class="btn btn-primary btn-gigw-touch d-inline-flex align-items-center justify-content-center gap-2 w-100 w-md-auto"
+                            onclick="CategoryModal()">
+                            <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                            <span>Add category</span>
+                        </button>
+                    </div>
+                </header>
+                <div class="overflow-hidden">
+                    <x-data-table.table
                         :columns="$columns"
-                        :filters="[]" 
-                        ajax-route="{{route('sidebar.categories.index')}}" 
-                        id="sidebar-category-table" 
+                        :filters="[]"
+                        ajax-route="{{ route('sidebar.categories.index') }}"
+                        id="sidebar-category-table"
+                        table-class="table align-middle mb-0 caption-top shadow-sm"
+                        :datatable-language="$sidebarCategoryDatatableLang"
                     />
                 </div>
             </div>
         </div>
-    </div>
+    </section>
 </div>
 
-<div class="modal fade" id="CategoryModal" tabindex="-1" aria-labelledby="CategoryModalLabel" data-bs-backdrop="static" aria-modal="true" role="dialog">
-    <div class="modal-dialog modal-dialog-centered modal-md">
+<div class="modal fade" id="CategoryModal" tabindex="-1" aria-labelledby="CategoryModalLabel"
+    data-bs-backdrop="static" aria-modal="true" role="dialog">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content rounded-3 shadow">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-semibold" id="CategoryModalLabel">Add / Edit Sidebar Category</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-header border-bottom border-light py-3">
+                <h2 class="modal-title h5 fw-semibold mb-0" id="CategoryModalLabel">
+                    Add or edit sidebar category
+                </h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close dialog"></button>
             </div>
             <div class="modal-body pt-3">
-                <form id="categoryForm" action="" method="POST" >
+                <form id="categoryForm" action="" method="post" novalidate>
                     @csrf
                     <input type="hidden" name="id" id="categoryId">
-                    <div class="form-group mb-2">
-                        <label class="form-label" for="name">Name <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="name" id="name" placeholder="Enter category name" value="{{old('name')}}">
+                    <div class="form-group mb-3">
+                        <label class="form-label fw-medium" for="name">
+                            Name
+                            <span class="text-danger" aria-hidden="true">*</span>
+                            <span class="visually-hidden">(required)</span>
+                        </label>
+                        <input type="text" class="form-control" name="name" id="name"
+                            placeholder="Enter category name" value="{{ old('name') }}"
+                            autocomplete="off" maxlength="100" required aria-required="true">
                     </div>
-                    <div class="form-group mb-2">
-                        <label class="form-label" for="slug">Slug <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="slug" id="slug" placeholder="Enter category slug" value="{{old('slug')}}" readonly>
+                    <div class="form-group mb-3">
+                        <label class="form-label fw-medium" for="slug">
+                            Slug
+                            <span class="text-danger" aria-hidden="true">*</span>
+                            <span class="visually-hidden">(required)</span>
+                        </label>
+                        <input type="text" class="form-control font-monospace" name="slug" id="slug"
+                            placeholder="e.g. training-resources" value="{{ old('slug') }}"
+                            readonly required aria-required="true" aria-describedby="slug-help"
+                            autocomplete="off" maxlength="100">
+                        <p id="slug-help" class="form-text mb-0">
+                            Generated automatically from the category name (lowercase, hyphenated).
+                        </p>
                     </div>
-                    <div class="form-group mb-2">
-                        <label class="form-label" for="icon">Icon</label>
-                        <input type="text" class="form-control" name="icon" id="icon" placeholder="e.g. bi bi-house" value="{{old('icon')}}">
+                    <div class="form-group mb-3">
+                        <label class="form-label fw-medium" for="icon">Icon</label>
+                        <input type="text" class="form-control font-monospace" name="icon" id="icon"
+                            placeholder="e.g. bi-house" value="{{ old('icon') }}"
+                            autocomplete="off" maxlength="100" aria-describedby="icon-help">
+                        <p id="icon-help" class="form-text mb-0">Bootstrap Icons class name (optional).</p>
                     </div>
-                    <div class="form-group mb-2">
-                        <label class="form-label" for="order">Order</label>
-                        <input type="number" class="form-control" name="order" id="order" placeholder="0" value="{{old('icon')}}">
+                    <div class="form-group mb-3">
+                        <label class="form-label fw-medium" for="order">Display order</label>
+                        <input type="number" class="form-control" name="order" id="order" placeholder="0"
+                            value="{{ old('order') }}" inputmode="numeric" min="0" aria-describedby="order-help">
+                        <p id="order-help" class="form-text mb-0">Lower numbers appear first (optional).</p>
                     </div>
-                    <div class="form-group mb-2">
-                        <label class="form-label" for="status">Status</label>
-                        <select class="form-select" name="is_active" id="is_active">
+                    <div class="form-group mb-3">
+                        <label class="form-label fw-medium" for="is_active">Status</label>
+                        <select class="form-select" name="is_active" id="is_active" required aria-required="true">
                             <option value="1">Active</option>
                             <option value="0">Inactive</option>
                         </select>
                     </div>
-                    <div class="d-flex gap-2 mt-4">
-                        <button type="submit" class="btn btn-success" id="SubmitCategoryForm"><i class="bi bi-save me-2"></i>Save</button>
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="bi bi-x-circle me-2"></i>Cancel</button>
+                    <div class="d-flex flex-column flex-sm-row gap-2 gap-sm-3 mt-4 pt-2 border-top border-light">
+                        <button type="submit" class="btn btn-success btn-gigw-touch order-2 order-sm-1"
+                            id="SubmitCategoryForm">
+                            <i class="bi bi-check-lg me-2" aria-hidden="true"></i>Save
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-gigw-touch order-1 order-sm-2"
+                            data-bs-dismiss="modal">
+                            <i class="bi bi-x-lg me-2" aria-hidden="true"></i>Cancel
+                        </button>
                     </div>
                 </form>
             </div>
@@ -87,6 +204,8 @@
     })
 
     function CategoryModal(data = null) {
+        $('input[name="_method"]').remove();
+        $('#slug').removeData('manual');
         if (data) {
             $('#categoryId').val(data.id);
             $('#name').val(data.name);
@@ -96,11 +215,10 @@
             $('#is_active').val(data.is_active);
             $('#categoryForm').attr('action', '/sidebar/categories/' + data.id);
             $('#categoryForm').append('<input type="hidden" name="_method" value="PUT">');
-        }else{
+        } else {
             $('#categoryForm')[0].reset();
             $('#categoryId').val('');
             $('#categoryForm').attr('action', '/sidebar/categories');
-            $('input[name="_method"]').remove();
         }
         $('#CategoryModal').modal('show');
     }
@@ -196,7 +314,11 @@
             submitHandler: function (form) {
                 let btn = $("#SubmitCategoryForm");
                 btn.prop("disabled", true);
-                btn.html('<i class="fa fa-spinner fa-spin"></i> Processing...');
+                btn.attr("aria-busy", "true");
+                btn.html(
+                    '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>' +
+                    '<span>Processing…</span>'
+                );
                 form.submit();
             }
         });
