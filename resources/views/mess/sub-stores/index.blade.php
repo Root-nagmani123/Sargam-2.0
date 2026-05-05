@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Sub Store Master')
-@section('setup_content')
+@section('content')
 @php
     $canDeleteSubStore = hasRole('Admin') || hasRole('Mess-Admin');
 @endphp

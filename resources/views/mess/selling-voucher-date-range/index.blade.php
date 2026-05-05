@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Selling Voucher with Date Range')
-@section('setup_content')
+@section('content')
 @php
 $canDeleteSellingVoucherDateRange = hasRole('Admin') || hasRole('Mess-Admin');
 $selectedStatuses = collect((array) request()->input('status', []))
