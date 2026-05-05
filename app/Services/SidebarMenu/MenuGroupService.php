@@ -22,7 +22,39 @@ class MenuGroupService
             'columns' => $this->columns(),
             'filters' => $this->filters(),
             'categories' => SidebarCategory::where('is_active', 1)->orderBy('order', 'asc')->get(),
+            'materialIcons' => $this->materialSymbolsRoundedIconNames(),
         ];
+    }
+
+    /**
+     * Material Symbols Rounded ligature names from official codepoints (resources/data/material-symbols-rounded.codepoints).
+     * Stored DB values are the icon name only (e.g. "home"), used as text in &lt;i class="material-icons material-symbols-rounded"&gt;.
+     */
+    public function materialSymbolsRoundedIconNames(): array
+    {
+        $path = resource_path('data/material-symbols-rounded.codepoints');
+        if (! is_readable($path)) {
+            return [];
+        }
+        $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        if ($lines === false) {
+            return [];
+        }
+        $names = [];
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if ($line === '' || str_starts_with($line, '#')) {
+                continue;
+            }
+            $parts = preg_split('/\s+/', $line, 2);
+            $name = $parts[0] ?? '';
+            if ($name !== '') {
+                $names[] = $name;
+            }
+        }
+        sort($names, SORT_NATURAL | SORT_FLAG_CASE);
+
+        return $names;
     }
     
     public function getAll()

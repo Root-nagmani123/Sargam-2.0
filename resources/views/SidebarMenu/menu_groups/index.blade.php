@@ -1,4 +1,50 @@
 @extends('admin.layouts.master')
+@push('styles')
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+    <style>
+        #MenuGroupModal .choices {
+            width: 100%;
+            margin-bottom: 0;
+        }
+
+        /* Do not combine .form-select on .choices__inner — Bootstrap’s chevron + Choices arrow = double arrows.
+           Strip any select background chevron; Choices provides its own. */
+        #MenuGroupModal .choices .choices__inner,
+        #MenuGroupModal .choices__inner.form-select {
+            background-image: none !important;
+            -webkit-appearance: none !important;
+            appearance: none !important;
+            min-height: calc(1.5em + 0.75rem + 2px);
+            padding: 0.375rem 2.25rem 0.375rem 0.75rem;
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            background-color: #fff;
+        }
+
+        #MenuGroupModal .choices__list--dropdown {
+            z-index: 2000;
+            border-radius: 0.375rem;
+            margin-top: 2px;
+        }
+
+        #MenuGroupModal .choices__list--dropdown .choices__input {
+            border: 1px solid #ced4da;
+            border-radius: 0.375rem;
+            margin: 0.5rem;
+            width: calc(100% - 1rem) !important;
+        }
+
+        #MenuGroupModal .choices.is-invalid .choices__inner,
+        #MenuGroupModal .choices.has-error .choices__inner {
+            border-color: var(--bs-form-invalid-border-color, #dc3545);
+        }
+
+        /* Icon row: keep preview + Choices on one line */
+        #MenuGroupModal .menu-group-icon-select-col .choices {
+            min-width: 0;
+        }
+    </style>
+@endpush
 @section('title', 'Sidebar Menu Groups')
 @section('setup_content')
     <div class="container-fluid">
@@ -44,7 +90,7 @@
                         @csrf
                         <div class="form-group mb-2">
                             <label class="form-label" for="category_id">Category <span class="text-danger">*</span></label>
-                            <select class="form-select" name="category_id" id="category_id">
+                            <select class="w-100 menu-group-choices" name="category_id" id="category_id">
                                 <option value="">Select Category</option>
                                 @if(isset($categories) && $categories->count() > 0)
                                     @forelse($categories as $category)
@@ -64,8 +110,24 @@
                         </div>
                         <div class="form-group mb-2">
                             <label class="form-label" for="icon">Icon <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" name="icon" id="icon" placeholder="e.g. bi bi-house"
-                                value="{{old('icon')}}">
+                            <div class="d-flex align-items-start gap-2 flex-wrap">
+                                <span class="flex-shrink-0 pt-1 d-inline-flex align-items-center justify-content-center text-primary"
+                                    style="min-width: 2.5rem; min-height: 2.5rem;" aria-hidden="true">
+                                    <i id="iconPreview"
+                                        class="material-icons menu-icon material-symbols-rounded fs-4 text-muted">apps</i>
+                                </span>
+                                <div class="flex-grow-1 menu-group-icon-select-col" style="min-width: 12rem;">
+                                    <select class="w-100 menu-group-choices" name="icon" id="icon">
+                                        <option value="">Select icon</option>
+                                        @isset($materialIcons)
+                                            @foreach ($materialIcons as $iconName)
+                                                <option value="{{ $iconName }}"
+                                                    @selected(old('icon') === $iconName)>{{ $iconName }}</option>
+                                            @endforeach
+                                        @endisset
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                         <div class="form-group mb-2">
                             <label class="form-label" for="order">Order</label>
@@ -80,10 +142,14 @@
                             </select>
                         </div>
                         <div class="d-flex gap-2 mt-4">
-                            <button type="submit" class="btn btn-success" id="SubmitMenuGroupForm"><i
-                                    class="bi bi-save me-2"></i>Save</button>
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i
-                                    class="bi bi-x-circle me-2"></i>Cancel</button>
+                            <button type="submit" class="btn btn-success d-inline-flex align-items-center"
+                                id="SubmitMenuGroupForm"><i
+                                    class="material-icons material-symbols-rounded me-2"
+                                    style="font-size: 20px;">save</i>Save</button>
+                            <button type="button" class="btn btn-secondary d-inline-flex align-items-center"
+                                data-bs-dismiss="modal"><i
+                                    class="material-icons material-symbols-rounded me-2"
+                                    style="font-size: 20px;">cancel</i>Cancel</button>
                         </div>
                     </form>
                 </div>
@@ -92,17 +158,171 @@
     </div>
 @endsection
 @section('script')
+    <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
     <script>
+        function menuGroupDestroyChoices(el) {
+            if (!el) {
+                return;
+            }
+            if (el._mgChoices) {
+                try {
+                    el._mgChoices.destroy();
+                } catch (e) {
+                    console.warn('Choices destroy', e);
+                }
+                el._mgChoices = null;
+            }
+        }
+
+        function menuGroupInitChoices(el, placeholderText, searchPlaceholder) {
+            if (!el || typeof window.Choices === 'undefined') {
+                return null;
+            }
+            menuGroupDestroyChoices(el);
+            var instance = new Choices(el, {
+                removeItemButton: false,
+                shouldSort: false,
+                searchEnabled: true,
+                searchPlaceholderValue: searchPlaceholder || 'Search…',
+                placeholder: true,
+                placeholderValue: placeholderText || 'Select…',
+                itemSelectText: '',
+                allowHTML: false,
+                shouldFlip: true,
+                classNames: {
+                    containerInner: ['choices__inner', 'menu-group-choices-inner'],
+                    input: ['choices__input', 'form-control', 'form-control-sm', 'border-0', 'shadow-none', 'my-1'],
+                    inputCloned: ['choices__input--cloned'],
+                    listDropdown: ['choices__list--dropdown', 'dropdown-menu', 'mt-1', 'p-0', 'shadow-sm', 'w-100'],
+                    item: ['choices__item', 'dropdown-item', 'rounded-0'],
+                    itemSelectable: ['choices__item--selectable'],
+                    itemDisabled: ['choices__item--disabled', 'disabled'],
+                    itemChoice: ['choices__item--choice'],
+                    placeholder: ['choices__placeholder', 'text-muted', 'opacity-75'],
+                    highlightedState: ['is-highlighted', 'active'],
+                    notice: ['choices__notice', 'dropdown-item-text', 'text-muted', 'small', 'py-2']
+                }
+            });
+            el._mgChoices = instance;
+            return instance;
+        }
+
+        function menuGroupSyncChoices(el) {
+            if (!el || !el._mgChoices) {
+                return;
+            }
+            var v = el.value;
+            if (v === '' || v === null || typeof v === 'undefined') {
+                el._mgChoices.removeActiveItems();
+                return;
+            }
+            try {
+                el._mgChoices.setChoiceByValue(v);
+            } catch (err) {
+                try {
+                    el._mgChoices.setChoiceByValue(String(v));
+                } catch (err2) {
+                    console.warn('Choices setChoiceByValue', err2);
+                }
+            }
+        }
+
+        function ensureIconOption(value) {
+            if (!value) {
+                return;
+            }
+            var $sel = $('#icon');
+            var exists = $sel.find('option').filter(function () {
+                return $(this).val() === value;
+            }).length > 0;
+            if (!exists) {
+                $sel.append($('<option></option>').attr('value', value).attr('data-adhoc', '1')
+                    .text(value + ' (custom)'));
+            }
+        }
+
+        function clearAdhocIconOptions() {
+            $('#icon option[data-adhoc="1"]').remove();
+        }
+
+        function syncIconPreview() {
+            var name = $('#icon').val();
+            var $i = $('#iconPreview');
+            $i.attr('class', 'material-icons menu-icon material-symbols-rounded fs-4');
+            if (name) {
+                $i.removeClass('text-muted').addClass('text-primary');
+                $i.text(name);
+            } else {
+                $i.addClass('text-muted');
+                $i.text('apps');
+            }
+        }
+
+        function initMenuGroupModalSelects() {
+            var catEl = document.getElementById('category_id');
+            var iconEl = document.getElementById('icon');
+
+            if (typeof window.Choices === 'undefined') {
+                $('#category_id, #icon').addClass('form-select');
+                syncIconPreview();
+                return;
+            }
+
+            $('#category_id, #icon').removeClass('form-select');
+
+            menuGroupDestroyChoices(catEl);
+            menuGroupDestroyChoices(iconEl);
+
+            if (catEl) {
+                menuGroupInitChoices(catEl, 'Type to search categories…', 'Search categories…');
+                menuGroupSyncChoices(catEl);
+                $(catEl).off('change.mg').on('change.mg', function () {
+                    $(this).valid();
+                });
+            }
+
+            if (iconEl) {
+                menuGroupInitChoices(iconEl, 'Type to search icons…', 'Search icons…');
+                menuGroupSyncChoices(iconEl);
+                $(iconEl).off('change.mg').on('change.mg', function () {
+                    syncIconPreview();
+                    $(this).valid();
+                });
+            }
+
+            syncIconPreview();
+        }
+
+        function destroyMenuGroupModalSelects() {
+            menuGroupDestroyChoices(document.getElementById('category_id'));
+            menuGroupDestroyChoices(document.getElementById('icon'));
+            $('#category_id, #icon').off('change.mg');
+            $('#category_id, #icon').addClass('form-select');
+        }
+
+        $('#MenuGroupModal')
+            .off('shown.bs.modal.menuGroup hidden.bs.modal.menuGroup')
+            .on('shown.bs.modal.menuGroup', function () {
+                window.requestAnimationFrame(function () {
+                    initMenuGroupModalSelects();
+                });
+            })
+            .on('hidden.bs.modal.menuGroup', function () {
+                destroyMenuGroupModalSelects();
+            });
+
         $(document).on('click', '.edit-btn', function () {
             let data = $(this).data('item');
             MenuGroupModal(data);
-        })
+        });
 
         function MenuGroupModal(data = null) {
             $('input[name="_method"]').remove();
+            clearAdhocIconOptions();
             if (data) {
                 $('#category_id').val(data.category_id);
                 $('#name').val(data.name);
+                ensureIconOption(data.icon);
                 $('#icon').val(data.icon);
                 $('#order').val(data.order);
                 $('#is_active').val(data.is_active);
@@ -127,7 +347,7 @@
 
 
             $("#menuGroupForm").validate({
-                ignore: ".ignore",
+                ignore: ".ignore, :hidden:not(.menu-group-choices)",
                 rules: {
                     category_id: {
                         required: true,
@@ -160,7 +380,7 @@
                         maxlength: "Name must be less than 100 characters"
                     },
                     icon: {
-                        required: "Please enter icon",
+                        required: "Please select an icon",
                         maxlength: "Icon must be less than 100 characters"
                     },
                     order: {
@@ -174,14 +394,23 @@
                 validClass: "is-valid",
                 errorElement: "div",
                 highlight: function (element) {
-                    $(element).addClass("is-invalid").removeClass("is-valid");
+                    var $el = $(element);
+                    $el.addClass("is-invalid").removeClass("is-valid");
+                    $el.closest(".choices").addClass("is-invalid");
                 },
                 unhighlight: function (element) {
-                    $(element).removeClass("is-invalid").addClass("is-valid");
+                    var $el = $(element);
+                    $el.removeClass("is-invalid").addClass("is-valid");
+                    $el.closest(".choices").removeClass("is-invalid");
                 },
                 errorPlacement: function (error, element) {
                     error.addClass("invalid-feedback");
-                    element.closest(".form-group").append(error);
+                    var $wrap = $(element).closest(".choices");
+                    if ($wrap.length) {
+                        error.insertAfter($wrap);
+                    } else {
+                        element.closest(".form-group").append(error);
+                    }
                 },
                 submitHandler: function (form) {
                     let btn = $("#SubmitMenuGroupForm");
