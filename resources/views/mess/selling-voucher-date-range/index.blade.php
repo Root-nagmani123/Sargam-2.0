@@ -49,7 +49,7 @@ $selectedClientType = (string) request()->input('client_type', '');
                 <div class="sv-filter-fields-grid">
                     <div class="sv-filter-field">
                         <label class="form-label small fw-semibold text-uppercase mb-1">Status</label>
-                        <select name="status[]" class="form-select form-select-sm voucher-filter-multiselect w-100" multiple
+                        <select name="status[]" class="form-select  voucher-filter-multiselect w-100" multiple
                             data-placeholder="All Statuses">
                             <option value="" disabled>All</option>
                             <option value="0" {{ in_array('0', $selectedStatuses, true) ? 'selected' : '' }}>Pending
@@ -62,7 +62,7 @@ $selectedClientType = (string) request()->input('client_type', '');
                     </div>
                     <div class="sv-filter-field">
                         <label class="form-label small fw-semibold text-uppercase mb-1">Store</label>
-                        <select name="store[]" class="form-select form-select-sm voucher-filter-multiselect w-100" multiple
+                        <select name="store[]" class="form-select  voucher-filter-multiselect w-100" multiple
                             data-placeholder="All Stores">
                             <option value="" disabled>All</option>
                             @foreach($stores as $store)
@@ -74,7 +74,7 @@ $selectedClientType = (string) request()->input('client_type', '');
                     </div>
                     <div class="sv-filter-field">
                         <label class="form-label small fw-semibold text-uppercase mb-1">Client type</label>
-                        <select name="client_type" class="form-select form-select-sm w-100">
+                        <select name="client_type" class="form-select  w-100">
                             <option value="" {{ $selectedClientType === '' ? 'selected' : '' }}>All</option>
                             @foreach(\App\Models\Mess\ClientType::clientTypes() as $slug => $label)
                             <option value="{{ $slug }}" {{ $selectedClientType === $slug ? 'selected' : '' }}>{{ $label }}</option>
@@ -83,7 +83,7 @@ $selectedClientType = (string) request()->input('client_type', '');
                     </div>
                     <div class="sv-filter-field">
                         <label class="form-label small fw-semibold text-uppercase mb-1">Return status</label>
-                        <select name="return_status" class="form-select form-select-sm w-100">
+                        <select name="return_status" class="form-select  w-100">
                             <option value="" {{ $selectedReturnStatus === '' ? 'selected' : '' }}>All</option>
                             <option value="returned" {{ $selectedReturnStatus === 'returned' ? 'selected' : '' }}>Returned</option>
                             <option value="not_returned" {{ $selectedReturnStatus === 'not_returned' ? 'selected' : '' }}>Not returned</option>
@@ -91,12 +91,12 @@ $selectedClientType = (string) request()->input('client_type', '');
                     </div>
                     <div class="sv-filter-field">
                         <label class="form-label small fw-semibold text-uppercase mb-1">Start Date</label>
-                        <input type="date" name="start_date" id="filter_start_date" class="form-control form-control-sm w-100"
+                        <input type="date" name="start_date" id="filter_start_date" class="form-control  w-100"
                             value="{{ request('start_date') }}">
                     </div>
                     <div class="sv-filter-field">
                         <label class="form-label small fw-semibold text-uppercase mb-1">End Date</label>
-                        <input type="date" name="end_date" id="filter_end_date" class="form-control form-control-sm w-100"
+                        <input type="date" name="end_date" id="filter_end_date" class="form-control  w-100"
                             value="{{ request('end_date') }}" @if(request()->filled('start_date')) min="{{ request('start_date') }}" @endif>
                     </div>
                 </div>

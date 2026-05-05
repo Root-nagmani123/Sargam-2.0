@@ -40,7 +40,7 @@
                     <div class="sv-filter-fields-grid">
                         <div class="sv-filter-field">
                             <label class="form-label small text-muted mb-1">Status</label>
-                            <select name="status[]" id="filter_status" class="form-select form-select-sm w-100" multiple>
+                            <select name="status[]" id="filter_status" class="form-select w-100" multiple>
                                 @php
                                     $selectedStatuses = request('status', []);
                                     if (!is_array($selectedStatuses)) {
@@ -54,7 +54,7 @@
                         </div>
                         <div class="sv-filter-field">
                             <label class="form-label small text-muted mb-1">Return status</label>
-                            <select name="return_status" id="filter_return_status" class="form-select form-select-sm w-100">
+                            <select name="return_status" id="filter_return_status" class="form-select w-100">
                                 <option value="" {{ request('return_status', '') === '' ? 'selected' : '' }}>All</option>
                                 <option value="returned" {{ request('return_status') === 'returned' ? 'selected' : '' }}>Returned</option>
                                 <option value="not_returned" {{ request('return_status') === 'not_returned' ? 'selected' : '' }}>Not returned</option>
@@ -62,7 +62,7 @@
                         </div>
                         <div class="sv-filter-field">
                             <label class="form-label small text-muted mb-1">Store</label>
-                            <select name="store[]" id="filter_store" class="form-select form-select-sm w-100" multiple>
+                            <select name="store[]" id="filter_store" class="form-select w-100" multiple>
                                 @php
                                     $selectedStores = request('store', []);
                                     if (!is_array($selectedStores)) {
@@ -86,7 +86,7 @@
                         @endphp
                         <div class="sv-filter-field">
                             <label class="form-label small text-muted mb-1">Client type</label>
-                            <select name="client_type" id="filter_client_type" class="form-select form-select-sm w-100">
+                            <select name="client_type" id="filter_client_type" class="form-select w-100">
                                 <option value="" {{ $selectedClientType === '' ? 'selected' : '' }}>All</option>
                                 @foreach($filterClientTypes as $value => $label)
                                     <option value="{{ $value }}" {{ $selectedClientType === $value ? 'selected' : '' }}>{{ $label }}</option>
@@ -95,11 +95,11 @@
                         </div>
                         <div class="sv-filter-field">
                             <label class="form-label small text-muted mb-1">Start Date</label>
-                            <input type="date" name="start_date" id="filter_start_date" class="form-control form-control-sm w-100" value="{{ request('start_date') }}">
+                            <input type="date" name="start_date" id="filter_start_date" class="form-control w-100" value="{{ request('start_date') }}">
                         </div>
                         <div class="sv-filter-field">
                             <label class="form-label small text-muted mb-1">End Date</label>
-                            <input type="date" name="end_date" id="filter_end_date" class="form-control form-control-sm w-100" value="{{ request('end_date') }}" @if(request()->filled('start_date')) min="{{ request('start_date') }}" @endif>
+                            <input type="date" name="end_date" id="filter_end_date" class="form-control w-100" value="{{ request('end_date') }}" @if(request()->filled('start_date')) min="{{ request('start_date') }}" @endif>
                         </div>
                     </div>
                     <div class="d-flex flex-wrap gap-2 justify-content-lg-end align-items-center mt-3 pt-2 border-top border-light-subtle">
@@ -310,7 +310,7 @@
     opacity: 0.75;
 }
 
-/* Filter dropdowns: Choices.js — match native form-select-sm + chevron */
+/* Filter dropdowns: Choices.js — match native + chevron */
 #filter_status + .choices,
 #filter_store + .choices {
     margin-bottom: 0;
@@ -330,6 +330,22 @@
     background-size: 16px 12px;
     box-shadow: none;
     color: #526b7a;
+}
+#filter_status + .choices .choices__list--multiple,
+#filter_store + .choices .choices__list--multiple {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0.2rem;
+    max-height: none;
+    overflow-y: hidden;
+    overflow-x: hidden;
+    margin: 0;
+    padding-right: 0.15rem;
+    white-space: nowrap;
+}
+#filter_status + .choices .choices__input,
+#filter_store + .choices .choices__input {
+    margin: 0;
 }
 #filter_status + .choices .choices__placeholder,
 #filter_store + .choices .choices__placeholder {
@@ -363,6 +379,16 @@
     border-radius: var(--bs-border-radius-sm);
     font-size: 0.7rem;
     margin-bottom: 0.125rem;
+    max-width: 9.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.sv-selling-voucher-filters #filter_status + .choices .choices__button,
+.sv-selling-voucher-filters #filter_store + .choices .choices__button {
+    border-left: 1px solid #d9e0e6;
+    margin-left: 0.35rem;
+    padding-left: 0.35rem;
 }
 .sv-selling-voucher-filters #filter_status + .choices .choices__list--multiple .choices__item.is-highlighted,
 .sv-selling-voucher-filters #filter_store + .choices .choices__list--multiple .choices__item.is-highlighted {
@@ -696,7 +722,7 @@
                                     <tbody id="modalItemsBody">
                                         <tr class="sv-item-row">
                                             <td>
-                                                <select name="items[0][item_subcategory_id]" class="form-select form-select-sm sv-item-select" required>
+                                                <select name="items[0][item_subcategory_id]" class="form-select sv-item-select" required>
                                                     <option value="">Select Item</option>
                                                     @foreach($itemSubcategories as $s)
                                                         <option value="{{ $s['id'] }}" data-unit="{{ e($s['unit_measurement'] ?? '') }}" data-rate="{{ e($s['standard_cost'] ?? 0) }}">{{ e($s['item_name'] ?? '—') }}</option>
@@ -1665,19 +1691,15 @@ document.addEventListener('DOMContentLoaded', function() {
                                 input.scrollLeft = 0;
                             }
                         }
-                        // selection + search dono ko blank karo har open par
-                        self.clear(true);
+                        // Keep selected values; reset only search input each open
                         clearInputAndCursor();
                         setTimeout(function () {
-                            self.clear(true);
                             clearInputAndCursor();
                         }, 0);
                         setTimeout(function () {
-                            self.clear(true);
                             clearInputAndCursor();
                         }, 50);
                         setTimeout(function () {
-                            self.clear(true);
                             clearInputAndCursor();
                         }, 100);
                         setTimeout(function () {
@@ -1731,19 +1753,15 @@ document.addEventListener('DOMContentLoaded', function() {
                                 input.scrollLeft = 0;
                             }
                         }
-                        // selection + search dono ko blank karo har open par
-                        self.clear(true);
+                        // Keep selected values; reset only search input each open
                         clearInputAndCursor();
                         setTimeout(function () {
-                            self.clear(true);
                             clearInputAndCursor();
                         }, 0);
                         setTimeout(function () {
-                            self.clear(true);
                             clearInputAndCursor();
                         }, 50);
                         setTimeout(function () {
-                            self.clear(true);
                             clearInputAndCursor();
                         }, 100);
                         setTimeout(function () {
@@ -2417,7 +2435,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return '<option value="' + s.id + '" ' + attrs + '>' + (s.item_name || '—').replace(/</g, '&lt;') + '</option>';
         }).join('');
         return '<tr class="sv-item-row">' +
-            '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select form-select-sm sv-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
+            '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select sv-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
             '<td><input type="text" name="items[' + index + '][unit]" class="form-control  sv-unit" readonly placeholder="—"></td>' +
             '<td><input type="text" name="items[' + index + '][available_quantity]" class="form-control  sv-avail bg-light" readonly></td>' +
             '<td><input type="text" name="items[' + index + '][quantity]" class="form-control  sv-qty" step="0.01" min="0.01" required><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
@@ -3158,7 +3176,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const left = item && (avail - qty) >= 0 ? (avail - qty) : 0;
         const originalQtyAttr = item ? (' data-original-qty="' + (parseFloat(item.quantity) || 0) + '"') : '';
         return '<tr class="sv-item-row edit-sv-item-row"' + originalQtyAttr + '>' +
-            '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select form-select-sm sv-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
+            '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select sv-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
             '<td><input type="text" name="items[' + index + '][unit]" class="form-control  sv-unit" readonly placeholder="—" value="' + (unit || '') + '"></td>' +
             '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control  sv-avail bg-light" step="0.01" min="0" value="' + avail + '" placeholder="0" readonly></td>' +
             '<td><input type="number" name="items[' + index + '][quantity]" class="form-control  sv-qty" step="0.01" min="0.01" placeholder="0" value="' + qty + '" required><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
