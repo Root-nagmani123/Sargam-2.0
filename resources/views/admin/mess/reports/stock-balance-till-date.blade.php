@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Stock Balance as of Till Date')
-@section('setup_content')
+@section('content')
 @php
     /** @var array<int> $storeIds */
     $storeIds = isset($storeIds) ? $storeIds : [];

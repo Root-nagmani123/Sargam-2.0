@@ -52,7 +52,7 @@ class KitchenIssueController extends Controller
                 'subStore:id,sub_store_name',
                 'items' => function ($q) {
                     $q->select('pk', 'kitchen_issue_master_pk', 'item_subcategory_id', 'item_name', 'quantity', 'return_quantity')
-                        ->with('itemSubcategory');
+                        ->with(['itemSubcategory:id,name']);
                 },
                 'clientTypeCategory:id,client_name',
                 'course:pk,course_name',
@@ -97,11 +97,10 @@ class KitchenIssueController extends Controller
         if ($request->filled('kitchen_issue_type')) {
             $query->where('kitchen_issue_type', $request->kitchen_issue_type);
         }
-        // Date filter: support only start_date, only end_date, or both
+        // Date filter: support only start_date, only end_date, or both.
+        // For first load (no date selected), keep page responsive by limiting to recent records.
         if (! $request->filled('start_date') && ! $request->filled('end_date')) {
-            // Match the filter UI default (start date shows today when no query string) so the first load
-            // does not pull the full historical table into memory for client-side DataTables.
-            $query->whereDate('issue_date', now()->toDateString());
+            $query->whereDate('issue_date', '>=', now()->subDays(30)->toDateString());
         }
         if ($request->filled('start_date')) {
             $query->where('issue_date', '>=', $request->start_date);
@@ -114,6 +113,11 @@ class KitchenIssueController extends Controller
         $kitchenIssues = $query->orderBy('issue_date', 'desc')
             ->orderBy('pk', 'desc')
             ->get();
+
+        $kitchenIssues = $this->filterKitchenIssueRowsByReturnStatus(
+            $kitchenIssues,
+            (string) $request->input('return_status', '')
+        );
 
         // All courses (active + archived) for Client Name dropdown; label in UI via active_inactive.
         // Course end date before today is treated as archived (same idea as course list filters).
@@ -1337,5 +1341,35 @@ class KitchenIssueController extends Controller
         }
 
         return response()->json($items->values());
+    }
+
+    /**
+     * Limit listing rows to items matching return status (uses per-line return_quantity).
+     *
+     * @param  \Illuminate\Support\Collection<int, KitchenIssueMaster>  $kitchenIssues
+     * @return \Illuminate\Support\Collection<int, KitchenIssueMaster>
+     */
+    private function filterKitchenIssueRowsByReturnStatus($kitchenIssues, string $returnStatus)
+    {
+        $returnStatus = strtolower(trim($returnStatus));
+        if ($returnStatus === '' || $returnStatus === 'all') {
+            return $kitchenIssues;
+        }
+
+        $wantReturned = $returnStatus === 'returned';
+        if (! $wantReturned && $returnStatus !== 'not_returned') {
+            return $kitchenIssues;
+        }
+
+        return $kitchenIssues->map(function ($voucher) use ($wantReturned) {
+            $filtered = $voucher->items->filter(function ($item) use ($wantReturned) {
+                $rq = (float) ($item->return_quantity ?? 0);
+
+                return $wantReturned ? $rq > 0 : $rq <= 0;
+            });
+            $voucher->setRelation('items', $filtered);
+
+            return $voucher;
+        })->filter(fn ($voucher) => $voucher->items->isNotEmpty())->values();
     }
 }

@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Sale Voucher Report')
-@section('setup_content')
+@section('content')
 @php
     $cwBuyerReqTop = is_array(request('buyer_name')) ? request('buyer_name') : (request('buyer_name') !== null && request('buyer_name') !== '' ? [request('buyer_name')] : []);
     $preservedBuyerNames = array_values(array_filter(array_map(static fn ($n) => trim((string) $n), $cwBuyerReqTop), static fn ($n) => $n !== ''));

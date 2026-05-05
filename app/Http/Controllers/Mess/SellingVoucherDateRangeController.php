@@ -78,6 +78,13 @@ class SellingVoucherDateRangeController extends Controller
         if ($statusFilters->isNotEmpty()) {
             $query->whereIn('status', $statusFilters->all());
         }
+
+        $clientTypeSlug = (string) $request->input('client_type', '');
+        $allowedClientTypeSlugs = array_keys(ClientType::clientTypes());
+        if ($clientTypeSlug !== '' && in_array($clientTypeSlug, $allowedClientTypeSlugs, true)) {
+            $query->where('client_type_slug', $clientTypeSlug);
+        }
+
         if ($request->filled('start_date') && $request->filled('end_date')) {
             // Filter strictly by Request Date (date_from) falling within the selected range
             $query->whereBetween('date_from', [$request->start_date, $request->end_date]);
@@ -93,6 +100,11 @@ class SellingVoucherDateRangeController extends Controller
         $reports = $query->orderBy('date_from', 'desc')
             ->orderBy('id', 'desc')
             ->get();
+
+        $reports = $this->filterSellingVoucherDateRangeRowsByReturnStatus(
+            $reports,
+            (string) $request->input('return_status', '')
+        );
 
         // Get active stores and sub-stores
         $stores = Store::active()->get()->map(function ($store) {
@@ -1100,5 +1112,35 @@ class SellingVoucherDateRangeController extends Controller
         }
 
         return $items->values();
+    }
+
+    /**
+     * Limit listing rows to items matching return status (per-line return_quantity).
+     *
+     * @param  \Illuminate\Support\Collection<int, SellingVoucherDateRangeReport>  $reports
+     * @return \Illuminate\Support\Collection<int, SellingVoucherDateRangeReport>
+     */
+    private function filterSellingVoucherDateRangeRowsByReturnStatus($reports, string $returnStatus)
+    {
+        $returnStatus = strtolower(trim($returnStatus));
+        if ($returnStatus === '' || $returnStatus === 'all') {
+            return $reports;
+        }
+
+        $wantReturned = $returnStatus === 'returned';
+        if (! $wantReturned && $returnStatus !== 'not_returned') {
+            return $reports;
+        }
+
+        return $reports->map(function ($report) use ($wantReturned) {
+            $filtered = $report->items->filter(function ($item) use ($wantReturned) {
+                $rq = (float) ($item->return_quantity ?? 0);
+
+                return $wantReturned ? $rq > 0 : $rq <= 0;
+            });
+            $report->setRelation('items', $filtered);
+
+            return $report;
+        })->filter(fn ($report) => $report->items->isNotEmpty())->values();
     }
 }

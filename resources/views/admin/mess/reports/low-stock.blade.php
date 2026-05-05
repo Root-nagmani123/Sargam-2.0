@@ -20,7 +20,7 @@
     }
 @endphp
 @section('title', 'Low Stock Report')
-@section('setup_content')
+@section('content')
 <div class="container-fluid low-stock-report py-3 py-md-4">
     <x-breadcrum title="Low Stock Report"></x-breadcrum>
 
