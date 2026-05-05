@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Selling Voucher')
-@section('setup_content')
+@section('content')
 @php
     $canDeleteSellingVoucher = hasRole('Admin') || hasRole('Mess-Admin');
 @endphp
@@ -35,12 +35,12 @@
                     <span class="fw-semibold">Add Selling Voucher</span>
                 </button>
             </div>
-            <div class="border rounded-3 bg-light p-3">
+            <div class="border rounded-3 bg-light p-3 sv-selling-voucher-filters">
                 <form method="GET" action="{{ route('admin.mess.material-management.index') }}">
-                    <div class="row g-3">
-                        <div class="col-md-2 col-sm-6">
+                    <div class="sv-filter-fields-grid">
+                        <div class="sv-filter-field">
                             <label class="form-label small text-muted mb-1">Status</label>
-                            <select name="status[]" id="filter_status" class="form-select form-select-sm" multiple>
+                            <select name="status[]" id="filter_status" class="form-select w-100" multiple>
                                 @php
                                     $selectedStatuses = request('status', []);
                                     if (!is_array($selectedStatuses)) {
@@ -52,9 +52,9 @@
                                 <option value="4" {{ in_array('4', $selectedStatuses) || in_array(4, $selectedStatuses) ? 'selected' : '' }}>Completed</option>
                             </select>
                         </div>
-                        <div class="col-md-2 col-sm-6">
+                        <div class="sv-filter-field">
                             <label class="form-label small text-muted mb-1">Store</label>
-                            <select name="store[]" id="filter_store" class="form-select form-select-sm" multiple>
+                            <select name="store[]" id="filter_store" class="form-select w-100" multiple>
                                 @php
                                     $selectedStores = request('store', []);
                                     if (!is_array($selectedStores)) {
@@ -66,24 +66,51 @@
                                 @endforeach
                             </select>
                         </div>
-                        <div class="col-md-2 col-sm-6">
+                        @php
+                            $filterClientTypes = [
+                                (string) \App\Models\KitchenIssueMaster::CLIENT_EMPLOYEE => 'Employee',
+                                (string) \App\Models\KitchenIssueMaster::CLIENT_OT => 'OT',
+                                (string) \App\Models\KitchenIssueMaster::CLIENT_COURSE => 'Course',
+                                (string) \App\Models\KitchenIssueMaster::CLIENT_SECTION => 'Section',
+                                (string) \App\Models\KitchenIssueMaster::CLIENT_OTHER => 'Other',
+                            ];
+                            $selectedClientType = (string) request('client_type', '');
+                        @endphp
+                        <div class="sv-filter-field">
+                            <label class="form-label small text-muted mb-1">Client type</label>
+                            <select name="client_type" id="filter_client_type" class="form-select w-100">
+                                <option value="" {{ $selectedClientType === '' ? 'selected' : '' }}>All</option>
+                                @foreach($filterClientTypes as $value => $label)
+                                    <option value="{{ $value }}" {{ $selectedClientType === $value ? 'selected' : '' }}>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="sv-filter-field">
+                            <label class="form-label small text-muted mb-1">Return status</label>
+                            <select name="return_status" id="filter_return_status" class="form-select w-100">
+                                <option value="" {{ request('return_status', '') === '' ? 'selected' : '' }}>All</option>
+                                <option value="returned" {{ request('return_status') === 'returned' ? 'selected' : '' }}>Returned</option>
+                                <option value="not_returned" {{ request('return_status') === 'not_returned' ? 'selected' : '' }}>Not returned</option>
+                            </select>
+                        </div>
+                        <div class="sv-filter-field">
                             <label class="form-label small text-muted mb-1">Start Date</label>
-                            <input type="date" name="start_date" id="filter_start_date" class="form-control" value="{{ request('start_date') ?? date('Y-m-d') }}">
+                            <input type="date" name="start_date" id="filter_start_date" class="form-control w-100" value="{{ request('start_date') }}">
                         </div>
-                        <div class="col-md-2 col-sm-6">
+                        <div class="sv-filter-field">
                             <label class="form-label small text-muted mb-1">End Date</label>
-                            <input type="date" name="end_date" id="filter_end_date" class="form-control" value="{{ request('end_date') }}" min="{{ request('start_date') ?? date('Y-m-d') }}">
+                            <input type="date" name="end_date" id="filter_end_date" class="form-control w-100" value="{{ request('end_date') }}" @if(request()->filled('start_date')) min="{{ request('start_date') }}" @endif>
                         </div>
-                        <div class="col-md-4 d-flex align-items-end justify-content-md-end gap-2">
-                            <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-1">
-                                <span class="material-symbols-rounded" style="font-size: 1rem;">filter_list</span>
-                                <span>Filter</span>
-                            </button>
-                            <a href="{{ route('admin.mess.material-management.index') }}" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1">
-                                <span class="material-symbols-rounded" style="font-size: 1rem;">refresh</span>
-                                <span>Clear</span>
-                            </a>
-                        </div>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2 justify-content-lg-end align-items-center mt-3 pt-2 border-top border-light-subtle">
+                        <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-1">
+                            <span class="material-symbols-rounded" style="font-size: 1rem;">filter_list</span>
+                            <span>Filter</span>
+                        </button>
+                        <a href="{{ route('admin.mess.material-management.index') }}" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1">
+                            <span class="material-symbols-rounded" style="font-size: 1rem;">refresh</span>
+                            <span>Clear</span>
+                        </a>
                     </div>
                 </form>
             </div>
@@ -231,37 +258,141 @@
 
 {{-- Add Selling Voucher Modal (same UI/UX as Create Purchase Order) --}}
 <style>
-/* Filter dropdowns: Choices.js styling */
+/* Equal-width filter columns (grid); min-width 0 so Choices/Tom shrink inside fr tracks */
+.sv-selling-voucher-filters .sv-filter-fields-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 1rem;
+    align-items: end;
+}
+@media (max-width: 1199.98px) {
+    .sv-selling-voucher-filters .sv-filter-fields-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+@media (max-width: 767.98px) {
+    .sv-selling-voucher-filters .sv-filter-fields-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+@media (max-width: 575.98px) {
+    .sv-selling-voucher-filters .sv-filter-fields-grid {
+        grid-template-columns: 1fr;
+    }
+}
+.sv-selling-voucher-filters .sv-filter-field {
+    min-width: 0;
+}
+.sv-selling-voucher-filters .sv-filter-field .choices {
+    width: 100%;
+    max-width: 100%;
+}
+
+/* All filter fields: same surface, border, focus as theme form-select (admin styles.css) */
+.sv-selling-voucher-filters .form-select,
+.sv-selling-voucher-filters .form-control {
+    background-color: #fff;
+    box-shadow: none;
+    border: var(--bs-border-width) solid #e0e6eb;
+    color: #526b7a;
+}
+.sv-selling-voucher-filters .form-select:focus,
+.sv-selling-voucher-filters .form-control:focus {
+    background-color: #fff;
+    border-color: #b1adff;
+    color: #526b7a;
+    box-shadow: 0 0 0 0.25rem rgba(99, 91, 255, 0.25);
+}
+.sv-selling-voucher-filters input[type="date"].form-control {
+    color-scheme: light;
+}
+.sv-selling-voucher-filters input[type="date"].form-control::-webkit-calendar-picker-indicator {
+    opacity: 0.75;
+}
+
+/* Filter dropdowns: Choices.js — match native + chevron */
 #filter_status + .choices,
 #filter_store + .choices {
     margin-bottom: 0;
 }
 #filter_status + .choices .choices__inner,
 #filter_store + .choices .choices__inner {
-    min-height: calc(1.5em + 0.5rem + 2px);
-    padding: 0.25rem 0.5rem;
-    font-size: 0.875rem;
-    border: 1px solid var(--bs-border-color, #ced4da);
-    border-radius: var(--bs-border-radius-sm, 0.25rem);
-    background-color: var(--bs-body-bg, #fff);
+    min-height: calc(1.5em + 0.5rem + calc(var(--bs-border-width) * 2));
+    padding: 0.25rem 2.25rem 0.25rem 0.5rem;
+    font-size: 0.765625rem;
+    line-height: 1.5;
+    border: var(--bs-border-width) solid #e0e6eb;
+    border-radius: var(--bs-border-radius-sm);
+    background-color: #fff;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.65rem center;
+    background-size: 16px 12px;
+    box-shadow: none;
+    color: #526b7a;
+}
+#filter_status + .choices .choices__list--multiple,
+#filter_store + .choices .choices__list--multiple {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0.2rem;
+    max-height: none;
+    overflow-y: hidden;
+    overflow-x: hidden;
+    margin: 0;
+    padding-right: 0.15rem;
+    white-space: nowrap;
+}
+#filter_status + .choices .choices__input,
+#filter_store + .choices .choices__input {
+    margin: 0;
+}
+#filter_status + .choices .choices__placeholder,
+#filter_store + .choices .choices__placeholder {
+    color: #526b7a;
+    opacity: 0.65;
 }
 #filter_status + .choices.is-open .choices__inner,
 #filter_status + .choices.is-focused .choices__inner,
 #filter_store + .choices.is-open .choices__inner,
 #filter_store + .choices.is-focused .choices__inner {
-    border-color: var(--bs-primary, #86b7fe);
-    box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb, 13, 110, 253), 0.25);
+    border-color: #b1adff;
+    box-shadow: 0 0 0 0.25rem rgba(99, 91, 255, 0.25);
 }
 #filter_status + .choices .choices__list--dropdown,
 #filter_store + .choices .choices__list--dropdown {
     z-index: 1050;
-    border: 1px solid var(--bs-border-color, #ced4da);
-    border-radius: var(--bs-border-radius-sm, 0.25rem);
-    font-size: 0.875rem;
+    border: var(--bs-border-width) solid #e0e6eb;
+    border-radius: var(--bs-border-radius-sm);
+    font-size: 0.765625rem;
 }
 #filter_status + .choices .choices__item,
 #filter_store + .choices .choices__item {
-    font-size: 0.875rem;
+    font-size: 0.765625rem;
+    color: #526b7a;
+}
+.sv-selling-voucher-filters #filter_status + .choices .choices__list--multiple .choices__item,
+.sv-selling-voucher-filters #filter_store + .choices .choices__list--multiple .choices__item {
+    background-color: #eef2f5;
+    border: 1px solid #e0e6eb;
+    color: #526b7a;
+    border-radius: var(--bs-border-radius-sm);
+    font-size: 0.7rem;
+    margin-bottom: 0.125rem;
+    max-width: 9.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.sv-selling-voucher-filters #filter_status + .choices .choices__button,
+.sv-selling-voucher-filters #filter_store + .choices .choices__button {
+    border-left: 1px solid #d9e0e6;
+    margin-left: 0.35rem;
+    padding-left: 0.35rem;
+}
+.sv-selling-voucher-filters #filter_status + .choices .choices__list--multiple .choices__item.is-highlighted,
+.sv-selling-voucher-filters #filter_store + .choices .choices__list--multiple .choices__item.is-highlighted {
+    background-color: #e3e9ee;
 }
 
 #addSellingVoucherModal .modal-dialog,
@@ -499,13 +630,13 @@
                                     <select id="modalOtCourseSelect" class="form-select" style="display:none;">
                                         <option value="">Select Course</option>
                                         @foreach($otCourses ?? [] as $course)
-                                            <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }}</option>
+                                            <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }} [{{ (int)($course->active_inactive ?? 0) === 1 ? 'Active' : 'Archived' }}]</option>
                                         @endforeach
                                     </select>
                                     <select id="modalCourseSelect" class="form-select" style="display:none;">
                                         <option value="">Select Course</option>
                                         @foreach($otCourses ?? [] as $course)
-                                            <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }}</option>
+                                            <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }} [{{ (int)($course->active_inactive ?? 0) === 1 ? 'Active' : 'Archived' }}]</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -591,7 +722,7 @@
                                     <tbody id="modalItemsBody">
                                         <tr class="sv-item-row">
                                             <td>
-                                                <select name="items[0][item_subcategory_id]" class="form-select form-select-sm sv-item-select" required>
+                                                <select name="items[0][item_subcategory_id]" class="form-select sv-item-select" required>
                                                     <option value="">Select Item</option>
                                                     @foreach($itemSubcategories as $s)
                                                         <option value="{{ $s['id'] }}" data-unit="{{ e($s['unit_measurement'] ?? '') }}" data-rate="{{ e($s['standard_cost'] ?? 0) }}">{{ e($s['item_name'] ?? '—') }}</option>
@@ -684,13 +815,13 @@
                                     <select id="editModalOtCourseSelect" class="form-select" style="display:none;">
                                         <option value="">Select Course</option>
                                         @foreach($otCourses ?? [] as $course)
-                                            <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }}</option>
+                                            <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }} [{{ (int)($course->active_inactive ?? 0) === 1 ? 'Active' : 'Archived' }}]</option>
                                         @endforeach
                                     </select>
                                     <select id="editModalCourseSelect" class="form-select" style="display:none;">
                                         <option value="">Select Course</option>
                                         @foreach($otCourses ?? [] as $course)
-                                            <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }}</option>
+                                            <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }} [{{ (int)($course->active_inactive ?? 0) === 1 ? 'Active' : 'Archived' }}]</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -720,7 +851,7 @@
                                     <select id="editModalCourseNameSelect" class="form-select" style="display:none;">
                                         <option value="">Select Course</option>
                                         @foreach($otCourses ?? [] as $course)
-                                            <option value="{{ $course->pk }}">{{ e($course->course_name) }}</option>
+                                            <option value="{{ $course->pk }}">{{ e($course->course_name) }} [{{ (int)($course->active_inactive ?? 0) === 1 ? 'Active' : 'Archived' }}]</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -1560,19 +1691,15 @@ document.addEventListener('DOMContentLoaded', function() {
                                 input.scrollLeft = 0;
                             }
                         }
-                        // selection + search dono ko blank karo har open par
-                        self.clear(true);
+                        // Keep selected values; reset only search input each open
                         clearInputAndCursor();
                         setTimeout(function () {
-                            self.clear(true);
                             clearInputAndCursor();
                         }, 0);
                         setTimeout(function () {
-                            self.clear(true);
                             clearInputAndCursor();
                         }, 50);
                         setTimeout(function () {
-                            self.clear(true);
                             clearInputAndCursor();
                         }, 100);
                         setTimeout(function () {
@@ -1626,19 +1753,15 @@ document.addEventListener('DOMContentLoaded', function() {
                                 input.scrollLeft = 0;
                             }
                         }
-                        // selection + search dono ko blank karo har open par
-                        self.clear(true);
+                        // Keep selected values; reset only search input each open
                         clearInputAndCursor();
                         setTimeout(function () {
-                            self.clear(true);
                             clearInputAndCursor();
                         }, 0);
                         setTimeout(function () {
-                            self.clear(true);
                             clearInputAndCursor();
                         }, 50);
                         setTimeout(function () {
-                            self.clear(true);
                             clearInputAndCursor();
                         }, 100);
                         setTimeout(function () {
@@ -2312,7 +2435,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return '<option value="' + s.id + '" ' + attrs + '>' + (s.item_name || '—').replace(/</g, '&lt;') + '</option>';
         }).join('');
         return '<tr class="sv-item-row">' +
-            '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select form-select-sm sv-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
+            '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select sv-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
             '<td><input type="text" name="items[' + index + '][unit]" class="form-control  sv-unit" readonly placeholder="—"></td>' +
             '<td><input type="text" name="items[' + index + '][available_quantity]" class="form-control  sv-avail bg-light" readonly></td>' +
             '<td><input type="text" name="items[' + index + '][quantity]" class="form-control  sv-qty" step="0.01" min="0.01" required><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
@@ -3053,7 +3176,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const left = item && (avail - qty) >= 0 ? (avail - qty) : 0;
         const originalQtyAttr = item ? (' data-original-qty="' + (parseFloat(item.quantity) || 0) + '"') : '';
         return '<tr class="sv-item-row edit-sv-item-row"' + originalQtyAttr + '>' +
-            '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select form-select-sm sv-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
+            '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select sv-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
             '<td><input type="text" name="items[' + index + '][unit]" class="form-control  sv-unit" readonly placeholder="—" value="' + (unit || '') + '"></td>' +
             '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control  sv-avail bg-light" step="0.01" min="0" value="' + avail + '" placeholder="0" readonly></td>' +
             '<td><input type="number" name="items[' + index + '][quantity]" class="form-control  sv-qty" step="0.01" min="0.01" placeholder="0" value="' + qty + '" required><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +

@@ -47,22 +47,24 @@ class FacultyDataTable extends DataTable
                 $isActive = $row->active_inactive == 1;
                 $disabledAttr = $isActive ? 'disabled' : '';
                 $deleteTitle = $isActive ? 'Deactivate faculty first to enable deletion' : 'Delete';
-                $deleteStyle = $isActive ? 'opacity:0.5;cursor:not-allowed;' : '';
+                $deleteStyle = $isActive ? 'opacity:0.5;cursor:not-allowed;' : 'cursor:pointer;';
 
                 return '
-                    <a href="'.$editUrl.'" class="btn btn-primary bg-transparent border-0 p-0 text-primary" title="Edit">
-                        <i class="material-icons">edit</i>
-                    </a>
-                    <a href="'.$viewUrl.'" class="btn btn-info bg-transparent border-0 p-0 text-primary" title="View">
-                        <i class="material-icons">visibility</i>
-                    </a>
-                    <button type="button" class="btn btn-danger btn-sm delete-faculty-btn"
-                        data-url="'.$deleteUrl.'"
-                        data-name="'.htmlspecialchars($row->full_name, ENT_QUOTES).'"
-                        data-token="'.$csrf.'"
-                        title="'.$deleteTitle.'" '.$disabledAttr.' style="'.$deleteStyle.'">
-                        <i class="material-icons" style="font-size:14px;">delete</i>
-                    </button>
+                    <div class="d-flex align-items-center gap-2" style="white-space:nowrap;">
+                        <a href="'.$editUrl.'" class="btn bg-transparent border-0 p-0 text-primary" title="Edit">
+                            <i class="material-icons" style="font-size:20px;">edit</i>
+                        </a>
+                        <a href="'.$viewUrl.'" class="btn bg-transparent border-0 p-0 text-info" title="View">
+                            <i class="material-icons" style="font-size:20px;">visibility</i>
+                        </a>
+                        <button type="button" class="btn bg-transparent border-0 p-0 text-danger delete-faculty-btn"
+                            data-url="'.$deleteUrl.'"
+                            data-name="'.htmlspecialchars($row->full_name, ENT_QUOTES).'"
+                            data-token="'.$csrf.'"
+                            title="'.$deleteTitle.'" '.$disabledAttr.' style="'.$deleteStyle.'">
+                            <i class="material-icons" style="font-size:20px;">delete</i>
+                        </button>
+                    </div>
                 ';
             })
             ->addColumn('status', function ($row) {
@@ -88,6 +90,14 @@ class FacultyDataTable extends DataTable
             ->filterColumn('mobile_number', function ($query, $keyword) {
                 $query->where('mobile_no', 'like', "%{$keyword}%");
             })
+
+        ->addColumn('last_update', function($row) {
+                return $row->last_update ? \Carbon\Carbon::parse($row->last_update)->format('d-m-Y H:i') : 'N/A';
+            })
+            ->addColumn('created_by', function($row) {
+                return $row->createdByUser?->name ?? 'N/A';
+            })
+
             ->filter(function ($query) {
                 $searchValue = request()->input('search.value');
 
@@ -113,6 +123,7 @@ class FacultyDataTable extends DataTable
     {
         // return $model->newQuery();
         return $model->orderBy('pk', 'desc')->newQuery();
+
     }
 
     /**
@@ -179,12 +190,26 @@ class FacultyDataTable extends DataTable
                 ->title('Mobile Number')
                 ->searchable(true)
                 ->orderable(false),
+
+            Column::make('last_update')
+                ->title('Modified Date')
+                ->addClass('text-center')
+                ->searchable(false)
+                ->orderable(false),
+            Column::make('created_by')
+                ->title('Modified By')
+                ->addClass('text-center')
+                ->searchable(true)
+                ->orderable(false),
             Column::computed('status')
                 ->exportable(false)
-                ->printable(false),
-                Column::computed('action')
+                ->printable(false)
+                ->addClass('text-center'),
+            Column::computed('action')
                 ->exportable(false)
                 ->printable(false)
+                ->addClass('text-center')
+                ->width(120)
         ];
     }
 

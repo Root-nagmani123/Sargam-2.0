@@ -19,7 +19,7 @@ use App\Http\Controllers\Admin\Master\{
     MemoConclusionMasterController,
     HostelBuildingMasterController,
     HostelFloorMasterController,
-    HostelRoomMasterController
+    HostelRoomMasterController,
 };
 
 Route::prefix('master')->name('master.')->middleware('auth')->group(function () {
@@ -114,7 +114,7 @@ Route::prefix('master')->name('master.')->middleware('auth')->group(function () 
         Route::post('/changeStatus', 'changeStatus')->name('status');
     });
 
-  
+
     // Faculty Type Master Routes
     Route::prefix('faculty-type-master')->name('faculty.type.master.')->controller(FacultyTypeMasterController::class)->group(function () {
         Route::get('/', 'index')->name('index');
@@ -134,7 +134,7 @@ Route::prefix('master')->name('master.')->middleware('auth')->group(function () 
         Route::get('/getcategory', 'getcategory')->name('getcategory');
 
     });
-    
+
     Route::prefix('exemption-medical-speciality-master')->name('exemption.medical.speciality.')->controller(ExemptionCategoryController::class)->group(function () {
     Route::get('/', 'medicalSpecialityIndex')->name('index');
     Route::get('/create', 'medicalSpecialityCreate')->name('create');
@@ -213,7 +213,7 @@ Route::prefix('memo-conclusion-master')->name('memo.conclusion.master.')->contro
         Route::get('/', 'index')->name('index');
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
-        Route::get('/edit/{id}', 'edit')->name('edit'); 
+        Route::get('/edit/{id}', 'edit')->name('edit');
         Route::delete('/delete/{id}', 'delete')->name('delete');
     });
     Route::prefix('memo-conclusion-master')->name('memo.conclusion.master.')->controller(MemoConclusionMasterController::class)->group(function () {
@@ -223,6 +223,8 @@ Route::prefix('memo-conclusion-master')->name('memo.conclusion.master.')->contro
         Route::get('/edit/{id}', 'edit')->name('edit');
         Route::delete('/delete/{id}', 'destroy')->name('delete');
     });
+
+
 
     // Hostel Building Master
     Route::prefix('hostel-building-master')->name('hostel.building.')->controller(HostelBuildingMasterController::class)->group(function () {
@@ -251,5 +253,7 @@ Route::prefix('memo-conclusion-master')->name('memo.conclusion.master.')->contro
         Route::post('store', 'store')->name('store');
         Route::get('/edit/{id}', 'edit')->name('edit');
     });
+
+
 
 });
