@@ -138,103 +138,7 @@
                             <th scope="col" class="text-center text-secondary fw-semibold text-uppercase" style="width: 1%;">Action</th>
                         </tr>
                     </thead>
-                    @php($serial = 1)
-                    <tbody class="small">
-                        @forelse($kitchenIssues as $voucher)
-                            @forelse($voucher->items as $item)
-                                <tr>
-                                    <td class="text-center text-muted font-monospace">{{ $serial++ }}</td>
-                                    <td class="fw-medium">{{ $item->item_name ?: ($item->itemSubcategory->item_name ?? '—') }}</td>
-                                    <td class="text-end font-monospace">{{ $item->quantity }}</td>
-                                    <td class="text-end font-monospace">{{ $item->return_quantity ?? 0 }}</td>
-                                    <td>{{ $voucher->resolved_store_name }}</td>
-                                    <td>{{ $voucher->client_type_label ?? '—' }}</td>
-                                    <td>{{ $voucher->display_client_name }}</td>
-                                    <td>{{ $voucher->client_name ?? '—' }}</td>
-                                    <td>
-                                        @if($voucher->payment_type == 1)<span class="badge rounded-pill text-bg-warning">Credit</span>
-                                        @elseif($voucher->payment_type == 0)<span class="badge rounded-pill text-bg-secondary">Cash</span>
-                                        @elseif($voucher->payment_type == 2)<span class="badge rounded-pill text-bg-info">UPI</span>
-                                        @else<span class="text-muted">—</span>@endif
-                                    </td>
-                                    <td class="text-nowrap">{{ $voucher->created_at ? $voucher->created_at->format('d/m/Y') : '—' }}</td>
-                                    <td class="text-center">
-                                        @if($voucher->status == 0)<span class="badge rounded-pill text-bg-warning">Pending</span>
-                                        @elseif($voucher->status == 2)<span class="badge rounded-pill text-bg-success">Approved</span>
-                                        @elseif($voucher->status == 4)<span class="badge rounded-pill text-bg-primary">Completed</span>
-                                        @else<span class="badge rounded-pill text-bg-secondary">{{ $voucher->status }}</span>@endif
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="d-flex flex-wrap gap-2 align-items-center justify-content-center">
-                                            @if(($item->return_quantity ?? 0) > 0)
-                                                <span class="badge rounded-pill text-bg-info">Returned</span>
-                                            @endif
-                                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 btn-return-sv" data-voucher-id="{{ $voucher->pk }}" title="Return">Return</button>
-                                        </div>
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="d-inline-flex align-items-center justify-content-center gap-1">
-                                            <button type="button" class="btn btn-sm btn-light border btn-view-sv rounded-circle p-0 d-inline-flex align-items-center justify-content-center" style="width: 2.25rem; height: 2.25rem;" data-voucher-id="{{ $voucher->pk }}" title="View" aria-label="View voucher"><i class="material-symbols-rounded text-primary" style="font-size: 1.125rem;">visibility</i></button>
-                                            <button type="button" class="btn btn-sm btn-light border btn-edit-sv rounded-circle p-0 d-inline-flex align-items-center justify-content-center" style="width: 2.25rem; height: 2.25rem;" data-voucher-id="{{ $voucher->pk }}" title="{{ $voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED ? 'Edit is disabled for approved voucher' : 'Edit' }}" aria-label="Edit voucher" @if($voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED) disabled @endif><i class="material-symbols-rounded text-warning" style="font-size: 1.125rem;">edit</i></button>
-                                            @if($canDeleteSellingVoucher)
-                                                <form action="{{ route('admin.mess.material-management.destroy', $voucher->pk) }}" method="POST" class="d-inline m-0" onsubmit="return confirm('Are you sure you want to delete this Selling Voucher?');">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="btn btn-sm btn-light border rounded-circle p-0 d-inline-flex align-items-center justify-content-center" style="width: 2.25rem; height: 2.25rem;" title="Delete" aria-label="Delete voucher"><i class="material-symbols-rounded text-danger" style="font-size: 1.125rem;">delete</i></button>
-                                                </form>
-                                            @endif
-                                        </div>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td class="text-center text-muted font-monospace">{{ $serial++ }}</td>
-                                    <td class="text-muted">—</td>
-                                    <td class="text-end text-muted">—</td>
-                                    <td class="text-end text-muted">—</td>
-                                    <td>{{ $voucher->resolved_store_name }}</td>
-                                    <td>{{ $voucher->client_type_label ?? '—' }}</td>
-                                    <td>{{ $voucher->display_client_name }}</td>
-                                    <td>{{ $voucher->client_name ?? '—' }}</td>
-                                    <td><span class="text-muted">—</span></td>
-                                    <td class="text-nowrap">{{ $voucher->created_at ? $voucher->created_at->format('d/m/Y') : '—' }}</td>
-                                    <td class="text-center">
-                                        @if($voucher->status == 0)<span class="badge rounded-pill text-bg-warning">Pending</span>
-                                        @elseif($voucher->status == 2)<span class="badge rounded-pill text-bg-success">Approved</span>
-                                        @elseif($voucher->status == 4)<span class="badge rounded-pill text-bg-primary">Completed</span>
-                                        @else<span class="badge rounded-pill text-bg-secondary">{{ $voucher->status }}</span>@endif
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="d-flex flex-wrap gap-2 align-items-center justify-content-center">
-                                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 btn-return-sv" data-voucher-id="{{ $voucher->pk }}" title="Return">Return</button>
-                                        </div>
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="d-inline-flex align-items-center justify-content-center gap-1">
-                                            <button type="button" class="btn btn-sm btn-light border btn-view-sv rounded-circle p-0 d-inline-flex align-items-center justify-content-center" style="width: 2.25rem; height: 2.25rem;" data-voucher-id="{{ $voucher->pk }}" title="View" aria-label="View voucher"><i class="material-symbols-rounded text-primary" style="font-size: 1.125rem;">visibility</i></button>
-                                            <button type="button" class="btn btn-sm btn-light border btn-edit-sv rounded-circle p-0 d-inline-flex align-items-center justify-content-center" style="width: 2.25rem; height: 2.25rem;" data-voucher-id="{{ $voucher->pk }}" title="{{ $voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED ? 'Edit is disabled for approved voucher' : 'Edit' }}" aria-label="Edit voucher" @if($voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED) disabled @endif><i class="material-symbols-rounded text-warning" style="font-size: 1.125rem;">edit</i></button>
-                                            @if($canDeleteSellingVoucher)
-                                                <form action="{{ route('admin.mess.material-management.destroy', $voucher->pk) }}" method="POST" class="d-inline m-0" onsubmit="return confirm('Are you sure you want to delete this Selling Voucher?');">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="btn btn-sm btn-light border rounded-circle p-0 d-inline-flex align-items-center justify-content-center" style="width: 2.25rem; height: 2.25rem;" title="Delete" aria-label="Delete voucher"><i class="material-symbols-rounded text-danger" style="font-size: 1.125rem;">delete</i></button>
-                                                </form>
-                                            @endif
-                                        </div>
-                                    </td>
-                                </tr>
-                            @endforelse
-                        @empty
-                            <tr>
-                                <td class="text-center text-body-secondary py-5" colspan="13">
-                                    <span class="d-inline-flex align-items-center gap-2">
-                                        <span class="material-symbols-rounded text-secondary" style="font-size: 1.5rem;" aria-hidden="true">inbox</span>
-                                        <span>No kitchen issues found.</span>
-                                    </span>
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
+                    <tbody class="small"></tbody>
                 </table>
             </div>
     </div>
@@ -248,6 +152,13 @@
         'infoLabel' => 'selling vouchers',
         'searchDelay' => 0,
         'searchSmart' => false,
+        'serverSide' => true,
+        'ajaxUrlBase' => route('admin.mess.material-management.selling-vouchers-datatable'),
+        'serverSideColumnDefs' => [
+            ['className' => 'text-center text-muted', 'targets' => [0]],
+            ['className' => 'text-end', 'targets' => [2, 3]],
+            ['className' => 'text-center', 'targets' => [10, 11, 12]],
+        ],
     ])
     @include('mess.partials.modal-dropdown-stability')
 </div>
@@ -2118,10 +2029,24 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!$table.length || !$.fn.DataTable.isDataTable($table)) return;
 
         var dt = $table.DataTable();
-        var expectedCols = $table.find('thead tr:first th').length;
-        var url = window.location.pathname + window.location.search;
+        var canAjaxReload = dt.ajax && typeof dt.ajax.reload === 'function';
 
         isRefreshingSellingVouchersTable = true;
+
+        if (canAjaxReload) {
+            try {
+                dt.ajax.reload(function() {
+                    isRefreshingSellingVouchersTable = false;
+                }, false);
+            } catch (err) {
+                console.error('Failed to refresh selling vouchers table', err);
+                isRefreshingSellingVouchersTable = false;
+            }
+            return;
+        }
+
+        var expectedCols = $table.find('thead tr:first th').length;
+        var url = window.location.pathname + window.location.search;
 
         fetch(url, { headers: { 'Accept': 'text/html' } })
             .then(function(r) { return r.text(); })
@@ -2133,7 +2058,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 var newRowData = [];
                 newTbody.querySelectorAll('tr').forEach(function(tr) {
                     var cells = Array.from(tr.querySelectorAll('td,th'));
-                    if (expectedCols && cells.length !== expectedCols) return; // skip colspan/empty rows
+                    if (expectedCols && cells.length !== expectedCols) return;
                     newRowData.push(cells.map(function(td) { return td.innerHTML; }));
                 });
 

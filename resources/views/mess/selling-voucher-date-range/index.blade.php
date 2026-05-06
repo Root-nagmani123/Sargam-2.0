@@ -145,165 +145,7 @@ $selectedClientType = (string) request()->input('client_type', '');
                             <th scope="col" class="text-end pe-3">Action</th>
                         </tr>
                     </thead>
-                    <tbody class="border-top-0 small">
-                        @php $serial = 1; @endphp
-                        @forelse($reports as $report)
-                        @forelse($report->items as $item)
-                        <tr>
-                            <td class="ps-3 text-center text-body-secondary">{{ $serial++ }}</td>
-                            <td class="cell-item-name fw-semibold text-wrap text-break">
-                                {{ $item->item_name ?: ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? '—') }}
-                            </td>
-                            <td class="text-end font-monospace">{{ $item->quantity }}</td>
-                            <td class="text-end font-monospace">{{ $item->return_quantity ?? 0 }}</td>
-                            <td class="text-wrap text-break" title="{{ $report->resolved_store_name }}">
-                                {{ $report->resolved_store_name }}</td>
-                            <td>{{ $report->clientTypeCategory ? ucfirst($report->clientTypeCategory->client_type ?? '') : ($report->client_type_slug ? ucfirst($report->client_type_slug) : '—') }}
-                            </td>
-                            <td class="text-wrap text-break">{{ $report->display_client_name }}</td>
-                            <td class="text-wrap text-break">{{ $report->client_name ?? '—' }}</td>
-                            <td>
-                                <span class="badge text-bg-light border border-light-subtle fw-semibold">
-                                    {{ $report->payment_type == 1 ? 'Credit' : ($report->payment_type == 0 ? 'Cash' : ($report->payment_type == 2 ? 'UPI' : '—')) }}
-                                </span>
-                            </td>
-                            <td class="text-body-secondary">
-                                {{ $report->date_from ? $report->date_from->format('d/m/Y') : '—' }}</td>
-                            <td class="text-center">
-                                @if($report->status == 0)<span class="badge rounded-1 text-bg-warning">Pending</span>
-                                @elseif($report->status == 2)<span
-                                    class="badge rounded-1 text-bg-success">Approved</span>
-                                @elseif($report->status == 4)<span
-                                    class="badge rounded-1 text-bg-primary">Completed</span>
-                                @else<span class="badge rounded-1 text-bg-secondary">Final</span>@endif
-                            </td>
-                            <td>
-                                <div class="d-flex flex-wrap align-items-center gap-1">
-                                    @if(($item->return_quantity ?? 0) > 0)
-                                    <span class="badge rounded-1 text-bg-info">Returned</span>
-                                    @endif
-                                    @if($loop->first)
-                                    <button type="button"
-                                        class="btn btn-sm btn-outline-secondary btn-return-report d-inline-flex align-items-center gap-1 rounded-2 px-2"
-                                        data-report-id="{{ $report->id }}" title="Return">
-                                        <i class="material-symbols-rounded"
-                                            style="font-size: 1rem;">assignment_return</i>
-                                        <span>Return</span>
-                                    </button>
-                                    @endif
-                                </div>
-                            </td>
-                            <td class="text-end pe-3">
-                                @if($loop->first)
-                                <div class="d-inline-flex flex-wrap align-items-center justify-content-end gap-1">
-                                    <button type="button"
-                                        class="btn btn-sm btn-outline-primary btn-view-report voucher-icon-btn rounded-2"
-                                        data-report-id="{{ $report->id }}" title="View">
-                                        <i class="material-symbols-rounded">visibility</i>
-                                    </button>
-                                    <button type="button"
-                                        class="btn btn-sm btn-outline-warning btn-edit-report voucher-icon-btn rounded-2"
-                                        data-report-id="{{ $report->id }}"
-                                        title="{{ $report->status == \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED ? 'Edit is disabled for approved voucher' : 'Edit' }}"
-                                        @if($report->status ==
-                                        \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED) disabled
-                                        @endif>
-                                        <i class="material-symbols-rounded">edit</i>
-                                    </button>
-                                    @if($canDeleteSellingVoucherDateRange)
-                                    <form
-                                        action="{{ route('admin.mess.selling-voucher-date-range.destroy', $report->id) }}"
-                                        method="POST" class="d-inline"
-                                        onsubmit="return confirm('Are you sure you want to delete this report?');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit"
-                                            class="btn btn-sm btn-outline-danger voucher-icon-btn rounded-2"
-                                            title="Delete"><i class="material-symbols-rounded">delete</i></button>
-                                    </form>
-                                    @endif
-                                </div>
-                                @endif
-                            </td>
-                        </tr>
-                        @empty
-                        <tr>
-                            <td class="ps-3 text-center text-body-secondary">{{ $serial++ }}</td>
-                            <td class="cell-item-name text-body-secondary text-wrap text-break">—</td>
-                            <td class="text-end font-monospace text-body-secondary">—</td>
-                            <td class="text-end font-monospace text-body-secondary">—</td>
-                            <td class="text-wrap text-break" title="{{ $report->resolved_store_name }}">
-                                {{ $report->resolved_store_name }}</td>
-                            <td>{{ $report->clientTypeCategory ? ucfirst($report->clientTypeCategory->client_type ?? '') : ($report->client_type_slug ? ucfirst($report->client_type_slug) : '—') }}
-                            </td>
-                            <td class="text-wrap text-break">{{ $report->display_client_name }}</td>
-                            <td class="text-wrap text-break">{{ $report->client_name ?? '—' }}</td>
-                            <td>
-                                <span class="badge text-bg-light border border-light-subtle fw-semibold">
-                                    {{ $report->payment_type == 1 ? 'Credit' : ($report->payment_type == 0 ? 'Cash' : ($report->payment_type == 2 ? 'UPI' : '—')) }}
-                                </span>
-                            </td>
-                            <td class="text-body-secondary">
-                                {{ $report->date_from ? $report->date_from->format('d/m/Y') : '—' }}</td>
-                            <td class="text-center">
-                                @if($report->status == 0)<span class="badge rounded-1 text-bg-warning">Pending</span>
-                                @elseif($report->status == 2)<span
-                                    class="badge rounded-1 text-bg-success">Approved</span>
-                                @else<span class="badge rounded-1 text-bg-secondary">Final</span>@endif
-                            </td>
-                            <td>
-                                <button type="button"
-                                    class="btn btn-sm btn-outline-secondary btn-return-report d-inline-flex align-items-center gap-1 rounded-2 px-2"
-                                    data-report-id="{{ $report->id }}" title="Return">
-                                    <i class="material-symbols-rounded" style="font-size: 1rem;">assignment_return</i>
-                                    <span>Return</span>
-                                </button>
-                            </td>
-                            <td class="text-end pe-3">
-                                <div class="d-inline-flex flex-wrap align-items-center justify-content-end gap-1">
-                                    <button type="button"
-                                        class="btn btn-sm btn-outline-primary btn-view-report voucher-icon-btn rounded-3"
-                                        data-report-id="{{ $report->id }}" title="View"><i
-                                            class="material-symbols-rounded">visibility</i></button>
-                                    <button type="button"
-                                        class="btn btn-sm btn-outline-warning btn-edit-report voucher-icon-btn rounded-3"
-                                        data-report-id="{{ $report->id }}"
-                                        title="{{ $report->status == \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED ? 'Edit is disabled for approved voucher' : 'Edit' }}"
-                                        @if($report->status ==
-                                        \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED) disabled
-                                        @endif><i class="material-symbols-rounded">edit</i></button>
-                                    @if($canDeleteSellingVoucherDateRange)
-                                    <form
-                                        action="{{ route('admin.mess.selling-voucher-date-range.destroy', $report->id) }}"
-                                        method="POST" class="d-inline"
-                                        onsubmit="return confirm('Are you sure you want to delete this report?');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit"
-                                            class="btn btn-sm btn-outline-danger voucher-icon-btn rounded-3"
-                                            title="Delete"><i class="material-symbols-rounded">delete</i></button>
-                                    </form>
-                                    @endif
-                                </div>
-                            </td>
-                        </tr>
-                        @endforelse
-                        @empty
-                        <tr>
-                            <td class="text-center py-5 text-body-secondary border-0" colspan="13">
-                                <div class="d-flex flex-column align-items-center gap-2 py-3">
-                                    <span
-                                        class="d-inline-flex align-items-center justify-content-center rounded-circle bg-body-tertiary text-secondary p-3">
-                                        <i class="material-symbols-rounded" style="font-size: 2rem;">inbox</i>
-                                    </span>
-                                    <span class="fs-6 fw-medium text-body">No reports found</span>
-                                    <span class="small text-body-secondary">Try adjusting filters or add a new
-                                        voucher.</span>
-                                </div>
-                            </td>
-                        </tr>
-                        @endforelse
-                    </tbody>
+                    <tbody class="border-top-0 small"></tbody>
                 </table>
             </div>
         </div>
@@ -316,7 +158,9 @@ $selectedClientType = (string) request()->input('client_type', '');
     'actionColumnIndex' => 12,
     'infoLabel' => 'selling vouchers',
     'searchDelay' => 0,
-    'scrollX' => true
+    'scrollX' => true,
+    'serverSide' => true,
+    'ajaxUrlBase' => route('admin.mess.selling-voucher-date-range.datatable')
     ])
     @include('mess.partials.modal-dropdown-stability')
 
