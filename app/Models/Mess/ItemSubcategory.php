@@ -119,6 +119,27 @@ class ItemSubcategory extends Model
         return $query;
     }
 
+    /**
+     * First existing column usable for sorting by human-readable item title (schemas differ across DBs).
+     */
+    public static function displayNameColumnForQuery(): string
+    {
+        $table = (new static())->getTable();
+        foreach (['item_name', 'name', 'subcategory_name'] as $column) {
+            if (Schema::hasColumn($table, $column)) {
+                return $column;
+            }
+        }
+
+        return 'id';
+    }
+
+    public function scopeOrderedByDisplayName(\Illuminate\Database\Eloquent\Builder $query): \Illuminate\Database\Eloquent\Builder
+    {
+        return $query->orderBy(static::displayNameColumnForQuery());
+    }
+
+
     public function getStatusLabelAttribute(): string
     {
         $status = $this->status;

@@ -17,6 +17,7 @@ use App\Models\CourseMaster;
 use App\Models\StudentMaster;
 use App\Models\KitchenIssueMaster;
 use Carbon\Carbon;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -31,81 +32,6 @@ class SellingVoucherDateRangeController extends Controller
 {
     public function index(Request $request)
     {
-        $query = SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'course', 'items.itemSubcategory']);
-
-        $storeFilters = collect((array) $request->input('store', []))
-            ->filter(fn ($value) => $value !== null && $value !== '')
-            ->map(fn ($value) => (string) $value)
-            ->values();
-
-        if ($storeFilters->isNotEmpty()) {
-            $storeIds = $storeFilters
-                ->reject(fn ($value) => str_starts_with($value, 'sub_'))
-                ->map(fn ($value) => (int) $value)
-                ->filter(fn ($value) => $value > 0)
-                ->values();
-
-            $subStoreIds = $storeFilters
-                ->filter(fn ($value) => str_starts_with($value, 'sub_'))
-                ->map(fn ($value) => (int) str_replace('sub_', '', $value))
-                ->filter(fn ($value) => $value > 0)
-                ->values();
-
-            $query->where(function ($storeQuery) use ($storeIds, $subStoreIds) {
-                if ($storeIds->isNotEmpty()) {
-                    $storeQuery->where(function ($nestedQuery) use ($storeIds) {
-                        $nestedQuery->where('store_type', 'store')
-                            ->whereIn('store_id', $storeIds->all());
-                    });
-                }
-
-                if ($subStoreIds->isNotEmpty()) {
-                    $method = $storeIds->isNotEmpty() ? 'orWhere' : 'where';
-
-                    $storeQuery->{$method}(function ($nestedQuery) use ($subStoreIds) {
-                        $nestedQuery->where('store_type', 'sub_store')
-                            ->whereIn('store_id', $subStoreIds->all());
-                    });
-                }
-            });
-        }
-
-        $statusFilters = collect((array) $request->input('status', []))
-            ->filter(fn ($value) => $value !== null && $value !== '')
-            ->map(fn ($value) => (string) $value)
-            ->values();
-
-        if ($statusFilters->isNotEmpty()) {
-            $query->whereIn('status', $statusFilters->all());
-        }
-
-        $clientTypeSlug = (string) $request->input('client_type', '');
-        $allowedClientTypeSlugs = array_keys(ClientType::clientTypes());
-        if ($clientTypeSlug !== '' && in_array($clientTypeSlug, $allowedClientTypeSlugs, true)) {
-            $query->where('client_type_slug', $clientTypeSlug);
-        }
-
-        if ($request->filled('start_date') && $request->filled('end_date')) {
-            // Filter strictly by Request Date (date_from) falling within the selected range
-            $query->whereBetween('date_from', [$request->start_date, $request->end_date]);
-        } elseif ($request->filled('start_date')) {
-            // Partial filter: only start date provided – show vouchers from this date onward
-            $query->whereDate('date_from', '>=', $request->start_date);
-        } elseif ($request->filled('end_date')) {
-            // Partial filter: only end date provided – show vouchers up to this date
-            $query->whereDate('date_from', '<=', $request->end_date);
-        }
-
-        // DataTables handles pagination/search on the client; return full filtered set.
-        $reports = $query->orderBy('date_from', 'desc')
-            ->orderBy('id', 'desc')
-            ->get();
-
-        $reports = $this->filterSellingVoucherDateRangeRowsByReturnStatus(
-            $reports,
-            (string) $request->input('return_status', '')
-        );
-
         // Get active stores and sub-stores
         $stores = Store::active()->get()->map(function ($store) {
             return [
@@ -127,7 +53,7 @@ class SellingVoucherDateRangeController extends Controller
         // Combine stores and sub-stores
         $stores = $stores->concat($subStores)->sortBy('store_name')->values();
         
-        $itemSubcategories = ItemSubcategory::active()->orderBy('name')->get()->map(function ($s) {
+        $itemSubcategories = ItemSubcategory::active()->orderedByDisplayName()->get()->map(function ($s) {
             return [
                 'id' => $s->id,
                 'item_name' => $s->item_name ?? $s->name ?? '—',
@@ -225,7 +151,62 @@ class SellingVoucherDateRangeController extends Controller
                 ->values()
             : collect();
 
-        return view('mess.selling-voucher-date-range.index', compact('reports', 'stores', 'itemSubcategories', 'clientTypes', 'clientNamesByType', 'faculties', 'employees', 'messStaff', 'otCourses'));
+        return view('mess.selling-voucher-date-range.index', compact('stores', 'itemSubcategories', 'clientTypes', 'clientNamesByType', 'faculties', 'employees', 'messStaff', 'otCourses'));
+    }
+
+    /**
+     * Server-side DataTables JSON for Selling Voucher with Date Range listing (one row per item line).
+     */
+    public function datatable(Request $request)
+    {
+        $draw = (int) $request->input('draw', 1);
+        $start = max(0, (int) $request->input('start', 0));
+        $length = (int) $request->input('length', 10);
+        if ($length < 1 || $length > 100) {
+            $length = 10;
+        }
+
+        $searchRaw = '';
+        $searchPayload = $request->input('search');
+        if (is_array($searchPayload) && isset($searchPayload['value'])) {
+            $searchRaw = (string) $searchPayload['value'];
+        }
+
+        $base = $this->sellingVoucherDateRangeItemRowsBaseQuery($request);
+        $recordsTotal = (clone $base)->count('sri.id');
+
+        $filtered = clone $base;
+        $this->applySellingVoucherDateRangeItemSearch($filtered, $searchRaw);
+
+        $searchTrimmed = trim($searchRaw);
+        $recordsFiltered = $searchTrimmed === ''
+            ? $recordsTotal
+            : (clone $filtered)->count('sri.id');
+
+        $rows = (clone $filtered)
+            ->orderByDesc('sv.date_from')
+            ->orderByDesc('sv.id')
+            ->orderByDesc('sri.id')
+            ->offset($start)
+            ->limit($length)
+            ->get();
+
+        $canDeleteSellingVoucherDateRange = hasRole('Admin') || hasRole('Mess-Admin');
+        $data = [];
+        foreach ($rows as $idx => $row) {
+            $data[] = $this->buildSellingVoucherDateRangeDatatableRow(
+                $row,
+                $start + $idx + 1,
+                $canDeleteSellingVoucherDateRange
+            );
+        }
+
+        return response()->json([
+            'draw' => $draw,
+            'recordsTotal' => $recordsTotal,
+            'recordsFiltered' => $recordsFiltered,
+            'data' => $data,
+        ]);
     }
 
     /**
@@ -924,6 +905,281 @@ class SellingVoucherDateRangeController extends Controller
             DB::rollBack();
             return back()->withInput()->with('error', 'Failed to update return: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * @return Builder
+     */
+    private function sellingVoucherDateRangeItemRowsBaseQuery(Request $request)
+    {
+        $q = DB::table('sv_date_range_report_items as sri')
+            ->join('sv_date_range_reports as sv', 'sri.sv_date_range_report_id', '=', 'sv.id')
+            ->leftJoin('mess_stores as ms', function ($join) {
+                $join->on('sv.store_id', '=', 'ms.id')
+                    ->where('sv.store_type', '=', 'store');
+            })
+            ->leftJoin('mess_sub_stores as mss', function ($join) {
+                $join->on('sv.store_id', '=', 'mss.id')
+                    ->where('sv.store_type', '=', 'sub_store');
+            })
+            ->leftJoin('mess_client_types as mct', function ($join) {
+                $join->on('sv.client_type_pk', '=', 'mct.id')
+                    ->whereNotIn('sv.client_type_slug', ['ot', 'course']);
+            })
+            ->leftJoin('course_master as cm', function ($join) {
+                $join->on('sv.client_type_pk', '=', 'cm.pk')
+                    ->whereIn('sv.client_type_slug', ['ot', 'course']);
+            })
+            ->whereIn('sv.status', [
+                SellingVoucherDateRangeReport::STATUS_DRAFT,
+                SellingVoucherDateRangeReport::STATUS_FINAL,
+                SellingVoucherDateRangeReport::STATUS_APPROVED,
+            ])
+            ->select([
+                'sri.id as item_pk',
+                'sv.id as report_id',
+                'sri.item_name',
+                'sri.quantity',
+                'sri.return_quantity',
+                'sv.client_name as voucher_client_name',
+                'sv.payment_type',
+                'sv.status',
+                'sv.date_from',
+                'sv.client_type_slug',
+                'mct.client_type as category_client_type',
+                'mct.client_name as category_client_name',
+                'cm.course_name',
+                DB::raw("(CASE
+                    WHEN sv.store_type = 'sub_store' AND mss.sub_store_name IS NOT NULL THEN CONCAT(mss.sub_store_name, ' (Sub-Store)')
+                    WHEN sv.store_type = 'store' AND ms.store_name IS NOT NULL THEN ms.store_name
+                    ELSE 'N/A' END) as resolved_store_name"),
+                DB::raw('(SELECT MIN(i2.id) FROM sv_date_range_report_items i2 WHERE i2.sv_date_range_report_id = sv.id) as first_item_pk'),
+            ]);
+
+        $storeFilters = collect((array) $request->input('store', []))
+            ->filter(fn ($value) => $value !== null && $value !== '')
+            ->map(fn ($value) => (string) $value)
+            ->values();
+        if ($storeFilters->isNotEmpty()) {
+            $storeIds = $storeFilters
+                ->reject(fn ($value) => str_starts_with($value, 'sub_'))
+                ->map(fn ($value) => (int) $value)
+                ->filter(fn ($value) => $value > 0)
+                ->values();
+
+            $subStoreIds = $storeFilters
+                ->filter(fn ($value) => str_starts_with($value, 'sub_'))
+                ->map(fn ($value) => (int) str_replace('sub_', '', $value))
+                ->filter(fn ($value) => $value > 0)
+                ->values();
+
+            $q->where(function ($storeQuery) use ($storeIds, $subStoreIds) {
+                if ($storeIds->isNotEmpty()) {
+                    $storeQuery->where(function ($nestedQuery) use ($storeIds) {
+                        $nestedQuery->where('sv.store_type', 'store')
+                            ->whereIn('sv.store_id', $storeIds->all());
+                    });
+                }
+
+                if ($subStoreIds->isNotEmpty()) {
+                    $method = $storeIds->isNotEmpty() ? 'orWhere' : 'where';
+                    $storeQuery->{$method}(function ($nestedQuery) use ($subStoreIds) {
+                        $nestedQuery->where('sv.store_type', 'sub_store')
+                            ->whereIn('sv.store_id', $subStoreIds->all());
+                    });
+                }
+            });
+        }
+
+        $statusFilters = collect((array) $request->input('status', []))
+            ->filter(fn ($value) => $value !== null && $value !== '')
+            ->map(fn ($value) => (string) $value)
+            ->values();
+        if ($statusFilters->isNotEmpty()) {
+            $q->whereIn('sv.status', $statusFilters->all());
+        }
+
+        $clientTypeSlug = (string) $request->input('client_type', '');
+        if ($clientTypeSlug !== '' && in_array($clientTypeSlug, array_keys(ClientType::clientTypes()), true)) {
+            $q->where('sv.client_type_slug', $clientTypeSlug);
+        }
+
+        if ($request->filled('start_date') && $request->filled('end_date')) {
+            $q->whereBetween('sv.date_from', [$request->start_date, $request->end_date]);
+        } elseif ($request->filled('start_date')) {
+            $q->whereDate('sv.date_from', '>=', $request->start_date);
+        } elseif ($request->filled('end_date')) {
+            $q->whereDate('sv.date_from', '<=', $request->end_date);
+        }
+
+        $returnStatus = strtolower(trim((string) $request->input('return_status', '')));
+        if ($returnStatus === 'returned') {
+            $q->where(DB::raw('COALESCE(sri.return_quantity, 0)'), '>', 0);
+        } elseif ($returnStatus === 'not_returned') {
+            $q->where(function ($rq) {
+                $rq->whereNull('sri.return_quantity')->orWhere('sri.return_quantity', '<=', 0);
+            });
+        }
+
+        return $q;
+    }
+
+    private function applySellingVoucherDateRangeItemSearch(Builder $q, string $search): void
+    {
+        $search = trim($search);
+        if ($search === '') {
+            return;
+        }
+
+        $term = '%' . addcslashes($search, '%_\\') . '%';
+        $needle = strtolower($search);
+
+        $q->where(function ($w) use ($term, $needle, $search) {
+            $w->where('sri.item_name', 'like', $term)
+                ->orWhere('sv.client_name', 'like', $term)
+                ->orWhere('mct.client_name', 'like', $term)
+                ->orWhere('cm.course_name', 'like', $term)
+                ->orWhere('ms.store_name', 'like', $term)
+                ->orWhere('mss.sub_store_name', 'like', $term)
+                ->orWhereRaw(
+                    '(CASE
+                        WHEN sv.client_type_slug IN (?, ?) THEN ?
+                        ELSE COALESCE(mct.client_type, sv.client_type_slug, ?)
+                    END) LIKE ?',
+                    ['ot', 'course', 'course', '', $term]
+                );
+
+            if (is_numeric($search)) {
+                $w->orWhere('sri.quantity', 'like', $term)->orWhere('sri.return_quantity', 'like', $term);
+            }
+
+            if (str_contains($needle, 'credit')) {
+                $w->orWhere('sv.payment_type', 1);
+            }
+            if (str_contains($needle, 'cash')) {
+                $w->orWhere('sv.payment_type', 0);
+            }
+            if (str_contains($needle, 'upi') || str_contains($needle, 'online')) {
+                $w->orWhere('sv.payment_type', 2);
+            }
+            if (str_contains($needle, 'pending')) {
+                $w->orWhere('sv.status', SellingVoucherDateRangeReport::STATUS_DRAFT);
+            }
+            if (str_contains($needle, 'approv')) {
+                $w->orWhere('sv.status', SellingVoucherDateRangeReport::STATUS_APPROVED);
+            }
+            if (str_contains($needle, 'final')) {
+                $w->orWhere('sv.status', SellingVoucherDateRangeReport::STATUS_FINAL);
+            }
+            if (str_contains($needle, 'return')) {
+                $w->orWhere(DB::raw('COALESCE(sri.return_quantity, 0)'), '>', 0);
+            }
+        });
+    }
+
+    /**
+     * @param  \stdClass  $row
+     * @return array<int, string>
+     */
+    private function buildSellingVoucherDateRangeDatatableRow(\stdClass $row, int $serial, bool $canDeleteSellingVoucherDateRange): array
+    {
+        $reportId = (int) $row->report_id;
+        $itemPk = (int) $row->item_pk;
+        $firstItemPk = (int) ($row->first_item_pk ?? 0);
+        $isFirstItem = $itemPk > 0 && $firstItemPk > 0 && $itemPk === $firstItemPk;
+        $rq = isset($row->return_quantity) ? (float) $row->return_quantity : 0.0;
+        $status = isset($row->status) ? (int) $row->status : -1;
+        $paymentType = isset($row->payment_type) ? (int) $row->payment_type : -1;
+
+        $clientTypeLabel = trim((string) ($row->category_client_type ?? ''));
+        if ($clientTypeLabel === '') {
+            $clientTypeLabel = trim((string) ($row->client_type_slug ?? ''));
+        }
+        $clientTypeLabel = $clientTypeLabel !== '' ? ucfirst($clientTypeLabel) : '—';
+
+        $displayClientName = '—';
+        if (in_array((string) ($row->client_type_slug ?? ''), ['ot', 'course'], true)) {
+            $displayClientName = trim((string) ($row->course_name ?? ''));
+        } else {
+            $displayClientName = trim((string) ($row->category_client_name ?? ''));
+        }
+        if ($displayClientName === '') {
+            $displayClientName = '—';
+        }
+
+        $paymentHtml = '<span class="badge text-bg-light border border-light-subtle fw-semibold">—</span>';
+        if ($paymentType === 1) {
+            $paymentHtml = '<span class="badge text-bg-light border border-light-subtle fw-semibold">Credit</span>';
+        } elseif ($paymentType === 0) {
+            $paymentHtml = '<span class="badge text-bg-light border border-light-subtle fw-semibold">Cash</span>';
+        } elseif ($paymentType === 2) {
+            $paymentHtml = '<span class="badge text-bg-light border border-light-subtle fw-semibold">UPI</span>';
+        }
+
+        $statusHtml = '<span class="badge rounded-1 text-bg-secondary">Final</span>';
+        if ($status === 0) {
+            $statusHtml = '<span class="badge rounded-1 text-bg-warning">Pending</span>';
+        } elseif ($status === 2) {
+            $statusHtml = '<span class="badge rounded-1 text-bg-success">Approved</span>';
+        } elseif ($status === 4) {
+            $statusHtml = '<span class="badge rounded-1 text-bg-primary">Completed</span>';
+        }
+
+        $requestDate = '—';
+        if (!empty($row->date_from)) {
+            try {
+                $requestDate = Carbon::parse($row->date_from)->format('d/m/Y');
+            } catch (\Exception $e) {
+                $requestDate = '—';
+            }
+        }
+
+        $returnHtml = '<div class="d-flex flex-wrap align-items-center gap-1">';
+        if ($rq > 0) {
+            $returnHtml .= '<span class="badge rounded-1 text-bg-info">Returned</span>';
+        }
+        if ($isFirstItem) {
+            $returnHtml .= '<button type="button" class="btn btn-sm btn-outline-secondary btn-return-report d-inline-flex align-items-center gap-1 rounded-2 px-2" data-report-id="'.e((string) $reportId).'" title="Return"><i class="material-symbols-rounded" style="font-size: 1rem;">assignment_return</i><span>Return</span></button>';
+        }
+        $returnHtml .= '</div>';
+
+        $actionHtml = '';
+        if ($isFirstItem) {
+            $editDisabled = $status === SellingVoucherDateRangeReport::STATUS_APPROVED ? ' disabled' : '';
+            $editTitle = $status === SellingVoucherDateRangeReport::STATUS_APPROVED
+                ? e('Edit is disabled for approved voucher')
+                : 'Edit';
+
+            $actionHtml = '<div class="d-inline-flex flex-wrap align-items-center justify-content-end gap-1">'
+                .'<button type="button" class="btn btn-sm btn-outline-primary btn-view-report voucher-icon-btn rounded-2" data-report-id="'.e((string) $reportId).'" title="View"><i class="material-symbols-rounded">visibility</i></button>'
+                .'<button type="button" class="btn btn-sm btn-outline-warning btn-edit-report voucher-icon-btn rounded-2" data-report-id="'.e((string) $reportId).'" title="'.$editTitle.'"'.$editDisabled.'><i class="material-symbols-rounded">edit</i></button>';
+
+            if ($canDeleteSellingVoucherDateRange) {
+                $destroyUrl = route('admin.mess.selling-voucher-date-range.destroy', $reportId);
+                $actionHtml .= '<form action="'.e($destroyUrl).'" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this report?\');">'
+                    .csrf_field()
+                    .method_field('DELETE')
+                    .'<button type="submit" class="btn btn-sm btn-outline-danger voucher-icon-btn rounded-2" title="Delete"><i class="material-symbols-rounded">delete</i></button></form>';
+            }
+
+            $actionHtml .= '</div>';
+        }
+
+        return [
+            '<span class="text-body-secondary">'.e((string) $serial).'</span>',
+            '<span class="cell-item-name fw-semibold text-wrap text-break">'.e((string) ($row->item_name ?? '—')).'</span>',
+            '<span class="text-end font-monospace d-block">'.e((string) ($row->quantity ?? 0)).'</span>',
+            '<span class="text-end font-monospace d-block">'.e((string) ($row->return_quantity ?? 0)).'</span>',
+            '<span class="text-wrap text-break">'.e((string) ($row->resolved_store_name ?? 'N/A')).'</span>',
+            e($clientTypeLabel),
+            '<span class="text-wrap text-break">'.e($displayClientName).'</span>',
+            '<span class="text-wrap text-break">'.e((string) ($row->voucher_client_name ?? '—')).'</span>',
+            $paymentHtml,
+            '<span class="text-body-secondary">'.e($requestDate).'</span>',
+            '<div class="text-center">'.$statusHtml.'</div>',
+            $returnHtml,
+            '<div class="text-end pe-3">'.$actionHtml.'</div>',
+        ];
     }
 
     /**
