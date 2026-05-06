@@ -52,12 +52,12 @@ class ProcessMessBillsEmployeeController extends Controller
         
         // Handle multiselect for client_type (employee/ot/course/other)
         $clientTypeRaw = $request->input('client_type');
-        $clientTypes = is_array($clientTypeRaw) ? $clientTypeRaw : ($clientTypeRaw ? [$clientTypeRaw] : []);
+        $clientTypes = $this->normalizeFilterArrayValues($clientTypeRaw);
         $clientType = $clientTypes[0] ?? null; // For backward compatibility
         
         // Handle multiselect for client_type_pk
         $clientTypePkRaw = $request->input('client_type_pk');
-        $clientTypePks = is_array($clientTypePkRaw) ? $clientTypePkRaw : ($clientTypePkRaw ? [$clientTypePkRaw] : []);
+        $clientTypePks = $this->normalizeFilterArrayValues($clientTypePkRaw);
         $clientTypePk = $clientTypePks[0] ?? null; // For backward compatibility
         
         $buyerNames = $this->normalizeBuyerNames($request->input('buyer_name'));
@@ -2061,6 +2061,26 @@ class ProcessMessBillsEmployeeController extends Controller
 
         $name = trim((string) ($value ?? ''));
         return $name !== '' ? [$name] : [];
+    }
+
+    /**
+     * Normalize filter input from single or multi-select controls by dropping blank placeholders.
+     *
+     * @param  mixed  $value
+     * @return array<int, string>
+     */
+    private function normalizeFilterArrayValues($value): array
+    {
+        if (is_array($value)) {
+            return collect($value)
+                ->map(fn ($item) => trim((string) $item))
+                ->filter(fn ($item) => $item !== '')
+                ->values()
+                ->all();
+        }
+
+        $single = trim((string) ($value ?? ''));
+        return $single !== '' ? [$single] : [];
     }
 
     private function applyBuyerNameFilter($query, array $buyerNames): void
