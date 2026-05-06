@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Exports\VehiclePassExport;
 use App\Support\IdCardSecurityMapper;
 use App\Models\VehiclePassTWApply;
+use App\Models\VehiclePassFWApply;
 use App\Models\SecVehicleType;
 use App\Models\EmployeeMaster;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -15,6 +16,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
+use Carbon\Carbon;
 
 class VehiclePassController extends Controller
 {
@@ -115,7 +117,9 @@ class VehiclePassController extends Controller
         $sessionPk = $user->user_id ?? $user->pk ?? null;
         $canonical = IdCardSecurityMapper::resolveCanonicalEmployeeMasterPk($sessionPk);
         if ($canonical) {
-            $cap = IdCardSecurityMapper::approvedEmployeeIdCardValidityEnd($canonical, null);
+            $printed = IdCardSecurityMapper::resolvedDisplayIdCardNumberForEmployee($canonical);
+            $cap = IdCardSecurityMapper::effectiveApprovedValidityEndForPrintedIdCardNumber($printed)
+                ?? IdCardSecurityMapper::approvedEmployeeIdCardValidityEnd($canonical, null);
             if ($cap) {
                 $idCardValidityCapYmd = $cap->format('Y-m-d');
             }
@@ -145,18 +149,44 @@ class VehiclePassController extends Controller
             return null;
         }
 
+        $empIdDisplay = $emp->emp_id ?? '';
+        $canonical = IdCardSecurityMapper::resolveCanonicalEmployeeMasterPk((int) $emp->pk);
+        if ($canonical) {
+            $resolvedNo = IdCardSecurityMapper::resolvedDisplayIdCardNumberForEmployee($canonical);
+            if (is_string($resolvedNo) && $resolvedNo !== '') {
+                $empIdDisplay = $resolvedNo;
+            }
+        }
+
         return (object) [
             'pk' => $emp->pk,
             'name' => trim($emp->first_name . ' ' . ($emp->last_name ?? '')),
             'designation' => $emp->designation->designation_name ?? '',
             'department' => $emp->department->department_name ?? '',
-            'emp_id' => $emp->emp_id ?? '',
+            'emp_id' => $empIdDisplay,
         ];
     }
 
     /**
-     * Others applicant: resolve Name, Designation, Department from employee_master only.
-     * Match by employee code (emp_id), or numeric primary key (pk / pk_old).
+     * Prefer security printed ID (same as Duplicate ID / vehicle autofill) over raw employee_master.emp_id for validity caps.
+     */
+    private function printedIdCardNumberForVehiclePassValidityCap(?int $canonicalPk, ?string $employeeIdCardAfterNormalize): ?string
+    {
+        if ($canonicalPk) {
+            $resolved = IdCardSecurityMapper::resolvedDisplayIdCardNumberForEmployee($canonicalPk);
+            if (is_string($resolved) && $resolved !== '') {
+                return $resolved;
+            }
+        }
+        $t = trim((string) ($employeeIdCardAfterNormalize ?? ''));
+
+        return $t !== '' ? $t : null;
+    }
+
+    /**
+     * Others applicant: resolve name / designation / department from the first matching source:
+     * employee_master, security_parm_id_apply (permanent ID applications), optional security_parm_oth_id_apply,
+     * security_con_oth_id_apply (contractual ID applications).
      */
     public function lookupByIdCard(Request $request)
     {
@@ -168,7 +198,41 @@ class VehiclePassController extends Controller
             ], 422);
         }
 
-        $em = DB::table('employee_master as em')
+        $data = $this->vehiclePassLookupEmployeeMasterRow($lookup);
+        if ($data) {
+            return response()->json([
+                'success' => true,
+                'data' => $this->vehiclePassBuildLookupPayloadFromEmployeeJoinRow($data, $lookup),
+            ]);
+        }
+
+        foreach (['security_parm_id_apply', 'security_parm_oth_id_apply'] as $parmTable) {
+            if (! Schema::hasTable($parmTable)) {
+                continue;
+            }
+            $fromParm = $this->vehiclePassLookupFromSecurityParmLikeTable($lookup, $parmTable);
+            if ($fromParm !== null) {
+                return response()->json(['success' => true, 'data' => $fromParm]);
+            }
+        }
+
+        $fromCon = $this->vehiclePassLookupFromSecurityConOthIdApply($lookup);
+        if ($fromCon !== null) {
+            return response()->json(['success' => true, 'data' => $fromCon]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'No record found for this ID in employee master or security ID card applications.',
+        ], 404);
+    }
+
+    /**
+     * @return object|null  pk, first_name, last_name, emp_id, designation_name, department_name
+     */
+    private function vehiclePassLookupEmployeeMasterRow(string $lookup): ?object
+    {
+        return DB::table('employee_master as em')
             ->leftJoin('designation_master as dm', 'dm.pk', '=', 'em.designation_master_pk')
             ->leftJoin('department_master as dept', 'dept.pk', '=', 'em.department_master_pk')
             ->where(function ($q) use ($lookup) {
@@ -191,34 +255,262 @@ class VehiclePassController extends Controller
                 'dept.department_name',
             ])
             ->first();
+    }
 
-        if (! $em) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No employee found for this ID / employee code.',
-            ], 404);
-        }
-
+    /**
+     * @param  object  $em  row from vehiclePassLookupEmployeeMasterRow()
+     */
+    private function vehiclePassBuildLookupPayloadFromEmployeeJoinRow(object $em, string $lookupFallback, ?string $preferredEmployeeIdCard = null): array
+    {
         $name = trim(($em->first_name ?? '') . ' ' . ($em->last_name ?? ''));
         $empCode = $em->emp_id !== null && (string) $em->emp_id !== ''
             ? (string) $em->emp_id
-            : (string) $lookup;
+            : (string) $lookupFallback;
+        if ($preferredEmployeeIdCard !== null && $preferredEmployeeIdCard !== '') {
+            $empCode = $preferredEmployeeIdCard;
+        }
 
         $canonicalPk = IdCardSecurityMapper::resolveCanonicalEmployeeMasterPk((int) $em->pk);
-        $idCardCap = $canonicalPk ? IdCardSecurityMapper::approvedEmployeeIdCardValidityEnd($canonicalPk, null) : null;
+        $displayPrinted = ($preferredEmployeeIdCard !== null && $preferredEmployeeIdCard !== '') ? $preferredEmployeeIdCard : (string) $empCode;
+        $idCardCap = IdCardSecurityMapper::effectiveApprovedValidityEndForPrintedIdCardNumber($displayPrinted)
+            ?? ($canonicalPk ? IdCardSecurityMapper::approvedEmployeeIdCardValidityEnd($canonicalPk, null) : null);
 
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'employee_id_card' => $empCode,
-                'applicant_name' => $name,
-                'designation' => (string) ($em->designation_name ?? ''),
-                'department' => (string) ($em->department_name ?? ''),
-                'emp_master_pk' => (int) $em->pk,
-                'emp_id' => $em->emp_id !== null && (string) $em->emp_id !== '' ? (string) $em->emp_id : null,
-                'id_card_valid_to' => $idCardCap ? $idCardCap->format('Y-m-d') : null,
-            ],
-        ]);
+        return [
+            'employee_id_card' => $empCode,
+            'applicant_name' => $name,
+            'designation' => (string) ($em->designation_name ?? ''),
+            'department' => (string) ($em->department_name ?? ''),
+            'emp_master_pk' => (int) $em->pk,
+            'emp_id' => $em->emp_id !== null && (string) $em->emp_id !== '' ? (string) $em->emp_id : null,
+            'id_card_valid_to' => $idCardCap ? $idCardCap->format('Y-m-d') : null,
+        ];
+    }
+
+    /**
+     * Permanent / parm-type ID apply tables: match id_card_no or emp_id_apply, prefer linked employee_master.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function vehiclePassLookupFromSecurityParmLikeTable(string $lookup, string $table): ?array
+    {
+        $parts = [];
+        $bindings = [];
+        if (Schema::hasColumn($table, 'id_card_no')) {
+            $parts[] = '(id_card_no = ? OR TRIM(COALESCE(id_card_no, "")) = ?)';
+            $bindings[] = $lookup;
+            $bindings[] = trim($lookup);
+        }
+        if (Schema::hasColumn($table, 'emp_id_apply')) {
+            $parts[] = '(emp_id_apply = ? OR TRIM(COALESCE(emp_id_apply, "")) = ?)';
+            $bindings[] = $lookup;
+            $bindings[] = trim($lookup);
+        }
+        if ($parts === []) {
+            return null;
+        }
+
+        $orderCol = 'created_date';
+        if (! Schema::hasColumn($table, 'created_date')) {
+            $orderCol = Schema::hasColumn($table, 'pk') ? 'pk' : 'emp_id_apply';
+        }
+
+        $row = DB::table($table)
+            ->whereRaw('('.implode(' OR ', $parts).')', $bindings)
+            ->orderByDesc($orderCol)
+            ->first();
+
+        if (! $row) {
+            return null;
+        }
+
+        $displayId = null;
+        if (Schema::hasColumn($table, 'id_card_no') && ! empty($row->id_card_no)) {
+            $displayId = trim((string) $row->id_card_no);
+        }
+        if (($displayId === null || $displayId === '') && Schema::hasColumn($table, 'emp_id_apply') && ! empty($row->emp_id_apply)) {
+            $displayId = trim((string) $row->emp_id_apply);
+        }
+
+        $empPk = Schema::hasColumn($table, 'employee_master_pk') ? (int) ($row->employee_master_pk ?? 0) : 0;
+        if ($empPk > 0) {
+            $em = DB::table('employee_master as em')
+                ->leftJoin('designation_master as dm', 'dm.pk', '=', 'em.designation_master_pk')
+                ->leftJoin('department_master as dept', 'dept.pk', '=', 'em.department_master_pk')
+                ->where('em.pk', $empPk)
+                ->select([
+                    'em.pk',
+                    'em.first_name',
+                    'em.last_name',
+                    'em.emp_id',
+                    'dm.designation_name',
+                    'dept.department_name',
+                ])
+                ->first();
+            if ($em) {
+                return $this->vehiclePassBuildLookupPayloadFromEmployeeJoinRow(
+                    $em,
+                    $lookup,
+                    ($displayId !== null && $displayId !== '') ? $displayId : null
+                );
+            }
+        }
+
+        if (Schema::hasColumn($table, 'emp_id_apply') && ! empty($row->emp_id_apply)) {
+            $em = $this->vehiclePassLookupEmployeeMasterRow(trim((string) $row->emp_id_apply));
+            if ($em) {
+                return $this->vehiclePassBuildLookupPayloadFromEmployeeJoinRow(
+                    $em,
+                    $lookup,
+                    ($displayId !== null && $displayId !== '') ? $displayId : null
+                );
+            }
+        }
+
+        $designation = '';
+        if (Schema::hasColumn($table, 'designation_pk') && ! empty($row->designation_pk)) {
+            $designation = (string) (DB::table('designation_master')->where('pk', $row->designation_pk)->value('designation_name') ?? '');
+        }
+
+        $name = Schema::hasColumn($table, 'employee_name')
+            ? trim((string) ($row->employee_name ?? ''))
+            : '';
+
+        $displayForCap = ($displayId !== null && $displayId !== '') ? $displayId : $lookup;
+        $idCardCap = IdCardSecurityMapper::effectiveApprovedValidityEndForPrintedIdCardNumber($displayForCap);
+        if ($idCardCap === null && Schema::hasColumn($table, 'card_valid_to') && ! empty($row->card_valid_to)) {
+            try {
+                $idCardCap = Carbon::parse($row->card_valid_to)->startOfDay();
+            } catch (\Throwable $e) {
+                $idCardCap = null;
+            }
+        }
+
+        if ($name === '' && $designation === '' && $idCardCap === null) {
+            return null;
+        }
+
+        return [
+            'employee_id_card' => ($displayId !== null && $displayId !== '') ? $displayId : $lookup,
+            'applicant_name' => $name,
+            'designation' => $designation,
+            'department' => '',
+            'emp_master_pk' => $empPk > 0 ? $empPk : null,
+            'emp_id' => ($displayId !== null && $displayId !== '') ? $displayId : null,
+            'id_card_valid_to' => $idCardCap ? $idCardCap->format('Y-m-d') : null,
+        ];
+    }
+
+    /**
+     * Contractual other ID applications (security_con_oth_id_apply).
+     *
+     * @return array<string, mixed>|null
+     */
+    private function vehiclePassLookupFromSecurityConOthIdApply(string $lookup): ?array
+    {
+        if (! Schema::hasTable('security_con_oth_id_apply')) {
+            return null;
+        }
+
+        $conParts = [];
+        $conBindings = [];
+        if (Schema::hasColumn('security_con_oth_id_apply', 'id_card_no')) {
+            $conParts[] = '(id_card_no = ? OR TRIM(COALESCE(id_card_no, "")) = ?)';
+            $conBindings[] = $lookup;
+            $conBindings[] = trim($lookup);
+        }
+        if (Schema::hasColumn('security_con_oth_id_apply', 'emp_id_apply')) {
+            $conParts[] = '(emp_id_apply = ? OR TRIM(COALESCE(emp_id_apply, "")) = ?)';
+            $conBindings[] = $lookup;
+            $conBindings[] = trim($lookup);
+        }
+        if ($conParts === []) {
+            return null;
+        }
+
+        $conOrder = Schema::hasColumn('security_con_oth_id_apply', 'created_date') ? 'created_date' : 'pk';
+
+        $con = DB::table('security_con_oth_id_apply')
+            ->whereRaw('('.implode(' OR ', $conParts).')', $conBindings)
+            ->orderByDesc($conOrder)
+            ->first();
+
+        if (! $con) {
+            return null;
+        }
+
+        $displayId = null;
+        if (Schema::hasColumn('security_con_oth_id_apply', 'id_card_no') && ! empty($con->id_card_no)) {
+            $displayId = (string) $con->id_card_no;
+        }
+        if ($displayId === null && Schema::hasColumn('security_con_oth_id_apply', 'emp_id_apply') && ! empty($con->emp_id_apply)) {
+            $displayId = (string) $con->emp_id_apply;
+        }
+
+        $empPk = Schema::hasColumn('security_con_oth_id_apply', 'employee_master_pk') ? (int) ($con->employee_master_pk ?? 0) : 0;
+        if ($empPk > 0) {
+            $em = DB::table('employee_master as em')
+                ->leftJoin('designation_master as dm', 'dm.pk', '=', 'em.designation_master_pk')
+                ->leftJoin('department_master as dept', 'dept.pk', '=', 'em.department_master_pk')
+                ->where('em.pk', $empPk)
+                ->select([
+                    'em.pk',
+                    'em.first_name',
+                    'em.last_name',
+                    'em.emp_id',
+                    'dm.designation_name',
+                    'dept.department_name',
+                ])
+                ->first();
+            if ($em) {
+                return $this->vehiclePassBuildLookupPayloadFromEmployeeJoinRow(
+                    $em,
+                    $lookup,
+                    ($displayId !== null && $displayId !== '') ? $displayId : null
+                );
+            }
+        }
+
+        if (Schema::hasColumn('security_con_oth_id_apply', 'emp_id_apply') && ! empty($con->emp_id_apply)) {
+            $em = $this->vehiclePassLookupEmployeeMasterRow(trim((string) $con->emp_id_apply));
+            if ($em) {
+                return $this->vehiclePassBuildLookupPayloadFromEmployeeJoinRow(
+                    $em,
+                    $lookup,
+                    ($displayId !== null && $displayId !== '') ? $displayId : null
+                );
+            }
+        }
+
+        $name = Schema::hasColumn('security_con_oth_id_apply', 'employee_name')
+            ? trim((string) ($con->employee_name ?? ''))
+            : '';
+        $designation = Schema::hasColumn('security_con_oth_id_apply', 'designation_name')
+            ? (string) ($con->designation_name ?? '')
+            : '';
+        $department = '';
+        if (Schema::hasColumn('security_con_oth_id_apply', 'section') && ! empty($con->section) && Schema::hasTable('department_master')) {
+            $department = (string) (DB::table('department_master')->where('pk', $con->section)->value('department_name') ?? '');
+        }
+
+        $displayForCap = ($displayId !== null && $displayId !== '') ? $displayId : $lookup;
+        $idCardCap = IdCardSecurityMapper::effectiveApprovedValidityEndForPrintedIdCardNumber($displayForCap);
+        if ($idCardCap === null && Schema::hasColumn('security_con_oth_id_apply', 'card_valid_to') && ! empty($con->card_valid_to)) {
+            try {
+                $idCardCap = Carbon::parse($con->card_valid_to)->startOfDay();
+            } catch (\Throwable $e) {
+                $idCardCap = null;
+            }
+        }
+
+        return [
+            'employee_id_card' => ($displayId !== null && $displayId !== '') ? $displayId : $lookup,
+            'applicant_name' => $name,
+            'designation' => $designation,
+            'department' => $department,
+            'emp_master_pk' => $empPk > 0 ? $empPk : null,
+            'emp_id' => ($displayId !== null && $displayId !== '') ? $displayId : null,
+            'id_card_valid_to' => $idCardCap ? $idCardCap->format('Y-m-d') : null,
+        ];
     }
 
     public function store(Request $request)
@@ -272,8 +564,17 @@ class VehiclePassController extends Controller
         $canonicalForCap = null;
         if (in_array($applicantType, ['employee', 'government_vehicle'], true)) {
             $canonicalForCap = IdCardSecurityMapper::resolveCanonicalEmployeeMasterPk($employeePk);
-        } elseif ($applicantType === 'others' && $empMasterPk) {
-            $canonicalForCap = IdCardSecurityMapper::resolveCanonicalEmployeeMasterPk((int) $empMasterPk);
+        } elseif ($applicantType === 'others') {
+            $othersEmpPk = isset($validated['emp_master_pk']) ? (int) $validated['emp_master_pk'] : 0;
+            if ($othersEmpPk > 0) {
+                $canonicalForCap = IdCardSecurityMapper::resolveCanonicalEmployeeMasterPk($othersEmpPk);
+            }
+            if (! $canonicalForCap) {
+                $idCardRaw = trim((string) ($validated['employee_id_card'] ?? ''));
+                if ($idCardRaw !== '') {
+                    $canonicalForCap = IdCardSecurityMapper::resolveCanonicalFromPrintedIdCardNumber($idCardRaw);
+                }
+            }
         }
         if ($canonicalForCap) {
             IdCardSecurityMapper::assertPassValidityWithinApprovedEmployeeIdCard(
@@ -282,8 +583,17 @@ class VehiclePassController extends Controller
                 $validated['veh_card_valid_from'],
                 $validated['vech_card_valid_to'],
                 'veh_card_valid_from',
-                'vech_card_valid_to'
+                'vech_card_valid_to',
+                $this->printedIdCardNumberForVehiclePassValidityCap($canonicalForCap, $employeeIdCard)
             );
+        }
+
+        if ($employeePk && $this->applicantHasBlockingDuplicateVehicleNumber((int) $employeePk, $validated['vehicle_no'])) {
+            return redirect()->back()
+                ->withInput()
+                ->withErrors([
+                    'vehicle_no' => 'You already have a pending or approved request for this vehicle number. You can apply again only after that request is rejected.',
+                ]);
         }
 
         $govVeh = $applicantType === 'government_vehicle' ? 1 : 0;
@@ -369,7 +679,12 @@ class VehiclePassController extends Controller
             ? IdCardSecurityMapper::resolveCanonicalEmployeeMasterPk((int) $vehiclePass->emp_master_pk)
             : null;
         if ($capPk) {
-            $cap = IdCardSecurityMapper::approvedEmployeeIdCardValidityEnd($capPk, null);
+            $printed = trim((string) ($vehiclePass->employee_id_card ?? ''));
+            if ($printed === '') {
+                $printed = IdCardSecurityMapper::resolvedDisplayIdCardNumberForEmployee($capPk) ?? '';
+            }
+            $cap = IdCardSecurityMapper::effectiveApprovedValidityEndForPrintedIdCardNumber($printed)
+                ?? IdCardSecurityMapper::approvedEmployeeIdCardValidityEnd($capPk, null);
             if ($cap) {
                 $idCardValidityCapYmd = $cap->format('Y-m-d');
             }
@@ -549,8 +864,17 @@ class VehiclePassController extends Controller
         $canonicalForCap = null;
         if (in_array($applicantType, ['employee', 'government_vehicle'], true)) {
             $canonicalForCap = IdCardSecurityMapper::resolveCanonicalEmployeeMasterPk($employeePk);
-        } elseif ($applicantType === 'others' && $empMasterPk) {
-            $canonicalForCap = IdCardSecurityMapper::resolveCanonicalEmployeeMasterPk((int) $empMasterPk);
+        } elseif ($applicantType === 'others') {
+            $othersEmpPk = isset($validated['emp_master_pk']) ? (int) $validated['emp_master_pk'] : 0;
+            if ($othersEmpPk > 0) {
+                $canonicalForCap = IdCardSecurityMapper::resolveCanonicalEmployeeMasterPk($othersEmpPk);
+            }
+            if (! $canonicalForCap) {
+                $idCardRaw = trim((string) ($validated['employee_id_card'] ?? ''));
+                if ($idCardRaw !== '') {
+                    $canonicalForCap = IdCardSecurityMapper::resolveCanonicalFromPrintedIdCardNumber($idCardRaw);
+                }
+            }
         }
         if ($canonicalForCap) {
             IdCardSecurityMapper::assertPassValidityWithinApprovedEmployeeIdCard(
@@ -559,8 +883,17 @@ class VehiclePassController extends Controller
                 $validated['veh_card_valid_from'],
                 $validated['vech_card_valid_to'],
                 'veh_card_valid_from',
-                'vech_card_valid_to'
+                'vech_card_valid_to',
+                $this->printedIdCardNumberForVehiclePassValidityCap($canonicalForCap, $employeeIdCard)
             );
+        }
+
+        if ($employeePk && $this->applicantHasBlockingDuplicateVehicleNumber((int) $employeePk, $validated['vehicle_no'], $vehiclePass->vehicle_tw_pk)) {
+            return redirect()->back()
+                ->withInput()
+                ->withErrors([
+                    'vehicle_no' => 'You already have a pending or approved request for this vehicle number. You can apply again only after that request is rejected.',
+                ]);
         }
 
         $govVeh = $applicantType === 'government_vehicle' ? 1 : 0;
@@ -653,6 +986,67 @@ class VehiclePassController extends Controller
      * dono tables me vehicle_req_id UNIQUE hona chahiye aur
      * last row ke vehicle_req_id se +1 hokr next request banega.
      */
+    /**
+     * Normalize plate for duplicate detection (case, spaces, hyphens ignored).
+     */
+    private function normalizeVehicleNumberForDuplicateCheck(string $vehicleNo): string
+    {
+        return strtoupper(preg_replace('/[\s\-]+/', '', trim($vehicleNo)));
+    }
+
+    /**
+     * Employee master pk / pk_old values that may appear in veh_created_by for the logged-in user.
+     *
+     * @return list<int>
+     */
+    private function vehiclePassDuplicateCheckCreatedByKeys(int $employeePk): array
+    {
+        $keys = [$employeePk];
+        $em = EmployeeMaster::query()
+            ->where('pk', $employeePk)
+            ->orWhere('pk_old', $employeePk)
+            ->first(['pk', 'pk_old']);
+        if ($em) {
+            $keys[] = (int) $em->pk;
+            if (! empty($em->pk_old)) {
+                $keys[] = (int) $em->pk_old;
+            }
+        }
+
+        return array_values(array_unique(array_filter($keys)));
+    }
+
+    /**
+     * True when this submitter already has another TW or FW pass for the same vehicle number
+     * in Pending (1) or Approved (2). Rejected (3) does not block a new request.
+     */
+    private function applicantHasBlockingDuplicateVehicleNumber(int $employeePk, string $vehicleNo, ?string $excludeVehicleTwPk = null): bool
+    {
+        $createdByKeys = $this->vehiclePassDuplicateCheckCreatedByKeys($employeePk);
+        $norm = $this->normalizeVehicleNumberForDuplicateCheck($vehicleNo);
+
+        $twBlocks = VehiclePassTWApply::query()
+            ->whereIn('veh_created_by', $createdByKeys)
+            ->whereIn('vech_card_status', [1, 2])
+            ->when($excludeVehicleTwPk, fn ($q) => $q->where('vehicle_tw_pk', '!=', $excludeVehicleTwPk))
+            ->pluck('vehicle_no')
+            ->contains(fn ($stored) => $this->normalizeVehicleNumberForDuplicateCheck((string) $stored) === $norm);
+
+        if ($twBlocks) {
+            return true;
+        }
+
+        if (! Schema::hasTable('vehicle_pass_fw_apply')) {
+            return false;
+        }
+
+        return VehiclePassFWApply::query()
+            ->whereIn('veh_created_by', $createdByKeys)
+            ->whereIn('vech_card_status', [1, 2])
+            ->pluck('vehicle_no')
+            ->contains(fn ($stored) => $this->normalizeVehicleNumberForDuplicateCheck((string) $stored) === $norm);
+    }
+
     private function generateVehicleReqId($vehicleTypePk)
     {
         // Get max vehicle_req_id from two-wheeler table
