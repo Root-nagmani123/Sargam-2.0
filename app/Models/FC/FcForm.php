@@ -58,5 +58,16 @@ class FcForm extends Model
 
         return $this->where('id', $id)->firstOrFail();
     }
+
+    /**
+     * Active Foundation Course registration form used by the dynamic trainee UI (/fc-reg/forms/…).
+     */
+    public static function activeRegistrationDynamicForm(): ?self
+    {
+        return static::query()
+            ->where('form_slug', 'fc-registration')
+            ->where('is_active', true)
+            ->first();
+    }
 }
 

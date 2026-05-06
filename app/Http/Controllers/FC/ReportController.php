@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\FC;
 
 use App\Http\Controllers\Controller;
-use App\Services\FC\FcStudentRegistrationPdfBuilder;
+use App\Services\FC\RegistrationService;
 use App\Models\FC\{
     StudentMasterFirst, StudentMasterSecond, StudentMaster,
     SessionMaster, ServiceMaster, StateMaster, CategoryMaster,
@@ -117,7 +117,7 @@ class ReportController extends Controller
         $step2        = StudentMasterSecond::where('username',$username)->with(['category','religion','permState','fatherProfession'])->first();
         $master       = StudentMaster::where('username',$username)->first();
         $bank         = NewRegistrationBankDetailsMaster::where('username',$username)->first();
-        $documents    = FcJoiningRelatedDocumentsDetailsMaster::where('username',$username)->with('documentMaster')->get();
+        $documents = app(RegistrationService::class)->joiningDocumentChecklistForDisplay($username);
         $confirmation = StudentConfirmMaster::where('username',$username)->first();
         $qualifications = DB::table('student_master_qualification_details')
                            ->leftJoin('qualification_masters','student_master_qualification_details.qualification_id','=','qualification_masters.id')
@@ -135,7 +135,6 @@ class ReportController extends Controller
                           ->where('student_master_language_knowns.username',$username)
                           ->select('student_master_language_knowns.*','language_masters.language_name')
                           ->get();
-
         abort_unless($step1, 404, "Student '{$username}' not found.");
 
         return view('fc.report.student-detail', compact(
@@ -176,18 +175,9 @@ class ReportController extends Controller
             ->where('student_master_language_knowns.username', $username)
             ->select('student_master_language_knowns.*', 'language_masters.language_name')
             ->get();
-
-        $builder = new FcStudentRegistrationPdfBuilder(
-            $step1,
-            $step2,
-            $master,
-            $bank,
-            collect($qualifications),
-            collect($employments),
-            collect($languages),
-            $username,
+        $sections = $this->fcStudentPdfSanitizeSections(
+            app(RegistrationService::class)->buildPdfSectionsFromFormDefinition($username)
         );
-        $sections = $this->fcStudentPdfSanitizeSections($builder->sections());
         $printedAt = $this->fcPdfSanitizeText(now()->format('d/m/Y H:i'));
         $photoDataUri = $this->fcRegistrationPhotoDataUri($step1->photo_path);
 
