@@ -849,10 +849,14 @@ class ProcessMessBillsEmployeeController extends Controller
                         'issue_date' => $itemIssueDate ?: $purchaseDateStr,
                     ];
                 }
-                if ($dateMin === null && $dateMax === null && $b->issue_date) {
-                    $d = $b->issue_date->format('Y-m-d');
-                    $dateMin = $d;
-                    $dateMax = $d;
+                if ($b->issue_date) {
+                    $billIssueYmd = $b->issue_date->format('Y-m-d');
+                    if ($dateMin === null || $billIssueYmd < $dateMin) {
+                        $dateMin = $billIssueYmd;
+                    }
+                    if ($dateMax === null || $billIssueYmd > $dateMax) {
+                        $dateMax = $billIssueYmd;
+                    }
                 }
                 // Capture course name once (for OT / Course types)
                 if ($courseName === null) {
