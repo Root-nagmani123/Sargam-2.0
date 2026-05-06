@@ -303,7 +303,7 @@
                                 <td style="font-size:11px;">{{ $doc->remarks ?? '—' }}</td>
                             </tr>
                         @empty
-                            <tr><td colspan="6" class="text-center text-muted py-2">No documents uploaded yet.</td></tr>
+                            <tr><td colspan="6" class="text-center text-muted py-2">No joining document types are configured in the master checklist, or none are active.</td></tr>
                         @endforelse
                         </tbody>
                     </table>

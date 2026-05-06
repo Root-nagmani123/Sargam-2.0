@@ -89,22 +89,34 @@ class FcRegistrationIntentService
     public function redirectAfterFcWebLogin(?int $formId, ?int $setAt): RedirectResponse
     {
         if ($formId === null || $formId < 1) {
-            return redirect()->route('fc-reg.dashboard')
-                ->with('success', 'Login successful!');
+            return $this->redirectTraineeHome()->with('success', 'Login successful!');
         }
 
         if ($setAt !== null && (now()->getTimestamp() - $setAt) > self::TTL_SECONDS) {
-            return redirect()->route('fc-reg.dashboard')
+            return $this->redirectTraineeHome()
                 ->with('warning', 'Your programme link has expired. You can continue from your dashboard or open a fresh link from the academy.');
         }
 
         $form = FcForm::query()->whereKey($formId)->where('is_active', true)->first();
         if (! $form) {
-            return redirect()->route('fc-reg.dashboard')
+            return $this->redirectTraineeHome()
                 ->with('warning', 'The selected programme is no longer available. You can continue from your dashboard.');
         }
 
         return redirect()->route('fc-reg.forms.dashboard', $form)
             ->with('success', 'Login successful!');
+    }
+
+    /**
+     * Prefer the dynamic FC Registration dashboard when configured; otherwise legacy trainee dashboard.
+     */
+    public function redirectTraineeHome(): RedirectResponse
+    {
+        $registrationForm = FcForm::activeRegistrationDynamicForm();
+        if ($registrationForm) {
+            return redirect()->route('fc-reg.forms.dashboard', $registrationForm);
+        }
+
+        return redirect()->route('fc-reg.dashboard');
     }
 }

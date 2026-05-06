@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\FC;
 
 use App\Http\Controllers\Controller;
+use App\Models\FC\FcForm;
 use App\Models\FC\JbpUser;
 use App\Models\FC\LoginAttemptsLog;
 use Illuminate\Http\Request;
@@ -18,7 +19,7 @@ class AuthController extends Controller
     public function showLogin()
     {
         if (Auth::check()) {
-            return redirect()->route('fc-reg.dashboard');
+            return $this->redirectDefaultTraineeDashboard();
         }
         return view('auth.login');
     }
@@ -98,7 +99,17 @@ class AuthController extends Controller
         return match ($user->role) {
             'ADMIN', 'SUPERADMIN' => redirect()->route('admin.dashboard'),
             'REPORT'              => redirect()->route('admin.reports'),
-            default               => redirect()->route('fc-reg.dashboard'),   // FC officer trainees
+            default               => $this->redirectDefaultTraineeDashboard(),
         };
+    }
+
+    private function redirectDefaultTraineeDashboard()
+    {
+        $form = FcForm::activeRegistrationDynamicForm();
+        if ($form) {
+            return redirect()->route('fc-reg.forms.dashboard', $form);
+        }
+
+        return redirect()->route('fc-reg.dashboard');
     }
 }

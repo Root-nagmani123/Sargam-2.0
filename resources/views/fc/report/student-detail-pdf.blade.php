@@ -170,17 +170,18 @@
             text-align: center;
         }
         .photo-cell {
-            width: 64px;
+            width: 112px;
             text-align: center;
             vertical-align: middle;
             padding: 4px !important;
+            background: #f8fafc;
         }
         .photo-cell img {
             display: block;
             margin: 0 auto;
-            width: 56px;
+            width: 96px;
             height: auto;
-            max-height: 72px;
+            max-height: 124px;
             object-fit: cover;
             border: 1px solid #999;
         }
@@ -202,15 +203,15 @@
 
 <table class="meta-bar">
     <tr>
+        <td class="label">Name / नाम</td>
+        <td><strong>{{ ($pdfFullName ?? '') !== '' ? $pdfFullName : '-' }}</strong></td>
         <td class="photo-cell" rowspan="3">
             @if(!empty($photoDataUri))
-                <img src="{{ $photoDataUri }}" alt="Photo" width="56" height="72">
+                <img src="{{ $photoDataUri }}" alt="Photo" width="96" height="124">
             @else
                 <span style="font-size:8pt;color:#888;">Photo<br/>फोटो<br/>-</span>
             @endif
         </td>
-        <td class="label">Name / नाम</td>
-        <td><strong>{{ ($pdfFullName ?? '') !== '' ? $pdfFullName : '-' }}</strong></td>
     </tr>
     <tr>
         <td class="label">Username / उपयोगकर्ता</td>
@@ -231,7 +232,16 @@
 
         @if(($sec['type'] ?? '') === 'fields' && !empty($sec['rows']))
             <table class="fields" cellspacing="0">
+                @php $lastGroup = null; @endphp
                 @foreach($sec['rows'] as $row)
+                    @if(!empty($row['group']) && $row['group'] !== $lastGroup)
+                        <tr>
+                            <td colspan="3" style="background:#eef3f9;font-weight:bold;color:#0a3d6b;">
+                                {{ $row['group'] }}
+                            </td>
+                        </tr>
+                        @php $lastGroup = $row['group']; @endphp
+                    @endif
                     <tr>
                         <td class="lab-en">{{ $row['en'] }}</td>
                         <td class="lab-hi">{{ $row['hi'] }}</td>

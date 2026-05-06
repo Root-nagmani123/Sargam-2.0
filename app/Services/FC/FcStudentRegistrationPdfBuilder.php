@@ -18,6 +18,7 @@ class FcStudentRegistrationPdfBuilder
         public Collection $qualifications,
         public Collection $employments,
         public Collection $languages,
+        public Collection $additionalDynamicFields,
         public string $username,
     ) {}
 
@@ -131,6 +132,7 @@ class FcStudentRegistrationPdfBuilder
             ['en' => 'Cadre', 'hi' => 'केडर', 'value' => $s1->cadre ?? null],
             ['en' => 'Allotted state', 'hi' => 'आवंटित राज्य', 'value' => $s1->allottedState->state_name ?? null],
             ['en' => 'Registration status', 'hi' => 'पंजीकरण स्थिति', 'value' => $this->master?->status ?? 'INCOMPLETE'],
+            ...$this->dynamicRowsForStep('step1'),
         ]);
     }
 
@@ -180,6 +182,8 @@ class FcStudentRegistrationPdfBuilder
             ['en' => 'Emergency contact', 'hi' => 'आपातकालीन सम्पर्क', 'value' => $em],
             ['en' => "Father's profession", 'hi' => 'पिता का व्यवसाय', 'value' => $s2?->fatherProfession?->profession_name],
             ['en' => "Father's occupation details", 'hi' => 'पिता का कार्य विवरण', 'value' => $s2?->father_occupation_details],
+            ...$this->dynamicRowsForStep('step2'),
+            ...$this->dynamicRowsForStep('step3'),
         ]);
     }
 
@@ -199,7 +203,22 @@ class FcStudentRegistrationPdfBuilder
             ['en' => 'Account holder', 'hi' => 'खाताधारक', 'value' => $b->account_holder_name ?? null],
             ['en' => 'Account type', 'hi' => 'खाता प्रकार', 'value' => $b->account_type ?? null],
             ['en' => 'Verified', 'hi' => 'सत्यापित', 'value' => !empty($b->is_verified) ? 'Yes / हाँ' : 'No / नहीं'],
+            ...$this->dynamicRowsForStep('bank'),
         ]);
+    }
+
+    /** @return list<array{en:string,hi:string,value:mixed}> */
+    private function dynamicRowsForStep(string $stepSlug): array
+    {
+        return $this->additionalDynamicFields
+            ->filter(fn ($f) => (string) ($f->step_slug ?? '') === $stepSlug)
+            ->map(fn ($f) => [
+                'en' => (string) ($f->label ?? ''),
+                'hi' => 'अतिरिक्त फ़ील्ड',
+                'value' => $f->value ?? null,
+            ])
+            ->values()
+            ->all();
     }
 
     private function fmtService(): ?string
