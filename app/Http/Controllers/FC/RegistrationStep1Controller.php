@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\FC;
 
 use App\Http\Controllers\Controller;
-use App\Models\FC\{StudentMasterFirst, StudentMaster, SessionMaster, ServiceMaster, StateMaster};
+use App\Models\FC\{FcForm, StudentMasterFirst, StudentMaster, SessionMaster, ServiceMaster, StateMaster};
 use App\Services\FC\RegistrationService;
 use App\Services\FC\DynamicFormService;
 use Illuminate\Http\Request;
@@ -19,6 +19,11 @@ class RegistrationStep1Controller extends Controller
     // ── Dashboard (home after login) ─────────────────────────────────
     public function dashboard()
     {
+        $dynamicForm = FcForm::activeRegistrationDynamicForm();
+        if ($dynamicForm) {
+            return redirect()->route('fc-reg.forms.dashboard', $dynamicForm);
+        }
+
         $username = Auth::user()->username;
         $progress = $this->regService->getProgress($username);
         $step1    = StudentMasterFirst::where('username', $username)->first();

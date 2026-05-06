@@ -1065,3 +1065,48 @@ if (! function_exists('fc_registration_progress_view')) {
         ];
     }
 }
+
+if (! function_exists('fc_registration_dynamic_form_step_accessible')) {
+    /**
+     * FC registration (dynamic form dashboard): allow opening a step only when prior steps are complete.
+     * Completed steps stay open for review/edit ($stepCompleted === true).
+     *
+     * @param  array<string,bool>  $progressSteps  fc_registration_progress_view()['steps']
+     */
+    function fc_registration_dynamic_form_step_accessible(string $stepSlug, array $progressSteps, bool $stepCompleted): bool
+    {
+        if ($stepCompleted) {
+            return true;
+        }
+
+        $required = match ($stepSlug) {
+            'step1' => [],
+            'step2' => ['step1'],
+            'step3' => ['step2'],
+            'bank' => ['step3'],
+            'documents' => ['travel'],
+            default => [],
+        };
+
+        foreach ($required as $key) {
+            if (empty($progressSteps[$key])) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+}
+
+if (! function_exists('fc_registration_dynamic_form_step_blocked_message')) {
+    function fc_registration_dynamic_form_step_blocked_message(string $stepSlug): string
+    {
+        return match ($stepSlug) {
+            'step2' => 'Complete Basic Information first',
+            'step3' => 'Complete Personal Details first',
+            'bank' => 'Complete Other Details first',
+            'documents' => 'Complete Travel Plan first',
+            default => 'Complete the previous step first',
+        };
+    }
+}
