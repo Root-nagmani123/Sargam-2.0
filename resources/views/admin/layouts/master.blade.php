@@ -2,20 +2,23 @@
 <html lang="en" dir="ltr" data-bs-theme="light" data-color-theme="Blue_Theme" data-layout="vertical">
 
 <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
     <!-- Set initial theme from localStorage before paint (avoids flash) -->
     <script>
-        (function() {
-            'use strict';
-            try {
-                var saved = localStorage.getItem('bsTheme');
-                if (saved === 'dark' || saved === 'light') {
-                    document.documentElement.setAttribute('data-bs-theme', saved);
-                }
-            } catch (e) {}
-        })();
+    (function() {
+        'use strict';
+        try {
+            var saved = localStorage.getItem('bsTheme');
+            if (saved === 'dark' || saved === 'light') {
+                document.documentElement.setAttribute('data-bs-theme', saved);
+            }
+        } catch (e) {}
+    })();
     </script>
     @include('admin.layouts.pre_header')
-    <title>@yield('title') {{ env('APP_TITLE_SUFFIX') }} - Sargam 2.0 | Lal Bahadur Shastri National Academy of Administration</title>
+    <title>@yield('title') {{ env('APP_TITLE_SUFFIX') }} - Sargam 2.0 | Lal Bahadur Shastri National Academy of
+        Administration</title>
     @section('css')
     <style>
     .nav-item .tab-item .active {
@@ -355,20 +358,76 @@
         animation: sargamFloat 4s ease-in-out infinite;
     }
 
-    .sargam-loader-particle:nth-child(1) { left: 15%; top: 20%; animation-delay: 0s; }
-    .sargam-loader-particle:nth-child(2) { left: 85%; top: 25%; animation-delay: 0.5s; }
-    .sargam-loader-particle:nth-child(3) { left: 75%; top: 75%; animation-delay: 1s; }
-    .sargam-loader-particle:nth-child(4) { left: 20%; top: 80%; animation-delay: 1.5s; }
-    .sargam-loader-particle:nth-child(5) { left: 50%; top: 15%; animation-delay: 2s; }
-    .sargam-loader-particle:nth-child(6) { left: 10%; top: 50%; animation-delay: 2.5s; }
-    .sargam-loader-particle:nth-child(7) { left: 90%; top: 55%; animation-delay: 3s; }
-    .sargam-loader-particle:nth-child(8) { left: 45%; top: 85%; animation-delay: 3.5s; }
+    .sargam-loader-particle:nth-child(1) {
+        left: 15%;
+        top: 20%;
+        animation-delay: 0s;
+    }
+
+    .sargam-loader-particle:nth-child(2) {
+        left: 85%;
+        top: 25%;
+        animation-delay: 0.5s;
+    }
+
+    .sargam-loader-particle:nth-child(3) {
+        left: 75%;
+        top: 75%;
+        animation-delay: 1s;
+    }
+
+    .sargam-loader-particle:nth-child(4) {
+        left: 20%;
+        top: 80%;
+        animation-delay: 1.5s;
+    }
+
+    .sargam-loader-particle:nth-child(5) {
+        left: 50%;
+        top: 15%;
+        animation-delay: 2s;
+    }
+
+    .sargam-loader-particle:nth-child(6) {
+        left: 10%;
+        top: 50%;
+        animation-delay: 2.5s;
+    }
+
+    .sargam-loader-particle:nth-child(7) {
+        left: 90%;
+        top: 55%;
+        animation-delay: 3s;
+    }
+
+    .sargam-loader-particle:nth-child(8) {
+        left: 45%;
+        top: 85%;
+        animation-delay: 3.5s;
+    }
 
     @keyframes sargamFloat {
-        0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.4; }
-        25% { transform: translate(15px, -20px) scale(1.2); opacity: 0.7; }
-        50% { transform: translate(-10px, 15px) scale(0.9); opacity: 0.5; }
-        75% { transform: translate(-20px, -10px) scale(1.1); opacity: 0.6; }
+
+        0%,
+        100% {
+            transform: translate(0, 0) scale(1);
+            opacity: 0.4;
+        }
+
+        25% {
+            transform: translate(15px, -20px) scale(1.2);
+            opacity: 0.7;
+        }
+
+        50% {
+            transform: translate(-10px, 15px) scale(0.9);
+            opacity: 0.5;
+        }
+
+        75% {
+            transform: translate(-20px, -10px) scale(1.1);
+            opacity: 0.6;
+        }
     }
 
     /* Rotating rings container */
@@ -418,7 +477,9 @@
     }
 
     @keyframes sargamSpin {
-        to { transform: rotate(360deg); }
+        to {
+            transform: rotate(360deg);
+        }
     }
 
     /* Brand text with letter-by-letter animation */
@@ -443,20 +504,59 @@
         text-shadow: 0 0 30px rgba(0, 74, 147, 0.2);
     }
 
-    .sargam-loader-brand span:nth-child(1) { animation-delay: 0s; }
-    .sargam-loader-brand span:nth-child(2) { animation-delay: 0.05s; }
-    .sargam-loader-brand span:nth-child(3) { animation-delay: 0.1s; }
-    .sargam-loader-brand span:nth-child(4) { animation-delay: 0.15s; }
-    .sargam-loader-brand span:nth-child(5) { animation-delay: 0.2s; }
-    .sargam-loader-brand span:nth-child(6) { animation-delay: 0.25s; }
-    .sargam-loader-brand span:nth-child(7) { animation-delay: 0.3s; min-width: 0.25em; }
-    .sargam-loader-brand span:nth-child(8) { animation-delay: 0.35s; }
-    .sargam-loader-brand span:nth-child(9) { animation-delay: 0.4s; }
-    .sargam-loader-brand span:nth-child(10) { animation-delay: 0.45s; }
+    .sargam-loader-brand span:nth-child(1) {
+        animation-delay: 0s;
+    }
+
+    .sargam-loader-brand span:nth-child(2) {
+        animation-delay: 0.05s;
+    }
+
+    .sargam-loader-brand span:nth-child(3) {
+        animation-delay: 0.1s;
+    }
+
+    .sargam-loader-brand span:nth-child(4) {
+        animation-delay: 0.15s;
+    }
+
+    .sargam-loader-brand span:nth-child(5) {
+        animation-delay: 0.2s;
+    }
+
+    .sargam-loader-brand span:nth-child(6) {
+        animation-delay: 0.25s;
+    }
+
+    .sargam-loader-brand span:nth-child(7) {
+        animation-delay: 0.3s;
+        min-width: 0.25em;
+    }
+
+    .sargam-loader-brand span:nth-child(8) {
+        animation-delay: 0.35s;
+    }
+
+    .sargam-loader-brand span:nth-child(9) {
+        animation-delay: 0.4s;
+    }
+
+    .sargam-loader-brand span:nth-child(10) {
+        animation-delay: 0.45s;
+    }
 
     @keyframes sargamLetterPop {
-        0%, 100% { transform: translateY(0) scale(1); opacity: 1; }
-        50% { transform: translateY(-4px) scale(1.05); opacity: 0.9; }
+
+        0%,
+        100% {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+        }
+
+        50% {
+            transform: translateY(-4px) scale(1.05);
+            opacity: 0.9;
+        }
     }
 
     /* Segmented progress dots */
@@ -475,15 +575,38 @@
         animation: sargamDotPulse 1.4s ease-in-out infinite;
     }
 
-    .sargam-loader-dot:nth-child(1) { animation-delay: 0s; }
-    .sargam-loader-dot:nth-child(2) { animation-delay: 0.2s; }
-    .sargam-loader-dot:nth-child(3) { animation-delay: 0.4s; }
-    .sargam-loader-dot:nth-child(4) { animation-delay: 0.6s; }
-    .sargam-loader-dot:nth-child(5) { animation-delay: 0.8s; }
+    .sargam-loader-dot:nth-child(1) {
+        animation-delay: 0s;
+    }
+
+    .sargam-loader-dot:nth-child(2) {
+        animation-delay: 0.2s;
+    }
+
+    .sargam-loader-dot:nth-child(3) {
+        animation-delay: 0.4s;
+    }
+
+    .sargam-loader-dot:nth-child(4) {
+        animation-delay: 0.6s;
+    }
+
+    .sargam-loader-dot:nth-child(5) {
+        animation-delay: 0.8s;
+    }
 
     @keyframes sargamDotPulse {
-        0%, 100% { transform: scale(0.8); background: rgba(0, 74, 147, 0.2); }
-        50% { transform: scale(1.2); background: #0d6efd; }
+
+        0%,
+        100% {
+            transform: scale(0.8);
+            background: rgba(0, 74, 147, 0.2);
+        }
+
+        50% {
+            transform: scale(1.2);
+            background: #0d6efd;
+        }
     }
 
     /* Sidebar toggle icon rotation */
@@ -491,6 +614,7 @@
         transition: transform 0.3s ease-in-out;
         display: inline-block;
     }
+
     #sidebarToggleIcon.rotated {
         transform: rotate(180deg);
     }
@@ -502,7 +626,8 @@
 
 <body data-sidebartype="full">
     <!-- Preloader - Advanced Sargam 2.0 Loader (Bootstrap 5) -->
-    <div class="sargam-loader d-flex align-items-center justify-content-center" id="sargamLoader" role="status" aria-live="polite" aria-label="Loading Sargam 2.0">
+    <div class="sargam-loader d-flex align-items-center justify-content-center" id="sargamLoader" role="status"
+        aria-live="polite" aria-label="Loading Sargam 2.0">
         <div class="sargam-loader-particles">
             <span class="sargam-loader-particle"></span>
             <span class="sargam-loader-particle"></span>
@@ -520,7 +645,8 @@
                 <span class="sargam-loader-ring sargam-loader-ring-inner"></span>
             </div>
             <span class="sargam-loader-brand">
-                <span>S</span><span>A</span><span>R</span><span>G</span><span>A</span><span>M</span><span> </span><span>2</span><span>.</span><span>0</span>
+                <span>S</span><span>A</span><span>R</span><span>G</span><span>A</span><span>M</span><span>
+                </span><span>2</span><span>.</span><span>0</span>
             </span>
             <div class="sargam-loader-dots">
                 <span class="sargam-loader-dot" role="presentation"></span>
@@ -534,109 +660,123 @@
 
     <div id="main-wrapper">
         @php
-            // Must run in this view (not in header include) so tab panes below see $activeNavTab.
-            $activeNavTab = '#home';
-            $path = request()->path();
-            if (request()->routeIs('admin.dashboard') || request()->routeIs('admin.dashboard.*')) {
-                $activeNavTab = '#home';
-            } elseif (
-                // Modules moved from Setup to Home
-                request()->routeIs('admin.estate.*') ||
-                request()->routeIs('admin.mess.*') ||
-                request()->routeIs('admin.issue-management*') ||
-                request()->routeIs('admin.issue-categories.*') ||
-                request()->routeIs('admin.issue-sub-categories.*') ||
-                request()->routeIs('admin.issue-priorities.*') ||
-                request()->routeIs('admin.issue-escalation-matrix.*') ||
-                request()->routeIs('admin.employee_idcard.*') ||
-                request()->routeIs('admin.duplicate_idcard.*') ||
-                request()->routeIs('admin.family_idcard.*') ||
-                request()->routeIs('admin.security.*') ||
-                str_starts_with($path, 'admin/estate') ||
-                str_starts_with($path, 'admin/mess') ||
-                str_starts_with($path, 'admin/issue-management') ||
-                str_starts_with($path, 'admin/issue-categories') ||
-                str_starts_with($path, 'admin/issue-sub-categories') ||
-                str_starts_with($path, 'admin/issue-priorities') ||
-                str_starts_with($path, 'admin/issue-escalation-matrix') ||
-                str_starts_with($path, 'admin/employee-idcard') ||
-                str_starts_with($path, 'admin/duplicate-idcard') ||
-                str_starts_with($path, 'admin/family-idcard') ||
-                str_starts_with($path, 'security/')
-            ) {
-                $activeNavTab = '#home';
-            } elseif (
-                request()->routeIs('member.*') || request()->routeIs('faculty.*') || request()->routeIs('programme.*') ||
-                request()->routeIs('admin.roles.*') || request()->routeIs('admin.users.*') ||
-                str_starts_with($path, 'setup/') || str_starts_with($path, 'admin/setup') ||
-                str_starts_with($path, 'courseAttendanceNoticeMap') || str_starts_with($path, 'course_memo') ||
-                str_starts_with($path, 'building_floor') || str_starts_with($path, 'group_mapping') ||
-                str_starts_with($path, 'course-repository') || str_starts_with($path, 'feedback') || str_starts_with($path, 'admin/feedback') ||
-                str_starts_with($path, 'admin/notice') || str_starts_with($path, 'attendance') ||
-                str_starts_with($path, 'ot_notice') ||
-                str_starts_with($path, 'forms') || str_starts_with($path, 'registration') ||
-                str_starts_with($path, 'mdo_escrot') || str_starts_with($path, 'student_medical') ||
-                str_starts_with($path, 'medical_exception') || str_starts_with($path, 'memo_discipline') ||
-                str_starts_with($path, 'country') || str_starts_with($path, 'state') || str_starts_with($path, 'city') ||
-                str_starts_with($path, 'stream') || str_starts_with($path, 'subject') || str_starts_with($path, 'Venue-Master') ||
-                str_starts_with($path, 'batch') || str_starts_with($path, 'curriculum') || str_starts_with($path, 'mapping') ||
-                str_starts_with($path, 'admin/master') || str_starts_with($path, 'master/') || str_contains($path, 'breadcrumb-showcase') || str_starts_with($path, 'password') ||
-                request()->routeIs('calendar.index') || request()->routeIs('feedback.*') || str_starts_with($path, 'calendar') ||
-                str_starts_with($path, 'expertise') || str_starts_with($path, 'faculty_notice') || str_starts_with($path, 'faculty_mdo')
-            ) {
-                $activeNavTab = '#tab-setup';
-            } elseif (
-                str_starts_with($path, 'communications') ||
-                request()->routeIs('*communications*') ||
-                request()->routeIs('admin.birthday-wish.*')
-            ) {
-                $activeNavTab = '#tab-communications';
-            } elseif (str_starts_with($path, 'academics') || request()->routeIs('*academics*')) {
-                $activeNavTab = '#tab-academics';
-            } elseif (str_starts_with($path, 'material') || request()->routeIs('*material*')) {
-                $activeNavTab = '#tab-material-management';
-            }
+        // Must run in this view (not in header include) so tab panes below see $activeNavTab.
+        $activeNavTab = '#home';
+        $path = request()->path();
+        if (request()->routeIs('admin.dashboard') || request()->routeIs('admin.dashboard.*')) {
+        $activeNavTab = '#home';
+        } elseif (
+        // Modules moved from Setup to Home
+        request()->routeIs('admin.estate.*') ||
+        request()->routeIs('admin.mess.*') ||
+        request()->routeIs('admin.issue-management*') ||
+        request()->routeIs('admin.issue-categories.*') ||
+        request()->routeIs('admin.issue-sub-categories.*') ||
+        request()->routeIs('admin.issue-priorities.*') ||
+        request()->routeIs('admin.issue-escalation-matrix.*') ||
+        request()->routeIs('admin.employee_idcard.*') ||
+        request()->routeIs('admin.duplicate_idcard.*') ||
+        request()->routeIs('admin.family_idcard.*') ||
+        request()->routeIs('admin.security.*') ||
+        str_starts_with($path, 'admin/estate') ||
+        str_starts_with($path, 'admin/mess') ||
+        str_starts_with($path, 'admin/issue-management') ||
+        str_starts_with($path, 'admin/issue-categories') ||
+        str_starts_with($path, 'admin/issue-sub-categories') ||
+        str_starts_with($path, 'admin/issue-priorities') ||
+        str_starts_with($path, 'admin/issue-escalation-matrix') ||
+        str_starts_with($path, 'admin/employee-idcard') ||
+        str_starts_with($path, 'admin/duplicate-idcard') ||
+        str_starts_with($path, 'admin/family-idcard') ||
+        str_starts_with($path, 'security/')
+        ) {
+        $activeNavTab = '#home';
+        } elseif (
+        request()->routeIs('member.*') || request()->routeIs('faculty.*') || request()->routeIs('programme.*') ||
+        request()->routeIs('admin.roles.*') || request()->routeIs('admin.users.*') ||
+        str_starts_with($path, 'setup/') || str_starts_with($path, 'admin/setup') ||
+        str_starts_with($path, 'courseAttendanceNoticeMap') || str_starts_with($path, 'course_memo') ||
+        str_starts_with($path, 'building_floor') || str_starts_with($path, 'group_mapping') ||
+        str_starts_with($path, 'course-repository') || str_starts_with($path, 'feedback') || str_starts_with($path,
+        'admin/feedback') ||
+        str_starts_with($path, 'admin/notice') || str_starts_with($path, 'attendance') ||
+        str_starts_with($path, 'ot_notice') ||
+        str_starts_with($path, 'forms') || str_starts_with($path, 'registration') ||
+        str_starts_with($path, 'mdo_escrot') || str_starts_with($path, 'student_medical') ||
+        str_starts_with($path, 'medical_exception') || str_starts_with($path, 'memo_discipline') ||
+        str_starts_with($path, 'country') || str_starts_with($path, 'state') || str_starts_with($path, 'city') ||
+        str_starts_with($path, 'stream') || str_starts_with($path, 'subject') || str_starts_with($path, 'Venue-Master')
+        ||
+        str_starts_with($path, 'batch') || str_starts_with($path, 'curriculum') || str_starts_with($path, 'mapping') ||
+        str_starts_with($path, 'admin/master') || str_starts_with($path, 'master/') || str_contains($path,
+        'breadcrumb-showcase') || str_starts_with($path, 'password') ||
+        request()->routeIs('calendar.index') || request()->routeIs('feedback.*') || str_starts_with($path, 'calendar')
+        ||
+        str_starts_with($path, 'expertise') || str_starts_with($path, 'faculty_notice') || str_starts_with($path,
+        'faculty_mdo')
+        ) {
+        $activeNavTab = '#tab-setup';
+        } elseif (
+        str_starts_with($path, 'communications') ||
+        request()->routeIs('*communications*') ||
+        request()->routeIs('admin.birthday-wish.*')
+        ) {
+        $activeNavTab = '#tab-communications';
+        } elseif (str_starts_with($path, 'academics') || request()->routeIs('*academics*')) {
+        $activeNavTab = '#tab-academics';
+        } elseif (str_starts_with($path, 'material') || request()->routeIs('*material*')) {
+        $activeNavTab = '#tab-material-management';
+        }
         @endphp
         @include('admin.layouts.header')
         <div class="page-wrapper">
 
-            @include('admin.layouts.sidebar')
+            {{-- Horizontal Navigation Menu --}}
+            <div class="horizontal-nav-wrapper" id="sidebarWrapper">
+                @include('admin.layouts.sidebar')
+            </div>
+
             <div class="body-wrapper">
                 <main id="main-content" tabindex="-1" role="main">
-                <!-- Tab Content Container -->
-                <div class="tab-content" id="mainNavbarContent">
-                    <!-- Home Tab -->
-                    <div class="tab-pane fade {{ ($activeNavTab ?? '#home') === '#home' ? 'show active' : '' }}" id="home" role="tabpanel">
-                        @yield('content')
-                    </div>
+                    <!-- Tab Content Container -->
+                    <div class="tab-content" id="mainNavbarContent">
+                        <!-- Home Tab -->
+                        <div class="tab-pane fade {{ ($activeNavTab ?? '#home') === '#home' ? 'show active' : '' }}"
+                            id="home" role="tabpanel">
+                            @yield('content')
+                        </div>
 
-                    <!-- Setup Tab -->
-                    <div class="tab-pane fade {{ ($activeNavTab ?? '#home') === '#tab-setup' ? 'show active' : '' }}" id="tab-setup" role="tabpanel">
-                        @yield('setup_content')
-                    </div>
+                        <!-- Setup Tab -->
+                        <div class="tab-pane fade {{ ($activeNavTab ?? '#home') === '#tab-setup' ? 'show active' : '' }}"
+                            id="tab-setup" role="tabpanel">
+                            @yield('setup_content')
+                        </div>
 
-                    <!-- Communications Tab -->
-                    <div class="tab-pane fade {{ ($activeNavTab ?? '#home') === '#tab-communications' ? 'show active' : '' }}" id="tab-communications" role="tabpanel">
-                        @yield('communications_content')
-                    </div>
+                        <!-- Communications Tab -->
+                        <div class="tab-pane fade {{ ($activeNavTab ?? '#home') === '#tab-communications' ? 'show active' : '' }}"
+                            id="tab-communications" role="tabpanel">
+                            @yield('communications_content')
+                        </div>
 
-                    <!-- Academics Tab -->
-                    <div class="tab-pane fade {{ ($activeNavTab ?? '#home') === '#tab-academics' ? 'show active' : '' }}" id="tab-academics" role="tabpanel">
-                        @yield('academics_content')
-                    </div>
+                        <!-- Academics Tab -->
+                        <div class="tab-pane fade {{ ($activeNavTab ?? '#home') === '#tab-academics' ? 'show active' : '' }}"
+                            id="tab-academics" role="tabpanel">
+                            @yield('academics_content')
+                        </div>
 
-                    <!-- Material Management Tab -->
-                    <div class="tab-pane fade {{ ($activeNavTab ?? '#home') === '#tab-material-management' ? 'show active' : '' }}" id="tab-material-management" role="tabpanel">
-                        @yield('material_management_content')
+                        <!-- Material Management Tab -->
+                        <div class="tab-pane fade {{ ($activeNavTab ?? '#home') === '#tab-material-management' ? 'show active' : '' }}"
+                            id="tab-material-management" role="tabpanel">
+                            @yield('material_management_content')
+                        </div>
                     </div>
-                </div>
                 </main>
             </div>
         </div>
     </div>
 
     @include('admin.layouts.footer')
-     <script src="{{ asset('js/forms.js') }}"></script>
+    <script src="{{ asset('js/forms.js') }}"></script>
     <script src="{{ asset('admin_assets/js/sidebar-navigation-fixed.js') }}"></script>
     <script src="{{ asset('admin_assets/js/tab-persistence.js') }}"></script>
     <!-- SweetAlert2 -->
@@ -644,255 +784,206 @@
     @stack('scripts')
     @yield('scripts')
     <script>
-document.addEventListener('DOMContentLoaded', function () {
-    const toggle = document.getElementById('searchToggle');
-    const input  = document.getElementById('searchInput');
-    if (!toggle || !input) return;
+    document.addEventListener('DOMContentLoaded', function() {
+        const toggle = document.getElementById('searchToggle');
+        const input = document.getElementById('searchInput');
+        if (!toggle || !input) return;
 
-    toggle.addEventListener('click', () => {
-        input.classList.toggle('active');
-        if (input.classList.contains('active')) {
-            input.focus();
-        }
-    });
+        toggle.addEventListener('click', () => {
+            input.classList.toggle('active');
+            if (input.classList.contains('active')) {
+                input.focus();
+            }
+        });
 
-    // Close on outside click
-    document.addEventListener('click', (e) => {
-        if (!e.target.closest('.search-expand')) {
-            input.classList.remove('active');
-        }
+        // Close on outside click
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.search-expand')) {
+                input.classList.remove('active');
+            }
+        });
     });
-});
-</script>
-<script>
-    (function () {
+    </script>
+    <script>
+    (function() {
         function hideSargamLoader() {
             var loader = document.getElementById('sargamLoader');
             if (!loader || loader.classList.contains('hidden')) return;
             loader.classList.add('hidden');
-            setTimeout(function () { loader.style.display = 'none'; }, 500);
+            setTimeout(function() {
+                loader.style.display = 'none';
+            }, 500);
         }
         window.addEventListener('load', hideSargamLoader);
-        document.addEventListener('DOMContentLoaded', function () {
+        document.addEventListener('DOMContentLoaded', function() {
             setTimeout(hideSargamLoader, 300);
         });
         setTimeout(hideSargamLoader, 12000);
     })();
-</script>
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-    const sidebar = document.getElementById("main-wrapper");
-    const toggleBtn = document.getElementById("headerCollapse");
-    if (!sidebar || !toggleBtn) return;
-    // Query all icons across all tabs (multiple instances due to tab structure)
-    const icons = document.querySelectorAll("#sidebarToggleIcon");
-    const body = document.body;
-    const sidebarmenus = document.querySelectorAll(".sidebarmenu");
-    const isDashboard = {{ (request()->routeIs('admin.dashboard') || request()->is('dashboard')) ? 'true' : 'false' }};
+    </script>
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const body = document.body;
 
-    // Helper: Safely adjust all DataTables after layout changes
-    function adjustAllDataTables() {
-        try {
-            if (window.jQuery && $.fn && $.fn.dataTable) {
-                // Adjust columns for all visible tables and recalc responsive layout
-                const api = $.fn.dataTable.tables({ visible: true, api: true });
-                if (api && api.columns) {
-                    api.columns.adjust();
-                    // Recalculate Responsive extension if available
-                    if (api.responsive && api.responsive.recalc) {
-                        api.responsive.recalc();
-                    }
-                    // Only redraw for client-side tables to avoid extra server calls
-                    if (api.settings) {
-                        const settings = api.settings();
-                        let clientSideExists = false;
-                        for (let i = 0; i < settings.length; i++) {
-                            if (!settings[i].oFeatures.bServerSide) {
-                                clientSideExists = true;
-                                break;
-                            }
+        // Helper: Safely adjust all DataTables after layout changes
+        function adjustAllDataTables() {
+            try {
+                if (window.jQuery && $.fn && $.fn.dataTable) {
+                    const api = $.fn.dataTable.tables({
+                        visible: true,
+                        api: true
+                    });
+                    if (api && api.columns) {
+                        api.columns.adjust();
+                        if (api.responsive && api.responsive.recalc) {
+                            api.responsive.recalc();
                         }
-                        if (clientSideExists) api.draw(false);
+                        if (api.settings) {
+                            const settings = api.settings();
+                            let clientSideExists = false;
+                            for (let i = 0; i < settings.length; i++) {
+                                if (!settings[i].oFeatures.bServerSide) {
+                                    clientSideExists = true;
+                                    break;
+                                }
+                            }
+                            if (clientSideExists) api.draw(false);
+                        }
                     }
                 }
-            }
-        } catch (err) {
-            console.warn('DataTables adjust failed after sidebar toggle:', err);
-        }
-    }
-
-    // Apply saved sidebar type preference; default to collapsed on first login
-    try {
-        const savedType = localStorage.getItem('SidebarType');
-        if (savedType) {
-            body.setAttribute('data-sidebartype', savedType);
-        } else {
-            // Default to collapsed (mini-sidebar) for new users
-            body.setAttribute('data-sidebartype', 'mini-sidebar');
-            localStorage.setItem('SidebarType', 'mini-sidebar');
-        }
-    } catch (e) {}
-
-    // Initialize collapsed state on page load
-    const sidebarType = body.getAttribute("data-sidebartype");
-    console.log('Initial sidebar type:', sidebarType);
-    console.log('Icon elements found:', icons.length);
-
-    if (sidebarType === "mini-sidebar") {
-        // Sidebar should be collapsed - ensure main-wrapper doesn't have show-sidebar
-        sidebar.classList.remove("show-sidebar");
-        // Add close class to sidebarmenu elements
-        sidebarmenus.forEach(function(el) {
-            el.classList.add("close");
-        });
-        // Set all icon instances to expand (collapsed state)
-        icons.forEach(function(icon) {
-            icon.textContent = "keyboard_double_arrow_right";
-            icon.classList.remove("rotated");
-        });
-        console.log('Set all icons to non-rotated (collapsed state)');
-        // After initial collapse state, adjust DataTables to new layout
-        setTimeout(adjustAllDataTables, 300);
-    } else {
-        // Sidebar should be expanded
-        sidebar.classList.add("show-sidebar");
-        sidebarmenus.forEach(function(el) {
-            el.classList.remove("close");
-        });
-        // Set all icon instances to rotated (expanded state)
-        icons.forEach(function(icon) {
-            icon.textContent = "keyboard_double_arrow_right";
-            icon.classList.add("rotated");
-        });
-        console.log('Set all icons to rotated (expanded state)');
-        // After initial expanded state, adjust DataTables to new layout
-        setTimeout(adjustAllDataTables, 300);
-    }
-
-    // Sync all icon instances with data-sidebartype changes and adjust tables after toggle
-    function syncIconWithSidebar(type) {
-        const allIcons = document.querySelectorAll("#sidebarToggleIcon");
-        allIcons.forEach(function(icon) {
-            icon.textContent = "keyboard_double_arrow_right";
-            if (type === "full") {
-                icon.classList.add("rotated");
-            } else {
-                icon.classList.remove("rotated");
-            }
-        });
-        console.log('Synced', allIcons.length, 'icon(s) to type:', type);
-    }
-
-    const observer = new MutationObserver(function(mutations) {
-        for (const m of mutations) {
-            if (m.attributeName === 'data-sidebartype') {
-                const t = body.getAttribute('data-sidebartype');
-                syncIconWithSidebar(t);
-                setTimeout(adjustAllDataTables, 300);
+            } catch (err) {
+                console.warn('DataTables adjust failed:', err);
             }
         }
+
+        // Toggle horizontal nav visibility
+        document.addEventListener('click', function(e) {
+            var toggleBtn = e.target.closest('#headerCollapse, .sidebar-toggle-btn');
+            if (!toggleBtn) return;
+            e.preventDefault();
+
+            var navWrapper = document.getElementById('sidebarWrapper');
+            if (navWrapper) {
+                var isHidden = navWrapper.style.display === 'none';
+                navWrapper.style.display = isHidden ? '' : 'none';
+                body.setAttribute('data-sidebartype', isHidden ? 'full' : 'mini-sidebar');
+                try { localStorage.setItem('SidebarType', isHidden ? 'full' : 'mini-sidebar'); } catch(e){}
+            }
+            setTimeout(adjustAllDataTables, 300);
+        });
+
+        // Apply saved preference
+        try {
+            var savedType = localStorage.getItem('SidebarType');
+            if (savedType === 'mini-sidebar') {
+                var navWrapper = document.getElementById('sidebarWrapper');
+                if (navWrapper) navWrapper.style.display = 'none';
+                body.setAttribute('data-sidebartype', 'mini-sidebar');
+            }
+        } catch(e){}
     });
-    observer.observe(body, { attributes: true, attributeFilter: ['data-sidebartype'] });
-});
-</script>
+    </script>
 
-  <!-- Final safeguard: Force light mode on window load -->
-  <script>
+    <!-- Final safeguard: Force light mode on window load -->
+    <script>
     window.addEventListener('load', function() {
-      // Force light mode one final time after everything loads
-      document.documentElement.setAttribute('data-bs-theme', 'light');
-      document.documentElement.style.colorScheme = 'light';
-      document.documentElement.style.setProperty('--bs-body-bg', '#fff', 'important');
-      document.documentElement.style.setProperty('--bs-body-color', '#212529', 'important');
+        // Force light mode one final time after everything loads
+        document.documentElement.setAttribute('data-bs-theme', 'light');
+        document.documentElement.style.colorScheme = 'light';
+        document.documentElement.style.setProperty('--bs-body-bg', '#fff', 'important');
+        document.documentElement.style.setProperty('--bs-body-color', '#212529', 'important');
 
-      // Remove any dark mode classes
-      document.documentElement.classList.remove('dark');
-      if (document.body) {
-        document.body.classList.remove('dark');
-        document.body.style.colorScheme = 'light';
-      }
+        // Remove any dark mode classes
+        document.documentElement.classList.remove('dark');
+        if (document.body) {
+            document.body.classList.remove('dark');
+            document.body.style.colorScheme = 'light';
+        }
 
-      // Force reflow to apply styles
-      document.documentElement.offsetHeight;
+        // Force reflow to apply styles
+        document.documentElement.offsetHeight;
     });
-  </script>
+    </script>
 
-  <script>
+    <script>
     // Admin Mess: Tab on dropdown should act like Enter (Select2-friendly)
-    (function () {
-      function isAdminMessPage() {
-        try {
-          const p = (window.location && window.location.pathname || '').toLowerCase();
-          return p.includes('/admin/mess') || (p.includes('/mess') && !p.includes('/message'));
-        } catch (e) {
-          return false;
+    (function() {
+        function isAdminMessPage() {
+            try {
+                const p = (window.location && window.location.pathname || '').toLowerCase();
+                return p.includes('/admin/mess') || (p.includes('/mess') && !p.includes('/message'));
+            } catch (e) {
+                return false;
+            }
         }
-      }
 
-      function shouldConvertTabToEnter(e) {
-        if (!e || e.defaultPrevented) return false;
-        if (e.key !== 'Tab' || e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) return false;
+        function shouldConvertTabToEnter(e) {
+            if (!e || e.defaultPrevented) return false;
+            if (e.key !== 'Tab' || e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) return false;
 
-        const active = document.activeElement;
+            const active = document.activeElement;
 
-        // Select2: when dropdown is open, focus is in .select2-search__field
-        const isSelect2Search = !!(active && active.classList && active.classList.contains('select2-search__field'));
-        const isSelect2Open = !!document.querySelector('.select2-container--open');
+            // Select2: when dropdown is open, focus is in .select2-search__field
+            const isSelect2Search = !!(active && active.classList && active.classList.contains(
+                'select2-search__field'));
+            const isSelect2Open = !!document.querySelector('.select2-container--open');
 
-        if (isSelect2Search && isSelect2Open) return true;
+            if (isSelect2Search && isSelect2Open) return true;
 
-        // Fallback: if focus is within a select2 container and it's open
-        if (isSelect2Open && active && active.closest && active.closest('.select2-container')) return true;
+            // Fallback: if focus is within a select2 container and it's open
+            if (isSelect2Open && active && active.closest && active.closest('.select2-container')) return true;
 
-        // Choices.js: open dropdown has `.choices.is-open`; focus is usually in `.choices__input`
-        const choicesRoot = active && active.closest ? active.closest('.choices') : null;
-        if (choicesRoot && choicesRoot.classList && choicesRoot.classList.contains('is-open')) return true;
-        if (document.querySelector('.choices.is-open') && active && active.classList && active.classList.contains('choices__input')) return true;
+            // Choices.js: open dropdown has `.choices.is-open`; focus is usually in `.choices__input`
+            const choicesRoot = active && active.closest ? active.closest('.choices') : null;
+            if (choicesRoot && choicesRoot.classList && choicesRoot.classList.contains('is-open')) return true;
+            if (document.querySelector('.choices.is-open') && active && active.classList && active.classList
+                .contains('choices__input')) return true;
 
-        // Tom Select: open dropdown typically sets `.ts-wrapper.dropdown-active`
-        const tomRoot = active && active.closest ? active.closest('.ts-wrapper') : null;
-        if (tomRoot && tomRoot.classList && tomRoot.classList.contains('dropdown-active')) return true;
-        if (document.querySelector('.ts-wrapper.dropdown-active') && active && active.closest && active.closest('.ts-control')) return true;
+            // Tom Select: open dropdown typically sets `.ts-wrapper.dropdown-active`
+            const tomRoot = active && active.closest ? active.closest('.ts-wrapper') : null;
+            if (tomRoot && tomRoot.classList && tomRoot.classList.contains('dropdown-active')) return true;
+            if (document.querySelector('.ts-wrapper.dropdown-active') && active && active.closest && active.closest(
+                    '.ts-control')) return true;
 
-        return false;
-      }
-
-      function dispatchEnterOnActiveElement() {
-        const el = document.activeElement;
-        if (!el) return;
-
-        // Prefer keyboard event for Select2; it listens on keydown in the search field
-        try {
-          const evt = new KeyboardEvent('keydown', {
-            key: 'Enter',
-            code: 'Enter',
-            keyCode: 13,
-            which: 13,
-            bubbles: true,
-            cancelable: true
-          });
-          el.dispatchEvent(evt);
-        } catch (e) {
-          // Very old browsers fallback
-          if (typeof el.dispatchEvent === 'function') {
-            const legacy = document.createEvent('Event');
-            legacy.initEvent('keydown', true, true);
-            legacy.keyCode = 13;
-            legacy.which = 13;
-            el.dispatchEvent(legacy);
-          }
+            return false;
         }
-      }
 
-      document.addEventListener('keydown', function (e) {
-        if (!isAdminMessPage()) return;
-        if (!shouldConvertTabToEnter(e)) return;
+        function dispatchEnterOnActiveElement() {
+            const el = document.activeElement;
+            if (!el) return;
 
-        e.preventDefault();
-        dispatchEnterOnActiveElement();
-      }, true);
+            // Prefer keyboard event for Select2; it listens on keydown in the search field
+            try {
+                const evt = new KeyboardEvent('keydown', {
+                    key: 'Enter',
+                    code: 'Enter',
+                    keyCode: 13,
+                    which: 13,
+                    bubbles: true,
+                    cancelable: true
+                });
+                el.dispatchEvent(evt);
+            } catch (e) {
+                // Very old browsers fallback
+                if (typeof el.dispatchEvent === 'function') {
+                    const legacy = document.createEvent('Event');
+                    legacy.initEvent('keydown', true, true);
+                    legacy.keyCode = 13;
+                    legacy.which = 13;
+                    el.dispatchEvent(legacy);
+                }
+            }
+        }
+
+        document.addEventListener('keydown', function(e) {
+            if (!isAdminMessPage()) return;
+            if (!shouldConvertTabToEnter(e)) return;
+
+            e.preventDefault();
+            dispatchEnterOnActiveElement();
+        }, true);
     })();
-  </script>
+    </script>
 </body>
 
 </html>

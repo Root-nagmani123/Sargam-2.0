@@ -28,6 +28,8 @@
 <link rel="stylesheet" href="{{asset('css/breadcrumb.css')}}">
 <!-- Sidebar Menu Enhanced CSS -->
 <link rel="stylesheet" href="{{asset('css/sidebar-menu-enhanced.css')}}">
+<!-- Unified Single Sidebar CSS (GIGW compliant) -->
+<link rel="stylesheet" href="{{asset('css/unified-sidebar.css')}}">
 <style>
 .material-symbols-rounded {
   font-variation-settings:

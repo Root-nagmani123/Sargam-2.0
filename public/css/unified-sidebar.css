@@ -1,0 +1,543 @@
+/**
+ * Horizontal Navigation Bar Styles
+ * GIGW (Guidelines for Indian Government Websites) Compliant
+ * Built with Bootstrap 5.3+ classes
+ *
+ * Key GIGW Requirements:
+ * - Minimum touch target: 44x44px
+ * - Color contrast ratio: 4.5:1 (text), 3:1 (large text/icons)
+ * - Keyboard navigable
+ * - Proper focus indicators
+ * - Readable font sizes (min 14px)
+ */
+
+/* ======================================
+   HORIZONTAL NAV WRAPPER
+   ====================================== */
+.horizontal-nav-wrapper {
+    position: fixed;
+    top: 112px; /* directly below fixed topbar */
+    left: 0;
+    right: 0;
+    z-index: 96; /* below topbar (z-index:9 in theme) but above content */
+    background: #fff;
+    border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    width: 100%;
+    overflow: visible !important; /* allow dropdowns to escape */
+}
+
+.horizontal-nav-bar {
+    width: 100%;
+    padding: 0 16px;
+    overflow: visible !important;
+}
+
+.horizontal-nav-inner {
+    width: 100%;
+    overflow: visible !important;
+}
+
+.horizontal-nav-pane {
+    width: 100%;
+    overflow: visible !important;
+}
+
+/* ======================================
+   SECTION BUTTONS (horizontal row)
+   ====================================== */
+.hn-sections {
+    padding: 8px 0;
+    overflow: visible !important; /* dropdowns must escape — no clipping */
+    flex-wrap: nowrap !important;
+    justify-content: center;
+}
+
+/* Each dropdown container */
+.hn-dropdown {
+    position: relative;
+    flex-shrink: 0;
+}
+
+/* Section trigger button */
+.hn-section-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    min-height: 44px; /* GIGW: touch target */
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #004a93;
+    background: #f0f4f8;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s, color 0.2s, box-shadow 0.2s, border-color 0.2s;
+    letter-spacing: 0.01em;
+}
+
+.hn-section-btn:hover {
+    background: #e0ecf8;
+    color: #003570;
+    border-color: rgba(0, 74, 147, 0.15);
+}
+
+.hn-section-btn:focus-visible {
+    outline: 3px solid rgba(13, 110, 253, 0.5);
+    outline-offset: 2px;
+}
+
+/* Active/open state */
+.hn-dropdown.open .hn-section-btn {
+    background: #004a93;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(0, 74, 147, 0.25);
+    border-color: #004a93;
+}
+
+.hn-dropdown.open .hn-section-btn .material-icons {
+    color: #fff;
+}
+
+/* Has-active: button's dropdown contains the current active page link.
+   Panel stays closed — button gets a distinct indicator so user knows where they are */
+.hn-dropdown.has-active > .hn-section-btn {
+    background: #e0ecf8;
+    color: #004a93;
+    border-color: #004a93;
+    border-width: 2px;
+    font-weight: 700;
+}
+
+.hn-dropdown.has-active > .hn-section-btn .material-icons {
+    color: #004a93;
+}
+
+/* When both has-active AND open — full filled style wins */
+.hn-dropdown.has-active.open > .hn-section-btn {
+    background: #004a93;
+    color: #fff;
+    border-color: #004a93;
+    border-width: 1px;
+    font-weight: 600;
+}
+
+.hn-dropdown.has-active.open > .hn-section-btn .material-icons {
+    color: #fff;
+}
+
+/* Arrow rotation */
+.hn-section-btn .hn-arrow {
+    font-size: 18px;
+    transition: transform 0.2s ease;
+}
+
+.hn-dropdown.open .hn-section-btn .hn-arrow {
+    transform: rotate(180deg);
+}
+
+/* Material icon in button */
+.hn-section-btn .material-icons:first-child {
+    font-size: 20px;
+}
+
+/* ======================================
+   DROPDOWN PANEL
+   Uses position:fixed so it escapes any overflow:hidden ancestor.
+   Top/left are set via JS (positionHnDropdown)
+   ====================================== */
+.hn-dropdown-panel {
+    display: none;
+    position: fixed;
+    top: 0;   /* overridden by JS */
+    left: 0;  /* overridden by JS */
+    min-width: 280px;
+    max-width: 360px;
+    max-height: 70vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background: #fff;
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
+    z-index: 1055;
+    padding: 8px;
+    animation: hnSlideDown 0.2s ease-out;
+}
+
+.hn-dropdown.open .hn-dropdown-panel {
+    display: block;
+}
+
+@keyframes hnSlideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Scrollbar for dropdown panel */
+.hn-dropdown-panel::-webkit-scrollbar {
+    width: 5px;
+}
+
+.hn-dropdown-panel::-webkit-scrollbar-thumb {
+    background: rgba(0, 74, 147, 0.2);
+    border-radius: 3px;
+}
+
+/* ======================================
+   SIDEBAR NAV ITEMS (inside dropdown panels)
+   Override old dual-sidebar styles
+   ====================================== */
+.horizontal-nav-bar .sidebar-nav,
+.horizontal-nav-bar nav.sidebar-nav {
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    background: transparent !important;
+    display: block !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    z-index: auto !important;
+    top: auto !important;
+    left: auto !important;
+}
+
+.horizontal-nav-bar .sidebar-nav .simplebar-wrapper,
+.horizontal-nav-bar .sidebar-nav .simplebar-mask,
+.horizontal-nav-bar .sidebar-nav .simplebar-offset,
+.horizontal-nav-bar .sidebar-nav .simplebar-content-wrapper,
+.horizontal-nav-bar .sidebar-nav .simplebar-content {
+    position: static !important;
+    height: auto !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+}
+
+.horizontal-nav-bar .simplebar-track,
+.horizontal-nav-bar .simplebar-placeholder,
+.horizontal-nav-bar .simplebar-height-auto-observer-wrapper {
+    display: none !important;
+}
+
+.horizontal-nav-bar .scroll-sidebar {
+    height: auto !important;
+    overflow: visible !important;
+}
+
+/* Override old .side-mini-panel inside horizontal nav */
+.horizontal-nav-bar .side-mini-panel {
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    left: auto !important;
+    display: block !important;
+}
+
+.horizontal-nav-bar .side-mini-panel .mini-nav,
+.horizontal-nav-bar .mini-nav-ul,
+.horizontal-nav-bar .sidebar-google-hamburger,
+.horizontal-nav-bar .brand-logo,
+.horizontal-nav-bar .nav-logo {
+    display: none !important;
+}
+
+.horizontal-nav-bar .side-mini-panel .iconbar {
+    display: block !important;
+    height: auto !important;
+}
+
+.horizontal-nav-bar .side-mini-panel .sidebarmenu {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+}
+
+.horizontal-nav-bar .side-mini-panel .sidebarmenu .sidebar-nav {
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    display: block !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    top: auto !important;
+    left: auto !important;
+    z-index: auto !important;
+}
+
+/* Sidebar menu list */
+.horizontal-nav-bar .sidebar-menu {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+/* Sidebar items */
+.horizontal-nav-bar .sidebar-item {
+    margin-bottom: 1px;
+}
+
+/* Sidebar links - GIGW: min 44px touch target, readable font, good contrast */
+.horizontal-nav-bar .sidebar-item .sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    min-height: 44px; /* GIGW touch target */
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: #2a3547 !important;
+    text-decoration: none;
+    border-radius: 8px;
+    transition: background 0.15s, color 0.15s;
+    white-space: normal;
+    word-break: break-word;
+    background: transparent;
+    margin-bottom: 0;
+    border: none;
+    box-shadow: none;
+    width: auto !important;
+    max-width: none !important;
+}
+
+.horizontal-nav-bar .sidebar-item .sidebar-link:hover {
+    background: #e8f0fe !important;
+    color: #004a93 !important;
+    box-shadow: none !important;
+    border-radius: 8px !important;
+}
+
+.horizontal-nav-bar .sidebar-item .sidebar-link:focus-visible {
+    outline: 3px solid rgba(13, 110, 253, 0.5);
+    outline-offset: 1px;
+    background: #e8f0fe;
+    color: #004a93;
+}
+
+/* Active state */
+.horizontal-nav-bar .sidebar-item .sidebar-link.active {
+    background: #004a93 !important;
+    color: #fff !important;
+    font-weight: 600;
+    box-shadow: 0 2px 6px rgba(0, 74, 147, 0.2) !important;
+    border-radius: 8px !important;
+    padding: 10px 14px !important;
+    max-width: none !important;
+}
+
+.horizontal-nav-bar .sidebar-item .sidebar-link.active .material-icons,
+.horizontal-nav-bar .sidebar-item .sidebar-link.active span {
+    color: #fff !important;
+}
+
+.horizontal-nav-bar .sidebar-item .sidebar-link .material-icons {
+    color: inherit !important;
+    font-size: 18px;
+}
+
+/* Section heading pills (collapse toggles within menus) */
+.horizontal-nav-bar .sidebar-item[style*="background: #4077ad"] {
+    border-radius: 8px !important;
+    margin-top: 6px;
+    margin-bottom: 4px;
+    min-width: auto !important;
+    box-shadow: none !important;
+}
+
+.horizontal-nav-bar .sidebar-item[style*="background: #4077ad"] .sidebar-link {
+    color: #fff !important;
+    font-weight: 600;
+    border-radius: 8px !important;
+}
+
+/* Collapse sub-menus within dropdowns */
+.horizontal-nav-bar .collapse .sidebar-item .sidebar-link {
+    padding-left: 20px;
+    font-size: 0.8125rem;
+}
+
+/* Nav section headers */
+.horizontal-nav-bar .nav-section {
+    padding: 6px 14px 2px;
+    list-style: none;
+}
+
+.horizontal-nav-bar .nav-section .section-title {
+    font-size: 0.8125rem !important;
+    color: #004a93 !important;
+}
+
+.horizontal-nav-bar .nav-small-cap {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #6c757d;
+    padding: 6px 14px;
+}
+
+/* Profile component in dropdown */
+.horizontal-nav-bar [class*="profile"] {
+    padding: 6px 10px;
+}
+
+/* ======================================
+   BODY-WRAPPER (no left margin needed)
+   ====================================== */
+.page-wrapper .body-wrapper {
+    margin-left: 15px !important;
+    margin-right: 15px !important;
+    margin-top: 0 !important;
+    transition: none;
+    min-height: calc(100vh - 112px);
+}
+
+/* Override theme's vertical layout margins on page-wrapper */
+html[data-layout="vertical"] .page-wrapper,
+html[data-layout="vertical"] body[data-sidebartype="full"] .page-wrapper,
+html[data-layout="vertical"] body[data-sidebartype="mini-sidebar"] .page-wrapper {
+    margin-left: 0 !important;
+    padding-top: 185px; /* space for fixed topbar only; nav bar is fixed separately */
+}
+
+/* Override #main-wrapper flex layout to flow vertically */
+#main-wrapper {
+    display: block !important;
+    max-height: none !important;
+    overflow: visible !important;
+}
+
+/* Hide any leftover old left-sidebar or side-mini-panel elements */
+.left-sidebar,
+aside.side-mini-panel,
+aside.side-mini-panel.with-vertical {
+    display: none !important;
+    width: 0 !important;
+    position: absolute !important;
+    visibility: hidden !important;
+}
+
+/* Ensure horizontal-nav-wrapper is visible */
+.horizontal-nav-wrapper {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    transform: none !important;
+    overflow: visible !important;
+}
+
+/* ======================================
+   COLLAPSED STATE (hide horizontal nav)
+   ====================================== */
+body[data-sidebartype="mini-sidebar"] .horizontal-nav-wrapper {
+    display: none;
+}
+
+/* ======================================
+   RESPONSIVE - MOBILE
+   ====================================== */
+@media (max-width: 991.98px) {
+    .horizontal-nav-wrapper {
+        top: 60px; /* smaller topbar on mobile */
+        padding: 0 8px;
+    }
+
+    html[data-layout="vertical"] .page-wrapper,
+    html[data-layout="vertical"] body[data-sidebartype="full"] .page-wrapper,
+    html[data-layout="vertical"] body[data-sidebartype="mini-sidebar"] .page-wrapper {
+        padding-top: 60px !important;
+    }
+
+    .hn-sections {
+        padding: 6px 0;
+        gap: 4px !important;
+    }
+
+    .hn-section-btn {
+        padding: 6px 12px;
+        font-size: 0.75rem;
+        min-height: 40px;
+    }
+
+    .hn-dropdown-panel {
+        min-width: 260px;
+        max-width: calc(100vw - 32px);
+        max-height: 60vh;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .hn-section-btn {
+        padding: 6px 10px;
+        font-size: 0.7rem;
+    }
+
+    .hn-section-btn span {
+        display: none; /* Icon only on very small screens */
+    }
+
+    .hn-section-btn .hn-arrow {
+        display: none;
+    }
+
+    .hn-dropdown-panel {
+        left: 8px !important;
+        right: 8px !important;
+        max-width: none;
+        width: auto;
+        border-radius: 12px;
+    }
+}
+
+/* ======================================
+   HIGH CONTRAST MODE (GIGW accessibility)
+   ====================================== */
+@media (forced-colors: active) {
+    .hn-section-btn {
+        border: 1px solid ButtonText;
+    }
+
+    .horizontal-nav-bar .sidebar-item .sidebar-link:focus-visible {
+        outline: 3px solid Highlight;
+    }
+
+    .horizontal-nav-bar .sidebar-item .sidebar-link.active {
+        border: 2px solid Highlight;
+    }
+}
+
+/* ======================================
+   REDUCED MOTION (GIGW accessibility)
+   ====================================== */
+@media (prefers-reduced-motion: reduce) {
+    .hn-dropdown-panel {
+        animation: none !important;
+    }
+
+    .hn-section-btn,
+    .horizontal-nav-bar .sidebar-item .sidebar-link {
+        transition: none !important;
+    }
+}
+
+/* ======================================
+   PRINT STYLES
+   ====================================== */
+@media print {
+    .horizontal-nav-wrapper {
+        display: none !important;
+    }
+}
+

@@ -1,109 +1,173 @@
+{{-- Horizontal Navigation Bar - GIGW Compliant --}}
+{{-- Displays navigation as a horizontal menu below the header --}}
 
-<!-- Tab Content Container -->
+<nav class="horizontal-nav-bar" id="horizontalNavBar" role="navigation" aria-label="Section navigation">
+    <div class="horizontal-nav-inner">
 
-<!-- //admin tabs -->
-    <div class="tab-content" id="sidebarTabContent">
-        <div class="tab-pane fade show active" id="sidebar-home" role="tabpanel" aria-labelledby="home-tab">
-           @include('admin.layouts.sidebar.home')
+        {{-- Pane: Home --}}
+        <div class="horizontal-nav-pane {{ ($activeNavTab ?? '#home') === '#home' ? '' : 'd-none' }}" id="sidebar-home">
+            @include('admin.layouts.sidebar.home-new')
         </div>
-        <div class="tab-pane fade" id="sidebar-setup" role="tabpanel" aria-labelledby="setup-tab">
-            @include('admin.layouts.sidebar.setup')
+
+        {{-- Pane: Setup --}}
+        <div class="horizontal-nav-pane {{ ($activeNavTab ?? '#home') === '#tab-setup' ? '' : 'd-none' }}" id="sidebar-setup">
+            @include('admin.layouts.sidebar.setup-new')
         </div>
-        <div class="tab-pane fade" id="sidebar-communications" role="tabpanel" aria-labelledby="communications-tab">
-            @include('admin.layouts.sidebar.communication') 
+
+        {{-- Pane: Communications --}}
+        <div class="horizontal-nav-pane {{ ($activeNavTab ?? '#home') === '#tab-communications' ? '' : 'd-none' }}" id="sidebar-communications">
+            @include('admin.layouts.sidebar.communication-new')
         </div>
-        <div class="tab-pane fade" id="sidebar-academics" role="tabpanel" aria-labelledby="academics-tab">
-            @include('admin.layouts.sidebar.academics')
+
+        {{-- Pane: Academics --}}
+        <div class="horizontal-nav-pane {{ ($activeNavTab ?? '#home') === '#tab-academics' ? '' : 'd-none' }}" id="sidebar-academics">
+            @include('admin.layouts.sidebar.academics-new')
         </div>
-        <div class="tab-pane fade" id="sidebar-purchase-order" role="tabpanel" aria-labelledby="purchase-order-tab">
+
+        {{-- Pane: Material (placeholder) --}}
+        <div class="horizontal-nav-pane {{ ($activeNavTab ?? '#home') === '#tab-material-management' ? '' : 'd-none' }}" id="sidebar-purchase-order">
             @include('admin.layouts.sidebar.material')
         </div>
+
     </div>
-
-
-    <!-- //faculty & OTs tabs -->
-
-
+</nav>
 
 <script>
-const sidebar = document.querySelector('.sidebarmenu .simplebar-content-wrapper');
-
-// Restore scroll position on load
 document.addEventListener('DOMContentLoaded', function() {
-    const scrollPos = localStorage.getItem('sidebar-scroll');
-    if (scrollPos && sidebar) {
-        sidebar.scrollTop = parseInt(scrollPos, 10);
-    }
-    
-    // Sync sidebar tabs with main content tabs
-    syncSidebarWithMainTabs();
-});
+    'use strict';
 
-// Function to sync sidebar tabs with main content tabs
-function syncSidebarWithMainTabs() {
-    const mainTabLinks = document.querySelectorAll('#mainNavbar .nav-link[data-bs-toggle="tab"]');
-    const sidebarTabPanes = document.querySelectorAll('#sidebarTabContent .tab-pane');
-    
-    // Map main tab IDs to sidebar tab IDs
-    const tabMapping = {
-        '#home': '#sidebar-home',
-        '#tab-setup': '#sidebar-setup',
-        '#tab-communications': '#sidebar-communications',
-        '#tab-academics': '#sidebar-academics',
-        '#tab-material-management': '#sidebar-purchase-order'
+    // Sync horizontal nav panes with header tab clicks
+    var allNavTabLinks = document.querySelectorAll(
+        '#mainNavbar .nav-link[data-bs-toggle="tab"], .mobile-tabbar .nav-link[data-bs-toggle="tab"]'
+    );
+    var navPanes = document.querySelectorAll('#horizontalNavBar .horizontal-nav-pane');
+
+    var tabMapping = {
+        '#home': 'sidebar-home',
+        '#tab-setup': 'sidebar-setup',
+        '#tab-communications': 'sidebar-communications',
+        '#tab-academics': 'sidebar-academics',
+        '#tab-material-management': 'sidebar-purchase-order'
     };
-    
-    // Function to activate sidebar tab based on main tab
-    function activateSidebarTab(mainTabId) {
-        const sidebarTabId = tabMapping[mainTabId];
-        if (!sidebarTabId) return;
-        
-        // Deactivate all sidebar tabs
-        sidebarTabPanes.forEach(pane => {
-            pane.classList.remove('show', 'active');
+
+    function activateNavPane(mainTabId) {
+        var paneId = tabMapping[mainTabId];
+        if (!paneId) return;
+
+        navPanes.forEach(function(pane) {
+            pane.classList.add('d-none');
         });
-        
-        // Activate corresponding sidebar tab
-        const sidebarTab = document.querySelector(sidebarTabId);
-        if (sidebarTab) {
-            sidebarTab.classList.add('show', 'active');
+
+        var activePane = document.getElementById(paneId);
+        if (activePane) {
+            activePane.classList.remove('d-none');
         }
     }
-    
-    // Listen for main tab clicks
-    mainTabLinks.forEach(link => {
+
+    // Listen for header tab clicks
+    allNavTabLinks.forEach(function(link) {
         link.addEventListener('click', function() {
-            const targetTab = this.getAttribute('href');
-            activateSidebarTab(targetTab);
+            var targetTab = this.getAttribute('href');
+            if (targetTab && tabMapping[targetTab]) {
+                activateNavPane(targetTab);
+            }
         });
-        
-        // Also listen for Bootstrap tab events
         link.addEventListener('shown.bs.tab', function() {
-            const targetTab = this.getAttribute('href');
-            activateSidebarTab(targetTab);
+            var targetTab = this.getAttribute('href');
+            activateNavPane(targetTab);
         });
     });
-    
-    // Activate sidebar tab based on initial active main tab
-    const activeMainTab = document.querySelector('#mainNavbar .nav-link[data-bs-toggle="tab"].active');
-    if (activeMainTab) {
-        const targetTab = activeMainTab.getAttribute('href');
-        activateSidebarTab(targetTab);
-    }
-    
-    // Note: do not force from localStorage here.
-    // Route-aware tab selection is handled in header/sidebar-navigation-fixed.
-}
 
-// Save scroll position before unload
-window.addEventListener('beforeunload', function() {
-    if (sidebar) {
-        localStorage.setItem('sidebar-scroll', sidebar.scrollTop);
+    // Position a fixed dropdown panel below its trigger button
+    function positionHnDropdown(btn, panel) {
+        var rect = btn.getBoundingClientRect();
+        var panelWidth = Math.max(panel.offsetWidth || 280, 280);
+        var top = rect.bottom + 4;
+        var left = rect.left;
+
+        // Prevent overflow off right edge
+        if (left + panelWidth > window.innerWidth - 8) {
+            left = window.innerWidth - panelWidth - 8;
+        }
+        // Prevent overflow off left edge
+        if (left < 8) left = 8;
+
+        panel.style.top  = top  + 'px';
+        panel.style.left = left + 'px';
     }
+
+    function closeAllHnDropdowns() {
+        document.querySelectorAll('.hn-dropdown.open').forEach(function(dd) {
+            dd.classList.remove('open');
+            var b = dd.querySelector('.hn-section-btn');
+            if (b) b.setAttribute('aria-expanded', 'false');
+        });
+    }
+
+    // Horizontal nav: close dropdown on outside click
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.hn-dropdown')) {
+            closeAllHnDropdowns();
+        }
+    });
+
+    // Close on scroll / resize so fixed panel stays in sync
+    window.addEventListener('scroll', closeAllHnDropdowns, { passive: true });
+    window.addEventListener('resize', closeAllHnDropdowns, { passive: true });
+
+    // Horizontal nav: toggle dropdown on section click
+    document.querySelectorAll('.horizontal-nav-bar .hn-section-btn').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var parentDropdown = this.closest('.hn-dropdown');
+            var wasOpen = parentDropdown.classList.contains('open');
+
+            // Close all open dropdowns first
+            closeAllHnDropdowns();
+
+            // Toggle current
+            if (!wasOpen) {
+                parentDropdown.classList.add('open');
+                this.setAttribute('aria-expanded', 'true');
+                // Position the panel using fixed coords
+                var panel = parentDropdown.querySelector('.hn-dropdown-panel');
+                if (panel) positionHnDropdown(this, panel);
+            }
+        });
+
+        // Keyboard: Enter/Space toggle
+        btn.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                this.click();
+            }
+            // Escape to close
+            if (e.key === 'Escape') {
+                closeAllHnDropdowns();
+            }
+        });
+    });
+
+    // Mark parent .hn-dropdown as active if it contains an active link
+    // (panel stays CLOSED — user must click to open)
+    document.querySelectorAll('.horizontal-nav-bar .sidebar-link.active').forEach(function(activeLink) {
+        // Mark the dropdown button as "has-active" so CSS can style it
+        var dropdown = activeLink.closest('.hn-dropdown');
+        if (dropdown) {
+            dropdown.classList.add('has-active');
+            var activeBtn = dropdown.querySelector('.hn-section-btn');
+            if (activeBtn) activeBtn.classList.add('has-active');
+        }
+        // Expand inner Bootstrap collapse so the active item is visible when panel opens
+        var innerCollapse = activeLink.closest('.collapse');
+        if (innerCollapse && !innerCollapse.classList.contains('show')) {
+            innerCollapse.classList.add('show');
+            // Update toggle aria-expanded for the collapse trigger
+            var collapseToggle = document.querySelector('[data-bs-target="#' + innerCollapse.id + '"]');
+            if (collapseToggle) collapseToggle.setAttribute('aria-expanded', 'true');
+        }
+    });
 });
-// Mini-nav state is managed centrally by sidebar-navigation-fixed.js
 </script>
 
-
-
-<!--  Sidebar End -->
+<!--  Horizontal Nav End -->
