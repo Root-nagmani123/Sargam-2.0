@@ -446,7 +446,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                 </td>
                                 <td class="text-center">
                                     <div class="btn-group" role="group">
-                                        <a href="{{ route('course-repository.document.download', $doc->pk) }}"
+                                        <a href="{{ $doc->full_path ? asset('storage/' . $doc->full_path) : route('course-repository.document.download', $doc->pk) }}"
+                                            download="{{ $doc->upload_document }}"
                                             class="text-primary" data-bs-toggle="tooltip" title="Download">
                                             <span class="material-icons material-symbols-rounded">download</span>
                                         </a>
