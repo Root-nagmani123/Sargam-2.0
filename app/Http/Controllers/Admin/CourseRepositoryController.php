@@ -523,24 +523,74 @@ class CourseRepositoryController extends Controller
         try {
             $document = CourseRepositoryDocument::findOrFail($pk);
             
-            if (!$document->normalized_full_path) {
+            if (!$document->full_path && !$document->normalized_full_path) {
                 return redirect()->back()->with('error', 'File not found');
             }
-            
-            // Check if file exists
-            if (!Storage::disk('public')->exists($document->normalized_full_path)) {
-                Log::error('File not found in storage: ' . $document->normalized_full_path);
+
+            $relativePath = $this->resolveDocumentRelativePath($document);
+            if (!$relativePath) {
+                Log::error('Course repository file not found', [
+                    'document_pk' => $document->pk,
+                    'full_path' => $document->full_path,
+                    'normalized_full_path' => $document->normalized_full_path,
+                ]);
                 return redirect()->back()->with('error', 'File not found in storage');
             }
             
             // Get original filename without timestamp prefix
             $originalName = preg_replace('/^\d+_[a-f0-9]+_/', '', $document->upload_document);
             
-            return Storage::disk('public')->download($document->normalized_full_path, $originalName);
+            return Storage::disk('public')->download($relativePath, $originalName);
         } catch (Exception $e) {
             Log::error('Error downloading document: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Download failed: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Resolve file path variations and return a valid relative path for public disk.
+     */
+    private function resolveDocumentRelativePath(CourseRepositoryDocument $document): ?string
+    {
+        $candidates = [];
+
+        if ($document->normalized_full_path) {
+            $candidates[] = ltrim(str_replace('\\', '/', $document->normalized_full_path), '/');
+        }
+
+        if ($document->full_path) {
+            $rawPath = trim((string) $document->full_path);
+            $rawPath = preg_replace('#^https?://[^/]+/#i', '', $rawPath);
+            $rawPath = str_replace('\\', '/', $rawPath);
+            $rawPath = preg_replace('#^/?storage/app/public/#', '', $rawPath);
+            $rawPath = preg_replace('#^/?storage/#', '', $rawPath);
+            $rawPath = preg_replace('#^/?app/public/#', '', $rawPath);
+            $rawPath = ltrim($rawPath, '/');
+            if ($rawPath !== '') {
+                $candidates[] = $rawPath;
+            }
+        }
+
+        $candidates = array_values(array_unique(array_filter($candidates)));
+
+        // Backward compatibility: many old rows don't include base repository folder
+        // in full_path, while files are physically stored under one of these roots.
+        $prefixedCandidates = [];
+        foreach ($candidates as $candidate) {
+            $prefixedCandidates[] = $candidate;
+            $prefixedCandidates[] = 'course_repository/' . ltrim($candidate, '/');
+            $prefixedCandidates[] = 'course-repository/' . ltrim($candidate, '/');
+            $prefixedCandidates[] = 'Course Repository/' . ltrim($candidate, '/');
+        }
+        $candidates = array_values(array_unique(array_filter($prefixedCandidates)));
+
+        foreach ($candidates as $candidate) {
+            if (Storage::disk('public')->exists($candidate)) {
+                return $candidate;
+            }
+        }
+
+        return null;
     }
 
     /**

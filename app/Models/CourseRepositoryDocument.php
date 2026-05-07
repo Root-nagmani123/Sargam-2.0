@@ -77,11 +77,20 @@ class CourseRepositoryDocument extends Model
             return null;
         }
 
+        // Handle full URL values like "https://domain/storage/..."
+        $path = preg_replace('#^https?://[^/]+/#i', '', $path);
+
         // Handle old data saved as "storage/app/public/..."
         $path = preg_replace('#^/?storage/app/public/#', '', $path);
 
         // Handle old data saved as "/storage/..."
         $path = preg_replace('#^/?storage/#', '', $path);
+
+        // Handle old data saved as "app/public/..."
+        $path = preg_replace('#^/?app/public/#', '', $path);
+
+        // Windows-style paths
+        $path = str_replace('\\', '/', $path);
 
         return ltrim($path, '/');
     }
