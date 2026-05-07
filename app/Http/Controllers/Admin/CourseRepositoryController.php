@@ -577,10 +577,18 @@ class CourseRepositoryController extends Controller
         // in full_path, while files are physically stored under one of these roots.
         $prefixedCandidates = [];
         foreach ($candidates as $candidate) {
+            $normalizedCandidate = ltrim(str_replace('\\', '/', $candidate), '/');
+
             $prefixedCandidates[] = $candidate;
-            $prefixedCandidates[] = 'course_repository/' . ltrim($candidate, '/');
-            $prefixedCandidates[] = 'course-repository/' . ltrim($candidate, '/');
-            $prefixedCandidates[] = 'Course Repository/' . ltrim($candidate, '/');
+            $prefixedCandidates[] = 'course_repository/' . $normalizedCandidate;
+            $prefixedCandidates[] = 'course-repository/' . $normalizedCandidate;
+            $prefixedCandidates[] = 'Course Repository/' . $normalizedCandidate;
+
+            // Base folder replacement fallbacks (important for env mismatch)
+            $prefixedCandidates[] = preg_replace('#^course_repository/#', 'course-repository/', $normalizedCandidate);
+            $prefixedCandidates[] = preg_replace('#^course-repository/#', 'course_repository/', $normalizedCandidate);
+            $prefixedCandidates[] = preg_replace('#^Course Repository/#', 'course-repository/', $normalizedCandidate);
+            $prefixedCandidates[] = preg_replace('#^Course Repository/#', 'course_repository/', $normalizedCandidate);
         }
         $candidates = array_values(array_unique(array_filter($prefixedCandidates)));
 
