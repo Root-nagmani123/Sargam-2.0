@@ -445,8 +445,9 @@ class CourseRepositoryController extends Controller
                         // Generate unique filename
                         $fileName = time() . '_' . uniqid() . '_' . $file->getClientOriginalName();
                         
-                        // Store file in hierarchical folder structure
-                        $filePath = $file->storeAs('course-repository/' . $folderPath, $fileName, 'public');
+                        // Store file in hierarchical folder structure under admin root
+                        $storageFolder = trim($folderPath, '/');
+                        $filePath = $file->storeAs($storageFolder, $fileName, 'public');
                         
                         // Insert into course_repository_documents
                         CourseRepositoryDocument::create([
@@ -847,30 +848,33 @@ class CourseRepositoryController extends Controller
 
     /**
      * Build folder hierarchy path from parent repository
-     * Example: "Central Course Repository of LBSNAA/Foundation Course/FC-89/Class Materials"
+     * Example: "course_repository/Central Course Repository of LBSNAA/Foundation Course/FC-89/Class Materials"
      */
     private function buildFolderPath($repository)
     {
-        $pathParts = [];
+        $hierarchyParts = [];
         $current = $repository;
         
         // Traverse up the hierarchy to build path
         while ($current) {
             // Sanitize folder name (remove special characters that are problematic for file systems)
-            $folderName = preg_replace('/[^\w\s\-()]/', '', $current->course_repository_name);
+            $folderName = preg_replace('/[^\w\s\-()]/', '', (string) $current->course_repository_name);
             $folderName = trim($folderName);
-            
-            array_unshift($pathParts, $folderName);
+
+            if ($folderName !== '') {
+                array_unshift($hierarchyParts, $folderName);
+            }
             
             // Get parent if exists
-            if ($current->parent_pk) {
-                $current = CourseRepositoryMaster::find($current->parent_pk);
+            if (!empty($current->parent_type)) {
+                $current = CourseRepositoryMaster::find($current->parent_type);
             } else {
                 break;
             }
         }
-        
-        return implode('/', $pathParts);
+
+        $pathParts = array_merge(['course_repository'], $hierarchyParts);
+        return implode('/', array_filter($pathParts));
     }
 
     /**
