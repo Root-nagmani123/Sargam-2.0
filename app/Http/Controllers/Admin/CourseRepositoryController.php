@@ -523,20 +523,20 @@ class CourseRepositoryController extends Controller
         try {
             $document = CourseRepositoryDocument::findOrFail($pk);
             
-            if (!$document->full_path) {
+            if (!$document->normalized_full_path) {
                 return redirect()->back()->with('error', 'File not found');
             }
             
             // Check if file exists
-            if (!Storage::disk('public')->exists($document->full_path)) {
-                Log::error('File not found in storage: ' . $document->full_path);
+            if (!Storage::disk('public')->exists($document->normalized_full_path)) {
+                Log::error('File not found in storage: ' . $document->normalized_full_path);
                 return redirect()->back()->with('error', 'File not found in storage');
             }
             
             // Get original filename without timestamp prefix
             $originalName = preg_replace('/^\d+_[a-f0-9]+_/', '', $document->upload_document);
             
-            return Storage::disk('public')->download($document->full_path, $originalName);
+            return Storage::disk('public')->download($document->normalized_full_path, $originalName);
         } catch (Exception $e) {
             Log::error('Error downloading document: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Download failed: ' . $e->getMessage());
