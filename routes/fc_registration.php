@@ -224,6 +224,8 @@ Route::middleware(['auth'])->prefix('admin/reports')->name('admin.reports.')->gr
     // Individual student full profile
     Route::get('/student/{username}', [ReportController::class, 'studentDetail'])->name('student');
     Route::get('/student/{username}/pdf', [ReportController::class, 'studentDetailPdf'])->name('student.pdf');
+    Route::post('/student/{username}/documents/{documentMasterId}/verify', [ReportController::class, 'updateStudentDocumentVerification'])
+        ->name('student.documents.verify');
 
     // Aggregated reports
     Route::get('/by-service',   [ReportController::class, 'byService'])->name('service');
