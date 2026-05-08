@@ -11,6 +11,12 @@ use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use App\Models\User;
 use Illuminate\Support\Facades\Session;
+use App\Exports\WeekTimetableWorkbookExport;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
+use Maatwebsite\Excel\Facades\Excel;
 
 
 
@@ -44,9 +50,21 @@ class CalendarController extends Controller
                 ->where('student_master_course__map.student_master_pk', auth()->user()->user_id);
         }
 
-        $courseMaster = $courseMaster->select('course_master.pk', 'course_name', 'couse_short_name', 'course_year')
-            ->get();
-        // print_r($courseMaster);die;
+        $courseMaster = $courseMaster->select(
+            'course_master.pk',
+            'course_name',
+            'couse_short_name',
+            'course_year',
+            'course_master.start_year',
+            'course_master.end_date'
+        )->get();
+
+        $calendarCourseMeta = $courseMaster->mapWithKeys(static function ($c) {
+            return [(string) $c->pk => [
+                'start_year' => $c->start_year,
+                'end_date' => $c->end_date,
+            ]];
+        });
 
         $facultyMaster = FacultyMaster::where('active_inactive', 1)
             ->select('pk', 'faculty_type', 'full_name')
@@ -79,6 +97,7 @@ class CalendarController extends Controller
 
         return view('admin.calendar.index', compact(
             'courseMaster',
+            'calendarCourseMeta',
             'facultyMaster',
             'subjects',
             'venueMaster',
@@ -235,16 +254,28 @@ class CalendarController extends Controller
 
     public function fullCalendarDetails(Request $request)
     {
+        $rangeStart = $request->input('start');
+        $rangeEnd = $request->input('end');
+        if (!$rangeStart || !$rangeEnd) {
+            $rangeStart = Carbon::now()->startOfMonth()->toDateString();
+            $rangeEnd = Carbon::now()->endOfMonth()->toDateString();
+        }
+        $coursePk = $request->filled('course_id') ? (int) $request->course_id : null;
 
-        $event = new CalendarEvent();
+        return response()->json($this->collectCalendarEventsForRange($request, $rangeStart, $rangeEnd, $coursePk));
+    }
 
-
+    /**
+     * Timetable events + holidays for a date span (same payload as full-calendar-details JSON).
+     *
+     * @return Collection<int, array<string, mixed>>
+     */
+    protected function collectCalendarEventsForRange(Request $request, string $rangeStart, string $rangeEnd, ?int $courseMasterPk): Collection
+    {
         $events = DB::table('timetable')
             ->join('venue_master', 'timetable.venue_id', '=', 'venue_master.venue_id');
 
-        // Student-OT Role
         if (hasRole('Student-OT')) {
-
             $student_pk = auth()->user()->user_id;
 
             $events = $events
@@ -252,30 +283,20 @@ class CalendarController extends Controller
                 ->join('student_course_group_map', 'student_course_group_map.group_type_master_course_master_map_pk', '=', 'course_group_timetable_mapping.group_pk')
                 ->where('student_course_group_map.student_master_pk', $student_pk);
         }
-        $cuurent_month_start_date = Carbon::now()->startOfMonth()->toDateString();
-        $cuurent_month_end_date = Carbon::now()->endOfMonth()->toDateString();
-        if (($request->start) && ($request->end)) {
-        } else {
-            $request->start = $cuurent_month_start_date;
-            $request->end = $cuurent_month_end_date;
-        }
 
-
-        // Filter by course if provided
-        if ($request->has('course_id') && $request->course_id) {
-            $events = $events->where('timetable.course_master_pk', $request->course_id);
+        if ($courseMasterPk !== null) {
+            $events = $events->where('timetable.course_master_pk', $courseMasterPk);
         }
 
         $events = $events
-            ->whereDate('START_DATE', '>=', $request->start)
-            ->whereDate('END_DATE', '<=', $request->end)
+            ->whereDate('START_DATE', '>=', $rangeStart)
+            ->whereDate('END_DATE', '<=', $rangeEnd)
             ->select(
                 'timetable.*',
                 'venue_master.venue_name as venue_name'
             )
             ->get();
 
-        // Internal / Guest Faculty - Filter after fetching to handle JSON
         if (hasRole('Internal Faculty') || hasRole('Guest Faculty')) {
             $faculty_pk = auth()->user()->user_id;
             $faculty_master_pk = DB::table('faculty_master')
@@ -285,33 +306,24 @@ class CalendarController extends Controller
             if ($faculty_master_pk) {
                 $events = $events->filter(function ($event) use ($faculty_master_pk) {
                     $facultyIds = json_decode($event->faculty_master, true);
-                    // Handle both old integer format and new JSON array format
                     if (is_array($facultyIds)) {
                         return in_array($faculty_master_pk, $facultyIds);
-                    } else {
-                        // Old format: integer value
-                        return $event->faculty_master == $faculty_master_pk;
                     }
+
+                    return $event->faculty_master == $faculty_master_pk;
                 });
             } else {
                 $events = collect([]);
             }
         }
 
-
-
-
-        // Array of some sample colors
         $colors = ['#ffffff'];
 
-        // Assign random color to each event
         $events = $events->map(function ($event) use ($colors) {
-            // Parse start and end times from class_session if it contains time range
             $startDateTime = $event->START_DATE;
             $endDateTime = $event->END_DATE;
             $allDay = false;
 
-            // Get faculty names from JSON (handle both old integer and new JSON array format)
             $facultyIds = json_decode($event->faculty_master, true);
             $facultyNames = '';
             if (is_array($facultyIds) && !empty($facultyIds)) {
@@ -320,47 +332,57 @@ class CalendarController extends Controller
                     ->pluck('full_name')
                     ->implode(', ');
             } elseif (!is_array($facultyIds) && !empty($event->faculty_master)) {
-                // Old format: integer value
                 $facultyNames = DB::table('faculty_master')
                     ->where('pk', $event->faculty_master)
                     ->value('full_name') ?? '';
             }
 
-            // Check if class_session exists and contains a time range with dash
-            if (!empty($event->class_session) && strpos($event->class_session, '-') !== false) {
-                $timeRange = trim($event->class_session);
-                $parts = explode('-', $timeRange);
+            $sessionPair = !empty($event->class_session)
+                ? $this->splitClassSessionTimeRange((string) $event->class_session)
+                : null;
 
-                if (count($parts) === 2) {
-                    $startTime = trim($parts[0]);
-                    $endTime = trim($parts[1]);
+            if ($sessionPair !== null) {
+                [$startTime, $endTime] = $sessionPair;
+                $startTimestamp = strtotime($startTime);
+                $endTimestamp = strtotime($endTime);
 
-                    // Try to parse times
-                    $startTimestamp = strtotime($startTime);
-                    $endTimestamp = strtotime($endTime);
+                if ($startTimestamp !== false && $endTimestamp !== false) {
+                    $startTime24 = date('H:i', $startTimestamp);
+                    $endTime24 = date('H:i', $endTimestamp);
 
-                    if ($startTimestamp !== false && $endTimestamp !== false) {
-                        $startTime24 = date('H:i', $startTimestamp);
-                        $endTime24 = date('H:i', $endTimestamp);
-
-                        // Append time to date (ISO 8601 format)
+                    $startDateTime = $event->START_DATE . 'T' . $startTime24 . ':00';
+                    $endDay = $event->END_DATE ?: $event->START_DATE;
+                    $endDateTime = $endDay . 'T' . $endTime24 . ':00';
+                    $allDay = false;
+                } else {
+                    $startTime24 = $this->parseClockChunkTo24h($startTime);
+                    $endTime24 = $this->parseClockChunkTo24h($endTime);
+                    if ($startTime24 !== null && $endTime24 !== null) {
                         $startDateTime = $event->START_DATE . 'T' . $startTime24 . ':00';
-                        $endDateTime = $event->END_DATE . 'T' . $endTime24 . ':00';
+                        $endDay = $event->END_DATE ?: $event->START_DATE;
+                        $endDateTime = $endDay . 'T' . $endTime24 . ':00';
                         $allDay = false;
                     } else {
-                        // If time parsing failed, treat as all-day
+                        $allDay = true;
+                    }
+                }
+            } else {
+                $sessNorm = $this->normalizeTimetableSessionString((string) ($event->class_session ?? ''));
+                if ($sessNorm !== '') {
+                    $single = $this->parseClockChunkTo24h($sessNorm);
+                    if ($single !== null) {
+                        $startDateTime = $event->START_DATE . 'T' . $single . ':00';
+                        $endDay = $event->END_DATE ?: $event->START_DATE;
+                        $endDateTime = $endDay . 'T' . $single . ':00';
+                        $allDay = false;
+                    } else {
                         $allDay = true;
                     }
                 } else {
                     $allDay = true;
                 }
-            } else {
-                // No time information, treat as all-day
-                $allDay = true;
             }
 
-            // For all-day events, FullCalendar expects an exclusive end date.
-            // If start and end are the same, advance end by +1 day so it renders.
             if ($allDay) {
                 try {
                     $startDateTime = Carbon::parse($event->START_DATE)->format('Y-m-d');
@@ -368,11 +390,27 @@ class CalendarController extends Controller
                         ->addDay()
                         ->format('Y-m-d');
                 } catch (\Exception $e) {
-                    // Fallback: ensure at least a one-day span
                     $startDateTime = $event->START_DATE;
                     $endDateTime = Carbon::parse($event->START_DATE)->addDay()->format('Y-m-d');
                 }
             }
+
+            $decodedGroups = json_decode($event->group_name, true);
+            $groupIds = [];
+            if (is_array($decodedGroups)) {
+                $groupIds = $decodedGroups;
+            } elseif (is_numeric($decodedGroups)) {
+                $groupIds = [(int) $decodedGroups];
+            }
+            $groupNamesList = [];
+            if ($groupIds !== []) {
+                $groupNamesList = DB::table('group_type_master_course_master_map')
+                    ->whereIn('pk', $groupIds)
+                    ->pluck('group_name')
+                    ->values()
+                    ->all();
+            }
+            $groupNameStr = $groupNamesList !== [] ? implode(', ', $groupNamesList) : '';
 
             return [
                 'id' => $event->pk,
@@ -381,20 +419,20 @@ class CalendarController extends Controller
                 'end'   => $endDateTime,
                 'vanue'   => $event->venue_name,
                 'faculty_name'   => $facultyNames,
-                'backgroundColor' => $colors[array_rand($colors)],  // background color for event
-                'borderColor' => $colors[array_rand($colors)],  // border color for event
-                // Use dark text for better contrast with light backgrounds
+                'class_session' => $event->class_session ?? '',
+                'group_name' => $groupNameStr,
+                'group_names' => $groupNamesList,
+                'backgroundColor' => $colors[array_rand($colors)],
+                'borderColor' => $colors[array_rand($colors)],
                 'textColor' => '#111827',
                 'allDay' => $allDay,
                 'display' => 'block',
-                // Debug info - class_session value stored in database
                 'class_session_debug' => $event->class_session,
             ];
         });
 
-        // Fetch holidays
         $holidays = Holiday::active()
-            ->whereBetween('holiday_date', [$request->start, $request->end])
+            ->whereBetween('holiday_date', [$rangeStart, $rangeEnd])
             ->get()
             ->map(function ($holiday) {
                 $backgroundColor = '';
@@ -402,14 +440,14 @@ class CalendarController extends Controller
 
                 switch ($holiday->holiday_type) {
                     case 'gazetted':
-                        $backgroundColor = '#dc3545'; // Red for Gazetted
+                        $backgroundColor = '#dc3545';
                         break;
                     case 'restricted':
-                        $backgroundColor = '#ffc107'; // Yellow/Amber for Restricted
+                        $backgroundColor = '#ffc107';
                         $textColor = '#000';
                         break;
                     case 'optional':
-                        $backgroundColor = '#17a2b8'; // Info color for Optional
+                        $backgroundColor = '#17a2b8';
                         break;
                 }
 
@@ -417,7 +455,6 @@ class CalendarController extends Controller
                     'id' => 'holiday_' . $holiday->id,
                     'title' => $holiday->holiday_name . ' (' . ucfirst($holiday->holiday_type) . ')',
                     'start' => $holiday->holiday_date->format('Y-m-d'),
-                    // End must be exclusive for all-day events (+1 day)
                     'end' => $holiday->holiday_date->copy()->addDay()->format('Y-m-d'),
                     'backgroundColor' => $backgroundColor,
                     'borderColor' => $backgroundColor,
@@ -426,14 +463,896 @@ class CalendarController extends Controller
                     'type' => 'holiday',
                     'holiday_type' => $holiday->holiday_type,
                     'description' => $holiday->description,
-                    'allDay' => true
+                    'allDay' => true,
                 ];
             });
 
-        // Merge events and holidays
-        $allEvents = $events->merge($holidays);
+        return $events->merge($holidays);
+    }
 
-        return response()->json($allEvents);
+    /**
+     * @param  array<string, mixed>  $ev
+     */
+    protected function isWeekTimetableHoliday(array $ev): bool
+    {
+        return ($ev['type'] ?? '') === 'holiday' || str_starts_with((string) ($ev['id'] ?? ''), 'holiday_');
+    }
+
+    /**
+     * Shared data for week timetable PDF / print / Excel.
+     *
+     * @return array{weekMonday: \Carbon\Carbon, weekNum: int, weekYear: int, courseTitle: string, headerDates: list<array{weekday: string, dmy: string}>, weekRangeLabel: string, gridRows: list<array<string, string>>, allEvents: Collection<int, array<string, mixed>>, coursePk: ?int, pdfFileBase: string, venueSummaryLine: ?string, footnotes: list<string>, pdfBodyFont: string}
+     */
+    protected function prepareWeekTimetableExport(Request $request): array
+    {
+        $weekOffset = (int) $request->input('week_offset', 0);
+        $weekMonday = Carbon::now()->startOfWeek(Carbon::MONDAY)->addWeeks($weekOffset);
+        $weekSunday = $weekMonday->copy()->endOfWeek(Carbon::SUNDAY);
+
+        $rangeStart = $weekMonday->toDateString();
+        $rangeEnd = $weekSunday->toDateString();
+
+        $coursePk = $request->filled('course_id') ? (int) $request->course_id : null;
+
+        $allEvents = $this->collectCalendarEventsForRange($request, $rangeStart, $rangeEnd, $coursePk);
+
+        $weekYear = (int) $weekMonday->isoWeekYear();
+        $isoWeek = (int) $weekMonday->isoWeek();
+
+        $courseRow = null;
+        if ($coursePk) {
+            $courseRow = CourseMaster::where('pk', $coursePk)->first([
+                'pk', 'course_name', 'course_year', 'start_year', 'end_date',
+            ]);
+        }
+
+        $courseProgrammeTitle = $courseRow?->course_name ?? 'Academic timetable';
+        $coursePeriodParen = $this->formatCoursePeriodLine($courseRow);
+        $sheetWeekNumber = $this->resolveSheetWeekNumber($weekMonday, $courseRow, $isoWeek);
+
+        $headerDates = [];
+        for ($i = 0; $i < 5; $i++) {
+            $d = $weekMonday->copy()->addDays($i);
+            $headerDates[] = [
+                'weekday' => $d->englishDayOfWeek,
+                'dmy' => $d->format('d.m.Y'),
+            ];
+        }
+
+        $weekRangeLabel = $weekMonday->format('d.m.Y') . ' to ' . $weekMonday->copy()->addDays(6)->format('d.m.Y');
+
+        $gridRows = $this->buildWeekTimetablePdfGridRows($allEvents, $weekMonday);
+        $breakNotices = $this->buildWeekTimetableBreakNoticeCells($allEvents, $weekMonday);
+        $venueSummaryLine = $this->buildWeekTimetableVenueSummaryLine($allEvents, $weekMonday);
+        $footnotes = array_values(array_unique(array_filter(array_map('trim', config('week_timetable.footnotes', [])))));
+
+        return [
+            'weekMonday' => $weekMonday,
+            'weekNum' => $isoWeek,
+            'weekYear' => $weekYear,
+            'sheetWeekNumber' => $sheetWeekNumber,
+            'courseTitle' => $courseProgrammeTitle,
+            'courseProgrammeTitle' => $courseProgrammeTitle,
+            'coursePeriodParen' => $coursePeriodParen,
+            'headerDates' => $headerDates,
+            'weekRangeLabel' => $weekRangeLabel,
+            'gridRows' => $gridRows,
+            'breakNotices' => $breakNotices,
+            'venueSummaryLine' => $venueSummaryLine,
+            'footnotes' => $footnotes,
+            'pdfBodyFont' => (string) config('week_timetable.pdf_body_font', 'DejaVu Sans, Arial, Helvetica, sans-serif'),
+            'allEvents' => $allEvents,
+            'coursePk' => $coursePk,
+            'pdfFileBase' => 'week-timetable-' . $weekMonday->format('Y-m-d'),
+        ];
+    }
+
+    /**
+     * Programme dates line like official PDF: "(8 December 2025 to 17 April, 2026)".
+     */
+    protected function formatCoursePeriodLine(?CourseMaster $course): ?string
+    {
+        if (!$course || empty($course->start_year) || empty($course->end_date)) {
+            return null;
+        }
+        try {
+            $s = Carbon::parse($course->start_year);
+            $e = Carbon::parse($course->end_date);
+
+            return '(' . $s->format('j F Y') . ' to ' . $e->format('j F, Y') . ')';
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    /**
+     * Official "Week-19" style number: weeks since programme start (Monday-aligned), else ISO week.
+     */
+    protected function resolveSheetWeekNumber(Carbon $weekMonday, ?CourseMaster $course, int $isoWeekFallback): int
+    {
+        if ($course && !empty($course->start_year)) {
+            try {
+                $progStart = Carbon::parse($course->start_year)->copy()->startOfWeek(Carbon::MONDAY)->startOfDay();
+                $wm = $weekMonday->copy()->startOfDay();
+                $days = (int) $progStart->diffInDays($wm, false);
+                if ($days >= 0) {
+                    return max(1, (int) floor($days / 7) + 1);
+                }
+            } catch (\Throwable $e) {
+            }
+        }
+
+        return $isoWeekFallback;
+    }
+
+    /**
+     * Per-column tea/lunch break notes (matches official sheet pattern when titles contain those words).
+     *
+     * @return array{Mon: string, Tue: string, Wed: string, Thu: string, Fri: string}
+     */
+    protected function buildWeekTimetableBreakNoticeCells(Collection $allEvents, Carbon $weekMonday): array
+    {
+        $byDay = ['Mon' => '', 'Tue' => '', 'Wed' => '', 'Thu' => '', 'Fri' => ''];
+        $weekFriday = $weekMonday->copy()->addDays(4)->endOfDay();
+        $dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+        foreach ($allEvents as $ev) {
+            if ($this->isWeekTimetableHoliday($ev)) {
+                continue;
+            }
+            $title = (string) ($ev['title'] ?? '');
+            if ($title === '' || !preg_match('/\b(tea\s*break|lunch\s*break)\b/i', $title)) {
+                continue;
+            }
+            try {
+                $start = Carbon::parse($ev['start']);
+            } catch (\Throwable $e) {
+                continue;
+            }
+            if ($start->lt($weekMonday->copy()->startOfDay()) || $start->gt($weekFriday)) {
+                continue;
+            }
+            $d = $dayNames[$start->dayOfWeek];
+            if (!isset($byDay[$d])) {
+                continue;
+            }
+            $sess = trim((string) ($ev['class_session'] ?? ''));
+            $line = $title . ($sess !== '' ? ': ' . $sess : '');
+            $byDay[$d] = $byDay[$d] === '' ? $line : ($byDay[$d] . ' ' . $line);
+        }
+
+        return $byDay;
+    }
+
+    /**
+     * One-line venue summary like official sheet: "VENUES: Group A: TH, Group B: AH".
+     */
+    protected function buildWeekTimetableVenueSummaryLine(Collection $allEvents, Carbon $weekMonday): ?string
+    {
+        $weekFriday = $weekMonday->copy()->addDays(4)->endOfDay();
+        $pairs = [];
+
+        foreach ($allEvents as $ev) {
+            if ($this->isWeekTimetableHoliday($ev)) {
+                continue;
+            }
+            $title = (string) ($ev['title'] ?? '');
+            if ($title !== '' && preg_match('/\b(tea\s*break|lunch\s*break)\b/i', $title)) {
+                continue;
+            }
+            try {
+                $start = Carbon::parse($ev['start']);
+            } catch (\Throwable $e) {
+                continue;
+            }
+            if ($start->lt($weekMonday->copy()->startOfDay()) || $start->gt($weekFriday)) {
+                continue;
+            }
+            $g = trim((string) ($ev['group_name'] ?? ''));
+            $v = trim((string) ($ev['vanue'] ?? $ev['venue_name'] ?? ''));
+            if ($g === '' && $v === '') {
+                continue;
+            }
+            $label = $g !== '' ? ($g . ': ' . $v) : $v;
+            $pairs[strtolower($label)] = $label;
+        }
+
+        if ($pairs === []) {
+            return null;
+        }
+
+        return 'VENUES: ' . implode(', ', array_values($pairs));
+    }
+
+    /**
+     * Strip HTML from PDF grid cells for Excel export.
+     */
+    protected function weekTimetableGridCellToPlain(string $html): string
+    {
+        if ($html === '') {
+            return '';
+        }
+        $s = preg_replace('#<br\s*/?>#i', "\n", $html);
+        $s = strip_tags($s);
+        $s = html_entity_decode($s, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        return trim(preg_replace("/\n{3,}/u", "\n\n", $s));
+    }
+
+    /**
+     * Excel rows mirroring the official revised sheet (letterhead + grid).
+     *
+     * @param  array<string, mixed>  $data  Output of {@see prepareWeekTimetableExport()}
+     * @return list<list<string>>
+     */
+    protected function buildWeekTimetableExcelSheetArray(array $data): array
+    {
+        $lines = [];
+        $blank = ['', '', '', '', '', ''];
+
+        $lines[] = ['लाल बहादुर शास्त्री राष्ट्रीय प्रशासन अकादमी, मसूरी', '', '', '', '', ''];
+        $lines[] = ['Lal Bahadur Shastri National Academy of Administration, Mussoorie', '', '', '', '', ''];
+        $lines[] = [(string) ($data['courseProgrammeTitle'] ?? $data['courseTitle'] ?? 'Academic timetable'), '', '', '', '', ''];
+        $period = trim((string) ($data['coursePeriodParen'] ?? ''));
+        if ($period !== '') {
+            $lines[] = [$period, '', '', '', '', ''];
+        }
+        $wn = (int) ($data['sheetWeekNumber'] ?? $data['weekNum'] ?? 1);
+        $lines[] = ['Time Table : Week-' . $wn . '     Revised', '', '', '', '', ''];
+        $lines[] = $blank;
+
+        $headerDates = $data['headerDates'] ?? [];
+        $rowWeekdays = ['TIME'];
+        foreach ($headerDates as $h) {
+            $rowWeekdays[] = (string) ($h['weekday'] ?? '');
+        }
+        while (count($rowWeekdays) < 6) {
+            $rowWeekdays[] = '';
+        }
+        $lines[] = $rowWeekdays;
+
+        $rowDmY = [''];
+        foreach ($headerDates as $h) {
+            $rowDmY[] = (string) ($h['dmy'] ?? '');
+        }
+        while (count($rowDmY) < 6) {
+            $rowDmY[] = '';
+        }
+        $lines[] = $rowDmY;
+
+        $bn = $data['breakNotices'] ?? ['Mon' => '', 'Tue' => '', 'Wed' => '', 'Thu' => '', 'Fri' => ''];
+        $showBreak = collect($bn)->contains(static fn ($v) => trim((string) $v) !== '');
+        if ($showBreak) {
+            $normBreak = static fn ($v): string => trim(str_replace(["\r\n", "\r"], "\n", (string) $v));
+            $lines[] = [
+                '',
+                $normBreak($bn['Mon'] ?? ''),
+                $normBreak($bn['Tue'] ?? ''),
+                $normBreak($bn['Wed'] ?? ''),
+                $normBreak($bn['Thu'] ?? ''),
+                $normBreak($bn['Fri'] ?? ''),
+            ];
+        }
+
+        $venue = trim((string) ($data['venueSummaryLine'] ?? ''));
+        if ($venue !== '') {
+            $lines[] = ['', $venue, '', '', '', ''];
+        }
+
+        $gridRows = $data['gridRows'] ?? [];
+        if ($gridRows === []) {
+            $lines[] = ['No sessions in this week for the selected filters.', '', '', '', '', ''];
+        } else {
+            foreach ($gridRows as $row) {
+                $lines[] = [
+                    str_replace(["\r\n", "\r"], "\n", (string) ($row['time'] ?? '')),
+                    $this->weekTimetableGridCellToPlain((string) ($row['Mon'] ?? '')),
+                    $this->weekTimetableGridCellToPlain((string) ($row['Tue'] ?? '')),
+                    $this->weekTimetableGridCellToPlain((string) ($row['Wed'] ?? '')),
+                    $this->weekTimetableGridCellToPlain((string) ($row['Thu'] ?? '')),
+                    $this->weekTimetableGridCellToPlain((string) ($row['Fri'] ?? '')),
+                ];
+            }
+        }
+
+        foreach ($data['footnotes'] ?? [] as $fn) {
+            $t = trim((string) $fn);
+            if ($t === '') {
+                continue;
+            }
+            $lines[] = ['', $t, '', '', '', ''];
+        }
+
+        return $lines;
+    }
+
+    /**
+     * PDF export — weekly Mon–Fri grid. Use query ?download=1 to force download.
+     */
+    public function exportWeekTimetablePdf(Request $request)
+    {
+        $data = $this->prepareWeekTimetableExport($request);
+
+        $viewData = Arr::only($data, [
+            'weekNum',
+            'weekYear',
+            'sheetWeekNumber',
+            'courseTitle',
+            'courseProgrammeTitle',
+            'coursePeriodParen',
+            'headerDates',
+            'weekRangeLabel',
+            'gridRows',
+            'breakNotices',
+            'venueSummaryLine',
+            'footnotes',
+            'pdfBodyFont',
+        ]);
+
+        $pdf = Pdf::loadView('admin.calendar.pdf.week-timetable-pdf', $viewData)
+            ->setPaper('a4', 'landscape');
+
+        $fname = $data['pdfFileBase'] . '.pdf';
+
+        if ($request->boolean('download')) {
+            return $pdf->download($fname);
+        }
+
+        return $pdf->stream($fname);
+    }
+
+    /**
+     * Printable HTML (opens in new tab; auto print dialog).
+     */
+    public function exportWeekTimetablePrint(Request $request)
+    {
+        $data = $this->prepareWeekTimetableExport($request);
+
+        $viewData = Arr::only($data, [
+            'weekNum',
+            'weekYear',
+            'sheetWeekNumber',
+            'courseTitle',
+            'courseProgrammeTitle',
+            'coursePeriodParen',
+            'headerDates',
+            'weekRangeLabel',
+            'gridRows',
+            'breakNotices',
+            'venueSummaryLine',
+            'footnotes',
+            'pdfBodyFont',
+        ]);
+
+        return response()->view('admin.calendar.print.week-timetable-print', $viewData);
+    }
+
+    /**
+     * Excel export — same layout as the revised sheet (letterhead + Mon–Fri grid; holidays omitted).
+     */
+    public function exportWeekTimetableExcel(Request $request)
+    {
+        $data = $this->prepareWeekTimetableExport($request);
+        $sheetRows = $this->buildWeekTimetableExcelSheetArray($data);
+        $flatSessions = $this->buildWeekTimetableExcelSessionRows($data['allEvents'], $data['weekMonday']);
+        $sessionsMatrix = $this->buildWeekTimetableSessionsExcelMatrix($flatSessions);
+
+        $fileName = $data['pdfFileBase'] . '.xlsx';
+        $sheetTitle = 'Week ' . ($data['sheetWeekNumber'] ?? $data['weekNum']) . ' — ' . Str::limit($data['courseTitle'], 24, '');
+
+        return Excel::download(
+            new WeekTimetableWorkbookExport($sheetRows, $sheetTitle, $sessionsMatrix),
+            $fileName
+        );
+    }
+
+    /**
+     * Flat session rows for the "Sessions" Excel sheet (Mon–Sun window; holidays omitted).
+     *
+     * @param  Collection<int, array<string, mixed>>  $allEvents
+     * @return list<array<string, string>>
+     */
+    protected function buildWeekTimetableExcelSessionRows(Collection $allEvents, Carbon $weekMonday): array
+    {
+        $weekEnd = $weekMonday->copy()->addDays(6)->endOfDay();
+        $rows = [];
+
+        foreach ($allEvents as $ev) {
+            if ($this->isWeekTimetableHoliday($ev)) {
+                continue;
+            }
+            try {
+                $start = Carbon::parse($ev['start']);
+            } catch (\Throwable $e) {
+                continue;
+            }
+
+            if ($start->lt($weekMonday->copy()->startOfDay()) || $start->gt($weekEnd)) {
+                continue;
+            }
+
+            $timeStr = str_replace(["\n", "\r"], [' ', ''], $this->weekTimetableTimeColumnDisplay($ev, $start));
+            $letter = $this->inferPdfGroupRowLetter((string) ($ev['group_name'] ?? ''));
+
+            $rows[] = [
+                'date' => $start->format('Y-m-d'),
+                'weekday' => $start->englishDayOfWeek,
+                'time' => $timeStr,
+                'group_row' => $letter,
+                'topic' => (string) ($ev['title'] ?? ''),
+                'group_names' => (string) ($ev['group_name'] ?? ''),
+                'session' => (string) ($ev['class_session'] ?? ''),
+                'venue' => (string) ($ev['vanue'] ?? $ev['venue_name'] ?? ''),
+                'faculty' => (string) ($ev['faculty_name'] ?? ''),
+                'type' => 'Session',
+                '__slot' => $this->weekTimetableSlotSortKey($ev, $start),
+            ];
+        }
+
+        usort($rows, static function (array $a, array $b): int {
+            return [$a['date'], $a['__slot'], $a['topic']] <=> [$b['date'], $b['__slot'], $b['topic']];
+        });
+
+        foreach ($rows as &$r) {
+            unset($r['__slot']);
+        }
+        unset($r);
+
+        return $rows;
+    }
+
+    /**
+     * @param  list<array<string, string>>  $flat
+     * @return list<list<string>>
+     */
+    protected function buildWeekTimetableSessionsExcelMatrix(array $flat): array
+    {
+        $head = ['Date', 'Weekday', 'Time', 'Group row', 'Topic', 'Group names', 'Session', 'Venue', 'Faculty', 'Type'];
+        $matrix = [$head];
+        foreach ($flat as $r) {
+            $matrix[] = [
+                $r['date'] ?? '',
+                $r['weekday'] ?? '',
+                $r['time'] ?? '',
+                $r['group_row'] ?? '',
+                $r['topic'] ?? '',
+                $r['group_names'] ?? '',
+                $r['session'] ?? '',
+                $r['venue'] ?? '',
+                $r['faculty'] ?? '',
+                $r['type'] ?? '',
+            ];
+        }
+
+        return $matrix;
+    }
+
+    protected function normalizeTimetableSessionString(string $s): string
+    {
+        $s = trim($s);
+        if ($s === '') {
+            return '';
+        }
+        $s = preg_replace('/[\x{2013}\x{2014}\x{2212}]/u', '-', $s);
+        $s = preg_replace('/\s*hrs\.?\s*$/i', '', $s);
+
+        return trim($s);
+    }
+
+    /**
+     * @return array{0: string, 1: string}|null
+     */
+    protected function splitClassSessionTimeRange(?string $raw): ?array
+    {
+        $s = $this->normalizeTimetableSessionString((string) $raw);
+        if ($s === '') {
+            return null;
+        }
+        $patterns = ['/\s+to\s+/i', '/\s*-\s*/'];
+        foreach ($patterns as $pat) {
+            $parts = preg_split($pat, $s, 2);
+            if (is_array($parts) && count($parts) === 2) {
+                $a = trim($parts[0]);
+                $b = trim($parts[1]);
+                if ($a !== '' && $b !== '') {
+                    return [$a, $b];
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Start-of-slot from class_session (left segment) on the event calendar day — used when allDay hides real times in start/end.
+     *
+     * @param  array<string, mixed>  $ev
+     */
+    protected function weekTimetableSessionSlotStart(array $ev, Carbon $eventDay): ?Carbon
+    {
+        $pair = $this->splitClassSessionTimeRange($ev['class_session'] ?? null);
+        $left = null;
+        if ($pair !== null) {
+            $left = trim($pair[0]);
+        } else {
+            $sessNorm = $this->normalizeTimetableSessionString((string) ($ev['class_session'] ?? ''));
+            $left = $sessNorm !== '' ? $sessNorm : null;
+        }
+        if ($left === null || $left === '') {
+            return null;
+        }
+
+        $dateStr = $eventDay->copy()->startOfDay()->format('Y-m-d');
+        try {
+            return Carbon::parse($dateStr . ' ' . $left);
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    /**
+     * Start/end minutes from midnight (0–2880 if session crosses midnight) for ordering.
+     *
+     * @param  array<string, mixed>  $ev
+     * @return array{0: int, 1: int}  Use t1 < 0 for “no clock” (sort last).
+     */
+    protected function weekTimetableSlotWindowMinutes(array $ev, Carbon $start): array
+    {
+        $pair = $this->splitClassSessionTimeRange($ev['class_session'] ?? null);
+        if ($pair !== null) {
+            $left = $this->parseClockChunkTo24h(trim($pair[0]));
+            $right = $this->parseClockChunkTo24h(trim($pair[1]));
+            if ($left !== null && $right !== null) {
+                [$h1, $m1] = array_map('intval', explode(':', $left, 2));
+                [$h2, $m2] = array_map('intval', explode(':', $right, 2));
+                $t1 = $h1 * 60 + $m1;
+                $t2 = $h2 * 60 + $m2;
+                if ($t2 < $t1) {
+                    $t2 += 1440;
+                }
+
+                return [$t1, $t2];
+            }
+        }
+
+        if (!empty($ev['allDay'])) {
+            $sessNorm = $this->normalizeTimetableSessionString((string) ($ev['class_session'] ?? ''));
+            if ($sessNorm !== '') {
+                $single = $this->parseClockChunkTo24h($sessNorm);
+                if ($single !== null) {
+                    [$h, $mi] = array_map('intval', explode(':', $single, 2));
+                    $t1 = $h * 60 + $mi;
+
+                    return [$t1, min($t1 + 50, 24 * 60)];
+                }
+            }
+            $fromSession = $this->weekTimetableSessionSlotStart($ev, $start);
+            if ($fromSession !== null) {
+                $t1 = (int) $fromSession->format('H') * 60 + (int) $fromSession->format('i');
+
+                return [$t1, min($t1 + 50, 24 * 60)];
+            }
+
+            return [-1, -1];
+        }
+
+        $t1 = (int) $start->format('H') * 60 + (int) $start->format('i');
+        try {
+            $end = isset($ev['end']) ? Carbon::parse($ev['end']) : $start->copy()->addHour();
+        } catch (\Throwable $e) {
+            $end = $start->copy()->addHour();
+        }
+        $t2 = (int) $end->format('H') * 60 + (int) $end->format('i');
+        if ($end->toDateString() !== $start->toDateString() && $t2 < $t1) {
+            $t2 += 1440;
+        }
+
+        return [$t1, $t2];
+    }
+
+    /**
+     * Stable slot key: clock-only band so Mon–Fri share one row per same session time (serial day order).
+     *
+     * @param  array<string, mixed>  $ev
+     */
+    protected function weekTimetableSlotSortKey(array $ev, Carbon $start): string
+    {
+        [$t1, $t2] = $this->weekTimetableSlotWindowMinutes($ev, $start);
+        if ($t1 < 0) {
+            return '999990_999990';
+        }
+
+        return sprintf('%05d_%05d', min($t1, 99999), min($t2, 99999));
+    }
+
+    /**
+     * Official-style time column: "09:45" newline "to" newline "10:35" (24h from class_session when possible).
+     *
+     * @param  array<string, mixed>  $ev
+     */
+    protected function weekTimetableTimeColumnDisplay(array $ev, Carbon $start): string
+    {
+        $pair = $this->splitClassSessionTimeRange($ev['class_session'] ?? null);
+        if ($pair !== null) {
+            $left = $this->parseClockChunkTo24h($pair[0]);
+            $right = $this->parseClockChunkTo24h($pair[1]);
+            if ($left !== null && $right !== null) {
+                return $left . "\nto\n" . $right;
+            }
+        }
+
+        $sessNorm = $this->normalizeTimetableSessionString((string) ($ev['class_session'] ?? ''));
+        if (!empty($ev['allDay']) && $sessNorm !== '') {
+            $single = $this->parseClockChunkTo24h($sessNorm);
+            if ($single !== null) {
+                return $single . "\nto\n" . $single;
+            }
+
+            return 'All Day';
+        }
+
+        if (!empty($ev['allDay'])) {
+            return 'All Day';
+        }
+
+        try {
+            $end = isset($ev['end']) ? Carbon::parse($ev['end']) : $start->copy()->addHour();
+        } catch (\Throwable $e) {
+            $end = $start->copy()->addHour();
+        }
+
+        return $start->format('H:i') . "\nto\n" . $end->format('H:i');
+    }
+
+    protected function parseClockChunkTo24h(string $chunk): ?string
+    {
+        $chunk = trim($chunk);
+        if ($chunk === '') {
+            return null;
+        }
+
+        if (preg_match('/^(\d{1,2})(\d{2})$/', $chunk, $m)) {
+            $h = (int) $m[1];
+            $mi = (int) $m[2];
+            if ($h <= 23 && $mi <= 59) {
+                return sprintf('%02d:%02d', $h, $mi);
+            }
+        }
+
+        if (preg_match('/^(\d{2})(\d{2})$/', $chunk, $m4) && strlen($chunk) === 4) {
+            $h = (int) $m4[1];
+            $mi = (int) $m4[2];
+            if ($h <= 23 && $mi <= 59) {
+                return sprintf('%02d:%02d', $h, $mi);
+            }
+        }
+
+        $ts = strtotime($chunk);
+        if ($ts === false) {
+            return null;
+        }
+
+        return date('H:i', $ts);
+    }
+
+    /**
+     * @param  Collection<int, array<string, mixed>>  $allEvents
+     * @return list<array{time: string, Mon: string, Tue: string, Wed: string, Thu: string, Fri: string}>
+     */
+    protected function buildWeekTimetablePdfGridRows(Collection $allEvents, Carbon $weekMonday): array
+    {
+        $weekFriday = $weekMonday->copy()->addDays(4)->endOfDay();
+        $slots = [];
+
+        foreach ($allEvents as $ev) {
+            if ($this->isWeekTimetableHoliday($ev)) {
+                continue;
+            }
+            try {
+                $start = Carbon::parse($ev['start']);
+            } catch (\Throwable $e) {
+                continue;
+            }
+            if ($start->lt($weekMonday->copy()->startOfDay()) || $start->gt($weekFriday)) {
+                continue;
+            }
+
+            $dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            $day = $dayNames[$start->dayOfWeek];
+            if (!in_array($day, ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], true)) {
+                continue;
+            }
+
+            $slotKey = $this->weekTimetableSlotSortKey($ev, $start);
+
+            if (!isset($slots[$slotKey])) {
+                $slots[$slotKey] = ['Mon' => [], 'Tue' => [], 'Wed' => [], 'Thu' => [], 'Fri' => []];
+            }
+            $slots[$slotKey][$day][] = $ev;
+        }
+
+        uksort($slots, static function (string $a, string $b): int {
+            return strcmp($a, $b);
+        });
+
+        $rows = [];
+        foreach ($slots as $slotKey => $days) {
+            $displayTime = '';
+            foreach (['Mon', 'Tue', 'Wed', 'Thu', 'Fri'] as $d) {
+                if (($days[$d] ?? []) !== []) {
+                    $first = $days[$d][0];
+                    try {
+                        $st = Carbon::parse($first['start']);
+                    } catch (\Throwable $e) {
+                        $st = Carbon::now();
+                    }
+                    $displayTime = $this->weekTimetableTimeColumnDisplay($first, $st);
+                    break;
+                }
+            }
+            if ($displayTime === '') {
+                $displayTime = $slotKey;
+            }
+
+            $rows[] = [
+                'time' => $displayTime,
+                'Mon' => $this->formatPdfCellHtml($days['Mon']),
+                'Tue' => $this->formatPdfCellHtml($days['Tue']),
+                'Wed' => $this->formatPdfCellHtml($days['Wed']),
+                'Thu' => $this->formatPdfCellHtml($days['Thu']),
+                'Fri' => $this->formatPdfCellHtml($days['Fri']),
+            ];
+        }
+
+        return $rows;
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $cellEvents
+     */
+    protected function formatPdfCellHtml(array $cellEvents): string
+    {
+        if ($cellEvents === []) {
+            return '';
+        }
+
+        $buckets = $this->bucketPdfCellEvents($cellEvents);
+        $blocks = [];
+        foreach ($buckets as $bucket) {
+            $body = '';
+            foreach ($bucket['events'] as $ev) {
+                $body .= $this->formatPdfMiniCard($ev, $bucket['letter'] !== '');
+            }
+            if ($bucket['letter'] !== '') {
+                $blocks[] = '<table class="cell-stack" width="100%" cellpadding="0" cellspacing="0"><tr>'
+                    . '<td class="cell-lbl">' . e($bucket['letter']) . '</td>'
+                    . '<td class="cell-body">' . $body . '</td></tr></table>';
+            } else {
+                $blocks[] = '<table class="cell-stack" width="100%" cellpadding="0" cellspacing="0"><tr>'
+                    . '<td class="cell-body cell-body-full">' . $body . '</td></tr></table>';
+            }
+        }
+
+        return '<div class="tt-wrap">' . implode('', $blocks) . '</div>';
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $cellEvents
+     * @return list<array{letter: string, events: list<array<string, mixed>>}>
+     */
+    protected function bucketPdfCellEvents(array $cellEvents): array
+    {
+        $isHoliday = static function (array $ev): bool {
+            return ($ev['type'] ?? '') === 'holiday' || str_starts_with((string) ($ev['id'] ?? ''), 'holiday_');
+        };
+
+        $onlyHolidays = true;
+        foreach ($cellEvents as $ev) {
+            if (!$isHoliday($ev)) {
+                $onlyHolidays = false;
+                break;
+            }
+        }
+        if ($onlyHolidays) {
+            return [['letter' => '', 'events' => $cellEvents]];
+        }
+
+        $letters = [];
+        foreach ($cellEvents as $idx => $ev) {
+            $letters[$idx] = $this->inferPdfGroupRowLetter((string) ($ev['group_name'] ?? ''));
+        }
+
+        $allBlank = !array_filter($letters, static fn ($l) => $l !== '');
+        if ($allBlank && count($cellEvents) > 1) {
+            $out = [];
+            foreach ($cellEvents as $i => $ev) {
+                $out[] = ['letter' => chr(65 + $i), 'events' => [$ev]];
+            }
+
+            return $out;
+        }
+
+        $map = [];
+        foreach ($cellEvents as $idx => $ev) {
+            $key = $letters[$idx] !== '' ? $letters[$idx] : '_';
+            if (!isset($map[$key])) {
+                $map[$key] = [];
+            }
+            $map[$key][] = $ev;
+        }
+
+        $sortedKeys = array_keys($map);
+        usort($sortedKeys, static function ($a, $b) {
+            if ($a === '_') {
+                return 1;
+            }
+            if ($b === '_') {
+                return -1;
+            }
+
+            return strcmp((string) $a, (string) $b);
+        });
+
+        $rows = [];
+        foreach ($sortedKeys as $k) {
+            $rows[] = [
+                'letter' => $k === '_' ? '' : $k,
+                'events' => $map[$k],
+            ];
+        }
+
+        return $rows;
+    }
+
+    protected function inferPdfGroupRowLetter(string $groupName): string
+    {
+        $blob = strtolower($groupName);
+        if (preg_match('/\bgroup\s*([a-z])\b/i', $groupName, $m)) {
+            return strtoupper($m[1]);
+        }
+        if (str_contains($blob, 'group a')) {
+            return 'A';
+        }
+        if (str_contains($blob, 'group b')) {
+            return 'B';
+        }
+        if (str_contains($blob, 'group c')) {
+            return 'C';
+        }
+        if (str_contains($blob, 'group d')) {
+            return 'D';
+        }
+
+        return '';
+    }
+
+    /**
+     * @param  array<string, mixed>  $ev
+     */
+    protected function formatPdfMiniCard(array $ev, bool $suppressGroupBadge): string
+    {
+        $title = (string) ($ev['title'] ?? '');
+        $group = (string) ($ev['group_name'] ?? '');
+        $sess = (string) ($ev['class_session'] ?? '');
+        $venue = (string) ($ev['vanue'] ?? $ev['venue_name'] ?? '');
+        $fac = (string) ($ev['faculty_name'] ?? '');
+
+        $badge = (!$suppressGroupBadge && $group !== '')
+            ? '<div class="gb">' . e(Str::limit($group, 80)) . '</div>'
+            : '';
+
+        $lines = '<div class="ttl">' . e(Str::limit($title, 220)) . '</div>';
+        if ($sess !== '') {
+            $lines .= '<div class="ln">' . e(Str::limit($sess, 72)) . '</div>';
+        }
+        if ($fac !== '') {
+            $lines .= '<div class="ln">(' . e(Str::limit($fac, 90)) . ')</div>';
+        }
+        if ($venue !== '') {
+            $lines .= '<div class="ln">' . e(Str::limit($venue, 72)) . '</div>';
+        }
+
+        return '<div class="cardx">' . $badge . $lines . '</div>';
     }
     function SingleCalendarDetails(Request $request)
     {

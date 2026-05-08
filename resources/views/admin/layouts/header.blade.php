@@ -4,10 +4,21 @@
     <a href="#main-content" class="visually-hidden-focusable skip-link">
         Skip to main content
     </a>
+    <a href="#main-content" class="visually-hidden-focusable skip-link">
+        Skip to main content
+    </a>
 
     <header class="header-top-bar d-none d-lg-block">
         <div class="container-fluid px-3 px-xl-4 d-flex align-items-center justify-content-between flex-wrap py-1">
 
+            <!-- Left: Government Identity -->
+            <div class="d-flex align-items-center gap-2">
+                <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Flag_of_India.svg/330px-Flag_of_India.svg.png"
+                    alt="Emblem of India" class="header-flag-icon">
+                <span class="fw-semibold small text-white">
+                    भारत सरकार | Government of India
+                </span>
+            </div>
             <!-- Left: Government Identity -->
             <div class="d-flex align-items-center gap-2">
                 <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Flag_of_India.svg/330px-Flag_of_India.svg.png"
@@ -339,6 +350,7 @@
                             aria-controls="setup-panel" id="setup-tab-mobile">
                             <i class="material-icons material-symbols-rounded" aria-hidden="true">settings</i>
                             @if(hasRole('Admin') || hasRole('Training-Induction') || hasRole('Staff'))
+                            @if(hasRole('Admin') || hasRole('Training-Induction') || hasRole('Staff'))
                             <span>Setup</span>
                             @elseif(hasRole('Internal Faculty') || hasRole('Guest Faculty') ||
                             hasRole('Student-OT'))
@@ -390,7 +402,7 @@
                 <div class="offcanvas-header border-bottom py-3">
                     <h5 class="offcanvas-title fw-semibold" id="notificationOffcanvasMobileLabel">Notifications</h5>
                     @if($unreadCountMobile > 0)
-                    <button type="button" class="btn btn-sm btn-link text-primary p-0" onclick="markAllAsRead()">
+                    <button type="button" class="btn btn-sm btn-link text-primary p-0 js-notification-mark-all-read" onclick="markAllAsRead(event)">
                         Mark all as read
                     </button>
                     @endif
@@ -1054,87 +1066,87 @@
                 }
             }
 
-            @media (max-width: 991.98px) {
-                body {
-                    padding-bottom: 64px !important;
-                }
+                @media (max-width: 991.98px) {
+                    body {
+                        padding-bottom: 64px !important;
+                    }
 
-                /* Mobile: Right-align logout and header actions */
-                .header-right-actions {
-                    width: 100%;
-                    justify-content: flex-end !important;
-                    margin-left: 0 !important;
-                    margin-right: 0 !important;
-                    padding: 0.5rem 0;
-                }
+                    /* Mobile: Right-align logout and header actions */
+                    .header-right-actions {
+                        width: 100%;
+                        justify-content: flex-end !important;
+                        margin-left: 0 !important;
+                        margin-right: 0 !important;
+                        padding: 0.5rem 0;
+                    }
 
-                /* Hide sidebar by default on mobile - responsive width */
-                .left-sidebar,
-                .side-mini-panel,
-                aside.side-mini-panel,
-                aside.side-mini-panel.with-vertical {
-                    position: fixed !important;
-                    top: 0 !important;
-                    left: -100% !important;
-                    width: min(320px, 88vw) !important;
-                    max-width: 320px !important;
-                    height: 100vh !important;
-                    z-index: 1060 !important;
-                    background: transparent !important;
-                    transition: left 0.3s ease-in-out !important;
-                    display: block !important;
-                    visibility: hidden !important;
-                    opacity: 0 !important;
-                    overflow-y: auto !important;
-                }
+                    /* Hide sidebar by default on mobile - responsive width */
+                    .left-sidebar,
+                    .side-mini-panel,
+                    aside.side-mini-panel,
+                    aside.side-mini-panel.with-vertical {
+                        position: fixed !important;
+                        top: 0 !important;
+                        left: -100% !important;
+                        width: min(320px, 88vw) !important;
+                        max-width: 320px !important;
+                        height: 100vh !important;
+                        z-index: 1060 !important;
+                        background: transparent !important;
+                        transition: left 0.3s ease-in-out !important;
+                        display: block !important;
+                        visibility: hidden !important;
+                        opacity: 0 !important;
+                        overflow-y: auto !important;
+                    }
 
-                /* Sidebar mini panel specific - compact when hidden */
-                .side-mini-panel {
-                    width: 64px !important;
-                    left: -64px !important;
-                }
+                    /* Sidebar mini panel specific - compact when hidden */
+                    .side-mini-panel {
+                        width: 64px !important;
+                        left: -64px !important;
+                    }
 
-                /* Hide sidebar tab content by default on mobile */
-                #sidebarTabContent {
-                    display: none !important;
-                    visibility: hidden !important;
-                    opacity: 0 !important;
-                }
+                    /* Hide sidebar tab content by default on mobile */
+                    #sidebarTabContent {
+                        display: none !important;
+                        visibility: hidden !important;
+                        opacity: 0 !important;
+                    }
 
-                .sidebar-overlay {
-                    z-index: 1050 !important;
-                }
+                    .sidebar-overlay {
+                        z-index: 1050 !important;
+                    }
 
-                /* Ensure sidebar toggle button is accessible */
-                #headerCollapse {
-                    z-index: 1040 !important;
-                    position: relative !important;
-                    pointer-events: auto !important;
-                }
+                    /* Ensure sidebar toggle button is accessible */
+                    #headerCollapse {
+                        z-index: 1040 !important;
+                        position: relative !important;
+                        pointer-events: auto !important;
+                    }
 
-                /* Show sidebar when toggled - handle all sidebar instances */
-                .left-sidebar.show-sidebar,
-                .side-mini-panel.show-sidebar,
-                aside.side-mini-panel.show-sidebar,
-                aside.side-mini-panel.with-vertical.show-sidebar,
-                #sidebarTabContent .tab-pane.show.active .side-mini-panel.show-sidebar,
-                #sidebarTabContent .tab-pane .side-mini-panel.show-sidebar {
-                    left: 0 !important;
-                    transform: translateX(0) !important;
-                    visibility: visible !important;
-                    opacity: 1 !important;
-                    display: block !important;
-                    background: transparent !important;
-                    pointer-events: auto !important;
-                }
+                    /* Show sidebar when toggled - handle all sidebar instances */
+                    .left-sidebar.show-sidebar,
+                    .side-mini-panel.show-sidebar,
+                    aside.side-mini-panel.show-sidebar,
+                    aside.side-mini-panel.with-vertical.show-sidebar,
+                    #sidebarTabContent .tab-pane.show.active .side-mini-panel.show-sidebar,
+                    #sidebarTabContent .tab-pane .side-mini-panel.show-sidebar {
+                        left: 0 !important;
+                        transform: translateX(0) !important;
+                        visibility: visible !important;
+                        opacity: 1 !important;
+                        display: block !important;
+                        background: transparent !important;
+                        pointer-events: auto !important;
+                    }
 
-                /* Expand side-mini-panel to responsive width on mobile when open - so child module (sidebar-nav) is visible */
-                .side-mini-panel.show-sidebar,
-                aside.side-mini-panel.show-sidebar,
-                aside.side-mini-panel.with-vertical.show-sidebar {
-                    width: min(320px, 88vw) !important;
-                    max-width: 320px !important;
-                }
+                    /* Expand side-mini-panel to responsive width on mobile when open - so child module (sidebar-nav) is visible */
+                    .side-mini-panel.show-sidebar,
+                    aside.side-mini-panel.show-sidebar,
+                    aside.side-mini-panel.with-vertical.show-sidebar {
+                        width: min(320px, 88vw) !important;
+                        max-width: 320px !important;
+                    }
 
                 /* Show sidebar tab content when sidebar is open */
                 body.sidebar-open #sidebarTabContent {
@@ -1150,107 +1162,107 @@
                     opacity: 1 !important;
                 }
 
-                .nav-container.d-lg-none {
-                    position: fixed !important;
-                    bottom: 0 !important;
-                    left: 0 !important;
-                    right: 0 !important;
-                    width: 100% !important;
-                    z-index: 1030 !important;
-                    margin: 0 !important;
-                    padding: 0 !important;
-                    pointer-events: none !important;
-                    overflow: visible !important;
-                }
+                    .nav-container.d-lg-none {
+                        position: fixed !important;
+                        bottom: 0 !important;
+                        left: 0 !important;
+                        right: 0 !important;
+                        width: 100% !important;
+                        z-index: 1030 !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        pointer-events: none !important;
+                        overflow: visible !important;
+                    }
 
-                .nav-container.d-lg-none .mobile-tabbar {
-                    pointer-events: auto !important;
-                }
+                    .nav-container.d-lg-none .mobile-tabbar {
+                        pointer-events: auto !important;
+                    }
 
-                .mobile-tabbar {
-                    position: fixed !important;
-                    bottom: 0 !important;
-                    left: 0 !important;
-                    right: 0 !important;
-                    width: 100% !important;
-                    z-index: 1030 !important;
-                    display: flex !important;
-                    flex-direction: row !important;
-                    justify-content: space-around !important;
-                    align-items: center !important;
-                    gap: 2px !important;
-                    padding: 6px 4px !important;
-                    margin: 0 !important;
-                    background: #ffffff !important;
-                    border-top: 1px solid rgba(0, 0, 0, 0.08) !important;
-                    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.06) !important;
-                    list-style: none !important;
-                    height: 64px !important;
-                    pointer-events: auto !important;
-                    overflow: visible !important;
-                }
+                    .mobile-tabbar {
+                        position: fixed !important;
+                        bottom: 0 !important;
+                        left: 0 !important;
+                        right: 0 !important;
+                        width: 100% !important;
+                        z-index: 1030 !important;
+                        display: flex !important;
+                        flex-direction: row !important;
+                        justify-content: space-around !important;
+                        align-items: center !important;
+                        gap: 2px !important;
+                        padding: 6px 4px !important;
+                        margin: 0 !important;
+                        background: #ffffff !important;
+                        border-top: 1px solid rgba(0, 0, 0, 0.08) !important;
+                        box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.06) !important;
+                        list-style: none !important;
+                        height: 64px !important;
+                        pointer-events: auto !important;
+                        overflow: visible !important;
+                    }
 
-                /* Hide mobile tab bar when sidebar is open - handled by JS */
-                body.sidebar-open .mobile-tabbar {
-                    display: none !important;
-                }
+                    /* Hide mobile tab bar when sidebar is open - handled by JS */
+                    body.sidebar-open .mobile-tabbar {
+                        display: none !important;
+                    }
 
-                .mobile-tabbar .nav-item {
-                    flex: 1 1 0 !important;
-                    text-align: center !important;
-                    margin: 0 !important;
-                    padding: 0 !important;
-                }
+                    .mobile-tabbar .nav-item {
+                        flex: 1 1 0 !important;
+                        text-align: center !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                    }
 
 
-                .mobile-tab-link {
-                    display: flex !important;
-                    flex-direction: column !important;
-                    align-items: center !important;
-                    justify-content: center !important;
-                    gap: 2px !important;
-                    padding: 6px 4px !important;
-                    font-size: 11px !important;
-                    color: #475569 !important;
-                    border-radius: 10px !important;
-                    text-decoration: none !important;
-                    width: 100% !important;
-                    height: 100% !important;
-                    border: none !important;
-                    background: transparent !important;
-                    cursor: pointer !important;
-                    pointer-events: auto !important;
-                    -webkit-tap-highlight-color: rgba(29, 78, 216, 0.1) !important;
-                    touch-action: manipulation !important;
-                }
+                    .mobile-tab-link {
+                        display: flex !important;
+                        flex-direction: column !important;
+                        align-items: center !important;
+                        justify-content: center !important;
+                        gap: 2px !important;
+                        padding: 6px 4px !important;
+                        font-size: 11px !important;
+                        color: #475569 !important;
+                        border-radius: 10px !important;
+                        text-decoration: none !important;
+                        width: 100% !important;
+                        height: 100% !important;
+                        border: none !important;
+                        background: transparent !important;
+                        cursor: pointer !important;
+                        pointer-events: auto !important;
+                        -webkit-tap-highlight-color: rgba(29, 78, 216, 0.1) !important;
+                        touch-action: manipulation !important;
+                    }
 
-                .mobile-tab-link:hover,
-                .mobile-tab-link:focus {
-                    color: #1d4ed8 !important;
-                    background: rgba(29, 78, 216, 0.05) !important;
-                }
+                    .mobile-tab-link:hover,
+                    .mobile-tab-link:focus {
+                        color: #1d4ed8 !important;
+                        background: rgba(29, 78, 216, 0.05) !important;
+                    }
 
-                .mobile-tab-link i {
-                    font-size: 22px !important;
-                    line-height: 22px !important;
-                    display: block !important;
-                }
+                    .mobile-tab-link i {
+                        font-size: 22px !important;
+                        line-height: 22px !important;
+                        display: block !important;
+                    }
 
-                .mobile-tab-link span {
-                    font-size: 10px !important;
-                    line-height: 1.2 !important;
-                    white-space: nowrap !important;
-                }
+                    .mobile-tab-link span {
+                        font-size: 10px !important;
+                        line-height: 1.2 !important;
+                        white-space: nowrap !important;
+                    }
 
-                .mobile-tab-link.active {
-                    color: #1d4ed8 !important;
-                    background: rgba(29, 78, 216, 0.08) !important;
-                }
+                    .mobile-tab-link.active {
+                        color: #1d4ed8 !important;
+                        background: rgba(29, 78, 216, 0.08) !important;
+                    }
 
-                .mobile-tab-link.active i {
-                    color: #1d4ed8 !important;
+                    .mobile-tab-link.active i {
+                        color: #1d4ed8 !important;
+                    }
                 }
-            }
 
             /* Very small phones - narrower sidebar */
             @media (max-width: 375px) {
@@ -1271,34 +1283,34 @@
                 }
             }
 
-            @media (max-width: 991.98px) and (orientation: landscape) {
-                .mobile-tabbar {
-                    height: 56px !important;
+                @media (max-width: 991.98px) and (orientation: landscape) {
+                    .mobile-tabbar {
+                        height: 56px !important;
+                    }
+
+                    body {
+                        padding-bottom: 56px !important;
+                    }
+
+                    .mobile-tab-link {
+                        padding: 4px 2px !important;
+                    }
+
+                    .mobile-tab-link i {
+                        font-size: 20px !important;
+                    }
+
+                    .mobile-tab-link span {
+                        font-size: 9px !important;
+                    }
                 }
 
-                body {
-                    padding-bottom: 56px !important;
+                /* Mobile notifications offcanvas - ensure it appears above tabbar */
+                @media (max-width: 991.98px) {
+                    #notificationOffcanvasMobile {
+                        z-index: 1100 !important;
+                    }
                 }
-
-                .mobile-tab-link {
-                    padding: 4px 2px !important;
-                }
-
-                .mobile-tab-link i {
-                    font-size: 20px !important;
-                }
-
-                .mobile-tab-link span {
-                    font-size: 9px !important;
-                }
-            }
-
-            /* Mobile notifications offcanvas - ensure it appears above tabbar */
-            @media (max-width: 991.98px) {
-                #notificationOffcanvasMobile {
-                    z-index: 1100 !important;
-                }
-            }
 
             /* Desktop styles - ensure sidebar is visible */
             @media (min-width: 992px) {
@@ -1316,51 +1328,51 @@
                     display: block !important;
                 }
 
-                /* Ensure sidebar tab content is visible on desktop */
-                #sidebarTabContent {
-                    display: block !important;
-                    visibility: visible !important;
-                    opacity: 1 !important;
+                    /* Ensure sidebar tab content is visible on desktop */
+                    #sidebarTabContent {
+                        display: block !important;
+                        visibility: visible !important;
+                        opacity: 1 !important;
+                    }
+
+                    /* Ensure active sidebar tab pane is visible */
+                    #sidebarTabContent .tab-pane.show.active {
+                        display: block !important;
+                        visibility: visible !important;
+                        opacity: 1 !important;
+                    }
+
+                    /* Remove overlay on desktop */
+                    .sidebar-overlay {
+                        display: none !important;
+                    }
+
+                    /* Ensure body doesn't have mobile padding on desktop */
+                    body {
+                        padding-bottom: 0 !important;
+                    }
+
+                    /* Reset any inline styles that might hide sidebar on desktop */
+                    .left-sidebar[style*="left: -"],
+                    .side-mini-panel[style*="left: -"],
+                    aside.side-mini-panel[style*="left: -"] {
+                        left: 0 !important;
+                    }
                 }
 
-                /* Ensure active sidebar tab pane is visible */
-                #sidebarTabContent .tab-pane.show.active {
-                    display: block !important;
-                    visibility: visible !important;
-                    opacity: 1 !important;
-                }
-
-                /* Remove overlay on desktop */
-                .sidebar-overlay {
-                    display: none !important;
-                }
-
-                /* Ensure body doesn't have mobile padding on desktop */
-                body {
-                    padding-bottom: 0 !important;
-                }
-
-                /* Reset any inline styles that might hide sidebar on desktop */
-                .left-sidebar[style*="left: -"],
-                .side-mini-panel[style*="left: -"],
-                aside.side-mini-panel[style*="left: -"] {
-                    left: 0 !important;
-                }
-            }
-
-            /* Medium desktop fallback (e.g., 1280x1024 at 100% zoom):
+                /* Medium desktop fallback (e.g., 1280x1024 at 100% zoom):
                keep content shifted so fixed sidebar doesn't overlap mid section. */
-            @media (min-width: 992px) and (max-width: 1299.98px) {
-                html[data-layout="vertical"] body[data-sidebartype="full"] .page-wrapper {
-                    margin-left: calc(80px + 240px) !important;
-                    width: calc(100% - 320px) !important;
-                }
+                @media (min-width: 992px) and (max-width: 1299.98px) {
+                    html[data-layout="vertical"] body[data-sidebartype="full"] .page-wrapper {
+                        margin-left: calc(80px + 240px) !important;
+                        width: calc(100% - 320px) !important;
+                    }
 
-                html[data-layout="vertical"] body[data-sidebartype="mini-sidebar"] .page-wrapper {
-                    margin-left: 80px !important;
-                    width: calc(100% - 80px) !important;
+                    html[data-layout="vertical"] body[data-sidebartype="mini-sidebar"] .page-wrapper {
+                        margin-left: 80px !important;
+                        width: calc(100% - 80px) !important;
+                    }
                 }
-            }
             </style>
             <script>
             const root = document.documentElement;
@@ -1668,19 +1680,19 @@
                 document.addEventListener('click', handleMobileCollapse, true);
 
 
-                // Time format is already set in PHP, no need to override
+                    // Time format is already set in PHP, no need to override
 
-                // Active tab indicator animation
-                const activeTab = document.querySelector('.nav-link.active');
-                const indicator = document.querySelector('.active-tab-indicator');
+                    // Active tab indicator animation
+                    const activeTab = document.querySelector('.nav-link.active');
+                    const indicator = document.querySelector('.active-tab-indicator');
 
-                if (activeTab && indicator) {
-                    updateIndicatorPosition(activeTab);
+                    if (activeTab && indicator) {
+                        updateIndicatorPosition(activeTab);
 
-                    // Listen for tab changes
-                    document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
-                        tab.addEventListener('shown.bs.tab', function(e) {
-                            updateIndicatorPosition(e.target);
+                        // Listen for tab changes
+                        document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
+                            tab.addEventListener('shown.bs.tab', function(e) {
+                                updateIndicatorPosition(e.target);
 
                             // Keep active state in sync between desktop and mobile tabs
                             const targetId = e.target.getAttribute('href');
@@ -1698,27 +1710,27 @@
                     });
                 }
 
-                function updateIndicatorPosition(element) {
-                    const rect = element.getBoundingClientRect();
-                    const parentRect = element.closest('.nav-container').getBoundingClientRect();
+                    function updateIndicatorPosition(element) {
+                        const rect = element.getBoundingClientRect();
+                        const parentRect = element.closest('.nav-container').getBoundingClientRect();
 
-                    indicator.style.width = `${rect.width}px`;
-                    indicator.style.transform = `translateX(${rect.left - parentRect.left}px)`;
-                }
+                        indicator.style.width = `${rect.width}px`;
+                        indicator.style.transform = `translateX(${rect.left - parentRect.left}px)`;
+                    }
 
-                // Enhanced dropdown interaction
-                const financialDropdown = document.getElementById('financialDropdown');
-                if (financialDropdown) {
-                    financialDropdown.addEventListener('focus', function() {
-                        this.setAttribute('aria-expanded', 'true');
-                    });
+                    // Enhanced dropdown interaction
+                    const financialDropdown = document.getElementById('financialDropdown');
+                    if (financialDropdown) {
+                        financialDropdown.addEventListener('focus', function() {
+                            this.setAttribute('aria-expanded', 'true');
+                        });
 
-                    financialDropdown.addEventListener('blur', function(e) {
-                        if (!this.parentElement.contains(e.relatedTarget)) {
-                            this.setAttribute('aria-expanded', 'false');
-                        }
-                    });
-                }
+                        financialDropdown.addEventListener('blur', function(e) {
+                            if (!this.parentElement.contains(e.relatedTarget)) {
+                                this.setAttribute('aria-expanded', 'false');
+                            }
+                        });
+                    }
 
                 // Search trigger functionality - scroll to DataTables search or focus search input
                 const searchTriggers = document.querySelectorAll('.search-trigger');
@@ -1742,15 +1754,15 @@
                     });
                 }
 
-                // Keyboard navigation enhancement
-                document.querySelectorAll('.nav-link, .dropdown-item').forEach(item => {
-                    item.addEventListener('keydown', function(e) {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            this.click();
-                        }
+                    // Keyboard navigation enhancement
+                    document.querySelectorAll('.nav-link, .dropdown-item').forEach(item => {
+                        item.addEventListener('keydown', function(e) {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                this.click();
+                            }
+                        });
                     });
-                });
 
                 // Mobile tab handling - ensure Bootstrap tabs work
                 const mobileTabs = document.querySelectorAll('.mobile-tab-link[data-bs-toggle="tab"]');
@@ -1856,15 +1868,15 @@
                 const target = e.target && e.target.closest ? e.target.closest('[data-notification-id]') : null;
                 if (!target) return;
 
-                const id = target.getAttribute('data-notification-id');
-                if (!id) return;
+                    const id = target.getAttribute('data-notification-id');
+                    if (!id) return;
 
-                console.log('[Notification][Step 0] Notification clicked', {
-                    id,
-                    elementClass: target.className
+                    console.log('[Notification][Step 0] Notification clicked', {
+                        id,
+                        elementClass: target.className
+                    });
+                    markAsRead(id);
                 });
-                markAsRead(id);
-            });
 
             function markAllAsRead() {
                 const markAllEndpoint = '/admin/notifications/mark-all-read';
@@ -1897,29 +1909,29 @@
 
 <!-- 🧠 Search Toggle Script -->
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll("time").forEach(function(el) {
-        const dt = new Date(el.getAttribute("datetime"));
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll("time").forEach(function(el) {
+            const dt = new Date(el.getAttribute("datetime"));
 
-        const day = String(dt.getDate()).padStart(2, '0');
-        const month = String(dt.getMonth() + 1).padStart(2, '0'); // JS months start at 0
-        const year = dt.getFullYear();
+            const day = String(dt.getDate()).padStart(2, '0');
+            const month = String(dt.getMonth() + 1).padStart(2, '0'); // JS months start at 0
+            const year = dt.getFullYear();
 
-        const hours = String(dt.getHours()).padStart(2, '0');
-        const minutes = String(dt.getMinutes()).padStart(2, '0');
-        const seconds = String(dt.getSeconds()).padStart(2, '0');
+            const hours = String(dt.getHours()).padStart(2, '0');
+            const minutes = String(dt.getMinutes()).padStart(2, '0');
+            const seconds = String(dt.getSeconds()).padStart(2, '0');
 
-        el.textContent = `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
+            el.textContent = `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
+        });
     });
-});
 </script>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const toggleBtn = document.getElementById('searchToggleBtn');
-    const searchBox = document.getElementById('searchContainer');
-    const closeBtn = document.getElementById('closeSearchBtn');
-    const searchInput = document.getElementById('tableSearchInput');
+    document.addEventListener('DOMContentLoaded', function() {
+        const toggleBtn = document.getElementById('searchToggleBtn');
+        const searchBox = document.getElementById('searchContainer');
+        const closeBtn = document.getElementById('closeSearchBtn');
+        const searchInput = document.getElementById('tableSearchInput');
 
     if (toggleBtn && searchBox) {
         toggleBtn.addEventListener('click', (e) => {
@@ -1961,19 +1973,19 @@ window.SARGAM_ACTIVE_NAV_TAB = '{{ $activeNavTab }}';
 window.SARGAM_DASHBOARD_URL = "{{ route('admin.dashboard') }}";
 </script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Include both desktop and mobile tabs
-    const tabLinks = document.querySelectorAll('[data-bs-toggle="tab"]');
-    const panes = document.querySelectorAll('#mainNavbarContent .tab-pane');
+    document.addEventListener('DOMContentLoaded', function() {
+        // Include both desktop and mobile tabs
+        const tabLinks = document.querySelectorAll('[data-bs-toggle="tab"]');
+        const panes = document.querySelectorAll('#mainNavbarContent .tab-pane');
 
-    function showPane(targetId) {
-        if (!targetId || targetId === '#') return; // Skip empty hrefs
+        function showPane(targetId) {
+            if (!targetId || targetId === '#') return; // Skip empty hrefs
 
-        // If the target pane has no server-rendered section on this page,
-        // keep current body content as-is; still switch header/sidebar tab state.
-        const targetPaneId = getMainContentPaneId(targetId);
-        const targetPane = targetPaneId ? document.getElementById(targetPaneId) : null;
-        const canSwitchBodyPane = !!(targetPane && targetPane.children.length > 0);
+            // If the target pane has no server-rendered section on this page,
+            // keep current body content as-is; still switch header/sidebar tab state.
+            const targetPaneId = getMainContentPaneId(targetId);
+            const targetPane = targetPaneId ? document.getElementById(targetPaneId) : null;
+            const canSwitchBodyPane = !!(targetPane && targetPane.children.length > 0);
 
         if (canSwitchBodyPane) {
             panes.forEach(p => {
@@ -2001,41 +2013,41 @@ document.addEventListener('DOMContentLoaded', function() {
         localStorage.setItem('activeMainTab', targetId);
     }
 
-    function getMainContentPaneId(targetId) {
-        const map = {
-            '#home': 'home',
-            '#tab-setup': 'tab-setup',
-            '#tab-communications': 'tab-communications',
-            '#tab-academics': 'tab-academics',
-            '#tab-material-management': 'tab-material-management'
-        };
-        return map[targetId] || null;
-    }
+        function getMainContentPaneId(targetId) {
+            const map = {
+                '#home': 'home',
+                '#tab-setup': 'tab-setup',
+                '#tab-communications': 'tab-communications',
+                '#tab-academics': 'tab-academics',
+                '#tab-material-management': 'tab-material-management'
+            };
+            return map[targetId] || null;
+        }
 
-    function isMainContentPaneEmpty(targetId) {
-        const pid = getMainContentPaneId(targetId);
-        if (!pid) return true;
-        const pane = document.querySelector('#mainNavbarContent #' + pid);
-        if (!pane) return true;
-        return pane.children.length === 0;
-    }
+        function isMainContentPaneEmpty(targetId) {
+            const pid = getMainContentPaneId(targetId);
+            if (!pid) return true;
+            const pane = document.querySelector('#mainNavbarContent #' + pid);
+            if (!pane) return true;
+            return pane.children.length === 0;
+        }
 
-    /**
-     * After a tab switch, show the first mini-nav submenu so the sidebar is never blank.
-     */
-    function activateDefaultSubmenuForPane(targetId) {
-        const sidebarTabMap = {
-            '#home': '#sidebar-home',
-            '#tab-setup': '#sidebar-setup',
-            '#tab-communications': '#sidebar-communications',
-            '#tab-academics': '#sidebar-academics',
-            '#tab-material-management': '#sidebar-purchase-order'
-        };
-        const sidebarPaneSel = sidebarTabMap[targetId];
-        if (!sidebarPaneSel) return;
+        /**
+         * After a tab switch, show the first mini-nav submenu so the sidebar is never blank.
+         */
+        function activateDefaultSubmenuForPane(targetId) {
+            const sidebarTabMap = {
+                '#home': '#sidebar-home',
+                '#tab-setup': '#sidebar-setup',
+                '#tab-communications': '#sidebar-communications',
+                '#tab-academics': '#sidebar-academics',
+                '#tab-material-management': '#sidebar-purchase-order'
+            };
+            const sidebarPaneSel = sidebarTabMap[targetId];
+            if (!sidebarPaneSel) return;
 
-        const pane = document.querySelector('#sidebarTabContent ' + sidebarPaneSel + '.tab-pane');
-        if (!pane) return;
+            const pane = document.querySelector('#sidebarTabContent ' + sidebarPaneSel + '.tab-pane');
+            if (!pane) return;
 
         const storageKey = 'active-mini-nav-' + (pane.id || 'global');
         let storedId = localStorage.getItem(storageKey);
@@ -2054,33 +2066,33 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         if (!itemEl || !itemEl.id) return;
 
-        pane.querySelectorAll('.mini-nav .mini-nav-item').forEach(el => el.classList.remove('selected'));
-        itemEl.classList.add('selected');
+            pane.querySelectorAll('.mini-nav .mini-nav-item').forEach(el => el.classList.remove('selected'));
+            itemEl.classList.add('selected');
 
-        const targetMenuId = 'menu-right-' + itemEl.id;
-        const allMenus = pane.querySelectorAll('.sidebarmenu nav');
-        allMenus.forEach(nav => {
-            nav.classList.remove('d-block');
-            nav.style.display = 'none';
-        });
-        const safeId = targetMenuId.replace(/([#.;?+*^$[\]\\(){}|\-])/g, '\\$1');
-        const targetMenu = pane.querySelector('#' + safeId);
-        if (targetMenu) {
-            targetMenu.classList.add('d-block');
-            targetMenu.style.display = 'block';
-            document.body.setAttribute('data-sidebartype', 'full');
+            const targetMenuId = 'menu-right-' + itemEl.id;
+            const allMenus = pane.querySelectorAll('.sidebarmenu nav');
+            allMenus.forEach(nav => {
+                nav.classList.remove('d-block');
+                nav.style.display = 'none';
+            });
+            const safeId = targetMenuId.replace(/([#.;?+*^$[\]\\(){}|\-])/g, '\\$1');
+            const targetMenu = pane.querySelector('#' + safeId);
+            if (targetMenu) {
+                targetMenu.classList.add('d-block');
+                targetMenu.style.display = 'block';
+                document.body.setAttribute('data-sidebartype', 'full');
+            }
+
         }
 
-    }
-
-    // Handle clicks on all tabs (desktop and mobile)
-    tabLinks.forEach(link => {
-        link.addEventListener('click', function(e) {
-            const target = this.getAttribute('href');
-            if (!target || target === '#') {
-                e.preventDefault();
-                return; // Skip tabs without proper href
-            }
+        // Handle clicks on all tabs (desktop and mobile)
+        tabLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                const target = this.getAttribute('href');
+                if (!target || target === '#') {
+                    e.preventDefault();
+                    return; // Skip tabs without proper href
+                }
 
             // From Setup (or any non-Home main tab), "Home" must load the dashboard route
             // so the main content area is not an empty/stale #home pane.
@@ -2141,18 +2153,18 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         ];
 
-        for (const item of sidebarPanes) {
-            const links = document.querySelectorAll(`${item.pane} .sidebar-link[href]`);
-            for (const link of links) {
-                if (!link.href) continue;
-                const target = new URL(link.href, window.location.origin);
-                const targetPath = target.pathname.replace(/\/+$/, '');
-                const targetQuery = target.search || '';
-                if (targetPath === currentPath && targetQuery === currentQuery) {
-                    return item.tab;
+            for (const item of sidebarPanes) {
+                const links = document.querySelectorAll(`${item.pane} .sidebar-link[href]`);
+                for (const link of links) {
+                    if (!isSidebarNavLink(link)) continue;
+                    const target = new URL(link.href, window.location.origin);
+                    const targetPath = normalizePanePath(target.pathname);
+                    const targetQuery = target.search || '';
+                    if (targetPath === currentPath && targetQuery === currentQuery) {
+                        return item.tab;
+                    }
                 }
             }
-        }
 
         // GET filters add query string; sidebar links are usually path-only. Match path, prefer non-Home panes first.
         const pathMatchOrder = [...sidebarPanes].sort(function(a, b) {
@@ -2173,16 +2185,34 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
-        return null;
-    }
+            // create/edit/show: longest pathname prefix wins (prefer non-Home on ties)
+            let bestTab = null;
+            let bestLen = -1;
+            for (const item of pathMatchOrder) {
+                const links = document.querySelectorAll(`${item.pane} .sidebar-link[href]`);
+                for (const link of links) {
+                    if (!isSidebarNavLink(link)) continue;
+                    const target = new URL(link.href, window.location.origin);
+                    const targetPath = normalizePanePath(target.pathname);
+                    if (currentPath !== targetPath && !currentPath.startsWith(targetPath + '/')) {
+                        continue;
+                    }
+                    if (targetPath.length > bestLen) {
+                        bestLen = targetPath.length;
+                        bestTab = item.tab;
+                    }
+                }
+            }
+            return bestTab;
+        }
 
-    const routeTab = window.SARGAM_ACTIVE_NAV_TAB || '#home';
-    const savedTab = localStorage.getItem('activeMainTab');
-    const inferredTab = inferTabFromSidebarByUrl();
-    const hasRouteTab = !!document.querySelector(`[data-bs-toggle="tab"][href="${routeTab}"]`);
-    const hasSavedTab = !!document.querySelector(`[data-bs-toggle="tab"][href="${savedTab}"]`);
-    const hasInferredTab = !!document.querySelector(`[data-bs-toggle="tab"][href="${inferredTab}"]`);
-    let initial = '#home';
+        const routeTab = window.SARGAM_ACTIVE_NAV_TAB || '#home';
+        const savedTab = localStorage.getItem('activeMainTab');
+        const inferredTab = inferTabFromSidebarByUrl();
+        const hasRouteTab = !!document.querySelector(`[data-bs-toggle="tab"][href="${routeTab}"]`);
+        const hasSavedTab = !!document.querySelector(`[data-bs-toggle="tab"][href="${savedTab}"]`);
+        const hasInferredTab = !!document.querySelector(`[data-bs-toggle="tab"][href="${inferredTab}"]`);
+        let initial = '#home';
 
     if (hasRouteTab) {
         initial = routeTab;

@@ -67,25 +67,31 @@ use App\Http\Controllers\Admin\EmployeeIDCardRequestController;
 use App\Http\Controllers\Admin\DuplicateIDCardRequestController;
 use App\Http\Controllers\Admin\FamilyIDCardRequestController;
 use App\Http\Controllers\Admin\BirthdayWishController;
+use App\Http\Controllers\Admin\WordOfTheDayController;
 
 
-Route::get('clear-cache', function () {
-    Artisan::call('cache:clear');
-    Artisan::call('config:clear');
-    Artisan::call('view:clear');
-    Artisan::call('route:clear');
-    Artisan::call('optimize:clear');
-    return redirect()->back()->with('success', 'Cache cleared successfully');
-});
 // Authentication Routes
 Auth::routes(['verify' => true, 'register' => false]);
 
 // Public Routes
 Route::get('/', [LoginController::class, 'showLoginForm'])->name('login');
-Route::post('/login', [LoginController::class, 'authenticate'])->name('post_login');
+Route::post('/login', [LoginController::class, 'authenticate'])
+    ->middleware('throttle:login')
+    ->name('post_login');
 
 // Protected Routes
 Route::middleware(['auth'])->group(function () {
+
+    Route::get('clear-cache', function () {
+        abort_unless(hasRole('Admin') || hasRole('Super Admin'), 403);
+        Artisan::call('cache:clear');
+        Artisan::call('config:clear');
+        Artisan::call('view:clear');
+        Artisan::call('route:clear');
+        Artisan::call('optimize:clear');
+
+        return redirect()->back()->with('success', 'Cache cleared successfully');
+    })->name('clear-cache');
 
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('users/get-roles', [UserController::class, 'getAllRoles'])
@@ -120,6 +126,19 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/birthday-wishes/send-email', [BirthdayWishController::class, 'sendEmail'])->name('admin.birthday-wish.send-email');
     Route::post('/birthday-wishes/send-bulk-email', [BirthdayWishController::class, 'sendBulkEmail'])->name('admin.birthday-wish.send-bulk-email');
     Route::post('/birthday-wishes/send-notification', [BirthdayWishController::class, 'sendNotification'])->name('admin.birthday-wish.send-notification');
+    Route::get('/birthday-wishes/my-wishes-today', [BirthdayWishController::class, 'myBirthdayWishesToday'])->name('admin.birthday-wish.my-wishes-today');
+    Route::post('/birthday-wishes/reply', [BirthdayWishController::class, 'replyToWish'])->name('admin.birthday-wish.reply');
+
+    // Login page — Word of the Day (policy: Admin / Super Admin or permission)
+    Route::get('/word-of-day/export', [WordOfTheDayController::class, 'export'])->name('admin.word-of-day.export');
+    Route::post('/word-of-day/import', [WordOfTheDayController::class, 'import'])->name('admin.word-of-day.import');
+    Route::post('/word-of-day/reorder', [WordOfTheDayController::class, 'reorder'])->name('admin.word-of-day.reorder');
+    Route::get('/word-of-day', [WordOfTheDayController::class, 'index'])->name('admin.word-of-day.index');
+    Route::get('/word-of-day/create', [WordOfTheDayController::class, 'create'])->name('admin.word-of-day.create');
+    Route::post('/word-of-day', [WordOfTheDayController::class, 'store'])->name('admin.word-of-day.store');
+    Route::get('/word-of-day/{word}/edit', [WordOfTheDayController::class, 'edit'])->name('admin.word-of-day.edit');
+    Route::put('/word-of-day/{word}', [WordOfTheDayController::class, 'update'])->name('admin.word-of-day.update');
+    Route::delete('/word-of-day/{word}', [WordOfTheDayController::class, 'destroy'])->name('admin.word-of-day.destroy');
 
     // Dashboard Statistics (Batch Profile)
     // NOTE: Currently served by a Blade view; replace with controller when business logic is ready.
@@ -432,6 +451,9 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/event-delete/{id}', [CalendarController::class, 'delete_event'])->name('calendar.event.delete');
 
         Route::get('/get-week', [CalendarController::class, 'weeklyTimetable'])->name('getWeek');
+        Route::get('/week-timetable-pdf', [CalendarController::class, 'exportWeekTimetablePdf'])->name('week-timetable-pdf');
+        Route::get('/week-timetable-print', [CalendarController::class, 'exportWeekTimetablePrint'])->name('week-timetable-print');
+        Route::get('/week-timetable-excel', [CalendarController::class, 'exportWeekTimetableExcel'])->name('week-timetable-excel');
     });
 
     // Timetable Report
