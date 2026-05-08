@@ -15,6 +15,7 @@ use App\Models\FC\{
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Symfony\Component\Process\Process;
 
@@ -24,14 +25,17 @@ class ReportController extends Controller
     public function overview(Request $request)
     {
         $sessions = SessionMaster::orderByDesc('id')->get();
-        $services = ServiceMaster::orderBy('service_name')->get();
+        $services = DB::table('service_master')
+            ->orderBy('service_name')
+            ->select('pk', 'service_name', 'service_short_name')
+            ->get();
         $states   = StateMaster::orderBy('state_name')->get();
 
         $query = StudentMaster::with([
                 'session',
             ])
             ->leftJoin('student_master_firsts as s1','student_masters.username','=','s1.username')
-            ->leftJoin('service_masters as svc','s1.service_id','=','svc.id')
+            ->leftJoin('service_master as svc','s1.service_id','=','svc.pk')
             ->leftJoin('state_masters as st','s1.allotted_state_id','=','st.id')
             ->leftJoin('student_confirm_masters as sc','student_masters.username','=','sc.username')
             ->select(
@@ -50,7 +54,7 @@ class ReportController extends Controller
                 's1.email',
                 's1.date_of_birth',
                 'svc.service_name',
-                'svc.service_code',
+                DB::raw('COALESCE(svc.service_short_name, svc.service_name) as service_code'),
                 's1.cadre',
                 'st.state_name as allotted_state',
                 'sc.declaration_accepted',
@@ -120,27 +124,78 @@ class ReportController extends Controller
         $documents = app(RegistrationService::class)->joiningDocumentChecklistForDisplay($username);
         $confirmation = StudentConfirmMaster::where('username',$username)->first();
         $qualifications = DB::table('student_master_qualification_details')
-                           ->leftJoin('qualification_masters','student_master_qualification_details.qualification_id','=','qualification_masters.id')
-                           ->leftJoin('board_name_masters','student_master_qualification_details.board_id','=','board_name_masters.id')
-                           ->where('student_master_qualification_details.username',$username)
-                           ->select('student_master_qualification_details.*','qualification_masters.qualification_name','board_name_masters.board_name')
-                           ->get();
+                           ->where('username', $username)
+                           ->get()
+                           ->map(function ($row) {
+                               $row->qualification_name = $this->fcResolveLookupLabel(
+                                   ['qualification_masters', 'qualification_master'],
+                                   ['id', 'pk'],
+                                   'qualification_name',
+                                   $row->qualification_id ?? null
+                               );
+                               $row->board_name = $this->fcResolveLookupLabel(
+                                   ['board_name_masters', 'board_name_master'],
+                                   ['id', 'pk'],
+                                   'board_name',
+                                   $row->board_id ?? null
+                               );
+                               return $row;
+                           });
         $employments  = DB::table('student_master_employment_details')
                           ->leftJoin('job_type_masters','student_master_employment_details.job_type_id','=','job_type_masters.id')
                           ->where('student_master_employment_details.username',$username)
                           ->select('student_master_employment_details.*','job_type_masters.job_type_name')
                           ->get();
         $languages    = DB::table('student_master_language_knowns')
-                          ->leftJoin('language_masters','student_master_language_knowns.language_id','=','language_masters.id')
-                          ->where('student_master_language_knowns.username',$username)
-                          ->select('student_master_language_knowns.*','language_masters.language_name')
-                          ->get();
+                          ->where('username', $username)
+                          ->get()
+                          ->map(function ($row) {
+                              $row->language_name = $this->fcResolveLookupLabel(
+                                  ['language_master', 'language_masters'],
+                                  ['id', 'pk'],
+                                  'language_name',
+                                  $row->language_id ?? null
+                              );
+                              return $row;
+                          });
         abort_unless($step1, 404, "Student '{$username}' not found.");
 
         return view('fc.report.student-detail', compact(
             'username','step1','step2','master','bank',
             'documents','confirmation','qualifications','employments','languages'
         ));
+    }
+
+    public function updateStudentDocumentVerification(Request $request, string $username, int $documentMasterId)
+    {
+        $request->validate([
+            'is_verified' => 'nullable|boolean',
+            'remarks' => 'nullable|string|max:500',
+        ]);
+
+        $docMaster = FcJoiningRelatedDocumentsMaster::where('id', $documentMasterId)
+            ->where('is_active', 1)
+            ->firstOrFail();
+
+        $doc = FcJoiningRelatedDocumentsDetailsMaster::where('username', $username)
+            ->where('document_master_id', $documentMasterId)
+            ->first();
+
+        if (! $doc || ! $doc->is_uploaded) {
+            return back()->with('error', "\"{$docMaster->document_name}\" is not uploaded yet, so it cannot be verified.");
+        }
+
+        $isVerified = (bool) $request->boolean('is_verified');
+        $remarks = trim((string) $request->input('remarks', ''));
+
+        $doc->update([
+            'is_verified' => $isVerified,
+            'verified_by' => $isVerified ? ((string) (auth()->user()->username ?? auth()->id())) : null,
+            'verified_at' => $isVerified ? now() : null,
+            'remarks' => $remarks !== '' ? $remarks : null,
+        ]);
+
+        return back()->with('success', "\"{$docMaster->document_name}\" verification updated successfully.");
     }
 
     /**
@@ -160,21 +215,40 @@ class ReportController extends Controller
         $master = StudentMaster::where('username', $username)->first();
         $bank = NewRegistrationBankDetailsMaster::where('username', $username)->first();
         $qualifications = DB::table('student_master_qualification_details')
-            ->leftJoin('qualification_masters', 'student_master_qualification_details.qualification_id', '=', 'qualification_masters.id')
-            ->leftJoin('board_name_masters', 'student_master_qualification_details.board_id', '=', 'board_name_masters.id')
-            ->where('student_master_qualification_details.username', $username)
-            ->select('student_master_qualification_details.*', 'qualification_masters.qualification_name', 'board_name_masters.board_name')
-            ->get();
+            ->where('username', $username)
+            ->get()
+            ->map(function ($row) {
+                $row->qualification_name = $this->fcResolveLookupLabel(
+                    ['qualification_masters', 'qualification_master'],
+                    ['id', 'pk'],
+                    'qualification_name',
+                    $row->qualification_id ?? null
+                );
+                $row->board_name = $this->fcResolveLookupLabel(
+                    ['board_name_masters', 'board_name_master'],
+                    ['id', 'pk'],
+                    'board_name',
+                    $row->board_id ?? null
+                );
+                return $row;
+            });
         $employments = DB::table('student_master_employment_details')
             ->leftJoin('job_type_masters', 'student_master_employment_details.job_type_id', '=', 'job_type_masters.id')
             ->where('student_master_employment_details.username', $username)
             ->select('student_master_employment_details.*', 'job_type_masters.job_type_name')
             ->get();
         $languages = DB::table('student_master_language_knowns')
-            ->leftJoin('language_masters', 'student_master_language_knowns.language_id', '=', 'language_masters.id')
-            ->where('student_master_language_knowns.username', $username)
-            ->select('student_master_language_knowns.*', 'language_masters.language_name')
-            ->get();
+            ->where('username', $username)
+            ->get()
+            ->map(function ($row) {
+                $row->language_name = $this->fcResolveLookupLabel(
+                    ['language_master', 'language_masters'],
+                    ['id', 'pk'],
+                    'language_name',
+                    $row->language_id ?? null
+                );
+                return $row;
+            });
         $sections = $this->fcStudentPdfSanitizeSections(
             app(RegistrationService::class)->buildPdfSectionsFromFormDefinition($username)
         );
@@ -445,6 +519,30 @@ class ReportController extends Controller
         return $this->fcPdfSanitizeText((string) $v);
     }
 
+    private function fcResolveLookupLabel(array $tables, array $valueColumns, string $labelColumn, mixed $raw): ?string
+    {
+        if ($raw === null || $raw === '') {
+            return null;
+        }
+
+        foreach ($tables as $table) {
+            if (! Schema::hasTable($table) || ! Schema::hasColumn($table, $labelColumn)) {
+                continue;
+            }
+            foreach ($valueColumns as $valueColumn) {
+                if (! Schema::hasColumn($table, $valueColumn)) {
+                    continue;
+                }
+                $label = DB::table($table)->where($valueColumn, $raw)->value($labelColumn);
+                if ($label !== null && $label !== '') {
+                    return (string) $label;
+                }
+            }
+        }
+
+        return null;
+    }
+
     /**
      * Embed trainee photo (downscaled for PDF) when file exists on public disk.
      */
@@ -511,53 +609,169 @@ class ReportController extends Controller
     public function byService(Request $request)
     {
         $sessions = SessionMaster::orderByDesc('id')->get();
+        $services = DB::table('service_master')->orderBy('service_name')->select('pk', 'service_name', 'service_short_name')->get();
 
-        $data = DB::table('student_master_firsts as s1')
-            ->join('service_masters as svc','s1.service_id','=','svc.id')
+        $base = DB::table('student_master_firsts as s1')
+            ->join('service_master as svc','s1.service_id','=','svc.pk')
             ->leftJoin('student_masters as sm','s1.username','=','sm.username')
             ->leftJoin('student_master_seconds as s2','s1.username','=','s2.username')
             ->leftJoin('category_masters as cat','s2.category_id','=','cat.id')
             ->leftJoin('state_masters as st','s1.allotted_state_id','=','st.id')
             ->when($request->session_id, fn($q,$v) => $q->where('sm.session_id',$v))
-            ->when($request->service_id, fn($q,$v) => $q->where('s1.service_id',$v))
+            ->when(!empty((array) $request->input('service_ids', [])), function ($q) use ($request) {
+                $serviceIds = array_values(array_filter((array) $request->input('service_ids', []), fn ($v) => $v !== null && $v !== ''));
+                if (!empty($serviceIds)) {
+                    $q->whereIn('s1.service_id', $serviceIds);
+                }
+            })
             ->select(
-                'svc.service_name','svc.service_code',
+                'svc.pk as service_pk',
+                'svc.service_name',
+                DB::raw('COALESCE(svc.service_short_name, svc.service_name) as service_code'),
                 DB::raw('COUNT(s1.username) as total'),
                 DB::raw('SUM(CASE WHEN s1.gender="Male" THEN 1 ELSE 0 END) as male'),
                 DB::raw('SUM(CASE WHEN s1.gender="Female" THEN 1 ELSE 0 END) as female'),
                 DB::raw('SUM(CASE WHEN sm.status="SUBMITTED" THEN 1 ELSE 0 END) as submitted'),
                 DB::raw('SUM(CASE WHEN sm.docs_done=1 THEN 1 ELSE 0 END) as docs_done')
             )
-            ->groupBy('svc.id','svc.service_name','svc.service_code')
-            ->orderBy('svc.service_name')
-            ->get();
+            ->groupBy('svc.pk','svc.service_name','svc.service_short_name')
+            ->orderBy('svc.service_name');
 
-        $services = ServiceMaster::orderBy('service_name')->get();
-        return view('fc.report.by-service', compact('data','sessions','services'));
+        if ($request->ajax()) {
+            $draw = (int) $request->input('draw', 1);
+            $start = max((int) $request->input('start', 0), 0);
+            $length = (int) $request->input('length', 10);
+            $length = $length > 0 ? $length : 10;
+            $search = trim((string) data_get($request->input('search', []), 'value', ''));
+
+            $wrapped = DB::query()->fromSub($base, 'x');
+            $recordsTotal = (clone $wrapped)->count();
+
+            if ($search !== '') {
+                $like = '%'.$search.'%';
+                $wrapped->where(function ($q) use ($like) {
+                    $q->where('service_name', 'like', $like)
+                        ->orWhere('service_code', 'like', $like);
+                });
+            }
+
+            $recordsFiltered = (clone $wrapped)->count();
+
+            $orderColumnIndex = (int) data_get($request->input('order', []), '0.column', 1);
+            $orderDir = strtolower((string) data_get($request->input('order', []), '0.dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+            $orderable = [
+                1 => 'service_name',
+                2 => 'service_code',
+                3 => 'total',
+                4 => 'male',
+                5 => 'female',
+                6 => 'submitted',
+                7 => 'docs_done',
+            ];
+            $orderBy = $orderable[$orderColumnIndex] ?? 'service_name';
+
+            $rows = $wrapped
+                ->orderBy($orderBy, $orderDir)
+                ->offset($start)
+                ->limit($length)
+                ->get()
+                ->map(function ($row) {
+                    $total = (int) ($row->total ?? 0);
+                    $submitted = (int) ($row->submitted ?? 0);
+                    $row->pct = $total > 0 ? (int) round(($submitted / $total) * 100) : 0;
+                    return $row;
+                })
+                ->values();
+
+            return response()->json([
+                'draw' => $draw,
+                'recordsTotal' => $recordsTotal,
+                'recordsFiltered' => $recordsFiltered,
+                'data' => $rows,
+            ]);
+        }
+
+        return view('fc.report.by-service', compact('sessions','services'));
     }
 
     // ── 4. State-wise Report ──────────────────────────────────────────
     public function byState(Request $request)
     {
         $sessions = SessionMaster::orderByDesc('id')->get();
+        $states = DB::table('state_master')
+            ->orderBy('state_name')
+            ->selectRaw('Pk as pk, state_name')
+            ->get();
 
-        $data = DB::table('student_master_firsts as s1')
-            ->join('state_masters as st','s1.allotted_state_id','=','st.id')
+        $base = DB::table('student_master_firsts as s1')
+            ->join('state_master as st','s1.allotted_state_id','=','st.Pk')
             ->leftJoin('student_masters as sm','s1.username','=','sm.username')
-            ->leftJoin('service_masters as svc','s1.service_id','=','svc.id')
             ->when($request->session_id, fn($q,$v) => $q->where('sm.session_id',$v))
+            ->when(!empty((array) $request->input('state_ids', [])), function ($q) use ($request) {
+                $stateIds = array_values(array_filter((array) $request->input('state_ids', []), fn ($v) => $v !== null && $v !== ''));
+                if (!empty($stateIds)) {
+                    $q->whereIn('s1.allotted_state_id', $stateIds);
+                }
+            })
             ->select(
-                'st.state_name','st.state_code',
+                'st.state_name',
+                DB::raw('CAST(st.Pk AS CHAR) as state_code'),
                 DB::raw('COUNT(s1.username) as total'),
                 DB::raw('SUM(CASE WHEN s1.gender="Male" THEN 1 ELSE 0 END) as male'),
                 DB::raw('SUM(CASE WHEN s1.gender="Female" THEN 1 ELSE 0 END) as female'),
                 DB::raw('SUM(CASE WHEN sm.status="SUBMITTED" THEN 1 ELSE 0 END) as submitted')
             )
-            ->groupBy('st.id','st.state_name','st.state_code')
-            ->orderBy('st.state_name')
-            ->get();
+            ->groupBy('st.Pk','st.state_name')
+            ->orderBy('st.state_name');
 
-        return view('fc.report.by-state', compact('data','sessions'));
+        if ($request->ajax()) {
+            $draw = (int) $request->input('draw', 1);
+            $start = max((int) $request->input('start', 0), 0);
+            $length = (int) $request->input('length', 10);
+            $length = $length > 0 ? $length : 10;
+            $search = trim((string) data_get($request->input('search', []), 'value', ''));
+
+            $wrapped = DB::query()->fromSub($base, 'x');
+            $recordsTotal = (clone $wrapped)->count();
+
+            if ($search !== '') {
+                $like = '%'.$search.'%';
+                $wrapped->where(function ($q) use ($like) {
+                    $q->where('state_name', 'like', $like)
+                        ->orWhere('state_code', 'like', $like);
+                });
+            }
+
+            $recordsFiltered = (clone $wrapped)->count();
+
+            $orderColumnIndex = (int) data_get($request->input('order', []), '0.column', 1);
+            $orderDir = strtolower((string) data_get($request->input('order', []), '0.dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+            $orderable = [
+                1 => 'state_name',
+                2 => 'state_code',
+                3 => 'total',
+                4 => 'male',
+                5 => 'female',
+                6 => 'submitted',
+            ];
+            $orderBy = $orderable[$orderColumnIndex] ?? 'state_name';
+
+            $rows = $wrapped
+                ->orderBy($orderBy, $orderDir)
+                ->offset($start)
+                ->limit($length)
+                ->get()
+                ->values();
+
+            return response()->json([
+                'draw' => $draw,
+                'recordsTotal' => $recordsTotal,
+                'recordsFiltered' => $recordsFiltered,
+                'data' => $rows,
+            ]);
+        }
+
+        return view('fc.report.by-state', compact('sessions','states'));
     }
 
     // ── 5. Document Checklist Report ──────────────────────────────────
