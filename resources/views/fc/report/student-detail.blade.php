@@ -164,9 +164,9 @@
                         <tbody>
                         @foreach($qualifications as $q)
                             <tr>
-                                <td>{{ $q->qualification_name ?? '—' }}</td>
+                                <td>{{ $q->qualification_name ?? ($q->qualification_id ? ('Qualification #'.$q->qualification_id) : '—') }}</td>
                                 <td>{{ $q->degree_name ?? '—' }}</td>
-                                <td>{{ $q->board_name ?? '—' }}</td>
+                                <td>{{ $q->board_name ?? ($q->board_id ? ('Board #'.$q->board_id) : '—') }}</td>
                                 <td>{{ $q->institution_name ?? '—' }}</td>
                                 <td>{{ $q->year_of_passing ?? '—' }}</td>
                                 <td>{{ $q->percentage_cgpa ?? '—' }}</td>
@@ -220,7 +220,7 @@
                         <tbody>
                         @foreach($languages as $l)
                             <tr>
-                                <td>{{ $l->language_name }}</td>
+                                <td>{{ $l->language_name ?? ($l->language_id ? ('Language #'.$l->language_id) : '—') }}</td>
                                 <td>{{ $l->proficiency ?? '—' }}</td>
                                 <td class="text-center">{{ $l->can_read ? '✓' : '' }}</td>
                                 <td class="text-center">{{ $l->can_write ? '✓' : '' }}</td>
@@ -265,7 +265,7 @@
                 <div class="table-responsive">
                     <table class="table table-sm mb-0" style="font-size:12px;">
                         <thead class="table-light">
-                            <tr><th>#</th><th>Document</th><th class="text-center">Mandatory</th><th class="text-center">Uploaded</th><th class="text-center">Verified</th><th>Remarks</th></tr>
+                            <tr><th>#</th><th>Document</th><th class="text-center">Mandatory</th><th class="text-center">Uploaded</th><th class="text-center">Verified</th><th>Remarks / Admin Action</th></tr>
                         </thead>
                         <tbody>
                         @forelse($documents as $i => $doc)
@@ -293,14 +293,35 @@
                                         <span class="text-muted" style="font-size:11px;">Not uploaded</span>
                                     @endif
                                 </td>
-                                <td class="text-center">
-                                    @if($doc->is_verified)
-                                        <i class="bi bi-patch-check-fill text-success"></i>
+                                <td class="text-center align-middle">
+                                    @if($doc->is_uploaded)
+                                        @if($doc->is_verified)
+                                            <i class="bi bi-patch-check-fill text-success"></i>
+                                        @else
+                                            <i class="bi bi-clock text-warning"></i>
+                                        @endif
                                     @else
-                                        <i class="bi bi-clock text-warning"></i>
+                                        <span class="text-muted" style="font-size:11px;">—</span>
                                     @endif
                                 </td>
-                                <td style="font-size:11px;">{{ $doc->remarks ?? '—' }}</td>
+                                <td style="font-size:11px;min-width:260px;">
+                                    @if($doc->is_uploaded && $doc->documentMaster?->id)
+                                        <form method="POST" action="{{ route('admin.reports.student.documents.verify', ['username' => $username, 'documentMasterId' => $doc->documentMaster->id]) }}">
+                                            @csrf
+                                            <input type="hidden" name="is_verified" value="0">
+                                            <div class="d-flex align-items-center gap-2 mb-1">
+                                                <input class="form-check-input mt-0" type="checkbox" name="is_verified" value="1" {{ $doc->is_verified ? 'checked' : '' }}>
+                                                <span class="small text-muted">Mark verified</span>
+                                            </div>
+                                            <div class="d-flex gap-1">
+                                                <input type="text" name="remarks" class="form-control form-control-sm" maxlength="500" placeholder="Optional admin remark" value="{{ old('remarks', $doc->remarks) }}">
+                                                <button type="submit" class="btn btn-sm btn-outline-primary px-2">Save</button>
+                                            </div>
+                                        </form>
+                                    @else
+                                        <span class="text-muted">Not uploaded</span>
+                                    @endif
+                                </td>
                             </tr>
                         @empty
                             <tr><td colspan="6" class="text-center text-muted py-2">No joining document types are configured in the master checklist, or none are active.</td></tr>

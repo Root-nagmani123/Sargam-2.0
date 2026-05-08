@@ -77,7 +77,10 @@
                     <select name="service_id" class="form-select form-select-sm">
                         <option value="">All Services</option>
                         @foreach($services as $sv)
-                            <option value="{{ $sv->id }}" {{ request('service_id')==$sv->id?'selected':'' }}>{{ $sv->service_code }}</option>
+                            @php $serviceKey = $sv->pk ?? $sv->id; @endphp
+                            <option value="{{ $serviceKey }}" {{ (string) request('service_id') === (string) $serviceKey ? 'selected' : '' }}>
+                                {{ $sv->service_short_name ?? $sv->service_name }}
+                            </option>
                         @endforeach
                     </select>
                 </div>
