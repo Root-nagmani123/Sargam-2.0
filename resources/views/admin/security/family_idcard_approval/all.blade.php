@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'All Family ID Card Applications')
-@section('setup_content')
+@section('content')
 @php
     $familyApprovalReturn = in_array(request('return'), ['approval2', 'approval3'], true) ? request('return') : null;
     $familyShowReturnQs = $familyApprovalReturn ? ('?return=' . $familyApprovalReturn) : '';

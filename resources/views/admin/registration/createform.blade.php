@@ -78,7 +78,8 @@
         </div>
     </div>
 @endsection
-@section('scripts')
+
+@push('scripts')
     <script>
         const submissionColumns = @json($submissionColumns);
 
@@ -398,4 +399,4 @@
         }
     </script>
 
-@endsection
+@endpush

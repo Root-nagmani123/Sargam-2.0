@@ -705,8 +705,8 @@ table>thead{
 $user = Auth::user();
 $isAdminSummary = hasRole('Admin');
 $daysOld = $isAdminSummary ? 10 : null;
-$notifications = $user ? notification()->getNotifications($user->user_id, 10, false, $daysOld) : collect();
-$notificationBadgeCount = $user
+$notifications = ($user && $user->user_id) ? notification()->getNotifications($user->user_id, 10, false, $daysOld) : collect();
+$notificationBadgeCount = ($user && $user->user_id)
     ? ($isAdminSummary ? notification()->getUnreadCount($user->user_id, $daysOld) : $notifications->count())
     : 0;
 $notices = get_notice_notification_by_role();
@@ -850,8 +850,10 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                         <div class="card dashboard-stat-card shadow-sm rounded-4 card-blue">
                             <div class="card-body d-flex align-items-center justify-content-between gap-2">
                                 <div>
-                                    <p class="small text-dark mb-1">Today's Pending Permanent ID Requests</p>
+                                    <p class="small text-dark mb-1">Pending Permanent ID Requests</p>
+                                    <p class="small text-body-secondary mb-1">Today</p>
                                     <div class="dashboard-stat-value fw-semibold text-primary">{{ $todayPendingPermanentIdCardRequests ?? 0 }}</div>
+                                    <p class="small text-dark mb-0">Total pending: {{ $fullPendingPermanentIdCardRequests ?? 0 }}</p>
                                     <span class="stat-link-hint text-primary">Go to approvals <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
                                 </div>
                                 <span class="stat-icon"><span class="material-icons material-symbols-rounded">badge</span></span>
@@ -864,8 +866,10 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                         <div class="card dashboard-stat-card shadow-sm rounded-4 card-blue">
                             <div class="card-body d-flex align-items-center justify-content-between gap-2">
                                 <div>
-                                    <p class="small text-dark mb-1">Today's Pending Contractual ID Requests</p>
+                                    <p class="small text-dark mb-1">Pending Contractual ID Requests</p>
+                                    <p class="small text-body-secondary mb-1">Today</p>
                                     <div class="dashboard-stat-value fw-semibold text-primary">{{ $todayPendingContractualIdCardRequests ?? 0 }}</div>
+                                    <p class="small text-dark mb-0">Total pending: {{ $fullPendingContractualIdCardRequests ?? 0 }}</p>
                                     <span class="stat-link-hint text-primary">Go to approvals <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
                                 </div>
                                 <span class="stat-icon"><span class="material-icons material-symbols-rounded">badge</span></span>
@@ -878,8 +882,10 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                         <div class="card dashboard-stat-card shadow-sm rounded-4 card-amber">
                             <div class="card-body d-flex align-items-center justify-content-between gap-2">
                                 <div>
-                                    <p class="small text-dark mb-1">Today's Duplicate Permanent ID Requests</p>
+                                    <p class="small text-dark mb-1">Duplicate Permanent ID Requests</p>
+                                    <p class="small text-body-secondary mb-1">Today</p>
                                     <div class="dashboard-stat-value fw-semibold text-warning-emphasis">{{ $todayDuplicatePermIdCardRequests ?? 0 }}</div>
+                                    <p class="small text-dark mb-0">Total pending: {{ $fullDuplicatePermIdCardRequests ?? 0 }}</p>
                                     <span class="stat-link-hint text-warning">Go to approvals <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
                                 </div>
                                 <span class="stat-icon"><span class="material-icons material-symbols-rounded">copy_all</span></span>
@@ -892,8 +898,10 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                         <div class="card dashboard-stat-card shadow-sm rounded-4 card-amber">
                             <div class="card-body d-flex align-items-center justify-content-between gap-2">
                                 <div>
-                                    <p class="small text-dark mb-1">Today's Duplicate Contractual ID Requests</p>
+                                    <p class="small text-dark mb-1">Duplicate Contractual ID Requests</p>
+                                    <p class="small text-body-secondary mb-1">Today</p>
                                     <div class="dashboard-stat-value fw-semibold text-warning-emphasis">{{ $todayDuplicateContractualIdCardRequests ?? 0 }}</div>
+                                    <p class="small text-dark mb-0">Total pending: {{ $fullDuplicateContractualIdCardRequests ?? 0 }}</p>
                                     <span class="stat-link-hint text-warning">Go to approvals <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
                                 </div>
                                 <span class="stat-icon"><span class="material-icons material-symbols-rounded">content_copy</span></span>
@@ -906,8 +914,10 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                         <div class="card dashboard-stat-card shadow-sm rounded-4 card-blue">
                             <div class="card-body d-flex align-items-center justify-content-between gap-2">
                                 <div>
-                                    <p class="small text-dark mb-1">Today's Pending Family ID Requests</p>
+                                    <p class="small text-dark mb-1">Requested Family ID</p>
+                                    <p class="small text-body-secondary mb-1">Today</p>
                                     <div class="dashboard-stat-value fw-semibold text-primary">{{ $todayFamilyApprovals ?? 0 }}</div>
+                                    <p class="small text-dark mb-0">Total pending: {{ $fullFamilyApprovals ?? 0 }}</p>
                                     <span class="stat-link-hint text-primary">Go to approvals <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
                                 </div>
                                 <span class="stat-icon"><span class="material-icons material-symbols-rounded">diversity_3</span></span>
@@ -920,8 +930,10 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                         <div class="card dashboard-stat-card shadow-sm rounded-4 card-green">
                             <div class="card-body d-flex align-items-center justify-content-between gap-2">
                                 <div>
-                                    <p class="small text-dark mb-1">Today's Pending Vehicle Pass Requests</p>
+                                    <p class="small text-dark mb-1">Requested Vehicle Pass</p>
+                                    <p class="small text-body-secondary mb-1">Today</p>
                                     <div class="dashboard-stat-value fw-semibold text-success">{{ $todayVehicleApprovals ?? 0 }}</div>
+                                    <p class="small text-dark mb-0">Total pending: {{ $fullVehicleApprovals ?? 0 }}</p>
                                     <span class="stat-link-hint text-success">Go to approvals <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
                                 </div>
                                 <span class="stat-icon"><span class="material-icons material-symbols-rounded">directions_car</span></span>

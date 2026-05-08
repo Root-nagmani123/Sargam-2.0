@@ -2,7 +2,7 @@
 
 @section('title', 'Estate Possession for Other - Sargam')
 
-@section('setup_content')
+@section('content')
 <div class="container-fluid py-4">
     <x-breadcrum title="Estate Possession for Other"></x-breadcrum>
 

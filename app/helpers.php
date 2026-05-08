@@ -41,6 +41,9 @@ function view_file_link($path)
 
 function format_date($date, $format = 'd-m-Y')
 {
+     if (empty($date) || $date == '0000-00-00') {
+        return '-'; // or return '';
+    }
     return \Carbon\Carbon::parse($date)->format($format);
 }
 
@@ -99,6 +102,49 @@ function mess_combined_bill_slip_no(string $buyerName, string $clientTypeSlug): 
     return 'CB-' . date('Ymd') . '-' . str_pad((string) $num, 5, '0', STR_PAD_LEFT);
 }
 
+/**
+ * One buyer-section on the Sale Voucher Report may contain multiple voucher records that share the same slip no.
+ * Flatten to display rows and sort by line request date (item issue_date, else voucher issue_date) descending.
+ *
+ * @param  \Illuminate\Support\Collection<int, mixed>  $sectionVouchers
+ * @return \Illuminate\Support\Collection<int, object{kind: string, voucher: mixed, item?: mixed, sortDate: mixed, sortId: int}>
+ */
+function mess_cw_slip_section_display_rows(\Illuminate\Support\Collection $sectionVouchers): \Illuminate\Support\Collection
+{
+    $rows = collect();
+    foreach ($sectionVouchers as $voucher) {
+        $voucherRequestDate = $voucher->issue_date ?? null;
+        if ($voucher->items->isEmpty()) {
+            $rows->push((object) [
+                'kind' => 'empty',
+                'voucher' => $voucher,
+                'sortDate' => $voucherRequestDate,
+                'sortId' => (int) $voucher->getKey(),
+            ]);
+            continue;
+        }
+        foreach ($voucher->items as $item) {
+            $rows->push((object) [
+                'kind' => 'item',
+                'voucher' => $voucher,
+                'item' => $item,
+                'sortDate' => $item->issue_date ?? $voucherRequestDate,
+                'sortId' => (int) $item->getKey(),
+            ]);
+        }
+    }
+
+    return $rows->sort(function ($a, $b) {
+        $tsA = $a->sortDate ? \Carbon\Carbon::parse($a->sortDate)->startOfDay()->timestamp : 0;
+        $tsB = $b->sortDate ? \Carbon\Carbon::parse($b->sortDate)->startOfDay()->timestamp : 0;
+        if ($tsA !== $tsB) {
+            return $tsB <=> $tsA;
+        }
+
+        return $b->sortId <=> $a->sortId;
+    })->values();
+}
+
 function createDirectory($path)
 {
     $directory = public_path('storage/' . $path);
@@ -135,15 +181,16 @@ function hasRole($role)
 }
 
 /**
- * Whether the current user can see the low stock alert (Admin, Mess Staff role, or employee in Officers Mess department).
+ * Whether the current user can access full Mess Management
+ * (Mess Staff/Mess Admin role, or employee in Officers Mess department).
  */
 function canSeeLowStockAlert()
 {
     $user = Auth::user();
     if (!$user) return false;
 
-    if (hasRole('Admin')) return true;
     if (hasRole('Mess Staff') || hasRole('mess staff')) return true;
+    if (hasRole('Mess Admin') || hasRole('mess admin')) return true;
 
     // Mess staff dropdown list = employees in Officers Mess department; show alert to them when they login
     if (isset($user->user_category) && $user->user_category === 'E' && !empty($user->user_id)) {
@@ -155,15 +202,35 @@ function canSeeLowStockAlert()
     return false;
 }
 
+/**
+ * Setup sidebar: Mess (self-service my bills + full Mess Management when applicable).
+ * Aligns with staff-facing modules such as Estate self-service roles.
+ */
+function canSeeMessSelfServiceSetup(): bool
+{
+    if (canSeeLowStockAlert()) {
+        return true;
+    }
+
+    return hasRole('Staff')
+        || hasRole('Student-OT')
+        || hasRole('Doctor')
+        || hasRole('Guest Faculty')
+        || hasRole('Internal Faculty')
+        || hasRole('Training-Induction')
+        || hasRole('Training-MCTP')
+        || hasRole('IST');
+}
+
 function get_Role_by_course()
 {
     $user = Auth::user();
-    
+
     // Return empty array if user is not authenticated
     if (!$user) {
         return [];
     }
-    
+
     $sessionRoles = Session::get('user_roles', []);
     if (empty($sessionRoles)) {
         return [];
@@ -201,12 +268,12 @@ function service_find()
 function employee_designation_search()
 {
     $user = Auth::user();
-    
+
     // Return null if user is not authenticated
     if (!$user) {
         return null;
     }
-    
+
     // print_r($user);
     $cacheKey = 'employee_designation_' . $user->user_id;
     $designation = Cache::remember($cacheKey, 600, function () use ($user) {
@@ -220,12 +287,12 @@ function employee_designation_search()
 function get_profile_pic()
 {
     $user = Auth::user();
-    
+
     // Return default image if user is not authenticated
     if (!$user) {
         return 'https://images.unsplash.com/photo-1650110002977-3ee8cc5eac91?q=80&w=737&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
     }
-    
+
     $cacheKey = 'profile_pic_' . $user->user_id;
     if ($user->user_category == 'S') {
 
@@ -262,12 +329,12 @@ if (!function_exists('get_notice_notification_by_role')) {
     function get_notice_notification_by_role()
     {
         $user = Auth::user();
-        
+
         // Return empty collection if user is not authenticated
         if (!$user) {
             return collect([]);
         }
-        
+
         $sessionRoles = Session::get('user_roles', []);
 
         $roleStaffFaculty = ['Internal Faculty', 'Guest Faculty', 'Training', 'Staff'];
@@ -320,7 +387,7 @@ if (!function_exists('get_notice_notification_by_role')) {
 
 /**
  * Get NotificationService instance
- * 
+ *
  * @return \App\Services\NotificationService
  */
 if (!function_exists('notification')) {

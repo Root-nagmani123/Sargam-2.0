@@ -27,7 +27,17 @@
                                 </a>
                             </li>
 
-                            @if(hasRole('faculty'))
+                            @auth
+                            <!-- Profile Management Link -->
+                            <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('member.profile.edit') ? 'active' : '' }}"
+                                    href="{{ (Auth::check() && Auth::user()->user_id) ? route('member.profile.edit', Auth::user()->user_id) : '#' }}">
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Edit Profile</span>
+                                </a>
+                            </li>
+                            @endauth
+
+                            @if(hasRole('Admin') || hasRole('Training-Induction'))
                             <!-- Participant / Dashboard Statistics -->
                             <li class="sidebar-item">
                                 <a class="sidebar-link {{ request()->routeIs('admin.dashboard-statistics.*') ? 'active' : '' }}"
@@ -177,8 +187,8 @@
                                     <ul class="collapse list-unstyled ps-3" id="securityRequestsCollapse">
                                         <li class="sidebar-item">
                                             <a class="sidebar-link" href="{{ route('admin.employee_idcard.index') }}">
-                                                <span class="hide-menu small small-sm-normal text-nowrap">ID Card
-                                                    List</span>
+                                                <span class="hide-menu small small-sm-normal text-nowrap">Request ID
+                                                    Card</span>
                                             </a>
                                         </li>
 

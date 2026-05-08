@@ -122,6 +122,11 @@
                                 </a>
                             </li>
                             <ul class="collapse list-unstyled ps-3" id="facultyCollapse">
+
+                               <li class="sidebar-item"><a class="sidebar-link {{ request()->routeIs('master.appellation.*') ? 'active' : '' }}"
+                                        href="{{ route('master.appellation.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Appellation Master</span>
+                                    </a></li>
                                 <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('master.faculty.expertise.index') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Faculty
@@ -134,7 +139,7 @@
                                 <li class="sidebar-item"><a class="sidebar-link" href="{{ route('faculty.index') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Faculty</span>
                                     </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link {{ request()->routeIs('admin.faculty.whos-who') ? 'active' : '' }}" 
+                                <li class="sidebar-item"><a class="sidebar-link {{ request()->routeIs('admin.faculty.whos-who') ? 'active' : '' }}"
                                         href="{{ route('admin.faculty.whos-who') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Who's Who</span>
                                     </a></li>

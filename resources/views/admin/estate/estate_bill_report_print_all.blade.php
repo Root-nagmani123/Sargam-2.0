@@ -2,7 +2,7 @@
 
 @section('title', 'Print All Estate Bills - Sargam')
 
-@section('setup_content')
+@section('content')
 <style>
 .estate-bill-print { max-width: 210mm; margin: 0 auto; background: #f1f5f9; padding: 24px 0; }
 @media print {

@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Selling Voucher with Date Range')
-@section('setup_content')
+@section('content')
 @php
 $canDeleteSellingVoucherDateRange = hasRole('Admin') || hasRole('Mess-Admin');
 $selectedStatuses = collect((array) request()->input('status', []))
@@ -13,6 +13,8 @@ $selectedStores = collect((array) request()->input('store', []))
 ->map(fn ($value) => (string) $value)
 ->values()
 ->all();
+$selectedReturnStatus = (string) request()->input('return_status', '');
+$selectedClientType = (string) request()->input('client_type', '');
 @endphp
 <div class="container-fluid py-2 py-lg-3">
     <x-breadcrum title="Selling Voucher with Date Range"></x-breadcrum>
@@ -44,10 +46,10 @@ $selectedStores = collect((array) request()->input('store', []))
             </div>
             <hr class="my-4">
             <form method="GET" action="{{ route('admin.mess.selling-voucher-date-range.index') }}">
-                <div class="row g-3 align-items-end">
-                    <div class="col-12 col-sm-6 col-lg-4 col-xl-2">
+                <div class="sv-filter-fields-grid">
+                    <div class="sv-filter-field">
                         <label class="form-label small fw-semibold text-uppercase mb-1">Status</label>
-                        <select name="status[]" class="form-select voucher-filter-multiselect" multiple
+                        <select name="status[]" class="form-select  voucher-filter-multiselect w-100" multiple
                             data-placeholder="All Statuses">
                             <option value="" disabled>All</option>
                             <option value="0" {{ in_array('0', $selectedStatuses, true) ? 'selected' : '' }}>Pending
@@ -58,9 +60,9 @@ $selectedStores = collect((array) request()->input('store', []))
                             </option>
                         </select>
                     </div>
-                    <div class="col-12 col-sm-6 col-lg-4 col-xl-2">
+                    <div class="sv-filter-field">
                         <label class="form-label small fw-semibold text-uppercase mb-1">Store</label>
-                        <select name="store[]" class="form-select voucher-filter-multiselect" multiple
+                        <select name="store[]" class="form-select  voucher-filter-multiselect w-100" multiple
                             data-placeholder="All Stores">
                             <option value="" disabled>All</option>
                             @foreach($stores as $store)
@@ -70,27 +72,44 @@ $selectedStores = collect((array) request()->input('store', []))
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-12 col-sm-6 col-lg-4 col-xl-2">
+                    <div class="sv-filter-field">
+                        <label class="form-label small fw-semibold text-uppercase mb-1">Client type</label>
+                        <select name="client_type" class="form-select  w-100">
+                            <option value="" {{ $selectedClientType === '' ? 'selected' : '' }}>All</option>
+                            @foreach(\App\Models\Mess\ClientType::clientTypes() as $slug => $label)
+                            <option value="{{ $slug }}" {{ $selectedClientType === $slug ? 'selected' : '' }}>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="sv-filter-field">
+                        <label class="form-label small fw-semibold text-uppercase mb-1">Return status</label>
+                        <select name="return_status" class="form-select  w-100">
+                            <option value="" {{ $selectedReturnStatus === '' ? 'selected' : '' }}>All</option>
+                            <option value="returned" {{ $selectedReturnStatus === 'returned' ? 'selected' : '' }}>Returned</option>
+                            <option value="not_returned" {{ $selectedReturnStatus === 'not_returned' ? 'selected' : '' }}>Not returned</option>
+                        </select>
+                    </div>
+                    <div class="sv-filter-field">
                         <label class="form-label small fw-semibold text-uppercase mb-1">Start Date</label>
-                        <input type="date" name="start_date" id="filter_start_date" class="form-control "
-                            value="{{ request('start_date') ?? date('Y-m-d') }}">
+                        <input type="date" name="start_date" id="filter_start_date" class="form-control  w-100"
+                            value="{{ request('start_date') }}">
                     </div>
-                    <div class="col-12 col-sm-6 col-lg-4 col-xl-2">
+                    <div class="sv-filter-field">
                         <label class="form-label small fw-semibold text-uppercase mb-1">End Date</label>
-                        <input type="date" name="end_date" id="filter_end_date" class="form-control "
-                            value="{{ request('end_date') }}" min="{{ request('start_date') ?? date('Y-m-d') }}">
+                        <input type="date" name="end_date" id="filter_end_date" class="form-control  w-100"
+                            value="{{ request('end_date') }}" @if(request()->filled('start_date')) min="{{ request('start_date') }}" @endif>
                     </div>
-                    <div class="col-12 col-lg-8 col-xl-4 d-flex align-items-end gap-2 flex-wrap">
-                        <button type="submit" class="btn btn-primary  d-inline-flex align-items-center gap-1 px-3">
-                            <i class="material-symbols-rounded" style="font-size: 1rem;">filter_list</i>
-                            <span>Filter</span>
-                        </button>
-                        <a href="{{ route('admin.mess.selling-voucher-date-range.index') }}"
-                            class="btn btn-outline-secondary  d-inline-flex align-items-center gap-1 px-3">
-                            <i class="material-symbols-rounded" style="font-size: 1rem;">refresh</i>
-                            <span>Clear</span>
-                        </a>
-                    </div>
+                </div>
+                <div class="d-flex flex-wrap gap-2 justify-content-lg-end align-items-center mt-3 pt-3 border-top">
+                    <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-1 px-3">
+                        <i class="material-symbols-rounded" style="font-size: 1rem;">filter_list</i>
+                        <span>Filter</span>
+                    </button>
+                    <a href="{{ route('admin.mess.selling-voucher-date-range.index') }}"
+                        class="btn btn-outline-secondary d-inline-flex align-items-center gap-1 px-3">
+                        <i class="material-symbols-rounded" style="font-size: 1rem;">refresh</i>
+                        <span>Clear</span>
+                    </a>
                 </div>
             </form>
         </div>
@@ -126,165 +145,7 @@ $selectedStores = collect((array) request()->input('store', []))
                             <th scope="col" class="text-end pe-3">Action</th>
                         </tr>
                     </thead>
-                    <tbody class="border-top-0 small">
-                        @php $serial = 1; @endphp
-                        @forelse($reports as $report)
-                        @forelse($report->items as $item)
-                        <tr>
-                            <td class="ps-3 text-center text-body-secondary">{{ $serial++ }}</td>
-                            <td class="cell-item-name fw-semibold text-wrap text-break">
-                                {{ $item->item_name ?: ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? '—') }}
-                            </td>
-                            <td class="text-end font-monospace">{{ $item->quantity }}</td>
-                            <td class="text-end font-monospace">{{ $item->return_quantity ?? 0 }}</td>
-                            <td class="text-wrap text-break" title="{{ $report->resolved_store_name }}">
-                                {{ $report->resolved_store_name }}</td>
-                            <td>{{ $report->clientTypeCategory ? ucfirst($report->clientTypeCategory->client_type ?? '') : ($report->client_type_slug ? ucfirst($report->client_type_slug) : '—') }}
-                            </td>
-                            <td class="text-wrap text-break">{{ $report->display_client_name }}</td>
-                            <td class="text-wrap text-break">{{ $report->client_name ?? '—' }}</td>
-                            <td>
-                                <span class="badge text-bg-light border border-light-subtle fw-semibold">
-                                    {{ $report->payment_type == 1 ? 'Credit' : ($report->payment_type == 0 ? 'Cash' : ($report->payment_type == 2 ? 'UPI' : '—')) }}
-                                </span>
-                            </td>
-                            <td class="text-body-secondary">
-                                {{ $report->date_from ? $report->date_from->format('d/m/Y') : '—' }}</td>
-                            <td class="text-center">
-                                @if($report->status == 0)<span class="badge rounded-1 text-bg-warning">Pending</span>
-                                @elseif($report->status == 2)<span
-                                    class="badge rounded-1 text-bg-success">Approved</span>
-                                @elseif($report->status == 4)<span
-                                    class="badge rounded-1 text-bg-primary">Completed</span>
-                                @else<span class="badge rounded-1 text-bg-secondary">Final</span>@endif
-                            </td>
-                            <td>
-                                <div class="d-flex flex-wrap align-items-center gap-1">
-                                    @if(($item->return_quantity ?? 0) > 0)
-                                    <span class="badge rounded-1 text-bg-info">Returned</span>
-                                    @endif
-                                    @if($loop->first)
-                                    <button type="button"
-                                        class="btn btn-sm btn-outline-secondary btn-return-report d-inline-flex align-items-center gap-1 rounded-2 px-2"
-                                        data-report-id="{{ $report->id }}" title="Return">
-                                        <i class="material-symbols-rounded"
-                                            style="font-size: 1rem;">assignment_return</i>
-                                        <span>Return</span>
-                                    </button>
-                                    @endif
-                                </div>
-                            </td>
-                            <td class="text-end pe-3">
-                                @if($loop->first)
-                                <div class="d-inline-flex flex-wrap align-items-center justify-content-end gap-1">
-                                    <button type="button"
-                                        class="btn btn-sm btn-outline-primary btn-view-report voucher-icon-btn rounded-2"
-                                        data-report-id="{{ $report->id }}" title="View">
-                                        <i class="material-symbols-rounded">visibility</i>
-                                    </button>
-                                    <button type="button"
-                                        class="btn btn-sm btn-outline-warning btn-edit-report voucher-icon-btn rounded-2"
-                                        data-report-id="{{ $report->id }}"
-                                        title="{{ $report->status == \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED ? 'Edit is disabled for approved voucher' : 'Edit' }}"
-                                        @if($report->status ==
-                                        \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED) disabled
-                                        @endif>
-                                        <i class="material-symbols-rounded">edit</i>
-                                    </button>
-                                    @if($canDeleteSellingVoucherDateRange)
-                                    <form
-                                        action="{{ route('admin.mess.selling-voucher-date-range.destroy', $report->id) }}"
-                                        method="POST" class="d-inline"
-                                        onsubmit="return confirm('Are you sure you want to delete this report?');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit"
-                                            class="btn btn-sm btn-outline-danger voucher-icon-btn rounded-2"
-                                            title="Delete"><i class="material-symbols-rounded">delete</i></button>
-                                    </form>
-                                    @endif
-                                </div>
-                                @endif
-                            </td>
-                        </tr>
-                        @empty
-                        <tr>
-                            <td class="ps-3 text-center text-body-secondary">{{ $serial++ }}</td>
-                            <td class="cell-item-name text-body-secondary text-wrap text-break">—</td>
-                            <td class="text-end font-monospace text-body-secondary">—</td>
-                            <td class="text-end font-monospace text-body-secondary">—</td>
-                            <td class="text-wrap text-break" title="{{ $report->resolved_store_name }}">
-                                {{ $report->resolved_store_name }}</td>
-                            <td>{{ $report->clientTypeCategory ? ucfirst($report->clientTypeCategory->client_type ?? '') : ($report->client_type_slug ? ucfirst($report->client_type_slug) : '—') }}
-                            </td>
-                            <td class="text-wrap text-break">{{ $report->display_client_name }}</td>
-                            <td class="text-wrap text-break">{{ $report->client_name ?? '—' }}</td>
-                            <td>
-                                <span class="badge text-bg-light border border-light-subtle fw-semibold">
-                                    {{ $report->payment_type == 1 ? 'Credit' : ($report->payment_type == 0 ? 'Cash' : ($report->payment_type == 2 ? 'UPI' : '—')) }}
-                                </span>
-                            </td>
-                            <td class="text-body-secondary">
-                                {{ $report->date_from ? $report->date_from->format('d/m/Y') : '—' }}</td>
-                            <td class="text-center">
-                                @if($report->status == 0)<span class="badge rounded-1 text-bg-warning">Pending</span>
-                                @elseif($report->status == 2)<span
-                                    class="badge rounded-1 text-bg-success">Approved</span>
-                                @else<span class="badge rounded-1 text-bg-secondary">Final</span>@endif
-                            </td>
-                            <td>
-                                <button type="button"
-                                    class="btn btn-sm btn-outline-secondary btn-return-report d-inline-flex align-items-center gap-1 rounded-2 px-2"
-                                    data-report-id="{{ $report->id }}" title="Return">
-                                    <i class="material-symbols-rounded" style="font-size: 1rem;">assignment_return</i>
-                                    <span>Return</span>
-                                </button>
-                            </td>
-                            <td class="text-end pe-3">
-                                <div class="d-inline-flex flex-wrap align-items-center justify-content-end gap-1">
-                                    <button type="button"
-                                        class="btn btn-sm btn-outline-primary btn-view-report voucher-icon-btn rounded-3"
-                                        data-report-id="{{ $report->id }}" title="View"><i
-                                            class="material-symbols-rounded">visibility</i></button>
-                                    <button type="button"
-                                        class="btn btn-sm btn-outline-warning btn-edit-report voucher-icon-btn rounded-3"
-                                        data-report-id="{{ $report->id }}"
-                                        title="{{ $report->status == \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED ? 'Edit is disabled for approved voucher' : 'Edit' }}"
-                                        @if($report->status ==
-                                        \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED) disabled
-                                        @endif><i class="material-symbols-rounded">edit</i></button>
-                                    @if($canDeleteSellingVoucherDateRange)
-                                    <form
-                                        action="{{ route('admin.mess.selling-voucher-date-range.destroy', $report->id) }}"
-                                        method="POST" class="d-inline"
-                                        onsubmit="return confirm('Are you sure you want to delete this report?');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit"
-                                            class="btn btn-sm btn-outline-danger voucher-icon-btn rounded-3"
-                                            title="Delete"><i class="material-symbols-rounded">delete</i></button>
-                                    </form>
-                                    @endif
-                                </div>
-                            </td>
-                        </tr>
-                        @endforelse
-                        @empty
-                        <tr>
-                            <td class="text-center py-5 text-body-secondary border-0" colspan="13">
-                                <div class="d-flex flex-column align-items-center gap-2 py-3">
-                                    <span
-                                        class="d-inline-flex align-items-center justify-content-center rounded-circle bg-body-tertiary text-secondary p-3">
-                                        <i class="material-symbols-rounded" style="font-size: 2rem;">inbox</i>
-                                    </span>
-                                    <span class="fs-6 fw-medium text-body">No reports found</span>
-                                    <span class="small text-body-secondary">Try adjusting filters or add a new
-                                        voucher.</span>
-                                </div>
-                            </td>
-                        </tr>
-                        @endforelse
-                    </tbody>
+                    <tbody class="border-top-0 small"></tbody>
                 </table>
             </div>
         </div>
@@ -297,7 +158,9 @@ $selectedStores = collect((array) request()->input('store', []))
     'actionColumnIndex' => 12,
     'infoLabel' => 'selling vouchers',
     'searchDelay' => 0,
-    'scrollX' => true
+    'scrollX' => true,
+    'serverSide' => true,
+    'ajaxUrlBase' => route('admin.mess.selling-voucher-date-range.datatable')
     ])
     @include('mess.partials.modal-dropdown-stability')
 
@@ -352,8 +215,58 @@ $selectedStores = collect((array) request()->input('store', []))
 .selling-voucher-filter .card-body,
 .selling-voucher-filter .row,
 .selling-voucher-filter .col-12,
+.selling-voucher-filter .col,
+.selling-voucher-filter .sv-filter-fields-grid,
 .selling-voucher-filter .ts-wrapper {
     overflow: visible;
+}
+
+.selling-voucher-filter .sv-filter-fields-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 1rem;
+    align-items: end;
+}
+@media (max-width: 1199.98px) {
+    .selling-voucher-filter .sv-filter-fields-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+@media (max-width: 767.98px) {
+    .selling-voucher-filter .sv-filter-fields-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+@media (max-width: 575.98px) {
+    .selling-voucher-filter .sv-filter-fields-grid {
+        grid-template-columns: 1fr;
+    }
+}
+.selling-voucher-filter .sv-filter-field {
+    min-width: 0;
+}
+.selling-voucher-filter .sv-filter-field .ts-wrapper {
+    width: 100%;
+    max-width: 100%;
+}
+
+/* Filter strip only: same look as admin theme form-select / form-control */
+.selling-voucher-filter .form-select,
+.selling-voucher-filter .form-control {
+    background-color: #fff;
+    box-shadow: none;
+    border: var(--bs-border-width) solid #e0e6eb;
+    color: #526b7a;
+}
+.selling-voucher-filter .form-select:focus,
+.selling-voucher-filter .form-control:focus {
+    background-color: #fff;
+    border-color: #b1adff;
+    color: #526b7a;
+    box-shadow: 0 0 0 0.25rem rgba(99, 91, 255, 0.25);
+}
+.selling-voucher-filter input[type="date"].form-control {
+    color-scheme: light;
 }
 
 .ts-wrapper.choices {
@@ -372,6 +285,27 @@ $selectedStores = collect((array) request()->input('store', []))
 .ts-wrapper.choices.is-focused .choices__inner {
     border-color: #86b7fe;
     box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.selling-voucher-filter .ts-wrapper.choices .choices__inner {
+    min-height: calc(1.5em + 0.5rem + calc(var(--bs-border-width) * 2));
+    padding: 0.25rem 2.25rem 0.25rem 0.5rem;
+    font-size: 0.765625rem;
+    line-height: 1.5;
+    border: var(--bs-border-width) solid #e0e6eb;
+    border-radius: var(--bs-border-radius-sm);
+    background-color: #fff;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.65rem center;
+    background-size: 16px 12px;
+    box-shadow: none;
+    color: #526b7a;
+}
+.selling-voucher-filter .ts-wrapper.choices.is-open .choices__inner,
+.selling-voucher-filter .ts-wrapper.choices.is-focused .choices__inner {
+    border-color: #b1adff;
+    box-shadow: 0 0 0 0.25rem rgba(99, 91, 255, 0.25);
 }
 
 .ts-wrapper.choices .choices__list--single {
@@ -429,8 +363,12 @@ $selectedStores = collect((array) request()->input('store', []))
 }
 
 .selling-voucher-filter .ts-wrapper.choices[data-type*="select-multiple"] .choices__inner {
-    min-height: calc(1.5em + 0.75rem + 2px);
-    padding: 0.25rem 0.5rem;
+    min-height: calc(1.5em + 0.5rem + calc(var(--bs-border-width) * 2));
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.45rem;
 }
 
 .selling-voucher-filter .choices__list--multiple .choices__item {
@@ -439,7 +377,26 @@ $selectedStores = collect((array) request()->input('store', []))
     border-radius: 0.375rem !important;
     color: #fff !important;
     font-size: 0.8rem !important;
-    margin-bottom: 0;
+    display: inline-flex !important;
+    width: auto !important;
+    max-width: 100%;
+    align-items: center;
+    margin: 0 !important;
+    padding: 0.22rem 0.5rem !important;
+}
+
+.selling-voucher-filter .ts-wrapper.choices[data-type*="select-multiple"] .choices__input--cloned {
+    margin: 0 !important;
+    padding: 0.2rem 0 !important;
+    flex: 1 1 120px;
+    min-width: 120px;
+}
+
+.selling-voucher-filter .ts-wrapper.choices[data-type*="select-multiple"] .choices__list--multiple {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin: 0;
 }
 
 .voucher-icon-btn {
@@ -916,7 +873,7 @@ $selectedStores = collect((array) request()->input('store', []))
                                         @foreach($otCourses ?? [] as $course)
                                         <option value="{{ $course->pk }}"
                                             data-course-name="{{ e($course->course_name) }}">
-                                            {{ e($course->course_name) }}</option>
+                                            {{ e($course->course_name) }} [{{ (int)($course->active_inactive ?? 0) === 1 ? 'Active' : 'Archived' }}]</option>
                                         @endforeach
                                     </select>
                                     <select id="drCourseSelect" class="form-select " style="display:none;">
@@ -924,7 +881,7 @@ $selectedStores = collect((array) request()->input('store', []))
                                         @foreach($otCourses ?? [] as $course)
                                         <option value="{{ $course->pk }}"
                                             data-course-name="{{ e($course->course_name) }}">
-                                            {{ e($course->course_name) }}</option>
+                                            {{ e($course->course_name) }} [{{ (int)($course->active_inactive ?? 0) === 1 ? 'Active' : 'Archived' }}]</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -963,7 +920,7 @@ $selectedStores = collect((array) request()->input('store', []))
                                     <select id="drCourseNameSelect" class="form-select " style="display:none;">
                                         <option value="">Select Course</option>
                                         @foreach($otCourses ?? [] as $course)
-                                        <option value="{{ $course->pk }}">{{ e($course->course_name) }}</option>
+                                        <option value="{{ $course->pk }}">{{ e($course->course_name) }} [{{ (int)($course->active_inactive ?? 0) === 1 ? 'Active' : 'Archived' }}]</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -1429,7 +1386,7 @@ $selectedStores = collect((array) request()->input('store', []))
                                         @foreach($otCourses ?? [] as $course)
                                         <option value="{{ $course->pk }}"
                                             data-course-name="{{ e($course->course_name) }}">
-                                            {{ e($course->course_name) }}</option>
+                                            {{ e($course->course_name) }} [{{ (int)($course->active_inactive ?? 0) === 1 ? 'Active' : 'Archived' }}]</option>
                                         @endforeach
                                     </select>
                                     <select id="editDrCourseSelect" class="form-select " style="display:none;">
@@ -1437,7 +1394,7 @@ $selectedStores = collect((array) request()->input('store', []))
                                         @foreach($otCourses ?? [] as $course)
                                         <option value="{{ $course->pk }}"
                                             data-course-name="{{ e($course->course_name) }}">
-                                            {{ e($course->course_name) }}</option>
+                                            {{ e($course->course_name) }} [{{ (int)($course->active_inactive ?? 0) === 1 ? 'Active' : 'Archived' }}]</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -1475,7 +1432,7 @@ $selectedStores = collect((array) request()->input('store', []))
                                     <select id="editDrCourseNameSelect" class="form-select " style="display:none;">
                                         <option value="">Select Course</option>
                                         @foreach($otCourses ?? [] as $course)
-                                        <option value="{{ $course->pk }}">{{ e($course->course_name) }}</option>
+                                        <option value="{{ $course->pk }}">{{ e($course->course_name) }} [{{ (int)($course->active_inactive ?? 0) === 1 ? 'Active' : 'Archived' }}]</option>
                                         @endforeach
                                     </select>
                                 </div>

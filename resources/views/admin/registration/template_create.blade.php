@@ -31,9 +31,19 @@
         <!-- Form -->
         <div class="card mt-3">
             <div class="card-body">
+                @if ($errors->any())
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <ul class="mb-0">
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                @endif
                 <form action="{{ route('forms.template.store') }}" method="POST">
                     <!-- Add this hidden input to carry the template ID -->
-                    @if (request()->has('template'))
+                    @if (request()->filled('template'))
                         <input type="hidden" name="template_id" value="{{ request()->query('template') }}">
                     @endif
                     @csrf
@@ -65,7 +75,7 @@
                                 <option value="">Choose Option</option>
                                 @foreach ($forms as $item)
                                     <option value="{{ $item->id }}"
-                                        {{ old('parent_id') == $item->id ? 'selected' : '' }}>
+                                        {{ (old('parent_id', optional($template)->id) == $item->id) ? 'selected' : '' }}>
                                         {{ $item->name }}
                                     </option>
                                 @endforeach
@@ -75,13 +85,15 @@
                         <!-- Course Start Date -->
                         <div class="col-md-6">
                             <label for="course_sdate" class="form-label">Course Start Date:</label>
-                            <input type="date" class="form-control" id="course_sdate" name="course_sdate" required>
+                            <input type="date" class="form-control" id="course_sdate" name="course_sdate"
+                                value="{{ old('course_sdate', optional($template)->course_sdate) }}" required>
                         </div>
 
                         <!-- Course End Date -->
                         <div class="col-md-6">
                             <label for="course_edate" class="form-label">Course End Date:</label>
-                            <input type="date" class="form-control" id="course_edate" name="course_edate" required>
+                            <input type="date" class="form-control" id="course_edate" name="course_edate"
+                                value="{{ old('course_edate', optional($template)->course_edate) }}" required>
                         </div>
 
                         <!-- Visibility Toggle -->

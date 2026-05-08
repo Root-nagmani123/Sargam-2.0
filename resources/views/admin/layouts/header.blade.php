@@ -132,12 +132,14 @@
                                 notifications
                             </i>
 
-                            @php
-                            $unreadCount = notification()->getUnreadCount(
-                            Auth::user()->user_id ?? 0,
-                            hasRole('Admin') ? 10 : null
-                            );
-                            @endphp
+            @php
+                $unreadCount = (Auth::user() && Auth::user()->user_id)
+                    ? notification()->getUnreadCount(
+                        Auth::user()->user_id,
+                        hasRole('Admin') ? 10 : null
+                    )
+                    : 0;
+            @endphp
 
                             @if($unreadCount > 0)
                             <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge">
@@ -162,15 +164,17 @@
                                 @endif
                             </li>
 
-                            <div id="notificationList" class="notification-list">
-                                @php
-                                $notifications = notification()->getNotifications(
-                                Auth::user()->user_id ?? 0,
-                                10,
-                                false,
-                                hasRole('Admin') ? 10 : null
-                                );
-                                @endphp
+            <div id="notificationList" class="notification-list">
+                @php
+                    $notifications = (Auth::user() && Auth::user()->user_id)
+                        ? notification()->getNotifications(
+                            Auth::user()->user_id,
+                            10,
+                            false,
+                            hasRole('Admin') ? 10 : null
+                        )
+                        : collect();
+                @endphp
 
                                 @if($notifications->count() > 0)
                                 @foreach($notifications as $notification)
@@ -255,24 +259,26 @@
                 </ul>
                 </li>
 
-                <!-- Notifications (Offcanvas on mobile for reliable display) -->
-                <li class="nav-item" role="none">
-                    <button type="button"
-                        class="nav-link mobile-tab-link border-0 bg-transparent p-0 position-relative"
-                        id="notificationBtnMobile" data-bs-toggle="offcanvas" data-bs-target="#notificationOffcanvasMobile"
-                        aria-controls="notificationOffcanvasMobile" aria-label="Notifications" title="Notifications">
-                        <i class="material-icons material-symbols-rounded" aria-hidden="true">notifications_active</i>
-                        @php
-                        $unreadCountMobile = notification()->getUnreadCount(Auth::user()->user_id ?? 0);
-                        @endphp
-                        @if($unreadCountMobile > 0)
-                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge" style="font-size: 9px;">
-                            {{ $unreadCountMobile > 99 ? '99+' : $unreadCountMobile }}
-                        </span>
-                        @endif
-                        <span>Notifications</span>
-                    </button>
-                </li>
+                    <!-- Notifications (Offcanvas on mobile for reliable display) -->
+                    <li class="nav-item" role="none">
+                        <button type="button"
+                            class="nav-link mobile-tab-link border-0 bg-transparent p-0 position-relative"
+                            id="notificationBtnMobile" data-bs-toggle="offcanvas" data-bs-target="#notificationOffcanvasMobile"
+                            aria-controls="notificationOffcanvasMobile" aria-label="Notifications" title="Notifications">
+                            <i class="material-icons material-symbols-rounded" aria-hidden="true">notifications_active</i>
+                            @php
+                            $unreadCountMobile = (Auth::user() && Auth::user()->user_id)
+                                ? notification()->getUnreadCount(Auth::user()->user_id)
+                                : 0;
+                            @endphp
+                            @if($unreadCountMobile > 0)
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 9px;">
+                                {{ $unreadCountMobile > 99 ? '99+' : $unreadCountMobile }}
+                            </span>
+                            @endif
+                            <span>Notifications</span>
+                        </button>
+                    </li>
                 </ul>
             </div>
 
@@ -291,12 +297,14 @@
                 <div class="offcanvas-body p-0 overflow-y-auto notification-mobile-list" style="max-height: calc(70vh - 60px);">
                     <div id="notificationListMobile">
                         @php
-                        $notificationsMobile = notification()->getNotifications(
-                        Auth::user()->user_id ?? 0,
-                        10,
-                        false,
-                        hasRole('Admin') ? 10 : null
-                        );
+                        $notificationsMobile = (Auth::user() && Auth::user()->user_id)
+                            ? notification()->getNotifications(
+                                Auth::user()->user_id,
+                                10,
+                                false,
+                                hasRole('Admin') ? 10 : null
+                            )
+                            : collect();
                         @endphp
                         @if($notificationsMobile->count() > 0)
                         @foreach($notificationsMobile as $notification)
@@ -1744,49 +1752,20 @@
             });
         });
 
-        // Determine initial tab.
-        // Prefer tab inferred from current URL + sidebar links,
-        // then server route tab, then localStorage fallback.
-        function inferTabFromSidebarByUrl() {
-            const current = new URL(window.location.href);
-            let currentPath = current.pathname.replace(/\/+$/, '');
-            if (!currentPath) currentPath = '/';
-            const currentQuery = current.search || '';
-            const sidebarPanes = [{
-                    pane: '#sidebar-home',
-                    tab: '#home'
-                },
-                {
-                    pane: '#sidebar-setup',
-                    tab: '#tab-setup'
-                },
-                {
-                    pane: '#sidebar-communications',
-                    tab: '#tab-communications'
-                },
-                {
-                    pane: '#sidebar-academics',
-                    tab: '#tab-academics'
-                },
-                {
-                    pane: '#sidebar-purchase-order',
-                    tab: '#tab-material-management'
-                }
-            ];
-
-            function isSidebarNavLink(link) {
-                const href = link.getAttribute('href');
-                if (!href || href === '#' || href === 'javascript:void(0)') return false;
-                if (href.charAt(0) === '#') return false;
-                if (link.getAttribute('data-bs-toggle') === 'collapse') return false;
-                return true;
-            }
-
-            function normalizePanePath(pathname) {
-                let p = pathname.replace(/\/+$/, '');
-                if (!p) p = '/';
-                return p;
-            }
+    // Determine initial tab.
+    // Prefer server route tab first (source of truth),
+    // then infer from sidebar links, then localStorage fallback.
+    function inferTabFromSidebarByUrl() {
+        const current = new URL(window.location.href);
+        const currentPath = current.pathname.replace(/\/+$/, '');
+        const currentQuery = current.search || '';
+        const sidebarPanes = [
+            { pane: '#sidebar-home', tab: '#home' },
+            { pane: '#sidebar-setup', tab: '#tab-setup' },
+            { pane: '#sidebar-communications', tab: '#tab-communications' },
+            { pane: '#sidebar-academics', tab: '#tab-academics' },
+            { pane: '#sidebar-purchase-order', tab: '#tab-material-management' }
+        ];
 
             for (const item of sidebarPanes) {
                 const links = document.querySelectorAll(`${item.pane} .sidebar-link[href]`);
@@ -1849,38 +1828,36 @@
         const hasInferredTab = !!document.querySelector(`[data-bs-toggle="tab"][href="${inferredTab}"]`);
         let initial = '#home';
 
-        if (hasInferredTab) {
-            initial = inferredTab;
-            console.log('Initial tab from sidebar URL match:', initial);
-        } else if (hasRouteTab) {
-            initial = routeTab;
-            console.log('Initial tab from route:', initial);
-        } else if (hasSavedTab) {
-            initial = savedTab;
-            console.log('Initial tab from storage fallback:', initial);
+    if (hasRouteTab) {
+        initial = routeTab;
+        console.log('Initial tab from route:', initial);
+    } else if (hasInferredTab) {
+        initial = inferredTab;
+        console.log('Initial tab from sidebar URL match:', initial);
+    } else if (hasSavedTab) {
+        initial = savedTab;
+        console.log('Initial tab from storage fallback:', initial);
+    } else {
+        console.log('Initial tab fallback to home');
+    }
+    
+    showPane(initial);
+    
+    // Sync mobile tabs with initial state
+    const allTabs = document.querySelectorAll('[data-bs-toggle="tab"]');
+    allTabs.forEach(tab => {
+        const href = tab.getAttribute('href');
+        if (href === initial) {
+            tab.classList.add('active');
+            tab.setAttribute('aria-selected', 'true');
         } else {
-            console.log('Initial tab fallback to home');
+            tab.classList.remove('active');
+            tab.setAttribute('aria-selected', 'false');
         }
-
-        showPane(initial);
-
-        // Sync mobile tabs with initial state
-        const allTabs = document.querySelectorAll('[data-bs-toggle="tab"]');
-        allTabs.forEach(tab => {
-            const href = tab.getAttribute('href');
-            if (href === initial) {
-                tab.classList.add('active');
-                tab.setAttribute('aria-selected', 'true');
-            } else {
-                tab.classList.remove('active');
-                tab.setAttribute('aria-selected', 'false');
-            }
-        });
-
-        // Apply default submenu/content for initial tab (after sidebar init)
-        setTimeout(function() {
-            activateDefaultSubmenuForPane(initial);
-        }, 0);
     });
+    
+    // Apply default submenu/content for initial tab (after sidebar init)
+    setTimeout(function() { activateDefaultSubmenuForPane(initial); }, 0);
+});
 </script>
 <!-- 🌟 Header End -->

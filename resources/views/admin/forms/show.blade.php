@@ -321,7 +321,7 @@
                                 </a>
                                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="accountDropdown">
                                     <li>
-                                        <form action="#" method="POST">
+                                        <form action="{{ route('logout') }}" method="POST">
                                             @csrf
                                             <button class="dropdown-item" type="submit">Logout</button>
                                         </form>

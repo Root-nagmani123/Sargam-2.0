@@ -113,9 +113,23 @@
                                 <td>{{ $r->status_label }}</td>
                                 <td>{{ $r->request_date ? \Carbon\Carbon::parse($r->request_date)->format('d-m-Y') : '--' }}</td>
                                 <td>
-                                    <a href="{{ route('admin.duplicate_idcard.edit', $r->id) }}" class="btn  btn-outline-primary bg-transparent border-0 text-primary p-0" title="Edit">
-                                        <i class="material-icons material-symbols-rounded" style="font-size:16px;">edit</i>
-                                    </a>
+                                    @if(!empty($r->user_may_edit))
+                                        <div class="d-flex align-items-center gap-2">
+                                            <a href="{{ route('admin.duplicate_idcard.edit', $r->id) }}" class="btn btn-outline-primary bg-transparent border-0 text-primary p-0" title="Edit">
+                                                <i class="material-icons material-symbols-rounded" style="font-size:16px;">edit</i>
+                                            </a>
+                                            <form action="{{ route('admin.duplicate_idcard.destroy', $r->id) }}" method="POST" class="d-inline"
+                                                  onsubmit="return confirm('Delete this duplicate ID card request? This cannot be undone.');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-outline-danger bg-transparent border-0 text-danger p-0" title="Delete">
+                                                    <i class="material-icons material-symbols-rounded" style="font-size:16px;">delete</i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    @else
+                                        <span class="text-muted small">—</span>
+                                    @endif
                                 </td>
                             </tr>
                         @empty

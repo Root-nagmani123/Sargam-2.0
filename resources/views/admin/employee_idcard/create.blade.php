@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Generate New ID Card - Sargam | Lal Bahadur Shastri')
-@section('setup_content')
+@section('content')
 <div class="container-fluid idcard-create-page">
     <x-breadcrum title="Generate New ID Card"></x-breadcrum>
   
@@ -63,7 +63,8 @@
                     $oldDesignation = old('designation', '');
                     $oldDob = old('date_of_birth', '');
                     $oldAcademy = old('academy_joining', '');
-                    $oldIdValid = old('id_card_valid_upto', '');
+                    $defaultIdCardValidUptoOneYear = now()->addYear()->format('Y-m-d');
+                    $oldIdValid = old('id_card_valid_upto', $defaultIdCardValidUptoOneYear);
                     $oldMobile = old('mobile_number', '');
                     $oldBlood = old('blood_group', '');
                 @endphp
@@ -209,7 +210,7 @@
                 <!-- ========== CONTRACTUAL EMPLOYEE VIEW ========== -->
                 <div id="contractual-view" class="idcard-view-fields" style="display: none;">
                     <div class="row g-3">
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <label for="card_type_cont" class="form-label">Card Type <span class="text-danger">*</span></label>
                             <select name="card_type" id="card_type_cont" class="form-select idcard-cont-field idcard-step-field" required disabled>
                                 <option value="">Select Card Type</option>
@@ -218,23 +219,15 @@
                                 @endforeach
                             </select>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <label for="sub_type_cont" class="form-label">Sub Type <span class="text-danger">*</span></label>
                             <select name="sub_type" id="sub_type_cont" class="form-select idcard-cont-field idcard-step-field" required disabled>
                                 <option value="">Select Sub Type</option>
                             </select>
                         </div>
-                        <div class="col-md-4">
-                            <label for="request_for_cont" class="form-label">Request For <span class="text-danger">*</span></label>
-                            <select name="request_for" id="request_for_cont" class="form-select idcard-cont-field idcard-step-field" required disabled>
-                                <option value="">---Select---</option>
-                                @if(($lockedEmployeeType ?? null) === 'Contractual Employee')
-                                    <option value="Own ID Card" {{ $oldRequestFor == 'Own ID Card' ? 'selected' : '' }}>Own ID Card</option>
-                                @else
-                                    {{-- Permanent (or other) users choosing Contractual: request is for someone else --}}
-                                    <option value="Others ID Card" {{ $oldRequestFor == 'Others ID Card' ? 'selected' : '' }}>Others ID Card</option>
-                                @endif
-                            </select>
+                        <div class="col-12">
+                            <input type="hidden" name="request_for" id="request_for_cont" value="{{ old('request_for', 'Others ID Card') }}" class="idcard-cont-field idcard-step-field" autocomplete="off">
+                            <p class="small text-muted mb-0">Contractual new ID card is always <strong>Others ID Card</strong> — enter the beneficiary&rsquo;s details below.</p>
                         </div>
                         <div class="col-12 duplication-extension-field" id="duplicationExtensionCont" style="display:none;">
                         </div>
@@ -262,7 +255,7 @@
                         </div>
                         <div class="col-md-6">
                             <label for="id_card_valid_upto_cont" class="form-label">ID Card Valid Upto <span class="text-danger">*</span></label>
-                            <input type="date" name="id_card_valid_upto" id="id_card_valid_upto_cont" class="form-control idcard-cont-field " value="{{ $oldIdValid }}" min="{{ now()->format('Y-m-d') }}" required>
+                            <input type="date" name="id_card_valid_upto" id="id_card_valid_upto_cont" class="form-control idcard-cont-field " value="{{ old('id_card_valid_upto', $defaultIdCardValidUptoOneYear) }}" min="{{ now()->format('Y-m-d') }}" required>
                         </div>
                         <div class="col-md-6">
                             <label for="mobile_number_cont" class="form-label">Mobile Number <span class="text-danger">*</span></label>
@@ -584,6 +577,8 @@
             var el = document.getElementById(id);
             if (el) el.disabled = false;
         });
+        var vuOthers = document.getElementById('id_card_valid_upto_cont');
+        if (vuOthers) vuOthers.value = idcardValidUptoOneYearFromToday();
         idcardSyncDocumentsRequired();
     }
 
@@ -611,15 +606,147 @@
         if (photoPerm) photoPerm.required = false;
         if (photoCont) photoCont.required = true;
         idcardSyncDocumentsRequired();
+        var vuOnContShow = document.getElementById('id_card_valid_upto_cont');
+        if (vuOnContShow && (!vuOnContShow.value || vuOnContShow.value.trim() === '')) {
+            vuOnContShow.value = idcardValidUptoOneYearFromToday();
+        }
+    }
+
+    /** Full wipe of both Permanent and Contractual fields + uploads + dup modal (used when switching employee type). */
+    function idcardResetEntireForm() {
+        var empPk = document.getElementById('employee_master_pk_input');
+        if (empPk) empPk.value = '';
+
+        ['duplication_reason_modal', 'id_card_number_modal', 'id_card_valid_from_modal', 'id_card_valid_upto_modal'].forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        var firM = document.getElementById('fir_receipt_modal');
+        if (firM) {
+            firM.value = '';
+            clearDocPreviewModal('firReceiptPlaceholder', 'firReceiptPreview', 'firReceiptFileName');
+        }
+        var payM = document.getElementById('payment_receipt_modal');
+        if (payM) {
+            payM.value = '';
+            clearDocPreviewModal('paymentReceiptPlaceholder', 'paymentReceiptPreview', 'paymentReceiptFileName');
+        }
+        var dsp = document.getElementById('duplicationSummaryPerm');
+        var dsc = document.getElementById('duplicationSummaryCont');
+        if (dsp) dsp.textContent = '';
+        if (dsc) dsc.textContent = '';
+
+        function clearContainerFields(container) {
+            if (!container) return;
+            container.querySelectorAll('input, select, textarea').forEach(function(el) {
+                if (el.type === 'file') {
+                    el.value = '';
+                    return;
+                }
+                if (el.tagName === 'SELECT') {
+                    el.selectedIndex = 0;
+                    return;
+                }
+                el.value = '';
+            });
+        }
+        clearContainerFields(permanentView);
+        clearContainerFields(contractualView);
+
+        var rfc = document.getElementById('request_for_cont');
+        if (rfc) rfc.value = 'Others ID Card';
+
+        ['sub_type_perm', 'sub_type_cont'].forEach(function(id) {
+            var st = document.getElementById(id);
+            if (st) {
+                st.innerHTML = '<option value="">Select Sub Type</option>';
+                st.disabled = true;
+            }
+        });
+
+        var ppm = document.getElementById('photo_perm');
+        if (ppm) ppm.value = '';
+        clearPhotoPreview('photoPlaceholderPerm', 'photoPreviewPerm', 'photoPreviewImgPerm');
+        var pcm = document.getElementById('photo_cont');
+        if (pcm) pcm.value = '';
+        clearPhotoPreview('photoPlaceholderCont', 'photoPreviewCont', 'photoPreviewImgCont');
+        var jlp = document.getElementById('joining_letter_perm');
+        if (jlp) jlp.value = '';
+        clearDocPreview('joiningLetterPlaceholderPerm', 'joiningLetterPreviewPerm', 'joiningLetterFileNamePerm');
+        var jls = document.getElementById('joiningLetterSuccessPerm');
+        var jlst = document.getElementById('joiningLetterSuccessTextPerm');
+        if (jls) jls.classList.add('d-none');
+        if (jlst) jlst.textContent = 'Joining document selected — will be uploaded on submit.';
+        var jlc = document.getElementById('joining_letter_cont');
+        if (jlc) jlc.value = '';
+        clearDocPreview('joiningLetterPlaceholderCont', 'joiningLetterPreviewCont', 'joiningLetterFileNameCont');
+        var jlsc = document.getElementById('joiningLetterSuccessCont');
+        if (jlsc) jlsc.classList.add('d-none');
+        var doc = document.getElementById('documents');
+        if (doc) doc.value = '';
+        clearDocPreview('documentsPlaceholder', 'documentsPreview', 'documentsFileName');
+        var ds = document.getElementById('documentsSuccess');
+        var dst = document.getElementById('documentsSuccessText');
+        if (ds) ds.classList.add('d-none');
+        if (dst) dst.textContent = 'Document selected — will be uploaded on submit.';
+
+        var vuC = document.getElementById('id_card_valid_upto_cont');
+        if (vuC) vuC.value = idcardValidUptoOneYearFromToday();
+
+        toggleDuplicationExtension();
+    }
+
+    function idcardApplyFileInputAvailability() {
+        ['photo_perm', 'photo_cont', 'joining_letter_perm', 'joining_letter_cont', 'documents'].forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el && el.type === 'file') el.disabled = true;
+        });
+        if (permanentView.style.display !== 'none') {
+            ['photo_perm', 'joining_letter_perm'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el && el.type === 'file') el.disabled = false;
+            });
+        } else {
+            ['photo_cont', 'documents'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el && el.type === 'file') el.disabled = false;
+            });
+        }
+        idcardSyncDocumentsRequired();
     }
 
     permRad.addEventListener('change', function() {
+        if (!permRad.checked) return;
+        idcardResetEntireForm();
         showPermanent();
         idcardResetFlow();
+        idcardApplyFileInputAvailability();
+        document.getElementById('sub_type_perm').disabled = true;
+        document.getElementById('request_for_perm').disabled = true;
+        if (document.getElementById('card_type_perm').value) idcardLoadSubTypes();
+        var sfp = document.getElementById('request_for_perm');
+        var stp = document.getElementById('sub_type_perm');
+        if (sfp && stp && stp.value && sfp.value === 'Own ID Card') {
+            idcardLoadMe();
+        }
     });
     contRad.addEventListener('change', function() {
+        if (!contRad.checked) return;
+        idcardResetEntireForm();
         showContractual();
         idcardResetFlow();
+        idcardApplyFileInputAvailability();
+        document.getElementById('sub_type_cont').disabled = true;
+        var rfcI = document.getElementById('request_for_cont');
+        if (rfcI) {
+            rfcI.value = 'Others ID Card';
+            rfcI.disabled = false;
+        }
+        if (document.getElementById('card_type_cont').value) idcardLoadSubTypes();
+        var stc = document.getElementById('sub_type_cont');
+        if (rfcI && stc && stc.value) {
+            idcardContractualOthersEnableManualEntry(false);
+        }
     });
     if (lockedEmployeeType === 'Permanent Employee') {
         permRad.checked = true;
@@ -648,8 +775,13 @@
         var step = idcardGetStepFields();
         step.subType.innerHTML = '<option value="">Select Sub Type</option>';
         step.subType.disabled = true;
-        step.requestFor.disabled = true;
-        step.requestFor.value = '';
+        if (step.isPerm) {
+            step.requestFor.disabled = true;
+            step.requestFor.value = '';
+        } else {
+            step.requestFor.disabled = false;
+            step.requestFor.value = 'Others ID Card';
+        }
         var autofillFields = (step.isPerm ? permanentView : contractualView).querySelectorAll('.idcard-autofill-field');
         autofillFields.forEach(function(el) {
             el.disabled = true;
@@ -663,6 +795,10 @@
         if (bloodCont) bloodCont.value = '';
         idcardDisableAutofillExceptStep();
         idcardSyncDocumentsRequired();
+        var vuContReset = document.getElementById('id_card_valid_upto_cont');
+        if (vuContReset && contractualView.style.display !== 'none') {
+            vuContReset.value = idcardValidUptoOneYearFromToday();
+        }
     }
 
     function idcardDisableAutofillExceptStep() {
@@ -710,7 +846,12 @@
         if (!cardType) {
             step.subType.innerHTML = '<option value="">Select Sub Type</option>';
             step.subType.disabled = true;
-            step.requestFor.disabled = true;
+            if (step.isPerm) {
+                step.requestFor.disabled = true;
+            } else {
+                step.requestFor.disabled = false;
+                step.requestFor.value = 'Others ID Card';
+            }
             return;
         }
         fetch(subTypesUrl + '?card_type=' + encodeURIComponent(cardType) + '&employee_type=' + encodeURIComponent(employeeType))
@@ -725,7 +866,12 @@
                 });
                 step.subType.disabled = false;
                 step.subType.value = '';
-                step.requestFor.disabled = true;
+                if (step.isPerm) {
+                    step.requestFor.disabled = true;
+                } else {
+                    step.requestFor.value = 'Others ID Card';
+                    step.requestFor.disabled = false;
+                }
                 if (step.isPerm && permanentView.style.display !== 'none') {
                     var oldSubPerm = @json(old('sub_type', ''));
                     var oldRfPerm = @json(old('request_for', ''));
@@ -742,18 +888,13 @@
                 }
                 if (!step.isPerm && contractualView.style.display !== 'none') {
                     var oldSub = @json(old('sub_type', ''));
-                    var oldRf = @json(old('request_for', ''));
+                    step.requestFor.value = 'Others ID Card';
+                    step.requestFor.disabled = false;
                     if (oldSub) {
                         step.subType.value = oldSub;
-                        step.requestFor.disabled = !step.subType.value;
                     }
-                    if (oldRf) {
-                        step.requestFor.value = oldRf;
-                    }
-                    if (step.requestFor.value === 'Others ID Card' && step.subType.value) {
+                    if (step.subType.value) {
                         idcardContractualOthersEnableManualEntry(false);
-                    } else if (step.requestFor.value === 'Own ID Card' && step.subType.value) {
-                        idcardLoadMe();
                     }
                 }
             })
@@ -761,6 +902,16 @@
                 step.subType.innerHTML = '<option value="">Select Sub Type</option>';
                 step.subType.disabled = false;
             });
+    }
+
+    /** Default ID Card Valid Upto = same calendar date, one year from today (browser local date). */
+    function idcardValidUptoOneYearFromToday() {
+        var d = new Date();
+        d.setFullYear(d.getFullYear() + 1);
+        var y = d.getFullYear();
+        var m = String(d.getMonth() + 1).padStart(2, '0');
+        var day = String(d.getDate()).padStart(2, '0');
+        return y + '-' + m + '-' + day;
     }
 
     function idcardLoadMe() {
@@ -786,7 +937,7 @@
                     set('academy_joining_perm', emp.academy_joining);
                     set('mobile_number_perm', emp.mobile_number);
                     set('telephone_number_perm', emp.telephone_number);
-                    set('id_card_valid_upto_perm', emp.id_card_valid_upto);
+                    set('id_card_valid_upto_perm', emp.id_card_valid_upto || idcardValidUptoOneYearFromToday());
                 } else {
                     set('name_cont', emp.name);
                     set('designation_cont', emp.designation);
@@ -794,7 +945,7 @@
                     set('father_name_cont', emp.father_name);
                     set('academy_joining_cont', emp.academy_joining);
                     set('mobile_number_cont', emp.mobile_number);
-                    set('id_card_valid_upto_cont', emp.id_card_valid_upto);
+                    set('id_card_valid_upto_cont', idcardValidUptoOneYearFromToday());
                 }
                 idcardEnableOnlyPhotoAndBlood(!!step.isPerm);
             })
@@ -819,14 +970,8 @@
     document.getElementById('sub_type_cont').addEventListener('change', function() {
         if (contractualView.style.display !== 'none') {
             var rf = document.getElementById('request_for_cont');
-            rf.disabled = !document.getElementById('sub_type_cont').value;
-            if (!rf.disabled && !rf.value) {
-                var firstOpt = Array.from(rf.options).find(function(o) { return o.value; });
-                if (firstOpt) rf.value = firstOpt.value;
-            }
-            if (rf.value === 'Own ID Card') {
-                idcardLoadMe();
-            } else if (rf.value === 'Others ID Card') {
+            if (rf) rf.value = 'Others ID Card';
+            if (document.getElementById('sub_type_cont').value) {
                 idcardContractualOthersEnableManualEntry(true);
             }
         }
@@ -834,36 +979,9 @@
     document.getElementById('request_for_perm').addEventListener('change', function() {
         if (permanentView.style.display !== 'none') idcardLoadMe();
     });
-    document.getElementById('request_for_cont').addEventListener('change', function() {
-        if (contractualView.style.display !== 'none') {
-            if (this.value === 'Own ID Card') {
-                idcardLoadMe();
-                var sec = document.getElementById('section_cont'); if (sec) sec.disabled = false;
-                var app = document.getElementById('approval_authority_cont'); if (app) app.disabled = false;
-                var ven = document.getElementById('vendor_organization_name_cont'); if (ven) ven.disabled = false;
-            } else if (this.value === 'Others ID Card') {
-                idcardContractualOthersEnableManualEntry(true);
-            }
-        }
-    });
 
     idcardDisableAutofillExceptStep();
-    [ 'photo_perm', 'photo_cont', 'joining_letter_perm', 'joining_letter_cont', 'documents' ].forEach(function(id) {
-        var el = document.getElementById(id);
-        if (el && el.type === 'file') el.disabled = true;
-    });
-    if (permanentView.style.display !== 'none') {
-        [ 'photo_perm', 'joining_letter_perm' ].forEach(function(id) {
-            var el = document.getElementById(id);
-            if (el && el.type === 'file') el.disabled = false;
-        });
-    } else {
-        [ 'photo_cont', 'documents' ].forEach(function(id) {
-            var el = document.getElementById(id);
-            if (el && el.type === 'file') el.disabled = false;
-        });
-    }
-    idcardSyncDocumentsRequired();
+    idcardApplyFileInputAvailability();
     if (permanentView.style.display !== 'none') {
         document.getElementById('sub_type_perm').disabled = true;
         document.getElementById('request_for_perm').disabled = true;
@@ -875,14 +993,14 @@
         }
     } else {
         document.getElementById('sub_type_cont').disabled = true;
-        document.getElementById('request_for_cont').disabled = true;
-        if (document.getElementById('card_type_cont').value) idcardLoadSubTypes();
-        var sfcInit = document.getElementById('request_for_cont');
-        var stcInit = document.getElementById('sub_type_cont');
-        if (sfcInit && stcInit && stcInit.value && sfcInit.value === 'Own ID Card') {
-            idcardLoadMe();
+        var rfcInit = document.getElementById('request_for_cont');
+        if (rfcInit) {
+            rfcInit.value = 'Others ID Card';
+            rfcInit.disabled = false;
         }
-        if (sfcInit && stcInit && stcInit.value && sfcInit.value === 'Others ID Card') {
+        if (document.getElementById('card_type_cont').value) idcardLoadSubTypes();
+        var stcInit = document.getElementById('sub_type_cont');
+        if (rfcInit && stcInit && stcInit.value) {
             idcardContractualOthersEnableManualEntry(false);
         }
     }
@@ -906,7 +1024,6 @@
         idcardSyncDocumentsRequired();
     }
     document.getElementById('request_for_perm').addEventListener('change', toggleDuplicationExtension);
-    document.getElementById('request_for_cont').addEventListener('change', toggleDuplicationExtension);
     toggleDuplicationExtension();
 
     document.getElementById('duplication_reason_modal').addEventListener('change', function() {

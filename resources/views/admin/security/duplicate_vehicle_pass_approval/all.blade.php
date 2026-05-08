@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'All Duplicate Vehicle Pass Applications')
-@section('setup_content')
+@section('content')
 <div class="container-fluid">
     <x-breadcrum title="All Duplicate Vehicle Pass Applications"></x-breadcrum>
     <div class="card" style="border-left:4px solid #004a93;">

@@ -45,6 +45,7 @@ use App\Http\Controllers\Admin\{
 use App\Http\Controllers\Dashboard\Calendar1Controller;
 use App\Http\Controllers\Admin\MemoNoticeController;
 use App\Http\Controllers\Admin\Master\DisciplineMasterController;
+use App\Http\Controllers\Admin\Master\AppellationMasterController;
 use App\Http\Controllers\Admin\FeedbackController;
 use App\Http\Controllers\Admin\Estate\{
     EstateCampusController,
@@ -554,6 +555,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/export', 'export')->name('export');
         Route::get('/create', 'create')->name('create');
+        Route::get('/lookup/by-id-card', 'lookupByIdCard')->name('lookup.by_id_card');
         Route::post('/store', 'store')->name('store');
         Route::get('/show/{id}', 'show')->name('show');
         Route::get('/edit/{id}', 'edit')->name('edit');
@@ -668,16 +670,18 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
     Route::prefix('admin/duplicate-idcard')->name('admin.duplicate_idcard.')->controller(DuplicateIDCardRequestController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/create', 'create')->name('create');
-        Route::get('/{id}/edit', 'edit')->name('edit');
-        Route::post('/store', 'store')->name('store');
-        Route::post('/{id}/update', 'update')->name('update');
         Route::get('/lookup/by-card-number', 'lookupByCardNumber')->name('lookup');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/{id}/edit', 'edit')->name('edit');
+        Route::post('/{id}/update', 'update')->name('update');
+        Route::delete('/{id}', 'destroy')->name('destroy');
     });
 
     // Family ID Card Request Routes (admin/family-idcard)
     Route::prefix('admin/family-idcard')->name('admin.family_idcard.')->controller(FamilyIDCardRequestController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/create', 'create')->name('create');
+        Route::get('/lookup-employee-by-id', 'lookupEmployeeByIdForCreate')->name('lookup.employee_by_id');
         Route::post('/store', 'store')->name('store');
         Route::get('/export', 'export')->name('export');
         Route::get('/members/{id}', 'members')->name('members');
@@ -789,6 +793,16 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
     Route::get('/attendance_send_notice/{group_pk}/{course_pk}/{timetable_pk}', [CourseAttendanceNoticeMapController::class, 'view_all_notice_list'])->name('attendance.send_notice');
     Route::post('/notice_direct_save', [CourseAttendanceNoticeMapController::class, 'notice_direct_save'])->name('notice.direct.save');
 
+
+     // Appellation Master
+
+Route::prefix('admin/appellation')->name('master.appellation.')->middleware('auth')->group(function () {
+    Route::get('/', [AppellationMasterController::class, 'index'])->name('index');
+    Route::get('create', [AppellationMasterController::class, 'create'])->name('create');
+    Route::get('edit/{id}', [AppellationMasterController::class, 'edit'])->name('edit');
+    Route::post('store', [AppellationMasterController::class, 'store'])->name('store');
+    Route::delete('delete/{id}', [AppellationMasterController::class, 'destroy'])->name('delete');
+});
 
     Route::prefix('admin/discipline')->name('master.discipline.')->group(function () {
         Route::get('/', [DisciplineMasterController::class, 'index'])->name('index');
@@ -1289,6 +1303,7 @@ Route::prefix('admin/mess')->name('admin.mess.')->middleware(['auth'])->group(fu
     Route::get('material-management/students-by-course/{course_pk}', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'getStudentsByCourse'])->name('material-management.students-by-course');
     Route::get('material-management/buyer-names', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'getBuyerNames'])->name('material-management.buyer-names');
     Route::get('material-management/store/{storeIdentifier}/items', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'getStoreItems'])->name('material-management.store.items');
+    Route::get('material-management/selling-vouchers/datatable', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'sellingVouchersDatatable'])->name('material-management.selling-vouchers-datatable');
     Route::resource('material-management', \App\Http\Controllers\Mess\KitchenIssueController::class);
     Route::get('material-management/{id}/return', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'returnData'])->name('material-management.return');
     Route::put('material-management/{id}/return', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'updateReturn'])->name('material-management.update-return');
@@ -1300,6 +1315,7 @@ Route::prefix('admin/mess')->name('admin.mess.')->middleware(['auth'])->group(fu
     Route::get('selling-voucher-date-range/students-by-course/{course_pk}', [\App\Http\Controllers\Mess\SellingVoucherDateRangeController::class, 'getStudentsByCourse'])->name('selling-voucher-date-range.students-by-course');
     Route::get('selling-voucher-date-range/buyer-names', [\App\Http\Controllers\Mess\SellingVoucherDateRangeController::class, 'getBuyerNames'])->name('selling-voucher-date-range.buyer-names');
     Route::get('selling-voucher-date-range/store/{storeIdentifier}/items', [\App\Http\Controllers\Mess\SellingVoucherDateRangeController::class, 'getStoreItems'])->name('selling-voucher-date-range.store.items');
+    Route::get('selling-voucher-date-range/datatable', [\App\Http\Controllers\Mess\SellingVoucherDateRangeController::class, 'datatable'])->name('selling-voucher-date-range.datatable');
     Route::resource('selling-voucher-date-range', \App\Http\Controllers\Mess\SellingVoucherDateRangeController::class);
     Route::get('selling-voucher-date-range/{id}/return', [\App\Http\Controllers\Mess\SellingVoucherDateRangeController::class, 'returnData'])->name('selling-voucher-date-range.return');
     Route::put('selling-voucher-date-range/{id}/return', [\App\Http\Controllers\Mess\SellingVoucherDateRangeController::class, 'updateReturn'])->name('selling-voucher-date-range.update-return');
@@ -1313,6 +1329,7 @@ Route::prefix('admin/mess')->name('admin.mess.')->middleware(['auth'])->group(fu
     });
 
     // NEW: Billing & Finance
+    Route::get('my-bills', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'myBillsIndex'])->name('my-bills.index');
     Route::get('process-mess-bills-employee', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'index'])->name('process-mess-bills-employee.index');
     Route::get('process-mess-bills-employee/modal-data', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'modalData'])->name('process-mess-bills-employee.modal-data');
     Route::get('process-mess-bills-employee/{id}/payment-details', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'paymentDetails'])->name('process-mess-bills-employee.payment-details');

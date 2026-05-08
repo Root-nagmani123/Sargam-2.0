@@ -16,6 +16,7 @@
                     'search' => $search ?? '',
                     'date_from' => $dateFrom ?? '',
                     'date_to' => $dateTo ?? '',
+                    'list_status' => ($list_status ?? 'all') !== 'all' ? ($list_status ?? '') : '',
                 ]);
             @endphp
             <div class="dropdown">
@@ -66,6 +67,16 @@
                     <input type="search" name="search" id="idcardSearch" class="form-control " placeholder="Employee name..." value="{{ old('search', $search ?? '') }}">
                 </div>
                 @endif
+                <div class="col-12 col-md-2">
+                    <label for="listStatus" class="form-label small text-muted mb-0">Approval status</label>
+                    @php $ls = old('list_status', $list_status ?? 'all'); @endphp
+                    <select name="list_status" id="listStatus" class="form-select">
+                        <option value="all" {{ $ls === 'all' ? 'selected' : '' }}>All</option>
+                        <option value="pending" {{ $ls === 'pending' ? 'selected' : '' }}>Pending</option>
+                        <option value="approved" {{ $ls === 'approved' ? 'selected' : '' }}>Approved</option>
+                        <option value="rejected" {{ $ls === 'rejected' ? 'selected' : '' }}>Rejected</option>
+                    </select>
+                </div>
                 <div class="col-12 col-md-2">
                     <label for="dateFrom" class="form-label small text-muted mb-0">Date From</label>
                     <input type="date" name="date_from" id="dateFrom" class="form-control " value="{{ old('date_from', $dateFrom ?? '') }}">

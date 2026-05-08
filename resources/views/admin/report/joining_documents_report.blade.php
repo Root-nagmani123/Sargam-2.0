@@ -256,6 +256,8 @@
                                         <option value="">-- All Status --</option>
                                         <option value="1" {{ request('status') == '1' ? 'selected' : '' }}>
                                             Complete</option>
+                                        <option value="2" {{ request('status') == '2' ? 'selected' : '' }}>
+                                            Partial</option>
                                         <option value="0" {{ request('status') == '0' ? 'selected' : '' }}>
                                             Pending</option>
                                     </select>

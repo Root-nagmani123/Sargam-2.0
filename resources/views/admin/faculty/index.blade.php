@@ -149,9 +149,9 @@ $(document).on('click', '.delete-faculty-btn', function(e) {
 
 <script>
 $(document).ready(function () {
-    var urlParams = new URLSearchParams(window.location.search);
-    var toastMsg = urlParams.get('toast');
+    var toastMsg = sessionStorage.getItem('facultyToast');
     if (toastMsg) {
+        sessionStorage.removeItem('facultyToast');
         toastr.options = {
             "timeOut": "4000",
             "extendedTimeOut": "1000",
@@ -159,10 +159,8 @@ $(document).ready(function () {
             "closeButton": true,
             "progressBar": true
         };
-        toastr.success(decodeURIComponent(toastMsg));        // Push toastr container down slightly
-        $('#toast-container').css('top', '80px');        // Clean URL without reload
-        var cleanUrl = window.location.pathname + window.location.hash;
-        window.history.replaceState({}, document.title, cleanUrl);
+        toastr.success(toastMsg);
+        $('#toast-container').css('top', '80px');
     }
 });
 </script>

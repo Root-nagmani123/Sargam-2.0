@@ -32,6 +32,18 @@
     </div>
     <div class="col-md-6">
         <div class="mb-3">
+            <x-select
+                name="appellation"
+                label="Appellation :"
+                formLabelClass="form-label"
+                :options="$appellationMasterList"
+                value="{{ old('appellation', $faculty->appellation ?? '') }}"
+                required
+            />
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="mb-3">
             <x-input
                 name="firstName"
                 label="First Name :"
