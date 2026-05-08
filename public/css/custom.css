@@ -25,3 +25,57 @@ body.custom-loaded {
 .error-fix {
     display: none;
 }
+
+/* ════════════════════════════════════════════
+   Sidebar White Theme — Base Overrides
+   Overrides styles.css dark-blue sidebar panel
+   ════════════════════════════════════════════ */
+
+/* Main sidebar panel — white bg instead of #004384 */
+.side-mini-panel .sidebarmenu .sidebar-nav {
+    background: #ffffff !important;
+    border-radius: 0 !important;
+}
+
+/* Simplebar content inside sidebar — remove dark padding bg */
+.side-mini-panel .sidebarmenu .sidebar-nav .simplebar-content {
+    padding-left: 16px !important;
+    padding-right: 8px !important;
+}
+
+/* Mini-nav base override — white bg */
+.side-mini-panel .mini-nav {
+    background: #ffffff !important;
+    border-radius: 0 !important;
+}
+
+/* Override sidebar-nav link white color from styles.css */
+.sidebar-nav ul .sidebar-item .sidebar-link,
+.sidebar-nav ul .sidebar-item .sidebar-link .hide-menu,
+.sidebar-nav ul .sidebar-item .sidebar-link span {
+    color: #3c4043 !important;
+}
+
+/* Override sidebar-nav link hover from styles.css */
+.sidebar-nav ul .sidebar-item .sidebar-link:hover {
+    background-color: #f1f3f4 !important;
+    color: #1a73e8 !important;
+    border-radius: 0.5rem !important;
+    width: auto !important;
+}
+
+/* Override sidebar-nav active link from styles.css */
+.sidebar-nav ul .sidebar-item > .sidebar-link.active,
+.sidebar-nav ul .sidebar-item.selected > .sidebar-link,
+.sidebar-nav ul .sidebar-item.selected > .sidebar-link.active,
+.sidebar-nav ul .sidebar-item > .sidebar-link.active {
+    background-color: #e8f0fe !important;
+    color: #1a73e8 !important;
+    box-shadow: none !important;
+    max-width: none !important;
+}
+
+/* Override the nav-small-cap white color */
+.nav-small-cap {
+    color: #9aa0a6 !important;
+}

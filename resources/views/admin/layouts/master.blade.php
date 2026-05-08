@@ -486,10 +486,12 @@
         50% { transform: scale(1.2); background: #0d6efd; }
     }
 
-    /* Sidebar toggle icon rotation */
+    /* Sidebar toggle icon (+ 17px per layout spec) */
     #sidebarToggleIcon {
         transition: transform 0.3s ease-in-out;
         display: inline-block;
+        font-size: 17px !important;
+        line-height: 1;
     }
     #sidebarToggleIcon.rotated {
         transform: rotate(180deg);
@@ -735,8 +737,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Initialize collapsed state on page load
     const sidebarType = body.getAttribute("data-sidebartype");
-    console.log('Initial sidebar type:', sidebarType);
-    console.log('Icon elements found:', icons.length);
 
     if (sidebarType === "mini-sidebar") {
         // Sidebar should be collapsed - ensure main-wrapper doesn't have show-sidebar
@@ -745,12 +745,10 @@ document.addEventListener("DOMContentLoaded", function () {
         sidebarmenus.forEach(function(el) {
             el.classList.add("close");
         });
-        // Set all icon instances to expand (collapsed state)
         icons.forEach(function(icon) {
-            icon.textContent = "keyboard_double_arrow_right";
+            icon.textContent = "bottom_panel_open";
             icon.classList.remove("rotated");
         });
-        console.log('Set all icons to non-rotated (collapsed state)');
         // After initial collapse state, adjust DataTables to new layout
         setTimeout(adjustAllDataTables, 300);
     } else {
@@ -759,12 +757,10 @@ document.addEventListener("DOMContentLoaded", function () {
         sidebarmenus.forEach(function(el) {
             el.classList.remove("close");
         });
-        // Set all icon instances to rotated (expanded state)
         icons.forEach(function(icon) {
-            icon.textContent = "keyboard_double_arrow_right";
+            icon.textContent = "bottom_panel_open";
             icon.classList.add("rotated");
         });
-        console.log('Set all icons to rotated (expanded state)');
         // After initial expanded state, adjust DataTables to new layout
         setTimeout(adjustAllDataTables, 300);
     }
@@ -773,14 +769,14 @@ document.addEventListener("DOMContentLoaded", function () {
     function syncIconWithSidebar(type) {
         const allIcons = document.querySelectorAll("#sidebarToggleIcon");
         allIcons.forEach(function(icon) {
-            icon.textContent = "keyboard_double_arrow_right";
             if (type === "full") {
+                icon.textContent = "bottom_panel_open";
                 icon.classList.add("rotated");
             } else {
+                icon.textContent = "bottom_panel_open";
                 icon.classList.remove("rotated");
             }
         });
-        console.log('Synced', allIcons.length, 'icon(s) to type:', type);
     }
 
     const observer = new MutationObserver(function(mutations) {

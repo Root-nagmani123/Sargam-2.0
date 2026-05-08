@@ -93,45 +93,55 @@ body[data-bs-theme="dark"] {
 </style>
 
 <style>
-/* DataTables pagination: custom pill design (scoped only to DataTables) */
+/* DataTables — compact ERP controls (Bootstrap 5 sm-equivalent: pagination-sm, form-select-sm, form-control-sm) */
 .dataTables_wrapper .dataTables_paginate {
-  margin-top: 0.75rem;
+  margin-top: 0.5rem;
 }
 
+/* Match .pagination.pagination-sm */
 .dataTables_wrapper .dataTables_paginate .pagination {
-  gap: 0.35rem;
+  --bs-pagination-padding-x: 0.5rem;
+  --bs-pagination-padding-y: 0.25rem;
+  --bs-pagination-font-size: 0.8125rem;
+  --bs-pagination-border-radius: 0.25rem;
+  gap: 0.2rem;
   align-items: center;
+  margin-bottom: 0;
 }
 
 .dataTables_wrapper .dataTables_paginate .page-item {
   margin: 0 !important;
 }
 
+/* Tighter pill pagination (smaller than previous 2.1rem controls) */
 .dataTables_wrapper .dataTables_paginate .page-link {
-  min-width: 2.1rem;
-  height: 2.1rem;
-  padding: 0 0.65rem;
+  min-width: 1.65rem;
+  height: 1.65rem;
+  padding: var(--bs-pagination-padding-y) var(--bs-pagination-padding-x);
   border-radius: 999px !important;
   border: 0 !important;
   background: #ffffff !important;
   color: #1f3f66 !important;
   font-weight: 600;
-  line-height: 2rem;
+  font-size: var(--bs-pagination-font-size);
+  line-height: 1.25;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
-  transition: all 0.2s ease;
-  box-shadow: 0 1px 2px rgba(13, 110, 253, 0.08);
+  transition: background-color 0.15s ease, color 0.15s ease;
+  box-shadow: 0 1px 2px rgba(13, 110, 253, 0.06);
 }
 
 .dataTables_wrapper .dataTables_paginate .page-link:hover {
   background: #eef5ff !important;
   color: #0d6efd !important;
-  transform: translateY(-1px);
 }
 
 .dataTables_wrapper .dataTables_paginate .page-item.active .page-link {
   background: linear-gradient(135deg, #0d6efd, #0a58ca) !important;
   color: #ffffff !important;
-  box-shadow: 0 6px 16px rgba(13, 110, 253, 0.25);
+  box-shadow: 0 2px 8px rgba(13, 110, 253, 0.2);
 }
 
 .dataTables_wrapper .dataTables_paginate .page-item.disabled .page-link {
@@ -139,34 +149,133 @@ body[data-bs-theme="dark"] {
   color: #9aa9bd !important;
   cursor: not-allowed;
   box-shadow: none;
+  opacity: 0.85;
 }
 
 .dataTables_wrapper .dataTables_paginate .page-link:focus {
-  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.2) !important;
+  box-shadow: 0 0 0 0.15rem rgba(13, 110, 253, 0.2) !important;
 }
 
-/* DataTables page-length selector variants */
+/* Row count selector — form-select-sm scale */
 .dataTables_wrapper .dataTables_length {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.35rem;
 }
 
 .dataTables_wrapper .dataTables_length label {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.35rem;
   color: #1f3f66;
   font-weight: 600;
+  font-size: 0.8125rem;
   margin: 0;
 }
 
 .dataTables_wrapper .dataTables_length select {
-  min-width: 80px;
-  height: 2.1rem;
-  font-size: 0.875rem;
+  min-width: 4.25rem;
+  padding: 0.25rem 1.75rem 0.25rem 0.5rem;
+  font-size: 0.8125rem;
   font-weight: 600;
-  transition: all 0.2s ease;
+  line-height: 1.5;
+  min-height: calc(1.5em + 0.5rem + 2px);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* Global search — form-control-sm scale */
+.dataTables_wrapper .dataTables_filter {
+  font-size: 0.8125rem;
+}
+
+.dataTables_wrapper .dataTables_filter label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 600;
+  color: #1f3f66;
+  margin: 0;
+  font-size: 0.8125rem;
+}
+
+.dataTables_wrapper .dataTables_filter input {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  border-radius: var(--bs-border-radius-sm, 0.25rem);
+  min-height: calc(1.5em + 0.5rem + 2px);
+  margin-left: 0.35rem !important;
+  max-width: 14rem;
+}
+
+/* Entries info — small muted text */
+.dataTables_wrapper .dataTables_info {
+  font-size: 0.8125rem;
+  color: var(--bs-secondary-color);
+  padding-top: 0.5rem;
+  padding-bottom: 0.25rem;
+}
+
+/* Toolbar rows — less vertical slack */
+.dataTables_wrapper .dataTables_length,
+.dataTables_wrapper .dataTables_filter,
+.dataTables_wrapper .dataTables_info,
+.dataTables_wrapper .dataTables_paginate {
+  margin-top: 0.35rem;
+  margin-bottom: 0.35rem;
+}
+
+/* Sortable headers — tighter padding / arrows (Bootstrap table-sm-ish) */
+.dataTables_wrapper table.dataTable > thead > tr > th,
+.dataTables_wrapper table.dataTable > thead > tr > td {
+  padding: 0.4rem 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.dataTables_wrapper table.dataTable thead > tr > th.sorting,
+.dataTables_wrapper table.dataTable thead > tr > th.sorting_asc,
+.dataTables_wrapper table.dataTable thead > tr > th.sorting_desc,
+.dataTables_wrapper table.dataTable thead > tr > th.sorting_asc_disabled,
+.dataTables_wrapper table.dataTable thead > tr > th.sorting_desc_disabled,
+.dataTables_wrapper table.dataTable thead > tr > td.sorting,
+.dataTables_wrapper table.dataTable thead > tr > td.sorting_asc,
+.dataTables_wrapper table.dataTable thead > tr > td.sorting_desc,
+.dataTables_wrapper table.dataTable thead > tr > td.sorting_asc_disabled,
+.dataTables_wrapper table.dataTable thead > tr > td.sorting_desc_disabled {
+  padding-right: 1.125rem !important;
+}
+
+.dataTables_wrapper table.dataTable thead > tr > th.sorting:before,
+.dataTables_wrapper table.dataTable thead > tr > th.sorting:after,
+.dataTables_wrapper table.dataTable thead > tr > th.sorting_asc:before,
+.dataTables_wrapper table.dataTable thead > tr > th.sorting_asc:after,
+.dataTables_wrapper table.dataTable thead > tr > th.sorting_desc:before,
+.dataTables_wrapper table.dataTable thead > tr > th.sorting_desc:after,
+.dataTables_wrapper table.dataTable thead > tr > th.sorting_asc_disabled:before,
+.dataTables_wrapper table.dataTable thead > tr > th.sorting_asc_disabled:after,
+.dataTables_wrapper table.dataTable thead > tr > th.sorting_desc_disabled:before,
+.dataTables_wrapper table.dataTable thead > tr > th.sorting_desc_disabled:after,
+.dataTables_wrapper table.dataTable thead > tr > td.sorting:before,
+.dataTables_wrapper table.dataTable thead > tr > td.sorting:after,
+.dataTables_wrapper table.dataTable thead > tr > td.sorting_asc:before,
+.dataTables_wrapper table.dataTable thead > tr > td.sorting_asc:after,
+.dataTables_wrapper table.dataTable thead > tr > td.sorting_desc:before,
+.dataTables_wrapper table.dataTable thead > tr > td.sorting_desc:after,
+.dataTables_wrapper table.dataTable thead > tr > td.sorting_asc_disabled:before,
+.dataTables_wrapper table.dataTable thead > tr > td.sorting_asc_disabled:after,
+.dataTables_wrapper table.dataTable thead > tr > td.sorting_desc_disabled:before,
+.dataTables_wrapper table.dataTable thead > tr > td.sorting_desc_disabled:after {
+  right: 0.35rem !important;
+  font-size: 0.55em !important;
+  line-height: 0.45rem !important;
+}
+
+.dataTables_wrapper table.dataTable > tbody > tr > th,
+.dataTables_wrapper table.dataTable > tbody > tr > td {
+  padding: 0.4rem 0.5rem;
+  font-size: 0.8125rem;
 }
 
 /* 1) Pill style (default) */
@@ -211,15 +320,15 @@ body[data-bs-theme="dark"] {
 /* 4) Boxed style */
 .dataTables_wrapper.dt-length-style-boxed .dataTables_length select {
   border: 1px solid #9ec2f1 !important;
-  border-radius: 10px !important;
+  border-radius: 8px !important;
   background: linear-gradient(180deg, #ffffff 0%, #f2f7ff 100%) !important;
   color: #0f3f73 !important;
-  box-shadow: 0 4px 10px rgba(13, 110, 253, 0.1) !important;
+  box-shadow: 0 2px 6px rgba(13, 110, 253, 0.08) !important;
 }
 
 .dataTables_wrapper .dataTables_length select:focus {
   border-color: #0d6efd !important;
-  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15) !important;
+  box-shadow: 0 0 0 0.15rem rgba(13, 110, 253, 0.15) !important;
 }
 </style>
 

@@ -7,43 +7,40 @@
             <div class="simplebar-offset" style="right: 0px; bottom: 0px;">
                 <div class="simplebar-content-wrapper" tabindex="0" role="region" aria-label="scrollable content"
                     style="height: 100%; overflow: hidden scroll;">
-                    <div class="simplebar-content" style="padding: 0px 20px 24px;">
-                        <ul class="sidebar-menu" id="sidebarnav">
-                            <!-- ---------------------------------- -->
-                            <!-- Home -->
-                            <!-- ---------------------------------- -->
-                            <li class="nav-small-cap">
-                                <span class="hide-menu small small-sm-normal text-nowrap">Role Management</span>
-                            </li>
-                            <!-- ---------------------------------- -->
-                            <!-- Academic -->
-                            <!-- ---------------------------------- -->
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="#" id="get-url" aria-expanded="false">
-                                    <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu small small-sm-normal text-nowrap">Role Master</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="#" aria-expanded="false">
-                                    <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu small small-sm-normal text-nowrap">Role Permissions</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="#" aria-expanded="false">
-                                    <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu small small-sm-normal text-nowrap">Profile Edit Permission</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="#" aria-expanded="false">
-                                    <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu small small-sm-normal text-nowrap">Institute Management Mapping</span>
-                                </a>
-                            </li>
+                    <div class="simplebar-content" style="padding: 20px 0px 24px 20px;">
 
+                        <div class="sidebar-section-header text-uppercase fw-bold mb-3"
+                            style="font-size: 11px; letter-spacing: 2px; color: var(--sidebar-text-muted, #9aa0a6);">
+                            Role Management
+                        </div>
+
+                        <ul class="sidebar-menu list-unstyled" id="sidebarnav">
+                            <li class="sidebar-item mb-1">
+                                <a class="sidebar-link d-flex align-items-center gap-2" href="#" id="get-url" aria-expanded="false">
+                                    <i class="material-icons material-symbols-rounded" style="font-size:20px;">admin_panel_settings</i>
+                                    <span class="hide-menu">Role Master</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-item mb-1">
+                                <a class="sidebar-link d-flex align-items-center gap-2" href="#" aria-expanded="false">
+                                    <i class="material-icons material-symbols-rounded" style="font-size:20px;">key</i>
+                                    <span class="hide-menu">Role Permissions</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-item mb-1">
+                                <a class="sidebar-link d-flex align-items-center gap-2" href="#" aria-expanded="false">
+                                    <i class="material-icons material-symbols-rounded" style="font-size:20px;">edit_note</i>
+                                    <span class="hide-menu">Profile Edit Permission</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-item mb-1">
+                                <a class="sidebar-link d-flex align-items-center gap-2" href="#" aria-expanded="false">
+                                    <i class="material-icons material-symbols-rounded" style="font-size:20px;">account_tree</i>
+                                    <span class="hide-menu">Institute Management Mapping</span>
+                                </a>
+                            </li>
                         </ul>
+
                     </div>
                 </div>
             </div>
@@ -54,7 +51,6 @@
         <div class="simplebar-scrollbar" style="width: 0px; display: none;"></div>
     </div>
     <div class="simplebar-track simplebar-vertical" style="visibility: visible;">
-        <div class="simplebar-scrollbar" style="height: 45px; display: block; transform: translate3d(0px, 0px, 0px);">
-        </div>
+        <div class="simplebar-scrollbar" style="height: 45px; display: block; transform: translate3d(0px, 0px, 0px);"></div>
     </div>
 </nav>

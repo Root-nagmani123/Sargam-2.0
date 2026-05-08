@@ -17596,6 +17596,7 @@ tr {
     border-width: 0;
     color: #000000 !important;
     font-weight: 500 !important;
+    font-size: 0.7rem !important;
 }
 
 label {
@@ -38290,7 +38291,7 @@ fieldset:disabled .btn {
 }
 
 .body-wrapper {
-    margin-top: 122px;
+    margin-top: 125px;
     margin-left: calc(90px / 2);
     margin-right: calc(30px / 2);
     margin-bottom: 30px;
@@ -38426,9 +38427,8 @@ pre.code-view code.hljs {
     position: relative;
     background: #ECEDF8;
     width: 90px;
-    margin-top: 110px;
+    margin-top: 120px;
     padding: 5px;
-    border-radius: 0px 30px 0px 0px;
 }
 
 .side-mini-panel .mini-nav ul.mini-nav-ul {
@@ -38497,13 +38497,13 @@ pre.code-view code.hljs {
 .side-mini-panel .sidebarmenu .sidebar-nav {
     position: absolute;
     top: 130px;
-    left: 75px;
-    width: 280px;
+    left: 90px;
+    width: 275px;
     height: calc(100vh - 72px);
 
     /* SVG background panel */
     background: #004384;
-    margin-top: -12px;
+    margin-top: -5px;
     display: none;
     padding: 20px 0px 24px 20px;
     z-index: 98;
@@ -51450,9 +51450,6 @@ h6 {
     text-overflow: unset;
 }
 .navbar-nav .nav-link.active {
-    background-color: transparent;
-    color: #004a93 !important;
-    font-size: 16px !important;
     line-height: 24px;
     font-weight: 500 !important;
     padding: 20px !important;

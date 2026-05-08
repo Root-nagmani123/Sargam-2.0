@@ -1,235 +1,204 @@
-<nav class="sidebar-nav scroll-sidebar" id="menu-right-mini-3" data-simplebar="">
-    <ul class="sidebar-menu" id="sidebarnav">
-        <!-- Section Header -->
-        @if (hasRole('Admin') || hasRole('Training-Induction'))
-            <li class="nav-section" role="listitem">
-                <div class="d-flex align-items-center justify-content-between w-100">
-                    <div class="d-flex align-items-center mb-3">
-                        <h2 class="section-title text-white m-0"
-                            style="font-size: 1.125rem; font-weight: 600; letter-spacing: 0.25px;">
+<nav class="sidebar-nav d-block simplebar-scrollable-y" id="menu-right-mini-3" data-simplebar="init">
+    <div class="simplebar-wrapper" style="margin: 0px -20px -24px;">
+        <div class="simplebar-height-auto-observer-wrapper">
+            <div class="simplebar-height-auto-observer"></div>
+        </div>
+        <div class="simplebar-mask">
+            <div class="simplebar-offset" style="right: 0px; bottom: 0px;">
+                <div class="simplebar-content-wrapper" tabindex="0" role="region" aria-label="scrollable content"
+                    style="height: 100%; overflow: hidden scroll;">
+                    <div class="simplebar-content" style="padding: 20px 0px 24px 20px;">
+
+                        @if (hasRole('Admin') || hasRole('Training-Induction'))
+
+                        <div class="sidebar-section-header text-uppercase fw-bold mb-3"
+                            style="font-size: 11px; letter-spacing: 2px; color: var(--sidebar-text-muted, #9aa0a6);">
                             FC Registration
-                        </h2>
+                        </div>
+
+                        <ul class="sidebar-menu list-unstyled" id="sidebarnav">
+
+                            {{-- General (collapsible) --}}
+                            <li class="sidebar-item mb-1">
+                                <a class="sidebar-link d-flex align-items-center justify-content-between gap-2"
+                                    data-bs-toggle="collapse" href="#collapseGeneral" role="button"
+                                    aria-expanded="false" aria-controls="collapseGeneral">
+                                    <span class="d-flex align-items-center gap-2">
+                                        <i class="material-icons material-symbols-rounded" style="font-size:20px;">settings</i>
+                                        <span class="hide-menu">General</span>
+                                    </span>
+                                    <i class="material-icons material-symbols-rounded menu-icon" style="font-size:20px;">keyboard_arrow_right</i>
+                                </a>
+                            </li>
+                            <ul class="collapse list-unstyled" id="collapseGeneral">
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('frontpage.index') }}" target="_blank">
+                                        <span class="hide-menu">User Landing Page (User)</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('admin.frontpage') }}">
+                                        <span class="hide-menu">Landing Page (Admin)</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('admin.path.page') }}">
+                                        <span class="hide-menu">Path Page (Admin)</span>
+                                    </a>
+                                </li>
+                            </ul>
+
+                            {{-- Registration Management (collapsible) --}}
+                            <li class="sidebar-item mb-1">
+                                <a class="sidebar-link d-flex align-items-center justify-content-between gap-2"
+                                    data-bs-toggle="collapse" href="#collapseRegistration" role="button"
+                                    aria-expanded="false" aria-controls="collapseRegistration">
+                                    <span class="d-flex align-items-center gap-2">
+                                        <i class="material-icons material-symbols-rounded" style="font-size:20px;">app_registration</i>
+                                        <span class="hide-menu">Registration Management</span>
+                                    </span>
+                                    <i class="material-icons material-symbols-rounded menu-icon" style="font-size:20px;">keyboard_arrow_right</i>
+                                </a>
+                            </li>
+                            <ul class="collapse list-unstyled" id="collapseRegistration">
+                                <li class="sidebar-item {{ request()->routeIs('forms.*') ? 'active' : '' }}">
+                                    <a class="sidebar-link d-flex align-items-center gap-2 {{ request()->routeIs('forms.*') ? 'active' : '' }}"
+                                        href="{{ route('forms.index') }}">
+                                        <span class="hide-menu">Registration Forms</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('admin.registration.index') }}">
+                                        <span class="hide-menu">Registration Master</span>
+                                    </a>
+                                </li>
+                            </ul>
+
+                            {{-- Exemption (collapsible) --}}
+                            <li class="sidebar-item mb-1">
+                                <a class="sidebar-link d-flex align-items-center justify-content-between gap-2"
+                                    data-bs-toggle="collapse" href="#collapseExemption" role="button"
+                                    aria-expanded="false" aria-controls="collapseExemption">
+                                    <span class="d-flex align-items-center gap-2">
+                                        <i class="material-icons material-symbols-rounded" style="font-size:20px;">medical_services</i>
+                                        <span class="hide-menu">Exemption</span>
+                                    </span>
+                                    <i class="material-icons material-symbols-rounded menu-icon" style="font-size:20px;">keyboard_arrow_right</i>
+                                </a>
+                            </li>
+                            <ul class="collapse list-unstyled" id="collapseExemption">
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('admin.exemptionIndex') }}">
+                                        <span class="hide-menu">Exemption Categories (Master)</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('exemptions.datalist') }}">
+                                        <span class="hide-menu">Applications (Registration & Exemption)</span>
+                                    </a>
+                                </li>
+                            </ul>
+
+                            {{-- Database Tools (collapsible) --}}
+                            <li class="sidebar-item mb-1">
+                                <a class="sidebar-link d-flex align-items-center justify-content-between gap-2"
+                                    data-bs-toggle="collapse" href="#collapseDatabase" role="button"
+                                    aria-expanded="false" aria-controls="collapseDatabase">
+                                    <span class="d-flex align-items-center gap-2">
+                                        <i class="material-icons material-symbols-rounded" style="font-size:20px;">database</i>
+                                        <span class="hide-menu">Database Tools</span>
+                                    </span>
+                                    <i class="material-icons material-symbols-rounded menu-icon" style="font-size:20px;">keyboard_arrow_right</i>
+                                </a>
+                            </li>
+                            <ul class="collapse list-unstyled" id="collapseDatabase">
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('admin.column.form') }}">
+                                        <span class="hide-menu">Manage DB Columns</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('registration-page.create') }}">
+                                        <span class="hide-menu">Manage Logo</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('students.index') }}">
+                                        <span class="hide-menu">Data Migration</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('enrollment.create') }}">
+                                        <span class="hide-menu">New Course Enrollment</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('student.courses') }}">
+                                        <span class="hide-menu">Course wise OT's List</span>
+                                    </a>
+                                </li>
+                            </ul>
+
+                            {{-- Documents (collapsible) --}}
+                            <li class="sidebar-item mb-1">
+                                <a class="sidebar-link d-flex align-items-center justify-content-between gap-2"
+                                    data-bs-toggle="collapse" href="#collapseDocuments" role="button"
+                                    aria-expanded="false" aria-controls="collapseDocuments">
+                                    <span class="d-flex align-items-center gap-2">
+                                        <i class="material-icons material-symbols-rounded" style="font-size:20px;">description</i>
+                                        <span class="hide-menu">Documents</span>
+                                    </span>
+                                    <i class="material-icons material-symbols-rounded menu-icon" style="font-size:20px;">keyboard_arrow_right</i>
+                                </a>
+                            </li>
+                            <ul class="collapse list-unstyled" id="collapseDocuments">
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('fc.joining.index', ['formId' => 30]) }}">
+                                        <span class="hide-menu">Joining Documents (User)</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('admin.joining-documents.index', ['formId' => 30]) }}">
+                                        <span class="hide-menu">Report (Admin Only)</span>
+                                    </a>
+                                </li>
+                            </ul>
+
+                            {{-- Peer Evaluation (collapsible) --}}
+                            <li class="sidebar-item mb-1">
+                                <a class="sidebar-link d-flex align-items-center justify-content-between gap-2"
+                                    data-bs-toggle="collapse" href="#collapsePeerEvaluation" role="button"
+                                    aria-expanded="false" aria-controls="collapsePeerEvaluation">
+                                    <span class="d-flex align-items-center gap-2">
+                                        <i class="material-icons material-symbols-rounded" style="font-size:20px;">group_work</i>
+                                        <span class="hide-menu">Peer Evaluation</span>
+                                    </span>
+                                    <i class="material-icons material-symbols-rounded menu-icon" style="font-size:20px;">keyboard_arrow_right</i>
+                                </a>
+                            </li>
+                            <ul class="collapse list-unstyled" id="collapsePeerEvaluation">
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('admin.peer.index') }}">
+                                        <span class="hide-menu">Peer Evaluation (Admin Panel)</span>
+                                    </a>
+                                </li>
+                            </ul>
+
+                        </ul>
+
+                        @endif
+
                     </div>
                 </div>
-            </li>
-
-            <!-- ======= GENERAL ======= -->
-
-            <li class="sidebar-item"
-                style="background: #4077ad;
-                border-radius: 30px 0px 0px 30px;
-                width: 100%;
-                box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
-                min-width: 250px;">
-                <a class="sidebar-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
-                    href="#collapseGeneral" role="button" aria-expanded="false" aria-controls="collapseGeneral">
-                    <span class="fw-bold">General</span>
-                    <i class="material-icons menu-icon material-symbols-rounded toggle-icon"
-                        style="font-size: 24px; transition: transform 0.3s ease;">keyboard_arrow_right</i>
-                </a>
-            </li>
-            <ul class="collapse list-unstyled ps-3" id="collapseGeneral">
-                <li class="sidebar-item">
-                    <a class="sidebar-link" href="{{ route('frontpage.index') }}" target="_blank">
-
-                        <span class="hide-menu small small-sm-normal text-nowrap">User Landing Page (User)</span>
-                    </a>
-                </li>
-                <li class="sidebar-item">
-                    <a class="sidebar-link" href="{{ route('admin.frontpage') }}">
-
-                        <span class="hide-menu small small-sm-normal text-nowrap">Landing Page (Admin)</span>
-                    </a>
-                </li>
-                <li class="sidebar-item">
-                    <a class="sidebar-link" href="{{ route('admin.path.page') }}">
-                        <span class="hide-menu small small-sm-normal text-nowrap">Path Page (Admin)</span>
-                    </a>
-                </li>
-            </ul>
-
-            <!-- ======= REGISTRATION MANAGEMENT ======= -->
-            <li class="sidebar-item mt-2"
-                style="background: #4077ad;
-                border-radius: 30px 0px 0px 30px;
-                width: 100%;
-                box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
-                min-width: 250px;">
-                <a class="sidebar-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
-                    href="#collapseRegistration" role="button" aria-expanded="false"
-                    aria-controls="collapseRegistration">
-                    <span class="fw-bold">Registration Management</span>
-                    <i class="material-icons menu-icon material-symbols-rounded toggle-icon"
-                        style="font-size: 24px; transition: transform 0.3s ease;">keyboard_arrow_right</i>
-                </a>
-            </li>
-            <ul class="collapse list-unstyled ps-3" id="collapseRegistration">
-                <li class="sidebar-item {{ request()->routeIs('forms.*') ? 'active' : '' }}">
-                    <a class="sidebar-link {{ request()->routeIs('forms.*') ? 'active' : '' }}"
-                        href="{{ route('forms.index') }}">
-                        <span class="hide-menu small small-sm-normal text-nowrap">Registration Forms</span>
-                    </a>
-                </li>
-                <li class="sidebar-item">
-                    <a class="sidebar-link" href="{{ route('admin.registration.index') }}">
-                        <span class="hide-menu small small-sm-normal text-nowrap">Registration Master</span>
-                    </a>
-                </li>
-            </ul>
-
-            <!-- ======= EXEMPTION ======= -->
-            <li class="sidebar-item mt-2"
-                style="background: #4077ad;
-                border-radius: 30px 0px 0px 30px;
-                width: 100%;
-                box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
-                min-width: 250px;">
-                <a class="sidebar-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
-                    href="#collapseExemption" role="button" aria-expanded="false" aria-controls="collapseExemption">
-                    <span class="fw-bold">Exemption</span>
-                    <i class="material-icons menu-icon material-symbols-rounded toggle-icon"
-                        style="font-size: 24px; transition: transform 0.3s ease;">keyboard_arrow_right</i>
-                </a>
-            </li>
-            <ul class="collapse list-unstyled ps-3" id="collapseExemption">
-                <li class="sidebar-item">
-                    <a class="sidebar-link" href="{{ route('admin.exemptionIndex') }}">
-                        <span class="hide-menu small small-sm-normal text-nowrap">Exemption Categories (Master)</span>
-                    </a>
-                </li>
-                <li class="sidebar-item">
-                    <a class="sidebar-link" href="{{ route('exemptions.datalist') }}">
-                        <span class="hide-menu small small-sm-normal text-nowrap">Applications (Registration & Exemption)</span>
-                    </a>
-                </li>
-            </ul>
-
-            <!-- ======= DATABASE TOOLS ======= -->
-            <li class="sidebar-item mt-2"
-                style="background: #4077ad;
-                border-radius: 30px 0px 0px 30px;
-                width: 100%;
-                box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
-                min-width: 250px;">
-                <a class="sidebar-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
-                    href="#collapseDatabase" role="button" aria-expanded="false" aria-controls="collapseDatabase">
-                    <span class="fw-bold">Database Tools</span>
-                    <i class="material-icons menu-icon material-symbols-rounded toggle-icon"
-                        style="font-size: 24px; transition: transform 0.3s ease;">keyboard_arrow_right</i>
-                </a>
-            </li>
-            <ul class="collapse list-unstyled ps-3" id="collapseDatabase">
-                <li class="sidebar-item">
-                    <a class="sidebar-link" href="{{ route('admin.column.form') }}">
-                        <span class="hide-menu small small-sm-normal text-nowrap">Manage DB Columns</span>
-                    </a>
-                </li>
-                <li class="sidebar-item">
-                    <a class="sidebar-link" href="{{ route('registration-page.create') }}">
-                        <span class="hide-menu small small-sm-normal text-nowrap">Manage Logo</span>
-                    </a>
-                </li>
-                <li class="sidebar-item">
-                    <a class="sidebar-link" href="{{ route('students.index') }}">
-                        <span class="hide-menu small small-sm-normal text-nowrap">Data Migration</span>
-                    </a>
-                </li>
-
-                <li class="sidebar-item">
-                    <a class="sidebar-link" href="{{ route('enrollment.create') }}">
-                        <span class="hide-menu small small-sm-normal text-nowrap">New Course Enrollment</span>
-                    </a>
-                </li>
-
-                <li class="sidebar-item">
-                    <a class="sidebar-link" href="{{ route('student.courses') }}">
-                        <span class="hide-menu small small-sm-normal text-nowrap">Course wise OT's List</span>
-                    </a>
-                </li>
-            </ul>
-
-            <!-- ======= DOCUMENTS ======= -->
-            <li class="sidebar-item mt-2"
-                style="background: #4077ad;
-                border-radius: 30px 0px 0px 30px;
-                width: 100%;
-                box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
-                min-width: 250px;">
-                <a class="sidebar-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
-                    href="#collapseDocuments" role="button" aria-expanded="false"
-                    aria-controls="collapseDocuments">
-                    <span class="fw-bold">Documents</span>
-                    <i class="material-icons menu-icon material-symbols-rounded toggle-icon"
-                        style="font-size: 24px; transition: transform 0.3s ease;">keyboard_arrow_right</i>
-                </a>
-            </li>
-            <ul class="collapse list-unstyled ps-3" id="collapseDocuments">
-                <li class="sidebar-item">
-                    <a class="sidebar-link" href="{{ route('fc.joining.index', ['formId' => 30]) }}">
-                        <span class="hide-menu small small-sm-normal text-nowrap">Joining Documents (User)</span>
-                    </a>
-                </li>
-                <li class="sidebar-item">
-                    <a class="sidebar-link" href="{{ route('admin.joining-documents.index', ['formId' => 30]) }}">
-                        <span class="hide-menu small small-sm-normal text-nowrap">Report (Admin Only)</span>
-                    </a>
-                </li>
-            </ul>
-
-            <!-- ======= PEER EVALUATION ======= -->
-            <li class="sidebar-item mt-2"
-                style="background: #4077ad;
-                border-radius: 30px 0px 0px 30px;
-                width: 100%;
-                box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
-                min-width: 250px;">
-                <a class="sidebar-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
-                    href="#collapsePeerEvaluation" role="button" aria-expanded="false"
-                    aria-controls="collapsePeerEvaluation">
-                    <span class="fw-bold">Peer Evaluation</span>
-                    <i class="material-icons menu-icon material-symbols-rounded toggle-icon"
-                        style="font-size: 24px; transition: transform 0.3s ease;">keyboard_arrow_right</i>
-                </a>
-            </li>
-            <ul class="collapse list-unstyled ps-3" id="collapsePeerEvaluation">
-                <li class="sidebar-item">
-                    <a class="sidebar-link" href="{{ route('admin.peer.index') }}">
-                        <span class="hide-menu small small-sm-normal text-nowrap">Peer Evaluation (Admin Panel)</span>
-                    </a>
-                </li>
-            </ul>
-        @endif
-
-    </ul>
+            </div>
+        </div>
+        <div class="simplebar-placeholder" style="width: auto; height: 0px;"></div>
+    </div>
+    <div class="simplebar-track simplebar-horizontal" style="visibility: hidden;">
+        <div class="simplebar-scrollbar" style="width: 0px; display: none;"></div>
+    </div>
+    <div class="simplebar-track simplebar-vertical" style="visibility: visible;">
+        <div class="simplebar-scrollbar"
+            style="height: 25px; transform: translate3d(0px, 0px, 0px); display: block;"></div>
+    </div>
 </nav>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Handle toggle icon rotation for all collapsible sections
-        const collapseElements = document.querySelectorAll('.collapse');
-
-        collapseElements.forEach(function(collapseEl) {
-            collapseEl.addEventListener('show.bs.collapse', function() {
-                const trigger = document.querySelector(
-                    `[href="#${this.id}"], [data-bs-target="#${this.id}"]`);
-                if (trigger) {
-                    const icon = trigger.querySelector('.toggle-icon');
-                    if (icon) {
-                        icon.textContent = 'keyboard_arrow_down';
-                    }
-                }
-            });
-
-            collapseEl.addEventListener('hide.bs.collapse', function() {
-                const trigger = document.querySelector(
-                    `[href="#${this.id}"], [data-bs-target="#${this.id}"]`);
-                if (trigger) {
-                    const icon = trigger.querySelector('.toggle-icon');
-                    if (icon) {
-                        icon.textContent = 'keyboard_arrow_right';
-                    }
-                }
-            });
-        });
-    });
-</script>

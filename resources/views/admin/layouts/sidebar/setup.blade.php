@@ -162,7 +162,6 @@
     }
 
     #sidebar-setup .sidebar-google-style .mini-nav {
-        background: #f0f0f0 !important;
         border: 1px solid var(--bs-border-color-translucent);
         padding: 12px 0;
         border-radius: 10px;

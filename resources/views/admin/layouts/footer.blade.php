@@ -77,6 +77,19 @@
       try {
         if (window.jQuery && $.fn && $.fn.dataTable) {
           $.extend(true, $.fn.dataTable.defaults, { autoWidth: false, responsive: true });
+          $(document).on('init.dt', function (event, settings) {
+            if (!settings) return;
+            try {
+              var api = new $.fn.dataTable.Api(settings);
+              var $wrap = $(api.table().container());
+              $wrap.find('.dataTables_paginate ul.pagination').addClass('pagination-sm');
+              $wrap.find('.dataTables_length select').addClass('form-select form-select-sm');
+              $wrap.find('.dataTables_filter input').addClass('form-control form-control-sm');
+              $wrap.find('.dataTables_info').addClass('small text-muted');
+            } catch (err) {
+              console.warn('DataTables compact Bootstrap classes:', err);
+            }
+          });
         }
       } catch (e) {
         console.warn('Failed to set DataTables defaults:', e);

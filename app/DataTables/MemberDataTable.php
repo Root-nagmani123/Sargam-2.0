@@ -34,12 +34,12 @@ class MemberDataTable extends DataTable
             ->addColumn('actions', function($row) {
                 $deleteUrl = route('member.destroy', encrypt($row->pk));
                 return '<div class="d-flex justify-content-center gap-2">
-                    <a href="' . route('member.edit', $row->pk) . '" class="btn btn-sm btn-primary">Edit</a>
-                    <a href="' . route('member.show', encrypt($row->pk)) . '" class="btn btn-sm btn-success">View</a>
+                    <a href="' . route('member.edit', $row->pk) . '" class="btn btn-sm btn-outline-primary">Edit</a>
+                    <a href="' . route('member.show', encrypt($row->pk)) . '" class="btn btn-sm btn-outline-success">View</a>
                     <form action="' . $deleteUrl . '" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this member?\')">
                         ' . csrf_field() . '
                         ' . method_field('DELETE') . '
-                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                        <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
                     </form>
                 </div>';
 
