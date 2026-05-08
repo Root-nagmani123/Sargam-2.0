@@ -74,10 +74,32 @@ $selectedClientType = (string) request()->input('client_type', '');
                     </div>
                     <div class="sv-filter-field">
                         <label class="form-label small fw-semibold text-uppercase mb-1">Client type</label>
-                        <select name="client_type" class="form-select  w-100">
+                        <select name="client_type" id="filter_client_type" class="form-select  w-100">
                             <option value="" {{ $selectedClientType === '' ? 'selected' : '' }}>All</option>
                             @foreach(\App\Models\Mess\ClientType::clientTypes() as $slug => $label)
                             <option value="{{ $slug }}" {{ $selectedClientType === $slug ? 'selected' : '' }}>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="sv-filter-field">
+                        <label class="form-label small fw-semibold text-uppercase mb-1">Client category</label>
+                        <select name="client_type_pk" id="filter_client_type_pk" class="form-select w-100">
+                            <option value="">All categories</option>
+                            @foreach(($filterClientTypePkOptions ?? collect()) as $option)
+                            <option value="{{ $option['value'] }}" {{ (string) ($selectedClientTypePk ?? '') === (string) $option['value'] ? 'selected' : '' }}>
+                                {{ $option['text'] }}
+                            </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="sv-filter-field">
+                        <label class="form-label small fw-semibold text-uppercase mb-1">Buyer name</label>
+                        <select name="buyer_name" id="filter_buyer_name" class="form-select w-100">
+                            <option value="">All Buyers</option>
+                            @foreach(($filterBuyerNames ?? collect()) as $buyerName)
+                            <option value="{{ $buyerName }}" {{ (string) ($selectedBuyerName ?? '') === (string) $buyerName ? 'selected' : '' }}>
+                                {{ $buyerName }}
+                            </option>
                             @endforeach
                         </select>
                     </div>
@@ -4951,6 +4973,120 @@ $selectedClientType = (string) request()->input('client_type', '');
     document.addEventListener('DOMContentLoaded', function() {
         var filterStart = document.getElementById('filter_start_date');
         var filterEnd = document.getElementById('filter_end_date');
+        var filterType = document.getElementById('filter_client_type');
+        var filterTypePk = document.getElementById('filter_client_type_pk');
+        var filterBuyer = document.getElementById('filter_buyer_name');
+        var selectedTypePk = @json((string) ($selectedClientTypePk ?? request('client_type_pk', '')));
+        var selectedBuyer = @json((string) ($selectedBuyerName ?? request('buyer_name', '')));
+        var employees = @json(($employees ?? collect())->pluck('full_name')->filter()->values()->all(), JSON_UNESCAPED_UNICODE);
+        var faculties = @json(($faculties ?? collect())->pluck('full_name')->filter()->values()->all(), JSON_UNESCAPED_UNICODE);
+        var messStaff = @json(($messStaff ?? collect())->pluck('full_name')->filter()->values()->all(), JSON_UNESCAPED_UNICODE);
+        var typePkOptionsBySlug = {
+@foreach(($clientNamesByType ?? collect()) as $slug => $options)
+            '{{ $slug }}': [
+    @foreach($options as $option)
+                { value: '{{ (string) $option->id }}', text: '{{ addslashes((string) $option->client_name) }}' },
+    @endforeach
+            ],
+@endforeach
+        };
+        var otCourseOptions = [
+@foreach(($otCourses ?? collect()) as $course)
+            { value: '{{ (string) $course->pk }}', text: '{{ addslashes((string) $course->course_name) }}' },
+@endforeach
+        ];
+
+        function fillSelect(selectEl, options, placeholder, selectedValue) {
+            if (!selectEl) return;
+            selectEl.innerHTML = '';
+            var defaultOpt = document.createElement('option');
+            defaultOpt.value = '';
+            defaultOpt.textContent = placeholder;
+            selectEl.appendChild(defaultOpt);
+            (options || []).forEach(function(option) {
+                var opt = document.createElement('option');
+                opt.value = String(option.value || '');
+                opt.textContent = String(option.text || '');
+                if (selectedValue !== undefined && selectedValue !== null && String(selectedValue) === opt.value) {
+                    opt.selected = true;
+                }
+                selectEl.appendChild(opt);
+            });
+        }
+
+        function setBuyerOptions(options, preserveSelection) {
+            fillSelect(filterBuyer, (options || []).map(function(name) {
+                return { value: name, text: name };
+            }), 'All Buyers', preserveSelection ? selectedBuyer : '');
+        }
+
+        function loadBuyerOptions(preserveSelection) {
+            if (!filterType || !filterTypePk || !filterBuyer) return;
+            var slug = String(filterType.value || '');
+            var pk = String(filterTypePk.value || '');
+            if (!slug || !pk) {
+                setBuyerOptions([], preserveSelection);
+                return;
+            }
+
+            if (slug === 'employee') {
+                var selectedLabel = ((filterTypePk.options[filterTypePk.selectedIndex] || {}).text || '').toLowerCase().trim();
+                if (selectedLabel === 'academy staff') {
+                    setBuyerOptions(employees, preserveSelection);
+                } else if (selectedLabel === 'faculty') {
+                    setBuyerOptions(faculties, preserveSelection);
+                } else if (selectedLabel === 'mess staff') {
+                    setBuyerOptions(messStaff, preserveSelection);
+                } else {
+                    setBuyerOptions([], preserveSelection);
+                }
+                return;
+            }
+
+            var url = '';
+            if (slug === 'ot') {
+                url = '{{ route('admin.mess.selling-voucher-date-range.students-by-course', ['course_pk' => '__COURSE__']) }}'.replace('__COURSE__', encodeURIComponent(pk));
+            } else if (slug === 'course' || slug === 'section' || slug === 'other') {
+                var params = new URLSearchParams({
+                    client_type_slug: slug,
+                    client_type_pk: pk
+                });
+                url = '{{ route('admin.mess.selling-voucher-date-range.buyer-names') }}' + '?' + params.toString();
+            }
+
+            if (!url) {
+                setBuyerOptions([], preserveSelection);
+                return;
+            }
+            fetch(url, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(function(response) { return response.ok ? response.json() : { buyers: [] }; })
+                .then(function(payload) {
+                    var buyers = [];
+                    if (slug === 'ot') {
+                        buyers = (payload.students || []).map(function(student) { return student.display_name || ''; }).filter(Boolean);
+                    } else {
+                        buyers = (payload.buyers || []).map(function(name) { return String(name || '').trim(); }).filter(Boolean);
+                    }
+                    setBuyerOptions(buyers, preserveSelection);
+                })
+                .catch(function() {
+                    setBuyerOptions([], preserveSelection);
+                });
+        }
+
+        function loadTypePkOptions(preserveSelection) {
+            if (!filterType || !filterTypePk) return;
+            var slug = String(filterType.value || '');
+            var options = [];
+            if (slug === 'ot' || slug === 'course') {
+                options = otCourseOptions;
+            } else if (slug && typePkOptionsBySlug[slug]) {
+                options = typePkOptionsBySlug[slug];
+            }
+            fillSelect(filterTypePk, options, 'All categories', preserveSelection ? selectedTypePk : '');
+            loadBuyerOptions(preserveSelection);
+        }
+
         if (filterStart && filterEnd) {
             filterStart.addEventListener('change', function() {
                 filterEnd.min = this.value || '';
@@ -4958,6 +5094,18 @@ $selectedClientType = (string) request()->input('client_type', '');
                     filterEnd.value = this.value;
                 }
             });
+        }
+        if (filterType && filterTypePk && filterBuyer) {
+            filterType.addEventListener('change', function() {
+                selectedTypePk = '';
+                selectedBuyer = '';
+                loadTypePkOptions(false);
+            });
+            filterTypePk.addEventListener('change', function() {
+                selectedBuyer = '';
+                loadBuyerOptions(false);
+            });
+            loadTypePkOptions(true);
         }
     });
 

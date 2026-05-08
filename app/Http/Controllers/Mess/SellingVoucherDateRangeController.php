@@ -151,7 +151,86 @@ class SellingVoucherDateRangeController extends Controller
                 ->values()
             : collect();
 
-        return view('mess.selling-voucher-date-range.index', compact('stores', 'itemSubcategories', 'clientTypes', 'clientNamesByType', 'faculties', 'employees', 'messStaff', 'otCourses'));
+        $selectedClientType = (string) $request->input('client_type', '');
+        $selectedClientTypePk = (string) $request->input('client_type_pk', '');
+        $selectedBuyerName = trim((string) $request->input('buyer_name', ''));
+
+        $filterClientTypePkOptions = collect();
+        if (in_array($selectedClientType, ['ot', 'course'], true)) {
+            $filterClientTypePkOptions = $otCourses->map(function ($course) {
+                return [
+                    'value' => (string) $course->pk,
+                    'text' => (string) $course->course_name,
+                ];
+            })->values();
+        } elseif ($selectedClientType !== '' && isset($clientNamesByType[$selectedClientType])) {
+            $filterClientTypePkOptions = $clientNamesByType[$selectedClientType]
+                ->map(function ($category) {
+                    return [
+                        'value' => (string) $category->id,
+                        'text' => (string) $category->client_name,
+                    ];
+                })
+                ->values();
+        }
+
+        $filterBuyerNames = collect();
+        if ($selectedClientType === 'employee' && $selectedClientTypePk !== '') {
+            $selectedEmployeeBucket = strtolower(trim((string) $filterClientTypePkOptions
+                ->firstWhere('value', $selectedClientTypePk)['text'] ?? ''));
+            if ($selectedEmployeeBucket === 'academy staff') {
+                $filterBuyerNames = $employees->pluck('full_name')->filter()->values();
+            } elseif ($selectedEmployeeBucket === 'faculty') {
+                $filterBuyerNames = $faculties->pluck('full_name')->filter()->values();
+            } elseif ($selectedEmployeeBucket === 'mess staff') {
+                $filterBuyerNames = $messStaff->pluck('full_name')->filter()->values();
+            }
+        } elseif ($selectedClientType === 'ot' && $selectedClientTypePk !== '') {
+            $filterBuyerNames = StudentMaster::join('student_master_course__map', 'student_master.pk', '=', 'student_master_course__map.student_master_pk')
+                ->where('student_master_course__map.course_master_pk', (int) $selectedClientTypePk)
+                ->select('student_master.display_name', 'student_master.generated_OT_code')
+                ->orderBy('student_master.display_name')
+                ->get()
+                ->map(function ($student) {
+                    $displayName = trim((string) ($student->display_name ?? ''));
+                    $otCode = trim((string) ($student->generated_OT_code ?? ''));
+                    if ($displayName === '') {
+                        return null;
+                    }
+                    return $otCode !== '' ? ($displayName . ' (' . $otCode . ')') : $displayName;
+                })
+                ->filter()
+                ->values();
+        } elseif (in_array($selectedClientType, ['course', 'section', 'other'], true) && $selectedClientTypePk !== '') {
+            $filterBuyerNames = SellingVoucherDateRangeReport::query()
+                ->where('client_type_slug', $selectedClientType)
+                ->where('client_type_pk', (int) $selectedClientTypePk)
+                ->whereHas('items')
+                ->whereNotNull('client_name')
+                ->where('client_name', '!=', '')
+                ->distinct()
+                ->orderBy('client_name')
+                ->pluck('client_name')
+                ->map(fn ($name) => trim((string) $name))
+                ->filter()
+                ->values();
+        }
+
+        return view('mess.selling-voucher-date-range.index', compact(
+            'stores',
+            'itemSubcategories',
+            'clientTypes',
+            'clientNamesByType',
+            'faculties',
+            'employees',
+            'messStaff',
+            'otCourses',
+            'selectedClientType',
+            'selectedClientTypePk',
+            'selectedBuyerName',
+            'filterClientTypePkOptions',
+            'filterBuyerNames'
+        ));
     }
 
     /**
@@ -1002,6 +1081,12 @@ class SellingVoucherDateRangeController extends Controller
         $clientTypeSlug = (string) $request->input('client_type', '');
         if ($clientTypeSlug !== '' && in_array($clientTypeSlug, array_keys(ClientType::clientTypes()), true)) {
             $q->where('sv.client_type_slug', $clientTypeSlug);
+        }
+        if ($request->filled('client_type_pk')) {
+            $q->where('sv.client_type_pk', (int) $request->input('client_type_pk'));
+        }
+        if ($request->filled('buyer_name')) {
+            $q->where('sv.client_name', trim((string) $request->input('buyer_name')));
         }
 
         if ($request->filled('start_date') && $request->filled('end_date')) {
