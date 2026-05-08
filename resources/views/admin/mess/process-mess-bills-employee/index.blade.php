@@ -289,6 +289,8 @@
     'orderColumn' => [[0, 'asc']],
     'actionColumnIndex' => 8,
     'infoLabel' => 'bills',
+    'serverSide' => true,
+    'ajaxUrlBase' => route('admin.mess.process-mess-bills-employee.index'),
 ])
 
 {{-- Toast container for feedback --}}

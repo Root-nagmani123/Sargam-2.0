@@ -17,6 +17,7 @@ use App\Exports\ProcessMessBillsExport;
 use App\Services\NotificationService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Maatwebsite\Excel\Facades\Excel;
@@ -46,6 +47,7 @@ class ProcessMessBillsEmployeeController extends Controller
 
     public function index(Request $request)
     {
+        $isDataTableRequest = $request->ajax() && $request->has('draw');
         $dateFrom = $request->filled('date_from') ? $this->parseDate($request->date_from) : now()->startOfMonth()->format('Y-m-d');
         $dateTo = $request->filled('date_to') ? $this->parseDate($request->date_to) : now()->endOfMonth()->format('Y-m-d');
         $unionCollation = 'utf8mb4_unicode_ci';
@@ -177,6 +179,15 @@ class ProcessMessBillsEmployeeController extends Controller
         $effectiveDateFromYmd = $dateFrom;
         $effectiveDateToYmd = $dateTo;
 
+        if ($isDataTableRequest) {
+            return $this->processMessBillsDatatableResponse(
+                $request,
+                $combinedBills,
+                $effectiveDateFromYmd,
+                $effectiveDateToYmd
+            );
+        }
+
         // Stats based on (optionally filtered) combined bills (one per buyer)
         // Stats based on (optionally filtered) combined bills (one per buyer)
         $stats = [
@@ -185,6 +196,10 @@ class ProcessMessBillsEmployeeController extends Controller
             'unpaid_count' => $combinedBills->count() - $combinedBills->where('status', 2)->count(),
             'total_amount' => (float) $combinedBills->sum('total'),
         ];
+
+        // Main listing rows are fetched on pagination/search via AJAX DataTables.
+        // Keep initial HTML light to avoid rendering thousands of rows at once.
+        $combinedBills = collect();
 
         // Filters for Client Type / Buyer dropdowns (reuse Sale Voucher Report logic)
         $clientTypes = ClientType::clientTypes();
@@ -258,6 +273,117 @@ class ProcessMessBillsEmployeeController extends Controller
             'sectionBuyerNames',
             'allBuyerNames'
         ));
+    }
+
+    private function processMessBillsDatatableResponse(
+        Request $request,
+        Collection $combinedBills,
+        string $effectiveDateFromYmd,
+        string $effectiveDateToYmd
+    ) {
+        $draw = (int) $request->input('draw', 1);
+        $start = max(0, (int) $request->input('start', 0));
+        $length = (int) $request->input('length', 10);
+        if ($length < 1 || $length > 100) {
+            $length = 10;
+        }
+
+        $recordsTotal = $combinedBills->count();
+
+        $searchRaw = '';
+        $searchPayload = $request->input('search');
+        if (is_array($searchPayload) && isset($searchPayload['value'])) {
+            $searchRaw = trim((string) $searchPayload['value']);
+        }
+
+        $filteredBills = $combinedBills;
+        if ($searchRaw !== '') {
+            $needle = mb_strtolower($searchRaw);
+            $filteredBills = $filteredBills->filter(function ($cb) use ($needle) {
+                $statusLabel = ((int) ($cb->status ?? 0)) === 2
+                    ? 'paid'
+                    : (((int) ($cb->status ?? 0)) === 1 ? 'partial' : 'unpaid');
+
+                $haystack = mb_strtolower(implode(' ', [
+                    (string) ($cb->buyer_name ?? ''),
+                    (string) ($cb->combined_invoice_no ?? ''),
+                    (string) ($cb->invoice_date_range ?? ''),
+                    (string) ($cb->client_type_display ?? ''),
+                    (string) ($cb->payment_type ?? ''),
+                    (string) number_format((float) ($cb->total ?? 0), 2, '.', ''),
+                    $statusLabel,
+                ]));
+
+                return str_contains($haystack, $needle);
+            })->values();
+        }
+
+        $recordsFiltered = $filteredBills->count();
+
+        $orderColumn = (int) $request->input('order.0.column', 0);
+        $orderDir = strtolower((string) $request->input('order.0.dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+        $sortMap = [
+            1 => 'buyer_name',
+            2 => 'combined_invoice_no',
+            3 => 'invoice_date_range',
+            4 => 'client_type_display',
+            5 => 'total',
+            6 => 'payment_type',
+            7 => 'status',
+        ];
+        if (isset($sortMap[$orderColumn])) {
+            $field = $sortMap[$orderColumn];
+            $filteredBills = $filteredBills->sortBy(function ($cb) use ($field) {
+                $value = $cb->{$field} ?? '';
+                if ($field === 'total' || $field === 'status') {
+                    return (float) $value;
+                }
+                return mb_strtolower((string) $value);
+            }, SORT_REGULAR, $orderDir === 'desc')->values();
+        }
+
+        $rows = $filteredBills->slice($start, $length)->values();
+        $data = [];
+        foreach ($rows as $idx => $cb) {
+            $status = (int) ($cb->status ?? 0);
+            if ($status === 2) {
+                $statusBadge = '<span class="badge rounded-pill text-bg-success shadow-sm px-3 py-2">✓ Paid</span>';
+            } elseif ($status === 1) {
+                $statusBadge = '<span class="badge rounded-pill text-bg-warning text-dark shadow-sm px-3 py-2">⏱ Partial</span>';
+            } else {
+                $statusBadge = '<span class="badge rounded-pill text-bg-secondary shadow-sm px-3 py-2">○ Unpaid</span>';
+            }
+
+            $receiptUrl = route('admin.mess.process-mess-bills-employee.print-receipt', ['id' => $cb->combined_id])
+                . '?date_from=' . rawurlencode($effectiveDateFromYmd)
+                . '&date_to=' . rawurlencode($effectiveDateToYmd);
+
+            $actionHtml = '<a href="' . e($receiptUrl) . '" target="_blank"'
+                . ' class="btn btn-sm btn-outline-primary shadow-sm d-inline-flex align-items-center justify-content-center gap-1 px-3"'
+                . ' title="Print receipt (' . e((string) ($cb->combined_invoice_no ?? 'Invoice')) . ')">'
+                . '<i class="material-symbols-rounded" style="font-size: 1.1rem;">receipt</i>'
+                . '<span class="d-none d-sm-inline">Receipt</span>'
+                . '</a>';
+
+            $data[] = [
+                (string) ($start + $idx + 1),
+                e((string) ($cb->buyer_name ?? '—')),
+                e((string) ($cb->combined_invoice_no ?? '—')),
+                e((string) ($cb->invoice_date_range ?? '—')),
+                e((string) ($cb->client_type_display ?? '—')),
+                '₹ ' . number_format((float) ($cb->total ?? 0), 2),
+                e((string) ($cb->payment_type ?? '—')),
+                $statusBadge,
+                $actionHtml,
+            ];
+        }
+
+        return response()->json([
+            'draw' => $draw,
+            'recordsTotal' => $recordsTotal,
+            'recordsFiltered' => $recordsFiltered,
+            'data' => $data,
+        ]);
     }
 
     /**
