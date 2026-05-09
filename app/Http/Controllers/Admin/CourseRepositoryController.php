@@ -14,6 +14,7 @@ use App\Models\SectorMaster;
 use App\Models\MinistryMaster;
 use App\Models\Timetable;
 use Illuminate\Http\Request; 
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Exception;
@@ -21,6 +22,12 @@ use Exception;
  
 class CourseRepositoryController extends Controller
 {
+    private const CACHE_PREFIX = 'course_repository:v1';
+    private const CACHE_VERSION_KEY = 'course_repository:cache_version';
+    private const CACHE_TTL_SECONDS = 300;
+    private const CACHE_TTL_ENV_KEY = 'COURSE_REPOSITORY_CACHE_SECONDS';
+    private const CACHE_STORE_ENV_KEY = 'COURSE_REPOSITORY_CACHE_STORE';
+
     /**
      * Display listing of all course repositories
      * GET /course-repository
@@ -30,26 +37,29 @@ class CourseRepositoryController extends Controller
     {
         try {
             $parentPk = $request->query('parent_pk');
-            $parentRepository = null;
-            $ancestors = [];
-            $documents_count_array = [];
             $perPage = (int) $request->input('per_page', 15);
             $perPage = in_array($perPage, [10, 15, 25, 50, 100]) ? $perPage : 15;
 
-            if ($parentPk) {
-                // Show children of specific parent
-                $parentRepository = CourseRepositoryMaster::findOrFail($parentPk);
-                $repositories = $parentRepository->children()
-                    ->with(['children', 'documents'])
-                    ->orderBy('created_date', 'desc')
-                    ->paginate($perPage)
-                    ->withQueryString();
-                   
-            
-                                $documents_count_array = [];
+            $cacheKey = $this->cacheKey('index', [
+                'parent_pk' => (string) ($parentPk ?? ''),
+                'per_page' => (string) $perPage,
+                'page' => (string) $request->input('page', 1),
+            ]);
+            $payload = $this->rememberCache($cacheKey, function () use ($parentPk, $perPage) {
+                $parentRepository = null;
+                $ancestors = [];
+                $documents_count_array = [];
+
+                if ($parentPk) {
+                    // Show children of specific parent
+                    $parentRepository = CourseRepositoryMaster::findOrFail($parentPk);
+                    $repositories = $parentRepository->children()
+                        ->with(['children', 'documents'])
+                        ->orderBy('created_date', 'desc')
+                        ->paginate($perPage)
+                        ->withQueryString();
 
                     foreach ($repositories as $child) {
-
                         $documents_count = CourseRepositoryDetail::where(
                             'course_repository_master_pk',
                             $child->pk
@@ -58,45 +68,49 @@ class CourseRepositoryController extends Controller
                         $documents_count_array[$child->pk] = $documents_count;
                     }
 
+                    // Build ancestor chain for breadcrumb
+                    $current = $parentRepository;
+                    while ($current && $current->parent) {
+                        // Prepend to keep order from root -> ... -> parent
+                        array_unshift($ancestors, $current->parent);
+                        $current = $current->parent;
+                    }
+                } else {
+                    // Show only root repositories (no parent or parent_type = 0)
+                    $repositories = CourseRepositoryMaster::where('del_folder_status', 1)
+                        ->where(function($query) {
+                            $query->whereNull('parent_type')
+                                  ->orWhere('parent_type', 0);
+                        })
+                        ->with(['children', 'documents'])
+                        ->orderBy('created_date', 'desc')
+                        ->paginate($perPage)
+                        ->withQueryString();
 
-                // Build ancestor chain for breadcrumb
-                $current = $parentRepository;
-                while ($current && $current->parent) {
-                    // Prepend to keep order from root -> ... -> parent
-                    array_unshift($ancestors, $current->parent);
-                    $current = $current->parent;
+                    foreach ($repositories as $child) {
+                        $documents_count = CourseRepositoryDetail::where(
+                            'course_repository_master_pk',
+                            $child->pk
+                        )->count();
+
+                        $documents_count_array[$child->pk] = $documents_count;
+                    }
                 }
-            } else {
-                // Show only root repositories (no parent or parent_type = 0)
-                $repositories = CourseRepositoryMaster::where('del_folder_status', 1)
-                    ->where(function($query) {
-                        $query->whereNull('parent_type')
-                              ->orWhere('parent_type', 0);
-                    })
-                    ->with(['children', 'documents'])
-                    ->orderBy('created_date', 'desc')
-                    ->paginate($perPage)
-                    ->withQueryString();
-                    $documents_count_array = [];
 
-                    foreach ($repositories as $child) {
-
-                        $documents_count = CourseRepositoryDetail::where(
-                            'course_repository_master_pk',
-                            $child->pk
-                        )->count();
-
-                        $documents_count_array[$child->pk] = $documents_count;
-                    }
-                    
-            }
+                return [
+                    'repositories' => $repositories,
+                    'parentRepository' => $parentRepository,
+                    'ancestors' => $ancestors,
+                    'documents_count_array' => $documents_count_array,
+                ];
+            });
             
             return view('admin.course-repository.index', [
-                'repositories' => $repositories,
-                'parentRepository' => $parentRepository,
+                'repositories' => $payload['repositories'],
+                'parentRepository' => $payload['parentRepository'],
                 'parentPk' => $parentPk,
-                'ancestors' => $ancestors,
-                'documents_count_array' => $documents_count_array,
+                'ancestors' => $payload['ancestors'],
+                'documents_count_array' => $payload['documents_count_array'],
                 'perPage' => $perPage,
             ]);
         } catch (Exception $e) {
@@ -112,65 +126,80 @@ class CourseRepositoryController extends Controller
     public function show($pk)
     {
         try {
-            $repository = CourseRepositoryMaster::with([
-                'details' => function($query) {
-                    $query->with(['documents', 'course', 'subject', 'topic', 'creator']);
-                }, 
-                'parent',
-                'children' => function($query) {
-                    $query->with(['documents', 'children' => function($q) {
-                        $q->with(['documents', 'children' => function($q2) {
-                            $q2->with('documents');
+            $cacheKey = $this->cacheKey('show', ['pk' => (string) $pk]);
+            $payload = $this->rememberCache($cacheKey, function () use ($pk) {
+                $repository = CourseRepositoryMaster::with([
+                    'details' => function($query) {
+                        $query->with(['documents', 'course', 'subject', 'topic', 'creator']);
+                    },
+                    'parent',
+                    'children' => function($query) {
+                        $query->with(['documents', 'children' => function($q) {
+                            $q->with(['documents', 'children' => function($q2) {
+                                $q2->with('documents');
+                            }]);
                         }]);
-                    }]);
-                },
-                'documents'
-            ])->findOrFail($pk);
-            $documents_count_array = [];
-            
-            foreach ($repository->children as $child) {
-                        $documents_count = CourseRepositoryDetail::where(
-                            'course_repository_master_pk',
-                            $child->pk
-                        )->count();
-                        $documents_count_array[$child->pk] = $documents_count;
-                         }
-          
-            
-            // Get all documents linked through details with course_repository_details_pk
-            // Also include documents directly linked to master via course_repository_master_pk
-            $documents = CourseRepositoryDocument::where('del_type', 1)
-                ->where(function($query) use ($pk) {
-                    $query->where('course_repository_master_pk', $pk)
-                        ->orWhereIn('course_repository_details_pk', 
-                            CourseRepositoryDetail::where('course_repository_master_pk', $pk)->pluck('pk')
-                        );
-                })
-                ->orderBy('pk', 'desc')
-                ->get();
-                // print_r($documents); exit;
+                    },
+                    'documents'
+                ])->findOrFail($pk);
+                $documents_count_array = [];
 
-            // Build ancestor chain for breadcrumb
-            $ancestors = [];
-            $current = $repository;
-            while ($current && $current->parent) {
-                array_unshift($ancestors, $current->parent);
-                $current = $current->parent;
-            }
+                foreach ($repository->children as $child) {
+                    $documents_count = CourseRepositoryDetail::where(
+                        'course_repository_master_pk',
+                        $child->pk
+                    )->count();
+                    $documents_count_array[$child->pk] = $documents_count;
+                }
+
+                // Get all documents linked through details with course_repository_details_pk
+                // Also include documents directly linked to master via course_repository_master_pk
+                $documents = CourseRepositoryDocument::where('del_type', 1)
+                    ->where(function($query) use ($pk) {
+                        $query->where('course_repository_master_pk', $pk)
+                            ->orWhereIn('course_repository_details_pk',
+                                CourseRepositoryDetail::where('course_repository_master_pk', $pk)->pluck('pk')
+                            );
+                    })
+                    ->orderBy('pk', 'desc')
+                    ->get();
+
+                // Build ancestor chain for breadcrumb
+                $ancestors = [];
+                $current = $repository;
+                while ($current && $current->parent) {
+                    array_unshift($ancestors, $current->parent);
+                    $current = $current->parent;
+                }
+
+                return [
+                    'repository' => $repository,
+                    'documents' => $documents,
+                    'ancestors' => $ancestors,
+                    'documents_count_array' => $documents_count_array,
+                    'activeCourses' => CourseMaster::where('active_inactive', 1)->get(),
+                    'archivedCourses' => CourseMaster::where('active_inactive', 0)->get(),
+                    'subjects' => SubjectMaster::where('active_inactive', 1)->get(),
+                    'topics' => CourseRepositorySubtopic::all(),
+                    'authors' => FacultyMaster::select('pk','full_name')->get(),
+                    'sectors' => SectorMaster::active()->get(),
+                    'ministries' => MinistryMaster::active()->get(),
+                ];
+            });
            
             return view('admin.course-repository.show', [
-                'repository' => $repository,
-                'documents' => $documents,
-                'ancestors' => $ancestors,
-                'documents_count_array' => $documents_count_array,
+                'repository' => $payload['repository'],
+                'documents' => $payload['documents'],
+                'ancestors' => $payload['ancestors'],
+                'documents_count_array' => $payload['documents_count_array'],
                 // Data for dynamic dropdowns
-                'activeCourses' => CourseMaster::where('active_inactive', 1)->get(),
-                'archivedCourses' => CourseMaster::where('active_inactive', 0)->get(),
-                'subjects' => SubjectMaster::where('active_inactive', 1)->get(),
-                'topics' => CourseRepositorySubtopic::all(),
-                'authors' => FacultyMaster::select('pk','full_name')->get(),
-                'sectors' => SectorMaster::active()->get(),
-                'ministries' => MinistryMaster::active()->get(),
+                'activeCourses' => $payload['activeCourses'],
+                'archivedCourses' => $payload['archivedCourses'],
+                'subjects' => $payload['subjects'],
+                'topics' => $payload['topics'],
+                'authors' => $payload['authors'],
+                'sectors' => $payload['sectors'],
+                'ministries' => $payload['ministries'],
             ]);
         } catch (Exception $e) {
             Log::error('Error in course repository show: ' . $e->getMessage());
@@ -241,6 +270,7 @@ class CourseRepositoryController extends Controller
             }
             
             $repository = CourseRepositoryMaster::create($validated);
+            $this->bumpCacheVersion();
             
             // Check if AJAX request
             if ($request->ajax() || $request->wantsJson()) {
@@ -327,6 +357,7 @@ class CourseRepositoryController extends Controller
             }
             
             $repository->update($validated);
+            $this->bumpCacheVersion();
             
             // Check if AJAX request
             if ($request->ajax() || $request->wantsJson()) {
@@ -370,6 +401,7 @@ class CourseRepositoryController extends Controller
                 'del_folder_date' => now(),
                 'delete_by' => auth()->id(),
             ]);
+            $this->bumpCacheVersion();
             
             return redirect()->route('course-repository.index')
                 ->with('success', 'Repository deleted successfully');
@@ -461,6 +493,7 @@ class CourseRepositoryController extends Controller
                     }
                 }
             }
+            $this->bumpCacheVersion();
             
             // Return success response
             return response()->json([
@@ -499,6 +532,7 @@ class CourseRepositoryController extends Controller
                 'deleted_date' => now(),
                 'deleted_by' => auth()->id(),
             ]);
+            $this->bumpCacheVersion();
             
             return response()->json([
                 'success' => true,
@@ -558,18 +592,23 @@ class CourseRepositoryController extends Controller
                 ]);
             }
             
-            $repositories = CourseRepositoryMaster::where('del_folder_status', 1)
-                ->where('course_repository_name', 'like', '%' . $keyword . '%')
-                ->limit(10)
-                ->get();
-            
-            $documents = CourseRepositoryDocument::where('del_type', 1)
-                ->where(function($query) use ($keyword) {
-                    $query->where('file_title', 'like', '%' . $keyword . '%')
-                        ->orWhere('upload_document', 'like', '%' . $keyword . '%');
-                })
-                ->limit(10)
-                ->get();
+            $cacheKey = $this->cacheKey('search', ['keyword' => mb_strtolower((string) $keyword)]);
+            [$repositories, $documents] = $this->rememberCache($cacheKey, function () use ($keyword) {
+                $repositories = CourseRepositoryMaster::where('del_folder_status', 1)
+                    ->where('course_repository_name', 'like', '%' . $keyword . '%')
+                    ->limit(10)
+                    ->get();
+
+                $documents = CourseRepositoryDocument::where('del_type', 1)
+                    ->where(function($query) use ($keyword) {
+                        $query->where('file_title', 'like', '%' . $keyword . '%')
+                            ->orWhere('upload_document', 'like', '%' . $keyword . '%');
+                    })
+                    ->limit(10)
+                    ->get();
+
+                return [$repositories, $documents];
+            });
             
             return response()->json([
                 'repositories' => $repositories,
@@ -588,10 +627,12 @@ class CourseRepositoryController extends Controller
     public function getCourses()
     {
         try {
-            $courses = CourseMaster::where('course_active_inactive', 1)
-                ->select('pk', 'course_name')
-                ->orderBy('course_name')
-                ->get();
+            $courses = $this->rememberCache($this->cacheKey('getCourses'), function () {
+                return CourseMaster::where('course_active_inactive', 1)
+                    ->select('pk', 'course_name')
+                    ->orderBy('course_name')
+                    ->get();
+            });
 
             return response()->json(['success' => true, 'data' => $courses]);
         } catch (Exception $e) {
@@ -617,12 +658,14 @@ class CourseRepositoryController extends Controller
             }
 
             // Get all subjects that are mapped to this course in course_repository_details
-             $subjects = SubjectMaster::distinct()
-                ->join('timetable', 'subject_master.pk', '=', 'timetable.subject_master_pk')
-                ->where('timetable.course_master_pk', $coursePk)
-                ->where('subject_master.active_inactive', 1)
-                ->select('subject_master.pk', 'subject_master.subject_name')
-                ->get();
+            $subjects = $this->rememberCache($this->cacheKey('getSubjectsByCourse', ['course_pk' => (string) $coursePk]), function () use ($coursePk) {
+                return SubjectMaster::distinct()
+                    ->join('timetable', 'subject_master.pk', '=', 'timetable.subject_master_pk')
+                    ->where('timetable.course_master_pk', $coursePk)
+                    ->where('subject_master.active_inactive', 1)
+                    ->select('subject_master.pk', 'subject_master.subject_name')
+                    ->get();
+            });
 
             return response()->json(['success' => true, 'data' => $subjects]);
         } catch (Exception $e) {
@@ -650,18 +693,23 @@ class CourseRepositoryController extends Controller
                 return response()->json(['success' => false, 'data' => []], 422);
             }
 
-            // Get all topics that are mapped to this subject in course_repository_details
-            $query = Timetable::distinct()
-                ->leftJoin('faculty_master', 'timetable.faculty_master', '=', 'faculty_master.pk')
-                ->where('timetable.subject_master_pk', $subjectPk);
-            
-            // Only filter by course if provided
-            if ($coursePk) {
-                $query->where('timetable.course_master_pk', $coursePk);
-            }
-            
-            $topics = $query->select('timetable.pk', 'timetable.subject_topic', 'faculty_master.full_name as faculty_name', 'timetable.START_DATE')
-                ->get();
+            $topics = $this->rememberCache($this->cacheKey('getTopicsBySubject', [
+                'subject_pk' => (string) $subjectPk,
+                'course_pk' => (string) ($coursePk ?? ''),
+            ]), function () use ($subjectPk, $coursePk) {
+                // Get all topics that are mapped to this subject in course_repository_details
+                $query = Timetable::distinct()
+                    ->leftJoin('faculty_master', 'timetable.faculty_master', '=', 'faculty_master.pk')
+                    ->where('timetable.subject_master_pk', $subjectPk);
+
+                // Only filter by course if provided
+                if ($coursePk) {
+                    $query->where('timetable.course_master_pk', $coursePk);
+                }
+
+                return $query->select('timetable.pk', 'timetable.subject_topic', 'faculty_master.full_name as faculty_name', 'timetable.START_DATE')
+                    ->get();
+            });
 
             return response()->json(['success' => true, 'data' => $topics]);
         } catch (Exception $e) {
@@ -684,32 +732,34 @@ class CourseRepositoryController extends Controller
             }
 
             // Get session dates for this topic from course_repository_details
-            $sessionDates = Timetable::where('pk', $topicPk)
-                ->distinct()
-                ->select('START_DATE')
-                ->orderBy('START_DATE', 'desc')
-                ->get()
-                ->map(function($item) {
-                    $date = $item->START_DATE;
-                    
-                    // Convert string to Carbon if needed
-                    if (is_string($date)) {
-                        try {
-                            $date = \Carbon\Carbon::createFromFormat('Y-m-d', $date) 
-                                 ?: \Carbon\Carbon::parse($date);
-                        } catch (\Exception $e) {
-                            return [
-                                'session_date' => null,
-                                'display' => 'No Date'
-                            ];
+            $sessionDates = $this->rememberCache($this->cacheKey('getSessionDateByTopic', ['topic_pk' => (string) $topicPk]), function () use ($topicPk) {
+                return Timetable::where('pk', $topicPk)
+                    ->distinct()
+                    ->select('START_DATE')
+                    ->orderBy('START_DATE', 'desc')
+                    ->get()
+                    ->map(function($item) {
+                        $date = $item->START_DATE;
+
+                        // Convert string to Carbon if needed
+                        if (is_string($date)) {
+                            try {
+                                $date = \Carbon\Carbon::createFromFormat('Y-m-d', $date)
+                                     ?: \Carbon\Carbon::parse($date);
+                            } catch (\Exception $e) {
+                                return [
+                                    'session_date' => null,
+                                    'display' => 'No Date'
+                                ];
+                            }
                         }
-                    }
-                    
-                    return [
-                        'session_date' => $date ? $date->format('Y-m-d') : null,
-                        'display' => $date ? $date->format('d-m-Y') : 'No Date'
-                    ];
-                });
+
+                        return [
+                            'session_date' => $date ? $date->format('Y-m-d') : null,
+                            'display' => $date ? $date->format('d-m-Y') : 'No Date'
+                        ];
+                    });
+            });
 
             return response()->json(['success' => true, 'data' => $sessionDates]);
         } catch (Exception $e) {
@@ -732,11 +782,13 @@ class CourseRepositoryController extends Controller
             }
 
             // Get distinct faculty/authors for this topic from course_repository_details
-            $authors = FacultyMaster::distinct()
-                ->join('timetable', 'faculty_master.pk', '=', 'timetable.faculty_master')
-                ->where('timetable.pk', $topicPk)
-                ->select('faculty_master.pk', 'faculty_master.full_name')
-                ->get();
+            $authors = $this->rememberCache($this->cacheKey('getAuthorsByTopic', ['topic_pk' => (string) $topicPk]), function () use ($topicPk) {
+                return FacultyMaster::distinct()
+                    ->join('timetable', 'faculty_master.pk', '=', 'timetable.faculty_master')
+                    ->where('timetable.pk', $topicPk)
+                    ->select('faculty_master.pk', 'faculty_master.full_name')
+                    ->get();
+            });
 
             return response()->json(['success' => true, 'data' => $authors]);
         } catch (Exception $e) {
@@ -758,17 +810,19 @@ class CourseRepositoryController extends Controller
                 return response()->json(['success' => false, 'data' => []]);
             }
 
-            $groups = \DB::table('timetable as t')
-                ->join('subject_master as sm', 't.subject_master_pk', '=', 'sm.pk')
-                ->where('t.course_master_pk', $coursePk)
-                ->where('t.active_inactive', 1)
-                ->select(
-                    'sm.pk',
-                    'sm.subject_name'
-                )
-                ->groupBy('sm.pk', 'sm.subject_name')
-                ->orderBy('sm.subject_name')
-                ->get();
+            $groups = $this->rememberCache($this->cacheKey('getGroupsByCourse', ['course_pk' => (string) $coursePk]), function () use ($coursePk) {
+                return \DB::table('timetable as t')
+                    ->join('subject_master as sm', 't.subject_master_pk', '=', 'sm.pk')
+                    ->where('t.course_master_pk', $coursePk)
+                    ->where('t.active_inactive', 1)
+                    ->select(
+                        'sm.pk',
+                        'sm.subject_name'
+                    )
+                    ->groupBy('sm.pk', 'sm.subject_name')
+                    ->orderBy('sm.subject_name')
+                    ->get();
+            });
 
             return response()->json(['success' => true, 'data' => $groups]);
         } catch (Exception $e) {
@@ -791,27 +845,32 @@ class CourseRepositoryController extends Controller
                 return response()->json(['success' => false, 'data' => []]);
             }
 
-            $timetables = \DB::table('timetable as t')
-                ->leftJoin('faculty_master as fm', 't.faculty_master', '=', 'fm.pk')
-                ->where('t.subject_master_pk', $subjectPk)
-                ->where('t.course_master_pk', $coursePk)
-                ->where('t.active_inactive', 1)
-                ->select(
-                    't.pk',
-                    't.subject_topic',
-                    't.START_DATE',
-                    't.END_DATE',
-                    't.class_session',
-                    'fm.full_name as faculty_name'
-                )
-                ->orderBy('t.START_DATE', 'desc')
-                ->get()
-                ->map(function($item) {
-                    $dateStr = $item->START_DATE ? date('d-m-Y', strtotime($item->START_DATE)) : '';
-                    $facultyStr = $item->faculty_name ? ' - ' . $item->faculty_name : '';
-                    $item->display = $item->subject_topic . ' (' . $dateStr . ')' . $facultyStr;
-                    return $item;
-                });
+            $timetables = $this->rememberCache($this->cacheKey('getTimetablesByGroup', [
+                'group_pk' => (string) $subjectPk,
+                'course_master_pk' => (string) $coursePk,
+            ]), function () use ($subjectPk, $coursePk) {
+                return \DB::table('timetable as t')
+                    ->leftJoin('faculty_master as fm', 't.faculty_master', '=', 'fm.pk')
+                    ->where('t.subject_master_pk', $subjectPk)
+                    ->where('t.course_master_pk', $coursePk)
+                    ->where('t.active_inactive', 1)
+                    ->select(
+                        't.pk',
+                        't.subject_topic',
+                        't.START_DATE',
+                        't.END_DATE',
+                        't.class_session',
+                        'fm.full_name as faculty_name'
+                    )
+                    ->orderBy('t.START_DATE', 'desc')
+                    ->get()
+                    ->map(function($item) {
+                        $dateStr = $item->START_DATE ? date('d-m-Y', strtotime($item->START_DATE)) : '';
+                        $facultyStr = $item->faculty_name ? ' - ' . $item->faculty_name : '';
+                        $item->display = $item->subject_topic . ' (' . $dateStr . ')' . $facultyStr;
+                        return $item;
+                    });
+            });
 
             return response()->json(['success' => true, 'data' => $timetables]);
         } catch (Exception $e) {
@@ -833,10 +892,12 @@ class CourseRepositoryController extends Controller
                 return response()->json(['success' => false, 'message' => 'Sector PK is required'], 400);
             }
 
-            $ministries = MinistryMaster::where('sector_master_pk', $sectorPk)
-                ->where('status', 1)
-                ->orderBy('ministry_name')
-                ->get(['pk', 'ministry_name']);
+            $ministries = $this->rememberCache($this->cacheKey('getMynostriesBySector', ['sector_pk' => (string) $sectorPk]), function () use ($sectorPk) {
+                return MinistryMaster::where('sector_master_pk', $sectorPk)
+                    ->where('status', 1)
+                    ->orderBy('ministry_name')
+                    ->get(['pk', 'ministry_name']);
+            });
 
             return response()->json(['success' => true, 'data' => $ministries]);
         } catch (Exception $e) {
@@ -887,51 +948,60 @@ class CourseRepositoryController extends Controller
             $week = $request->query('week');
             $facultyPk = $request->query('faculty');
 
-            // Get root repositories (main course categories)
-            $query = CourseRepositoryMaster::where('del_folder_status', 1)
-                ->whereNull('parent_type')
-                ->with(['children', 'documents']);
+            $cacheKey = $this->cacheKey('userIndex', [
+                'date' => (string) ($date ?? ''),
+                'course' => (string) ($coursePk ?? ''),
+                'subject' => (string) ($subjectPk ?? ''),
+                'week' => (string) ($week ?? ''),
+                'faculty' => (string) ($facultyPk ?? ''),
+            ]);
+            $payload = $this->rememberCache($cacheKey, function () use ($date, $coursePk, $subjectPk, $week, $facultyPk) {
+                // Get root repositories (main course categories)
+                $query = CourseRepositoryMaster::where('del_folder_status', 1)
+                    ->whereNull('parent_type')
+                    ->with(['children', 'documents']);
 
-            // Apply filters if provided
-            if ($date || $coursePk || $subjectPk || $week || $facultyPk) {
-                // Filter repositories that have documents matching the criteria
-                $query->whereHas('documents', function($q) use ($date, $coursePk, $subjectPk, $week, $facultyPk) {
-                    $q->where('del_type', 1);
-                    
-                    if ($coursePk || $subjectPk || $date || $facultyPk) {
-                        $q->whereHas('detail', function($detailQuery) use ($date, $coursePk, $subjectPk, $facultyPk) {
-                            if ($coursePk) {
-                                $detailQuery->where('course_master_pk', $coursePk);
-                            }
-                            if ($subjectPk) {
-                                $detailQuery->where('subject_pk', $subjectPk);
-                            }
-                            if ($date) {
-                                $detailQuery->whereDate('session_date', $date);
-                            }
-                            if ($facultyPk) {
-                                $detailQuery->where('author_name', $facultyPk);
-                            }
-                        });
-                    }
-                });
-            }
-            
-            $repositories = $query->orderBy('created_date', 'desc')->get();
+                // Apply filters if provided
+                if ($date || $coursePk || $subjectPk || $week || $facultyPk) {
+                    // Filter repositories that have documents matching the criteria
+                    $query->whereHas('documents', function($q) use ($date, $coursePk, $subjectPk, $week, $facultyPk) {
+                        $q->where('del_type', 1);
 
-            // Get dropdown data
-            $courses = CourseMaster::where('active_inactive', 1)->orderBy('course_name')->get();
-            $subjects = SubjectMaster::where('active_inactive', 1)->orderBy('subject_name')->get();
-            $faculties = FacultyMaster::select('pk', 'full_name')
-                ->whereNotNull('full_name')
-                ->orderBy('full_name')
-                ->get();
+                        if ($coursePk || $subjectPk || $date || $facultyPk) {
+                            $q->whereHas('detail', function($detailQuery) use ($date, $coursePk, $subjectPk, $facultyPk) {
+                                if ($coursePk) {
+                                    $detailQuery->where('course_master_pk', $coursePk);
+                                }
+                                if ($subjectPk) {
+                                    $detailQuery->where('subject_pk', $subjectPk);
+                                }
+                                if ($date) {
+                                    $detailQuery->whereDate('session_date', $date);
+                                }
+                                if ($facultyPk) {
+                                    $detailQuery->where('author_name', $facultyPk);
+                                }
+                            });
+                        }
+                    });
+                }
+
+                return [
+                    'repositories' => $query->orderBy('created_date', 'desc')->get(),
+                    'courses' => CourseMaster::where('active_inactive', 1)->orderBy('course_name')->get(),
+                    'subjects' => SubjectMaster::where('active_inactive', 1)->orderBy('subject_name')->get(),
+                    'faculties' => FacultyMaster::select('pk', 'full_name')
+                        ->whereNotNull('full_name')
+                        ->orderBy('full_name')
+                        ->get(),
+                ];
+            });
 
             return view('admin.course-repository.user.index', [
-                'repositories' => $repositories,
-                'courses' => $courses,
-                'subjects' => $subjects,
-                'faculties' => $faculties,
+                'repositories' => $payload['repositories'],
+                'courses' => $payload['courses'],
+                'subjects' => $payload['subjects'],
+                'faculties' => $payload['faculties'],
                 'filters' => [
                     'date' => $date,
                     'course' => $coursePk,
@@ -953,26 +1023,28 @@ class CourseRepositoryController extends Controller
     {
         try {
             $filters = $this->getFilters($request);
-            $courses = CourseMaster::where('active_inactive', 1)->orderBy('course_name')->get();
-            $subjects = SubjectMaster::where('active_inactive', 1)->orderBy('subject_name')->get();
-            $faculties = FacultyMaster::select('pk', 'full_name')
-                ->whereNotNull('full_name')
-                ->orderBy('full_name')
-                ->get();
-
-            // Get Foundation Course repositories
-            $repositories = CourseRepositoryMaster::where('del_folder_status', 1)
-                ->where('course_repository_name', 'like', 'Foundation Course%')
-                ->whereNull('parent_type')
-                ->with(['children', 'documents'])
-                ->orderBy('created_date', 'desc')
-                ->get();
+            $payload = $this->rememberCache($this->cacheKey('foundationCourse'), function () {
+                return [
+                    'courses' => CourseMaster::where('active_inactive', 1)->orderBy('course_name')->get(),
+                    'subjects' => SubjectMaster::where('active_inactive', 1)->orderBy('subject_name')->get(),
+                    'faculties' => FacultyMaster::select('pk', 'full_name')
+                        ->whereNotNull('full_name')
+                        ->orderBy('full_name')
+                        ->get(),
+                    'repositories' => CourseRepositoryMaster::where('del_folder_status', 1)
+                        ->where('course_repository_name', 'like', 'Foundation Course%')
+                        ->whereNull('parent_type')
+                        ->with(['children', 'documents'])
+                        ->orderBy('created_date', 'desc')
+                        ->get(),
+                ];
+            });
 
             return view('admin.course-repository.user.foundation-course', [
-                'repositories' => $repositories,
-                'courses' => $courses,
-                'subjects' => $subjects,
-                'faculties' => $faculties,
+                'repositories' => $payload['repositories'],
+                'courses' => $payload['courses'],
+                'subjects' => $payload['subjects'],
+                'faculties' => $payload['faculties'],
                 'filters' => $filters,
             ]);
         } catch (Exception $e) {
@@ -988,26 +1060,28 @@ class CourseRepositoryController extends Controller
     {
         try {
             $filters = $this->getFilters($request);
-            $courses = CourseMaster::where('active_inactive', 1)->orderBy('course_name')->get();
-            $subjects = SubjectMaster::where('active_inactive', 1)->orderBy('subject_name')->get();
-            $faculties = FacultyMaster::select('pk', 'full_name')
-                ->whereNotNull('full_name')
-                ->orderBy('full_name')
-                ->get();
-
-            // Get course repositories for this course code
-            $repositories = CourseRepositoryMaster::where('del_folder_status', 1)
-                ->where('course_repository_name', 'like', '%' . $courseCode . '%')
-                ->with(['children', 'documents'])
-                ->orderBy('created_date', 'desc')
-                ->get();
+            $payload = $this->rememberCache($this->cacheKey('foundationCourseDetail', ['course_code' => (string) $courseCode]), function () use ($courseCode) {
+                return [
+                    'courses' => CourseMaster::where('active_inactive', 1)->orderBy('course_name')->get(),
+                    'subjects' => SubjectMaster::where('active_inactive', 1)->orderBy('subject_name')->get(),
+                    'faculties' => FacultyMaster::select('pk', 'full_name')
+                        ->whereNotNull('full_name')
+                        ->orderBy('full_name')
+                        ->get(),
+                    'repositories' => CourseRepositoryMaster::where('del_folder_status', 1)
+                        ->where('course_repository_name', 'like', '%' . $courseCode . '%')
+                        ->with(['children', 'documents'])
+                        ->orderBy('created_date', 'desc')
+                        ->get(),
+                ];
+            });
 
             return view('admin.course-repository.user.foundation-course-detail', [
                 'courseCode' => $courseCode,
-                'repositories' => $repositories,
-                'courses' => $courses,
-                'subjects' => $subjects,
-                'faculties' => $faculties,
+                'repositories' => $payload['repositories'],
+                'courses' => $payload['courses'],
+                'subjects' => $payload['subjects'],
+                'faculties' => $payload['faculties'],
                 'filters' => $filters,
             ]);
         } catch (Exception $e) {
@@ -1023,31 +1097,31 @@ class CourseRepositoryController extends Controller
     {
         try {
             $filters = $this->getFilters($request);
-            $courses = CourseMaster::where('active_inactive', 1)->orderBy('course_name')->get();
-            $subjects = SubjectMaster::where('active_inactive', 1)->orderBy('subject_name')->get();
-            $faculties = FacultyMaster::select('pk', 'full_name')
-                ->whereNotNull('full_name')
-                ->orderBy('full_name')
-                ->get();
-
-            // Get material cards
-            $materialCards = CourseRepositoryMaster::where('del_folder_status', 1)
-                ->where('course_repository_name', 'like', '%' . $courseCode . '%')
-                ->with(['children', 'documents'])
-                ->get();
-
-            // Get subjects list
-            $subjectsList = SubjectMaster::where('active_inactive', 1)
-                ->orderBy('subject_name')
-                ->get();
+            $payload = $this->rememberCache($this->cacheKey('classMaterialSubjectWise', ['course_code' => (string) $courseCode]), function () use ($courseCode) {
+                return [
+                    'courses' => CourseMaster::where('active_inactive', 1)->orderBy('course_name')->get(),
+                    'subjects' => SubjectMaster::where('active_inactive', 1)->orderBy('subject_name')->get(),
+                    'faculties' => FacultyMaster::select('pk', 'full_name')
+                        ->whereNotNull('full_name')
+                        ->orderBy('full_name')
+                        ->get(),
+                    'materialCards' => CourseRepositoryMaster::where('del_folder_status', 1)
+                        ->where('course_repository_name', 'like', '%' . $courseCode . '%')
+                        ->with(['children', 'documents'])
+                        ->get(),
+                    'subjectsList' => SubjectMaster::where('active_inactive', 1)
+                        ->orderBy('subject_name')
+                        ->get(),
+                ];
+            });
 
             return view('admin.course-repository.user.class-material-subject-wise', [
                 'courseCode' => $courseCode,
-                'materialCards' => $materialCards,
-                'subjectsList' => $subjectsList,
-                'courses' => $courses,
-                'subjects' => $subjects,
-                'faculties' => $faculties,
+                'materialCards' => $payload['materialCards'],
+                'subjectsList' => $payload['subjectsList'],
+                'courses' => $payload['courses'],
+                'subjects' => $payload['subjects'],
+                'faculties' => $payload['faculties'],
                 'filters' => $filters,
             ]);
         } catch (Exception $e) {
@@ -1063,35 +1137,38 @@ class CourseRepositoryController extends Controller
     {
         try {
             $filters = $this->getFilters($request);
-            $courses = CourseMaster::where('active_inactive', 1)->orderBy('course_name')->get();
-            $subjects = SubjectMaster::where('active_inactive', 1)->orderBy('subject_name')->get();
-            $faculties = FacultyMaster::select('pk', 'full_name')
-                ->whereNotNull('full_name')
-                ->orderBy('full_name')
-                ->get();
+            $payload = $this->rememberCache($this->cacheKey('classMaterialWeekWise', ['course_code' => (string) $courseCode]), function () use ($courseCode) {
+                // Generate weeks list (1-52)
+                $weeks = [];
+                for ($i = 1; $i <= 52; $i++) {
+                    $weeks[] = [
+                        'number' => $i,
+                        'label' => 'Week-' . str_pad($i, 2, '0', STR_PAD_LEFT),
+                    ];
+                }
 
-            // Get material cards
-            $materialCards = CourseRepositoryMaster::where('del_folder_status', 1)
-                ->where('course_repository_name', 'like', '%' . $courseCode . '%')
-                ->with(['children', 'documents'])
-                ->get();
-
-            // Generate weeks list (1-52)
-            $weeks = [];
-            for ($i = 1; $i <= 52; $i++) {
-                $weeks[] = [
-                    'number' => $i,
-                    'label' => 'Week-' . str_pad($i, 2, '0', STR_PAD_LEFT),
+                return [
+                    'courses' => CourseMaster::where('active_inactive', 1)->orderBy('course_name')->get(),
+                    'subjects' => SubjectMaster::where('active_inactive', 1)->orderBy('subject_name')->get(),
+                    'faculties' => FacultyMaster::select('pk', 'full_name')
+                        ->whereNotNull('full_name')
+                        ->orderBy('full_name')
+                        ->get(),
+                    'materialCards' => CourseRepositoryMaster::where('del_folder_status', 1)
+                        ->where('course_repository_name', 'like', '%' . $courseCode . '%')
+                        ->with(['children', 'documents'])
+                        ->get(),
+                    'weeks' => $weeks,
                 ];
-            }
+            });
 
             return view('admin.course-repository.user.class-material-week-wise', [
                 'courseCode' => $courseCode,
-                'materialCards' => $materialCards,
-                'weeks' => $weeks,
-                'courses' => $courses,
-                'subjects' => $subjects,
-                'faculties' => $faculties,
+                'materialCards' => $payload['materialCards'],
+                'weeks' => $payload['weeks'],
+                'courses' => $payload['courses'],
+                'subjects' => $payload['subjects'],
+                'faculties' => $payload['faculties'],
                 'filters' => $filters,
             ]);
         } catch (Exception $e) {
@@ -1107,27 +1184,32 @@ class CourseRepositoryController extends Controller
     {
         try {
             $filters = $this->getFilters($request);
-            $courses = CourseMaster::where('active_inactive', 1)->orderBy('course_name')->get();
-            $subjects = SubjectMaster::where('active_inactive', 1)->orderBy('subject_name')->get();
-            $faculties = FacultyMaster::select('pk', 'full_name')
-                ->whereNotNull('full_name')
-                ->orderBy('full_name')
-                ->get();
-
-            // Get documents for this week
-            $documents = CourseRepositoryDetail::whereHas('master', function($query) use ($courseCode) {
-                    $query->where('course_repository_name', 'like', '%' . $courseCode . '%');
-                })
-                ->with(['master', 'documents', 'author', 'subject', 'course'])
-                ->get();
+            $payload = $this->rememberCache($this->cacheKey('weekDetail', [
+                'course_code' => (string) $courseCode,
+                'week_number' => (string) $weekNumber,
+            ]), function () use ($courseCode) {
+                return [
+                    'courses' => CourseMaster::where('active_inactive', 1)->orderBy('course_name')->get(),
+                    'subjects' => SubjectMaster::where('active_inactive', 1)->orderBy('subject_name')->get(),
+                    'faculties' => FacultyMaster::select('pk', 'full_name')
+                        ->whereNotNull('full_name')
+                        ->orderBy('full_name')
+                        ->get(),
+                    'documents' => CourseRepositoryDetail::whereHas('master', function($query) use ($courseCode) {
+                            $query->where('course_repository_name', 'like', '%' . $courseCode . '%');
+                        })
+                        ->with(['master', 'documents', 'author', 'subject', 'course'])
+                        ->get(),
+                ];
+            });
 
             return view('admin.course-repository.user.week-detail', [
                 'courseCode' => $courseCode,
                 'weekNumber' => $weekNumber,
-                'documents' => $documents,
-                'courses' => $courses,
-                'subjects' => $subjects,
-                'faculties' => $faculties,
+                'documents' => $payload['documents'],
+                'courses' => $payload['courses'],
+                'subjects' => $payload['subjects'],
+                'faculties' => $payload['faculties'],
                 'filters' => $filters,
             ]);
         } catch (Exception $e) {
@@ -1142,8 +1224,10 @@ class CourseRepositoryController extends Controller
     public function documentDetails($documentId)
     {
         try {
-            $document = CourseRepositoryDetail::with(['author', 'subject', 'course', 'topic'])
-                ->findOrFail($documentId);
+            $document = $this->rememberCache($this->cacheKey('documentDetails', ['document_id' => (string) $documentId]), function () use ($documentId) {
+                return CourseRepositoryDetail::with(['author', 'subject', 'course', 'topic'])
+                    ->findOrFail($documentId);
+            });
 
             return response()->json([
                 'success' => true,
@@ -1166,8 +1250,10 @@ class CourseRepositoryController extends Controller
     public function documentView($documentId)
     {
         try {
-            $document = CourseRepositoryDetail::with(['documents', 'author', 'subject'])
-                ->findOrFail($documentId);
+            $document = $this->rememberCache($this->cacheKey('documentView', ['document_id' => (string) $documentId]), function () use ($documentId) {
+                return CourseRepositoryDetail::with(['documents', 'author', 'subject'])
+                    ->findOrFail($documentId);
+            });
 
             $pdfDocument = $document->documents->first();
             if (!$pdfDocument) {
@@ -1190,8 +1276,10 @@ class CourseRepositoryController extends Controller
     public function documentVideo($documentId)
     {
         try {
-            $document = CourseRepositoryDetail::with(['documents', 'author'])
-                ->findOrFail($documentId);
+            $document = $this->rememberCache($this->cacheKey('documentVideo', ['document_id' => (string) $documentId]), function () use ($documentId) {
+                return CourseRepositoryDetail::with(['documents', 'author'])
+                    ->findOrFail($documentId);
+            });
 
             return view('admin.course-repository.user.document-video', [
                 'document' => $document,
@@ -1209,90 +1297,103 @@ class CourseRepositoryController extends Controller
     public function userShow(Request $request, $pk)
     {
         try {
-            $repository = CourseRepositoryMaster::with([
-                'details' => function($query) {
-                    $query->with(['documents', 'course', 'subject', 'topic', 'creator']);
-                }, 
-                'parent',
-                'children' => function($query) {
-                    $query->with(['documents', 'children' => function($q) {
-                        $q->with(['documents', 'children' => function($q2) {
-                            $q2->with('documents');
-                        }]);
-                    }]);
-                },
-                'documents'
-            ])->findOrFail($pk);
-            
-            $documents_count_array = [];
-            
-            foreach ($repository->children as $child) {
-                $documents_count = CourseRepositoryDetail::where(
-                    'course_repository_master_pk',
-                    $child->pk
-                )->count();
-                $documents_count_array[$child->pk] = $documents_count;
-            }
-          
-            // Get all documents linked through details with course_repository_details_pk
-            // Also include documents directly linked to master via course_repository_master_pk
-            $documentsQuery = CourseRepositoryDocument::where('del_type', 1)
-                ->where(function($query) use ($pk) {
-                    $query->where('course_repository_master_pk', $pk)
-                        ->orWhereIn('course_repository_details_pk', 
-                            CourseRepositoryDetail::where('course_repository_master_pk', $pk)->pluck('pk')
-                        );
-                });
-
-            // Apply filters if provided
             $date = $request->query('date');
             $coursePk = $request->query('course');
             $subjectPk = $request->query('subject');
             $facultyPk = $request->query('faculty');
+            $cacheKey = $this->cacheKey('userShow', [
+                'pk' => (string) $pk,
+                'date' => (string) ($date ?? ''),
+                'course' => (string) ($coursePk ?? ''),
+                'subject' => (string) ($subjectPk ?? ''),
+                'faculty' => (string) ($facultyPk ?? ''),
+            ]);
+            $payload = $this->rememberCache($cacheKey, function () use ($pk, $date, $coursePk, $subjectPk, $facultyPk) {
+                $repository = CourseRepositoryMaster::with([
+                    'details' => function($query) {
+                        $query->with(['documents', 'course', 'subject', 'topic', 'creator']);
+                    },
+                    'parent',
+                    'children' => function($query) {
+                        $query->with(['documents', 'children' => function($q) {
+                            $q->with(['documents', 'children' => function($q2) {
+                                $q2->with('documents');
+                            }]);
+                        }]);
+                    },
+                    'documents'
+                ])->findOrFail($pk);
 
-            if ($date || $coursePk || $subjectPk || $facultyPk) {
-                $documentsQuery->whereHas('detail', function($detailQuery) use ($date, $coursePk, $subjectPk, $facultyPk) {
-                    if ($coursePk) {
-                        $detailQuery->where('course_master_pk', $coursePk);
-                    }
-                    if ($subjectPk) {
-                        $detailQuery->where('subject_pk', $subjectPk);
-                    }
-                    if ($date) {
-                        $detailQuery->whereDate('session_date', $date);
-                    }
-                    if ($facultyPk) {
-                        $detailQuery->where('author_name', $facultyPk);
-                    }
-                });
-            }
+                $documents_count_array = [];
 
-            $documents = $documentsQuery->orderBy('pk', 'desc')->get();
+                foreach ($repository->children as $child) {
+                    $documents_count = CourseRepositoryDetail::where(
+                        'course_repository_master_pk',
+                        $child->pk
+                    )->count();
+                    $documents_count_array[$child->pk] = $documents_count;
+                }
 
-            // Build ancestor chain for breadcrumb
-            $ancestors = [];
-            $current = $repository;
-            while ($current && $current->parent) {
-                array_unshift($ancestors, $current->parent);
-                $current = $current->parent;
-            }
+                // Get all documents linked through details with course_repository_details_pk
+                // Also include documents directly linked to master via course_repository_master_pk
+                $documentsQuery = CourseRepositoryDocument::where('del_type', 1)
+                    ->where(function($query) use ($pk) {
+                        $query->where('course_repository_master_pk', $pk)
+                            ->orWhereIn('course_repository_details_pk',
+                                CourseRepositoryDetail::where('course_repository_master_pk', $pk)->pluck('pk')
+                            );
+                    });
 
-            // Get dropdown data for filters
-            $courses = CourseMaster::where('active_inactive', 1)->orderBy('course_name')->get();
-            $subjects = SubjectMaster::where('active_inactive', 1)->orderBy('subject_name')->get();
-            $faculties = FacultyMaster::select('pk', 'full_name')
-                ->whereNotNull('full_name')
-                ->orderBy('full_name')
-                ->get();
+                // Apply filters if provided
+                if ($date || $coursePk || $subjectPk || $facultyPk) {
+                    $documentsQuery->whereHas('detail', function($detailQuery) use ($date, $coursePk, $subjectPk, $facultyPk) {
+                        if ($coursePk) {
+                            $detailQuery->where('course_master_pk', $coursePk);
+                        }
+                        if ($subjectPk) {
+                            $detailQuery->where('subject_pk', $subjectPk);
+                        }
+                        if ($date) {
+                            $detailQuery->whereDate('session_date', $date);
+                        }
+                        if ($facultyPk) {
+                            $detailQuery->where('author_name', $facultyPk);
+                        }
+                    });
+                }
+
+                $documents = $documentsQuery->orderBy('pk', 'desc')->get();
+
+                // Build ancestor chain for breadcrumb
+                $ancestors = [];
+                $current = $repository;
+                while ($current && $current->parent) {
+                    array_unshift($ancestors, $current->parent);
+                    $current = $current->parent;
+                }
+
+                return [
+                    'repository' => $repository,
+                    'documents' => $documents,
+                    'ancestors' => $ancestors,
+                    'documents_count_array' => $documents_count_array,
+                    'courses' => CourseMaster::where('active_inactive', 1)->orderBy('course_name')->get(),
+                    'subjects' => SubjectMaster::where('active_inactive', 1)->orderBy('subject_name')->get(),
+                    'faculties' => FacultyMaster::select('pk', 'full_name')
+                        ->whereNotNull('full_name')
+                        ->orderBy('full_name')
+                        ->get(),
+                ];
+            });
            
             return view('admin.course-repository.user.show', [
-                'repository' => $repository,
-                'documents' => $documents,
-                'ancestors' => $ancestors,
-                'documents_count_array' => $documents_count_array,
-                'courses' => $courses,
-                'subjects' => $subjects,
-                'faculties' => $faculties,
+                'repository' => $payload['repository'],
+                'documents' => $payload['documents'],
+                'ancestors' => $payload['ancestors'],
+                'documents_count_array' => $payload['documents_count_array'],
+                'courses' => $payload['courses'],
+                'subjects' => $payload['subjects'],
+                'faculties' => $payload['faculties'],
                 'filters' => [
                     'date' => $date,
                     'course' => $coursePk,
@@ -1319,5 +1420,53 @@ class CourseRepositoryController extends Controller
             'week' => $request->query('week'),
             'faculty' => $request->query('faculty'),
         ];
+    }
+
+    private function cacheRepository()
+    {
+        $configuredStore = (string) env(self::CACHE_STORE_ENV_KEY, 'redis');
+        $stores = config('cache.stores', []);
+        $storeName = array_key_exists($configuredStore, $stores)
+            ? $configuredStore
+            : (array_key_exists('redis', $stores) ? 'redis' : config('cache.default'));
+        $store = Cache::store($storeName);
+
+        return $store;
+    }
+
+    private function cacheVersion(): int
+    {
+        return (int) $this->cacheRepository()->rememberForever(self::CACHE_VERSION_KEY, function () {
+            return 1;
+        });
+    }
+
+    private function cacheKey(string $segment, array $payload = []): string
+    {
+        ksort($payload);
+        return self::CACHE_PREFIX . ':' . $this->cacheVersion() . ':' . $segment . ':' . md5(json_encode($payload));
+    }
+
+    private function rememberCache(string $cacheKey, callable $callback)
+    {
+        return $this->cacheRepository()->remember($cacheKey, $this->cacheTtlSeconds(), $callback);
+    }
+
+    private function cacheTtlSeconds(): int
+    {
+        return max(30, (int) env(self::CACHE_TTL_ENV_KEY, self::CACHE_TTL_SECONDS));
+    }
+
+    private function bumpCacheVersion(): void
+    {
+        try {
+            $repo = $this->cacheRepository();
+            $current = $repo->get(self::CACHE_VERSION_KEY, 1);
+            $repo->forever(self::CACHE_VERSION_KEY, ((int) $current) + 1);
+        } catch (Exception $e) {
+            Log::warning('Course repository cache version bump failed.', [
+                'message' => $e->getMessage(),
+            ]);
+        }
     }
 }
