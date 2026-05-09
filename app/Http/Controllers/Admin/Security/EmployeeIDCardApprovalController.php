@@ -9,9 +9,11 @@ use App\Models\SecurityDupPermIdApply;
 use App\Models\SecurityDupPermIdApplyApproval;
 use App\Models\SecurityDupOtherIdApply;
 use App\Models\SecurityDupOtherIdApplyApproval;
+use App\Support\IdCardSecurityLookup;
 use App\Support\IdCardSecurityMapper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -23,10 +25,117 @@ use Illuminate\Pagination\LengthAwarePaginator;
  */
 class EmployeeIDCardApprovalController extends Controller
 {
+    private const REDIS_TTL_MINUTES = 10;
+    private const CACHE_VERSION_KEY = 'security:employee_idcard_approval:version';
+
     /**
      * Default “Request Date From” on Approval II (and dashboard “total pending” counts for the same scope).
      */
     public const DEFAULT_REQUEST_DATE_FROM = '2026-03-01';
+
+    /**
+     * Read-through cache on redis with DB fallback.
+     *
+     * @param  callable():mixed  $resolver
+     */
+    private function rememberRedis(string $key, callable $resolver)
+    {
+        $versionedKey = 'v' . $this->cacheVersion() . ':' . $key;
+        try {
+            return Cache::store('redis')->remember(
+                $versionedKey,
+                now()->addMinutes(self::REDIS_TTL_MINUTES),
+                $resolver
+            );
+        } catch (\Throwable $e) {
+            return $resolver();
+        }
+    }
+
+    private function cacheVersion(): int
+    {
+        try {
+            return (int) (Cache::store('redis')->get(self::CACHE_VERSION_KEY, 1) ?: 1);
+        } catch (\Throwable $e) {
+            return 1;
+        }
+    }
+
+    private function bumpCacheVersion(): void
+    {
+        try {
+            Cache::store('redis')->increment(self::CACHE_VERSION_KEY);
+        } catch (\Throwable $e) {
+            // no-op
+        }
+    }
+
+    public function invalidateSecurityCaches(): void
+    {
+        $this->bumpCacheVersion();
+        IdCardSecurityMapper::invalidateLookupCache();
+        IdCardSecurityLookup::invalidateLookupCache();
+    }
+
+    /**
+     * sec_id_cardno_master list for dropdowns.
+     *
+     * @return array<int, string>
+     */
+    private function cachedCardTypes(): array
+    {
+        return $this->rememberRedis('security:approval:card_types:all', static function () {
+            return DB::table('sec_id_cardno_master')->orderBy('sec_card_name')->pluck('sec_card_name', 'pk')->toArray();
+        });
+    }
+
+    /**
+     * department_master labels by pk.
+     *
+     * @return array<int, string>
+     */
+    private function cachedDepartmentMap(): array
+    {
+        return $this->rememberRedis('security:approval:department_map:all', static function () {
+            return DB::table('department_master')->pluck('department_name', 'pk')->toArray();
+        });
+    }
+
+    /**
+     * @param  list<int>  $pks
+     * @return array<int, string>
+     */
+    private function cachedDepartmentNamesByPks(array $pks): array
+    {
+        $pks = array_values(array_unique(array_filter(array_map('intval', $pks), fn ($v) => $v > 0)));
+        if ($pks === []) {
+            return [];
+        }
+        sort($pks);
+        $key = 'security:approval:department_map:' . implode(',', $pks);
+
+        return $this->rememberRedis($key, static function () use ($pks) {
+            return DB::table('department_master')->whereIn('pk', $pks)->pluck('department_name', 'pk')->all();
+        });
+    }
+
+    /**
+     * @param  list<int>  $pks
+     * @return array<int, string>
+     */
+    private function cachedCardTypeNamesByPks(array $pks): array
+    {
+        $pks = array_values(array_unique(array_filter(array_map('intval', $pks), fn ($v) => $v > 0)));
+        if ($pks === []) {
+            return [];
+        }
+        sort($pks);
+        $key = 'security:approval:card_types:' . implode(',', $pks);
+
+        return $this->rememberRedis($key, static function () use ($pks) {
+            return DB::table('sec_id_cardno_master')->whereIn('pk', $pks)->pluck('sec_card_name', 'pk')->all();
+        });
+    }
 
     /**
      * Approval I: Only contractual employee requests where current user is the Approval Authority.
@@ -135,7 +244,7 @@ class EmployeeIDCardApprovalController extends Controller
         }
 
         $dupContRows = $dupContQuery->get();
-        $deptMap = DB::table('department_master')->pluck('department_name', 'pk')->toArray();
+        $deptMap = $this->cachedDepartmentMap();
         $dupContA1DoneArr = $dupContA1Done->toArray();
         $dupContDtos = $dupContRows->map(function ($r) use ($deptMap, $dupContA1DoneArr) {
             $requestedSection = null;
@@ -192,7 +301,7 @@ class EmployeeIDCardApprovalController extends Controller
             ['path' => $request->url(), 'query' => $request->query()]
         );
 
-        $cardTypes = DB::table('sec_id_cardno_master')->orderBy('sec_card_name')->pluck('sec_card_name', 'pk')->toArray();
+        $cardTypes = $this->cachedCardTypes();
 
         return view('admin.security.employee_idcard_approval.approval1', compact('requests', 'cardTypes'));
     }
@@ -424,7 +533,7 @@ class EmployeeIDCardApprovalController extends Controller
         $contRows = $contQuery->get();
         $dupContRows = $dupContQuery->get();
         $dupContCardLabels = $this->mapDupOtherIdCardTypeLabels($dupContRows);
-        $deptMap = DB::table('department_master')->pluck('department_name', 'pk')->toArray();
+        $deptMap = $this->cachedDepartmentMap();
         
         $contDtos = $contRows->map(function ($r) use ($contHasA2) {
             $dto = IdCardSecurityMapper::toContractualRequestDto($r);
@@ -804,7 +913,7 @@ class EmployeeIDCardApprovalController extends Controller
             $activeTab = 'new';
         }
 
-        $cardTypes = DB::table('sec_id_cardno_master')->orderBy('sec_card_name')->pluck('sec_card_name', 'pk')->toArray();
+        $cardTypes = $this->cachedCardTypes();
 
         return view('admin.security.employee_idcard_approval.approval2', compact(
             'newRequests',
@@ -922,6 +1031,7 @@ class EmployeeIDCardApprovalController extends Controller
      */
     public function markGenerated(Request $request, $id)
     {
+        register_shutdown_function([$this, 'invalidateSecurityCaches']);
         try {
             $decoded = decrypt($id);
         } catch (\Exception $e) {
@@ -1083,13 +1193,9 @@ class EmployeeIDCardApprovalController extends Controller
             $contRows = $contQuery->get();
         }
         $typePks = $contRows->pluck('permanent_type')->filter(fn ($v) => (int) $v > 0)->map(fn ($v) => (int) $v)->unique()->values()->all();
-        $secCardNames = $typePks !== []
-            ? DB::table('sec_id_cardno_master')->whereIn('pk', $typePks)->pluck('sec_card_name', 'pk')->all()
-            : [];
+        $secCardNames = $this->cachedCardTypeNamesByPks($typePks);
         $sectPks = $contRows->pluck('section')->filter(fn ($v) => (int) $v > 0)->map(fn ($v) => (int) $v)->unique()->values()->all();
-        $deptNames = $sectPks !== []
-            ? DB::table('department_master')->whereIn('pk', $sectPks)->pluck('department_name', 'pk')->all()
-            : [];
+        $deptNames = $this->cachedDepartmentNamesByPks($sectPks);
         $contDtos = $contRows->map(fn ($r) => IdCardSecurityMapper::toContractualRequestDtoForApprovalList($r, $secCardNames, $deptNames));
 
         $dupContRows = collect();
@@ -1108,9 +1214,7 @@ class EmployeeIDCardApprovalController extends Controller
         }
         $dupContCardLabels = $this->mapDupOtherIdCardTypeLabels($dupContRows);
         $dupDeptPks = $dupContRows->pluck('section')->filter(fn ($v) => $v !== null && $v !== '' && (int) $v > 0)->map(fn ($v) => (int) $v)->unique()->values()->all();
-        $dupDeptMap = $dupDeptPks !== []
-            ? DB::table('department_master')->whereIn('pk', $dupDeptPks)->pluck('department_name', 'pk')->all()
-            : [];
+        $dupDeptMap = $this->cachedDepartmentNamesByPks($dupDeptPks);
         $dupContDtos = $dupContRows->map(function ($r) use ($dupContCardLabels, $dupDeptMap) {
             $applyKey = (string) ($r->emp_id_apply ?? '');
             $requestedSection = ! empty($r->section) ? ($dupDeptMap[(int) $r->section] ?? null) : null;
@@ -1470,6 +1574,7 @@ class EmployeeIDCardApprovalController extends Controller
 
     public function approve1(Request $request, $id)
     {
+        register_shutdown_function([$this, 'invalidateSecurityCaches']);
         try {
             $decrypted = decrypt($id);
         } catch (\Exception $e) {
@@ -1597,6 +1702,7 @@ class EmployeeIDCardApprovalController extends Controller
 
     public function approve2(Request $request, $id)
     {
+        register_shutdown_function([$this, 'invalidateSecurityCaches']);
         try {
             $pk = decrypt($id);
         } catch (\Exception $e) {
@@ -1840,6 +1946,7 @@ class EmployeeIDCardApprovalController extends Controller
      */
     public function approve3(Request $request, $id)
     {
+        register_shutdown_function([$this, 'invalidateSecurityCaches']);
         try {
             $empIdApply = decrypt($id);
         } catch (\Exception $e) {
@@ -2130,6 +2237,7 @@ class EmployeeIDCardApprovalController extends Controller
 
     protected function reject(Request $request, $id, int $stage)
     {
+        register_shutdown_function([$this, 'invalidateSecurityCaches']);
         try {
             $pk = decrypt($id);
         } catch (\Exception $e) {
@@ -2757,12 +2865,7 @@ class EmployeeIDCardApprovalController extends Controller
         }
         $masterPks = array_values(array_unique(array_filter($masterPks)));
 
-        $namesByPk = $masterPks !== []
-            ? DB::table('sec_id_cardno_master')
-                ->whereIn('pk', $masterPks)
-                ->pluck('sec_card_name', 'pk')
-                ->all()
-            : [];
+        $namesByPk = $this->cachedCardTypeNamesByPks($masterPks);
 
         // Final labels: keyed by dup.emp_id_apply
         $labels = [];
@@ -2842,9 +2945,7 @@ class EmployeeIDCardApprovalController extends Controller
         }
         $masterPks = $masterPkList->filter(fn ($v) => (int) $v > 0)->unique()->values()->all();
 
-        $namesByPk = $masterPks !== []
-            ? DB::table('sec_id_cardno_master')->whereIn('pk', $masterPks)->pluck('sec_card_name', 'pk')->all()
-            : [];
+        $namesByPk = $this->cachedCardTypeNamesByPks($masterPks);
 
         $labels = [];
         foreach ($dupContRows as $r) {

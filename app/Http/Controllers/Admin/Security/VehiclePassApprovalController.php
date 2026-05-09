@@ -9,14 +9,74 @@ use App\Models\VehiclePassTWApplyApproval;
 use App\Models\VehiclePassFWApply;
 use App\Models\VehiclePassDuplicateApplyTwfw;
 use App\Models\VehiclePassDuplicateApplyApprovalTwfw;
+use App\Support\IdCardSecurityLookup;
+use App\Support\IdCardSecurityMapper;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 class VehiclePassApprovalController extends Controller
 {
+    private const REDIS_TTL_MINUTES = 10;
+    private const CACHE_VERSION_KEY = 'security:vehicle_approval:version';
+
+    /**
+     * Read-through Redis cache with DB fallback.
+     *
+     * @param  callable():mixed  $resolver
+     */
+    private function rememberRedis(string $key, callable $resolver)
+    {
+        $versionedKey = 'v' . $this->cacheVersion() . ':' . $key;
+        try {
+            return Cache::store('redis')->remember(
+                $versionedKey,
+                now()->addMinutes(self::REDIS_TTL_MINUTES),
+                $resolver
+            );
+        } catch (\Throwable $e) {
+            return $resolver();
+        }
+    }
+
+    private function cacheVersion(): int
+    {
+        try {
+            return (int) (Cache::store('redis')->get(self::CACHE_VERSION_KEY, 1) ?: 1);
+        } catch (\Throwable $e) {
+            return 1;
+        }
+    }
+
+    public function invalidateSecurityCaches(): void
+    {
+        try {
+            Cache::store('redis')->increment(self::CACHE_VERSION_KEY);
+        } catch (\Throwable $e) {
+            // no-op
+        }
+        IdCardSecurityMapper::invalidateLookupCache();
+        IdCardSecurityLookup::invalidateLookupCache();
+    }
+
+    private function cachedEmployeeByEmpId(string $empId): ?EmployeeMaster
+    {
+        $empId = trim($empId);
+        if ($empId === '') {
+            return null;
+        }
+        $cacheKey = 'security:vehicle_approval:employee_by_empid:' . strtolower($empId);
+
+        return $this->rememberRedis($cacheKey, static function () use ($empId) {
+            return EmployeeMaster::where('emp_id', $empId)
+                ->with(['designation', 'department'])
+                ->first();
+        });
+    }
+
     /**
      * Consolidated index showing both regular and duplicate vehicle pass applications.
      * Prefix format:
@@ -339,9 +399,7 @@ class VehiclePassApprovalController extends Controller
             $application->encrypted_id = encrypt('fw-' . $application->vehicle_fw_pk);
             // Fallback: try to resolve employee by employee_id_card -> employee_master.emp_id
             if (! $application->employee && $application->employee_id_card) {
-                $emp = EmployeeMaster::where('emp_id', $application->employee_id_card)
-                    ->with(['designation', 'department'])
-                    ->first();
+                $emp = $this->cachedEmployeeByEmpId((string) $application->employee_id_card);
                 if ($emp) {
                     $application->setRelation('employee', $emp);
                 }
@@ -363,9 +421,7 @@ class VehiclePassApprovalController extends Controller
 
             // Fallback: try to resolve employee by employee_id_card -> employee_master.emp_id
             if (! $application->employee && $application->employee_id_card) {
-                $emp = EmployeeMaster::where('emp_id', $application->employee_id_card)
-                    ->with(['designation', 'department'])
-                    ->first();
+                $emp = $this->cachedEmployeeByEmpId((string) $application->employee_id_card);
                 if ($emp) {
                     $application->setRelation('employee', $emp);
                 }
@@ -406,6 +462,7 @@ class VehiclePassApprovalController extends Controller
 
     public function approve(Request $request, $id)
     {
+        register_shutdown_function([$this, 'invalidateSecurityCaches']);
         $id = urldecode($id);
         try {
             $decryptedId = decrypt($id);
@@ -514,6 +571,7 @@ class VehiclePassApprovalController extends Controller
 
     public function reject(Request $request, $id)
     {
+        register_shutdown_function([$this, 'invalidateSecurityCaches']);
         $id = urldecode($id);
         try {
             $decryptedId = decrypt($id);

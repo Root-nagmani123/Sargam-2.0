@@ -6,6 +6,7 @@ use App\Models\SecurityParmIdApply;
 use App\Models\SecurityParmIdApplyApproval;
 use App\Models\SecurityFamilyIdApply;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
@@ -17,6 +18,98 @@ use stdClass;
  */
 class IdCardSecurityMapper
 {
+    private const REDIS_TTL_MINUTES = 10;
+    private const CACHE_VERSION_KEY = 'security:mapper:version';
+
+    private static function cacheVersion(): int
+    {
+        try {
+            return (int) (Cache::store('redis')->get(self::CACHE_VERSION_KEY, 1) ?: 1);
+        } catch (\Throwable $e) {
+            return 1;
+        }
+    }
+
+    public static function invalidateLookupCache(): void
+    {
+        try {
+            Cache::store('redis')->increment(self::CACHE_VERSION_KEY);
+        } catch (\Throwable $e) {
+            // no-op: keep write flows safe even if redis is unavailable
+        }
+    }
+
+    /**
+     * Read-through cache using Redis, fallback to direct DB read.
+     *
+     * @param  callable():mixed  $resolver
+     */
+    private static function rememberRedis(string $key, callable $resolver)
+    {
+        $versionedKey = 'v' . self::cacheVersion() . ':' . $key;
+        try {
+            return Cache::store('redis')->remember(
+                $versionedKey,
+                now()->addMinutes(self::REDIS_TTL_MINUTES),
+                $resolver
+            );
+        } catch (\Throwable $e) {
+            return $resolver();
+        }
+    }
+
+    private static function secCardNameByPk($pk): ?string
+    {
+        $pk = (int) $pk;
+        if ($pk <= 0) {
+            return null;
+        }
+
+        return self::rememberRedis("security:mapper:sec_card_name:{$pk}", static function () use ($pk) {
+            return DB::table('sec_id_cardno_master')->where('pk', $pk)->value('sec_card_name');
+        });
+    }
+
+    private static function secConfigNameByPk($pk): ?string
+    {
+        $pk = (int) $pk;
+        if ($pk <= 0) {
+            return null;
+        }
+
+        return self::rememberRedis("security:mapper:sec_config_name:{$pk}", static function () use ($pk) {
+            return DB::table('sec_id_cardno_config_map')->where('pk', $pk)->value('config_name');
+        });
+    }
+
+    private static function departmentNameByPk($pk): ?string
+    {
+        $pk = (int) $pk;
+        if ($pk <= 0) {
+            return null;
+        }
+
+        return self::rememberRedis("security:mapper:department_name:{$pk}", static function () use ($pk) {
+            return DB::table('department_master')->where('pk', $pk)->value('department_name');
+        });
+    }
+
+    private static function employeeBasicByPkOrOld($pk): ?object
+    {
+        if ($pk === null || $pk === '') {
+            return null;
+        }
+        $cacheKey = 'security:mapper:employee_basic:' . trim((string) $pk);
+
+        return self::rememberRedis($cacheKey, static function () use ($pk) {
+            return DB::table('employee_master')
+                ->where(function ($q) use ($pk) {
+                    $q->where('pk', $pk)->orWhere('pk_old', $pk);
+                })
+                ->first();
+        });
+    }
+
     /**
      * Format a date value (Carbon, DateTime, string, or null) to d/m/Y for display.
      */
@@ -43,12 +136,7 @@ class IdCardSecurityMapper
         if ($employeePk === null || $employeePk === '') {
             return null;
         }
-        $emp = DB::table('employee_master')
-            ->where(function ($q) use ($employeePk) {
-                $q->where('pk', $employeePk)->orWhere('pk_old', $employeePk);
-            })
-            ->select(['first_name', 'last_name'])
-            ->first();
+        $emp = self::employeeBasicByPkOrOld($employeePk);
         if (! $emp) {
             return null;
         }
@@ -211,7 +299,7 @@ class IdCardSecurityMapper
             if ($cardLookups !== null && isset($cardLookups['masters'][$pt])) {
                 $cardTypeName = $cardLookups['masters'][$pt];
             } else {
-                $master = DB::table('sec_id_cardno_master')->where('pk', $row->permanent_type)->value('sec_card_name');
+                $master = self::secCardNameByPk($row->permanent_type);
                 if ($master) {
                     $cardTypeName = $master;
                 }
@@ -262,9 +350,9 @@ class IdCardSecurityMapper
             if ($cardLookups !== null && isset($cardLookups['configs'][$pst])) {
                 $subTypeName = $cardLookups['configs'][$pst];
             } else {
-                $configRow = DB::table('sec_id_cardno_config_map')->where('pk', $row->perm_sub_type)->first();
-                if ($configRow && ! empty($configRow->config_name)) {
-                    $subTypeName = $configRow->config_name;
+                $configName = self::secConfigNameByPk($row->perm_sub_type);
+                if (! empty($configName)) {
+                    $subTypeName = $configName;
                 }
             }
         }
@@ -286,15 +374,11 @@ class IdCardSecurityMapper
             }
         }
         if ($dto->requested_by === null && !empty($row->created_by)) {
-            $creator = DB::table('employee_master')
-                ->where(function ($q) use ($row) {
-                    $q->where('pk', $row->created_by)->orWhere('pk_old', $row->created_by);
-                })
-                ->first();
+            $creator = self::employeeBasicByPkOrOld($row->created_by);
             if ($creator) {
                 $dto->requested_by = trim(($creator->first_name ?? '') . ' ' . ($creator->last_name ?? ''));
                 if (!empty($creator->department_master_pk)) {
-                    $dept = DB::table('department_master')->where('pk', $creator->department_master_pk)->value('department_name');
+                    $dept = self::departmentNameByPk($creator->department_master_pk);
                     $dto->requested_section = $dept;
                 }
             }
@@ -402,7 +486,7 @@ class IdCardSecurityMapper
         $dto->created_at = isset($row->created_date) ? \Carbon\Carbon::parse($row->created_date) : null;
         $cardTypeName = '--';
         if (!empty($row->permanent_type)) {
-            $master = DB::table('sec_id_cardno_master')->where('pk', $row->permanent_type)->value('sec_card_name');
+            $master = self::secCardNameByPk($row->permanent_type);
             if ($master) {
                 $cardTypeName = $master;
             }
@@ -461,7 +545,7 @@ class IdCardSecurityMapper
 
             // Resolve approver names from employee_master for display in "All Requests" table
             if ($dto->approved_by_a1) {
-                $emp1 = DB::table('employee_master')->where('pk', $dto->approved_by_a1)->first();
+                $emp1 = self::employeeBasicByPkOrOld($dto->approved_by_a1);
                 if ($emp1) {
                     $dto->approver1 = (object)[
                         'name' => trim(($emp1->first_name ?? '') . ' ' . ($emp1->last_name ?? '')),
@@ -469,7 +553,7 @@ class IdCardSecurityMapper
                 }
             }
             if ($dto->approved_by_a2) {
-                $emp2 = DB::table('employee_master')->where('pk', $dto->approved_by_a2)->first();
+                $emp2 = self::employeeBasicByPkOrOld($dto->approved_by_a2);
                 if ($emp2) {
                     $dto->approver2 = (object)[
                         'name' => trim(($emp2->first_name ?? '') . ' ' . ($emp2->last_name ?? '')),
@@ -477,7 +561,7 @@ class IdCardSecurityMapper
                 }
             }
             if ($dto->rejected_by) {
-                $empR = DB::table('employee_master')->where('pk', $dto->rejected_by)->first();
+                $empR = self::employeeBasicByPkOrOld($dto->rejected_by);
                 if ($empR) {
                     $dto->rejectedByUser = (object)[
                         'name' => trim(($empR->first_name ?? '') . ' ' . ($empR->last_name ?? '')),
@@ -490,9 +574,9 @@ class IdCardSecurityMapper
         $dto->card_valid_to = isset($row->card_valid_to) ? \Carbon\Carbon::parse($row->card_valid_to) : null;
         $subTypeName = null;
         if (!empty($row->perm_sub_type)) {
-            $configRow = DB::table('sec_id_cardno_config_map')->where('pk', $row->perm_sub_type)->first();
-            if ($configRow && !empty($configRow->config_name)) {
-                $subTypeName = $configRow->config_name;
+            $configName = self::secConfigNameByPk($row->perm_sub_type);
+            if (!empty($configName)) {
+                $subTypeName = $configName;
             }
         }
         $dto->sub_type = $subTypeName;
@@ -507,23 +591,19 @@ class IdCardSecurityMapper
         $dto->requested_by = null;
         $dto->requested_section = null;
         if (!empty($row->section)) {
-            $deptName = DB::table('department_master')->where('pk', $row->section)->value('department_name');
+            $deptName = self::departmentNameByPk($row->section);
             $dto->section = $deptName ?? (string) $row->section;
             $dto->requested_section = $dto->section;
         }
         $dto->created_by_name = null;
         if (!empty($row->created_by)) {
-            $creator = DB::table('employee_master')
-                ->where(function ($q) use ($row) {
-                    $q->where('pk', $row->created_by)->orWhere('pk_old', $row->created_by);
-                })
-                ->first();
+            $creator = self::employeeBasicByPkOrOld($row->created_by);
             if ($creator) {
                 $creatorName = trim(($creator->first_name ?? '') . ' ' . ($creator->last_name ?? ''));
                 $dto->created_by_name = $creatorName !== '' ? $creatorName : null;
                 $dto->requested_by = $creatorName !== '' ? $creatorName : null;
                 if (!empty($creator->department_master_pk)) {
-                    $dto->requested_section = DB::table('department_master')->where('pk', $creator->department_master_pk)->value('department_name');
+                    $dto->requested_section = self::departmentNameByPk($creator->department_master_pk);
                 }
             }
         }

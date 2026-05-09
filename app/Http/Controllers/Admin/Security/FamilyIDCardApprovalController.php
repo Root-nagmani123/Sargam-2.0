@@ -5,10 +5,12 @@ namespace App\Http\Controllers\Admin\Security;
 use App\Http\Controllers\Controller;
 use App\Models\SecurityFamilyIdApply;
 use App\Models\SecurityFamilyIdApplyApproval;
+use App\Support\IdCardSecurityLookup;
 use App\Support\IdCardSecurityMapper;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -18,6 +20,88 @@ use Illuminate\Support\Facades\Schema;
  */
 class FamilyIDCardApprovalController extends Controller
 {
+    private const REDIS_TTL_MINUTES = 10;
+    private const CACHE_VERSION_KEY = 'security:family_approval:version';
+
+    /**
+     * Read-through cache on Redis with DB fallback.
+     *
+     * @param  callable():mixed  $resolver
+     */
+    private function rememberRedis(string $key, callable $resolver)
+    {
+        $versionedKey = 'v' . $this->cacheVersion() . ':' . $key;
+        try {
+            return Cache::store('redis')->remember(
+                $versionedKey,
+                now()->addMinutes(self::REDIS_TTL_MINUTES),
+                $resolver
+            );
+        } catch (\Throwable $e) {
+            return $resolver();
+        }
+    }
+
+    private function cacheVersion(): int
+    {
+        try {
+            return (int) (Cache::store('redis')->get(self::CACHE_VERSION_KEY, 1) ?: 1);
+        } catch (\Throwable $e) {
+            return 1;
+        }
+    }
+
+    private function invalidateSecurityCaches(): void
+    {
+        try {
+            Cache::store('redis')->increment(self::CACHE_VERSION_KEY);
+        } catch (\Throwable $e) {
+            // no-op
+        }
+        IdCardSecurityMapper::invalidateLookupCache();
+        IdCardSecurityLookup::invalidateLookupCache();
+    }
+
+    /**
+     * @param  array<int, int|string>  $creatorIds
+     * @return array<string, string>
+     */
+    private function creatorNamesByPkOrOld(array $creatorIds): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map(static function ($v) {
+            return is_numeric($v) ? (int) $v : null;
+        }, $creatorIds), static fn ($v) => $v !== null && $v > 0)));
+
+        if ($ids === []) {
+            return [];
+        }
+
+        sort($ids);
+        $key = 'security:family_approval:creator_names:' . implode(',', $ids);
+
+        return $this->rememberRedis($key, static function () use ($ids) {
+            $emap = [];
+            $emps = DB::table('employee_master')
+                ->whereIn('pk', $ids)
+                ->orWhereIn('pk_old', $ids)
+                ->get(['pk', 'pk_old', 'first_name', 'last_name']);
+
+            foreach ($emps as $e) {
+                $fullName = trim(($e->first_name ?? '') . ' ' . ($e->last_name ?? ''));
+                $label = $fullName ?: ('Employee #' . ($e->pk ?? $e->pk_old));
+
+                if (!is_null($e->pk)) {
+                    $emap[(string) $e->pk] = $label;
+                }
+                if (!is_null($e->pk_old)) {
+                    $emap[(string) $e->pk_old] = $label;
+                }
+            }
+
+            return $emap;
+        });
+    }
+
     public function index(Request $request)
     {
         $search = trim($request->get('search', ''));
@@ -70,23 +154,8 @@ class FamilyIDCardApprovalController extends Controller
         $creatorPks = $pendingRows->pluck('created_by')->filter()->unique();
         $creators = collect();
         if ($creatorPks->isNotEmpty()) {
-            // created_by may store either current pk or legacy pk_old from employee_master
-            $emps = DB::table('employee_master')
-                ->whereIn('pk', $creatorPks)
-                ->orWhereIn('pk_old', $creatorPks)
-                ->get(['pk', 'pk_old', 'first_name', 'last_name']);
-
-            foreach ($emps as $e) {
-                $fullName = trim(($e->first_name ?? '') . ' ' . ($e->last_name ?? ''));
-                $label = $fullName ?: ('Employee #' . ($e->pk ?? $e->pk_old));
-
-                if (!is_null($e->pk)) {
-                    $creators[(string) $e->pk] = $label;
-                }
-                if (!is_null($e->pk_old)) {
-                    $creators[(string) $e->pk_old] = $label;
-                }
-            }
+            // created_by may store either current pk or legacy pk_old from employee_master.
+            $creators = collect($this->creatorNamesByPkOrOld($creatorPks->all()));
         }
 
         // Aggregate approval flags in one query (avoids loading approvals relation for every row)
@@ -383,6 +452,7 @@ class FamilyIDCardApprovalController extends Controller
             $application->save();
         }
 
+        $this->invalidateSecurityCaches();
         return redirect()->route('admin.security.family_idcard_approval.index')
             ->with('success', 'Family ID Card approved successfully');
     }
@@ -419,6 +489,7 @@ class FamilyIDCardApprovalController extends Controller
             'created_date' => now(),
         ]);
 
+        $this->invalidateSecurityCaches();
         return redirect()->route('admin.security.family_idcard_approval.index')
             ->with('success', 'Family ID Card rejected');
     }
@@ -523,6 +594,7 @@ class FamilyIDCardApprovalController extends Controller
             }
         }
 
+        $this->invalidateSecurityCaches();
         return redirect()->route('admin.security.family_idcard_approval.index')
             ->with('success', 'Family ID Card group approved (' . $groupRows->count() . ' members)');
     }
@@ -570,6 +642,7 @@ class FamilyIDCardApprovalController extends Controller
             ]);
         }
 
+        $this->invalidateSecurityCaches();
         return redirect()->route('admin.security.family_idcard_approval.index')
             ->with('success', 'Family ID Card group rejected (' . $groupRows->count() . ' members)');
     }
