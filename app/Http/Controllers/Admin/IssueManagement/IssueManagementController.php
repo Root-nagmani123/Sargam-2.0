@@ -21,7 +21,7 @@ use App\Models\{
 };
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
-use Illuminate\Support\Facades\{DB, Auth, Storage, Schema, Log};
+use Illuminate\Support\Facades\{DB, Auth, Storage, Schema, Log, Cache};
 use Carbon\Carbon;
 use Maatwebsite\Excel\Facades\Excel;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -33,45 +33,60 @@ class IssueManagementController extends Controller
      */
     public function index(Request $request)
     {
-        // echo Auth::user()->user_id; exit;
-        $query = IssueLogManagement::with([
-            'category',
-            'priority',
-            'reproducibility',
-            'subCategoryMappings.subCategory',
-            'buildingMapping.building',
-            'hostelMapping.hostelBuilding',
-            'statusHistory'
-        ]);
+        $filters = [
+            'search' => trim((string) $request->get('search', '')),
+            'status' => (string) $request->get('status', ''),
+            'category' => (string) $request->get('category', ''),
+            'priority' => (string) $request->get('priority', ''),
+            'date_from' => (string) $request->get('date_from', ''),
+            'date_to' => (string) $request->get('date_to', ''),
+            'raised_by' => (string) $request->get('raised_by', ''),
+            'page' => (int) $request->get('page', 1),
+        ];
 
-        $applyUserScope = function ($builder) {
+        $scopeIds = getEmployeeIdsForUser(Auth::user()->user_id);
+        if (empty($scopeIds)) {
+            $scopeIds = [Auth::user()->user_id];
+        }
+
+        $cacheKey = 'issue_management:index:' . sha1(json_encode([
+            'v' => $this->getCacheVersion('issue_lists'),
+            'user' => (string) (Auth::user()->user_id ?? ''),
+            'is_admin' => hasRole('Admin') || hasRole('SuperAdmin'),
+            'scope_ids' => array_map('strval', $scopeIds),
+            'filters' => $filters,
+        ]));
+
+        $issues = $this->rememberRedis($cacheKey, 120, function () use ($filters, $scopeIds) {
+            $query = IssueLogManagement::with([
+                'category',
+                'priority',
+                'reproducibility',
+                'subCategoryMappings.subCategory',
+                'buildingMapping.building',
+                'hostelMapping.hostelBuilding',
+                'statusHistory',
+            ]);
+
             if (!hasRole('Admin') && !hasRole('SuperAdmin')) {
-                $ids = getEmployeeIdsForUser(Auth::user()->user_id);
-                if (empty($ids)) {
-                    $ids = [Auth::user()->user_id];
-                }
-                $builder->where(function ($q) use ($ids) {
-                    $q->whereIn('employee_master_pk', $ids)
-                        ->orWhereIn('issue_logger', $ids)
-                        ->orWhereIn('assigned_to', $ids)
-                        ->orWhereIn('created_by', $ids);
+                $query->where(function ($q) use ($scopeIds) {
+                    $q->whereIn('employee_master_pk', $scopeIds)
+                        ->orWhereIn('issue_logger', $scopeIds)
+                        ->orWhereIn('assigned_to', $scopeIds)
+                        ->orWhereIn('created_by', $scopeIds);
                 });
             }
-        };
 
-        // Raised by: "all" = raised by himself or other employee, "self" = raised by himself only
-        $applyRaisedBy = function ($builder) use ($request) {
-            if ($request->get('raised_by') === 'self') {
-                $ids = getEmployeeIdsForUser(Auth::user()->user_id);
-                $builder->whereIn('created_by', empty($ids) ? [Auth::user()->user_id] : $ids);
+            if ($filters['raised_by'] === 'self') {
+                $query->whereIn('created_by', $scopeIds);
             }
-        };
 
-        $applyFilters = function ($builder) use ($request) {
-            // Search (ID, description, category name, sub-category)
-            if ($request->filled('search')) {
-                $term = trim($request->search);
-                $builder->where(function ($q) use ($term) {
+            if ($filters['status'] !== '') {
+                $query->where('issue_status', (int) $filters['status']);
+            }
+            if ($filters['search'] !== '') {
+                $term = $filters['search'];
+                $query->where(function ($q) use ($term) {
                     if (is_numeric($term)) {
                         $q->orWhere('pk', $term);
                     }
@@ -84,45 +99,28 @@ class IssueManagementController extends Controller
                         });
                 });
             }
-
-            // Filter by category
-            if ($request->has('category') && !empty($request->category)) {
-                $builder->where('issue_category_master_pk', $request->category);
+            if ($filters['category'] !== '') {
+                $query->where('issue_category_master_pk', $filters['category']);
+            }
+            if ($filters['priority'] !== '') {
+                $query->where('issue_priority_master_pk', $filters['priority']);
+            }
+            if ($filters['date_from'] !== '') {
+                $query->where('created_date', '>=', Carbon::parse($filters['date_from'])->startOfDay()->toDateTimeString());
+            }
+            if ($filters['date_to'] !== '') {
+                $query->where('created_date', '<=', Carbon::parse($filters['date_to'])->endOfDay()->toDateTimeString());
             }
 
-            // Filter by priority
-            if ($request->has('priority') && !empty($request->priority)) {
-                $builder->where('issue_priority_master_pk', $request->priority);
-            }
+            return $query->orderBy('created_date', 'desc')->paginate(20, ['*'], 'page', $filters['page']);
+        });
 
-            // Filter by date range (use Carbon for consistent timezone handling)
-            if ($request->filled('date_from')) {
-                // Use full datetime so the day's range is applied correctly
-                $from = Carbon::parse($request->date_from)->startOfDay()->toDateTimeString();
-                $builder->where('created_date', '>=', $from);
-            }
-            if ($request->filled('date_to')) {
-                // Use full datetime so the "to" date includes the entire day (23:59:59)
-                $to = Carbon::parse($request->date_to)->endOfDay()->toDateTimeString();
-                $builder->where('created_date', '<=', $to);
-            }
-        };
-
-        $applyUserScope($query);
-        $applyRaisedBy($query);
-        $query->orderBy('created_date', 'desc');
-
-        // Single list: all complaints. Status filter only when user selects from dropdown.
-        if ($request->filled('status') && $request->status !== '') {
-            $query->where('issue_status', (int) $request->status);
-        }
-
-        $applyFilters($query);
-
-        $issues = $query->paginate(20);
-
-        $categories = IssueCategoryMaster::active()->get();
-        $priorities = IssuePriorityMaster::active()->ordered()->get();
+        $categories = $this->rememberRedis('issue_management:master:categories', 300, function () {
+            return IssueCategoryMaster::active()->get();
+        });
+        $priorities = $this->rememberRedis('issue_management:master:priorities', 300, function () {
+            return IssuePriorityMaster::active()->ordered()->get();
+        });
 
         return view('admin.issue_management.index', compact('issues', 'categories', 'priorities'));
     }
@@ -217,72 +215,147 @@ class IssueManagementController extends Controller
      */
     public function centcom(Request $request)
     {
-        $query = IssueLogManagement::with([
+        // Centcom listing: show only issues where the logged-in employee
+        // is either the configured nodal officer (employee_master_pk)
+        // or currently assigned handler (assigned_to).
+        $ids = getEmployeeIdsForUser(Auth::user()->user_id);
+        if (empty($ids)) {
+            $ids = [Auth::user()->user_id];
+        }
+
+        $filters = [
+            'search' => trim((string) $request->get('search', '')),
+            'status' => $request->has('status') ? (string) $request->get('status') : '',
+            'category' => $request->has('category') ? (string) $request->get('category') : '',
+            'priority' => $request->has('priority') ? (string) $request->get('priority') : '',
+            'date_from' => (string) $request->get('date_from', ''),
+            'date_to' => (string) $request->get('date_to', ''),
+            'page' => (int) $request->get('page', 1),
+        ];
+
+        $cachePayload = [
+            'v' => $this->getCacheVersion('issue_lists'),
+            'user' => (string) (Auth::user()->user_id ?? ''),
+            'ids' => array_map('strval', $ids),
+            'filters' => $filters,
+        ];
+        $cacheKey = 'issue_management:centcom:' . sha1(json_encode($cachePayload));
+
+        try {
+            $issues = Cache::store('redis')->remember($cacheKey, now()->addMinutes(2), function () use ($ids, $filters) {
+                $query = IssueLogManagement::with([
+                    'category',
+                    'priority',
+                    'reproducibility',
+                    'subCategoryMappings.subCategory',
+                    'buildingMapping.building',
+                    'hostelMapping.hostelBuilding',
+                    'statusHistory',
+                ])->orderBy('created_date', 'desc');
+
+                $query->where(function ($q) use ($ids) {
+                    $q->whereIn('employee_master_pk', $ids)   // Nodal officer for the category
+                      ->orWhereIn('assigned_to', $ids);       // Currently assigned to this employee
+                });
+
+                // Search (ID, description, category name, sub-category)
+                if ($filters['search'] !== '') {
+                    $term = $filters['search'];
+                    $query->where(function ($q) use ($term) {
+                        if (is_numeric($term)) {
+                            $q->orWhere('pk', $term);
+                        }
+                        $q->orWhere('description', 'like', "%{$term}%")
+                            ->orWhereHas('category', fn ($cq) => $cq->where('issue_category', 'like', "%{$term}%"))
+                            ->orWhereHas('subCategoryMappings.subCategory', fn ($sq) => $sq->where('issue_sub_category', 'like', "%{$term}%"));
+                    });
+                }
+
+                // Status (use has + !== '' so "0" works)
+                if ($filters['status'] !== '') {
+                    $query->where('issue_status', (int) $filters['status']);
+                }
+
+                // Category
+                if ($filters['category'] !== '') {
+                    $query->where('issue_category_master_pk', (int) $filters['category']);
+                }
+
+                // Priority
+                if ($filters['priority'] !== '') {
+                    $query->where('issue_priority_master_pk', (int) $filters['priority']);
+                }
+
+                // Date range (Carbon for consistent timezone)
+                if ($filters['date_from'] !== '') {
+                    $from = Carbon::parse($filters['date_from'])->startOfDay()->toDateTimeString();
+                    $query->where('created_date', '>=', $from);
+                }
+                if ($filters['date_to'] !== '') {
+                    $to = Carbon::parse($filters['date_to'])->endOfDay()->toDateTimeString();
+                    $query->where('created_date', '<=', $to);
+                }
+
+                return $query->paginate(20, ['*'], 'page', $filters['page']);
+            });
+        } catch (\Throwable $e) {
+            Log::warning('CENTCOM Redis cache unavailable, falling back to DB query.', [
+                'error' => $e->getMessage(),
+            ]);
+
+            $query = IssueLogManagement::with([
                 'category',
                 'priority',
                 'reproducibility',
                 'subCategoryMappings.subCategory',
                 'buildingMapping.building',
                 'hostelMapping.hostelBuilding',
-                'statusHistory'
+                'statusHistory',
             ])->orderBy('created_date', 'desc');
 
-            // Centcom listing: show only issues where the logged-in employee
-            // is either the configured nodal officer (employee_master_pk)
-            // or currently assigned handler (assigned_to).
-            $ids = getEmployeeIdsForUser(Auth::user()->user_id);
-            if (empty($ids)) {
-                $ids = [Auth::user()->user_id];
+            $query->where(function ($q) use ($ids) {
+                $q->whereIn('employee_master_pk', $ids)
+                    ->orWhereIn('assigned_to', $ids);
+            });
+
+            if ($filters['search'] !== '') {
+                $term = $filters['search'];
+                $query->where(function ($q) use ($term) {
+                    if (is_numeric($term)) {
+                        $q->orWhere('pk', $term);
+                    }
+                    $q->orWhere('description', 'like', "%{$term}%")
+                        ->orWhereHas('category', fn ($cq) => $cq->where('issue_category', 'like', "%{$term}%"))
+                        ->orWhereHas('subCategoryMappings.subCategory', fn ($sq) => $sq->where('issue_sub_category', 'like', "%{$term}%"));
+                });
+            }
+            if ($filters['status'] !== '') {
+                $query->where('issue_status', (int) $filters['status']);
+            }
+            if ($filters['category'] !== '') {
+                $query->where('issue_category_master_pk', (int) $filters['category']);
+            }
+            if ($filters['priority'] !== '') {
+                $query->where('issue_priority_master_pk', (int) $filters['priority']);
+            }
+            if ($filters['date_from'] !== '') {
+                $from = Carbon::parse($filters['date_from'])->startOfDay()->toDateTimeString();
+                $query->where('created_date', '>=', $from);
+            }
+            if ($filters['date_to'] !== '') {
+                $to = Carbon::parse($filters['date_to'])->endOfDay()->toDateTimeString();
+                $query->where('created_date', '<=', $to);
             }
 
-            $query->where(function ($q) use ($ids) {
-                $q->whereIn('employee_master_pk', $ids)   // Nodal officer for the category
-                  ->orWhereIn('assigned_to', $ids);       // Currently assigned to this employee
-            });
-
-        // Search (ID, description, category name, sub-category)
-        if ($request->filled('search')) {
-            $term = trim($request->search);
-            $query->where(function ($q) use ($term) {
-                if (is_numeric($term)) {
-                    $q->orWhere('pk', $term);
-                }
-                $q->orWhere('description', 'like', "%{$term}%")
-                    ->orWhereHas('category', fn ($cq) => $cq->where('issue_category', 'like', "%{$term}%"))
-                    ->orWhereHas('subCategoryMappings.subCategory', fn ($sq) => $sq->where('issue_sub_category', 'like', "%{$term}%"));
-            });
+            $issues = $query->paginate(20, ['*'], 'page', $filters['page']);
         }
 
-        // Status (use has + !== '' so "0" works)
-        if ($request->has('status') && $request->status !== '') {
-            $query->where('issue_status', (int) $request->status);
-        }
-
-        // Category
-        if ($request->has('category') && $request->category !== '') {
-            $query->where('issue_category_master_pk', (int) $request->category);
-        }
-
-        // Priority
-        if ($request->has('priority') && $request->priority !== '') {
-            $query->where('issue_priority_master_pk', (int) $request->priority);
-        }
-
-        // Date range (Carbon for consistent timezone)
-        if ($request->filled('date_from')) {
-            $from = Carbon::parse($request->date_from)->startOfDay()->toDateTimeString();
-            $query->where('created_date', '>=', $from);
-        }
-        if ($request->filled('date_to')) {
-            $to = Carbon::parse($request->date_to)->endOfDay()->toDateTimeString();
-            $query->where('created_date', '<=', $to);
-        }
-
-        $issues = $query->paginate(20);
-        // print_r($issues); exit;
-
-        $categories = IssueCategoryMaster::active()->get();
-        $priorities = IssuePriorityMaster::active()->ordered()->get();
+        $categories = $this->rememberRedis('issue_management:master:categories', 300, function () {
+            return IssueCategoryMaster::active()->get();
+        });
+        $priorities = $this->rememberRedis('issue_management:master:priorities', 300, function () {
+            return IssuePriorityMaster::active()->ordered()->get();
+        });
 
         return view('admin.issue_management.centcom', compact('issues', 'categories', 'priorities'));
     }
@@ -292,9 +365,15 @@ class IssueManagementController extends Controller
      */
     public function create()
     {
-        $categories = IssueCategoryMaster::active()->get();
-        $priorities = IssuePriorityMaster::active()->ordered()->get();
-        $reproducibilities = IssueReproducibilityMaster::active()->get();
+        $categories = $this->rememberRedis('issue_management:master:categories', 300, function () {
+            return IssueCategoryMaster::active()->get();
+        });
+        $priorities = $this->rememberRedis('issue_management:master:priorities', 300, function () {
+            return IssuePriorityMaster::active()->ordered()->get();
+        });
+        $reproducibilities = $this->rememberRedis('issue_management:master:reproducibilities', 300, function () {
+            return IssueReproducibilityMaster::active()->get();
+        });
         
         // Make building/hostel queries conditional based on table existence
         $buildings = collect([]);
@@ -303,7 +382,9 @@ class IssueManagementController extends Controller
         
         try {
             if (Schema::hasTable('building_master')) {
-                $buildings = BuildingMaster::get();
+                $buildings = $this->rememberRedis('issue_management:master:buildings', 300, function () {
+                    return BuildingMaster::get();
+                });
             }
         } catch (\Exception $e) {
             \Log::warning('Building master table not accessible: ' . $e->getMessage());
@@ -311,7 +392,9 @@ class IssueManagementController extends Controller
         
         try {
             if (Schema::hasTable('hostel_building_master')) {
-                $hostels = HostelBuildingMaster::get();
+                $hostels = $this->rememberRedis('issue_management:master:hostels', 300, function () {
+                    return HostelBuildingMaster::get();
+                });
             }
         } catch (\Exception $e) {
             \Log::warning('Hostel building master table not accessible: ' . $e->getMessage());
@@ -345,7 +428,8 @@ class IssueManagementController extends Controller
     public function getNodalEmployees($categoryId)
     {
         try {
-            $all = DB::table('issue_category_employee_map as b')
+            $all = $this->rememberRedis('issue_management:nodal_employees:' . (int) $categoryId, 300, function () use ($categoryId) {
+                return DB::table('issue_category_employee_map as b')
                 ->join('employee_master as d', function ($join) {
                     $join->on('b.employee_master_pk', '=', 'd.pk');
                     if (Schema::hasColumn('employee_master', 'pk_old')) {
@@ -364,6 +448,7 @@ class IssueManagementController extends Controller
                 )
                 ->orderBy('b.priority', 'asc')
                 ->get();
+            });
 
             $level1 = $all->where('priority', 1)->values();
             $level2 = $all->where('priority', 2)->first();
@@ -547,6 +632,9 @@ class IssueManagementController extends Controller
             );
             DB::table('Issue_log_status')->insert($status_data);
 
+            $this->bumpCacheVersion('issue_lists');
+            $this->bumpCacheVersion('issue_detail:' . (int) $id);
+
             return redirect()->route('admin.issue-management.show', $id)
                 ->with('success', 'Complaint submitted successfully!');
             
@@ -564,19 +652,74 @@ class IssueManagementController extends Controller
      */
     public function show($id)
     {
-        $issue = IssueLogManagement::with([
-            'category',
-            'priority',
-            'reproducibility',
-            'subCategoryMappings.subCategory',
-            'buildingMapping.building',
-            'hostelMapping.hostelBuilding',
-            'statusHistory.creator',
-            'nodal_officer',
-            // 'escalationHistory',
-            'creator',
-            'logger'
-        ])->findOrFail($id);
+        $issueCacheKey = 'issue_management:show:' . (int) $id . ':' . $this->getCacheVersion('issue_detail:' . (int) $id);
+        $showData = $this->rememberRedis($issueCacheKey, 120, function () use ($id) {
+            $issue = IssueLogManagement::with([
+                'category',
+                'priority',
+                'reproducibility',
+                'subCategoryMappings.subCategory',
+                'buildingMapping.building',
+                'hostelMapping.hostelBuilding',
+                'statusHistory.creator',
+                'nodal_officer',
+                // 'escalationHistory',
+                'creator',
+                'logger'
+            ])->findOrFail($id);
+
+            // Fallback: load location mapping from DB (for O always; for H/R when no mapping loaded)
+            $locationFallback = null;
+            if ($issue->location === 'O') {
+                // Other (O): always load from issue_log_building_map + building_master; derive floor from building_room_master if empty
+                $row = DB::table('issue_log_building_map as m')
+                    ->leftJoin('building_master as b', 'm.building_master_pk', '=', 'b.pk')
+                    ->where('m.issue_log_management_pk', $issue->pk)
+                    ->select('m.building_master_pk', 'm.floor_name', 'm.room_name', 'b.building_name')
+                    ->first();
+                if ($row) {
+                    $floorDisplay = $this->locationDisplayValue($row->floor_name);
+                    if ($floorDisplay === 'N/A' && $row->building_master_pk !== null && trim((string)($row->room_name ?? '')) !== '') {
+                        $roomRow = DB::table('building_room_master')
+                            ->where('building_master_pk', $row->building_master_pk)
+                            ->where(function ($q) use ($row) {
+                                $q->where('room_no', $row->room_name)->orWhere('room_no', 'like', '%' . $row->room_name . '%');
+                            })
+                            ->select('floor')
+                            ->first();
+                        $floorDisplay = $roomRow !== null ? (string)$roomRow->floor : 'N/A';
+                    }
+                    $locationFallback = [
+                        'type' => 'building',
+                        'name' => trim($row->building_name ?? '') ?: 'N/A',
+                        'floor' => $floorDisplay,
+                        'room' => $this->locationDisplayValue($row->room_name),
+                    ];
+                }
+            } elseif (!$issue->buildingMapping && !$issue->hostelMapping && ($issue->location === 'H' || $issue->location === 'R')) {
+                $row = DB::table('issue_log_hostel_map as m')
+                    ->leftJoin('hostel_building_master as h', 'm.hostel_building_master_pk', '=', 'h.pk')
+                    ->where('m.issue_log_management_pk', $issue->pk)
+                    ->select('m.hostel_building_master_pk', 'm.floor_name', 'm.room_name', 'h.hostel_name', 'h.building_name')
+                    ->first();
+                if ($row) {
+                    $locationFallback = [
+                        'type' => $issue->location === 'H' ? 'hostel' : 'residential',
+                        'name' => trim($row->hostel_name ?? $row->building_name ?? '') ?: 'N/A',
+                        'floor' => $this->locationDisplayValue($row->floor_name),
+                        'room' => $this->locationDisplayValue($row->room_name),
+                    ];
+                }
+            }
+
+            return [
+                'issue' => $issue,
+                'locationFallback' => $locationFallback,
+            ];
+        });
+
+        $issue = $showData['issue'];
+        $locationFallback = $showData['locationFallback'];
 
         if (!hasRole('Admin') && !hasRole('SuperAdmin')) {
             $userId = Auth::user()->user_id;
@@ -620,50 +763,6 @@ class IssueManagementController extends Controller
                 if ($assigned) {
                     $employees = $employees->prepend($assigned);
                 }
-            }
-        }
-
-        // Fallback: load location mapping from DB (for O always; for H/R when no mapping loaded)
-        $locationFallback = null;
-        if ($issue->location === 'O') {
-            // Other (O): always load from issue_log_building_map + building_master; derive floor from building_room_master if empty
-            $row = DB::table('issue_log_building_map as m')
-                ->leftJoin('building_master as b', 'm.building_master_pk', '=', 'b.pk')
-                ->where('m.issue_log_management_pk', $issue->pk)
-                ->select('m.building_master_pk', 'm.floor_name', 'm.room_name', 'b.building_name')
-                ->first();
-            if ($row) {
-                $floorDisplay = $this->locationDisplayValue($row->floor_name);
-                if ($floorDisplay === 'N/A' && $row->building_master_pk !== null && trim((string)($row->room_name ?? '')) !== '') {
-                    $roomRow = DB::table('building_room_master')
-                        ->where('building_master_pk', $row->building_master_pk)
-                        ->where(function ($q) use ($row) {
-                            $q->where('room_no', $row->room_name)->orWhere('room_no', 'like', '%' . $row->room_name . '%');
-                        })
-                        ->select('floor')
-                        ->first();
-                    $floorDisplay = $roomRow !== null ? (string)$roomRow->floor : 'N/A';
-                }
-                $locationFallback = [
-                    'type' => 'building',
-                    'name' => trim($row->building_name ?? '') ?: 'N/A',
-                    'floor' => $floorDisplay,
-                    'room' => $this->locationDisplayValue($row->room_name),
-                ];
-            }
-        } elseif (!$issue->buildingMapping && !$issue->hostelMapping && ($issue->location === 'H' || $issue->location === 'R')) {
-            $row = DB::table('issue_log_hostel_map as m')
-                ->leftJoin('hostel_building_master as h', 'm.hostel_building_master_pk', '=', 'h.pk')
-                ->where('m.issue_log_management_pk', $issue->pk)
-                ->select('m.hostel_building_master_pk', 'm.floor_name', 'm.room_name', 'h.hostel_name', 'h.building_name')
-                ->first();
-            if ($row) {
-                $locationFallback = [
-                    'type' => $issue->location === 'H' ? 'hostel' : 'residential',
-                    'name' => trim($row->hostel_name ?? $row->building_name ?? '') ?: 'N/A',
-                    'floor' => $this->locationDisplayValue($row->floor_name),
-                    'room' => $this->locationDisplayValue($row->room_name),
-                ];
             }
         }
 
@@ -854,6 +953,8 @@ class IssueManagementController extends Controller
             }
 
             DB::commit();
+            $this->bumpCacheVersion('issue_lists');
+            $this->bumpCacheVersion('issue_detail:' . (int) $issue->pk);
 
             $showUrl = route('admin.issue-management.show', $issue->pk);
             if ($request->filled('from_modal')) {
@@ -873,10 +974,12 @@ class IssueManagementController extends Controller
      */
     public function getSubCategories($categoryId)
     {
-        $subCategories = IssueSubCategoryMaster::byCategory($categoryId)
-            ->active()
-            ->orderBy('issue_sub_category')
-            ->get();
+        $subCategories = $this->rememberRedis('issue_management:sub_categories:' . (int) $categoryId, 300, function () use ($categoryId) {
+            return IssueSubCategoryMaster::byCategory($categoryId)
+                ->active()
+                ->orderBy('issue_sub_category')
+                ->get();
+        });
 
         return response()->json($subCategories);
     }
@@ -892,19 +995,18 @@ class IssueManagementController extends Controller
             ]);
 
             $type = $request->type;
-            $data = [];
-
-            switch ($type) {
-                case 'H':
-                    $data = $this->getHostelBuildings();
-                    break;
-                case 'R':
-                    $data = $this->getResidentialBuildings();
-                    break;
-                case 'O':
-                    $data = $this->getOtherBuildings();
-                    break;
-            }
+            $data = $this->rememberRedis('issue_management:buildings:' . $type, 300, function () use ($type) {
+                switch ($type) {
+                    case 'H':
+                        return $this->getHostelBuildings();
+                    case 'R':
+                        return $this->getResidentialBuildings();
+                    case 'O':
+                        return $this->getOtherBuildings();
+                    default:
+                        return collect([]);
+                }
+            });
 
             return response()->json([
                 'status' => true,
@@ -979,18 +1081,18 @@ class IssueManagementController extends Controller
             ];
             $apiType = $typeMap[$type];
 
-            $data = [];
-            switch ($apiType) {
-                case 'hostel':
-                    $data = $this->getHostelFloors($buildingId);
-                    break;
-                case 'residential':
-                    $data = $this->getResidentialFloors($buildingId);
-                    break;
-                case 'other':
-                    $data = $this->getOtherFloors($buildingId);
-                    break;
-            }
+            $data = $this->rememberRedis('issue_management:floors:' . $apiType . ':' . (int) $buildingId, 300, function () use ($apiType, $buildingId) {
+                switch ($apiType) {
+                    case 'hostel':
+                        return $this->getHostelFloors($buildingId);
+                    case 'residential':
+                        return $this->getResidentialFloors($buildingId);
+                    case 'other':
+                        return $this->getOtherFloors($buildingId);
+                    default:
+                        return collect([]);
+                }
+            });
 
             return response()->json([
                 'status' => true,
@@ -1077,70 +1179,65 @@ class IssueManagementController extends Controller
             ];
             $apiType = $typeMap[$type];
 
-            $result = collect();
-
-            switch ($apiType) {
-                case 'hostel':
-                    $result = DB::table('hostel_building_master as e')
-                        ->join('hostel_building_floor_map as f', 'e.pk', '=', 'f.hostel_building_master_pk')
-                        ->join('hostel_floor_room_map as g', 'f.pk', '=', 'g.hostel_building_floor_map_pk')
-                        ->where('e.pk', $buildingId)
-                        ->where('f.pk', $floorId)
-                        ->select(
-                            'e.building_name',
-                            'f.floor_name',
-                            'g.room_name',
-                            'g.pk',
-                            'g.room_capacity',
-                            'g.facilities',
-                            'g.fees',
-                            'g.sub_unit_type_master_pk',
-                            'g.room_type'
-                        )
-                        ->get();
-                    break;
-
-                case 'other':
-                    $result = DB::table('building_master as k')
-                        ->join('building_room_master as l', 'k.pk', '=', 'l.building_master_pk')
-                        ->where('k.pk', $buildingId)
-                        ->where('l.floor', $floorId)
-                        ->select(
-                            'k.building_name',
-                            'l.floor as floor_name',
-                            'l.room_no as room_name',
-                            'l.pk',
-                            'l.room_capacity',
-                            'l.facility',
-                            'l.fee_per_bed'
-                        )
-                        ->distinct()
-                        ->get();
-                    break;
-
-                case 'residential':
-                    $result = DB::table('estate_house_master as j')
-                        ->join('estate_block_master as h', 'j.estate_block_master_pk', '=', 'h.pk')
-                        ->where('h.pk', $buildingId)
-                        ->where('j.estate_unit_sub_type_master_pk', $floorId)
-                        ->select(
-                            'h.block_name',
-                            'j.house_no',
-                            'j.pk',
-                            'j.licence_fee',
-                            'j.water_charge',
-                            'j.electric_charge'
-                        )
-                        ->get();
-                    break;
-
-                default:
-                    return response()->json([
-                        'status' => false,
-                        'message' => 'Invalid type specified!',
-                        'data' => []
-                    ], 400);
-            }
+            $cacheFloor = is_scalar($floorId) ? (string) $floorId : json_encode($floorId);
+            $result = $this->rememberRedis(
+                'issue_management:rooms:' . $apiType . ':' . (int) $buildingId . ':' . sha1($cacheFloor),
+                300,
+                function () use ($apiType, $buildingId, $floorId) {
+                    switch ($apiType) {
+                        case 'hostel':
+                            return DB::table('hostel_building_master as e')
+                                ->join('hostel_building_floor_map as f', 'e.pk', '=', 'f.hostel_building_master_pk')
+                                ->join('hostel_floor_room_map as g', 'f.pk', '=', 'g.hostel_building_floor_map_pk')
+                                ->where('e.pk', $buildingId)
+                                ->where('f.pk', $floorId)
+                                ->select(
+                                    'e.building_name',
+                                    'f.floor_name',
+                                    'g.room_name',
+                                    'g.pk',
+                                    'g.room_capacity',
+                                    'g.facilities',
+                                    'g.fees',
+                                    'g.sub_unit_type_master_pk',
+                                    'g.room_type'
+                                )
+                                ->get();
+                        case 'other':
+                            return DB::table('building_master as k')
+                                ->join('building_room_master as l', 'k.pk', '=', 'l.building_master_pk')
+                                ->where('k.pk', $buildingId)
+                                ->where('l.floor', $floorId)
+                                ->select(
+                                    'k.building_name',
+                                    'l.floor as floor_name',
+                                    'l.room_no as room_name',
+                                    'l.pk',
+                                    'l.room_capacity',
+                                    'l.facility',
+                                    'l.fee_per_bed'
+                                )
+                                ->distinct()
+                                ->get();
+                        case 'residential':
+                            return DB::table('estate_house_master as j')
+                                ->join('estate_block_master as h', 'j.estate_block_master_pk', '=', 'h.pk')
+                                ->where('h.pk', $buildingId)
+                                ->where('j.estate_unit_sub_type_master_pk', $floorId)
+                                ->select(
+                                    'h.block_name',
+                                    'j.house_no',
+                                    'j.pk',
+                                    'j.licence_fee',
+                                    'j.water_charge',
+                                    'j.electric_charge'
+                                )
+                                ->get();
+                        default:
+                            return collect([]);
+                    }
+                }
+            );
 
             if ($result->isEmpty()) {
                 return response()->json([
@@ -1286,6 +1383,8 @@ class IssueManagementController extends Controller
             ]);
 
             DB::commit();
+            $this->bumpCacheVersion('issue_lists');
+            $this->bumpCacheVersion('issue_detail:' . (int) $issue->pk);
 
             return redirect()->route('admin.issue-management.show', $issue->pk)
                 ->with('success', 'Issue status updated successfully.');
@@ -1313,6 +1412,8 @@ class IssueManagementController extends Controller
             'updated_by' => Auth::id(),
             'updated_date' => now(),
         ]);
+        $this->bumpCacheVersion('issue_detail:' . (int) $issue->pk);
+        $this->bumpCacheVersion('issue_lists');
 
         return back()->with('success', 'Feedback added successfully.');
     }
@@ -1326,5 +1427,52 @@ class IssueManagementController extends Controller
             return 'N/A';
         }
         return (string) $value;
+    }
+
+    /**
+     * Redis first with graceful fallback to direct query execution.
+     */
+    protected function rememberRedis(string $key, int $ttlSeconds, callable $callback)
+    {
+        try {
+            return Cache::store('redis')->remember($key, now()->addSeconds($ttlSeconds), $callback);
+        } catch (\Throwable $e) {
+            Log::warning('IssueManagement redis cache fallback triggered', [
+                'cache_key' => $key,
+                'error' => $e->getMessage(),
+            ]);
+            return $callback();
+        }
+    }
+
+    protected function getCacheVersion(string $segment): int
+    {
+        $key = 'issue_management:version:' . $segment;
+
+        try {
+            return (int) Cache::store('redis')->rememberForever($key, function () {
+                return 1;
+            });
+        } catch (\Throwable $e) {
+            Log::warning('IssueManagement cache version read fallback', [
+                'segment' => $segment,
+                'error' => $e->getMessage(),
+            ]);
+            return 1;
+        }
+    }
+
+    protected function bumpCacheVersion(string $segment): void
+    {
+        $key = 'issue_management:version:' . $segment;
+
+        try {
+            Cache::store('redis')->increment($key);
+        } catch (\Throwable $e) {
+            Log::warning('IssueManagement cache version bump failed', [
+                'segment' => $segment,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }
