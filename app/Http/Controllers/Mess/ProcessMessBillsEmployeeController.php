@@ -48,6 +48,7 @@ class ProcessMessBillsEmployeeController extends Controller
     {
         $dateFrom = $request->filled('date_from') ? $this->parseDate($request->date_from) : now()->startOfMonth()->format('Y-m-d');
         $dateTo = $request->filled('date_to') ? $this->parseDate($request->date_to) : now()->endOfMonth()->format('Y-m-d');
+        $unionCollation = 'utf8mb4_unicode_ci';
         
         // Handle multiselect for client_type (employee/ot/course/other)
         $clientTypeRaw = $request->input('client_type');
@@ -67,15 +68,15 @@ class ProcessMessBillsEmployeeController extends Controller
         $dateRangeQuery = SellingVoucherDateRangeReport::query()
             ->select([
                 'id',
-                'client_name',
+                DB::raw("CONVERT(client_name USING utf8mb4) COLLATE {$unionCollation} as client_name"),
                 'issue_date',
-                'client_type_slug',
+                DB::raw("CONVERT(client_type_slug USING utf8mb4) COLLATE {$unionCollation} as client_type_slug"),
                 'client_type_pk',
                 'total_amount',
                 'payment_type',
                 'status',
                 'store_id',
-                DB::raw("'date_range' as source_type")
+                DB::raw("CONVERT('date_range' USING utf8mb4) COLLATE {$unionCollation} as source_type")
             ])
             ->whereIn('client_type_slug', self::ALLOWED_CLIENT_SLUGS);
 
@@ -98,15 +99,15 @@ class ProcessMessBillsEmployeeController extends Controller
         $kitchenIssueQuery = KitchenIssueMaster::query()
             ->select([
                 'pk as id',
-                'client_name',
+                DB::raw("CONVERT(client_name USING utf8mb4) COLLATE {$unionCollation} as client_name"),
                 'issue_date',
-                DB::raw("CASE client_type WHEN 1 THEN 'employee' WHEN 2 THEN 'ot' WHEN 3 THEN 'course' WHEN 4 THEN 'other' END as client_type_slug"),
+                DB::raw("CONVERT((CASE client_type WHEN 1 THEN 'employee' WHEN 2 THEN 'ot' WHEN 3 THEN 'course' WHEN 4 THEN 'other' END) USING utf8mb4) COLLATE {$unionCollation} as client_type_slug"),
                 'client_type_pk',
                 DB::raw('NULL as total_amount'),
                 'payment_type',
                 'status',
                 'store_id',
-                DB::raw("'kitchen_issue' as source_type")
+                DB::raw("CONVERT('kitchen_issue' USING utf8mb4) COLLATE {$unionCollation} as source_type")
             ])
             ->whereIn('client_type', $kitchenClientTypes)
             ->whereIn('kitchen_issue_type', self::KITCHEN_MESS_SELLING_ISSUE_TYPES);
@@ -268,6 +269,7 @@ class ProcessMessBillsEmployeeController extends Controller
 
         $dateFrom = $request->filled('date_from') ? $this->parseDate($request->date_from) : now()->startOfMonth()->format('Y-m-d');
         $dateTo = $request->filled('date_to') ? $this->parseDate($request->date_to) : now()->endOfMonth()->format('Y-m-d');
+        $unionCollation = 'utf8mb4_unicode_ci';
 
         $authUid = (int) (auth()->user()->user_id ?? 0);
         $authLinkedUserIds = $this->authLinkedUserIdsForMessSelfService();
@@ -300,15 +302,15 @@ class ProcessMessBillsEmployeeController extends Controller
         $dateRangeQuery = SellingVoucherDateRangeReport::query()
             ->select([
                 'id',
-                'client_name',
+                DB::raw("CONVERT(client_name USING utf8mb4) COLLATE {$unionCollation} as client_name"),
                 'issue_date',
-                'client_type_slug',
+                DB::raw("CONVERT(client_type_slug USING utf8mb4) COLLATE {$unionCollation} as client_type_slug"),
                 'client_type_pk',
                 'total_amount',
                 'payment_type',
                 'status',
                 'store_id',
-                DB::raw("'date_range' as source_type"),
+                DB::raw("CONVERT('date_range' USING utf8mb4) COLLATE {$unionCollation} as source_type"),
             ])
             ->whereIn('client_type_slug', self::ALLOWED_CLIENT_SLUGS);
         $dateRangeQuery->whereIn('status', $this->sellingVoucherDateRangeReportSaleVoucherStatuses());
@@ -318,15 +320,15 @@ class ProcessMessBillsEmployeeController extends Controller
         $kitchenIssueQuery = KitchenIssueMaster::query()
             ->select([
                 'pk as id',
-                'client_name',
+                DB::raw("CONVERT(client_name USING utf8mb4) COLLATE {$unionCollation} as client_name"),
                 'issue_date',
-                DB::raw("CASE client_type WHEN 1 THEN 'employee' WHEN 2 THEN 'ot' WHEN 3 THEN 'course' WHEN 4 THEN 'other' END as client_type_slug"),
+                DB::raw("CONVERT((CASE client_type WHEN 1 THEN 'employee' WHEN 2 THEN 'ot' WHEN 3 THEN 'course' WHEN 4 THEN 'other' END) USING utf8mb4) COLLATE {$unionCollation} as client_type_slug"),
                 'client_type_pk',
                 DB::raw('NULL as total_amount'),
                 'payment_type',
                 'status',
                 'store_id',
-                DB::raw("'kitchen_issue' as source_type"),
+                DB::raw("CONVERT('kitchen_issue' USING utf8mb4) COLLATE {$unionCollation} as source_type"),
             ])
             ->whereIn('client_type', self::ALLOWED_KITCHEN_CLIENT_TYPES)
             ->whereIn('kitchen_issue_type', self::KITCHEN_MESS_SELLING_ISSUE_TYPES);
@@ -643,6 +645,7 @@ class ProcessMessBillsEmployeeController extends Controller
     {
         $dateFrom = $request->filled('date_from') ? $this->parseDate($request->date_from) : now()->startOfMonth()->format('Y-m-d');
         $dateTo = $request->filled('date_to') ? $this->parseDate($request->date_to) : now()->endOfMonth()->format('Y-m-d');
+        $unionCollation = 'utf8mb4_unicode_ci';
         $search = $request->filled('search') ? trim((string) $request->search) : null;
         $search = ($search !== null && $search !== '') ? $search : null;
         $clientType = $request->filled('client_type') ? $request->client_type : null;
@@ -654,16 +657,16 @@ class ProcessMessBillsEmployeeController extends Controller
         $dateRangeQuery = SellingVoucherDateRangeReport::query()
             ->select([
                 'id',
-                'client_name',
+                DB::raw("CONVERT(client_name USING utf8mb4) COLLATE {$unionCollation} as client_name"),
                 'issue_date',
                 'date_from',
-                'client_type_slug',
+                DB::raw("CONVERT(client_type_slug USING utf8mb4) COLLATE {$unionCollation} as client_type_slug"),
                 'client_type_pk',
                 'total_amount',
                 'payment_type',
                 'status',
                 'store_id',
-                DB::raw("'date_range' as source_type")
+                DB::raw("CONVERT('date_range' USING utf8mb4) COLLATE {$unionCollation} as source_type")
             ])
             ->whereIn('client_type_slug', $clientType ? [$clientType] : self::ALLOWED_CLIENT_SLUGS);
 
@@ -677,16 +680,16 @@ class ProcessMessBillsEmployeeController extends Controller
         $kitchenIssueQuery = KitchenIssueMaster::query()
             ->select([
                 'pk as id',
-                'client_name',
+                DB::raw("CONVERT(client_name USING utf8mb4) COLLATE {$unionCollation} as client_name"),
                 'issue_date',
                 DB::raw('NULL as date_from'),
-                DB::raw("CASE client_type WHEN 1 THEN 'employee' WHEN 2 THEN 'ot' WHEN 3 THEN 'course' WHEN 4 THEN 'other' END as client_type_slug"),
+                DB::raw("CONVERT((CASE client_type WHEN 1 THEN 'employee' WHEN 2 THEN 'ot' WHEN 3 THEN 'course' WHEN 4 THEN 'other' END) USING utf8mb4) COLLATE {$unionCollation} as client_type_slug"),
                 'client_type_pk',
                 DB::raw('NULL as total_amount'),
                 'payment_type',
                 'status',
                 'store_id',
-                DB::raw("'kitchen_issue' as source_type")
+                DB::raw("CONVERT('kitchen_issue' USING utf8mb4) COLLATE {$unionCollation} as source_type")
             ])
             ->whereIn('client_type', $kitchenClientTypes)
             ->whereIn('kitchen_issue_type', self::KITCHEN_MESS_SELLING_ISSUE_TYPES);

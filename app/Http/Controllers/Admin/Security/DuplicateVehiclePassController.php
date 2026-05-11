@@ -206,6 +206,10 @@ class DuplicateVehiclePassController extends Controller
         }
 
         $canonicalForCap = IdCardSecurityMapper::resolveCanonicalEmployeeMasterPk((int) $validated['emp_master_pk']);
+        $printedForCap = trim((string) ($validated['id_card_number'] ?? ''));
+        if ($canonicalForCap && $printedForCap === '') {
+            $printedForCap = IdCardSecurityMapper::resolvedDisplayIdCardNumberForEmployee($canonicalForCap) ?? '';
+        }
         if ($canonicalForCap) {
             IdCardSecurityMapper::assertPassValidityWithinApprovedEmployeeIdCard(
                 $canonicalForCap,
@@ -213,7 +217,8 @@ class DuplicateVehiclePassController extends Controller
                 $validated['start_date'],
                 $validated['end_date'],
                 'start_date',
-                'end_date'
+                'end_date',
+                $printedForCap !== '' ? $printedForCap : null
             );
         }
 
@@ -310,6 +315,10 @@ class DuplicateVehiclePassController extends Controller
         ]);
 
         $canonicalForCap = IdCardSecurityMapper::resolveCanonicalEmployeeMasterPk((int) $validated['emp_master_pk']);
+        $printedForCap = trim((string) ($validated['id_card_number'] ?? ''));
+        if ($canonicalForCap && $printedForCap === '') {
+            $printedForCap = IdCardSecurityMapper::resolvedDisplayIdCardNumberForEmployee($canonicalForCap) ?? '';
+        }
         if ($canonicalForCap) {
             IdCardSecurityMapper::assertPassValidityWithinApprovedEmployeeIdCard(
                 $canonicalForCap,
@@ -317,7 +326,8 @@ class DuplicateVehiclePassController extends Controller
                 $validated['start_date'],
                 $validated['end_date'],
                 'start_date',
-                'end_date'
+                'end_date',
+                $printedForCap !== '' ? $printedForCap : null
             );
         }
 

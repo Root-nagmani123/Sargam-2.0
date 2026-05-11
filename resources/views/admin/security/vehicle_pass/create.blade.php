@@ -18,12 +18,49 @@
             $oldValidFrom = old('veh_card_valid_from', $todayYmd);
             $oldValidTo = old('vech_card_valid_to', now()->addYear()->format('Y-m-d'));
             $idCap = $idCardValidityCapYmd ?? null;
-            if ($idCap && $oldValidTo > $idCap) {
-                $oldValidTo = $idCap;
+
+            // Keep range on/after today so min="" and value="" never disagree (avoids broken native date pickers).
+            if ($oldValidFrom < $todayYmd) {
+                $oldValidFrom = $todayYmd;
             }
-            if ($idCap && $oldValidFrom > $idCap) {
-                $oldValidFrom = $idCap;
+            if ($oldValidTo < $todayYmd) {
+                $oldValidTo = $todayYmd;
             }
+            if ($oldValidTo < $oldValidFrom) {
+                $oldValidTo = $oldValidFrom;
+            }
+
+            // End-of-ID-card cap only when the cap is still in the future; never set max < min in the browser.
+            if ($idCap && $idCap >= $todayYmd) {
+                if ($oldValidTo > $idCap) {
+                    $oldValidTo = $idCap;
+                }
+                if ($oldValidFrom > $idCap) {
+                    $oldValidFrom = $todayYmd;
+                }
+                if ($oldValidTo < $oldValidFrom) {
+                    $oldValidTo = $oldValidFrom;
+                }
+            }
+
+            // Fresh defaults when user switches applicant type (same rules as unposted create).
+            $vehiclePassResetValidFrom = $todayYmd;
+            $vehiclePassResetValidTo = now()->addYear()->format('Y-m-d');
+            if ($vehiclePassResetValidTo < $vehiclePassResetValidFrom) {
+                $vehiclePassResetValidTo = $vehiclePassResetValidFrom;
+            }
+            if ($idCap && $idCap >= $todayYmd) {
+                if ($vehiclePassResetValidTo > $idCap) {
+                    $vehiclePassResetValidTo = $idCap;
+                }
+                if ($vehiclePassResetValidFrom > $idCap) {
+                    $vehiclePassResetValidFrom = $todayYmd;
+                }
+                if ($vehiclePassResetValidTo < $vehiclePassResetValidFrom) {
+                    $vehiclePassResetValidTo = $vehiclePassResetValidFrom;
+                }
+            }
+
             if (in_array($oldApplicantType, ['employee', 'government_vehicle']) && isset($currentUserEmployee) && $currentUserEmployee) {
                 if ($oldIdCard === '') {
                     $oldIdCard = $currentUserEmployee->emp_id ?? '';
@@ -86,17 +123,12 @@
                     </div>
                     <div class="col-md-6">
                         <label for="vehicle_type" class="form-label">Vehicle Type <span class="text-danger">*</span></label>
-                        <div class="d-flex gap-2 align-items-start">
-                            <select name="vehicle_type" id="vehicle_type" class="form-select flex-grow-1" required>
-                                <option value="">Select</option>
-                                @foreach($vehicleTypes as $vt)
-                                    <option value="{{ $vt->pk }}" {{ old('vehicle_type') == $vt->pk ? 'selected' : '' }}>{{ $vt->vehicle_type }}</option>
-                                @endforeach
-                            </select>
-                            <button type="button" class="btn btn-outline-primary btn-sm flex-shrink-0" id="addVehicleTypeBtn" title="Add new vehicle type">
-                                <i class="material-icons material-symbols-rounded" style="font-size:20px;">add</i>
-                            </button>
-                        </div>
+                        <select name="vehicle_type" id="vehicle_type" class="form-select" required>
+                            <option value="">Select</option>
+                            @foreach($vehicleTypes as $vt)
+                                <option value="{{ $vt->pk }}" {{ old('vehicle_type') == $vt->pk ? 'selected' : '' }}>{{ $vt->vehicle_type }}</option>
+                            @endforeach
+                        </select>
                         @error('vehicle_type')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-md-6">
@@ -149,36 +181,6 @@
             </div>
         </div>
     </form>
-</div>
-
-{{-- Modal: Add new vehicle type --}}
-<div class="modal fade" id="addVehicleTypeModal" tabindex="-1" aria-labelledby="addVehicleTypeModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="addVehicleTypeModalLabel">Add New Vehicle Type</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div id="addVehicleTypeError" class="alert alert-danger d-none" role="alert"></div>
-                <form id="addVehicleTypeForm">
-                    @csrf
-                    <div class="mb-3">
-                        <label for="new_vehicle_type_name" class="form-label">Vehicle Type <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="new_vehicle_type_name" name="vehicle_type" placeholder="e.g. Car, Two Wheeler" maxlength="100" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="new_vehicle_type_description" class="form-label">Description (optional)</label>
-                        <textarea class="form-control" id="new_vehicle_type_description" name="description" rows="2" placeholder="Optional description"></textarea>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="addVehicleTypeSubmit">Save</button>
-            </div>
-        </div>
-    </div>
 </div>
 
 <style>
@@ -355,6 +357,61 @@
     var idCardInput = document.getElementById('employee_id_card');
     var othersLookupHint = document.getElementById('othersIdCardLookupHint');
     var othersLookupAbort = null;
+    var vehiclePassCreateDefaults = {
+        validFrom: @json($vehiclePassResetValidFrom),
+        validTo: @json($vehiclePassResetValidTo),
+    };
+    var hasServerOldInput = @json((bool) old('_token'));
+    var isInitialApplicantHydration = true;
+    var lastApplicantType = null;
+
+    function getCurrentApplicantType() {
+        if (applicantTypeEmployee && applicantTypeEmployee.checked) return 'employee';
+        if (applicantTypeGovernment && applicantTypeGovernment.checked) return 'government_vehicle';
+        if (applicantTypeOthers && applicantTypeOthers.checked) return 'others';
+        return 'others';
+    }
+
+    function clearVehiclePassServerValidationUi() {
+        var form = document.getElementById('vehiclePassForm');
+        if (!form) return;
+        form.querySelectorAll('.invalid-feedback.d-block').forEach(function (el) {
+            el.remove();
+        });
+        form.querySelectorAll('.is-invalid').forEach(function (el) {
+            el.classList.remove('is-invalid');
+        });
+        form.classList.remove('was-validated');
+    }
+
+    function resetVehiclePassSharedFieldsOnApplicantSwitch() {
+        var vt = document.getElementById('vehicle_type');
+        var vn = document.getElementById('vehicle_no');
+        if (vt) vt.value = '';
+        if (vn) vn.value = '';
+        var fromEl = document.getElementById('veh_card_valid_from');
+        var toEl = document.getElementById('vech_card_valid_to');
+        if (fromEl) fromEl.value = vehiclePassCreateDefaults.validFrom;
+        if (toEl) toEl.value = vehiclePassCreateDefaults.validTo;
+        var docInput = document.getElementById('doc_upload');
+        if (docInput) docInput.value = '';
+        if (removeBtn) removeBtn.click();
+        if (othersLookupAbort) {
+            try { othersLookupAbort.abort(); } catch (e) {}
+        }
+        othersLookupIdCardCapYmd = null;
+        setOthersLookupHint('', '');
+    }
+
+    function onApplicantTypeRadioChange() {
+        var cur = getCurrentApplicantType();
+        if (lastApplicantType !== null && cur !== lastApplicantType) {
+            clearVehiclePassServerValidationUi();
+            resetVehiclePassSharedFieldsOnApplicantSwitch();
+        }
+        lastApplicantType = cur;
+        updateApplicantTypeFields();
+    }
 
     function setOthersLookupHint(message, kind) {
         if (!othersLookupHint) return;
@@ -410,6 +467,10 @@
                 empMasterPkInput.value = String(d.emp_master_pk);
             }
             othersLookupIdCardCapYmd = d.id_card_valid_to || null;
+            var validToEl = document.getElementById('vech_card_valid_to');
+            if (validToEl && d.id_card_valid_to && (!validToEl.value || validToEl.value > d.id_card_valid_to)) {
+                validToEl.value = d.id_card_valid_to;
+            }
             syncVehicleDateConstraints();
             setOthersLookupHint(
                 d.id_card_valid_to
@@ -466,21 +527,38 @@
                 setApplicantFields('', '', '', '', false);
             }
         } else {
-            if (empMasterPkInput) empMasterPkInput.value = '';
-            // For "Others" keep fields editable; do not force-readonly
-            setApplicantFields('', '', '', '', false);
+            // On first render after validation error, preserve old input for "Others"/contractual.
+            if (isInitialApplicantHydration && hasServerOldInput) {
+                if (empMasterPkInput) empMasterPkInput.value = empMasterPkInput.value || '';
+                setApplicantFields(
+                    idCardInput ? idCardInput.value : '',
+                    document.getElementById('applicant_name') ? document.getElementById('applicant_name').value : '',
+                    document.getElementById('designation') ? document.getElementById('designation').value : '',
+                    document.getElementById('department') ? document.getElementById('department').value : '',
+                    false
+                );
+            } else {
+                if (empMasterPkInput) empMasterPkInput.value = '';
+                // For "Others" keep fields editable; do not force-readonly
+                setApplicantFields('', '', '', '', false);
+            }
             setOthersLookupHint('', '');
         }
         clearVehiclePassValidToMaxFromIdCard();
         if (typeof syncVehicleDateConstraints === 'function') {
             syncVehicleDateConstraints();
         }
+        isInitialApplicantHydration = false;
     }
 
-    if (applicantTypeEmployee) applicantTypeEmployee.addEventListener('change', updateApplicantTypeFields);
-    if (applicantTypeOthers) applicantTypeOthers.addEventListener('change', updateApplicantTypeFields);
-    if (applicantTypeGovernment) applicantTypeGovernment.addEventListener('change', updateApplicantTypeFields);
+    if (applicantTypeEmployee) applicantTypeEmployee.addEventListener('change', onApplicantTypeRadioChange);
+    if (applicantTypeOthers) applicantTypeOthers.addEventListener('change', onApplicantTypeRadioChange);
+    if (applicantTypeGovernment) applicantTypeGovernment.addEventListener('change', onApplicantTypeRadioChange);
+    lastApplicantType = getCurrentApplicantType();
     updateApplicantTypeFields();
+    if (hasServerOldInput && applicantTypeOthers && applicantTypeOthers.checked && idCardInput && (idCardInput.value || '').trim() !== '') {
+        applyOthersIdCardLookup();
+    }
 
     if (idCardInput) {
         idCardInput.addEventListener('blur', function () {
@@ -526,7 +604,8 @@
         }
 
         var capY = (typeof effectiveVehiclePassIdCardCapYmd === 'function') ? effectiveVehiclePassIdCardCapYmd() : null;
-        if (capY) {
+        // If cap is before today, do not set max: it would be less than min and the browser date UI breaks.
+        if (capY && capY >= todayYmd) {
             fromDateInput.setAttribute('max', capY);
             toDateInput.setAttribute('max', capY);
             if (fromDateInput.value && fromDateInput.value > capY) {
@@ -551,60 +630,19 @@
         toDateInput.addEventListener('change', syncVehicleDateConstraints);
     }
 
-    // Add new vehicle type (modal + AJAX)
-    var addVehicleTypeBtn = document.getElementById('addVehicleTypeBtn');
-    var addVehicleTypeModal = document.getElementById('addVehicleTypeModal');
-    var addVehicleTypeForm = document.getElementById('addVehicleTypeForm');
-    var addVehicleTypeSubmit = document.getElementById('addVehicleTypeSubmit');
-    var addVehicleTypeError = document.getElementById('addVehicleTypeError');
-    var vehicleTypeSelect = document.getElementById('vehicle_type');
-    if (addVehicleTypeBtn && addVehicleTypeModal && vehicleTypeSelect) {
-        addVehicleTypeBtn.addEventListener('click', function() {
-            addVehicleTypeError.classList.add('d-none');
-            addVehicleTypeError.textContent = '';
-            addVehicleTypeForm.reset();
-            var modal = new bootstrap.Modal(addVehicleTypeModal);
-            modal.show();
-        });
-        if (addVehicleTypeSubmit) {
-            addVehicleTypeSubmit.addEventListener('click', function() {
-                var nameInput = document.getElementById('new_vehicle_type_name');
-                var descInput = document.getElementById('new_vehicle_type_description');
-                if (!nameInput || !nameInput.value.trim()) {
-                    addVehicleTypeError.textContent = 'Vehicle type name is required.';
-                    addVehicleTypeError.classList.remove('d-none');
-                    return;
+    var vehiclePassForm = document.getElementById('vehiclePassForm');
+    if (vehiclePassForm && toDateInput) {
+        vehiclePassForm.addEventListener('submit', function (ev) {
+            var capY = (typeof effectiveVehiclePassIdCardCapYmd === 'function') ? effectiveVehiclePassIdCardCapYmd() : null;
+            if (capY && toDateInput.value && toDateInput.value > capY) {
+                ev.preventDefault();
+                if (typeof toastr !== 'undefined') {
+                    toastr.error('End date cannot be later than this employee\'s ID card validity end date.');
+                } else {
+                    alert('End date cannot be later than this employee\'s ID card validity end date.');
                 }
-                addVehicleTypeError.classList.add('d-none');
-                addVehicleTypeSubmit.disabled = true;
-                var formData = new FormData();
-                formData.append('_token', document.querySelector('input[name="_token"]') ? document.querySelector('input[name="_token"]').value : '');
-                formData.append('vehicle_type', nameInput.value.trim());
-                formData.append('description', descInput ? descInput.value.trim() : '');
-                fetch('{{ route("admin.security.vehicle_type.store") }}', {
-                    method: 'POST',
-                    body: formData,
-                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
-                }).then(function(r) { return r.json(); }).then(function(data) {
-                    addVehicleTypeSubmit.disabled = false;
-                    if (data.success && data.data) {
-                        var opt = document.createElement('option');
-                        opt.value = data.data.pk;
-                        opt.textContent = data.data.vehicle_type;
-                        opt.selected = true;
-                        vehicleTypeSelect.appendChild(opt);
-                        bootstrap.Modal.getInstance(addVehicleTypeModal).hide();
-                    } else {
-                        addVehicleTypeError.textContent = data.message || 'Could not add vehicle type.';
-                        addVehicleTypeError.classList.remove('d-none');
-                    }
-                }).catch(function(err) {
-                    addVehicleTypeSubmit.disabled = false;
-                    addVehicleTypeError.textContent = 'Request failed. Please try again.';
-                    addVehicleTypeError.classList.remove('d-none');
-                });
-            });
-        }
+            }
+        });
     }
 })();
 </script>

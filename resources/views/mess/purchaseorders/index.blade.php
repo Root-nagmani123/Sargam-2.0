@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Purchase Orders')
-@section('setup_content')
+@section('content')
 @php
     $canDeletePurchaseOrder = hasRole('Admin') || hasRole('Mess-Admin');
 @endphp

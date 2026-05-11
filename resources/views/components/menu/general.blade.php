@@ -187,8 +187,8 @@
                                     <ul class="collapse list-unstyled ps-3" id="securityRequestsCollapse">
                                         <li class="sidebar-item">
                                             <a class="sidebar-link" href="{{ route('admin.employee_idcard.index') }}">
-                                                <span class="hide-menu small small-sm-normal text-nowrap">ID Card
-                                                    List</span>
+                                                <span class="hide-menu small small-sm-normal text-nowrap">Request ID
+                                                    Card</span>
                                             </a>
                                         </li>
 

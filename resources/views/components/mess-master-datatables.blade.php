@@ -27,6 +27,9 @@
     $columnDefs = count($actionColumnIndices) > 0
         ? [['orderable' => false, 'targets' => $actionColumnIndices]]
         : [];
+    $serverSide = isset($serverSide) ? (bool) $serverSide : false;
+    $ajaxUrlBase = isset($ajaxUrlBase) ? (string) $ajaxUrlBase : '';
+    $serverSideColumnDefs = isset($serverSideColumnDefs) && is_array($serverSideColumnDefs) ? $serverSideColumnDefs : [];
 @endphp
 @if($searchHighlight)
 @push('styles')
@@ -214,9 +217,77 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     var order = {!! json_encode($ordering ? (is_array($orderColumn) ? $orderColumn : [[$orderColumn, $orderDir]]) : []) !!};
-    var columnDefs = {!! json_encode($columnDefs) !!};
+    var columnDefsMerged = {!! json_encode(array_values(array_merge($columnDefs, $serverSideColumnDefs))) !!};
     var lengthMenu = {!! json_encode($lengthMenu) !!};
 
+    @if ($serverSide && $ajaxUrlBase !== '')
+    var columnCount = $firstHeaderRow.children('th,td').length;
+    var ajaxColumns = [];
+    for (var ci = 0; ci < columnCount; ci++) {
+        ajaxColumns.push({
+            data: ci,
+            orderable: false,
+            searchable: false,
+            render: function(data, type) {
+                if (type !== 'display' && type !== 'filter') {
+                    try {
+                        return $('<div>').append($.parseHTML(String(data))).text();
+                    } catch (e) {
+                        return String(data).replace(/<[^>]*>/g, '');
+                    }
+                }
+                return data;
+            }
+        });
+    }
+
+    function sellingVouchersServerDtUrl() {
+        var sep = '{{ $ajaxUrlBase }}'.indexOf('?') === -1 ? '?' : '&';
+        return '{{ $ajaxUrlBase }}' + (window.location.search ? (sep + window.location.search.substring(1)) : '');
+    }
+
+    $table.DataTable({
+        ordering: {{ $ordering ? 'true' : 'false' }},
+        order: order,
+        serverSide: true,
+        processing: true,
+        ajax: {
+            url: sellingVouchersServerDtUrl(),
+            type: 'GET'
+        },
+        columns: ajaxColumns,
+        pageLength: {{ $pageLength }},
+        lengthMenu: lengthMenu,
+        searchDelay: {{ $searchDelay }},
+        search: { smart: {{ $searchSmart ? 'true' : 'false' }} },
+        responsive: {{ $responsive ? 'true' : 'false' }},
+        scrollX: {{ $scrollX ? 'true' : 'false' }},
+        dom: '<"row align-items-center mb-2"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row align-items-center mt-2"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+        language: {
+            search: '',
+            searchPlaceholder: '{{ addslashes($searchPlaceholder) }}',
+            lengthMenu: 'Show _MENU_ entries',
+            info: 'Showing _START_ to _END_ of _TOTAL_ {{ $infoLabel }}',
+            infoEmpty: 'No {{ $infoLabel }}',
+            emptyTable: 'No {{ $infoLabel }}',
+            infoFiltered: '(filtered from _MAX_ total)',
+            paginate: { first: 'First', last: 'Last', next: 'Next', previous: 'Previous' }
+        },
+        columnDefs: columnDefsMerged,
+        drawCallback: function(settings) {
+            if (typeof window.adjustAllDataTables === 'function') {
+                try { window.adjustAllDataTables(); } catch (e) {}
+            }
+            @if ($searchHighlight)
+            if (typeof window.messDataTableApplySearchHighlight === 'function') {
+                try {
+                    window.messDataTableApplySearchHighlight(new $.fn.dataTable.Api(settings), {!! json_encode($searchHighlightExcludeColumnsMerged) !!});
+                } catch (e) {}
+            }
+            @endif
+        }
+    });
+    @else
     $table.DataTable({
         ordering: {{ $ordering ? 'true' : 'false' }},
         order: order,
@@ -237,7 +308,7 @@ document.addEventListener('DOMContentLoaded', function() {
             infoFiltered: '(filtered from _MAX_ total)',
             paginate: { first: 'First', last: 'Last', next: 'Next', previous: 'Previous' }
         },
-        columnDefs: columnDefs,
+        columnDefs: columnDefsMerged,
         drawCallback: function(settings) {
             if (typeof window.adjustAllDataTables === 'function') {
                 try { window.adjustAllDataTables(); } catch (e) {}
@@ -251,6 +322,7 @@ document.addEventListener('DOMContentLoaded', function() {
             @endif
         }
     });
+    @endif
 });
 </script>
 @endpush
