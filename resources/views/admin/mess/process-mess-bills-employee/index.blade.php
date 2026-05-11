@@ -1043,6 +1043,15 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     }
 
+    function focusAddProcessMessBillsModal() {
+        var addModalEl = document.getElementById('addProcessMessBillsModal');
+        if (!addModalEl || typeof bootstrap === 'undefined') return;
+        var wasVisible = addModalEl.classList.contains('show');
+        var addInst = bootstrap.Modal.getOrCreateInstance(addModalEl);
+        addInst.show();
+        if (wasVisible) loadModalBills();
+    }
+
     function getFilteredModalBills() {
         var search = (document.getElementById('modalSearch') || {}).value || '';
         search = String(search).toLowerCase().trim();
@@ -1196,6 +1205,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     document.getElementById('addProcessMessBillsModal').addEventListener('show.bs.modal', function() { loadModalBills(); });
+    var payNowModalForAddRedirect = document.getElementById('payNowModal');
+    if (payNowModalForAddRedirect) {
+        payNowModalForAddRedirect.addEventListener('hidden.bs.modal', function () {
+            focusAddProcessMessBillsModal();
+        });
+    }
     document.getElementById('modalLoadBillsBtn').addEventListener('click', loadModalBills);
     document.getElementById('modalClearFiltersBtn').addEventListener('click', clearModalFilters);
     document.getElementById('modalSearch').addEventListener('input', function() {
@@ -2236,10 +2251,14 @@ document.addEventListener('DOMContentLoaded', function() {
             if (data.success) {
                 showToast('Payment completed for ' + (buyerName || data.client_name) + '.');
                 var payNowModalEl = document.getElementById('payNowModal');
-                if (payNowModalEl && bootstrap.Modal.getInstance(payNowModalEl)) bootstrap.Modal.getInstance(payNowModalEl).hide();
-                var addModalEl = document.getElementById('addProcessMessBillsModal');
-                if (addModalEl && bootstrap.Modal.getInstance(addModalEl)) bootstrap.Modal.getInstance(addModalEl).hide();
-                window.location.reload();
+                var payNowWasOpen = payNowModalEl && payNowModalEl.classList.contains('show');
+                if (payNowModalEl && typeof bootstrap !== 'undefined') {
+                    var payInst = bootstrap.Modal.getInstance(payNowModalEl);
+                    if (payInst) payInst.hide();
+                }
+                if (!payNowWasOpen) {
+                    focusAddProcessMessBillsModal();
+                }
             } else {
                 showToast(data.message || 'Failed to process payment.', 'error');
                 if (btnEl) { btnEl.disabled = false; btnEl.textContent = 'Payment'; }
