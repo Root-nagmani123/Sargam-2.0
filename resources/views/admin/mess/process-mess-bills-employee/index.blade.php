@@ -48,7 +48,7 @@
                     </div>
                     <div>
                         <div class="text-muted small text-uppercase fw-semibold mb-1">Total Bills</div>
-                        <div class="fs-3 fw-bold text-dark">{{ number_format($stats['total_bills']) }}</div>
+                        <div class="fs-3 fw-bold text-dark" id="process-mess-stats-total-bills">{{ number_format($stats['total_bills']) }}</div>
                     </div>
                 </div>
             </div>
@@ -61,7 +61,7 @@
                     </div>
                     <div>
                         <div class="text-muted small text-uppercase fw-semibold mb-1">Unpaid</div>
-                        <div class="fs-3 fw-bold text-dark">{{ number_format($stats['unpaid_count']) }}</div>
+                        <div class="fs-3 fw-bold text-dark" id="process-mess-stats-unpaid">{{ number_format($stats['unpaid_count']) }}</div>
                     </div>
                 </div>
             </div>
@@ -74,7 +74,7 @@
                     </div>
                     <div>
                         <div class="text-muted small text-uppercase fw-semibold mb-1">Paid</div>
-                        <div class="fs-3 fw-bold text-dark">{{ number_format($stats['paid_count']) }}</div>
+                        <div class="fs-3 fw-bold text-dark" id="process-mess-stats-paid">{{ number_format($stats['paid_count']) }}</div>
                     </div>
                 </div>
             </div>
@@ -87,7 +87,7 @@
                     </div>
                     <div>
                         <div class="text-muted small text-uppercase fw-semibold mb-1">Total Amount</div>
-                        <div class="fs-3 fw-bold text-dark">₹ {{ number_format($stats['total_amount'], 2) }}</div>
+                        <div class="fs-3 fw-bold text-dark" id="process-mess-stats-total-amount">₹ {{ number_format($stats['total_amount'], 2) }}</div>
                     </div>
                 </div>
             </div>
@@ -292,6 +292,36 @@
     'serverSide' => true,
     'ajaxUrlBase' => route('admin.mess.process-mess-bills-employee.index'),
 ])
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof window.jQuery === 'undefined') return;
+    var $ = window.jQuery;
+    var $table = $('#processMessBillsTable');
+    if (!$table.length) return;
+    $table.on('xhr.dt', function(e, settings, json) {
+        if (!json || !json.stats) return;
+        var s = json.stats;
+        var fmtInt = function(n) { return String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ','); };
+        var fmtAmt = function(n) {
+            var x = Number(n) || 0;
+            var parts = x.toFixed(2).split('.');
+            parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            return parts.join('.');
+        };
+        var elTotal = document.getElementById('process-mess-stats-total-bills');
+        var elUnpaid = document.getElementById('process-mess-stats-unpaid');
+        var elPaid = document.getElementById('process-mess-stats-paid');
+        var elAmt = document.getElementById('process-mess-stats-total-amount');
+        if (elTotal) elTotal.textContent = fmtInt(s.total_bills);
+        if (elUnpaid) elUnpaid.textContent = fmtInt(s.unpaid_count);
+        if (elPaid) elPaid.textContent = fmtInt(s.paid_count);
+        if (elAmt) elAmt.textContent = '₹ ' + fmtAmt(s.total_amount);
+    });
+});
+</script>
+@endpush
 
 {{-- Toast container for feedback --}}
 <div class="toast-container position-fixed bottom-0 end-0 p-3 no-print" id="processBillsToastContainer"></div>

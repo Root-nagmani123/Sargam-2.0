@@ -47,7 +47,8 @@ class ProcessMessBillsEmployeeController extends Controller
 
     public function index(Request $request)
     {
-        $isDataTableRequest = $request->ajax() && $request->has('draw');
+        // DataTables serverSide sends `draw` on every AJAX request; do not require X-Requested-With.
+        $isDataTableRequest = $request->filled('draw');
         $dateFrom = $request->filled('date_from') ? $this->parseDate($request->date_from) : now()->startOfMonth()->format('Y-m-d');
         $dateTo = $request->filled('date_to') ? $this->parseDate($request->date_to) : now()->endOfMonth()->format('Y-m-d');
         $unionCollation = 'utf8mb4_unicode_ci';
@@ -126,60 +127,34 @@ class ProcessMessBillsEmployeeController extends Controller
         }
         $this->applyBuyerNameFilter($kitchenIssueQuery, $buyerNames);
 
-        [$combinedBills, $bills] = $this->queryAndGroupBillsForProcessIndex(
-            $dateFrom,
-            $dateTo,
-            $dateRangeQuery,
-            $kitchenIssueQuery
-        );
-
-        // Distinct buyer names per type for filters (Employee / OT / Course / Other / Section etc.)
-        $bySlug = $bills->groupBy(function ($bill) {
-            return $this->getBillClientTypeSlug($bill);
-        });
-        $otBuyerNames = isset($bySlug[ClientType::TYPE_OT])
-            ? $bySlug[ClientType::TYPE_OT]->pluck('client_name')->filter()->unique()->sort()->values()
-            : collect();
-        $courseBuyerNames = isset($bySlug[ClientType::TYPE_COURSE])
-            ? $bySlug[ClientType::TYPE_COURSE]->pluck('client_name')->filter()->unique()->sort()->values()
-            : collect();
-        $otherBuyerNames = isset($bySlug['other'])
-            ? $bySlug['other']->pluck('client_name')->filter()->unique()->sort()->values()
-            : collect();
-        $sectionBuyerNames = isset($bySlug['section'])
-            ? $bySlug['section']->pluck('client_name')->filter()->unique()->sort()->values()
-            : collect();
-
-        // All distinct buyer names across both sources (for modal fallback)
-        $allBuyerNames = $combinedBills
-            ->pluck('client_name')
-            ->filter()
-            ->unique()
-            ->sort()
-            ->values();
-
-        // Optional status filter on combined bills (0=Unpaid, 1=Partial, 2=Paid)
-        if ($statusFilter !== null && $statusFilter !== '') {
-            $statusMap = [
-                'unpaid' => 0,
-                'partial' => 1,
-                'paid' => 2,
-                0 => 0,
-                1 => 1,
-                2 => 2,
-            ];
-            $normalized = $statusMap[$statusFilter] ?? null;
-            if ($normalized !== null) {
-                $combinedBills = $combinedBills->where('status', $normalized)->values();
-            }
-        }
-
         $effectiveDateFrom = $request->filled('date_from') ? $request->date_from : now()->startOfMonth()->format('d-m-Y');
         $effectiveDateTo = $request->filled('date_to') ? $request->date_to : now()->endOfMonth()->format('d-m-Y');
         $effectiveDateFromYmd = $dateFrom;
         $effectiveDateToYmd = $dateTo;
 
         if ($isDataTableRequest) {
+            [$combinedBills] = $this->queryAndGroupBillsForProcessIndex(
+                $dateFrom,
+                $dateTo,
+                $dateRangeQuery,
+                $kitchenIssueQuery
+            );
+
+            if ($statusFilter !== null && $statusFilter !== '') {
+                $statusMap = [
+                    'unpaid' => 0,
+                    'partial' => 1,
+                    'paid' => 2,
+                    0 => 0,
+                    1 => 1,
+                    2 => 2,
+                ];
+                $normalized = $statusMap[$statusFilter] ?? null;
+                if ($normalized !== null) {
+                    $combinedBills = $combinedBills->where('status', $normalized)->values();
+                }
+            }
+
             return $this->processMessBillsDatatableResponse(
                 $request,
                 $combinedBills,
@@ -188,17 +163,22 @@ class ProcessMessBillsEmployeeController extends Controller
             );
         }
 
-        // Stats based on (optionally filtered) combined bills (one per buyer)
-        // Stats based on (optionally filtered) combined bills (one per buyer)
+        [
+            $otBuyerNames,
+            $courseBuyerNames,
+            $otherBuyerNames,
+            $sectionBuyerNames,
+            $allBuyerNames,
+        ] = $this->processMessBillsBuyerNameCollectionsFromUnion($dateRangeQuery, $kitchenIssueQuery);
+
+        // Summary cards: populated after the first DataTables AJAX response (see JSON `stats`).
         $stats = [
-            'total_bills' => $combinedBills->count(),
-            'paid_count' => $combinedBills->where('status', 2)->count(),
-            'unpaid_count' => $combinedBills->count() - $combinedBills->where('status', 2)->count(),
-            'total_amount' => (float) $combinedBills->sum('total'),
+            'total_bills' => 0,
+            'paid_count' => 0,
+            'unpaid_count' => 0,
+            'total_amount' => 0.0,
         ];
 
-        // Main listing rows are fetched on pagination/search via AJAX DataTables.
-        // Keep initial HTML light to avoid rendering thousands of rows at once.
         $combinedBills = collect();
 
         // Filters for Client Type / Buyer dropdowns (reuse Sale Voucher Report logic)
@@ -342,6 +322,13 @@ class ProcessMessBillsEmployeeController extends Controller
             }, SORT_REGULAR, $orderDir === 'desc')->values();
         }
 
+        $statsPayload = [
+            'total_bills' => $combinedBills->count(),
+            'paid_count' => $combinedBills->where('status', 2)->count(),
+            'unpaid_count' => $combinedBills->count() - $combinedBills->where('status', 2)->count(),
+            'total_amount' => (float) $combinedBills->sum('total'),
+        ];
+
         $rows = $filteredBills->slice($start, $length)->values();
         $data = [];
         foreach ($rows as $idx => $cb) {
@@ -383,7 +370,44 @@ class ProcessMessBillsEmployeeController extends Controller
             'recordsTotal' => $recordsTotal,
             'recordsFiltered' => $recordsFiltered,
             'data' => $data,
+            'stats' => $statsPayload,
         ]);
+    }
+
+    /**
+     * Distinct buyer names from the union (no model hydration) for filter dropdowns on full page load.
+     *
+     * @return array{0: \Illuminate\Support\Collection, 1: \Illuminate\Support\Collection, 2: \Illuminate\Support\Collection, 3: \Illuminate\Support\Collection, 4: \Illuminate\Support\Collection}
+     */
+    private function processMessBillsBuyerNameCollectionsFromUnion($dateRangeQuery, $kitchenIssueQuery): array
+    {
+        $unionQuery = $dateRangeQuery->union($kitchenIssueQuery);
+        $rows = DB::table(DB::raw("({$unionQuery->toSql()}) as combined_bills"))
+            ->mergeBindings($unionQuery->getQuery())
+            ->select('client_name', 'client_type_slug')
+            ->distinct()
+            ->orderBy('client_name')
+            ->get();
+
+        $bySlug = $rows->groupBy('client_type_slug');
+        $namesForSlug = function (string $slug) use ($bySlug): \Illuminate\Support\Collection {
+            $group = $bySlug->get($slug);
+            if ($group === null) {
+                return collect();
+            }
+
+            return $group->pluck('client_name')->map(fn ($n) => trim((string) $n))->filter()->unique()->sort()->values();
+        };
+
+        $allBuyerNames = $rows->pluck('client_name')->map(fn ($n) => trim((string) $n))->filter()->unique()->sort()->values();
+
+        return [
+            $namesForSlug(ClientType::TYPE_OT),
+            $namesForSlug(ClientType::TYPE_COURSE),
+            $namesForSlug(ClientType::TYPE_OTHER),
+            $namesForSlug(ClientType::TYPE_SECTION),
+            $allBuyerNames,
+        ];
     }
 
     /**
@@ -521,23 +545,48 @@ class ProcessMessBillsEmployeeController extends Controller
             ->limit(5000)
             ->get();
 
-        $bills = $rows->map(function ($bill) use ($dateFrom, $dateTo) {
-            if ($bill->source_type === 'date_range') {
-                $model = SellingVoucherDateRangeReport::with([
-                    'store',
-                    'clientTypeCategory',
-                    'items' => function ($itemQ) use ($dateFrom, $dateTo) {
-                        $this->applySvDateRangeReportItemsIssueDateConstraint($itemQ, $dateFrom, $dateTo);
-                    },
-                    'items.itemSubcategory',
-                ])->find($bill->id);
+        $drIds = [];
+        $kiIds = [];
+        foreach ($rows as $bill) {
+            if (($bill->source_type ?? '') === 'date_range') {
+                $drIds[] = (int) $bill->id;
+            } else {
+                $kiIds[] = (int) $bill->id;
+            }
+        }
+        $drIds = array_values(array_unique(array_filter($drIds)));
+        $kiIds = array_values(array_unique(array_filter($kiIds)));
+
+        $drModels = collect();
+        if ($drIds !== []) {
+            $drModels = SellingVoucherDateRangeReport::with([
+                'store',
+                'clientTypeCategory',
+                'items' => function ($itemQ) use ($dateFrom, $dateTo) {
+                    $this->applySvDateRangeReportItemsIssueDateConstraint($itemQ, $dateFrom, $dateTo);
+                },
+                'items.itemSubcategory',
+            ])->whereIn('id', $drIds)->get()->keyBy('id');
+        }
+
+        $kiModels = collect();
+        if ($kiIds !== []) {
+            $kiModels = KitchenIssueMaster::with(['store', 'clientTypeCategory', 'items'])
+                ->whereIn('pk', $kiIds)
+                ->get()
+                ->keyBy('pk');
+        }
+
+        $bills = $rows->map(function ($bill) use ($drModels, $kiModels) {
+            if (($bill->source_type ?? '') === 'date_range') {
+                $model = $drModels->get((int) $bill->id);
                 if ($model) {
                     $model->setAttribute('source_type', 'date_range');
                 }
 
                 return $model;
             }
-            $model = KitchenIssueMaster::with(['store', 'clientTypeCategory', 'items'])->where('pk', $bill->id)->first();
+            $model = $kiModels->get((int) $bill->id);
             if ($model) {
                 $model->setAttribute('source_type', 'kitchen_issue');
             }
