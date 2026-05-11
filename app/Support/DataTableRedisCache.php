@@ -18,6 +18,7 @@ final class DataTableRedisCache
      * @param  Request|DataTablesUtilitiesRequest  $request  Yajra DataTable exposes {@see DataTablesUtilitiesRequest}, not {@see Request}
      * @param  array{enabled: string, seconds: string}  $envKeys  Full .env key names, e.g. MEMBER_DATATABLE_CACHE_ENABLED
      * @param  callable(): JsonResponse  $parentAjax  Typically `fn () => parent::ajax()`
+     * @param  array<string, mixed>  $extraFingerprint  Merged into fingerprint (e.g. custom ajax params from {@see preXhr.dt})
      */
     public static function serveCachedAjax(
         Request|DataTablesUtilitiesRequest $request,
@@ -25,10 +26,14 @@ final class DataTableRedisCache
         string $listEpochKey,
         array $envKeys,
         string $logLabel,
-        callable $parentAjax
+        callable $parentAjax,
+        array $extraFingerprint = []
     ): JsonResponse {
         $draw = (int) $request->input('draw', 0);
         $fingerprint = self::requestFingerprint($request, self::readListEpoch($listEpochKey));
+        if ($extraFingerprint !== []) {
+            $fingerprint['extra'] = $extraFingerprint;
+        }
         $cacheKey = $v1KeyPrefix . md5(json_encode($fingerprint));
 
         $payload = self::remember(

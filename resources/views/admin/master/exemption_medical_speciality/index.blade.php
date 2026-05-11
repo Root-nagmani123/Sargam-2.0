@@ -26,7 +26,7 @@
                     </div>
                     <hr>
                     <div class="table-responsive">
-                        <table class="table" id="exemptionCategoryeditForm">
+                        <table class="table" id="exemptionMedicalSpecialityTable">
                             <thead>
                                 <!-- start row -->
                                 <tr>
@@ -52,47 +52,54 @@
 @section('scripts')
 <script>
     $(function() {
-        let table = $('#exemptionCategoryeditForm').DataTable({
-            processing: true,
-            serverSide: true,
-            searching: true,
-            ajax: {
-                url: "{{ route('master.exemption.medical.speciality.exemption_med_spec_mst') }}",
-                data: function(d) {
-                    d.pk = $('#pk').val();
-                    d.active_inactive = $('#active_inactive').val();
-                    // console.log('jjj');
-                }
-            },
-            columns: [{
-                    data: 'DT_RowIndex',
-                    name: 'DT_RowIndex',
-                    orderable: false,
-                    searchable: false
-                },
-                {
-                    data: 'speciality_name',
-                    name: 'speciality_name'
-                },
-                {
-                    data: 'created_date',
-                    name: 'created_date'
-                },
-                {
-                    data: 'status',
-                    name: 'status',
-                    orderable: false,
-                    searchable: false
-                },
-                {
-                    data: 'action',
-                    name: 'action',
-                    orderable: false,
-                    searchable: false
-                }
-            ]
+        const tableSelector = '#exemptionMedicalSpecialityTable';
+        let table;
 
-        });
+        if ($.fn.DataTable.isDataTable(tableSelector)) {
+            table = $(tableSelector).DataTable();
+        } else {
+            table = $(tableSelector).DataTable({
+                processing: true,
+                serverSide: true,
+                searching: true,
+                ajax: {
+                    url: "{{ route('master.exemption.medical.speciality.exemption_med_spec_mst') }}",
+                    data: function(d) {
+                        d.pk = $('#pk').val();
+                        d.active_inactive = $('#active_inactive').val();
+                        // console.log('jjj');
+                    }
+                },
+                columns: [{
+                        data: 'DT_RowIndex',
+                        name: 'DT_RowIndex',
+                        orderable: false,
+                        searchable: false
+                    },
+                    {
+                        data: 'speciality_name',
+                        name: 'speciality_name'
+                    },
+                    {
+                        data: 'created_date',
+                        name: 'created_date'
+                    },
+                    {
+                        data: 'status',
+                        name: 'status',
+                        orderable: false,
+                        searchable: false
+                    },
+                    {
+                        data: 'action',
+                        name: 'action',
+                        orderable: false,
+                        searchable: false
+                    }
+                ]
+
+            });
+        }
 
         $(document).on('change', '.plain-status-toggle', function() {
             var checkbox = $(this); // save reference
@@ -290,7 +297,7 @@ document.getElementById('showAlert').addEventListener('click', function () {
             });
 
             // reload datatable / page if needed
-             $('#exemptionCategoryeditForm').DataTable().ajax.reload();
+             $('#exemptionMedicalSpecialityTable').DataTable().ajax.reload();
         }
     });
 });
@@ -412,7 +419,7 @@ $(document).on('click', '.edit-btn', function () {
             });
 
             // Reload datatable if exists
-            $('#exemptionCategoryeditForm').DataTable().ajax.reload(null, false);
+            $('#exemptionMedicalSpecialityTable').DataTable().ajax.reload(null, false);
         }
     });
 });

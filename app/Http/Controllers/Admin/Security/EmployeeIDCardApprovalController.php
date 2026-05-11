@@ -9,6 +9,7 @@ use App\Models\SecurityDupPermIdApply;
 use App\Models\SecurityDupPermIdApplyApproval;
 use App\Models\SecurityDupOtherIdApply;
 use App\Models\SecurityDupOtherIdApplyApproval;
+use App\Support\DataTableRedisCache;
 use App\Support\IdCardSecurityMapper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -23,6 +24,13 @@ use Illuminate\Pagination\LengthAwarePaginator;
  */
 class EmployeeIDCardApprovalController extends Controller
 {
+    private const APPROVAL1_LIST_EPOCH_KEY = 'employee_idcard_approval1_list_epoch';
+
+    public static function bumpApproval1ListCacheEpoch(): void
+    {
+        DataTableRedisCache::bumpListEpoch(self::APPROVAL1_LIST_EPOCH_KEY, 'EmployeeIDCardApprovalController@approval1');
+    }
+
     /**
      * Approval I: Only contractual employee requests where current user is the Approval Authority.
      * Includes:
@@ -36,6 +44,51 @@ class EmployeeIDCardApprovalController extends Controller
         $user = Auth::user();
         $currentEmployeePk = $user->user_id ?? $user->pk ?? null;
 
+        $epoch = DataTableRedisCache::readListEpoch(self::APPROVAL1_LIST_EPOCH_KEY);
+        $cacheKey = 'employee_idcard_approval1:v1:' . md5(json_encode([
+            'epoch' => $epoch,
+            'emp_pk' => $currentEmployeePk,
+            'search' => $request->get('search'),
+            'date_from' => $request->get('date_from'),
+            'date_to' => $request->get('date_to'),
+            'card_type' => $request->get('card_type'),
+        ]));
+
+        $payload = DataTableRedisCache::remember(
+            $cacheKey,
+            [
+                'enabled' => 'EMPLOYEE_IDCARD_APPROVAL1_CACHE_ENABLED',
+                'seconds' => 'EMPLOYEE_IDCARD_APPROVAL1_CACHE_SECONDS',
+            ],
+            'EmployeeIDCardApprovalController@approval1',
+            fn () => $this->buildApproval1ListPayload($request, $currentEmployeePk)
+        );
+
+        $merged = $payload['merged'] ?? collect();
+        if (! $merged instanceof \Illuminate\Support\Collection) {
+            $merged = collect($merged);
+        }
+        $cardTypes = $payload['cardTypes'] ?? [];
+
+        $perPage = (int) $request->get('per_page', 10);
+        $perPage = in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 10;
+        $page = (int) $request->get('page', 1);
+        $requests = new LengthAwarePaginator(
+            $merged->forPage($page, $perPage),
+            $merged->count(),
+            $perPage,
+            $page,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+
+        return view('admin.security.employee_idcard_approval.approval1', compact('requests', 'cardTypes'));
+    }
+
+    /**
+     * @return array{merged: \Illuminate\Support\Collection, cardTypes: array}
+     */
+    private function buildApproval1ListPayload(Request $request, $currentEmployeePk): array
+    {
         // Contractual regular ID Card requests - Approval 1
         $contA1Done = DB::table('security_con_oth_id_apply_approval')
             ->where('status', 1)
@@ -108,7 +161,7 @@ class EmployeeIDCardApprovalController extends Controller
             ->where('card_type', 'Contractual')
             // Approval-I scope: requests assigned to current authority
             ->where('department_approval_emp_pk', $currentEmployeePk);
-            
+
         // (No whereNotIn here: we want already-approved rows to still appear as view-only.)
         $dupContQuery->orderByDesc('created_date');
 
@@ -176,20 +229,9 @@ class EmployeeIDCardApprovalController extends Controller
 
         $merged = $contDtos->concat($dupContDtos)->sortByDesc('created_at')->values();
 
-        $perPage = (int) $request->get('per_page', 10);
-        $perPage = in_array($perPage, [10, 25, 50, 100]) ? $perPage : 10;
-        $page = (int) $request->get('page', 1);
-        $requests = new LengthAwarePaginator(
-            $merged->forPage($page, $perPage),
-            $merged->count(),
-            $perPage,
-            $page,
-            ['path' => $request->url(), 'query' => $request->query()]
-        );
-
         $cardTypes = DB::table('sec_id_cardno_master')->orderBy('sec_card_name')->pluck('sec_card_name', 'pk')->toArray();
 
-        return view('admin.security.employee_idcard_approval.approval1', compact('requests', 'cardTypes'));
+        return ['merged' => $merged, 'cardTypes' => $cardTypes];
     }
 
     public function approval2(Request $request)
@@ -757,6 +799,7 @@ class EmployeeIDCardApprovalController extends Controller
             DB::table('security_dup_other_id_apply')
                 ->where('emp_id_apply', $applyId)
                 ->update(['id_card_generate_date' => $now]);
+            self::bumpApproval1ListCacheEpoch();
             return redirect()->back()->with('success', 'Record moved to archive successfully.');
         }
 
@@ -773,6 +816,7 @@ class EmployeeIDCardApprovalController extends Controller
             DB::table('security_con_oth_id_apply')
                 ->where('pk', $pk)
                 ->update(['id_card_generate_date' => $now]);
+            self::bumpApproval1ListCacheEpoch();
             return redirect()->back()->with('success', 'Record moved to archive successfully.');
         }
 
@@ -1478,6 +1522,8 @@ class EmployeeIDCardApprovalController extends Controller
                 'modified_date' => now()->format('Y-m-d H:i:s'),
             ]);
 
+            self::bumpApproval1ListCacheEpoch();
+
             return redirect()->route('admin.security.employee_idcard_approval.approval1')
                 ->with('success', 'Contractual duplicate ID Card request approved at Level 1 and forwarded to Security for further approval.');
          }
@@ -1523,6 +1569,8 @@ class EmployeeIDCardApprovalController extends Controller
                 ]);
                
 
+            self::bumpApproval1ListCacheEpoch();
+
             return redirect()->route('admin.security.employee_idcard_approval.approval1')
                 ->with('success', 'Contractual ID Card request approved at Level 1 and forwarded to Security for further approval.');
         }
@@ -1545,6 +1593,8 @@ class EmployeeIDCardApprovalController extends Controller
             'modified_by' => $employeePk,
             'modified_date' => now()->format('Y-m-d H:i:s'),
         ]);
+
+        self::bumpApproval1ListCacheEpoch();
 
         return redirect()->route('admin.security.employee_idcard_approval.approval1')
             ->with('success', 'Request approved successfully. It will now move to Approver 2.');
@@ -2141,6 +2191,9 @@ class EmployeeIDCardApprovalController extends Controller
             $route = $stage === 1
                 ? 'admin.security.employee_idcard_approval.approval1'
                 : ($stage === 2 ? 'admin.security.employee_idcard_approval.approval2' : 'admin.security.employee_idcard_approval.approval3');
+            if ($stage === 1) {
+                self::bumpApproval1ListCacheEpoch();
+            }
             return redirect()->route($route)->with('success', 'Request rejected.');
         }
 
@@ -2231,6 +2284,9 @@ class EmployeeIDCardApprovalController extends Controller
             $route = $stage === 1
                 ? 'admin.security.employee_idcard_approval.approval1'
                 : ($stage === 2 ? 'admin.security.employee_idcard_approval.approval2' : 'admin.security.employee_idcard_approval.approval3');
+            if ($stage === 1) {
+                self::bumpApproval1ListCacheEpoch();
+            }
             return redirect()->route($route)->with('success', 'Request rejected.');
         }
 
@@ -2271,6 +2327,9 @@ class EmployeeIDCardApprovalController extends Controller
         $route = $stage === 1
             ? 'admin.security.employee_idcard_approval.approval1'
             : ($stage === 2 ? 'admin.security.employee_idcard_approval.approval2' : 'admin.security.employee_idcard_approval.approval3');
+        if ($stage === 1) {
+            self::bumpApproval1ListCacheEpoch();
+        }
         return redirect()->route($route)->with('success', 'Request rejected.');
     }
 
