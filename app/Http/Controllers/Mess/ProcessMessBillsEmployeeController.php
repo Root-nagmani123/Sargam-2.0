@@ -715,6 +715,48 @@ class ProcessMessBillsEmployeeController extends Controller
     }
 
     /**
+     * True if a MessInvoice notification was already sent for this bill reference and receiver.
+     */
+    private function messSingleInvoiceAlreadySent(int $receiverUserId, int $referencePk): bool
+    {
+        if ($receiverUserId <= 0 || $referencePk <= 0) {
+            return false;
+        }
+
+        return Notification::query()
+            ->where('type', 'mess')
+            ->where('module_name', 'MessInvoice')
+            ->where('receiver_user_id', $receiverUserId)
+            ->where('reference_pk', $referencePk)
+            ->exists();
+    }
+
+    /**
+     * True if a MessInvoiceCombined notification exists for this combined id and receiver.
+     */
+    private function messCombinedInvoiceAlreadySent(int $receiverUserId, string $combinedId): bool
+    {
+        if ($receiverUserId <= 0 || $combinedId === '') {
+            return false;
+        }
+
+        $notifications = Notification::query()
+            ->where('type', 'mess')
+            ->where('module_name', 'MessInvoiceCombined')
+            ->where('receiver_user_id', $receiverUserId)
+            ->get(['message']);
+
+        foreach ($notifications as $n) {
+            $parsed = NotificationService::parseMessCombinedReceiptPayload($n->message);
+            if ($parsed !== null && $parsed['i'] === $combinedId) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Get summary statistics for mess bills (Employee, OT, Course, Other) in the given date range.
      */
     private function getSummaryStats(?string $dateFrom, ?string $dateTo, ?string $search, ?string $clientType = null, ?string $buyerName = null): array
@@ -1463,6 +1505,12 @@ class ProcessMessBillsEmployeeController extends Controller
                     'message' => 'Invoice generated, but notification could not be sent because user mapping was not found.',
                 ], 422);
             }
+            if ($this->messCombinedInvoiceAlreadySent((int) $receiverUserId, (string) $id)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Already sent invoice.',
+                ], 422);
+            }
             $dateFromYmd = $request->filled('date_from')
                 ? $this->parseDate($request->date_from)
                 : now()->startOfMonth()->format('Y-m-d');
@@ -1508,6 +1556,12 @@ class ProcessMessBillsEmployeeController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Invoice generated, but notification could not be sent because user mapping was not found.',
+            ], 422);
+        }
+        if ($this->messSingleInvoiceAlreadySent((int) $receiverUserId, (int) $billId)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Already sent invoice.',
             ], 422);
         }
         try {

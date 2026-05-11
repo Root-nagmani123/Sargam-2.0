@@ -1091,6 +1091,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 var statusCell = b.invoice_notification_sent
                     ? '<span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle fw-semibold">Invoice Sent</span>'
                     : '<span class="text-muted small">—</span>';
+                var invoiceSent = !!b.invoice_notification_sent;
+                var invoiceBtnClass = invoiceSent ? 'btn btn-outline-secondary generate-invoice-btn' : 'btn btn-outline-primary generate-invoice-btn';
+                var invoiceBtnAttrs = 'data-bill-id="' + b.id + '" data-buyer-name="' + (b.buyer_name || '').replace(/"/g, '&quot;') + '" title="' + (invoiceSent ? 'Invoice already sent' : 'Generate Invoice') + '"' + (invoiceSent ? ' disabled data-invoice-sent="1"' : '');
                 return '<tr class="' + (i % 2 === 0 ? 'table-light' : '') + '">' +
                     '<td><input type="checkbox" class="form-check-input modal-bill-check" data-id="' + b.id + '" data-name="' + (b.buyer_name || '').replace(/"/g, '&quot;') + '"></td>' +
                     '<td>' + sn + '</td>' +
@@ -1100,7 +1103,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     '<td class="text-end">' + (b.total || '0') + '</td>' +
                     '<td class="text-center">' + statusCell + '</td>' +
                     '<td class="text-center"><div class="btn-group btn-group-sm">' +
-                    '<button type="button" class="btn btn-outline-primary generate-invoice-btn" data-bill-id="' + b.id + '" data-buyer-name="' + (b.buyer_name || '').replace(/"/g, '&quot;') + '" title="Generate Invoice">Invoice</button>' +
+                    '<button type="button" class="' + invoiceBtnClass + '" ' + invoiceBtnAttrs + '>Invoice</button>' +
                     '<button type="button" class="btn btn-outline-success generate-payment-btn" data-bill-id="' + b.id + '" data-buyer-name="' + (b.buyer_name || '').replace(/"/g, '&quot;') + '" title="Mark as Paid">Payment</button>' +
                     '</div></td>' +
                     '<td class="text-center"><a href="' + printUrl + '" target="_blank" class="btn  btn-outline-secondary" title="Print receipt"><i class="material-symbols-rounded" style="font-size:1.1rem;">receipt</i></a></td>' +
@@ -2419,6 +2422,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (invoiceBtn) {
             e.preventDefault();
             e.stopPropagation();
+            if (invoiceBtn.disabled || invoiceBtn.getAttribute('data-invoice-sent') === '1') {
+                showToast('Already sent invoice.', 'error');
+                return;
+            }
             var billId = invoiceBtn.getAttribute('data-bill-id');
             var buyerName = invoiceBtn.getAttribute('data-buyer-name') || '';
             if (confirm('Generate invoice and send notification to ' + (buyerName || 'this employee') + '?')) {
@@ -2448,13 +2455,23 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('modalBulkInvoiceBtn').addEventListener('click', function() {
         var ids = Array.from(document.querySelectorAll('#addProcessMessBillsModal .modal-bill-check:checked')).map(function(c) { return c.getAttribute('data-id'); });
         if (ids.length === 0) { showToast('Select at least one bill.', 'error'); return; }
-        if (!confirm('Generate invoice for ' + ids.length + ' selected bill(s)?')) return;
-        var done = 0;
-        ids.forEach(function(id) {
-            doGenerateInvoice(id, '', null);
-            done++;
+        var toSend = ids.filter(function(id) {
+            var b = (modalBillsData || []).find(function(x) { return String(x.id) === String(id); });
+            return !b || !b.invoice_notification_sent;
         });
-        showToast('Processing ' + ids.length + ' invoice(s)...');
+        var skipped = ids.length - toSend.length;
+        if (toSend.length === 0) {
+            showToast('Already sent invoice.', 'error');
+            return;
+        }
+        if (!confirm('Generate invoice for ' + toSend.length + ' selected bill(s)?')) return;
+        if (skipped > 0) {
+            showToast('Skipping ' + skipped + ' bill(s): already sent invoice.', 'error');
+        }
+        toSend.forEach(function(id) {
+            doGenerateInvoice(id, '', null);
+        });
+        showToast('Processing ' + toSend.length + ' invoice(s)...');
     });
 
     document.getElementById('modalBulkPaymentBtn').addEventListener('click', function() {
