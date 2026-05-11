@@ -1463,17 +1463,27 @@ class ProcessMessBillsEmployeeController extends Controller
         $clientTypePk = $request->filled('client_type_pk') ? $request->client_type_pk : null;
         $buyerNames = $this->normalizeBuyerNames($request->input('buyer_name'));
         $buyerName = $buyerNames[0] ?? null;
+        $page = max(1, (int) $request->input('page', 1));
+        $perPage = (int) $request->input('per_page', 10);
+        if ($perPage < 1 || $perPage > 100) {
+            $perPage = 10;
+        }
+        $search = trim((string) $request->input('search', ''));
+        $unionCollation = 'utf8mb4_unicode_ci';
 
         // Query 1: Selling Voucher with Date Range
         $dateRangeSlugs = $clientType ? [$clientType] : self::ALLOWED_CLIENT_SLUGS;
-        $dateRangeQuery = SellingVoucherDateRangeReport::with([
-            'store',
-            'clientTypeCategory',
-            'items' => function ($itemQ) use ($dateFrom, $dateTo) {
-                $this->applySvDateRangeReportItemsIssueDateConstraint($itemQ, $dateFrom, $dateTo);
-            },
-            'items.itemSubcategory',
-        ])
+        $dateRangeQuery = SellingVoucherDateRangeReport::query()
+            ->select([
+                'id',
+                DB::raw("CONVERT(client_name USING utf8mb4) COLLATE {$unionCollation} as client_name"),
+                'issue_date',
+                DB::raw("CONVERT(client_type_slug USING utf8mb4) COLLATE {$unionCollation} as client_type_slug"),
+                'client_type_pk',
+                'payment_type',
+                'status',
+                DB::raw("CONVERT('date_range' USING utf8mb4) COLLATE {$unionCollation} as source_type"),
+            ])
             ->whereIn('client_type_slug', $dateRangeSlugs)
             ->where('status', '!=', 2); // Only unpaid bills
 
@@ -1487,7 +1497,17 @@ class ProcessMessBillsEmployeeController extends Controller
         $kitchenClientTypes = $clientType
             ? [$this->clientTypeSlugToKitchenId($clientType)]
             : self::ALLOWED_KITCHEN_CLIENT_TYPES;
-        $kitchenIssueQuery = KitchenIssueMaster::with(['store', 'clientTypeCategory', 'items'])
+        $kitchenIssueQuery = KitchenIssueMaster::query()
+            ->select([
+                'pk as id',
+                DB::raw("CONVERT(client_name USING utf8mb4) COLLATE {$unionCollation} as client_name"),
+                'issue_date',
+                DB::raw("CONVERT((CASE client_type WHEN 1 THEN 'employee' WHEN 2 THEN 'ot' WHEN 3 THEN 'course' WHEN 4 THEN 'other' WHEN 5 THEN 'section' END) USING utf8mb4) COLLATE {$unionCollation} as client_type_slug"),
+                'client_type_pk',
+                'payment_type',
+                'status',
+                DB::raw("CONVERT('kitchen_issue' USING utf8mb4) COLLATE {$unionCollation} as source_type"),
+            ])
             ->whereIn('client_type', $kitchenClientTypes)
             ->whereIn('kitchen_issue_type', self::KITCHEN_MESS_SELLING_ISSUE_TYPES)
             ->where('status', '!=', 2); // Only unpaid bills
@@ -1503,17 +1523,110 @@ class ProcessMessBillsEmployeeController extends Controller
             $kitchenIssueQuery->where('issue_date', '<=', $dateTo);
         }
 
-        // Get both types and group by buyer (one combined bill per user)
-        $dateRangeBills = $dateRangeQuery->get();
-        $kitchenIssueBills = $kitchenIssueQuery->get();
-        $allBills = $dateRangeBills->concat($kitchenIssueBills)->sortByDesc('issue_date');
-        $combinedBills = $this->groupBillsByBuyer($allBills);
+        $unionQuery = $dateRangeQuery->union($kitchenIssueQuery);
+        $rows = DB::table(DB::raw("({$unionQuery->toSql()}) as combined_bills"))
+            ->mergeBindings($unionQuery->getQuery())
+            ->orderBy('issue_date', 'desc')
+            ->orderBy('id', 'desc')
+            ->limit(5000)
+            ->get();
 
         $paymentTypeMap = [0 => 'Cash', 1 => 'Deduct From Salary', 2 => 'Online', 5 => 'Deduct From Salary'];
+        $groupedRows = $rows->groupBy(function ($bill) {
+            $name = trim((string) ($bill->client_name ?? ''));
+            $slug = (string) ($bill->client_type_slug ?? 'employee');
+            return $name . '|' . $slug;
+        })->values();
+
+        if ($search !== '') {
+            $needle = mb_strtolower($search);
+            $groupedRows = $groupedRows->filter(function ($group) use ($needle, $paymentTypeMap) {
+                $first = $group->first();
+                $buyerName = trim((string) ($first->client_name ?? ''));
+                $clientTypeSlug = (string) ($first->client_type_slug ?? 'employee');
+                $invoiceNo = $this->generateCombinedInvoiceNo($buyerName, $clientTypeSlug);
+                $paymentType = $paymentTypeMap[$first->payment_type ?? 1] ?? '—';
+                $haystack = mb_strtolower($buyerName . ' ' . $invoiceNo . ' ' . $paymentType);
+
+                return str_contains($haystack, $needle);
+            })->values();
+        }
+
+        $total = $groupedRows->count();
+        if ($total > 0 && (($page - 1) * $perPage) >= $total) {
+            $page = (int) ceil($total / $perPage);
+        }
+        $offset = ($page - 1) * $perPage;
+        $pageGroups = $groupedRows->slice($offset, $perPage)->values();
+        $pageGroupOrder = [];
+        $drIds = [];
+        $kiIds = [];
+        foreach ($pageGroups as $groupIndex => $group) {
+            $first = $group->first();
+            $buyerName = trim((string) ($first->client_name ?? ''));
+            $clientTypeSlug = (string) ($first->client_type_slug ?? 'employee');
+            $pageGroupOrder[$buyerName . '|' . $clientTypeSlug] = $groupIndex;
+            foreach ($group as $bill) {
+                if (($bill->source_type ?? '') === 'date_range') {
+                    $drIds[] = (int) $bill->id;
+                } else {
+                    $kiIds[] = (int) $bill->id;
+                }
+            }
+        }
+
+        $drModels = collect();
+        $drIds = array_values(array_unique(array_filter($drIds)));
+        if ($drIds !== []) {
+            $drModels = SellingVoucherDateRangeReport::with([
+                'store',
+                'clientTypeCategory',
+                'items' => function ($itemQ) use ($dateFrom, $dateTo) {
+                    $this->applySvDateRangeReportItemsIssueDateConstraint($itemQ, $dateFrom, $dateTo);
+                },
+                'items.itemSubcategory',
+            ])->whereIn('id', $drIds)->get()->keyBy('id');
+        }
+
+        $kiModels = collect();
+        $kiIds = array_values(array_unique(array_filter($kiIds)));
+        if ($kiIds !== []) {
+            $kiModels = KitchenIssueMaster::with(['store', 'clientTypeCategory', 'items'])
+                ->whereIn('pk', $kiIds)
+                ->get()
+                ->keyBy('pk');
+        }
+
+        $pageBills = $pageGroups->flatMap(function ($group) use ($drModels, $kiModels) {
+            return $group->map(function ($bill) use ($drModels, $kiModels) {
+                if (($bill->source_type ?? '') === 'date_range') {
+                    $model = $drModels->get((int) $bill->id);
+                    if ($model) {
+                        $model->setAttribute('source_type', 'date_range');
+                    }
+
+                    return $model;
+                }
+
+                $model = $kiModels->get((int) $bill->id);
+                if ($model) {
+                    $model->setAttribute('source_type', 'kitchen_issue');
+                }
+
+                return $model;
+            })->filter();
+        })->values();
+
+        $combinedBills = $this->groupBillsByBuyer($pageBills)
+            ->sortBy(function ($cb) use ($pageGroupOrder) {
+                $key = trim((string) ($cb->buyer_name ?? '')) . '|' . (string) ($cb->bills->first() ? $this->getBillClientTypeSlug($cb->bills->first()) : 'employee');
+                return $pageGroupOrder[$key] ?? PHP_INT_MAX;
+            })
+            ->values();
 
         $invoiceSentKeys = $this->messCombinedInvoiceNotificationSentKeys($combinedBills);
 
-        $rows = $combinedBills->map(function ($cb, $index) use ($paymentTypeMap, $invoiceSentKeys, $dateFrom, $dateTo) {
+        $rows = $combinedBills->map(function ($cb, $index) use ($paymentTypeMap, $invoiceSentKeys, $dateFrom, $dateTo, $offset) {
             $invoiceNo = $cb->combined_invoice_no ?? ('CB-' . date('Ymd') . '-' . str_pad((string) ($index + 1), 5, '0', STR_PAD_LEFT));
             $receiverId = $this->resolveReceiverUserIdFromAnyBill($cb->bills->all());
             $sentKey = ($receiverId !== null && $receiverId > 0)
@@ -1525,7 +1638,7 @@ class ProcessMessBillsEmployeeController extends Controller
                 'id' => $cb->combined_id,
                 'bill_id' => $cb->combined_id,
                 'slip_no' => $invoiceNo,
-                'sno' => $index + 1,
+                'sno' => $offset + $index + 1,
                 'buyer_name' => $cb->buyer_name,
                 'invoice_no' => $invoiceNo,
                 'payment_type' => $cb->payment_type,
@@ -1539,7 +1652,16 @@ class ProcessMessBillsEmployeeController extends Controller
             ];
         })->values();
 
-        return response()->json(['bills' => $rows]);
+        return response()->json([
+            'bills' => $rows,
+            'pagination' => [
+                'page' => $page,
+                'per_page' => $perPage,
+                'total' => $total,
+                'from' => $total ? $offset + 1 : 0,
+                'to' => min($offset + $perPage, $total),
+            ],
+        ]);
     }
 
     /**

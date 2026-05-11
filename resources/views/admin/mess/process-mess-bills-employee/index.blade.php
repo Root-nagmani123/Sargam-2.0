@@ -966,6 +966,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     var modalBillsData = [];
     var modalBillsCurrentPage = 1;
+    var modalBillsTotal = 0;
+    var modalBillsFrom = 0;
+    var modalBillsTo = 0;
+    var modalAllBuyerNames = {!! json_encode(($allBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
     var paymentDetailsBillId = null;
     var paymentDetailsDateFrom = null;
     var paymentDetailsDateTo = null;
@@ -1004,8 +1008,9 @@ document.addEventListener('DOMContentLoaded', function() {
         toastEl.addEventListener('hidden.bs.toast', function() { toastEl.remove(); });
     }
 
-    function loadModalBills() {
-        modalBillsCurrentPage = 1;
+    function loadModalBills(page) {
+        var requestedPage = parseInt(page, 10);
+        modalBillsCurrentPage = isNaN(requestedPage) ? 1 : Math.max(1, requestedPage);
         var ct = document.getElementById('modal_client_type');
         var ctp = document.getElementById('modal_client_type_pk');
         var bn = document.getElementById('modal_buyer_name');
@@ -1013,10 +1018,14 @@ document.addEventListener('DOMContentLoaded', function() {
         var dateTo = getModalDateYmd('modal_date_to');
         var clientType = (ct && ct.value) ? ct.value : '';
         var clientTypePk = (ctp && ctp.value) ? ctp.value : '';
+        var perPage = parseInt((document.getElementById('modalPerPage') || {}).value || 10, 10);
+        var modalSearch = (document.getElementById('modalSearch') || {}).value || '';
         var buyerNames = bn
             ? Array.from(bn.selectedOptions || []).map(function (o) { return String(o.value || '').trim(); }).filter(Boolean)
             : [];
         var url = '{{ route("admin.mess.process-mess-bills-employee.modal-data") }}?date_from=' + encodeURIComponent(dateFrom) + '&date_to=' + encodeURIComponent(dateTo);
+        url += '&page=' + encodeURIComponent(modalBillsCurrentPage) + '&per_page=' + encodeURIComponent(perPage);
+        if (modalSearch) url += '&search=' + encodeURIComponent(modalSearch);
         if (clientType) url += '&client_type=' + encodeURIComponent(clientType);
         if (clientTypePk) url += '&client_type_pk=' + encodeURIComponent(clientTypePk);
         if (buyerNames.length) {
@@ -1028,20 +1037,25 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 modalBillsData = data.bills || [];
+                var pagination = data.pagination || {};
+                modalBillsTotal = parseInt(pagination.total || modalBillsData.length || 0, 10);
+                modalBillsFrom = parseInt(pagination.from || (modalBillsTotal ? 1 : 0), 10);
+                modalBillsTo = parseInt(pagination.to || modalBillsData.length || 0, 10);
+                modalBillsCurrentPage = parseInt(pagination.page || modalBillsCurrentPage || 1, 10);
                 renderModalTable();
 
                 // Also refresh Buyer Name dropdown in modal based on loaded bills.
                 // IMPORTANT: Only do this when no client type is selected, otherwise it
                 // overrides the dependent "Client Type -> Buyer Name" behavior.
-                if (clientType) {
+                if (clientType || modalBillsCurrentPage > 1 || modalSearch) {
                     return;
                 }
                 try {
                     var buyerSelect = document.getElementById('modal_buyer_name');
                     if (buyerSelect) {
                         var buyers = Array.from(new Set(
-                            (modalBillsData || [])
-                                .map(function (b) { return b.buyer_name || b.client_name || ''; })
+                            ((modalAllBuyerNames || []).length ? modalAllBuyerNames : (modalBillsData || [])
+                                .map(function (b) { return b.buyer_name || b.client_name || ''; }))
                                 .filter(function (name) { return !!name; })
                         ));
 
@@ -1068,6 +1082,9 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(function() {
                 modalBillsData = [];
+                modalBillsTotal = 0;
+                modalBillsFrom = 0;
+                modalBillsTo = 0;
                 renderModalTable();
                 showToast('Failed to load bills.', 'error');
             });
@@ -1083,16 +1100,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function getFilteredModalBills() {
-        var search = (document.getElementById('modalSearch') || {}).value || '';
-        search = String(search).toLowerCase().trim();
-        return modalBillsData.filter(function(b) {
-            if (!search) return true;
-            return (b.buyer_name || '').toLowerCase().indexOf(search) >= 0 ||
-                   String(b.invoice_no || '').indexOf(search) >= 0 ||
-                   (b.payment_type || '').toLowerCase().indexOf(search) >= 0 ||
-                   String(b.total || '').indexOf(search) >= 0 ||
-                   (b.invoice_notification_sent && 'invoice sent'.indexOf(search) >= 0);
-        });
+        return modalBillsData || [];
     }
 
     function updateModalPaginationNav(totalPages, filteredLength) {
@@ -1125,16 +1133,16 @@ document.addEventListener('DOMContentLoaded', function() {
         if (modalSelectAllEl) modalSelectAllEl.checked = false;
         var filtered = getFilteredModalBills();
         var perPage = parseInt((document.getElementById('modalPerPage') || {}).value || 10, 10);
-        var totalPages = filtered.length ? Math.ceil(filtered.length / perPage) : 0;
+        var totalPages = modalBillsTotal ? Math.ceil(modalBillsTotal / perPage) : 0;
         modalBillsCurrentPage = Math.max(1, Math.min(modalBillsCurrentPage, totalPages || 1));
-        var start = (modalBillsCurrentPage - 1) * perPage;
-        var pageData = filtered.slice(start, start + perPage);
+        var start = modalBillsFrom ? modalBillsFrom - 1 : 0;
+        var pageData = filtered;
 
         if (pageData.length === 0) {
             tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted">No unpaid bills found. Adjust date range and click Load Bills.</td></tr>';
         } else {
             tbody.innerHTML = pageData.map(function(b, i) {
-                var sn = start + i + 1;
+                var sn = b.sno || (start + i + 1);
                 var printUrl = printReceiptBaseUrl.replace('__ID__', encodeURIComponent(b.id));
                 if (String(b.id || '').indexOf('combined-') === 0) {
                     var receiptDf = b.date_from || getModalDateYmd('modal_date_from') || '';
@@ -1164,8 +1172,8 @@ document.addEventListener('DOMContentLoaded', function() {
             }).join('');
         }
 
-        document.getElementById('modalPaginationInfo').textContent = 'Showing ' + (filtered.length ? start + 1 : 0) + ' to ' + Math.min(start + perPage, filtered.length) + ' of ' + filtered.length + ' entries';
-        updateModalPaginationNav(totalPages, filtered.length);
+        document.getElementById('modalPaginationInfo').textContent = 'Showing ' + modalBillsFrom + ' to ' + modalBillsTo + ' of ' + modalBillsTotal + ' entries';
+        updateModalPaginationNav(totalPages, modalBillsTotal);
         updateBulkActionsBar();
     }
 
@@ -1256,29 +1264,24 @@ document.addEventListener('DOMContentLoaded', function() {
             focusAddProcessMessBillsModal();
         });
     }
-    document.getElementById('modalLoadBillsBtn').addEventListener('click', loadModalBills);
+    document.getElementById('modalLoadBillsBtn').addEventListener('click', function() { loadModalBills(1); });
     document.getElementById('modalClearFiltersBtn').addEventListener('click', clearModalFilters);
     document.getElementById('modalSearch').addEventListener('input', function() {
-        modalBillsCurrentPage = 1;
-        renderModalTable();
+        loadModalBills(1);
     });
     document.getElementById('modalPerPage').addEventListener('change', function() {
-        modalBillsCurrentPage = 1;
-        renderModalTable();
+        loadModalBills(1);
     });
     document.getElementById('modalPaginationPrev').addEventListener('click', function() {
         if (modalBillsCurrentPage > 1) {
-            modalBillsCurrentPage--;
-            renderModalTable();
+            loadModalBills(modalBillsCurrentPage - 1);
         }
     });
     document.getElementById('modalPaginationNext').addEventListener('click', function() {
-        var filtered = getFilteredModalBills();
         var perPage = parseInt((document.getElementById('modalPerPage') || {}).value || 10, 10);
-        var totalPages = filtered.length ? Math.ceil(filtered.length / perPage) : 0;
+        var totalPages = modalBillsTotal ? Math.ceil(modalBillsTotal / perPage) : 0;
         if (modalBillsCurrentPage < totalPages) {
-            modalBillsCurrentPage++;
-            renderModalTable();
+            loadModalBills(modalBillsCurrentPage + 1);
         }
     });
 
@@ -2276,7 +2279,7 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(function(data) {
             if (data.success) {
                 showToast(data.message || 'Invoice generated.');
-                loadModalBills();
+                loadModalBills(modalBillsCurrentPage);
             } else {
                 showToast(data.message || 'Failed to generate invoice.', 'error');
             }
