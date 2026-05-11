@@ -1152,6 +1152,34 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    function clearChoicesSelection(el) {
+        if (!el) return;
+        if (el.choicesInstance) {
+            var inst = el.choicesInstance;
+            if (el.multiple && typeof inst.removeActiveItems === 'function') {
+                inst.removeActiveItems();
+                return;
+            }
+            if (typeof inst.setChoiceByValue === 'function') {
+                try {
+                    inst.setChoiceByValue(el.multiple ? [] : '');
+                } catch (e) {
+                    if (typeof inst.removeActiveItems === 'function') {
+                        inst.removeActiveItems();
+                    }
+                }
+            }
+            return;
+        }
+        if (el.multiple) {
+            Array.from(el.options || []).forEach(function (opt) {
+                opt.selected = false;
+            });
+        } else {
+            el.value = '';
+        }
+    }
+
     function clearModalFilters() {
         // Reset all filter inputs to defaults, then reload bills so table shows unfiltered (default) data
         var defaultDateFrom = '{{ now()->startOfMonth()->format("d-m-Y") }}';
@@ -1169,27 +1197,14 @@ document.addEventListener('DOMContentLoaded', function() {
         setDateInput('modal_invoice_date', defaultInvoiceDate);
 
         var ct = document.getElementById('modal_client_type');
+        clearChoicesSelection(ct);
         if (ct) {
-            ct.value = '';
-            if (ct.choicesInstance) {
-                ct.choicesInstance.setChoiceByValue('');
-            }
-        }
-        var ctp = document.getElementById('modal_client_type_pk');
-        if (ctp) {
-            ctp.innerHTML = '<option value=\"\">All</option>';
-            if (ctp.choicesInstance) {
-                ctp.choicesInstance.clearStore();
-                ctp.choicesInstance.setChoices([{ value: '', label: 'All', selected: true }], 'value', 'label', true);
-            }
+            ct.dispatchEvent(new Event('change', { bubbles: true }));
         }
         var bn = document.getElementById('modal_buyer_name');
-        if (bn) {
+        clearChoicesSelection(bn);
+        if (bn && !bn.choicesInstance) {
             bn.innerHTML = '';
-            if (bn.choicesInstance) {
-                bn.choicesInstance.clearStore();
-                bn.choicesInstance.setChoices([], 'value', 'label', true);
-            }
         }
         var mp = document.getElementById('modal_mode_of_payment');
         if (mp) {
@@ -1445,14 +1460,24 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
             }
 
-            // When multiple slugs are selected, load buyers from all of them
-            if (selectedSlugs.length > 1 || selectedSlugs.length === 0) {
-                // Multiple client types or none selected: load buyers from all selected types
+            // No client type: show full buyer name list (same as legacy single-select "All" path)
+            if (selectedSlugs.length === 0) {
+                if ((allBuyerNames || []).length) {
+                    var listAllEmpty = (allBuyerNames || []).map(function (name) {
+                        return { value: name, text: name };
+                    });
+                    addBuyerOptions(listAllEmpty);
+                }
+                syncChoicesBuyer();
+                return;
+            }
+
+            // Multiple client types selected: merge buyer lists from each slug
+            if (selectedSlugs.length > 1) {
                 var allBuyers = [];
-                
-                selectedSlugs.forEach(function(slug) {
+
+                selectedSlugs.forEach(function (slug) {
                     if (slug === 'employee') {
-                        // Add all employee buyers
                         allBuyers = allBuyers.concat(employeeNames['academy staff'] || [])
                             .concat(employeeNames['faculty'] || [])
                             .concat(employeeNames['mess staff'] || []);
@@ -1466,19 +1491,18 @@ document.addEventListener('DOMContentLoaded', function() {
                         allBuyers = allBuyers.concat((sectionBuyerNames || []).map(function (name) { return { value: name, text: name }; }));
                     }
                 });
-                
-                // De-duplicate
-                var map = new Map();
+
+                var mapMulti = new Map();
                 allBuyers.forEach(function (o) {
                     var key = String(o.value || '').trim().toLowerCase();
                     if (!key) return;
-                    if (!map.has(key)) map.set(key, { value: o.value, text: o.text });
+                    if (!mapMulti.has(key)) mapMulti.set(key, { value: o.value, text: o.text });
                 });
-                var unique = Array.from(map.values()).sort(function (a, b) {
+                var uniqueMulti = Array.from(mapMulti.values()).sort(function (a, b) {
                     return String(a.text || '').localeCompare(String(b.text || ''), undefined, { sensitivity: 'base' });
                 });
-                
-                addBuyerOptions(unique);
+
+                addBuyerOptions(uniqueMulti);
                 syncChoicesBuyer();
                 return;
             }
