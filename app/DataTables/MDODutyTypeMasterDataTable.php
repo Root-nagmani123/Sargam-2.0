@@ -112,6 +112,7 @@ class MDODutyTypeMasterDataTable extends DataTable
             // ->orderBy(1)
             ->parameters([
                 'order' => [],
+                'pagingType' => 'full_numbers',
                 'responsive' => true,
                 'autoWidth' => false,
                 'scrollX' => true,
@@ -127,12 +128,7 @@ class MDODutyTypeMasterDataTable extends DataTable
                     ['orderable' => false, 'targets' => 3],
                 ],
                 'language' => [
-                    'paginate' => [
-                        'previous' => ' <i class="material-icons menu-icon material-symbols-rounded"
-                                                    style="font-size: 24px;">chevron_left</i>',
-                        'next' => '<i class="material-icons menu-icon material-symbols-rounded"
-                                                    style="font-size: 24px;">chevron_right</i>'
-                    ]
+                    'paginate' => ['first' => '', 'last' => '', 'next' => '', 'previous' => '']
                 ],
 
             ])

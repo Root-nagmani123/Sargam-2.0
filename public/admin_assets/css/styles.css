@@ -17398,7 +17398,7 @@ h4 {
 
     .h4,
     h4 {
-        font-size: 1.375rem;
+        font-size: 1rem;
     }
 }
 
@@ -23185,7 +23185,7 @@ fieldset:disabled .btn {
     --bs-breadcrumb-padding-x: 0;
     --bs-breadcrumb-padding-y: 0;
     --bs-breadcrumb-margin-bottom: 0;
-    --bs-breadcrumb-font-size: 0.875rem;
+    --bs-breadcrumb-font-size: 0.75rem;
     --bs-breadcrumb-divider-color: var(--bs-secondary-color);
     --bs-breadcrumb-item-padding-x: 1rem;
     --bs-breadcrumb-item-active-color: #5a6a85;
@@ -28659,7 +28659,7 @@ fieldset:disabled .btn {
 }
 
 .fs-4 {
-    font-size: 1rem !important;
+    font-size: .75rem !important;
 }
 
 .fs-5 {

@@ -262,6 +262,7 @@ document.addEventListener('DOMContentLoaded', function() {
         search: { smart: {{ $searchSmart ? 'true' : 'false' }} },
         responsive: {{ $responsive ? 'true' : 'false' }},
         scrollX: {{ $scrollX ? 'true' : 'false' }},
+        pagingType: 'full_numbers',
         dom: '<"row align-items-center mb-2"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row align-items-center mt-2"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
         language: {
             search: '',
@@ -271,7 +272,7 @@ document.addEventListener('DOMContentLoaded', function() {
             infoEmpty: 'No {{ $infoLabel }}',
             emptyTable: 'No {{ $infoLabel }}',
             infoFiltered: '(filtered from _MAX_ total)',
-            paginate: { first: 'First', last: 'Last', next: 'Next', previous: 'Previous' }
+            paginate: { first: '', last: '', next: '', previous: '' }
         },
         columnDefs: columnDefsMerged,
         drawCallback: function(settings) {
@@ -297,6 +298,7 @@ document.addEventListener('DOMContentLoaded', function() {
         search: { smart: {{ $searchSmart ? 'true' : 'false' }} },
         responsive: {{ $responsive ? 'true' : 'false' }},
         scrollX: {{ $scrollX ? 'true' : 'false' }},
+        pagingType: 'full_numbers',
         dom: '<"row align-items-center mb-2"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row align-items-center mt-2"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
         language: {
             search: '',
@@ -306,7 +308,7 @@ document.addEventListener('DOMContentLoaded', function() {
             infoEmpty: 'No {{ $infoLabel }}',
             emptyTable: 'No {{ $infoLabel }}',
             infoFiltered: '(filtered from _MAX_ total)',
-            paginate: { first: 'First', last: 'Last', next: 'Next', previous: 'Previous' }
+            paginate: { first: '', last: '', next: '', previous: '' }
         },
         columnDefs: columnDefsMerged,
         drawCallback: function(settings) {

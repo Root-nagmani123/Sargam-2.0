@@ -221,12 +221,9 @@ $courseQuery->whereNotNull('end_date')
     'lengthChange' => true,
     'pageLength' => 10,
     'order' => [],
-    'pagingType' => 'simple_numbers', // Bootstrap 5 pagination style
+    'pagingType' => 'full_numbers', // Bootstrap 5 pagination style
     'language' => [
-    'paginate' => [
-    'previous' => '&laquo;',
-    'next' => '&raquo;',
-    ]
+    'paginate' => ['first' => '', 'last' => '', 'next' => '', 'previous' => '']
     ]
     ]);
     }

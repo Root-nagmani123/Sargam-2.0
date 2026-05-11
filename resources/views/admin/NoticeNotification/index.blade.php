@@ -6,7 +6,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
 @endpush
 
-@section('content')
+@section('setup_content')
 <div class="container-fluid">
     <x-breadcrum title="Notice notification List"></x-breadcrum>
 

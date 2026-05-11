@@ -106,13 +106,6 @@
     }
 
     /* Basic container */
-    .calendar-component {
-        max-width: 100%;
-        background: #fff;
-        border-radius: 12px;
-        padding: 14px;
-        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
-    }
 
     .calendar-header .form-select {
         max-width: 120px;
@@ -186,10 +179,6 @@
 
     /* Responsive behavior */
     @media (max-width: 480px) {
-        .calendar-component {
-            padding: 10px;
-            max-width: 100%;
-        }
 
         .calendar-header {
             gap: .5rem;

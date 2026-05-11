@@ -19,14 +19,6 @@
                     भारत सरकार | Government of India
                 </span>
             </div>
-            <!-- Left: Government Identity -->
-            <div class="d-flex align-items-center gap-2">
-                <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Flag_of_India.svg/330px-Flag_of_India.svg.png"
-                    alt="Emblem of India" class="header-flag-icon">
-                <span class="fw-semibold small text-white">
-                    भारत सरकार | Government of India
-                </span>
-            </div>
 
             <!-- Right: Utilities with vertical separators -->
             <nav aria-label="Utility Navigation">
@@ -349,7 +341,6 @@
                             aria-selected="{{ $activeNavTab === '#tab-setup' ? 'true' : 'false' }}"
                             aria-controls="setup-panel" id="setup-tab-mobile">
                             <i class="material-icons material-symbols-rounded" aria-hidden="true">settings</i>
-                            @if(hasRole('Admin') || hasRole('Training-Induction') || hasRole('Staff'))
                             @if(hasRole('Admin') || hasRole('Training-Induction') || hasRole('Staff'))
                             <span>Setup</span>
                             @elseif(hasRole('Internal Faculty') || hasRole('Guest Faculty') ||
