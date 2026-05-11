@@ -1404,8 +1404,12 @@ class ProcessMessBillsEmployeeController extends Controller
      */
     public function modalData(Request $request)
     {
-        $dateFrom = $request->filled('date_from') ? $this->parseDate($request->date_from) : now()->startOfMonth()->format('Y-m-d');
-        $dateTo = $request->filled('date_to') ? $this->parseDate($request->date_to) : now()->endOfMonth()->format('Y-m-d');
+        $dateFrom = $request->filled('date_from')
+            ? ($this->parseDate($request->date_from) ?? now()->startOfMonth()->format('Y-m-d'))
+            : now()->startOfMonth()->format('Y-m-d');
+        $dateTo = $request->filled('date_to')
+            ? ($this->parseDate($request->date_to) ?? now()->endOfMonth()->format('Y-m-d'))
+            : now()->endOfMonth()->format('Y-m-d');
         $clientType = $request->filled('client_type') ? $request->client_type : null;
         $clientTypePk = $request->filled('client_type_pk') ? $request->client_type_pk : null;
         $buyerNames = $this->normalizeBuyerNames($request->input('buyer_name'));
@@ -1460,7 +1464,7 @@ class ProcessMessBillsEmployeeController extends Controller
 
         $invoiceSentKeys = $this->messCombinedInvoiceNotificationSentKeys($combinedBills);
 
-        $rows = $combinedBills->map(function ($cb, $index) use ($paymentTypeMap, $invoiceSentKeys) {
+        $rows = $combinedBills->map(function ($cb, $index) use ($paymentTypeMap, $invoiceSentKeys, $dateFrom, $dateTo) {
             $invoiceNo = $cb->combined_invoice_no ?? ('CB-' . date('Ymd') . '-' . str_pad((string) ($index + 1), 5, '0', STR_PAD_LEFT));
             $receiverId = $this->resolveReceiverUserIdFromAnyBill($cb->bills->all());
             $sentKey = ($receiverId !== null && $receiverId > 0)
@@ -1480,6 +1484,9 @@ class ProcessMessBillsEmployeeController extends Controller
                 'paid_amount' => number_format($cb->paid, 2),
                 'bill_no' => $invoiceNo,
                 'invoice_notification_sent' => $invoiceNotificationSent,
+                // Same range used for this row; receipt/print must pass these or server defaults to current month.
+                'date_from' => $dateFrom,
+                'date_to' => $dateTo,
             ];
         })->values();
 

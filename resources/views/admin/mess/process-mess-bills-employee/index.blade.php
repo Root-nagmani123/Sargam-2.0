@@ -950,6 +950,17 @@ document.addEventListener('DOMContentLoaded', function() {
         return p[2] + '-' + p[1] + '-' + p[0];
     }
 
+    /** Prefer Flatpickr's selected date so the modal request matches the picker (avoids stale input vs calendar). */
+    function getModalDateYmd(inputId) {
+        var el = document.getElementById(inputId);
+        if (!el) return '';
+        var fp = el._flatpickr;
+        if (fp && fp.selectedDates && fp.selectedDates.length > 0 && typeof fp.formatDate === 'function') {
+            return fp.formatDate(fp.selectedDates[0], 'Y-m-d');
+        }
+        return el.value ? toYmd(el.value) : '';
+    }
+
     function showToast(message, type) {
         type = type || 'success';
         var container = document.getElementById('processBillsToastContainer');
@@ -965,13 +976,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function loadModalBills() {
         modalBillsCurrentPage = 1;
-        var df = document.getElementById('modal_date_from');
-        var dt = document.getElementById('modal_date_to');
         var ct = document.getElementById('modal_client_type');
         var ctp = document.getElementById('modal_client_type_pk');
         var bn = document.getElementById('modal_buyer_name');
-        var dateFrom = (df && df.value) ? toYmd(df.value) : '';
-        var dateTo = (dt && dt.value) ? toYmd(dt.value) : '';
+        var dateFrom = getModalDateYmd('modal_date_from');
+        var dateTo = getModalDateYmd('modal_date_to');
         var clientType = (ct && ct.value) ? ct.value : '';
         var clientTypePk = (ctp && ctp.value) ? ctp.value : '';
         var buyerNames = bn
@@ -1087,7 +1096,12 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             tbody.innerHTML = pageData.map(function(b, i) {
                 var sn = start + i + 1;
-                var printUrl = printReceiptBaseUrl.replace('__ID__', b.id);
+                var printUrl = printReceiptBaseUrl.replace('__ID__', encodeURIComponent(b.id));
+                if (String(b.id || '').indexOf('combined-') === 0) {
+                    var receiptDf = b.date_from || getModalDateYmd('modal_date_from') || '';
+                    var receiptDt = b.date_to || getModalDateYmd('modal_date_to') || '';
+                    printUrl += (printUrl.indexOf('?') >= 0 ? '&' : '?') + 'date_from=' + encodeURIComponent(receiptDf) + '&date_to=' + encodeURIComponent(receiptDt);
+                }
                 var statusCell = b.invoice_notification_sent
                     ? '<span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle fw-semibold">Invoice Sent</span>'
                     : '<span class="text-muted small">—</span>';
@@ -1378,11 +1392,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             function getModalDateRangeYmd() {
-                var df = document.getElementById('modal_date_from');
-                var dt = document.getElementById('modal_date_to');
                 return {
-                    from: (df && df.value) ? toYmd(df.value) : '',
-                    to: (dt && dt.value) ? toYmd(dt.value) : ''
+                    from: getModalDateYmd('modal_date_from'),
+                    to: getModalDateYmd('modal_date_to')
                 };
             }
 
@@ -2181,10 +2193,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (btnEl) { btnEl.disabled = true; btnEl.textContent = '…'; }
         var body = {};
         if (String(billId).indexOf('combined-') === 0) {
-            var mFrom = document.getElementById('modal_date_from');
-            var mTo = document.getElementById('modal_date_to');
-            if (mFrom && mFrom.value) body.date_from = toYmd(mFrom.value);
-            if (mTo && mTo.value) body.date_to = toYmd(mTo.value);
+            var fromYmd = getModalDateYmd('modal_date_from');
+            var toYmdVal = getModalDateYmd('modal_date_to');
+            if (fromYmd) body.date_from = fromYmd;
+            if (toYmdVal) body.date_to = toYmdVal;
         }
         fetch(generateInvoiceBaseUrl + '/' + encodeURIComponent(billId) + '/generate-invoice', {
             method: 'POST',
@@ -2441,10 +2453,8 @@ document.addEventListener('DOMContentLoaded', function() {
             var dateFromYmd = null;
             var dateToYmd = null;
             if (String(billId).indexOf('combined-') === 0) {
-                var mFrom = document.getElementById('modal_date_from');
-                var mTo = document.getElementById('modal_date_to');
-                if (mFrom && mFrom.value) dateFromYmd = toYmd(mFrom.value);
-                if (mTo && mTo.value) dateToYmd = toYmd(mTo.value);
+                dateFromYmd = getModalDateYmd('modal_date_from') || null;
+                dateToYmd = getModalDateYmd('modal_date_to') || null;
             }
             openPaymentDetailsModal(billId, dateFromYmd, dateToYmd);
             return;
