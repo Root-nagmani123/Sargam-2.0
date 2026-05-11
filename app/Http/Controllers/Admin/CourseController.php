@@ -31,8 +31,8 @@ class CourseController extends Controller
             {
                 $courses = $courses->whereIn('pk',$data_course_id);
             }
-            $courses = $courses->orderBy('course_name')
-            ->pluck('course_name', 'pk')
+            $courses = $courses->orderBy('couse_short_name')
+            ->pluck('couse_short_name', 'pk')
             ->toArray();
 
         return $dataTable->render('admin.programme.index', compact('courses'));
@@ -45,13 +45,13 @@ class CourseController extends Controller
 
         if ($status === 'active') {
             $courses = CourseMaster::where('end_date', '>=', $currentDate)
-                ->orderBy('course_name')
-                ->pluck('course_name', 'pk')
+                ->orderBy('couse_short_name')
+                ->pluck('couse_short_name', 'pk')
                 ->toArray();
         } else {
             $courses = CourseMaster::where('end_date', '<', $currentDate)
-                ->orderBy('course_name')
-                ->pluck('course_name', 'pk')
+                ->orderBy('couse_short_name')
+                ->pluck('couse_short_name', 'pk')
                 ->toArray();
         }
 

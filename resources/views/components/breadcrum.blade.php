@@ -165,108 +165,78 @@
         $lastItem = $breadcrumbItems[count($breadcrumbItems) - 1];
         $pageHeading = $lastItem['label'] ?? $title;
     }
+
+    // Auto-detect if back button should be shown (create/edit/show pages, not index)
+    $showBack = \Illuminate\Support\Str::is(
+        ['*.create', '*.edit', '*.show', '*.update', '*.view'],
+        $routeName ?? ''
+    );
 @endphp
 
-<div class="modern-breadcrumb-wrapper mb-4" data-variant="{{ $variant }}">
-    <div class="card modern-breadcrumb-card border-0 shadow-sm rounded-3 bg-white">
-        <div class="card-body p-3">
-            <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
-                <div class="d-flex align-items-center gap-3 min-w-0 flex-grow-1">
-                    <a href="#"
-                       onclick="event.preventDefault(); handleBackNavigation();"
-                       class="btn btn-link p-0 modern-back-button text-body-secondary d-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
-                       title="Go back to previous page"
-                       aria-label="Go back to previous page">
-                        <i class="material-icons material-symbols-rounded modern-back-button-icon" aria-hidden="true">arrow_back</i>
-                    </a>
-                    <div class="min-w-0 flex-grow-1">
-                        <nav aria-label="breadcrumb" class="breadcrumb-nav">
-                            <ol class="breadcrumb mb-1 small flex-wrap"
-                                style="--bs-breadcrumb-divider: '/'; --bs-breadcrumb-item-padding-x: 0.35rem;">
-                                @foreach ($breadcrumbItems as $index => $item)
-                                    @php $isLast = $index === count($breadcrumbItems) - 1; @endphp
-                                    <li class="breadcrumb-item{{ $isLast ? ' active' : '' }}"
-                                        @if ($isLast) aria-current="page" @endif>
-                                        @if (!$isLast && filled($item['url']))
-                                            <a href="{{ $item['url'] }}"
-                                               class="link-secondary link-underline-opacity-0 link-underline-opacity-100-hover text-decoration-none">
-                                                {{ $item['label'] }}
-                                            </a>
+<div class="modern-breadcrumb-wrapper mb-3" data-variant="{{ $variant }}">
+    <div class="bg-white border rounded-3" style="padding: 1rem 1.25rem;">
+        <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+            <div class="d-flex min-w-0 flex-grow-1" style="gap:.65rem;">
+                @if($showBack)
+                <a href="javascript:void(0)" onclick="handleBackNavigation()"
+                   style="color:#333;text-decoration:none;display:inline-flex;align-items:center;line-height:1;margin-top:1.35rem;flex-shrink:0;"
+                   aria-label="Go back" title="Go back">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                </a>
+                @endif
+                <div class="min-w-0">
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb mb-1 flex-wrap"
+                            style="--bs-breadcrumb-divider: '/'; --bs-breadcrumb-item-padding-x: 0.3rem; font-size: .78rem;">
+                            @foreach ($breadcrumbItems as $index => $item)
+                                @php $isLast = $index === count($breadcrumbItems) - 1; @endphp
+                                <li class="breadcrumb-item{{ $isLast ? ' active' : '' }}"
+                                    @if ($isLast) aria-current="page" @endif>
+                                    @if (!$isLast && filled($item['url']))
+                                        <a href="{{ $item['url'] }}" style="color:#999;text-decoration:none;">
+                                            {{ $item['label'] }}
+                                        </a>
+                                    @else
+                                        @if ($isLast)
+                                            <span style="color:#333;font-weight:600;">{{ $item['label'] }}</span>
                                         @else
-                                            @if ($isLast)
-                                                <span class="text-body fw-bold">{{ $item['label'] }}</span>
-                                            @else
-                                                <span class="text-body-secondary">{{ $item['label'] }}</span>
-                                            @endif
+                                            <span style="color:#999;">{{ $item['label'] }}</span>
                                         @endif
-                                    </li>
-                                @endforeach
-                            </ol>
-                        </nav>
-                        <h1 class="h4 fs-4 fw-bold text-dark mb-0 lh-sm text-truncate">{{ $pageHeading }}</h1>
-                    </div>
-                </div>
-                <div class="d-flex align-items-center gap-2 flex-shrink-0 modern-breadcrumb-clock text-primary fw-semibold lh-sm"
-                     role="status"
-                     aria-live="polite"
-                     aria-atomic="true">
-                    <i class="material-icons material-symbols-rounded fs-5" aria-hidden="true">schedule</i>
-                    <span id="breadcrumb-live-time">—:—</span>
+                                    @endif
+                                </li>
+                            @endforeach
+                        </ol>
+                    </nav>
+                    <h1 style="font-size:1.25rem;font-weight:700;color:#222;margin:0;line-height:1.3;">{{ $pageHeading }}</h1>
                 </div>
             </div>
+            @if($slot->isNotEmpty())
+            <div class="d-flex align-items-center gap-2 flex-shrink-0" style="margin-top:.75rem;">
+                {{ $slot }}
+            </div>
+            @endif
         </div>
     </div>
 </div>
 
 <style>
+    .modern-breadcrumb-wrapper .breadcrumb {
+        background: none;
+        padding: 0;
+    }
+
     .modern-breadcrumb-wrapper .breadcrumb-item + .breadcrumb-item::before {
-        color: var(--bs-secondary-color);
+        color: #bbb;
     }
 
     .modern-breadcrumb-wrapper .breadcrumb-item.active {
         color: inherit;
     }
 
-    .modern-back-button {
-        width: 2.25rem;
-        height: 2.25rem;
-        text-decoration: none;
-        transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out;
-    }
-
-    .modern-back-button-icon {
-        font-size: 1.35rem;
-    }
-
-    #breadcrumb-live-time {
-        font-variant-numeric: tabular-nums;
-        min-width: 2.75rem;
-    }
-
-    .modern-back-button:hover {
-        color: var(--bs-primary) !important;
-        background-color: var(--bs-tertiary-bg);
-    }
-
-    .modern-back-button:focus-visible {
-        box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.35);
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-        .modern-back-button {
-            transition: none;
-        }
-    }
-
     @media print {
         .modern-breadcrumb-card {
             box-shadow: none !important;
             border: 1px solid var(--bs-border-color) !important;
-        }
-
-        .modern-back-button,
-        .modern-breadcrumb-clock {
-            display: none !important;
         }
     }
 </style>
@@ -396,21 +366,4 @@ function handleBackNavigation() {
     // Priority 4: Default fallback - go to home/dashboard
     window.location.href = "{{ url('/') }}";
 }
-
-(function initBreadcrumbLiveClock() {
-    const el = document.getElementById('breadcrumb-live-time');
-    if (!el) return;
-
-    function formatTime() {
-        const d = new Date();
-        return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false });
-    }
-
-    function tick() {
-        el.textContent = formatTime();
-    }
-
-    tick();
-    window.setInterval(tick, 30000);
-})();
 </script>

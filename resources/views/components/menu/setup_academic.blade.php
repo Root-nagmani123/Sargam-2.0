@@ -13,10 +13,7 @@
 
                         <div class="sidebar-section-header text-uppercase fw-bold mb-3"
                             style="font-size: 11px; letter-spacing: 2px; color: var(--sidebar-text-muted, #9aa0a6);">
-                            @php
-                                $roles = session('user_roles', []);
-                            @endphp
-                            {{ !empty($roles) ? implode(', ', $roles) : '' }}
+                            Academic
                         </div>
 
                         <ul class="sidebar-menu list-unstyled" id="sidebarnav">

@@ -36,11 +36,12 @@ class CourseMasterDataTable extends DataTable
             })
             ->addColumn('status', function ($row) {
                 $checked = $row->active_inactive == 1 ? 'checked' : '';
-                return '
-                <div class="form-check form-switch d-inline-block">
-                    <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                        data-table="course_master" data-column="active_inactive" data-id="'.$row->pk.'" '.$checked.'>
-                </div>';
+                $isActive = (int) $row->active_inactive === 1;
+                $badge = $isActive
+                    ? '<span class="programme-badge-active">Active</span>'
+                    : '<span class="programme-badge-inactive">Inactive</span>';
+
+                return $badge;
             })
             ->addColumn('action', function ($row) {
                 $editUrl = route('programme.edit', ['id' => encrypt($row->pk)]);
@@ -48,80 +49,21 @@ class CourseMasterDataTable extends DataTable
                 $deleteUrl = route('programme.destroy', ['id' => encrypt($row->pk)]);
                 $isActive = $row->active_inactive == 1;
                 $csrf = csrf_token();
-                $btnId = 'dropdown-btn-' . $row->pk;
 
-                $html = <<<HTML
-<td class="text-center">
-    <div class="d-inline-flex align-items-center gap-2"
-         role="group"
-         aria-label="Row actions">
+                $statusToggle = '<a href="javascript:void(0)" class="programme-status-toggle-btn" data-table="course_master" data-column="active_inactive" data-id="'.$row->pk.'" data-status="'.($isActive ? '1' : '0').'" aria-label="'.($isActive ? 'Deactivate' : 'Activate').' course">'
+                    .'<span class="material-icons material-symbols-rounded" style="font-size:24px; color:'.($isActive ? '#198754' : '#6c757d').';">'.($isActive ? 'toggle_on' : 'toggle_off').'</span></a>';
 
-        <!-- View -->
-        <a
-            href="{$viewUrl}"
-            class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 bg-transparent border-0 p-0 text-primary"
-            aria-label="View course"
-        >
-            <span class="material-icons material-symbols-rounded"
-                  style="font-size:18px;"
-                  aria-hidden="true">
-                visibility
-            </span>
-        </a>
+                $deleteBtn = '<a href="javascript:void(0)" class="programme-delete-btn" data-delete-url="'.$deleteUrl.'" data-csrf="'.$csrf.'" aria-label="Delete course">'
+                    .'<span class="material-icons material-symbols-rounded" style="font-size:20px; color:#dc3545;">delete</span></a>';
 
-        <!-- Edit -->
-        <a
-            href="{$editUrl}"
-            class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 bg-transparent border-0 p-0 text-primary"
-            aria-label="Edit course"
-        >
-            <span class="material-icons material-symbols-rounded"
-                  style="font-size:18px;"
-                  aria-hidden="true">
-                edit
-            </span>
-        </a>
-
-        <!-- Delete -->
-        <?php if ($isActive): ?>
-            <button
-                type="button"
-                class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 d-none bg-transparent border-0 p-0 text-primary"
-                disabled
-                aria-disabled="true"
-                title="Cannot delete active course"
-            >
-                <span class="material-icons material-symbols-rounded"
-                      style="font-size:18px;"
-                      aria-hidden="true">
-                    delete
-                </span>
-            </button>
-        <?php else: ?>
-            <form action="{$deleteUrl}" method="POST" class="d-inline">
-                <input type="hidden" name="_token" value="{$csrf}">
-                <input type="hidden" name="_method" value="DELETE">
-
-                <button
-                    type="submit"
-                    class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1 bg-transparent border-0 p-0 text-primary"
-                    aria-label="Delete course"
-                    onclick="return confirm('Are you sure you want to delete this course?');"
-                >
-                    <span class="material-icons material-symbols-rounded"
-                          style="font-size:18px;"
-                          aria-hidden="true">
-                        delete
-                    </span>
-                </button>
-            </form>
-        <?php endif; ?>
-
-    </div>
-</td>
-
-HTML;
-                return $html;
+                return '<div class="d-inline-flex align-items-center gap-3" role="group" aria-label="Row actions">'
+                    .'<a href="'.$viewUrl.'" class="text-decoration-none" aria-label="View course">'
+                    .'<span class="material-icons material-symbols-rounded" style="font-size:20px; color:#6c757d;">visibility</span></a>'
+                    .'<a href="'.$editUrl.'" class="text-decoration-none" aria-label="Edit course">'
+                    .'<span class="material-icons material-symbols-rounded" style="font-size:20px; color:#6c757d;">edit</span></a>'
+                    .$statusToggle
+                    .$deleteBtn
+                    .'</div>';
             })
             ->filterColumn('course_name', function ($query, $keyword) {
                 $query->where('course_name', 'like', "%{$keyword}%");
@@ -173,12 +115,12 @@ HTML;
         $courseFilter = request('course_filter');
         $currentDate = Carbon::now()->format('Y-m-d');
         
-        if ($statusFilter === 'active' || !$statusFilter) {
-            // Active courses: end_date is today or in the future (current and upcoming courses)
-            $query->where('end_date', '>=', $currentDate);
-        } elseif ($statusFilter === 'archive') {
-            // Archived courses: end_date has already passed (expired courses)
+        if ($statusFilter === 'archive') {
+            // Archived courses: end_date has already passed
             $query->where('end_date', '<', $currentDate);
+        } else {
+            // Active courses (default): end_date is today or in the future
+            $query->where('end_date', '>=', $currentDate);
         }
         
         // Apply course filter if provided
@@ -199,7 +141,7 @@ HTML;
         return $this->builder()
             ->setTableId('coursemaster-table')
             ->columns($this->getColumns())
-            ->minifiedAjax() // This will use the current route for ajax
+            ->minifiedAjax('', null, ['status_filter' => 'active']) // Pass default status_filter on initial load
             // ->orderBy(1)
             ->selectStyleSingle()
             ->responsive(true)
@@ -210,8 +152,20 @@ HTML;
                 'ordering' => false,
                 'searching' => true,
                 'lengthChange' => true,
-                'pageLength' => 10,
+                'pageLength' => 200,
+                'lengthMenu' => [[10, 25, 50, 100, 200, -1], [10, 25, 50, 100, 200, 'All']],
                 'order' => [],
+                'dom' => '<"d-flex flex-wrap justify-content-end gap-2 mb-2 programme-dt-export"B>rt<"d-flex flex-wrap justify-content-between align-items-center gap-3 p-3 border-top"<"programme-dt-paginate-wrap d-flex align-items-center"p><"programme-dt-meta d-flex align-items-center gap-2 flex-wrap justify-content-end"li>>',
+                'language' => [
+                    'info' => 'of _TOTAL_ items',
+                    'infoEmpty' => 'of 0 items',
+                    'infoFiltered' => '(filtered from _MAX_)',
+                    'lengthMenu' => 'Showing _MENU_',
+                    'paginate' => [
+                        'previous' => '&lsaquo;',
+                        'next' => '&rsaquo;',
+                    ],
+                ],
             ])
             ->buttons([
                 Button::make('excel'),
@@ -231,7 +185,7 @@ HTML;
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('S.No.')->searchable(false)->orderable(false),
+            Column::computed('DT_RowIndex')->title('S. No.')->searchable(false)->orderable(false),
             Column::make('course_name')->title('Course Name')->orderable(false)->searchable(true),
             Column::make('couse_short_name')->title('Short Name')->orderable(false)->searchable(true),
             Column::make('course_year')->title('Course Year')->orderable(false)->searchable(true),

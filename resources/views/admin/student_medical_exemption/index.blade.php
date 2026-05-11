@@ -143,69 +143,18 @@
 </style>
 <div class="container-fluid">
     <x-breadcrum title="Medical Exemption Form" />
+    <x-breadcrum title="Course Master">
+        <a href="{{route('student.medical.exemption.create')}}"
+            class="btn btn-sm btn-primary d-inline-flex align-items-center justify-content-center gap-1 rounded-1 shadow-sm px-3 fw-semibold text-nowrap">
+            <i class="material-icons material-symbols-rounded fs-6 lh-1" aria-hidden="true">add</i>
+            <span>Add Student Medical Exemption</span>
+        </a>
+    </x-breadcrum>
     <div class="datatables">
         <!-- start Zero Configuration -->
-        <div class="card" style="border-left:4px solid #004a93;">
+        <div class="card">
             <div class="card-body">
                 <div class="row align-items-center g-3 mb-3">
-
-                    <!-- Title -->
-                    <div class="col-lg-4 col-md-12">
-                        <h4 class="mb-0 fw-bold text-dark">
-                            Medical Exemption Form
-                        </h4>
-                    </div>
-
-                     <!-- Active / Archive -->
-                    <div class="col-lg-4 col-md-6 text-end">
-                        <div class="btn-group shadow-sm rounded-pill overflow-hidden" role="group"
-                            aria-label="Course Status Filter">
-                            <a href="javascript:void(0)"
-                                class="btn btn-success active px-4 fw-semibold"
-                                id="filterActive" aria-pressed="true">
-                                <i class="bi bi-check-circle me-1"></i> Active
-                            </a>
-                            <a href="javascript:void(0)"
-                                class="btn btn-outline-secondary px-4 fw-semibold"
-                                id="filterArchive" aria-pressed="false">
-                                <i class="bi bi-archive me-1"></i> Archive
-                            </a>
-                        </div>
-                    </div>
-
-                    <!-- Actions -->
-                    <div class="col-lg-4 col-md-6">
-                        <div class="d-flex justify-content-md-end justify-content-start flex-wrap gap-2">
-
-                            <button type="button"
-        class="btn btn-outline-info d-flex align-items-center gap-1 px-3"
-        onclick="printTable()">
-    <i class="material-icons material-symbols-rounded"
-       style="font-size:22px;"
-       aria-hidden="true">print</i>
-    <span class="d-none d-md-inline">Print</span>
-</button>
-
-                            <a href="{{ route('student.medical.exemption.export') }}" class="btn btn-outline-success d-flex align-items-center gap-1 px-3">
-                                <i class="material-icons material-symbols-rounded" style="font-size:22px;"
-                                    aria-hidden="true">download</i>
-                                <span class="d-none d-md-inline">Export</span>
-                            </a>
-
-                            <a href="{{route('student.medical.exemption.create')}}"
-                                class="btn btn-primary d-flex align-items-center gap-1 px-4 fw-semibold">
-                                <i class="material-icons material-symbols-rounded" style="font-size:22px;"
-                                    aria-hidden="true">add</i>
-                                Add Student Medical Exemption
-                            </a>
-
-                        </div>
-                    </div>
-
-                </div>
-
-
-                <hr>
 
                 <!-- Filters Section -->
                 <div class="row mb-3 align-items-end">

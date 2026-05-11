@@ -61,43 +61,35 @@ class CourseGroupTypeController extends Controller
                 return $row->type_name ?? 'N/A';
             })
 
-            // Status Toggle
+            // Status Badge
             ->addColumn('status', function ($row) {
-                $checked = $row->active_inactive == 1 ? 'checked' : '';
-
-                return '
-                <div class="form-check form-switch d-inline-block">
-                    <input class="form-check-input plain-status-toggle" type="checkbox" role="switch"
-                        data-table="course_group_type_master"
-                        data-column="active_inactive"
-                        data-id="' . $row->pk . '"
-                        ' . $checked . '>
-                </div>';
+                if ($row->active_inactive == 1) {
+                    return '<div class="text-center"><span class="cgt-badge-active">Active</span></div>';
+                }
+                return '<div class="text-center"><span class="cgt-badge-inactive">Inactive</span></div>';
             })
 
-            // Action Dropdown
+            // Action Icons
             ->addColumn('action', function ($row) {
-
-                $disabled = $row->active_inactive == 1 ? 'disabled aria-disabled="true"' : '';
+                $toggleIcon = $row->active_inactive == 1 ? 'toggle_on' : 'toggle_off';
+                $toggleClass = $row->active_inactive == 1 ? 'cgt-action-toggle' : 'cgt-action-toggle-off';
+                $toggleStatus = $row->active_inactive == 1 ? '1' : '0';
 
                 return '
-    <div class="d-inline-flex align-items-center gap-2" role="group" aria-label="Row actions">
-
-        <!-- Edit Action -->
-        <a href="javascript:void(0)" data-id="' . $row->pk . '" data-type-name="' . $row->type_name . '" 
-           class="btn btn-sm edit-btn btn-outline-primary d-inline-flex align-items-center gap-1"
-           aria-label="Edit course group type">
-            <i class="material-icons material-symbols-rounded bg-transparent border-0 p-0" style="font-size:18px;">edit</i>
+    <div class="d-flex align-items-center justify-content-center gap-2" role="group" aria-label="Row actions">
+        <a href="javascript:void(0)" data-id="' . $row->pk . '" data-type-name="' . e($row->type_name) . '"
+           class="edit-btn cgt-action-btn cgt-action-edit border-0 p-0 bg-transparent" title="Edit" aria-label="Edit">
+            <i class="material-icons material-symbols-rounded">edit</i>
         </a>
-
-        <!-- Delete Action -->
-        
-            <a href="javascript:void(0)"
-                data-id="' . $row->pk . '"
-                class="btn btn-sm btn-outline-danger delete-btn d-inline-flex align-items-center gap-1 ' . $disabled . '"
-                aria-disabled="' . ($row->active_inactive == 1 ? 'true' : 'false') . '">
-                    <i class="material-icons material-symbols-rounded bg-transparent border-0 p-0" style="font-size:18px;">delete</i>
-                </a>
+        <a href="javascript:void(0)" class="cgt-status-toggle-btn cgt-action-btn border-0 p-0 bg-transparent ' . $toggleClass . '"
+           data-id="' . $row->pk . '" data-status="' . $toggleStatus . '"
+           title="Toggle status" aria-label="Toggle status">
+            <i class="material-icons material-symbols-rounded">' . $toggleIcon . '</i>
+        </a>
+        <a href="javascript:void(0)" data-id="' . $row->pk . '"
+           class="delete-btn cgt-action-btn cgt-action-delete border-0 p-0 bg-transparent" title="Delete" aria-label="Delete">
+            <i class="material-icons material-symbols-rounded">delete</i>
+        </a>
     </div>';
             })
 

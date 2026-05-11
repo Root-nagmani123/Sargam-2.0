@@ -32,16 +32,28 @@ class GroupMappingController extends Controller
     {
         $data_course_id =  get_Role_by_course();
 
-        $courses = CourseMaster::where('active_inactive', '1')
-            ->where('end_date', '>', now());
+        $activeCourseQuery = CourseMaster::where('active_inactive', '1')
+            ->where(function ($q) {
+                $q->whereNull('end_date')
+                  ->orWhere('end_date', '>=', now());
+            });
+
+        $archivedCourseQuery = CourseMaster::where('active_inactive', '1')
+            ->whereNotNull('end_date')
+            ->where('end_date', '<', now());
 
         if(!empty($data_course_id))
         {
-            $courses = $courses->whereIn('pk',$data_course_id);
+            $activeCourseQuery = $activeCourseQuery->whereIn('pk', $data_course_id);
+            $archivedCourseQuery = $archivedCourseQuery->whereIn('pk', $data_course_id);
         }
 
-        $courses = $courses->orderBy('course_name')
-            ->pluck('course_name', 'pk')
+        $courses = $activeCourseQuery->orderBy('course_name')
+            ->pluck('couse_short_name', 'pk')
+            ->toArray();
+
+        $archivedCourses = $archivedCourseQuery->orderBy('course_name')
+            ->pluck('couse_short_name', 'pk')
             ->toArray();
 
         $groupTypes = CourseGroupTypeMaster::where('active_inactive', 1)
@@ -49,7 +61,12 @@ class GroupMappingController extends Controller
                 ->pluck('type_name', 'pk')
                 ->toArray();
 
-        return $dataTable->render('admin.group_mapping.index', compact('courses', 'groupTypes'));
+        $facilities = FacultyMaster::where('active_inactive', 1)
+            ->orderBy('full_name')
+            ->pluck('full_name', 'pk')
+            ->toArray();
+
+        return $dataTable->render('admin.group_mapping.index', compact('courses', 'archivedCourses', 'groupTypes', 'facilities'));
     }
 
 
