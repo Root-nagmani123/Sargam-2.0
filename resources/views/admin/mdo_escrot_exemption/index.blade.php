@@ -43,84 +43,17 @@
 }
 </style>
 <div class="container-fluid">
-    <x-breadcrum title="MDO/Escort Exemption" />
+    <x-breadcrum title="MDO/Escort Exemption">
+        <a href="{{ route('mdo-escrot-exemption.create') }}"
+            class="btn btn-sm btn-primary d-inline-flex align-items-center justify-content-center gap-1 rounded-1 shadow-sm px-3 fw-semibold text-nowrap">
+            <i class="material-icons material-symbols-rounded fs-6 lh-1" aria-hidden="true">add</i>
+            <span>Add New MDO/Escort Exemption</span>
+        </a>
+    </x-breadcrum>
     <div class="datatables">
-        <div class="card" style="border-left: 4px solid #004a93;">
+        <div class="card">
             <div class="card-body">
                 <div class="table-responsive">
-                    <div class="row">
-                        <div class="col-4">
-                            <h4>MDO/Escort Exemption</h4>
-                        </div>
-                        <div class="col-4 text-end">
-                             <div class="btn-group shadow-sm rounded-pill overflow-hidden" role="group"
-                                aria-label="Course Status Filter">
-                                @php
-                                    $activeParams = ['filter' => 'active'];
-                                    $archiveParams = ['filter' => 'archive'];
-                                    // Preserve other filters if they exist in request
-                                    if (request('course_filter')) {
-                                        $activeParams['course_filter'] = request('course_filter');
-                                        $archiveParams['course_filter'] = request('course_filter');
-                                    }
-                                    if (request('year_filter')) {
-                                        $activeParams['year_filter'] = request('year_filter');
-                                        $archiveParams['year_filter'] = request('year_filter');
-                                    }
-                                    if (request('duty_type_filter')) {
-                                        $activeParams['duty_type_filter'] = request('duty_type_filter');
-                                        $archiveParams['duty_type_filter'] = request('duty_type_filter');
-                                    }
-                                    if (request('time_from_filter')) {
-                                        $activeParams['time_from_filter'] = request('time_from_filter');
-                                        $archiveParams['time_from_filter'] = request('time_from_filter');
-                                    }
-                                    if (request('time_to_filter')) {
-                                        $activeParams['time_to_filter'] = request('time_to_filter');
-                                        $archiveParams['time_to_filter'] = request('time_to_filter');
-                                    }
-                                    if (request('from_date_filter')) {
-                                        $activeParams['from_date_filter'] = request('from_date_filter');
-                                        $archiveParams['from_date_filter'] = request('from_date_filter');
-                                    }
-                                    if (request('to_date_filter')) {
-                                        $activeParams['to_date_filter'] = request('to_date_filter');
-                                        $archiveParams['to_date_filter'] = request('to_date_filter');
-                                    }
-                                @endphp
-                                <a href="{{ route('mdo-escrot-exemption.index', $activeParams) }}"
-                                    class="btn {{ ($filter ?? 'active') === 'active' ? 'btn-success active' : 'btn-outline-secondary' }} px-4 fw-semibold"
-                                    id="filterActive" aria-pressed="{{ ($filter ?? 'active') === 'active' ? 'true' : 'false' }}">
-                                    <i class="bi bi-check-circle me-1"></i> Active
-                                </a>
-                                <a href="{{ route('mdo-escrot-exemption.index', $archiveParams) }}"
-                                    class="btn {{ ($filter ?? 'active') === 'archive' ? 'btn-success active' : 'btn-outline-secondary' }} px-4 fw-semibold"
-                                    id="filterArchive" aria-pressed="{{ ($filter ?? 'active') === 'archive' ? 'true' : 'false' }}">
-                                    <i class="bi bi-archive me-1"></i> Archive
-                                </a>
-                            </div>
-                        </div>
-                        <div class="col-4">
-                            <div class="d-flex justify-content-end align-items-end mb-3 gap-2">
-                                <!-- Print / Download Button -->
-                                <button type="button" id="printDownloadBtn"
-                                    class="btn btn-outline-info px-3 py-2 rounded shadow-sm">
-                                    <i class="material-icons menu-icon material-symbols-rounded"
-                                        style="font-size: 20px; vertical-align: middle;">print</i>
-                                    Print / Download
-                                </button>
-                                <!-- Add New Button -->
-                                <a href="{{ route('mdo-escrot-exemption.create') }}"
-                                    class="btn btn-primary px-3 py-2 rounded shadow-sm">
-                                    <i class="material-icons menu-icon material-symbols-rounded"
-                                        style="font-size: 20px; vertical-align: middle;">add</i>
-                                    Add New MDO/Escort Exemption
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-
-                    <hr>
 
                     <!-- Filters Section -->
                     <div class="row mb-3 align-items-end">
