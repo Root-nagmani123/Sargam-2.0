@@ -436,6 +436,58 @@
     50% { opacity: 0.9; transform: scale(1.03); box-shadow: 0 0 0 6px rgba(var(--bs-danger-rgb), 0); }
 }
 
+/* Notice dashboard tabs (category filters) */
+.dashboard-notice-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+.dashboard-notice-tab {
+    border: none;
+    border-radius: 10px;
+    padding: 8px 14px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    background: #e9ecef;
+    color: #495057;
+    transition: background 0.2s ease, color 0.2s ease;
+    cursor: pointer;
+}
+.dashboard-notice-tab:hover {
+    background: #dee2e6;
+}
+.dashboard-notice-tab.active {
+    background: #004a93;
+    color: #fff;
+}
+.dashboard-notice-tab-pane { min-height: 1rem; }
+.dashboard-notice-card-lite {
+    border-left: 4px solid #0d6efd;
+    border-radius: 10px;
+    background: #f1f3f5;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+}
+.dashboard-notice-card-title {
+    color: #0d6efd;
+    font-weight: 600;
+    font-size: 0.95rem;
+    line-height: 1.35;
+    margin: 0;
+}
+.dashboard-notice-card-range {
+    font-size: 0.8125rem;
+    color: #6c757d;
+    margin-top: 6px;
+    display: block;
+}
+.dashboard-notice-card-sub {
+    font-size: 0.75rem;
+    color: #868e96;
+    margin-top: 4px;
+}
+
 .dashboard-stat-card:focus-visible {
     outline: 2px solid var(--bs-primary);
     outline-offset: 2px;
@@ -454,6 +506,29 @@ $notificationBadgeCount = ($user && $user->user_id)
     ? ($isAdminSummary ? notification()->getUnreadCount($user->user_id, $daysOld) : $notifications->count())
     : 0;
 $notices = get_notice_notification_by_role();
+$noticeList = collect($notices)->unique('pk');
+$noticeCategoryTabs = $noticeList->isEmpty()
+    ? collect()
+    : $noticeList->groupBy(function ($n) {
+        if (!empty($n->notice_category_master_pk)) {
+            return 'c:' . $n->notice_category_master_pk;
+        }
+
+        return 'leg:' . md5((string) ($n->notice_type ?? 'other'));
+    })->map(function ($items, $tabKey) {
+        $first = $items->first();
+        $label = $first->category_name ?? $first->notice_type ?? 'Other';
+
+        return [
+            'key' => $tabKey,
+            'label' => $label,
+            'sort' => (int) ($first->category_sort_order ?? 99999),
+            'total' => $items->count(),
+            'preview' => $items->sortByDesc(function ($row) {
+                return $row->display_date ?? '';
+            })->take(4)->values(),
+        ];
+    })->sortBy('sort')->values();
 $hour = (int) date('G');
 $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good evening');
 $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
@@ -862,7 +937,7 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                 </div>
                 <div class="card-body p-3 p-md-4">
                     <div class="dashboard-tweet-item">
-                        <span class="small text-body-secondary">You have <strong class="text-body">{{ $notifications->count() }}</strong> unread notices and total <strong class="text-body">{{ count($notices) }}</strong> notices.</span>
+                        <span class="small text-body-secondary">You have <strong class="text-body">{{ $notifications->count() }}</strong> unread notices and total <strong class="text-body">{{ $noticeList->count() }}</strong> notices.</span>
                     </div>
                     <div class="dashboard-tweet-item">
                         <span class="small text-body-secondary">You have <strong class="text-body">{{ $notifications->count() }}</strong> purchase orders for approval.</span>
@@ -909,46 +984,83 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
             @endif
 
             <div class="card dashboard-panel shadow-sm rounded-4 mb-3">
-                <div class="card-header py-3 px-4 d-flex align-items-center gap-2">
-                    <span class="material-icons material-symbols-rounded text-primary">push_pin</span>
-                    <h5 class="mb-0 fw-semibold">Notices</h5>
+                <div class="card-header py-3 px-4 d-flex flex-wrap align-items-center justify-content-between gap-2 border-0 bg-transparent">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="material-icons material-symbols-rounded text-primary">push_pin</span>
+                        <h5 class="mb-0 fw-semibold">Notices</h5>
+                    </div>
+                    <a href="{{ route('admin.notice.create') }}" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1 rounded-2">
+                        <span class="material-icons material-symbols-rounded" style="font-size:18px;">note_add</span>
+                        Add New Notice
+                    </a>
                 </div>
-                <div class="card-body p-3 p-md-4 dashboard-list-scroll">
-                    @if(count($notices) === 0)
+                <div class="card-body p-3 p-md-4 pt-0 dashboard-list-scroll">
+                    @if($noticeCategoryTabs->isEmpty())
                     <div class="dashboard-empty-state">
                         <span class="material-icons material-symbols-rounded">description</span>
                         <p class="mb-0 small">No notices available.</p>
                     </div>
                     @else
-                    <ul class="list-unstyled mb-0 ps-0">
-                        @foreach($notices as $notice)
-                        @php
-                            $noticeDate = $notice->created_at ?? $notice->display_date ?? null;
-                            $isNewNotice = $noticeDate && \Carbon\Carbon::parse($noticeDate)->diffInDays(now()) < 7;
-                        @endphp
-                        <li class="mb-2">
-                            <div class="dashboard-notice-item {{ $isNewNotice ? 'dashboard-notice-item-new' : '' }}">
-                                <div class="d-flex align-items-start gap-3">
-                                    <span class="notice-icon-wrap"><span class="material-icons material-symbols-rounded">description</span></span>
-                                    <div class="flex-grow-1 min-w-0">
-                                        <div class="d-flex align-items-start justify-content-between gap-2 flex-wrap">
-                                            <span class="dashboard-notice-title">{{ $notice->notice_title }}</span>
-                                            @if($isNewNotice)
-                                            <span class="badge bg-danger dashboard-notice-new-tag flex-shrink-0">New</span>
-                                            @endif
-                                        </div>
-                                        <small class="d-block dashboard-notice-date">{{ $noticeDate ? date('d M, Y', strtotime($noticeDate)) : '—' }}</small>
-                                        @if($notice->document)
-                                        <a href="{{ asset('storage/' . $notice->document) }}" target="_blank" class="dashboard-notice-attachment text-danger text-decoration-none">
-                                            <span class="material-icons material-symbols-rounded" style="font-size: 1rem;">attach_file</span>View attachment
-                                        </a>
-                                        @endif
-                                    </div>
+                    <div id="dashboard-notices-root">
+                        <div class="dashboard-notice-tabs" role="tablist" aria-label="Notice categories">
+                            @foreach($noticeCategoryTabs as $idx => $tab)
+                            <button type="button" class="dashboard-notice-tab {{ $idx === 0 ? 'active' : '' }}" data-notice-tab="{{ $tab['key'] }}" role="tab" aria-selected="{{ $idx === 0 ? 'true' : 'false' }}">
+                                {{ $tab['label'] }}: {{ $tab['total'] }}
+                            </button>
+                            @endforeach
+                        </div>
+                        @foreach($noticeCategoryTabs as $idx => $tab)
+                        <div class="dashboard-notice-tab-pane {{ $idx === 0 ? '' : 'd-none' }}" data-notice-pane="{{ $tab['key'] }}" role="tabpanel">
+                            @foreach($tab['preview'] as $notice)
+                            @php
+                                $noticeDate = $notice->created_at ?? $notice->display_date ?? null;
+                                $isNewNotice = $noticeDate && \Carbon\Carbon::parse($noticeDate)->diffInDays(now()) < 7;
+                                $d1 = !empty($notice->display_date) ? \Carbon\Carbon::parse($notice->display_date)->format('j F, Y') : null;
+                                $d2 = !empty($notice->expiry_date) ? \Carbon\Carbon::parse($notice->expiry_date)->format('j F, Y') : null;
+                                $rangeLabel = ($d1 && $d2) ? ($d1 . ' to ' . $d2) : ($d1 ?? '—');
+                            @endphp
+                            <div class="dashboard-notice-card-lite">
+                                <div class="d-flex align-items-start justify-content-between gap-2 flex-wrap">
+                                    <p class="dashboard-notice-card-title mb-0">{{ $notice->notice_title }}</p>
+                                    @if($isNewNotice)
+                                    <span class="badge bg-danger dashboard-notice-new-tag flex-shrink-0">New</span>
+                                    @endif
                                 </div>
+                                <span class="dashboard-notice-card-range">{{ $rangeLabel }}</span>
+                                @if(!empty($notice->subcategory_name))
+                                <span class="dashboard-notice-card-sub">{{ $notice->subcategory_name }}</span>
+                                @endif
+                                @if($notice->document)
+                                <a href="{{ asset('storage/' . $notice->document) }}" target="_blank" class="dashboard-notice-attachment text-danger text-decoration-none mt-2">
+                                    <span class="material-icons material-symbols-rounded" style="font-size: 1rem;">attach_file</span>View attachment
+                                </a>
+                                @endif
                             </div>
-                        </li>
+                            @endforeach
+                        </div>
                         @endforeach
-                    </ul>
+                        <div class="text-end mt-2">
+                            <a href="{{ route('admin.notice.feed') }}" class="small fw-semibold text-primary text-decoration-none">See all</a>
+                        </div>
+                    </div>
+                    <script>
+                    (function () {
+                        var root = document.getElementById('dashboard-notices-root');
+                        if (!root) { return; }
+                        root.querySelectorAll('[data-notice-tab]').forEach(function (btn) {
+                            btn.addEventListener('click', function () {
+                                var key = btn.getAttribute('data-notice-tab');
+                                root.querySelectorAll('[data-notice-tab]').forEach(function (b) {
+                                    b.classList.toggle('active', b === btn);
+                                    b.setAttribute('aria-selected', b === btn ? 'true' : 'false');
+                                });
+                                root.querySelectorAll('[data-notice-pane]').forEach(function (pane) {
+                                    pane.classList.toggle('d-none', pane.getAttribute('data-notice-pane') !== key);
+                                });
+                            });
+                        });
+                    })();
+                    </script>
                     @endif
                 </div>
             </div>

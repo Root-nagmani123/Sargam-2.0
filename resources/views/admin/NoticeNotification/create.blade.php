@@ -2,7 +2,7 @@
 
 @section('title', 'Create Notice notification')
 
-@section('content')
+@section('setup_content')
 
 
 <div class="container-fluid">
@@ -40,12 +40,20 @@
                     </div>
                     <div class="col-6">
                         <div class="mb-3">
-                            <label class="form-label">Notice Type <span class="text-danger">*</span></label>
-                            <select name="notice_type" class="form-control">
-                                <option value="">Select Notice Type</option>
-                                @foreach($types as $t)
-                                <option value="{{ $t }}" {{ old('notice_type') == $t ? 'selected' : '' }}>{{ $t }}</option>
+                            <label class="form-label">Notice Type (Category) <span class="text-danger">*</span></label>
+                            <select name="notice_category_master_pk" id="noticeCategory" class="form-control" required>
+                                <option value="">Select category</option>
+                                @foreach($categories as $cat)
+                                <option value="{{ $cat->pk }}" {{ (string) old('notice_category_master_pk') === (string) $cat->pk ? 'selected' : '' }}>{{ $cat->name }}</option>
                                 @endforeach
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="mb-3">
+                            <label class="form-label">Notice Sub Type (Subcategory)</label>
+                            <select name="notice_subcategory_master_pk" id="noticeSubcategory" class="form-control">
+                                <option value="">Select sub type</option>
                             </select>
                         </div>
                     </div>
@@ -166,6 +174,33 @@
                     return button.render();
                 }
             }
+        });
+
+        function loadNoticeSubcategories(categoryId, selectedId) {
+            const $sub = $('#noticeSubcategory');
+            $sub.empty().append('<option value="">Select sub type</option>');
+            if (!categoryId) {
+                return;
+            }
+            $.get(`{{ url('admin/notice/subcategories') }}/${encodeURIComponent(categoryId)}`, function(res) {
+                if (!res.status || !res.data) {
+                    return;
+                }
+                $.each(res.data, function(_, item) {
+                    const sel = selectedId && String(selectedId) === String(item.pk) ? 'selected' : '';
+                    $sub.append('<option value="' + item.pk + '" ' + sel + '>' + item.name + '</option>');
+                });
+            });
+        }
+
+        const oldCat = @json(old('notice_category_master_pk'));
+        const oldSub = @json(old('notice_subcategory_master_pk'));
+        if (oldCat) {
+            loadNoticeSubcategories(oldCat, oldSub);
+        }
+
+        $('#noticeCategory').on('change', function() {
+            loadNoticeSubcategories($(this).val(), null);
         });
 
         $('#targetAudience').on('change', function() {

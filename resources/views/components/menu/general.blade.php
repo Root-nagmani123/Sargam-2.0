@@ -51,6 +51,14 @@
                                     <span class="hide-menu small small-sm-normal text-nowrap">Notice
                                         Notifications</span>
                                 </a></li>
+                            @if(hasRole('Admin') || hasRole('Training-Induction'))
+                            <li class="sidebar-item"><a class="sidebar-link {{ request()->routeIs('admin.notice.category-master.*') ? 'active' : '' }}" href="{{ route('admin.notice.category-master.index') }}">
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Notice category master</span>
+                                </a></li>
+                            <li class="sidebar-item"><a class="sidebar-link {{ request()->routeIs('admin.notice.subcategory-master.*') ? 'active' : '' }}" href="{{ route('admin.notice.subcategory-master.index') }}">
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Notice subcategory master</span>
+                                </a></li>
+                            @endif
 
                             <!-- Faculty Dashboard Route -->
                             @if(hasRole('Doctor'))

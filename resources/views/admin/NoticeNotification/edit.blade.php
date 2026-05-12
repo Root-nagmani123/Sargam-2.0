@@ -2,7 +2,7 @@
 
 @section('title', 'Edit Notice notification')
 
-@section('content')
+@section('setup_content')
 
 <div class="container-fluid">
     <x-breadcrum title="Notice notification List" />
@@ -38,12 +38,22 @@
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">Notice Type <span class="text-danger">*</span></label>
-                    <select name="notice_type" class="form-control">
-                        <option value="">Select Notice Type</option>
-                        @foreach($types as $t)
-                            <option value="{{ $t }}" @if($notice->notice_type == $t) selected @endif>{{ $t }}</option>
+                    <label class="form-label">Notice Type (Category) <span class="text-danger">*</span></label>
+                    <select name="notice_category_master_pk" id="noticeCategory" class="form-control" required>
+                        <option value="">Select category</option>
+                        @foreach($categories as $cat)
+                            <option value="{{ $cat->pk }}"
+                                @selected((string) ($resolvedCategoryPk ?? $notice->notice_category_master_pk) === (string) $cat->pk)>
+                                {{ $cat->name }}
+                            </option>
                         @endforeach
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Notice Sub Type (Subcategory)</label>
+                    <select name="notice_subcategory_master_pk" id="noticeSubcategory" class="form-control">
+                        <option value="">Select sub type</option>
                     </select>
                 </div>
 
@@ -104,6 +114,33 @@
 
 <script>
 $(document).ready(function() {
+
+    function loadNoticeSubcategories(categoryId, selectedId) {
+        const $sub = $('#noticeSubcategory');
+        $sub.empty().append('<option value="">Select sub type</option>');
+        if (!categoryId) {
+            return;
+        }
+        $.get(`{{ url('admin/notice/subcategories') }}/${encodeURIComponent(categoryId)}`, function(res) {
+            if (!res.status || !res.data) {
+                return;
+            }
+            $.each(res.data, function(_, item) {
+                const sel = selectedId && String(selectedId) === String(item.pk) ? 'selected' : '';
+                $sub.append('<option value="' + item.pk + '" ' + sel + '>' + item.name + '</option>');
+            });
+        });
+    }
+
+    const initialCat = @json($resolvedCategoryPk ?? $notice->notice_category_master_pk);
+    const initialSub = @json($notice->notice_subcategory_master_pk);
+    if (initialCat) {
+        loadNoticeSubcategories(initialCat, initialSub);
+    }
+
+    $('#noticeCategory').on('change', function() {
+        loadNoticeSubcategories($(this).val(), null);
+    });
 
    $('#editor').summernote({
         height: 200,
