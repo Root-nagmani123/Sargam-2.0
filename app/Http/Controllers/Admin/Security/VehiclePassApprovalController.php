@@ -508,6 +508,10 @@ class VehiclePassApprovalController extends Controller
             $application->save();
         }
 
+        if ($kind === 'tw') {
+            VehiclePassController::bumpIndexListCacheEpoch();
+        }
+
         return redirect()->route('admin.security.vehicle_pass_approval.index')
             ->with('success', 'Vehicle Pass approved successfully');
     }
@@ -561,6 +565,10 @@ class VehiclePassApprovalController extends Controller
             'created_by' => $employeePk,
             'created_date' => now(),
         ]);
+
+        if ($kind === 'tw') {
+            VehiclePassController::bumpIndexListCacheEpoch();
+        }
 
         return redirect()->route('admin.security.vehicle_pass_approval.index')
             ->with('success', 'Vehicle Pass rejected');
