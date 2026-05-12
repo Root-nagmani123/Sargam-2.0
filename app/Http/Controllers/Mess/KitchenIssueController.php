@@ -159,7 +159,100 @@ class KitchenIssueController extends Controller
                 ->values()
             : collect();
 
-        return view('mess.kitchen-issues.index', compact('stores', 'itemSubcategories', 'clientTypes', 'clientNamesByType', 'faculties', 'employees', 'messStaff', 'otCourses'));
+        $selectedClientType = (string) $request->input('client_type', '');
+        $selectedClientTypePk = (string) $request->input('client_type_pk', '');
+        $selectedBuyerName = trim((string) $request->input('buyer_name', ''));
+
+        $typeSlugMap = [
+            (string) KitchenIssueMaster::CLIENT_EMPLOYEE => 'employee',
+            (string) KitchenIssueMaster::CLIENT_OT => 'ot',
+            (string) KitchenIssueMaster::CLIENT_COURSE => 'course',
+            (string) KitchenIssueMaster::CLIENT_SECTION => 'section',
+            (string) KitchenIssueMaster::CLIENT_OTHER => 'other',
+        ];
+        $selectedTypeSlug = $typeSlugMap[$selectedClientType] ?? '';
+
+        $filterClientTypePkOptions = collect();
+        if (in_array($selectedTypeSlug, ['ot', 'course'], true)) {
+            $filterClientTypePkOptions = $otCourses->map(function ($course) {
+                return [
+                    'value' => (string) $course->pk,
+                    'text' => (string) $course->course_name,
+                ];
+            })->values();
+        } elseif ($selectedTypeSlug !== '' && isset($clientNamesByType[$selectedTypeSlug])) {
+            $filterClientTypePkOptions = $clientNamesByType[$selectedTypeSlug]
+                ->map(function ($category) {
+                    return [
+                        'value' => (string) $category->id,
+                        'text' => (string) $category->client_name,
+                    ];
+                })
+                ->values();
+        }
+
+        $filterBuyerNames = collect();
+        if ($selectedTypeSlug === 'employee' && $selectedClientTypePk !== '') {
+            $selectedEmployeeBucket = strtolower(trim((string) $filterClientTypePkOptions
+                ->firstWhere('value', $selectedClientTypePk)['text'] ?? ''));
+            if ($selectedEmployeeBucket === 'academy staff') {
+                $filterBuyerNames = $employees->pluck('full_name')->filter()->values();
+            } elseif ($selectedEmployeeBucket === 'faculty') {
+                $filterBuyerNames = $faculties->pluck('full_name')->filter()->values();
+            } elseif ($selectedEmployeeBucket === 'mess staff') {
+                $filterBuyerNames = $messStaff->pluck('full_name')->filter()->values();
+            }
+        } elseif ($selectedTypeSlug === 'ot' && $selectedClientTypePk !== '') {
+            $filterBuyerNames = StudentMaster::join('student_master_course__map', 'student_master.pk', '=', 'student_master_course__map.student_master_pk')
+                ->where('student_master_course__map.course_master_pk', (int) $selectedClientTypePk)
+                ->select('student_master.display_name', 'student_master.generated_OT_code')
+                ->orderBy('student_master.display_name')
+                ->get()
+                ->map(function ($student) {
+                    $displayName = trim((string) ($student->display_name ?? ''));
+                    $otCode = trim((string) ($student->generated_OT_code ?? ''));
+                    if ($displayName === '') {
+                        return null;
+                    }
+                    return $otCode !== '' ? ($displayName . ' (' . $otCode . ')') : $displayName;
+                })
+                ->filter()
+                ->values();
+        } elseif (in_array($selectedTypeSlug, ['course', 'section', 'other'], true) && $selectedClientTypePk !== '') {
+            $typeToNumber = [
+                'course' => KitchenIssueMaster::CLIENT_COURSE,
+                'section' => KitchenIssueMaster::CLIENT_SECTION,
+                'other' => KitchenIssueMaster::CLIENT_OTHER,
+            ];
+            $filterBuyerNames = KitchenIssueMaster::query()
+                ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+                ->where('client_type', $typeToNumber[$selectedTypeSlug])
+                ->where('client_type_pk', (int) $selectedClientTypePk)
+                ->whereNotNull('client_name')
+                ->where('client_name', '!=', '')
+                ->distinct()
+                ->orderBy('client_name')
+                ->pluck('client_name')
+                ->map(fn ($name) => trim((string) $name))
+                ->filter()
+                ->values();
+        }
+
+        return view('mess.kitchen-issues.index', compact(
+            'stores',
+            'itemSubcategories',
+            'clientTypes',
+            'clientNamesByType',
+            'faculties',
+            'employees',
+            'messStaff',
+            'otCourses',
+            'selectedClientType',
+            'selectedClientTypePk',
+            'selectedBuyerName',
+            'filterClientTypePkOptions',
+            'filterBuyerNames'
+        ));
     }
 
     /**
@@ -338,6 +431,12 @@ class KitchenIssueController extends Controller
 
         if ($request->filled('client_type')) {
             $q->where('kim.client_type', $request->client_type);
+        }
+        if ($request->filled('client_type_pk')) {
+            $q->where('kim.client_type_pk', (int) $request->input('client_type_pk'));
+        }
+        if ($request->filled('buyer_name')) {
+            $q->where('kim.client_name', trim((string) $request->input('buyer_name')));
         }
 
         if (! $request->filled('start_date') && ! $request->filled('end_date')) {
