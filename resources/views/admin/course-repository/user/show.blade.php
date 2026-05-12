@@ -192,7 +192,7 @@
                                         </small>
                                     </td>
                                     <td class="text-center">
-                                        <a href="{{ route('course-repository.document.download', $doc->pk) }}"
+                                        <a href="{{ route('course-repository.document.download', $doc->pk) }}?file={{ urlencode($doc->upload_document) }}"
                                             class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation();">
                                             <span class="material-icons material-symbols-rounded me-1">download</span>
                                             Download

@@ -23,7 +23,7 @@ class PurchaseOrderController extends Controller
         $vendorIds = $this->normalizeFilterIdList($request->input('vendor_id'));
         $storeIds = $this->normalizeFilterIdList($request->input('store_id'));
 
-        $query = PurchaseOrder::with(['vendor', 'store', 'creator', 'approver', 'items']);
+        $query = PurchaseOrder::query();
 
         if ($request->filled('date_from')) {
             $query->whereDate('po_date', '>=', $request->date_from);
@@ -38,7 +38,83 @@ class PurchaseOrderController extends Controller
             $query->whereIn('store_id', $storeIds);
         }
 
-        $purchaseOrders = $query->latest('po_date')->get();
+        if ($request->ajax() && $request->has('draw')) {
+            $draw = (int) $request->input('draw', 0);
+            $start = max((int) $request->input('start', 0), 0);
+            $length = (int) $request->input('length', 10);
+            $search = trim((string) $request->input('search.value', ''));
+
+            $recordsTotal = (clone $query)->count();
+
+            if ($search !== '') {
+                $query->where(function ($q) use ($search) {
+                    $q->where('po_number', 'like', '%' . $search . '%')
+                        ->orWhere('status', 'like', '%' . $search . '%')
+                        ->orWhereHas('vendor', function ($v) use ($search) {
+                            $v->where('name', 'like', '%' . $search . '%');
+                        })
+                        ->orWhereHas('store', function ($s) use ($search) {
+                            $s->where('store_name', 'like', '%' . $search . '%');
+                        });
+                });
+            }
+
+            $recordsFiltered = (clone $query)->count();
+
+            $paged = (clone $query)
+                ->with(['vendor', 'store'])
+                ->latest('po_date');
+
+            if ($length !== -1) {
+                $paged->skip($start)->take(max($length, 0));
+            }
+
+            $purchaseOrders = $paged->get();
+            $canDeletePurchaseOrder = function_exists('hasRole') && (hasRole('Admin') || hasRole('Mess-Admin'));
+            $rowStart = $start + 1;
+
+            $data = $purchaseOrders->map(function ($po, $index) use ($canDeletePurchaseOrder, $rowStart) {
+                $statusBadgeClass = $po->status === 'approved'
+                    ? 'text-bg-success'
+                    : ($po->status === 'rejected' ? 'text-bg-danger' : ($po->status === 'completed' ? 'text-bg-primary' : 'text-bg-warning'));
+
+                $viewBtn = '<button type="button" class="btn btn-sm btn-outline-primary btn-view-po rounded-2 po-action-btn" data-po-id="' . $po->id . '" title="View">'
+                    . '<i class="material-icons material-symbol-rounded align-middle" style="font-size: 1rem;">visibility</i>'
+                    . '</button>';
+                $editBtn = '<button type="button" class="btn btn-sm btn-outline-info btn-edit-po rounded-2 po-action-btn" data-po-id="' . $po->id . '" title="Edit">'
+                    . '<i class="material-icons material-symbol-rounded align-middle" style="font-size: 1rem;">edit</i>'
+                    . '</button>';
+                $deleteForm = '';
+
+                if ($canDeletePurchaseOrder) {
+                    $deleteUrl = route('admin.mess.purchaseorders.destroy', $po->id);
+                    $csrf = csrf_token();
+                    $deleteForm = '<form action="' . e($deleteUrl) . '" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this purchase order?\');">'
+                        . '<input type="hidden" name="_token" value="' . e($csrf) . '">'
+                        . '<input type="hidden" name="_method" value="DELETE">'
+                        . '<button type="submit" class="btn btn-sm btn-outline-danger rounded-2 po-action-btn" title="Delete">'
+                        . '<i class="material-icons material-symbol-rounded align-middle" style="font-size: 1rem;">delete</i>'
+                        . '</button>'
+                        . '</form>';
+                }
+
+                return [
+                    '<span class="ps-4 d-inline-block text-body-secondary fw-medium">' . ($rowStart + $index) . '</span>',
+                    '<span class="fw-semibold text-body">' . e($po->po_number) . '</span>',
+                    '<span class="text-body-secondary">' . e(optional($po->vendor)->name ?? 'N/A') . '</span>',
+                    '<span class="text-body-secondary">' . e(optional($po->store)->store_name ?? 'N/A') . '</span>',
+                    '<span class="badge rounded-pill ' . $statusBadgeClass . ' px-3 py-1 fw-semibold" style="font-size: 0.72rem; letter-spacing: 0.02em;">' . e(ucfirst($po->status)) . '</span>',
+                    '<div class="d-inline-flex align-items-center justify-content-end gap-1">' . $viewBtn . $editBtn . $deleteForm . '</div>',
+                ];
+            })->values()->all();
+
+            return response()->json([
+                'draw' => $draw,
+                'recordsTotal' => $recordsTotal,
+                'recordsFiltered' => $recordsFiltered,
+                'data' => $data,
+            ]);
+        }
 
         $vendors = Vendor::orderBy('name')->get();
         $stores = Store::where('status', 1)->orderBy('store_name')->get();
@@ -58,7 +134,7 @@ class PurchaseOrderController extends Controller
         $filterStoreIds = $storeIds;
 
         return view('mess.purchaseorders.index', compact(
-            'purchaseOrders', 'vendors', 'stores', 'itemSubcategories', 'po_number', 'paymentModes',
+            'vendors', 'stores', 'itemSubcategories', 'po_number', 'paymentModes',
             'filterDateFrom', 'filterDateTo', 'filterVendorIds', 'filterStoreIds'
         ));
     }

@@ -65,4 +65,45 @@ class CourseRepositoryDocument extends Model
     {
         return $query->where('del_type', 0);
     }
+
+    /**
+     * Normalize stored path so both old/new records work.
+     */
+    public function getNormalizedFullPathAttribute()
+    {
+        $path = trim((string) $this->full_path);
+
+        if ($path === '') {
+            return null;
+        }
+
+        // Handle full URL values like "https://domain/storage/..."
+        $path = preg_replace('#^https?://[^/]+/#i', '', $path);
+
+        // Handle old data saved as "storage/app/public/..."
+        $path = preg_replace('#^/?storage/app/public/#', '', $path);
+
+        // Handle old data saved as "/storage/..."
+        $path = preg_replace('#^/?storage/#', '', $path);
+
+        // Handle old data saved as "app/public/..."
+        $path = preg_replace('#^/?app/public/#', '', $path);
+
+        // Windows-style paths
+        $path = str_replace('\\', '/', $path);
+
+        return ltrim($path, '/');
+    }
+
+    /**
+     * Public URL for browser download/view links.
+     */
+    public function getPublicFileUrlAttribute()
+    {
+        if (!$this->normalized_full_path) {
+            return null;
+        }
+
+        return asset('storage/' . $this->normalized_full_path);
+    }
 }
