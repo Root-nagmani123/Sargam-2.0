@@ -76,53 +76,48 @@ class ExemptionCategoryController extends Controller
            STATUS TOGGLE
         ================================ */
             ->addColumn('status', function ($row) {
-                $checked = $row->active_inactive == 1 ? 'checked' : '';
-
-                return '
-            <div class="form-check form-switch d-inline-block">
-                <input class="form-check-input plain-status-toggle"
-                       type="checkbox"
-                       data-id="' . $row->pk . '"
-                       ' . $checked . '>
-            </div>';
+                if ($row->active_inactive == 1) {
+                    return '<span class="badge-active">Active</span>';
+                }
+                return '<span class="badge-inactive">Inactive</span>';
             })
 
             /* ===============================
            ACTION BUTTONS
         ================================ */
-    ->addColumn('action', function ($row) {
-        $disabled = $row->active_inactive == 1 ? 'disabled aria-disabled="true"' : '';
+            ->addColumn('action', function ($row) {
+                $checked = $row->active_inactive == 1 ? 'checked' : '';
 
                 return '
-                    <div class="d-inline-flex align-items-center gap-2"
-                        role="group"
-                        aria-label="Row actions">
+                    <div class="d-inline-flex align-items-center gap-2">
 
-                        <!-- Edit Action -->
+                        <!-- Edit -->
                         <a href="javascript:void(0)"
-                        data-id="' . $row->pk . '"
-                        data-exemp_category_name="' . $row->exemp_category_name . '"
-                        data-exemp_cat_short_name="' . $row->exemp_cat_short_name . '"
-                        data-active_inactive="' . $row->active_inactive . '"
-                        class="btn btn-sm edit-btn btn-outline-primary d-inline-flex align-items-center gap-1"
-                        aria-label="Edit course group type">
-
-                            <i class="material-icons material-symbols-rounded"
-                            style="font-size:18px;">edit</i>
-
-                            <span class="d-none d-md-inline">Edit</span>
+                            data-id="' . $row->pk . '"
+                            data-exemp_category_name="' . htmlspecialchars($row->exemp_category_name, ENT_QUOTES, 'UTF-8') . '"
+                            data-exemp_cat_short_name="' . htmlspecialchars($row->exemp_cat_short_name, ENT_QUOTES, 'UTF-8') . '"
+                            data-active_inactive="' . $row->active_inactive . '"
+                            class="ec-action-btn edit-btn text-primary"
+                            title="Edit">
+                            <span class="material-icons material-symbols-rounded" style="font-size:20px;">edit</span>
                         </a>
 
-                        <!-- Delete Action -->
+                        <!-- Status Toggle -->
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input plain-status-toggle"
+                                   type="checkbox"
+                                   role="switch"
+                                   data-id="' . $row->pk . '"
+                                   style="cursor:pointer;width:2.2em;height:1.2em;"
+                                   ' . $checked . '>
+                        </div>
+
+                        <!-- Delete -->
                         <a href="javascript:void(0)"
-                        data-id="' . $row->pk . '"
-                        class="btn btn-sm btn-outline-danger delete-btn d-inline-flex align-items-center gap-1 ' . $disabled . '"
-                        aria-disabled="' . ($row->active_inactive == 1 ? 'true' : 'false') . '">
-
-                            <i class="material-icons material-symbols-rounded"
-                            style="font-size:18px;">delete</i>
-
-                            <span class="d-none d-md-inline">Delete</span>
+                            data-id="' . $row->pk . '"
+                            class="ec-action-btn delete-btn text-danger"
+                            title="Delete">
+                            <span class="material-icons material-symbols-rounded" style="font-size:20px;">delete</span>
                         </a>
 
                     </div>
@@ -289,55 +284,47 @@ public function store(Request $request)
            STATUS TOGGLE
         ================================ */
             ->addColumn('status', function ($row) {
-                $checked = $row->active_inactive == 1 ? 'checked' : '';
-
-                return '
-            <div class="form-check form-switch d-inline-block">
-                <input class="form-check-input plain-status-toggle"
-                       type="checkbox"
-                       data-id="' . $row->pk . '"
-                       ' . $checked . '>
-            </div>';
+                if ($row->active_inactive == 1) {
+                    return '<span class="badge-active">Active</span>';
+                }
+                return '<span class="badge-inactive">Inactive</span>';
             })
 
             /* ===============================
            ACTION BUTTONS
         ================================ */
-
-
-             ->addColumn('action', function ($row) {
-              $disabled = $row->active_inactive == 1 ? 'disabled aria-disabled="true"' : '';
+            ->addColumn('action', function ($row) {
+                $checked = $row->active_inactive == 1 ? 'checked' : '';
 
                 return '
-                    <div class="d-inline-flex align-items-center gap-2"
-                        role="group"
-                        aria-label="Row actions">
+                    <div class="d-inline-flex align-items-center gap-2">
 
-                        <!-- Edit Action -->
+                        <!-- Edit -->
                         <a href="javascript:void(0)"
-                        data-id="' . $row->pk . '"
-                        data-speciality_name="' . $row->speciality_name . '"
-                        data-created_date="' . $row->created_date . '"
-                        data-active_inactive="' . $row->active_inactive . '"
-                        class="btn btn-sm edit-btn btn-outline-primary d-inline-flex align-items-center gap-1"
-                        aria-label="Edit course group type">
-
-                            <i class="material-icons material-symbols-rounded"
-                            style="font-size:18px;">edit</i>
-
-                            <span class="d-none d-md-inline">Edit</span>
+                            data-id="' . $row->pk . '"
+                            data-speciality_name="' . htmlspecialchars($row->speciality_name, ENT_QUOTES, 'UTF-8') . '"
+                            data-active_inactive="' . $row->active_inactive . '"
+                            class="ems-action-btn edit-btn text-primary"
+                            title="Edit">
+                            <span class="material-icons material-symbols-rounded" style="font-size:20px;">edit</span>
                         </a>
 
-                        <!-- Delete Action -->
+                        <!-- Status Toggle -->
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input plain-status-toggle"
+                                   type="checkbox"
+                                   role="switch"
+                                   data-id="' . $row->pk . '"
+                                   style="cursor:pointer;width:2.2em;height:1.2em;"
+                                   ' . $checked . '>
+                        </div>
+
+                        <!-- Delete -->
                         <a href="javascript:void(0)"
-                        data-id="' . $row->pk . '"
-                        class="btn btn-sm btn-outline-danger delete-btn d-inline-flex align-items-center gap-1 ' . $disabled . '"
-                        aria-disabled="' . ($row->active_inactive == 1 ? 'true' : 'false') . '">
-
-                            <i class="material-icons material-symbols-rounded"
-                            style="font-size:18px;">delete</i>
-
-                            <span class="d-none d-md-inline">Delete</span>
+                            data-id="' . $row->pk . '"
+                            class="ems-action-btn delete-btn text-danger"
+                            title="Delete">
+                            <span class="material-icons material-symbols-rounded" style="font-size:20px;">delete</span>
                         </a>
 
                     </div>

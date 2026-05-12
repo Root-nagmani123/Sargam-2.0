@@ -72,25 +72,39 @@ class MDOEscrotExemptionDataTable extends DataTable
                 }
             }, true)
             ->addColumn('actions', function ($row) {
-                $editUrl = route('mdo-escrot-exemption.edit', $row->pk);
-                $deleteUrl = route('mdo-escrot-exemption.destroy', $row->pk);
-                $csrf = csrf_token();
-                $formId = 'delete-form-' . $row->pk;
+                $encryptedPk = encrypt($row->pk);
+                $dutyTypePk  = $row->mdo_duty_type_master_pk ?? '';
+                $facultyPk   = $row->faculty_master_pk ?? '';
+                $mdoDate     = $row->mdo_date ? \Carbon\Carbon::parse($row->mdo_date)->format('Y-m-d') : '';
+                $timeFrom    = $row->Time_from ? substr($row->Time_from, 0, 5) : '';
+                $timeTo      = $row->Time_to   ? substr($row->Time_to, 0, 5)   : '';
+                $studentName = htmlspecialchars($row->studentMaster->display_name ?? '', ENT_QUOTES, 'UTF-8');
+                $deleteUrl   = route('mdo-escrot-exemption.destroy', $row->pk);
+                $csrf        = csrf_token();
+                $formId      = 'delete-form-' . $row->pk;
 
                 return <<<HTML
-<div class="d-flex justify-content-center align-items-center gap-2"
+<div class="d-flex justify-content-start align-items-start gap-2"
      role="group"
      aria-label="Row actions">
 
-    <!-- Edit -->
-    <a href="{$editUrl}"
-       class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 px-2"
-       aria-label="Edit record">
+    <!-- Edit (opens modal) -->
+    <button type="button"
+            class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1 px-2 border-0 p-0 bg-transparent text-primary"
+            data-bs-toggle="modal"
+            data-bs-target="#editMdoModal"
+            data-pk="{$encryptedPk}"
+            data-duty-type="{$dutyTypePk}"
+            data-faculty="{$facultyPk}"
+            data-date="{$mdoDate}"
+            data-time-from="{$timeFrom}"
+            data-time-to="{$timeTo}"
+            data-student="{$studentName}"
+            aria-label="Edit record">
         <span class="material-icons material-symbols-rounded"
               style="font-size:20px;"
               aria-hidden="true">edit</span>
-        <span class="d-none d-md-inline">Edit</span>
-    </a>
+    </button>
 
     <!-- Delete -->
     <form id="{$formId}" action="{$deleteUrl}" method="POST" class="d-inline">
@@ -98,13 +112,12 @@ class MDOEscrotExemptionDataTable extends DataTable
         <input type="hidden" name="_method" value="DELETE">
 
         <button type="submit"
-                class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1 px-2"
+                class="btn btn-sm btn-danger d-inline-flex align-items-center gap-1 px-2 border-0 p-0 bg-transparent text-primary"
                 aria-label="Delete record"
                 onclick="return confirm('Are you sure you want to delete this record?');">
             <span class="material-icons material-symbols-rounded"
                   style="font-size:20px;"
                   aria-hidden="true">delete</span>
-            <span class="d-none d-md-inline">Delete</span>
         </button>
     </form>
 
@@ -209,17 +222,17 @@ public function html(): HtmlBuilder
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center')->orderable(false)->searchable(false),
+            Column::computed('DT_RowIndex')->title('S.No.')->orderable(false)->searchable(false),
             Column::make('mdo_date')->title('Date')->orderable(false)->searchable(false),
-            Column::make('student_name')->title('Student Name')->addClass('text-center')->orderable(false)->searchable(true),
-            Column::make('ot_code')->title('OT Code')->addClass('text-center')->orderable(false)->searchable(true),
-            Column::make('Time_from')->title('Time From')->orderable(false)->searchable(false)->addClass('text-center'),
-            Column::make('Time_to')->title('Time To')->orderable(false)->searchable(false)->addClass('text-center'),
-            Column::make('course_name')->title('Programme Name')->addClass('text-center')->searchable(true)->orderable(false),
-            Column::make('mdo_name')->title('Duty type')->addClass('text-center')->searchable(true)->orderable(false),
-            Column::make('faculty_name')->title('Faculty Name')->addClass('text-center')->searchable(true)->orderable(false),
-            Column::make('Remark')->title('Remarks')->addClass('text-center')->searchable(true)->orderable(false),
-            Column::computed('actions')->title('Actions')->addClass('text-center')->orderable(false),
+            Column::make('student_name')->title('Student Name')->orderable(false)->searchable(true),
+            Column::make('ot_code')->title('OT Code')->orderable(false)->searchable(true),
+            Column::make('Time_from')->title('Time From')->orderable(false)->searchable(false),
+            Column::make('Time_to')->title('Time To')->orderable(false)->searchable(false),
+            Column::make('course_name')->title('Programme Name')->searchable(true)->orderable(false),
+            Column::make('mdo_name')->title('Duty type')->searchable(true)->orderable(false),
+            Column::make('faculty_name')->title('Faculty Name')->searchable(true)->orderable(false),
+            Column::make('Remark')->title('Remarks')->searchable(true)->orderable(false),
+            Column::computed('actions')->title('Actions')->orderable(false),
         ];
 
     }
