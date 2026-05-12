@@ -60,53 +60,36 @@ class CourseMemoDecisionMappController extends Controller
                 })
 
                 ->addColumn('status', function ($row) {
-                    return '<div class="form-check form-switch d-inline-block">
-                    <input class="form-check-input status-toggle"
-                        type="checkbox"
-                        data-table="course_memo_decision_mapp"
-                        data-column="active_inactive"
-                        data-id="' . $row->getKey() . '"
-                        ' . ($row->active_inactive == 1 ? 'checked' : '') . '>
-                </div>';
+                    return $row->active_inactive == 1
+                        ? '<span class="cmd-badge-active">Active</span>'
+                        : '<span class="cmd-badge-inactive">Inactive</span>';
                 })
 
                 ->addColumn('action', function ($row) {
-
-                    $editUrl   = route('course.memo.decision.edit', encrypt($row->pk));
                     $deleteUrl = route('course.memo.decision.delete', encrypt($row->pk));
+                    $isActive  = ($row->active_inactive == 1);
 
-                    $editBtn = '
-                <a href="javascript:void(0)"
-                    class="btn btn-sm btn-outline-warning d-flex align-items-center gap-1 editConclusion"
-                    data-id="' . $row->pk . '"
-                    data-course="' . $row->course_master_pk . '"
-                    data-memo="' . $row->memo_type_master_pk . '"
-                    data-conclusion="' . $row->memo_conclusion_master_pk . '"
-                    data-status="' . $row->active_inactive . '">
-                    <i class="material-icons material-symbols-rounded" style="font-size:18px;">edit</i>
-                    <span class="d-none d-md-inline">Edit</span>
-                </a>';
+                    $editBtn = '<a href="javascript:void(0)" class="cmd-action-btn text-primary editConclusion"'
+                        . ' data-id="' . $row->pk . '"'
+                        . ' data-course="' . $row->course_master_pk . '"'
+                        . ' data-memo="' . $row->memo_type_master_pk . '"'
+                        . ' data-conclusion="' . $row->memo_conclusion_master_pk . '"'
+                        . ' data-status="' . $row->active_inactive . '"'
+                        . ' title="Edit"><span class="material-symbols-rounded">edit</span></a>';
 
-                    if ($row->active_inactive == 1) {
-                        $deleteBtn = '
-                    <button class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1" disabled>
-                        <i class="material-icons material-symbols-rounded" style="font-size:18px;">delete</i>
-                        <span class="d-none d-md-inline">Delete</span>
-                    </button>';
-                    } else {
-                        $deleteBtn = '
-                    <form action="' . $deleteUrl . '" method="POST" class="d-inline">
-                        ' . csrf_field() . method_field('DELETE') . '
-                        <button type="submit"
-                            class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1"
-                            onclick="return confirm(\'Are you sure you want to delete this memo type?\');">
-                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">delete</i>
-                            <span class="d-none d-md-inline">Delete</span>
-                        </button>
-                    </form>';
-                    }
+                    $toggleBtn = '<div class="form-check form-switch d-inline-block mb-0" style="min-height:0;">'
+                        . '<input class="form-check-input status-toggle" type="checkbox" role="switch"'
+                        . ' data-table="course_memo_decision_mapp" data-column="active_inactive"'
+                        . ' data-id="' . $row->getKey() . '" ' . ($isActive ? 'checked' : '') . '>'
+                        . '</div>';
 
-                    return '<div class="d-inline-flex gap-2">' . $editBtn . $deleteBtn . '</div>';
+                    $deleteBtn = $isActive
+                        ? '<button type="button" class="cmd-action-btn text-muted" disabled style="opacity:0.35;cursor:not-allowed;" title="Cannot delete active record"><span class="material-symbols-rounded">delete</span></button>'
+                        : '<button type="button" class="cmd-action-btn text-danger cmd-delete-btn"'
+                            . ' data-url="' . $deleteUrl . '"'
+                            . ' title="Delete"><span class="material-symbols-rounded">delete</span></button>';
+
+                    return '<div class="d-inline-flex align-items-center gap-1">' . $editBtn . $toggleBtn . $deleteBtn . '</div>';
                 })
 
                 ->rawColumns(['status', 'action'])
