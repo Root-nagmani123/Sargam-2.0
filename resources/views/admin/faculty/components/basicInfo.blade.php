@@ -334,8 +334,8 @@
             label="Photo Upload:"
             placeholder="Photo upload :"
             formLabelClass="form-label"
-
-            helperSmallText="Please upload a recent passport-sized photo"
+            accept="image/jpeg,image/png,image/gif"
+            helperSmallText="Please upload a recent passport-sized photo (Max 2 MB, JPG or PNG or GIF only)"
             />
 
             @if(!empty($faculty->photo_uplode_path))

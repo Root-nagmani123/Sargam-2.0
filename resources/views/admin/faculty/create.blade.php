@@ -430,7 +430,9 @@ input.is-invalid {
                                     label="Photo Upload:"
                                     placeholder="Photo Upload:"
                                     formLabelClass="form-label"
-                                    helperSmallText="Please upload a recent passport-sized photo"
+                                    accept="image/jpeg,image/png,image/gif"
+                                    helperSmallText="Please upload a recent passport-sized photo (Max 2 MB, JPG or PNG or GIF only)"
+
                                 />
 
                                 <!-- Preview Container -->
