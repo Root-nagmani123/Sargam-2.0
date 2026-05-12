@@ -103,7 +103,7 @@
         }
 
         if ($matchesSection(
-            ['member.profile.edit', 'admin.dashboard*', 'admin.notice.*'],
+            ['member.profile.edit', 'admin.dashboard*', 'admin.notice.*', 'admin.notice.category-master.*', 'admin.notice.subcategory-master.*', 'admin.notice.categories-master.*'],
             ['dashboard*', 'member/profile/edit*']
         )) {
             return 'General';

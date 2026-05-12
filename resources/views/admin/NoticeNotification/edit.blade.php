@@ -2,12 +2,16 @@
 
 @section('title', 'Edit Notice notification')
 
+<<<<<<< HEAD
 @push('styles')
 <link href="https://cdnjs.cloudflare.com/ajax/libs/summernote/0.8.18/summernote-lite.min.css" rel="stylesheet">
 <style>
     .notice-form-card {
         border-left: 4px solid #004a93;
     }
+=======
+@section('setup_content')
+>>>>>>> 72c69fa0 (notice_notification category subcategory mapping work)
 
     .notice-form-card .form-label {
         font-size: 0.875rem;
@@ -166,6 +170,7 @@
                         <textarea id="editor" name="description" class="form-control">{!! old('description', $notice->description) !!}</textarea>
                     </div>
 
+<<<<<<< HEAD
                     {{-- Row 3: Display | Expiry --}}
                     <div class="col-md-6">
                         <label class="form-label" for="display_date">
@@ -215,6 +220,54 @@
                             <option value="">Select the target audience</option>
                             @foreach($target as $t)
                             <option value="{{ $t }}" {{ old('target_audience', $notice->target_audience) == $t ? 'selected' : '' }}>
+=======
+                <div class="mb-3">
+                    <label class="form-label">Notice Type (Category) <span class="text-danger">*</span></label>
+                    <select name="notice_category_master_pk" id="noticeCategory" class="form-control" required>
+                        <option value="">Select category</option>
+                        @foreach($categories as $cat)
+                            <option value="{{ $cat->pk }}"
+                                @selected((string) ($resolvedCategoryPk ?? $notice->notice_category_master_pk) === (string) $cat->pk)>
+                                {{ $cat->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Notice Sub Type (Subcategory)</label>
+                    <select name="notice_subcategory_master_pk" id="noticeSubcategory" class="form-control">
+                        <option value="">Select sub type</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Display Date <span class="text-danger">*</span></label>
+                    <input type="date" name="display_date" class="form-control"
+                           value="{{ $notice->display_date }}">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Expiry Date <span class="text-danger">*</span></label>
+                    <input type="date" name="expiry_date" class="form-control"
+                           value="{{ $notice->expiry_date }}">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Document (Optional)</label>
+                    <input type="file" name="document" class="form-control">
+                    @if($notice->document)
+                        <a href="{{ asset('storage/'.$notice->document) }}" target="_blank">View Document</a>
+                    @endif
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Target Audience <span class="text-danger">*</span></label>
+                    <select name="target_audience" id="targetAudience" class="form-control">
+                        <option value="">Select Target Audience</option>
+                        @foreach($target as $t)
+                            <option value="{{ $t }}" @if($notice->target_audience == $t) selected @endif>
+>>>>>>> 72c69fa0 (notice_notification category subcategory mapping work)
                                 {{ $t }}
                             </option>
                             @endforeach
@@ -260,6 +313,7 @@ $(document).ready(function() {
         'Service related': ['Transfer', 'Posting', 'Promotion', 'Retirement']
     };
 
+<<<<<<< HEAD
     function refreshNoticeSubType() {
         var type = $('#notice_type').val();
         var $sub = $('#noticeSubType');
@@ -278,6 +332,36 @@ $(document).ready(function() {
     refreshNoticeSubType();
 
     $('#editor').summernote({
+=======
+    function loadNoticeSubcategories(categoryId, selectedId) {
+        const $sub = $('#noticeSubcategory');
+        $sub.empty().append('<option value="">Select sub type</option>');
+        if (!categoryId) {
+            return;
+        }
+        $.get(`{{ url('admin/notice/subcategories') }}/${encodeURIComponent(categoryId)}`, function(res) {
+            if (!res.status || !res.data) {
+                return;
+            }
+            $.each(res.data, function(_, item) {
+                const sel = selectedId && String(selectedId) === String(item.pk) ? 'selected' : '';
+                $sub.append('<option value="' + item.pk + '" ' + sel + '>' + item.name + '</option>');
+            });
+        });
+    }
+
+    const initialCat = @json($resolvedCategoryPk ?? $notice->notice_category_master_pk);
+    const initialSub = @json($notice->notice_subcategory_master_pk);
+    if (initialCat) {
+        loadNoticeSubcategories(initialCat, initialSub);
+    }
+
+    $('#noticeCategory').on('change', function() {
+        loadNoticeSubcategories($(this).val(), null);
+    });
+
+   $('#editor').summernote({
+>>>>>>> 72c69fa0 (notice_notification category subcategory mapping work)
         height: 200,
         placeholder: 'Write here...',
         toolbar: [
