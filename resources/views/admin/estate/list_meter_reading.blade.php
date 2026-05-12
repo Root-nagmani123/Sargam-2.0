@@ -188,7 +188,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 columns: [
                     { data: 'sno', name: 'sno', orderable: false, searchable: false },
                     { data: 'name', name: 'name' },
-                    { data: 'employee_type', name: 'employee_type' },
+                    { data: 'designation', name: 'designation' },
                     { data: 'section', name: 'section' },
                     { data: 'unit_type', name: 'unit_type' },
                     { data: 'unit_sub_type', name: 'unit_sub_type' },

@@ -9,6 +9,7 @@ use App\Models\SecurityParmIdApply;
 use Illuminate\Pagination\LengthAwarePaginator;
 use App\Models\SecurityParmIdApplyApproval;
 use App\Models\EmployeeMaster;
+use App\Support\DataTableRedisCache;
 use App\Support\IdCardSecurityMapper;
 use App\Support\IdCardSecurityLookup;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -26,8 +27,105 @@ use Maatwebsite\Excel\Facades\Excel;
  */
 class EmployeeIDCardRequestController extends Controller
 {
+    private const LISTING_CACHE_EPOCH_KEY = 'admin_employee_idcard_index_list_epoch';
+
+    public static function bumpIndexListCacheEpoch(): void
+    {
+        DataTableRedisCache::bumpListEpoch(self::LISTING_CACHE_EPOCH_KEY, 'EmployeeIDCardRequestController@index');
+    }
+
     public function index(Request $request)
     {
+        $filter = $request->get('filter', 'all');
+        if (! in_array($filter, ['active', 'archive', 'all'], true)) {
+            $filter = 'all';
+        }
+        $listStatus = $request->get('list_status', 'all');
+        if (! in_array($listStatus, ['all', 'pending', 'approved', 'rejected'], true)) {
+            $listStatus = 'all';
+        }
+        $dateFrom = $request->get('date_from');
+        $dateTo = $request->get('date_to');
+        $search = trim($request->get('search', ''));
+
+        $isAdmin = hasRole('Admin') || hasRole('SuperAdmin');
+        $userId = Auth::user()->user_id ?? Auth::id();
+
+        $epoch = DataTableRedisCache::readListEpoch(self::LISTING_CACHE_EPOCH_KEY);
+        $cacheKey = 'admin_employee_idcard_index:v1:' . md5(json_encode([
+            'epoch' => $epoch,
+            'is_admin' => $isAdmin,
+            'user_id' => $userId,
+            'filter' => $filter,
+            'list_status' => $listStatus,
+            'date_from' => $dateFrom,
+            'date_to' => $dateTo,
+            'search' => $search,
+        ]));
+
+        $allRequests = DataTableRedisCache::remember(
+            $cacheKey,
+            [
+                'enabled' => 'EMPLOYEE_IDCARD_INDEX_CACHE_ENABLED',
+                'seconds' => 'EMPLOYEE_IDCARD_INDEX_CACHE_SECONDS',
+            ],
+            'EmployeeIDCardRequestController@index',
+            fn () => $this->buildEmployeeIdcardIndexMergedCollection($request)
+        );
+        if (! $allRequests instanceof \Illuminate\Support\Collection) {
+            $allRequests = collect($allRequests);
+        }
+
+        $activeCollection = $allRequests
+            ->filter(fn ($r) => ($r->status ?? '') === 'Pending')
+            ->values();
+        $archivedCollection = $allRequests
+            ->filter(fn ($r) => in_array(($r->status ?? ''), ['Approved', 'Rejected'], true))
+            ->values();
+        $duplicationCollection = $allRequests
+            ->filter(fn ($r) => in_array(($r->request_for ?? ''), ['Replacement', 'Duplication'], true) && ($r->status ?? '') === 'Approved')
+            ->values();
+        $extensionCollection = $allRequests
+            ->filter(fn ($r) => ($r->request_for ?? '') === 'Extension' && ($r->status ?? '') === 'Approved')
+            ->values();
+
+        $perPage = (int) $request->get('per_page', 15);
+        $perPage = $perPage >= 5 && $perPage <= 100 ? $perPage : 15;
+
+        $activeRequests = static::paginateCollection($activeCollection, (int) $request->get('active_page', 1) ?: 1, $perPage, $request->url(), 'active_page');
+        $activeRequests->withQueryString();
+        // Combined list (all statuses in one list)
+        $allRequestsPaged = static::paginateCollection($allRequests, (int) $request->get('page', 1) ?: 1, $perPage, $request->url(), 'page');
+        $allRequestsPaged->withQueryString();
+        $archivedRequests = static::paginateCollection($archivedCollection, (int) $request->get('archive_page', 1) ?: 1, $perPage, $request->url(), 'archive_page');
+        $archivedRequests->withQueryString();
+        $duplicationRequests = static::paginateCollection($duplicationCollection, (int) $request->get('duplication_page', 1) ?: 1, $perPage, $request->url(), 'duplication_page');
+        $duplicationRequests->withQueryString();
+        $extensionRequests = static::paginateCollection($extensionCollection, (int) $request->get('extension_page', 1) ?: 1, $perPage, $request->url(), 'extension_page');
+        $extensionRequests->withQueryString();
+
+        return view('admin.employee_idcard.index', [
+            'allRequests' => $allRequestsPaged,
+            'activeRequests' => $activeRequests,
+            'archivedRequests' => $archivedRequests,
+            'duplicationRequests' => $duplicationRequests,
+            'extensionRequests' => $extensionRequests,
+            'filter' => $filter,
+            'list_status' => $listStatus,
+            'dateFrom' => $dateFrom ?? '',
+            'dateTo' => $dateTo ?? '',
+            'search' => $search ?? '',
+        ]);
+    }
+
+    /**
+     * Heavy merged list for /admin/employee-idcard (cached; pagination applied in {@see index()}).
+     *
+     * @return \Illuminate\Support\Collection<int, mixed>
+     */
+    private function buildEmployeeIdcardIndexMergedCollection(Request $request): \Illuminate\Support\Collection
+    {
+
         $with = [
             'employee:pk,first_name,last_name,designation_master_pk',
             'employee.designation:pk,designation_name',
@@ -217,46 +315,7 @@ class EmployeeIDCardRequestController extends Controller
         }
 
         $allRequests = $merged->values();
-        $activeCollection = $allRequests
-            ->filter(fn ($r) => ($r->status ?? '') === 'Pending')
-            ->values();
-        $archivedCollection = $allRequests
-            ->filter(fn ($r) => in_array(($r->status ?? ''), ['Approved', 'Rejected'], true))
-            ->values();
-        $duplicationCollection = $allRequests
-            ->filter(fn ($r) => in_array(($r->request_for ?? ''), ['Replacement', 'Duplication'], true) && ($r->status ?? '') === 'Approved')
-            ->values();
-        $extensionCollection = $allRequests
-            ->filter(fn ($r) => ($r->request_for ?? '') === 'Extension' && ($r->status ?? '') === 'Approved')
-            ->values();
-
-        $perPage = (int) $request->get('per_page', 15);
-        $perPage = $perPage >= 5 && $perPage <= 100 ? $perPage : 15;
-
-        $activeRequests = static::paginateCollection($activeCollection, (int) $request->get('active_page', 1) ?: 1, $perPage, $request->url(), 'active_page');
-        $activeRequests->withQueryString();
-        // Combined list (all statuses in one list)
-        $allRequestsPaged = static::paginateCollection($allRequests, (int) $request->get('page', 1) ?: 1, $perPage, $request->url(), 'page');
-        $allRequestsPaged->withQueryString();
-        $archivedRequests = static::paginateCollection($archivedCollection, (int) $request->get('archive_page', 1) ?: 1, $perPage, $request->url(), 'archive_page');
-        $archivedRequests->withQueryString();
-        $duplicationRequests = static::paginateCollection($duplicationCollection, (int) $request->get('duplication_page', 1) ?: 1, $perPage, $request->url(), 'duplication_page');
-        $duplicationRequests->withQueryString();
-        $extensionRequests = static::paginateCollection($extensionCollection, (int) $request->get('extension_page', 1) ?: 1, $perPage, $request->url(), 'extension_page');
-        $extensionRequests->withQueryString();
-
-        return view('admin.employee_idcard.index', [
-            'allRequests' => $allRequestsPaged,
-            'activeRequests' => $activeRequests,
-            'archivedRequests' => $archivedRequests,
-            'duplicationRequests' => $duplicationRequests,
-            'extensionRequests' => $extensionRequests,
-            'filter' => $filter,
-            'list_status' => $listStatus,
-            'dateFrom' => $dateFrom ?? '',
-            'dateTo' => $dateTo ?? '',
-            'search' => $search ?? '',
-        ]);
+        return $allRequests;
     }
 
     /**
@@ -1243,6 +1302,8 @@ class EmployeeIDCardRequestController extends Controller
         if ($employeeType === 'Contractual Employee' && ! $isDupOrExt && $request->hasFile('documents')) {
             $successMsg .= ' Supporting document saved to database successfully.';
         }
+        static::bumpIndexListCacheEpoch();
+        DuplicateIDCardRequestController::bumpIndexListCacheEpoch();
         return redirect()
             ->route('admin.employee_idcard.index')
             ->with('success', $successMsg);
@@ -1496,7 +1557,8 @@ class EmployeeIDCardRequestController extends Controller
             if (!empty($documentsUploadedList)) {
                 $successMsg .= ' ' . implode(' and ', $documentsUploadedList) . ' uploaded successfully.';
             }
-            
+            static::bumpIndexListCacheEpoch();
+            DuplicateIDCardRequestController::bumpIndexListCacheEpoch();
             return redirect()
                 ->route('admin.employee_idcard.show', $res['id'])
                 ->with('success', $successMsg);
@@ -1581,7 +1643,8 @@ class EmployeeIDCardRequestController extends Controller
         if (!empty($documentsUploadedList)) {
             $successMsg .= ' ' . implode(' and ', $documentsUploadedList) . ' uploaded successfully.';
         }
-        
+        static::bumpIndexListCacheEpoch();
+        DuplicateIDCardRequestController::bumpIndexListCacheEpoch();
         // Use emp_id_apply (business key) for redirect so show() can resolve correctly.
         return redirect()
             ->route('admin.employee_idcard.show', $row->emp_id_apply)
@@ -1641,6 +1704,8 @@ class EmployeeIDCardRequestController extends Controller
         }
 
         $dto = IdCardSecurityMapper::toEmployeeRequestDto($row->load(['employee.designation', 'approvals.approver']));
+        static::bumpIndexListCacheEpoch();
+        DuplicateIDCardRequestController::bumpIndexListCacheEpoch();
         return response()->json([
             'success' => true,
             'message' => $dupInserted
@@ -1752,6 +1817,8 @@ class EmployeeIDCardRequestController extends Controller
             }
             DB::table('security_con_oth_id_apply_approval')->where('security_parm_id_apply_pk', $row->emp_id_apply)->delete();
             DB::table('security_con_oth_id_apply')->where('pk', $res['pk'])->delete();
+            static::bumpIndexListCacheEpoch();
+            DuplicateIDCardRequestController::bumpIndexListCacheEpoch();
             return redirect()
                 ->route('admin.employee_idcard.index')
                 ->with('success', 'Employee ID Card request archived successfully!');
@@ -1760,6 +1827,8 @@ class EmployeeIDCardRequestController extends Controller
         SecurityParmIdApplyApproval::where('security_parm_id_apply_pk', $row->emp_id_apply)->delete();
         $row->delete();
 
+        static::bumpIndexListCacheEpoch();
+        DuplicateIDCardRequestController::bumpIndexListCacheEpoch();
         return redirect()
             ->route('admin.employee_idcard.index')
             ->with('success', 'Employee ID Card request archived successfully!');

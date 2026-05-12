@@ -185,46 +185,49 @@
 @section('scripts')
 <script>
     $(function() {
-        $('#memoDecisionTable').DataTable({
-            processing: true,
-            serverSide: true,
-            ajax: "{{ route('course.memo.decision.index') }}",
-            order: [[0, 'desc']],
-            columns: [{
-                    data: 'DT_RowIndex',
-                    name: 'DT_RowIndex',
-                    orderable: false,
-                    searchable: false
-                },
-                {
-                    data: 'course_name',
-                    name: 'course.course_name'
-                },
-                {
-                    data: 'memo_decision',
-                    name: 'memo.memo_type_name'
-                },
-                {
-                    data: 'memo_conclusion',
-                    name: 'memoConclusion.discussion_name'
-                },
-                {
-                    data: 'status',
-                    name: 'status',
-                    orderable: false,
-                    searchable: false
-                },
-                {
-                    data: 'action',
-                    name: 'action',
-                    orderable: false,
-                    searchable: false
-                }
-            ],
-            order: [
-                [1, 'asc']
-            ]
-        });
+        const tableSelector = '#memoDecisionTable';
+        if (!$.fn.DataTable.isDataTable(tableSelector)) {
+            $(tableSelector).DataTable({
+                processing: true,
+                serverSide: true,
+                ajax: "{{ route('course.memo.decision.index') }}",
+                order: [[0, 'desc']],
+                columns: [{
+                        data: 'DT_RowIndex',
+                        name: 'DT_RowIndex',
+                        orderable: false,
+                        searchable: false
+                    },
+                    {
+                        data: 'course_name',
+                        name: 'course.course_name'
+                    },
+                    {
+                        data: 'memo_decision',
+                        name: 'memo.memo_type_name'
+                    },
+                    {
+                        data: 'memo_conclusion',
+                        name: 'memoConclusion.discussion_name'
+                    },
+                    {
+                        data: 'status',
+                        name: 'status',
+                        orderable: false,
+                        searchable: false
+                    },
+                    {
+                        data: 'action',
+                        name: 'action',
+                        orderable: false,
+                        searchable: false
+                    }
+                ],
+                order: [
+                    [1, 'asc']
+                ]
+            });
+        }
     });
 </script>
 

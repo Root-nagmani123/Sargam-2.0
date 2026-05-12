@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Support\DataTableRedisCache;
 use App\Models\DepartmentMaster;
 use App\Models\EmployeeMaster;
 use App\Models\SecurityDupOtherIdApply;
@@ -13,6 +14,7 @@ use App\Models\SecurityParmIdApply;
 use App\Models\SecurityFamilyIdApply;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -20,6 +22,13 @@ use Illuminate\Validation\ValidationException;
 
 class DuplicateIDCardRequestController extends Controller
 {
+    private const LISTING_CACHE_EPOCH_KEY = 'admin_duplicate_idcard_index_list_epoch';
+
+    public static function bumpIndexListCacheEpoch(): void
+    {
+        DataTableRedisCache::bumpListEpoch(self::LISTING_CACHE_EPOCH_KEY, 'DuplicateIDCardRequestController@index');
+    }
+
     public function index(Request $request)
     {
         $user = Auth::user();
@@ -33,6 +42,44 @@ class DuplicateIDCardRequestController extends Controller
         $perPage = in_array($perPage, [10, 25, 50, 100]) ? $perPage : 10;
         $page = (int) $request->get('page', 1);
 
+        $epoch = DataTableRedisCache::readListEpoch(self::LISTING_CACHE_EPOCH_KEY);
+        $cacheKey = 'admin_duplicate_idcard_index:v1:' . md5(json_encode([
+            'epoch' => $epoch,
+            'user_id' => $employeePk,
+            'search' => $search,
+        ]));
+
+        $items = DataTableRedisCache::remember(
+            $cacheKey,
+            [
+                'enabled' => 'DUPLICATE_IDCARD_INDEX_CACHE_ENABLED',
+                'seconds' => 'DUPLICATE_IDCARD_INDEX_CACHE_SECONDS',
+            ],
+            'DuplicateIDCardRequestController@index',
+            fn () => $this->buildDuplicateIdcardIndexItems($employeePk, $search)
+        );
+        if (! $items instanceof Collection) {
+            $items = collect($items);
+        }
+
+        $requests = new LengthAwarePaginator(
+            $items->forPage($page, $perPage),
+            $items->count(),
+            $perPage,
+            $page,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+
+        return view('admin.duplicate_idcard.index', compact('requests'));
+    }
+
+    /**
+     * Merged duplicate ID card rows for the index (cached; pagination in {@see index()}).
+     *
+     * @return Collection<int, object>
+     */
+    private function buildDuplicateIdcardIndexItems(mixed $employeePk, string $search): Collection
+    {
         // Permanent duplicate requests for this user
         $permQuery = SecurityDupPermIdApply::with(['employee.designation', 'employee.department'])
             ->where('created_by', $employeePk);
@@ -114,17 +161,7 @@ class DuplicateIDCardRequestController extends Controller
             ]);
         }
 
-        $items = $items->sortByDesc(fn ($i) => $i->request_date ? strtotime((string) $i->request_date) : 0)->values();
-
-        $requests = new LengthAwarePaginator(
-            $items->forPage($page, $perPage),
-            $items->count(),
-            $perPage,
-            $page,
-            ['path' => $request->url(), 'query' => $request->query()]
-        );
-
-        return view('admin.duplicate_idcard.index', compact('requests'));
+        return $items->sortByDesc(fn ($i) => $i->request_date ? strtotime((string) $i->request_date) : 0)->values();
     }
 
     public function create()
@@ -868,6 +905,7 @@ class DuplicateIDCardRequestController extends Controller
             $row->update($updates);
         }
 
+        static::bumpIndexListCacheEpoch();
         return redirect()->route('admin.duplicate_idcard.index')->with('success', 'Duplicate ID Card request updated successfully.');
     }
 
@@ -907,6 +945,7 @@ class DuplicateIDCardRequestController extends Controller
             }
         });
 
+        static::bumpIndexListCacheEpoch();
         return redirect()->route('admin.duplicate_idcard.index')->with('success', 'Duplicate ID Card request deleted successfully.');
     }
 
@@ -1134,6 +1173,7 @@ class DuplicateIDCardRequestController extends Controller
             }
         });
 
+        static::bumpIndexListCacheEpoch();
         return redirect()->route('admin.duplicate_idcard.index')->with('success', 'Duplicate ID Card request submitted successfully.');
     }
 

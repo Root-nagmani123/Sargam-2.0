@@ -7,7 +7,9 @@ use App\Exports\FamilyIDCardExport;
 use App\Models\EmployeeMaster;
 use App\Models\SecurityFamilyIdApply;
 use App\Models\SecurityParmIdApply;
+use App\Support\DataTableRedisCache;
 use App\Support\IdCardSecurityMapper;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -23,40 +25,39 @@ use Maatwebsite\Excel\Facades\Excel;
  */
 class FamilyIDCardRequestController extends Controller
 {
-    /**
-     * Group rows by (emp_id_apply, created_by, created_date) and return paginated group list.
-     * Supports search and filters
-     */
-    private function groupedFamilyRequests(int $idStatus, int $perPage, string $pageName = 'page'): LengthAwarePaginator
+    private const LISTING_CACHE_EPOCH_KEY = 'admin_family_idcard_index_list_epoch';
+
+    public static function bumpIndexListCacheEpoch(): void
     {
-        $query = SecurityFamilyIdApply::query();
-        $query->where('created_by', Auth::user()->user_id);
-        
-        if ($idStatus === 1) {
-            $query->where('id_status', 1);
-        } else {
-            $query->whereIn('id_status', [2, 3]);
-        }
-        
-        // Apply search filter
-        $search = request()->get('search', '');
-        if (!empty($search)) {
+        DataTableRedisCache::bumpListEpoch(self::LISTING_CACHE_EPOCH_KEY, 'FamilyIDCardRequestController@index');
+    }
+
+    /**
+     * @return Collection<int, SecurityFamilyIdApply>
+     */
+    private function fetchFamilyIdcardApplicantRows(mixed $createdBy, string $search): Collection
+    {
+        $query = SecurityFamilyIdApply::query()
+            ->where('created_by', $createdBy)
+            ->whereIn('id_status', [1, 2, 3]);
+
+        if ($search !== '') {
             $query->where(function ($q) use ($search) {
                 $q->where('emp_id_apply', 'LIKE', "%{$search}%")
-                  ->orWhere('family_name', 'LIKE', "%{$search}%")
-                  ->orWhere('family_relation', 'LIKE', "%{$search}%");
+                    ->orWhere('family_name', 'LIKE', "%{$search}%")
+                    ->orWhere('family_relation', 'LIKE', "%{$search}%");
             });
         }
-        
-        // Apply card type filter
-        $cardType = request()->get('card_type', '');
-        if (!empty($cardType)) {
-            // This filter would be applied at grouping level
-        }
-        
-        $all = $query->orderBy('created_date', 'desc')->get();
 
-        // Any approval action (L1 recommend / final / reject) blocks user-side delete for that member id.
+        return $query->orderBy('created_date', 'desc')->get();
+    }
+
+    /**
+     * @param  Collection<int, SecurityFamilyIdApply>  $all
+     * @return Collection<int, object>
+     */
+    private function buildFamilyIdcardGroupedListFromRows(Collection $all, string $cardType): Collection
+    {
         $fmlIdsAll = $all->pluck('fml_id_apply')->unique()->filter()->values();
         $blockedDeleteByFml = [];
         if ($fmlIdsAll->isNotEmpty()) {
@@ -75,6 +76,7 @@ class FamilyIDCardRequestController extends Controller
 
         $groupKey = function ($r) {
             $date = $r->created_date ? Carbon::parse($r->created_date)->format('Y-m-d H:i:s') : '';
+
             return $r->emp_id_apply . '|' . ($r->created_by ?? '') . '|' . $date;
         };
 
@@ -85,9 +87,8 @@ class FamilyIDCardRequestController extends Controller
             $empName = '--';
             $designation = '--';
             $section = '--';
-            
+
             if ($first->created_by) {
-                // created_by stores employee pk (from user_credentials.user_id which maps to employee_master.pk)
                 $emp = EmployeeMaster::with(['designation', 'department'])
                     ->where('pk', $first->created_by)
                     ->orWhere('pk_old', $first->created_by)
@@ -126,34 +127,95 @@ class FamilyIDCardRequestController extends Controller
                 'can_delete' => $canDelete,
             ];
         })->values();
-        
-        // Apply card type filter after grouping
-        $cardType = request()->get('card_type', '');
-        if (!empty($cardType)) {
-            $groupList = $groupList->filter(function ($group) use ($cardType) {
-                return $group->card_type === $cardType;
-            })->values();
+
+        if ($cardType !== '') {
+            $groupList = $groupList->filter(fn ($group) => $group->card_type === $cardType)->values();
         }
-        
-        $page = request()->get($pageName, 1);
-        $slice = $groupList->forPage($page, $perPage);
-        
+
+        return $groupList;
+    }
+
+    /**
+     * @return array{active: Collection<int, object>, archive: Collection<int, object>}
+     */
+    private function buildFamilyIdcardIndexGroupLists(mixed $createdBy, string $search, string $cardType): array
+    {
+        $rows = $this->fetchFamilyIdcardApplicantRows($createdBy, $search);
+        $activeRows = $rows->filter(fn ($r) => (int) ($r->id_status ?? 1) === 1)->values();
+        $archiveRows = $rows->filter(fn ($r) => in_array((int) ($r->id_status ?? 0), [2, 3], true))->values();
+
+        return [
+            'active' => $this->buildFamilyIdcardGroupedListFromRows($activeRows, $cardType),
+            'archive' => $this->buildFamilyIdcardGroupedListFromRows($archiveRows, $cardType),
+        ];
+    }
+
+    private static function paginateGroupCollection(Collection $groupList, int $perPage, int $page, string $path, string $pageName, array $query): LengthAwarePaginator
+    {
+        $page = max(1, $page);
+        $slice = $groupList->forPage($page, $perPage)->values();
+
         return new LengthAwarePaginator(
-            $slice->values(),
+            $slice,
             $groupList->count(),
             $perPage,
             $page,
-            ['path' => request()->url(), 'pageName' => $pageName, 'query' => request()->query()]
+            ['path' => $path, 'pageName' => $pageName, 'query' => $query]
         );
     }
 
     public function index(Request $request)
     {
+        $createdBy = Auth::user()->user_id;
+        $search = trim((string) $request->get('search', ''));
+        $cardType = trim((string) $request->get('card_type', ''));
         $perPage = (int) $request->get('per_page', 10);
         $perPage = in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 10;
-        $activeRequests = $this->groupedFamilyRequests(1, $perPage, 'page');
+
+        $epoch = DataTableRedisCache::readListEpoch(self::LISTING_CACHE_EPOCH_KEY);
+        $cacheKey = 'admin_family_idcard_index:v1:' . md5(json_encode([
+            'epoch' => $epoch,
+            'created_by' => $createdBy,
+            'search' => $search,
+            'card_type' => $cardType,
+        ]));
+
+        $lists = DataTableRedisCache::remember(
+            $cacheKey,
+            [
+                'enabled' => 'FAMILY_IDCARD_INDEX_CACHE_ENABLED',
+                'seconds' => 'FAMILY_IDCARD_INDEX_CACHE_SECONDS',
+            ],
+            'FamilyIDCardRequestController@index',
+            fn () => $this->buildFamilyIdcardIndexGroupLists($createdBy, $search, $cardType)
+        );
+        if (! is_array($lists) || ! isset($lists['active'], $lists['archive'])) {
+            $lists = $this->buildFamilyIdcardIndexGroupLists($createdBy, $search, $cardType);
+        }
+        $activeGroups = $lists['active'] instanceof Collection ? $lists['active'] : collect($lists['active'] ?? []);
+        $archiveGroups = $lists['archive'] instanceof Collection ? $lists['archive'] : collect($lists['archive'] ?? []);
+
+        $queryParams = $request->query();
+        $activePage = (int) $request->get('page', 1) ?: 1;
+        $archivePage = (int) $request->get('archive_page', 1) ?: 1;
+
+        $activeRequests = static::paginateGroupCollection(
+            $activeGroups,
+            $perPage,
+            $activePage,
+            $request->url(),
+            'page',
+            $queryParams
+        );
         $activeRequests->withQueryString();
-        $archivedRequests = $this->groupedFamilyRequests(0, $perPage, 'archive_page');
+        $archivedRequests = static::paginateGroupCollection(
+            $archiveGroups,
+            $perPage,
+            $archivePage,
+            $request->url(),
+            'archive_page',
+            $queryParams
+        );
         $archivedRequests->withQueryString();
 
         return view('admin.family_idcard.index', [
@@ -579,6 +641,7 @@ class FamilyIDCardRequestController extends Controller
             ? 'Family ID Card request created successfully!'
             : "{$count} Family ID Card requests created successfully!";
 
+        static::bumpIndexListCacheEpoch();
         return redirect()->route('admin.family_idcard.index')->with('success', $message);
     }
 
@@ -860,6 +923,7 @@ class FamilyIDCardRequestController extends Controller
             }
         }
 
+        static::bumpIndexListCacheEpoch();
         return redirect()->route('admin.family_idcard.show', $row->fml_id_apply)
             ->with('success', 'Family ID Card request updated successfully!');
     }
@@ -953,6 +1017,7 @@ class FamilyIDCardRequestController extends Controller
             'employee_type' => $mainRow->employee_type ?? null,
             'department_approval_emp_pk' => $mainRow->department_approval_emp_pk ?? null,
         ]);
+        static::bumpIndexListCacheEpoch();
         return redirect()->route('admin.family_idcard.edit', $id)
             ->with('success', 'Family member added successfully.');
     }
@@ -1000,6 +1065,7 @@ class FamilyIDCardRequestController extends Controller
             $memberRow->family_photo = $memberRow->family_photo ?? $memberRow->id_photo_path;
         }
         $memberRow->save();
+        static::bumpIndexListCacheEpoch();
         return redirect()->route('admin.family_idcard.edit', $id)
             ->with('success', 'Family member updated successfully.');
     }
@@ -1023,6 +1089,7 @@ class FamilyIDCardRequestController extends Controller
         }
         $memberRow = $this->sameGroupQuery($mainRow)->where('fml_id_apply', $memberId)->firstOrFail();
         $memberRow->delete();
+        static::bumpIndexListCacheEpoch();
         return redirect()->route('admin.family_idcard.edit', $id)
             ->with('success', 'Family member removed successfully.');
     }
@@ -1042,6 +1109,7 @@ class FamilyIDCardRequestController extends Controller
         }
 
         $row->delete();
+        static::bumpIndexListCacheEpoch();
         return redirect()->route('admin.family_idcard.index')
             ->with('success', 'Family ID Card request archived successfully!');
     }
@@ -1071,6 +1139,7 @@ class FamilyIDCardRequestController extends Controller
             // Move all members in this group back to id_status = 1 (Active)
             $query->update(['id_status' => 1]);
 
+            static::bumpIndexListCacheEpoch();
             return redirect()
                 ->route('admin.family_idcard.index')
                 ->with('success', 'Family ID Card request restored to Active list successfully.');
@@ -1112,6 +1181,7 @@ class FamilyIDCardRequestController extends Controller
         }
         $row->save();
 
+        static::bumpIndexListCacheEpoch();
         $membersUrl = route('admin.family_idcard.members', $id);
         return redirect($membersUrl)->with('success', 'Duplicate ID card request submitted successfully.');
     }

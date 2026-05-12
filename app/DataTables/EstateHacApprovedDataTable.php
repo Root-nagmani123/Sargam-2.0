@@ -3,11 +3,13 @@
 namespace App\DataTables;
 
 use App\Models\EstateHacApprovedRow;
+use App\Support\RedisBackedCache;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Yajra\DataTables\Html\Column;
@@ -19,13 +21,13 @@ use Yajra\DataTables\Services\DataTable;
 class EstateHacApprovedDataTable extends DataTable
 {
     /**
-     * Server-side JSON (ESTATE_UPDATE_METER_READING_CACHE_*). Keys: estate_hacap:v1:…
+     * Server-side JSON (ESTATE_UPDATE_METER_READING_CACHE_*). Keys: estate_hacap:v2:…
      */
     public function ajax(): JsonResponse
     {
         $draw = (int) $this->request()->input('draw', 0);
         $fingerprint = $this->hacApprovedDataTableCacheFingerprint();
-        $cacheKey = 'estate_hacap:v1:' . md5(json_encode($fingerprint));
+        $cacheKey = 'estate_hacap:v2:' . md5(json_encode($fingerprint));
 
         $payload = $this->rememberEstateListingCache($cacheKey, function () {
             $resp = parent::ajax();
@@ -61,10 +63,8 @@ class EstateHacApprovedDataTable extends DataTable
     {
         $enabled = ! in_array(strtolower((string) env('ESTATE_UPDATE_METER_READING_CACHE_ENABLED', 'true')), ['0', 'false', 'no', 'off'], true);
         $ttl = max(30, (int) env('ESTATE_UPDATE_METER_READING_CACHE_SECONDS', 300));
-        $storeName = (string) env('ESTATE_UPDATE_METER_READING_CACHE_STORE', env('ESTATE_BILL_REPORT_GRID_CACHE_STORE', 'redis'));
-        $repository = array_key_exists($storeName, config('cache.stores', []))
-            ? \Illuminate\Support\Facades\Cache::store($storeName)
-            : \Illuminate\Support\Facades\Cache::store(config('cache.default'));
+        $storeName = RedisBackedCache::estateUpdateMeterReadingStoreName();
+        $repository = RedisBackedCache::repositoryForStore($storeName);
         if (! $enabled) {
             return $callback();
         }
@@ -264,6 +264,13 @@ class EstateHacApprovedDataTable extends DataTable
 
         $part1 = DB::table('estate_change_home_req_details as ec')
             ->join('estate_home_request_details as eh', 'ec.estate_home_req_details_pk', '=', 'eh.pk')
+            ->leftJoin('employee_master as e_emp', function ($join) {
+                $join->on('eh.employee_pk', '=', 'e_emp.pk');
+                if (Schema::hasColumn('employee_master', 'pk_old')) {
+                    $join->orOn('eh.employee_pk', '=', 'e_emp.pk_old');
+                }
+            })
+            ->leftJoin('designation_master as d_emp', 'e_emp.designation_master_pk', '=', 'd_emp.pk')
             ->where('ec.estate_change_hac_status', 1)
             ->select(
                 DB::raw("'change' as request_type"),
@@ -274,7 +281,7 @@ class EstateHacApprovedDataTable extends DataTable
                 'ec.change_req_date as request_date',
                 'eh.emp_name',
                 'eh.employee_id',
-                'eh.emp_designation',
+                DB::raw("COALESCE(NULLIF(TRIM(d_emp.designation_name), ''), NULLIF(TRIM(eh.emp_designation), '')) as emp_designation"),
                 'eh.pay_scale',
                 'eh.doj_pay_scale',
                 'eh.doj_service',
@@ -300,6 +307,13 @@ class EstateHacApprovedDataTable extends DataTable
             ->all();
 
         $part2 = DB::table('estate_home_request_details as eh')
+            ->leftJoin('employee_master as e_emp', function ($join) {
+                $join->on('eh.employee_pk', '=', 'e_emp.pk');
+                if (Schema::hasColumn('employee_master', 'pk_old')) {
+                    $join->orOn('eh.employee_pk', '=', 'e_emp.pk_old');
+                }
+            })
+            ->leftJoin('designation_master as d_emp', 'e_emp.designation_master_pk', '=', 'd_emp.pk')
             ->where('eh.hac_status', 1)
             ->where('eh.change_status', 0)
             ->when(!empty($hasPossessionPks), function ($q) use ($hasPossessionPks) {
@@ -314,7 +328,7 @@ class EstateHacApprovedDataTable extends DataTable
                 'eh.req_date as request_date',
                 'eh.emp_name',
                 'eh.employee_id',
-                'eh.emp_designation',
+                DB::raw("COALESCE(NULLIF(TRIM(d_emp.designation_name), ''), NULLIF(TRIM(eh.emp_designation), '')) as emp_designation"),
                 'eh.pay_scale',
                 'eh.doj_pay_scale',
                 'eh.doj_service',
