@@ -1003,6 +1003,8 @@ class ProcessMessBillsEmployeeController extends Controller
     {
         // Combined bill: single invoice number (CB-...), no individual slip numbers on receipt
         if (is_string($id) && strpos($id, 'combined-') === 0) {
+            $filterDateFromYmd = $request->filled('date_from') ? $this->parseDate($request->date_from) : now()->startOfMonth()->format('Y-m-d');
+            $filterDateToYmd = $request->filled('date_to') ? $this->parseDate($request->date_to) : now()->endOfMonth()->format('Y-m-d');
             $bills = $this->resolveCombinedBillBills($request, $id);
             if (empty($bills)) {
                 abort(404, 'No bills found for this buyer in the selected date range.');
@@ -1012,7 +1014,7 @@ class ProcessMessBillsEmployeeController extends Controller
             $totalAmount = 0.0;
             $paidAmount = 0.0;
             $storeNames = [];
-            $dateMin = $dateMax = null;
+            $dateMin = null;
             $referenceNumbers = [];
             $orderBys = [];
             $remarksList = [];
@@ -1051,9 +1053,6 @@ class ProcessMessBillsEmployeeController extends Controller
                         if ($dateMin === null || $itemIssueYmd < $dateMin) {
                             $dateMin = $itemIssueYmd;
                         }
-                        if ($dateMax === null || $itemIssueYmd > $dateMax) {
-                            $dateMax = $itemIssueYmd;
-                        }
                     }
                     $items[] = (object) [
                         'item_name' => $item->item_name ?? ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? '—'),
@@ -1070,9 +1069,6 @@ class ProcessMessBillsEmployeeController extends Controller
                     $billIssueYmd = $b->issue_date->format('Y-m-d');
                     if ($dateMin === null || $billIssueYmd < $dateMin) {
                         $dateMin = $billIssueYmd;
-                    }
-                    if ($dateMax === null || $billIssueYmd > $dateMax) {
-                        $dateMax = $billIssueYmd;
                     }
                 }
                 // Capture course name once (for OT / Course types)
@@ -1112,8 +1108,8 @@ class ProcessMessBillsEmployeeController extends Controller
                 'client_type_label' => $bills[0]->client_type_label ?? null,
                 'client_type_slug' => $clientTypeSlug,
                 'resolved_store_name' => implode(', ', array_keys($storeNames)),
-                'date_from' => $dateMin ? Carbon::parse($dateMin) : null,
-                'date_to' => $dateMax ? Carbon::parse($dateMax) : null,
+                'date_from' => Carbon::parse($filterDateFromYmd),
+                'date_to' => Carbon::parse($filterDateToYmd),
                 'issue_date' => $dateMin ? Carbon::parse($dateMin) : null,
                 'net_total' => $totalAmount,
                 'reference_number' => $referenceNumber ?: null,
@@ -1245,11 +1241,13 @@ class ProcessMessBillsEmployeeController extends Controller
                     return response()->json(['error' => 'You do not have access to this bill.'], 403);
                 }
             }
+            $filterDateFromYmd = $request->filled('date_from') ? $this->parseDate($request->date_from) : now()->startOfMonth()->format('Y-m-d');
+            $filterDateToYmd = $request->filled('date_to') ? $this->parseDate($request->date_to) : now()->endOfMonth()->format('Y-m-d');
+            $dateFromStr = Carbon::parse($filterDateFromYmd)->format('d-m-Y');
+            $dateToStr = Carbon::parse($filterDateToYmd)->format('d-m-Y');
             $items = [];
             $totalAmount = 0.0;
             $paidAmount = 0.0;
-            $dateMin = null;
-            $dateMax = null;
             $clientTypeDisplay = '';
             $storeNames = [];
             foreach ($bills as $bill) {
@@ -1262,29 +1260,17 @@ class ProcessMessBillsEmployeeController extends Controller
                 if ($clientTypeDisplay === '') {
                     $clientTypeDisplay = $bill->client_type_display ?? ($bill->client_type_label ?? ($bill->clientTypeCategory ? ucfirst($bill->clientTypeCategory->client_type ?? '') : '—'));
                 }
-                $billHadItemDates = false;
                 foreach ($bill->items ?? [] as $item) {
                     $itemIssueDate = null;
-                    $itemIssueYmd = null;
                     try {
                         if (isset($item->issue_date) && $item->issue_date) {
                             $idt = $item->issue_date instanceof Carbon
                                 ? $item->issue_date
                                 : Carbon::parse($item->issue_date);
                             $itemIssueDate = $idt->format('d-m-Y');
-                            $itemIssueYmd = $idt->format('Y-m-d');
                         }
                     } catch (\Throwable $e) {
                         $itemIssueDate = null;
-                    }
-                    if ($itemIssueYmd !== null) {
-                        $billHadItemDates = true;
-                        if ($dateMin === null || $itemIssueYmd < $dateMin) {
-                            $dateMin = $itemIssueYmd;
-                        }
-                        if ($dateMax === null || $itemIssueYmd > $dateMax) {
-                            $dateMax = $itemIssueYmd;
-                        }
                     }
                     $items[] = [
                         'store_name' => $storeName,
@@ -1295,19 +1281,8 @@ class ProcessMessBillsEmployeeController extends Controller
                         'amount' => number_format($item->amount ?? 0, 2),
                     ];
                 }
-                if (! $billHadItemDates && $bill->issue_date) {
-                    $d = $bill->issue_date->format('Y-m-d');
-                    if ($dateMin === null || $d < $dateMin) {
-                        $dateMin = $d;
-                    }
-                    if ($dateMax === null || $d > $dateMax) {
-                        $dateMax = $d;
-                    }
-                }
             }
             $dueAmount = max(0, $totalAmount - $paidAmount);
-            $dateFromStr = $dateMin ? Carbon::parse($dateMin)->format('d-m-Y') : '—';
-            $dateToStr = $dateMax ? Carbon::parse($dateMax)->format('d-m-Y') : '—';
             $buyerName = trim((string) ($bills[0]->client_name ?? ($bills[0]->clientTypeCategory->client_name ?? '—')));
             $clientTypeSlug = $bills[0] instanceof SellingVoucherDateRangeReport
                 ? (string) ($bills[0]->client_type_slug ?? 'employee')
