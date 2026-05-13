@@ -178,6 +178,43 @@ $(document).ready(function() {
 
     // Run on page load for initial state
     toggleFacultyPaField();
+
+    // ======= PHOTO FILE SIZE VALIDATION =======
+    $('input[name="photo"]').on('change', function () {
+        try {
+            const file = this.files[0];
+            const maxSizeInBytes = 2 * 1024 * 1024; // 2 MB
+            const errorMessageDiv = $('#photoErrorMessageBasic');
+
+            if (!file) {
+                errorMessageDiv.addClass('d-none');
+                return;
+            }
+
+            if (file.size > maxSizeInBytes) {
+                errorMessageDiv.removeClass('d-none');
+                this.value = '';
+                $('#photoPreview').addClass('d-none').attr('src', '#');
+                return;
+            } else {
+                errorMessageDiv.addClass('d-none');
+                const reader = new FileReader();
+                reader.onload = function (event) {
+                    try {
+                        $('#photoPreview')
+                            .attr('src', event.target.result)
+                            .removeClass('d-none');
+                    } catch (err) {
+                        console.warn('Photo preview error:', err);
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        } catch (err) {
+            console.error('Photo validation error:', err);
+        }
+    });
+    // ======= END PHOTO VALIDATION =======
 });
 </script>
 @endsection

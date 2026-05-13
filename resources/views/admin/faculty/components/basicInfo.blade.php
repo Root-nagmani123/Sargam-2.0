@@ -338,6 +338,13 @@
             helperSmallText="Please upload a recent passport-sized photo (Max 2 MB, JPG or PNG or GIF only)"
             />
 
+            <!-- File Size Validation Message -->
+            <div id="photoErrorMessageBasic" class="alert alert-danger alert-dismissible fade show mt-2 d-none" role="alert">
+                <i class="material-icons align-middle me-2">error</i>
+                <strong>File size exceeds limit!</strong> Maximum file size allowed is 2 MB. Please select a smaller file.
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+
             @if(!empty($faculty->photo_uplode_path))
             <br/>
             <span class="text-info text-bold">Previously Uploaded Photo</span>
