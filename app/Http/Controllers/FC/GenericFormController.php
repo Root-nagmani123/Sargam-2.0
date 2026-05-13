@@ -13,6 +13,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 
 class GenericFormController extends Controller
@@ -80,13 +81,31 @@ class GenericFormController extends Controller
                 $rows = $this->formService->getExistingGroupRows($group, $username);
                 $existingRows[$group->group_name] = $rows;
                 $completedGroups[$group->group_name] = $rows->isNotEmpty();
-                $groupLookups[$group->group_name] = $this->formService->getGroupLookupData($group->activeGroupFields);
+                $fieldsForLookups = $group->activeGroupFields->isNotEmpty()
+                    ? $group->activeGroupFields
+                    : $group->groupFields;
+                $groupLookups[$group->group_name] = $this->formService->getGroupLookupData($fieldsForLookups);
             }
 
             $allSteps = $form->activeSteps;
             $stepIndex = $allSteps->search(fn($s) => $s->id === $step->id);
             $prevStep = $stepIndex > 0 ? $allSteps[$stepIndex - 1] : null;
             $nextStep = $stepIndex < $allSteps->count() - 1 ? $allSteps[$stepIndex + 1] : null;
+
+            // FC registration "Other details": dedicated step-3 layout (step indicator + same group tabs as builder).
+            if (($form->form_slug ?? '') === 'fc-registration' && ($step->step_slug ?? '') === 'step3') {
+                return view('fc.registration.dynamic-step3', compact(
+                    'form',
+                    'step',
+                    'groups',
+                    'existingRows',
+                    'groupLookups',
+                    'completedGroups',
+                    'allSteps',
+                    'prevStep',
+                    'nextStep'
+                ));
+            }
 
             return view('forms.step-groups', compact(
                 'form', 'step', 'groups', 'existingRows', 'groupLookups', 'completedGroups',
@@ -186,7 +205,7 @@ class GenericFormController extends Controller
             $rows = [$validated[$group->group_name] ?? $validated];
         }
 
-        $this->formService->saveGroupData($group, $username, $rows);
+        $this->formService->saveGroupData($group, $username, $rows, $request);
 
         // Check if last group — mark step done and move to next step
         $allGroups = $step->activeFieldGroups()->orderBy('display_order')->get();
@@ -194,11 +213,14 @@ class GenericFormController extends Controller
 
         if ($group->id === $lastGroup->id) {
             // Mark step as complete
-            if ($step->tracker_column && $form->consolidation_table) {
-                DB::table($form->consolidation_table)->updateOrInsert(
-                    [$form->user_identifier => $username],
-                    [$step->tracker_column => 1, 'updated_at' => now()]
-                );
+            if ($step->tracker_column) {
+                $trackerTable = $form->trackerStorageTable();
+                if (Schema::hasTable($trackerTable) && Schema::hasColumn($trackerTable, $form->user_identifier)) {
+                    DB::table($trackerTable)->updateOrInsert(
+                        [$form->user_identifier => $username],
+                        [$step->tracker_column => 1, 'updated_at' => now()]
+                    );
+                }
             }
 
             $allSteps  = $form->activeSteps;
@@ -223,6 +245,14 @@ class GenericFormController extends Controller
      */
     private function buildStepCompletionByStepId(FcForm $form, $steps, string $username): array
     {
+        $trackerTable = $form->trackerStorageTable();
+        $masterRow = null;
+        if ($steps->contains(fn ($s) => filled($s->tracker_column))
+            && Schema::hasTable($trackerTable)
+            && Schema::hasColumn($trackerTable, $form->user_identifier)) {
+            $masterRow = DB::table($trackerTable)->where($form->user_identifier, $username)->first();
+        }
+
         $stepStatus = [];
         foreach ($steps as $step) {
             $stepStatus[$step->id] = false;
@@ -232,11 +262,9 @@ class GenericFormController extends Controller
                     $stepStatus[$step->id] = (bool) $row->{$step->completion_column};
                 }
             }
-            if (! $stepStatus[$step->id] && $step->tracker_column && $form->consolidation_table) {
-                $master = DB::table($form->consolidation_table)->where($form->user_identifier, $username)->first();
-                if ($master && isset($master->{$step->tracker_column})) {
-                    $stepStatus[$step->id] = (bool) $master->{$step->tracker_column};
-                }
+            if (! $stepStatus[$step->id] && $step->tracker_column && $masterRow !== null
+                && property_exists($masterRow, $step->tracker_column)) {
+                $stepStatus[$step->id] = (bool) $masterRow->{$step->tracker_column};
             }
         }
 
@@ -248,11 +276,11 @@ class GenericFormController extends Controller
         $steps = $form->activeSteps;
         $stepStatus = $this->buildStepCompletionByStepId($form, $steps, $username);
         $isDone = $stepStatus[$step->id] ?? false;
-        if ($isDone) {
-            return null;
-        }
 
         if ($form->form_slug === 'fc-registration') {
+            if ($isDone) {
+                return null;
+            }
             $progress = fc_registration_progress_view($this->registrationService->getProgress($username));
             if (! fc_registration_dynamic_form_step_accessible($step->step_slug, $progress['steps'], false)) {
                 return redirect()->route('fc-reg.forms.dashboard', $form)

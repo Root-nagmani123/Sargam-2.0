@@ -3,6 +3,9 @@
     $fieldName   = $field->field_name;
     $fieldType   = $field->field_type;
     $value       = old($fieldName, $existingData->{$field->target_column ?? $fieldName} ?? $field->default_value ?? '');
+    if ($fieldType === 'number' && $value !== '' && $value !== null) {
+        $value = fc_numeric_display_value($value);
+    }
     $isReadonly  = $readonly ?? false;
     $options     = $field->decoded_options ?? [];
     $lookupItems = $lookups[$fieldName] ?? [];
@@ -76,14 +79,39 @@
         @break
 
     @case('checkbox')
-        <div class="form-check mt-1">
-            <input class="form-check-input @error($fieldName) is-invalid @enderror" type="checkbox"
-                   name="{{ $fieldName }}" value="1"
-                   id="{{ $fieldName }}"
-                   {{ $value ? 'checked' : '' }}
-                   {{ $isReadonly ? 'disabled' : '' }}>
-            <label class="form-check-label small" for="{{ $fieldName }}">{{ $field->label }}</label>
-        </div>
+        @if(count($options) > 0)
+            @php
+                $stored = old($fieldName, $existingData->{$field->target_column ?? $fieldName} ?? null);
+                $selectedVals = is_array($stored)
+                    ? array_map('strval', $stored)
+                    : fc_checkbox_multi_selected($stored, $options);
+            @endphp
+            <div class="d-flex flex-wrap gap-3 mt-1">
+                @foreach($options as $i => $opt)
+                    @php
+                        $optVal = (string) ($opt['value'] ?? '');
+                        $optLbl = (string) ($opt['label'] ?? $optVal);
+                    @endphp
+                    <div class="form-check">
+                        <input class="form-check-input @error($fieldName) is-invalid @enderror" type="checkbox"
+                               name="{{ $fieldName }}[]" value="{{ $optVal }}"
+                               id="fc_cb_{{ $field->id }}_{{ $i }}"
+                               {{ in_array($optVal, $selectedVals, true) ? 'checked' : '' }}
+                               {{ $isReadonly ? 'disabled' : '' }}>
+                        <label class="form-check-label small" for="fc_cb_{{ $field->id }}_{{ $i }}">{{ $optLbl }}</label>
+                    </div>
+                @endforeach
+            </div>
+        @else
+            <div class="form-check mt-1">
+                <input class="form-check-input @error($fieldName) is-invalid @enderror" type="checkbox"
+                       name="{{ $fieldName }}" value="1"
+                       id="fc_cb_single_{{ $field->id }}"
+                       {{ fc_checkbox_single_checked($value) ? 'checked' : '' }}
+                       {{ $isReadonly ? 'disabled' : '' }}>
+                <label class="form-check-label small" for="fc_cb_single_{{ $field->id }}">{{ $field->label }}</label>
+            </div>
+        @endif
         @break
 
     @case('file')

@@ -27,7 +27,6 @@
     <div class="col-md-8">
         <label class="form-label small fw-semibold">Validation Rules</label>
         <input type="text" name="validation_rules" class="form-control form-control-sm" value="{{ $field->validation_rules ?? '' }}" placeholder="e.g. required|string|max:200">
-        <small class="text-muted">Laravel validation syntax</small>
     </div>
     <div class="col-md-4">
         <label class="form-label small fw-semibold">CSS Class</label>

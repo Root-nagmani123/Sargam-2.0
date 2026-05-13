@@ -6,12 +6,16 @@
         : $group->groupFields;
 @endphp
 
+@php $hideRemoveRow = ($group->max_rows <= 1 && $group->min_rows >= 1); @endphp
 <div class="repeatable-row border rounded p-3 mb-2 bg-light position-relative" data-index="{{ $i }}">
     <div class="row g-2">
         @foreach($groupFields as $gf)
             @php
                 $fieldName  = "{$groupName}[{$i}][{$gf->field_name}]";
                 $fieldValue = old("{$groupName}.{$i}.{$gf->field_name}", $row->{$gf->target_column} ?? '');
+                if ($gf->field_type === 'number' && $fieldValue !== '' && $fieldValue !== null) {
+                    $fieldValue = fc_numeric_display_value($fieldValue);
+                }
                 $errorKey   = "{$groupName}.{$i}.{$gf->field_name}";
                 $lookupItems = $groupLookups[$gf->field_name] ?? [];
                 $options     = $gf->decoded_options ?? [];
@@ -54,10 +58,46 @@
                         </select>
                         @break
                     @case('checkbox')
-                        <div class="form-check mt-1">
-                            <input class="form-check-input" type="checkbox" name="{{ $fieldName }}" value="1" {{ $fieldValue ? 'checked' : '' }}>
-                            <label class="form-check-label small">{{ $gf->label }}</label>
-                        </div>
+                        @if(count($options) > 0)
+                            @php
+                                $storedG = old("{$groupName}.{$i}.{$gf->field_name}", $row->{$gf->target_column} ?? null);
+                                $selectedG = is_array($storedG)
+                                    ? array_map('strval', $storedG)
+                                    : fc_checkbox_multi_selected($storedG, $options);
+                            @endphp
+                            <div class="d-flex flex-wrap gap-2 mt-1">
+                                @foreach($options as $oi => $opt)
+                                    @php
+                                        $gOptVal = (string) ($opt['value'] ?? '');
+                                        $gOptLbl = (string) ($opt['label'] ?? $gOptVal);
+                                    @endphp
+                                    <div class="form-check">
+                                        <input class="form-check-input @error($errorKey) is-invalid @enderror" type="checkbox"
+                                               name="{{ $fieldName }}[]" value="{{ $gOptVal }}"
+                                               id="fc_gcb_{{ $gf->id }}_{{ $i }}_{{ $oi }}"
+                                               {{ in_array($gOptVal, $selectedG, true) ? 'checked' : '' }}>
+                                        <label class="form-check-label small" for="fc_gcb_{{ $gf->id }}_{{ $i }}_{{ $oi }}">{{ $gOptLbl }}</label>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @else
+                            <div class="form-check mt-1">
+                                <input class="form-check-input @error($errorKey) is-invalid @enderror" type="checkbox"
+                                       name="{{ $fieldName }}" value="1"
+                                       id="fc_gcb_single_{{ $gf->id }}_{{ $i }}"
+                                       {{ fc_checkbox_single_checked($fieldValue) ? 'checked' : '' }}>
+                                <label class="form-check-label small" for="fc_gcb_single_{{ $gf->id }}_{{ $i }}">{{ $gf->label }}</label>
+                            </div>
+                        @endif
+                        @break
+                    @case('file')
+                        @php $existingFilePath = ($gf->target_column ?? null) ? ($row->{$gf->target_column} ?? null) : null; @endphp
+                        <input type="file" name="{{ $fieldName }}"
+                               class="form-control form-control-sm @error($errorKey) is-invalid @enderror"
+                               accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png">
+                        @if(! empty($existingFilePath))
+                            <div class="small mt-1 dynamic-current-file-hint">Current file: <a href="{{ asset($existingFilePath) }}" target="_blank" rel="noopener">View</a></div>
+                        @endif
                         @break
                 @endswitch
 
@@ -67,7 +107,9 @@
             </div>
         @endforeach
     </div>
-    <button type="button" class="btn btn-sm btn-outline-danger position-absolute top-0 end-0 m-2 remove-row-btn" onclick="this.closest('.repeatable-row').remove()" title="Remove row">
-        <i class="bi bi-x-lg"></i>
-    </button>
+    @unless($hideRemoveRow)
+        <button type="button" class="btn btn-sm btn-outline-danger position-absolute top-0 end-0 m-2 remove-row-btn" onclick="this.closest('.repeatable-row').remove()" title="Remove row">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    @endunless
 </div>

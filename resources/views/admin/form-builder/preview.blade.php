@@ -42,10 +42,10 @@
 
             {{-- Groups (Step 3) --}}
             @if($groups->isNotEmpty())
-                <ul class="nav nav-tabs mb-3" role="tablist">
+                <ul class="nav nav-tabs mb-3 flex-wrap" role="tablist">
                     @foreach($groups as $gi => $group)
                         <li class="nav-item">
-                            <a class="nav-link {{ $gi === 0 ? 'active' : '' }}" data-bs-toggle="tab" href="#preview-grp-{{ $group->id }}">{{ $group->group_label }}</a>
+                            <a class="nav-link text-nowrap {{ $gi === 0 ? 'active' : '' }}" data-bs-toggle="tab" href="#preview-grp-{{ $group->id }}">{{ $group->group_label }}</a>
                         </li>
                     @endforeach
                 </ul>

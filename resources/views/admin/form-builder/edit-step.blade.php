@@ -51,15 +51,20 @@
             <form method="POST" action="{{ route('fc-reg.admin.form-builder.step.update', $step) }}">
                 @csrf @method('PUT')
                 <div class="row g-3">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label small fw-semibold">Step Name</label>
                         <input type="text" name="step_name" class="form-control" value="{{ $step->step_name }}">
                     </div>
-                    <div class="col-md-2">
-                        <label class="form-label small fw-semibold">Icon Class</label>
-                        <input type="text" name="icon" class="form-control" value="{{ $step->icon }}" placeholder="bi-person-fill">
-                    </div>
                     <div class="col-md-4">
+                        @include('admin.forms.partials.fc-form-icon-picker', [
+                            'selectedIcon' => old('icon', $step->icon ?: 'bi-file-text'),
+                            'selectId' => 'fcFormBuilderStepIcon',
+                            'formSelect' => 'form-select-sm',
+                            'label' => 'Step icon',
+                            'labelClass' => 'form-label small fw-semibold',
+                        ])
+                    </div>
+                    <div class="col-md-3">
                         <label class="form-label small fw-semibold">Description</label>
                         <input type="text" name="description" class="form-control" value="{{ $step->description }}">
                     </div>
@@ -235,10 +240,10 @@
         </div>
         <div class="card-body">
             {{-- Group tabs --}}
-            <ul class="nav nav-tabs mb-3" role="tablist">
+            <ul class="nav nav-tabs mb-3 flex-wrap" role="tablist">
                 @foreach($step->fieldGroups as $gi => $group)
                     <li class="nav-item">
-                        <a class="nav-link {{ $gi === 0 ? 'active' : '' }}" data-bs-toggle="tab" href="#grp-{{ $group->id }}">
+                        <a class="nav-link text-nowrap {{ $gi === 0 ? 'active' : '' }}" data-bs-toggle="tab" href="#grp-{{ $group->id }}">
                             {{ $group->group_label }}
                             <span class="badge bg-secondary ms-1">{{ $group->groupFields->count() }}</span>
                             @if(! $group->is_active)

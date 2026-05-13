@@ -328,9 +328,11 @@ class FormBuilderController extends Controller
         if (Schema::hasTable($table) && !Schema::hasColumn($table, $column)) {
             Schema::table($table, function (Blueprint $t) use ($column, $fieldType) {
                 match ($fieldType) {
-                    'number'   => $t->decimal($column, 15, 4)->nullable(),
+                    // Store as string so phones and decimals appear as entered (avoids DECIMAL …0000 padding).
+                    'number'   => $t->string($column, 100)->nullable(),
                     'date'     => $t->date($column)->nullable(),
-                    'checkbox' => $t->boolean($column)->default(false),
+                    // Text holds JSON array for multi-option checkboxes, or 0/1 for a single checkbox.
+                    'checkbox' => $t->text($column)->nullable(),
                     'textarea' => $t->text($column)->nullable(),
                     'file'     => $t->string($column, 500)->nullable(),
                     default    => $t->string($column, 500)->nullable(),

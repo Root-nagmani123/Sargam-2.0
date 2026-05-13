@@ -523,3 +523,71 @@ if (! function_exists('fc_registration_dynamic_form_step_blocked_message')) {
         };
     }
 }
+
+if (! function_exists('fc_numeric_display_value')) {
+    /**
+     * Strip trailing zeros from numeric strings for FC form display (e.g. DECIMAL 8745265.0000 → 8745265).
+     */
+    function fc_numeric_display_value(mixed $value): string
+    {
+        if ($value === null || $value === '') {
+            return '';
+        }
+        $s = is_string($value) ? trim($value) : (string) $value;
+        if ($s === '' || ! is_numeric($s)) {
+            return $s;
+        }
+        if (! str_contains($s, '.')) {
+            return $s;
+        }
+
+        return rtrim(rtrim($s, '0'), '.') ?: '0';
+    }
+}
+
+if (! function_exists('fc_checkbox_multi_selected')) {
+    /**
+     * Selected option values for a multi-option checkbox (stored as JSON array string in DB).
+     *
+     * @param  array<int, array{value?: mixed, label?: string}>  $options
+     * @return array<int, string>
+     */
+    function fc_checkbox_multi_selected(mixed $raw, array $options): array
+    {
+        if (count($options) === 0) {
+            return [];
+        }
+        if (is_array($raw)) {
+            return array_map('strval', $raw);
+        }
+        if ($raw === null || $raw === '') {
+            return [];
+        }
+        $decoded = json_decode((string) $raw, true);
+        if (is_array($decoded)) {
+            return array_map('strval', array_values($decoded));
+        }
+
+        return [];
+    }
+}
+
+if (! function_exists('fc_checkbox_single_checked')) {
+    /**
+     * Whether a single yes/no checkbox field is checked (legacy tinyint or string).
+     */
+    function fc_checkbox_single_checked(mixed $raw): bool
+    {
+        if ($raw === null || $raw === '' || $raw === false || $raw === 0 || $raw === '0') {
+            return false;
+        }
+        if ($raw === true) {
+            return true;
+        }
+        if (is_numeric($raw)) {
+            return (int) $raw === 1;
+        }
+
+        return in_array(strtolower((string) $raw), ['1', 'true', 'yes', 'on'], true);
+    }
+}

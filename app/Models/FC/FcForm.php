@@ -30,6 +30,15 @@ class FcForm extends Model
     }
 
     /**
+     * Table where step tracker flags (e.g. step1_done) are written and read for dynamic forms.
+     * When no consolidation table is configured, the app uses student_masters (same as DynamicFormService).
+     */
+    public function trackerStorageTable(): string
+    {
+        return filled($this->consolidation_table) ? $this->consolidation_table : 'student_masters';
+    }
+
+    /**
      * Public + admin URLs use encrypted id instead of raw integer.
      *
      * {@inheritdoc}
