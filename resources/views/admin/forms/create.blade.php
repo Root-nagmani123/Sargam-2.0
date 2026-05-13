@@ -2,7 +2,7 @@
 @section('title', 'Create New Form')
 
 @section('setup_content')
-<div class="container py-4" style="max-width:750px;">
+<div class="container-fluid py-4 px-4">
     <div class="d-flex align-items-center mb-4">
         <a href="{{ route('fc-reg.admin.forms.index') }}" class="btn btn-sm btn-outline-secondary me-3">
             <i class="bi bi-arrow-left"></i>
@@ -55,10 +55,10 @@
 
                 <div class="row g-3 mb-3">
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">Icon Class</label>
-                        <input type="text" name="icon" class="form-control @error('icon') is-invalid @enderror"
-                               value="{{ old('icon', 'bi-file-text') }}" placeholder="bi-file-text">
-                        <small class="text-muted">Bootstrap Icons class name</small>
+                        @include('admin.forms.partials.fc-form-icon-picker', [
+                            'selectedIcon' => old('icon', 'bi-file-text'),
+                            'selectId' => 'fcCreateFormIcon',
+                        ])
                     </div>
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">User Identifier Column</label>
