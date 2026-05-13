@@ -36,10 +36,10 @@
             margin: 12mm 10mm 12mm 10mm;
         }
         * { box-sizing: border-box; }
-        html { font-size: 9pt; }
+        html { font-size: 10.5pt; }
         body {
             font-family: DejaVu Sans, Arial, Helvetica, sans-serif;
-            font-size: 9pt;
+            font-size: 10.5pt;
             margin: 0;
             padding: 0;
             color: #212529;
@@ -60,9 +60,9 @@
         .pdf-header .hdr-center { padding-left: 10px; }
         .pdf-header .hdr-right { width: 50px; text-align: right; }
         .pdf-header .hdr-right img { width: 40px; height: 40px; }
-        .brand-1 { font-size: 7pt; text-transform: uppercase; letter-spacing: 0.06em; color: #0b4a7e; font-weight: 600; }
-        .brand-2 { font-size: 9.5pt; font-weight: 700; text-transform: uppercase; color: #111; margin-top: 2px; }
-        .brand-3 { font-size: 7.5pt; color: #555; margin-top: 2px; }
+        .brand-1 { font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.06em; color: #0b4a7e; font-weight: 600; }
+        .brand-2 { font-size: 11pt; font-weight: 700; text-transform: uppercase; color: #111; margin-top: 2px; }
+        .brand-3 { font-size: 9pt; color: #555; margin-top: 2px; }
 
         /* ── Report title block ── */
         .report-title-block {
