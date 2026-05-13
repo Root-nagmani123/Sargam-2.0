@@ -136,8 +136,26 @@ class NoticeNotificationController extends Controller
                 ];
             })->sortBy('sort')->values();
 
+        $highlightNoticePk = null;
+        if ($request->filled('notice')) {
+            $n = (int) $request->query('notice');
+            $highlightNoticePk = $n > 0 ? $n : null;
+        }
+
         $activeTabKey = (string) $request->get('tab', '');
         $firstTab = $noticeCategoryTabs->first();
+
+        if ($highlightNoticePk !== null && $noticeCategoryTabs->isNotEmpty()) {
+            foreach ($noticeCategoryTabs as $tab) {
+                foreach ($tab['notices'] as $row) {
+                    if ((int) ($row->pk ?? 0) === $highlightNoticePk) {
+                        $activeTabKey = (string) $tab['key'];
+                        break 2;
+                    }
+                }
+            }
+        }
+
         if ($activeTabKey === '' || $noticeCategoryTabs->firstWhere('key', $activeTabKey) === null) {
             $activeTabKey = $firstTab ? (string) $firstTab['key'] : '';
         }
@@ -146,6 +164,7 @@ class NoticeNotificationController extends Controller
             'noticeCategoryTabs' => $noticeCategoryTabs,
             'activeTabKey' => $activeTabKey,
             'q' => $q,
+            'highlightNoticePk' => $highlightNoticePk,
         ]);
     }
 

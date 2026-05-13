@@ -55,6 +55,12 @@
         line-height: 1.5;
         margin-top: 10px;
     }
+    .notice-feed-card-highlight {
+        outline: 3px solid #0d6efd;
+        outline-offset: 2px;
+        box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.15);
+        background: #f8f9ff;
+    }
     .notice-feed-search .input-group-text {
         background: #fff;
         border-right: 0;
@@ -108,6 +114,9 @@
                     </div>
                     <form method="get" action="{{ route('admin.notice.feed') }}" class="notice-feed-search flex-shrink-0" style="min-width: 220px; max-width: 320px;">
                         <input type="hidden" name="tab" id="notice-feed-tab-input" value="{{ $activeTabKey }}">
+                        @if(!empty($highlightNoticePk))
+                        <input type="hidden" name="notice" value="{{ $highlightNoticePk }}">
+                        @endif
                         <div class="input-group input-group-sm">
                             <span class="input-group-text border-end-0 rounded-start-pill"><span class="material-symbols-rounded text-muted" style="font-size: 1.1rem;">search</span></span>
                             <input type="search" name="q" value="{{ $q }}" class="form-control rounded-end-pill" placeholder="Search" autocomplete="off">
@@ -137,7 +146,10 @@
                                 $whenLabel = $whenCarbon ? $whenCarbon->format('d/m/Y h:i A') : '—';
                                 $plainDesc = trim(preg_replace('/\s+/', ' ', strip_tags((string) ($notice->description ?? ''))));
                             @endphp
-                            <article class="notice-feed-card">
+                            <article
+                                id="notice-feed-card-{{ $notice->pk }}"
+                                class="notice-feed-card {{ !empty($highlightNoticePk) && (int) $notice->pk === (int) $highlightNoticePk ? 'notice-feed-card-highlight' : '' }}"
+                            >
                                 <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
                                     <h2 class="notice-feed-card-title">{{ $notice->notice_title }}</h2>
                                     <div class="notice-feed-card-meta text-md-end">
@@ -190,6 +202,18 @@
             });
         })();
         </script>
+        @if(!empty($highlightNoticePk))
+        <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var el = document.getElementById('notice-feed-card-{{ (int) $highlightNoticePk }}');
+            if (el) {
+                setTimeout(function () {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 200);
+            }
+        });
+        </script>
+        @endif
     @endif
 </div>
 @endsection
