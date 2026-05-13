@@ -59,13 +59,8 @@ class RegistrationStep3Controller extends Controller
             $groupLookups[$group->group_name] = $this->formService->getGroupLookupData($fieldsForLookups);
         }
 
-        $preMedicalCourse = $this->registrationSessionName($username);
-        $preMedical = FcPreHistory::where('userid', $username)->where('course', $preMedicalCourse)->first();
-        $completedPreMedical = $preMedical !== null;
-
         return view('fc.registration.dynamic-step3', compact(
             'step', 'groups', 'existingRows', 'groupLookups', 'completedGroups',
-            'preMedical', 'preMedicalCourse', 'completedPreMedical'
         ));
     }
 
@@ -85,7 +80,7 @@ class RegistrationStep3Controller extends Controller
             $rows = [$validated[$group->group_name] ?? $validated];
         }
 
-        $this->formService->saveGroupData($group, $username, $rows);
+        $this->formService->saveGroupData($group, $username, $rows, $request);
 
         // Check if this is the last group (module choice) — mark step3 done
         $step       = $group->step;
@@ -128,6 +123,9 @@ class RegistrationStep3Controller extends Controller
         $sportsMasters        = SportsMaster::orderBy('sport_name')->get();
         $degreeMasters        = DB::table('degree_master')->orderBy('degree_name')->get();
 
+        $preMedicalCourse = $this->registrationSessionName($username);
+        $preMedical = FcPreHistory::where('userid', $username)->where('course', $preMedicalCourse)->first();
+
         return view('fc.registration.step3', compact(
             'qualifications','higherEdus','employments','spouse','languages','hindi',
             'hobbies','skills','distinctions','sportsPlayed','sportsTrg','moduleChoice',
@@ -147,6 +145,10 @@ class RegistrationStep3Controller extends Controller
         return trim((string) ($first?->session?->session_name ?? ''));
     }
 
+    /**
+     * Legacy flat form (step3.blade.php). When Step 3 uses dynamic groups, pre-medical is saved via
+     * {@see saveGroup()} on the `pre_medical_history` group instead.
+     */
     public function savePreMedicalHistory(Request $request)
     {
         $username = Auth::user()->username;

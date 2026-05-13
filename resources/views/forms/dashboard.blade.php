@@ -25,10 +25,11 @@
         <div class="row g-4">
             @foreach($steps as $si => $step)
                 @php
-                    $isDone = $stepStatus[$step->id] ?? false;
+                    $rawDone = $stepStatus[$step->id] ?? false;
                     $fcReg = ($form->form_slug ?? '') === 'fc-registration' && isset($registrationProgress);
                     if ($fcReg) {
                         $regSteps = $registrationProgress['steps'] ?? [];
+                        $isDone = $rawDone;
                         $isAccessible = fc_registration_dynamic_form_step_accessible($step->step_slug, $regSteps, $isDone);
                         $blockedMsg = $isAccessible ? null : fc_registration_dynamic_form_step_blocked_message($step->step_slug);
                     } else {
@@ -39,7 +40,10 @@
                                 break;
                             }
                         }
-                        $isAccessible = $isDone || $prevAllDone;
+                        // Sequential UX: do not show "Completed" / Review until every earlier step is done,
+                        // even if this step's tracker/detail row is already set (avoids misleading cards).
+                        $isDone = $rawDone && ($si === 0 || $prevAllDone);
+                        $isAccessible = $si === 0 || $prevAllDone;
                         $blockedMsg = $isAccessible ? null : 'Complete the previous step first';
                     }
                 @endphp

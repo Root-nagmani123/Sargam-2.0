@@ -60,7 +60,7 @@ class FcFormBuilderSeeder extends Seeder
             'completion_column' => null,
             'tracker_column'    => 'step3_done',
             'icon'              => 'bi-journal-text',
-            'description'       => 'Qualifications, employment, languages, hobbies, sports, and module choice.',
+            'description'       => 'Pre-medical history, qualifications, employment, languages, hobbies, sports, and module choice.',
         ]);
 
         $stepBank = FcFormStep::create([
@@ -177,8 +177,28 @@ class FcFormBuilderSeeder extends Seeder
 
     private function seedStep3Groups(FcFormStep $step): void
     {
+        // ── Pre-medical history (fc_pre_history; editable in form builder) ──
+        $gPreMed = FcFormFieldGroup::create([
+            'step_id' => $step->id,
+            'group_name' => 'pre_medical_history',
+            'group_label' => 'Pre-medical history',
+            'target_table' => 'fc_pre_history',
+            'save_mode' => 'upsert',
+            'min_rows' => 1,
+            'max_rows' => 1,
+            'display_order' => 0,
+        ]);
+        $this->createGroupFields($gPreMed, [
+            ['field_name' => 'allergy_illness', 'label' => 'History of allergy / previous illness / injury / disability / asthma / slip disc / blood transfusion', 'field_type' => 'textarea', 'target_column' => 'allergy_illness', 'validation_rules' => 'nullable|string|max:60000', 'is_required' => 0, 'display_order' => 1, 'css_class' => 'col-12'],
+            ['field_name' => 'prolonged_medication', 'label' => 'History of prolonged medication', 'field_type' => 'textarea', 'target_column' => 'prolonged_medication', 'validation_rules' => 'nullable|string|max:60000', 'is_required' => 0, 'display_order' => 2, 'css_class' => 'col-12'],
+            ['field_name' => 'hospital_history', 'label' => 'History of hospitalisation / surgery', 'field_type' => 'textarea', 'target_column' => 'hospital_history', 'validation_rules' => 'nullable|string|max:60000', 'is_required' => 0, 'display_order' => 3, 'css_class' => 'col-12'],
+            ['field_name' => 'altitude_illness', 'label' => 'History of altitude illness / motion sickness', 'field_type' => 'textarea', 'target_column' => 'altitude_illness', 'validation_rules' => 'nullable|string|max:60000', 'is_required' => 0, 'display_order' => 4, 'css_class' => 'col-12'],
+            ['field_name' => 'additional_info', 'label' => 'Any other relevant medical information', 'field_type' => 'textarea', 'target_column' => 'additional_info', 'validation_rules' => 'nullable|string|max:60000', 'is_required' => 0, 'display_order' => 5, 'css_class' => 'col-12'],
+            ['field_name' => 'pre_med_doc', 'label' => 'Supporting document (PDF or image)', 'field_type' => 'file', 'target_column' => 'doc_path', 'validation_rules' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240', 'is_required' => 0, 'display_order' => 6, 'css_class' => 'col-12'],
+        ]);
+
         // ── Qualifications ──
-        $gQual = FcFormFieldGroup::create(['step_id'=>$step->id, 'group_name'=>'qualifications', 'group_label'=>'Educational Qualifications', 'target_table'=>'student_master_qualification_details', 'save_mode'=>'replace_all', 'min_rows'=>1, 'max_rows'=>10, 'display_order'=>1]);
+        $gQual = FcFormFieldGroup::create(['step_id'=>$step->id, 'group_name'=>'qualifications', 'group_label'=>'Educational Qualifications', 'target_table'=>'student_master_qualification_details', 'save_mode'=>'replace_all', 'min_rows'=>1, 'max_rows'=>10, 'display_order'=>2]);
         $this->createGroupFields($gQual, [
             ['field_name'=>'qualification_id', 'label'=>'Qualification', 'field_type'=>'select',  'target_column'=>'qualification_id', 'validation_rules'=>'required|exists:qualification_masters,id', 'is_required'=>1, 'display_order'=>1, 'lookup_table'=>'qualification_masters', 'lookup_value_column'=>'id', 'lookup_label_column'=>'qualification_name', 'css_class'=>'col-md-4'],
             ['field_name'=>'degree_name',      'label'=>'Degree Name',   'field_type'=>'text',    'target_column'=>'degree_name',      'validation_rules'=>'required|string|max:200', 'is_required'=>1, 'display_order'=>2, 'css_class'=>'col-md-4'],
@@ -191,7 +211,7 @@ class FcFormBuilderSeeder extends Seeder
         ]);
 
         // ── Higher Education ──
-        $gHigher = FcFormFieldGroup::create(['step_id'=>$step->id, 'group_name'=>'higher_education', 'group_label'=>'Higher Education', 'target_table'=>'student_master_higher_educational_details', 'save_mode'=>'replace_all', 'min_rows'=>0, 'max_rows'=>10, 'display_order'=>2]);
+        $gHigher = FcFormFieldGroup::create(['step_id'=>$step->id, 'group_name'=>'higher_education', 'group_label'=>'Higher Education', 'target_table'=>'student_master_higher_educational_details', 'save_mode'=>'replace_all', 'min_rows'=>0, 'max_rows'=>10, 'display_order'=>3]);
         $this->createGroupFields($gHigher, [
             ['field_name'=>'degree_type',     'label'=>'Degree Type',   'field_type'=>'select', 'target_column'=>'degree_type',     'validation_rules'=>'required|exists:degree_master,pk', 'is_required'=>1, 'display_order'=>1, 'lookup_table'=>'degree_master', 'lookup_value_column'=>'pk', 'lookup_label_column'=>'degree_name', 'css_class'=>'col-md-3'],
             ['field_name'=>'subject_name',    'label'=>'Subject',      'field_type'=>'text',   'target_column'=>'subject_name',    'validation_rules'=>'nullable|string|max:200', 'is_required'=>0, 'display_order'=>2, 'css_class'=>'col-md-3'],
@@ -201,7 +221,7 @@ class FcFormBuilderSeeder extends Seeder
         ]);
 
         // ── Employment ──
-        $gEmploy = FcFormFieldGroup::create(['step_id'=>$step->id, 'group_name'=>'employment', 'group_label'=>'Employment History', 'target_table'=>'student_master_employment_details', 'save_mode'=>'replace_all', 'min_rows'=>0, 'max_rows'=>20, 'display_order'=>3]);
+        $gEmploy = FcFormFieldGroup::create(['step_id'=>$step->id, 'group_name'=>'employment', 'group_label'=>'Employment History', 'target_table'=>'student_master_employment_details', 'save_mode'=>'replace_all', 'min_rows'=>0, 'max_rows'=>20, 'display_order'=>4]);
         $this->createGroupFields($gEmploy, [
             ['field_name'=>'organisation_name', 'label'=>'Organisation',  'field_type'=>'text',     'target_column'=>'organisation_name', 'validation_rules'=>'required|string|max:300', 'is_required'=>1, 'display_order'=>1, 'css_class'=>'col-md-4'],
             ['field_name'=>'designation',       'label'=>'Designation',   'field_type'=>'text',     'target_column'=>'designation',       'validation_rules'=>'required|string|max:200', 'is_required'=>1, 'display_order'=>2, 'css_class'=>'col-md-3'],
@@ -212,7 +232,7 @@ class FcFormBuilderSeeder extends Seeder
         ]);
 
         // ── Spouse ──
-        $gSpouse = FcFormFieldGroup::create(['step_id'=>$step->id, 'group_name'=>'spouse', 'group_label'=>'Spouse / Family', 'target_table'=>'student_master_spouse_masters', 'save_mode'=>'upsert', 'min_rows'=>0, 'max_rows'=>1, 'display_order'=>4]);
+        $gSpouse = FcFormFieldGroup::create(['step_id'=>$step->id, 'group_name'=>'spouse', 'group_label'=>'Spouse / Family', 'target_table'=>'student_master_spouse_masters', 'save_mode'=>'upsert', 'min_rows'=>0, 'max_rows'=>1, 'display_order'=>5]);
         $this->createGroupFields($gSpouse, [
             ['field_name'=>'spouse_name',         'label'=>'Spouse Name',       'field_type'=>'text', 'target_column'=>'spouse_name',         'validation_rules'=>'nullable|string|max:200', 'is_required'=>0, 'display_order'=>1, 'css_class'=>'col-md-6'],
             ['field_name'=>'spouse_dob',          'label'=>'Spouse DOB',        'field_type'=>'date', 'target_column'=>'spouse_dob',          'validation_rules'=>'nullable|date|before:today', 'is_required'=>0, 'display_order'=>2, 'css_class'=>'col-md-3'],
@@ -223,7 +243,7 @@ class FcFormBuilderSeeder extends Seeder
         ]);
 
         // ── Languages ──
-        $gLang = FcFormFieldGroup::create(['step_id'=>$step->id, 'group_name'=>'languages', 'group_label'=>'Languages Known', 'target_table'=>'student_master_language_knowns', 'save_mode'=>'replace_all', 'min_rows'=>1, 'max_rows'=>10, 'display_order'=>5]);
+        $gLang = FcFormFieldGroup::create(['step_id'=>$step->id, 'group_name'=>'languages', 'group_label'=>'Languages Known', 'target_table'=>'student_master_language_knowns', 'save_mode'=>'replace_all', 'min_rows'=>1, 'max_rows'=>10, 'display_order'=>6]);
         $this->createGroupFields($gLang, [
             ['field_name'=>'language_id',  'label'=>'Language',    'field_type'=>'select',   'target_column'=>'language_id',  'validation_rules'=>'required|exists:language_master,id', 'is_required'=>1, 'display_order'=>1, 'lookup_table'=>'language_master', 'lookup_value_column'=>'id', 'lookup_label_column'=>'language_name', 'css_class'=>'col-md-3'],
             ['field_name'=>'can_read',     'label'=>'Can Read',    'field_type'=>'checkbox', 'target_column'=>'can_read',     'validation_rules'=>'nullable|boolean', 'is_required'=>0, 'display_order'=>2, 'css_class'=>'col-md-2'],
@@ -233,7 +253,7 @@ class FcFormBuilderSeeder extends Seeder
         ]);
 
         // ── Hobbies ──
-        $gHobbies = FcFormFieldGroup::create(['step_id'=>$step->id, 'group_name'=>'hobbies', 'group_label'=>'Hobbies & Skills', 'target_table'=>'student_master_hobbies_details', 'save_mode'=>'upsert', 'min_rows'=>0, 'max_rows'=>1, 'display_order'=>6]);
+        $gHobbies = FcFormFieldGroup::create(['step_id'=>$step->id, 'group_name'=>'hobbies', 'group_label'=>'Hobbies & Skills', 'target_table'=>'student_master_hobbies_details', 'save_mode'=>'upsert', 'min_rows'=>0, 'max_rows'=>1, 'display_order'=>7]);
         $this->createGroupFields($gHobbies, [
             ['field_name'=>'hobbies',          'label'=>'Hobbies',              'field_type'=>'textarea', 'target_column'=>'hobbies',          'validation_rules'=>'nullable|string', 'is_required'=>0, 'display_order'=>1, 'css_class'=>'col-md-12'],
             ['field_name'=>'special_skills',   'label'=>'Special Skills',       'field_type'=>'textarea', 'target_column'=>'special_skills',   'validation_rules'=>'nullable|string', 'is_required'=>0, 'display_order'=>2, 'css_class'=>'col-md-12'],
@@ -241,7 +261,7 @@ class FcFormBuilderSeeder extends Seeder
         ]);
 
         // ── Distinctions ──
-        $gDist = FcFormFieldGroup::create(['step_id'=>$step->id, 'group_name'=>'distinctions', 'group_label'=>'Academic Distinctions', 'target_table'=>'student_master_academic_distinctions', 'save_mode'=>'replace_all', 'min_rows'=>0, 'max_rows'=>20, 'display_order'=>7]);
+        $gDist = FcFormFieldGroup::create(['step_id'=>$step->id, 'group_name'=>'distinctions', 'group_label'=>'Academic Distinctions', 'target_table'=>'student_master_academic_distinctions', 'save_mode'=>'replace_all', 'min_rows'=>0, 'max_rows'=>20, 'display_order'=>8]);
         $this->createGroupFields($gDist, [
             ['field_name'=>'distinction_type', 'label'=>'Type',           'field_type'=>'text', 'target_column'=>'distinction_type', 'validation_rules'=>'required|string|max:200', 'is_required'=>1, 'display_order'=>1, 'css_class'=>'col-md-3'],
             ['field_name'=>'description',      'label'=>'Description',    'field_type'=>'text', 'target_column'=>'description',      'validation_rules'=>'nullable|string|max:500', 'is_required'=>0, 'display_order'=>2, 'css_class'=>'col-md-4'],
@@ -250,7 +270,7 @@ class FcFormBuilderSeeder extends Seeder
         ]);
 
         // ── Sports Played ──
-        $gSports = FcFormFieldGroup::create(['step_id'=>$step->id, 'group_name'=>'sports_played', 'group_label'=>'Sports', 'target_table'=>'student_sports_fitness_teach_masters', 'save_mode'=>'replace_all', 'min_rows'=>0, 'max_rows'=>20, 'display_order'=>8]);
+        $gSports = FcFormFieldGroup::create(['step_id'=>$step->id, 'group_name'=>'sports_played', 'group_label'=>'Sports', 'target_table'=>'student_sports_fitness_teach_masters', 'save_mode'=>'replace_all', 'min_rows'=>0, 'max_rows'=>20, 'display_order'=>9]);
         $this->createGroupFields($gSports, [
             ['field_name'=>'sport_id', 'label'=>'Sport',  'field_type'=>'select', 'target_column'=>'sport_id', 'validation_rules'=>'required|exists:sports_masters,id', 'is_required'=>1, 'display_order'=>1, 'lookup_table'=>'sports_masters', 'lookup_value_column'=>'id', 'lookup_label_column'=>'sport_name', 'css_class'=>'col-md-3'],
             ['field_name'=>'level',    'label'=>'Level',  'field_type'=>'select', 'target_column'=>'level',    'validation_rules'=>'nullable|string|max:100', 'is_required'=>0, 'display_order'=>2, 'options_json'=>json_encode([['value'=>'National','label'=>'National'],['value'=>'State','label'=>'State'],['value'=>'District','label'=>'District'],['value'=>'University','label'=>'University'],['value'=>'School','label'=>'School']]), 'css_class'=>'col-md-3'],
@@ -259,7 +279,7 @@ class FcFormBuilderSeeder extends Seeder
         ]);
 
         // ── Module Choice ──
-        $gModule = FcFormFieldGroup::create(['step_id'=>$step->id, 'group_name'=>'module', 'group_label'=>'Module Choice', 'target_table'=>'student_master_module_masters', 'save_mode'=>'upsert', 'min_rows'=>1, 'max_rows'=>1, 'display_order'=>9]);
+        $gModule = FcFormFieldGroup::create(['step_id'=>$step->id, 'group_name'=>'module', 'group_label'=>'Module Choice', 'target_table'=>'student_master_module_masters', 'save_mode'=>'upsert', 'min_rows'=>1, 'max_rows'=>1, 'display_order'=>10]);
         $this->createGroupFields($gModule, [
             ['field_name'=>'chosen_module', 'label'=>'Preferred Module',  'field_type'=>'text', 'target_column'=>'chosen_module', 'validation_rules'=>'required|string|max:100', 'is_required'=>1, 'display_order'=>1, 'css_class'=>'col-md-6'],
             ['field_name'=>'second_module', 'label'=>'Second Preference', 'field_type'=>'text', 'target_column'=>'second_module', 'validation_rules'=>'nullable|string|max:100', 'is_required'=>0, 'display_order'=>2, 'css_class'=>'col-md-6'],

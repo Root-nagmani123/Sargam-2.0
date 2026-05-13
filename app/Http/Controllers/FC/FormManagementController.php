@@ -8,6 +8,7 @@ use App\Models\FC\FcFormStep;
 use App\Models\FC\FcFormFieldGroup;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class FormManagementController extends Controller
 {
@@ -158,13 +159,31 @@ class FormManagementController extends Controller
     public function updateStep(Request $request, FcFormStep $step)
     {
         $validated = $request->validate([
-            'step_name'   => 'required|string|max:100',
-            'description' => 'nullable|string',
-            'icon'        => 'nullable|string|max:50',
-            'is_active'   => 'nullable|boolean',
+            'step_name'         => 'required|string|max:100',
+            'step_slug'         => [
+                'required',
+                'string',
+                'max:50',
+                'regex:/^[a-z0-9\-_]+$/',
+                Rule::unique('fc_form_steps', 'step_slug')->ignore($step->id),
+            ],
+            'target_table'      => 'required|string|max:100',
+            'completion_column' => 'nullable|string|max:100',
+            'tracker_column'    => 'nullable|string|max:100',
+            'description'       => 'nullable|string',
+            'icon'              => 'nullable|string|max:50',
+            'is_active'         => 'nullable|boolean',
         ]);
 
         $validated['is_active'] = $request->boolean('is_active');
+        $validated['icon'] = ($validated['icon'] ?? '') !== '' ? $validated['icon'] : 'bi-file-text';
+        $validated['completion_column'] = filled($request->input('completion_column'))
+            ? $validated['completion_column']
+            : null;
+        $validated['tracker_column'] = filled($request->input('tracker_column'))
+            ? $validated['tracker_column']
+            : null;
+
         $step->update($validated);
 
         return back()->with('success', 'Step updated.');

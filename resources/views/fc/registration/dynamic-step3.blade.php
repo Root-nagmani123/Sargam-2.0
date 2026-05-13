@@ -3,6 +3,13 @@
 
 @section('setup_content')
 <div class="container py-4">
+    @isset($form)
+        <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+            <a href="{{ route('fc-reg.forms.dashboard', $form) }}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i>{{ $form->form_name }}
+            </a>
+        </div>
+    @endisset
     @include('partials.step-indicator', ['current' => 3])
 
     <div class="card border-0 shadow-sm" style="border-radius:10px;">
@@ -13,26 +20,19 @@
             @endif
         </div>
         <div class="card-body">
-            {{-- Group Tabs (pre-medical is fixed first tab; builder-driven groups follow) --}}
+            {{-- Group tabs from form builder (includes Pre-medical when configured as first group) --}}
             <ul class="nav nav-tabs mb-3 flex-wrap" id="step3Tabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active text-nowrap" id="tab-premed-setup-btn"
-                            data-bs-toggle="tab" data-bs-target="#tab-premed-setup" type="button" role="tab">
-                        @if($completedPreMedical ?? false)
-                            <i class="bi bi-check-circle-fill me-1 text-success"></i>
-                        @endif
-                        <i class="bi bi-heart-pulse me-1"></i>Pre-medical history
-                    </button>
-                </li>
                 @foreach($groups as $gi => $group)
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link {{ ($completedGroups[$group->group_name] ?? false) ? 'text-success' : '' }}"
+                        <button class="nav-link text-nowrap {{ $gi === 0 ? 'active' : '' }} {{ ($completedGroups[$group->group_name] ?? false) ? 'text-success' : '' }}"
                                 id="tab-{{ $group->group_name }}-btn"
                                 data-bs-toggle="tab"
                                 data-bs-target="#tab-{{ $group->group_name }}"
                                 type="button" role="tab">
                             @if($completedGroups[$group->group_name] ?? false)
                                 <i class="bi bi-check-circle-fill me-1"></i>
+                            @elseif(($group->group_name ?? '') === 'pre_medical_history')
+                                <i class="bi bi-heart-pulse me-1"></i>
                             @endif
                             {{ $group->group_label }}
                         </button>
@@ -40,11 +40,7 @@
                 @endforeach
             </ul>
 
-            {{-- Tab Content --}}
             <div class="tab-content" id="step3TabContent">
-                <div class="tab-pane fade show active" id="tab-premed-setup" role="tabpanel" aria-labelledby="tab-premed-setup-btn">
-                    @include('fc.registration.partials.pre-medical-history-form', ['preMedicalFormLayout' => 'dynamic'])
-                </div>
                 @foreach($groups as $gi => $group)
                     @php
                         $rows         = $existingRows[$group->group_name] ?? collect();
@@ -54,15 +50,17 @@
                         $groupFieldDefs = $group->activeGroupFields->isNotEmpty()
                             ? $group->activeGroupFields
                             : $group->groupFields;
+                        $needsMultipart = $groupFieldDefs->contains(fn ($f) => $f->field_type === 'file');
                     @endphp
-                    <div class="tab-pane fade" id="tab-{{ $group->group_name }}" role="tabpanel">
-                        <form method="POST" action="{{ route('fc-reg.registration.step3.save-group', $group->id) }}">
+                    <div class="tab-pane fade {{ $gi === 0 ? 'show active' : '' }}" id="tab-{{ $group->group_name }}" role="tabpanel">
+                        <form method="POST" action="{{ route('fc-reg.registration.step3.save-group', $group->id) }}"
+                              @if($needsMultipart) enctype="multipart/form-data" @endif>
                             @csrf
 
                             @if($groupFieldDefs->isEmpty())
                                 <div class="alert alert-warning small mb-0">
                                     <i class="bi bi-exclamation-triangle me-1"></i>
-                                    This tab has no form fields yet. Add fields under <strong>FC Registration → FC Admin Dynamic Form</strong> for this group, or run the FC form seeder.
+                                    This tab has no form fields yet. Add fields under <strong>FC Registration → Form Management / Form Builder</strong> for this group, or run the FC form seeder.
                                 </div>
                             @else
                             <div id="{{ $group->group_name }}-container">
@@ -76,7 +74,6 @@
                                         ])
                                     @endforeach
                                 @else
-                                    {{-- Always show at least one starter row (min_rows may be 0 for optional repeatables) --}}
                                     @php $starterRows = max(1, (int) $group->min_rows); @endphp
                                     @for($i = 0; $i < $starterRows; $i++)
                                         @include('fc.registration.partials.dynamic-group-row', [
@@ -103,9 +100,9 @@
                                         <i class="bi bi-arrow-left me-1"></i>Previous Tab
                                     </button>
                                 @else
-                                    <button type="button" class="btn btn-outline-secondary" onclick="document.getElementById('tab-premed-setup-btn').click()">
-                                        <i class="bi bi-arrow-left me-1"></i>Previous Tab
-                                    </button>
+                                    <a href="{{ route('fc-reg.registration.step2') }}" class="btn btn-outline-secondary">
+                                        <i class="bi bi-arrow-left me-1"></i>Back to Step 2
+                                    </a>
                                 @endif
 
                                 <button type="submit" class="btn btn-primary">
@@ -162,11 +159,15 @@ function addGroupRow(groupName, groupId, maxRows) {
             el.selectedIndex = 0;
         } else if (el.type === 'checkbox') {
             el.checked = false;
+        } else if (el.type === 'file') {
+            el.value = '';
         } else {
             el.value = '';
         }
         el.classList.remove('is-invalid');
     });
+
+    clone.querySelectorAll('.dynamic-current-file-hint').forEach(function(el) { el.remove(); });
 
     // Clear validation errors
     clone.querySelectorAll('.invalid-feedback').forEach(function(el) { el.remove(); });

@@ -1,4 +1,4 @@
-{{-- Shared by legacy step3 and dynamic-step3. Expects: $preMedical, $preMedicalCourse --}}
+{{-- Legacy Step 3 only (no form-builder groups). Expects: $preMedical, $preMedicalCourse --}}
 @php $layout = $preMedicalFormLayout ?? 'legacy'; @endphp
 <form method="POST" action="{{ route('fc-reg.registration.step3.pre-medical-history') }}" enctype="multipart/form-data">
     @csrf
