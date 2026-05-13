@@ -48,21 +48,15 @@
     #smaLengthSelect { height: 30px; font-size: 0.8125rem; border-radius: 6px; border: 1px solid #dee2e6; padding: 0 8px; }
 
     /* --- Mark Attendance Modal --- */
-    #studentMarkModal .modal-content  { border-radius: 16px !important; }
-    #studentMarkModal .sma-student-header strong { display: block; font-size: 0.875rem; font-weight: 700; color: #1b3a5c; }
-    #studentMarkModal .sma-student-header span   { font-size: 0.75rem; color: #6c757d; }
-    #studentMarkModal .sma-field-label { font-size: 0.8125rem; font-weight: 600; color: #212529; margin-bottom: 8px; display: block; }
-    #studentMarkModal .sma-field-label .req { color: #dc3545; }
-    #studentMarkModal .sma-radio-group { display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 20px; }
-    #studentMarkModal .sma-radio-group .form-check { display: flex; align-items: center; gap: 6px; margin: 0; padding: 0; }
-    #studentMarkModal .sma-radio-group .form-check-input { width: 18px; height: 18px; margin: 0; accent-color: #1b3a5c; cursor: pointer; flex-shrink: 0; }
-    #studentMarkModal .sma-radio-group .form-check-label { font-size: 0.875rem; color: #212529; cursor: pointer; margin: 0; }
-    #studentMarkModal .sma-toggle-row  { display: flex; align-items: center; justify-content: space-between; padding: 13px 0; border-bottom: 1px solid #f0f1f3; }
-    #studentMarkModal .sma-toggle-row:last-child { border-bottom: none; }
-    #studentMarkModal .sma-toggle-label { font-size: 0.875rem; color: #212529; }
-    #studentMarkModal .sma-section-title { font-size: 0.9375rem; font-weight: 700; color: #212529; padding: 13px 0 4px; display: block; }
-    #studentMarkModal .form-check-input.sma-toggle { width: 44px; height: 24px; border-radius: 20px; cursor: pointer; flex-shrink: 0; }
-    #studentMarkModal .form-check-input.sma-toggle:checked { background-color: #6f4cec; border-color: #6f4cec; }
+    #studentMarkModal .modal-content { border-radius: 16px !important; }
+    #studentMarkModal .sma-att-radio .form-check-input { width: 18px; height: 18px; accent-color: #1b3a5c; cursor: pointer; margin-top: 0; }
+    #studentMarkModal .sma-att-radio .form-check-label { font-size: 0.875rem; cursor: pointer; }
+    #studentMarkModal .sma-switch-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f0f1f3; }
+    #studentMarkModal .sma-switch-row:last-child { border-bottom: none; }
+    #studentMarkModal .sma-switch-row .form-check { margin: 0; padding: 0; }
+    #studentMarkModal .sma-switch-row .form-check-input { width: 44px; height: 24px; cursor: pointer; }
+    #studentMarkModal .sma-switch-row .form-check-input:checked { background-color: #6f4cec; border-color: #6f4cec; }
+    #studentMarkModal #smaMdo:checked { background-color: #1b3a5c; border-color: #1b3a5c; }
 
     @media print { .no-print { display: none !important; } }
 </style>
@@ -71,11 +65,19 @@
 @section('setup_content')
 <div class="container-fluid py-3 px-3 px-lg-4">
     @if(hasRole('Admin') || hasRole('Training-Induction'))
-    <x-breadcrum title="Mark Attendance Of Officer Trainees" />
+    <x-breadcrum title="Mark Attendance Of Officer Trainees">
+        <a href="{{ route('attendance.index') }}" class="btn btn-outline-secondary btn-sm px-3 rounded-2 d-inline-flex align-items-center gap-1">
+            <span class="material-symbols-rounded" style="font-size:16px;">arrow_back</span> Back
+        </a>
+    </x-breadcrum>
     <x-session_message />
     @endif
     @if(hasRole('Internal Faculty'))
-    <x-breadcrum title="Mark Attendance Of Your Assigned Officer Trainees" />
+    <x-breadcrum title="Mark Attendance Of Your Assigned Officer Trainees">
+        <a href="{{ route('attendance.index') }}" class="btn btn-outline-secondary btn-sm px-3 rounded-2 d-inline-flex align-items-center gap-1">
+            <span class="material-symbols-rounded" style="font-size:16px;">arrow_back</span> Back
+        </a>
+    </x-breadcrum>
     <x-session_message />
     @endif
 
@@ -83,7 +85,7 @@
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 no-print">
         <div>{{-- spacer --}}</div>
         <a href="{{ route('attendance.export', ['group_pk' => $group_pk, 'course_pk' => $course_pk, 'timetable_pk' => $courseGroup->timetable_pk]) }}"
-            class="btn btn-link text-decoration-none text-body d-inline-flex align-items-center gap-1 px-0">
+            class="btn btn-outline-primary text-decoration-none d-inline-flex align-items-center gap-1">
             <span class="material-symbols-rounded" style="font-size:18px;color:#1b3a5c;">download</span>
             <span class="fw-semibold">Download</span>
         </a>
@@ -143,8 +145,6 @@
 
             {{-- Back / Save buttons --}}
             <div class="d-flex justify-content-end align-items-center flex-wrap gap-2 mt-3 no-print">
-                <a href="{{ route('attendance.index') }}"
-                    class="btn btn-outline-secondary btn-sm px-3 rounded-2">Back</a>
             </div>
 
         </div>
@@ -157,55 +157,76 @@
 <div class="modal fade" id="studentMarkModal" tabindex="-1" aria-labelledby="studentMarkModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" style="max-width:440px;">
         <div class="modal-content border-0 shadow-lg">
+
+            {{-- Header --}}
             <div class="modal-header border-0 pb-0 px-4 pt-4">
                 <h5 class="modal-title fw-bold" id="studentMarkModalLabel">Mark Attendance</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body px-4 py-3">
 
-                <div class="sma-student-header mb-3 d-none" id="smaStudentHeader">
-                    <strong id="smaStudentName"></strong>
-                    <span id="smaStudentCode"></span>
+            {{-- Body --}}
+            <div class="modal-body px-4 pt-3 pb-0">
+
+                {{-- Student name/code (shown when available) --}}
+                <div class="mb-3 d-none" id="smaStudentHeader">
+                    <strong id="smaStudentName" class="d-block" style="font-size:0.875rem;color:#1b3a5c;"></strong>
+                    <span id="smaStudentCode" class="text-muted" style="font-size:0.75rem;"></span>
                 </div>
 
-                <label class="sma-field-label">Attendance<span class="req">*</span></label>
-                <div class="sma-radio-group">
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="sma_att" id="smaPresent" value="1" checked>
+                {{-- Attendance radios --}}
+                <p class="fw-semibold mb-2" style="font-size:0.875rem;">Attendance<span class="text-danger">*</span></p>
+                <div class="d-flex align-items-center gap-4 mb-3 sma-att-radio">
+                    <div class="form-check d-flex align-items-center gap-2 m-0 p-0">
+                        <input class="form-check-input m-0" type="radio" name="sma_att" id="smaPresent" value="1" checked>
                         <label class="form-check-label" for="smaPresent">Present</label>
                     </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="sma_att" id="smaLate" value="2">
+                    <div class="form-check d-flex align-items-center gap-2 m-0 p-0">
+                        <input class="form-check-input m-0" type="radio" name="sma_att" id="smaLate" value="2">
                         <label class="form-check-label" for="smaLate">Late</label>
                     </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="sma_att" id="smaAbsent" value="3">
+                    <div class="form-check d-flex align-items-center gap-2 m-0 p-0">
+                        <input class="form-check-input m-0" type="radio" name="sma_att" id="smaAbsent" value="3">
                         <label class="form-check-label" for="smaAbsent">Absent</label>
                     </div>
                 </div>
 
-                <div class="sma-toggle-row">
-                    <span class="sma-toggle-label">MDO Duty</span>
-                    <input class="form-check-input sma-toggle" type="checkbox" role="switch" id="smaMdo">
+                {{-- MDO Duty toggle --}}
+                <div class="sma-switch-row">
+                    <label class="form-label mb-0" for="smaMdo" style="font-size:0.9rem;">MDO Duty</label>
+                    <div class="form-check form-switch m-0 p-0">
+                        <input class="form-check-input" type="checkbox" role="switch" id="smaMdo">
+                    </div>
                 </div>
 
-                <span class="sma-section-title">Exemptions</span>
-                <div class="sma-toggle-row">
-                    <span class="sma-toggle-label">Medical Exemptions</span>
-                    <input class="form-check-input sma-toggle" type="checkbox" role="switch" id="smaMedical">
+                {{-- Exemptions section title --}}
+                <p class="fw-bold mb-0 pt-3" style="font-size:0.9375rem;">Exemptions</p>
+
+                {{-- Medical Exemptions toggle --}}
+                <div class="sma-switch-row">
+                    <label class="form-label mb-0" for="smaMedical" style="font-size:0.9rem;">Medical Exemptions</label>
+                    <div class="form-check form-switch m-0 p-0">
+                        <input class="form-check-input" type="checkbox" role="switch" id="smaMedical">
+                    </div>
                 </div>
-                <div class="sma-toggle-row">
-                    <span class="sma-toggle-label">Other Exemptions</span>
-                    <input class="form-check-input sma-toggle" type="checkbox" role="switch" id="smaOther">
+
+                {{-- Other Exemptions toggle --}}
+                <div class="sma-switch-row">
+                    <label class="form-label mb-0" for="smaOther" style="font-size:0.9rem;">Other Exemptions</label>
+                    <div class="form-check form-switch m-0 p-0">
+                        <input class="form-check-input" type="checkbox" role="switch" id="smaOther">
+                    </div>
                 </div>
 
             </div>
-            <div class="modal-footer border-0 px-4 pb-4 pt-1 gap-2 justify-content-end">
+
+            {{-- Footer --}}
+            <div class="modal-footer border-0 px-4 pb-4 pt-3 gap-2 justify-content-end">
                 <button type="button" class="btn btn-outline-secondary px-4 rounded-2"
                     data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn px-4 rounded-2 fw-semibold" id="smaSaveBtn"
                     style="background:#1b3a5c;color:#fff;">Mark Attendance</button>
             </div>
+
         </div>
     </div>
 </div>
@@ -283,7 +304,7 @@
         $('#smaOther').prop('checked', oth === 1);
 
         $('#smaSaveBtn').prop('disabled', false).text('Mark Attendance');
-        new bootstrap.Modal(document.getElementById('studentMarkModal')).show();
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('studentMarkModal')).show();
     });
 
     // Save button
