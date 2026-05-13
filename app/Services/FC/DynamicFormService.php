@@ -7,10 +7,14 @@ use App\Models\FC\FcFormStep;
 use App\Models\FC\FcFormField;
 use App\Models\FC\FcFormFieldGroup;
 use App\Models\FC\FcFormGroupField;
+use App\Models\FC\FcPreHistory;
+use App\Models\FC\StudentMasterFirst;
+use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class DynamicFormService
 {
@@ -73,6 +77,20 @@ class DynamicFormService
     {
         $rules = [];
         foreach ($fields as $field) {
+            if ($field->field_type === 'checkbox' && count($field->decoded_options) > 0) {
+                $allowed = collect($field->decoded_options)->pluck('value')->map(fn ($v) => (string) $v)->values()->all();
+                if (count($allowed) > 0) {
+                    $rules[$field->field_name] = trim(implode('|', array_filter([
+                        $field->is_required ? 'required' : 'nullable',
+                        'array',
+                        $field->is_required ? 'min:1' : null,
+                    ])));
+                    $rules[$field->field_name.'.*'] = ['string', Rule::in($allowed)];
+
+                    continue;
+                }
+            }
+
             if ($field->validation_rules) {
                 $rules[$field->field_name] = $field->validation_rules;
             } elseif ($field->is_required) {
@@ -81,6 +99,7 @@ class DynamicFormService
                 $rules[$field->field_name] = 'nullable';
             }
         }
+
         return $rules;
     }
 
@@ -104,6 +123,20 @@ class DynamicFormService
 
         foreach ($groupFields as $field) {
             $key = "{$prefix}.*.{$field->field_name}";
+            if ($field->field_type === 'checkbox' && count($field->decoded_options) > 0) {
+                $allowed = collect($field->decoded_options)->pluck('value')->map(fn ($v) => (string) $v)->values()->all();
+                if (count($allowed) > 0) {
+                    $rules[$key] = trim(implode('|', array_filter([
+                        $field->is_required ? 'required' : 'nullable',
+                        'array',
+                        $field->is_required ? 'min:1' : null,
+                    ])));
+                    $rules["{$prefix}.*.{$field->field_name}.*"] = ['string', Rule::in($allowed)];
+
+                    continue;
+                }
+            }
+
             if ($field->validation_rules) {
                 $rules[$key] = $this->normalizeLanguageMasterExistsInRules($field->validation_rules, $field);
             } elseif ($field->is_required) {
@@ -248,7 +281,27 @@ class DynamicFormService
      */
     public function getExistingGroupRows(FcFormFieldGroup $group, string $username): Collection
     {
+        if ($group->target_table === 'fc_pre_history') {
+            $course = $this->registrationPreMedicalCourse($username);
+            $row = DB::table('fc_pre_history')
+                ->where('userid', $username)
+                ->where('course', $course)
+                ->first();
+
+            return $row ? collect([$row]) : collect();
+        }
+
         return collect(DB::table($group->target_table)->where('username', $username)->get());
+    }
+
+    /**
+     * Session/course label for fc_pre_history (matches RegistrationStep3Controller).
+     */
+    public function registrationPreMedicalCourse(string $username): string
+    {
+        $first = StudentMasterFirst::with('session')->where('username', $username)->first();
+
+        return trim((string) ($first?->session?->session_name ?? ''));
     }
 
     /**
@@ -259,6 +312,12 @@ class DynamicFormService
     {
         $step   = $this->getStep($stepSlug);
         $fields = $step->activeFields;
+
+        foreach ($fields as $field) {
+            if ($field->field_type === 'checkbox' && count($field->decoded_options) > 0) {
+                $validatedData[$field->field_name] = $validatedData[$field->field_name] ?? [];
+            }
+        }
 
         // Group fields by target_table
         $tableData = [];
@@ -283,11 +342,17 @@ class DynamicFormService
                     );
                     $tableData[$targetTable][$field->target_column] = $path;
                 }
+            } elseif ($field->field_type === 'checkbox' && count($field->decoded_options) > 0) {
+                $arr = $validatedData[$field->field_name] ?? [];
+                $arr = is_array($arr) ? $arr : [];
+                $tableData[$targetTable][$field->target_column] = json_encode(array_values($arr), JSON_UNESCAPED_UNICODE);
             } else {
                 if (array_key_exists($field->field_name, $validatedData)) {
                     $value = $validatedData[$field->field_name];
                     if ($field->field_type === 'checkbox') {
                         $value = $value ? 1 : 0;
+                    } elseif ($field->field_type === 'number' && $value !== null && $value !== '') {
+                        $value = fc_numeric_display_value($value);
                     }
                     $tableData[$targetTable][$field->target_column] = $value;
                 }
@@ -296,6 +361,8 @@ class DynamicFormService
 
         // Save to each target table
         DB::transaction(function () use ($tableData, $username, $step) {
+            $form = $step->form;
+
             foreach ($tableData as $table => $data) {
                 $data['username'] = $username;
 
@@ -333,8 +400,10 @@ class DynamicFormService
                     }
                 }
 
-                DB::table('student_masters')->updateOrInsert(
-                    ['username' => $username],
+                $trackerTable = $form->trackerStorageTable();
+                $userKey = $form->user_identifier ?: 'username';
+                DB::table($trackerTable)->updateOrInsert(
+                    [$userKey => $username],
                     $trackerData
                 );
             }
@@ -344,9 +413,25 @@ class DynamicFormService
     /**
      * Save repeatable group data (delete-and-recreate or upsert).
      */
-    public function saveGroupData(FcFormFieldGroup $group, string $username, array $rows): void
+    public function saveGroupData(FcFormFieldGroup $group, string $username, array $rows, ?Request $request = null): void
     {
-        $fields = $group->activeGroupFields;
+        $fields = $group->activeGroupFields->isNotEmpty()
+            ? $group->activeGroupFields
+            : $group->groupFields;
+
+        if ($group->target_table === 'fc_pre_history') {
+            $this->saveFcPreHistoryGroup($group, $username, $rows, $fields, $request);
+
+            return;
+        }
+
+        foreach ($rows as $i => $_row) {
+            foreach ($fields as $field) {
+                if ($field->field_type === 'checkbox' && count($field->decoded_options) > 0) {
+                    $rows[$i][$field->field_name] = $rows[$i][$field->field_name] ?? [];
+                }
+            }
+        }
 
         DB::transaction(function () use ($group, $username, $rows, $fields) {
             if ($group->save_mode === 'replace_all') {
@@ -356,11 +441,7 @@ class DynamicFormService
                     $data = ['username' => $username, 'created_at' => now(), 'updated_at' => now()];
                     foreach ($fields as $field) {
                         $value = $row[$field->field_name] ?? null;
-                        // Convert checkbox values
-                        if ($field->field_type === 'checkbox') {
-                            $value = $value ? 1 : 0;
-                        }
-                        $data[$field->target_column] = $value;
+                        $data[$field->target_column] = $this->normalizeGroupFieldStoredValue($field, $value);
                     }
                     DB::table($group->target_table)->insert($data);
                 }
@@ -370,10 +451,7 @@ class DynamicFormService
                 $row  = $rows[0] ?? [];
                 foreach ($fields as $field) {
                     $value = $row[$field->field_name] ?? null;
-                    if ($field->field_type === 'checkbox') {
-                        $value = $value ? 1 : 0;
-                    }
-                    $data[$field->target_column] = $value;
+                    $data[$field->target_column] = $this->normalizeGroupFieldStoredValue($field, $value);
                 }
                 DB::table($group->target_table)->updateOrInsert(
                     ['username' => $username],
@@ -385,5 +463,102 @@ class DynamicFormService
                 }
             }
         });
+    }
+
+    /**
+     * @param  mixed  $value
+     * @return mixed
+     */
+    private function normalizeGroupFieldStoredValue(FcFormGroupField $field, $value)
+    {
+        if ($field->field_type === 'checkbox') {
+            $opts = $field->decoded_options ?? [];
+            if (count($opts) > 0) {
+                $arr = is_array($value) ? $value : [];
+
+                return json_encode(array_values($arr), JSON_UNESCAPED_UNICODE);
+            }
+
+            return $value ? 1 : 0;
+        }
+        if ($field->field_type === 'number' && $value !== null && $value !== '') {
+            return fc_numeric_display_value($value);
+        }
+
+        return $value;
+    }
+
+    /**
+     * fc_pre_history uses (userid, course) not username alone; optional file upload.
+     *
+     * @param  \Illuminate\Support\Collection<int, FcFormGroupField>  $fields
+     */
+    private function saveFcPreHistoryGroup(
+        FcFormFieldGroup $group,
+        string $username,
+        array $rows,
+        Collection $fields,
+        ?Request $request
+    ): void {
+        $course = $this->registrationPreMedicalCourse($username);
+        $row = $rows[0] ?? [];
+
+        foreach ($fields as $field) {
+            if ($field->field_type === 'checkbox' && count($field->decoded_options) > 0) {
+                $row[$field->field_name] = $row[$field->field_name] ?? [];
+            }
+        }
+
+        $existing = FcPreHistory::where('userid', $username)->where('course', $course)->first();
+
+        $payload = [
+            'userid' => $username,
+            'course' => $course,
+            'status' => 1,
+        ];
+
+        foreach ($fields as $field) {
+            if ($field->field_type === 'file') {
+                continue;
+            }
+            $value = $row[$field->field_name] ?? null;
+            if ($field->field_type === 'checkbox') {
+                $opts = $field->decoded_options ?? [];
+                if (count($opts) > 0) {
+                    $arr = is_array($value) ? $value : [];
+                    $value = json_encode(array_values($arr), JSON_UNESCAPED_UNICODE);
+                } else {
+                    $value = $value ? 1 : 0;
+                }
+            } elseif ($field->field_type === 'number' && $value !== null && $value !== '') {
+                $value = fc_numeric_display_value($value);
+            }
+            $payload[$field->target_column] = $value;
+        }
+
+        $docPath = $existing?->doc_path;
+        $fileField = $fields->first(fn ($f) => $f->field_type === 'file');
+        if ($request && $fileField) {
+            $fileKey = $group->group_name.'.0.'.$fileField->field_name;
+            if ($request->hasFile($fileKey)) {
+                $file = $request->file($fileKey);
+                if ($file->isValid()) {
+                    $stored = $file->storeAs(
+                        'fc/pre_history',
+                        $username.'_'.uniqid('', true).'.'.$file->getClientOriginalExtension(),
+                        'public'
+                    );
+                    $docPath = 'storage/'.$stored;
+                }
+            }
+        }
+        if ($fileField) {
+            $payload[$fileField->target_column] = $docPath;
+        }
+
+        FcPreHistory::updateOrCreate(
+            ['userid' => $username, 'course' => $course],
+            $payload
+        );
     }
 }

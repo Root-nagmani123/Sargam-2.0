@@ -24,16 +24,18 @@
         </div>
         <div class="card-body">
             {{-- Group Tabs --}}
-            <ul class="nav nav-tabs mb-3" id="groupTabs" role="tablist">
+            <ul class="nav nav-tabs mb-3 flex-wrap" id="groupTabs" role="tablist">
                 @foreach($groups as $gi => $group)
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link {{ $gi === 0 ? 'active' : '' }} {{ ($completedGroups[$group->group_name] ?? false) ? 'text-success' : '' }}"
+                        <button class="nav-link text-nowrap {{ $gi === 0 ? 'active' : '' }} {{ ($completedGroups[$group->group_name] ?? false) ? 'text-success' : '' }}"
                                 id="tab-{{ $group->group_name }}-btn"
                                 data-bs-toggle="tab"
                                 data-bs-target="#tab-{{ $group->group_name }}"
                                 type="button" role="tab">
                             @if($completedGroups[$group->group_name] ?? false)
                                 <i class="bi bi-check-circle-fill me-1"></i>
+                            @elseif(($group->group_name ?? '') === 'pre_medical_history')
+                                <i class="bi bi-heart-pulse me-1"></i>
                             @endif
                             {{ $group->group_label }}
                         </button>
@@ -52,9 +54,11 @@
                         $groupFieldDefs = $group->activeGroupFields->isNotEmpty()
                             ? $group->activeGroupFields
                             : $group->groupFields;
+                        $needsMultipart = $groupFieldDefs->contains(fn ($f) => $f->field_type === 'file');
                     @endphp
                     <div class="tab-pane fade {{ $gi === 0 ? 'show active' : '' }}" id="tab-{{ $group->group_name }}" role="tabpanel">
-                        <form method="POST" action="{{ route('fc-reg.forms.group.save', [$form, $group]) }}">
+                        <form method="POST" action="{{ route('fc-reg.forms.group.save', [$form, $group]) }}"
+                              @if($needsMultipart) enctype="multipart/form-data" @endif>
                             @csrf
 
                             @if($groupFieldDefs->isEmpty())
@@ -154,12 +158,15 @@ function addGroupRow(groupName, groupId, maxRows) {
             el.selectedIndex = 0;
         } else if (el.type === 'checkbox') {
             el.checked = false;
+        } else if (el.type === 'file') {
+            el.value = '';
         } else {
             el.value = '';
         }
         el.classList.remove('is-invalid');
     });
 
+    clone.querySelectorAll('.dynamic-current-file-hint').forEach(function(el) { el.remove(); });
     clone.querySelectorAll('.invalid-feedback').forEach(function(el) { el.remove(); });
     container.appendChild(clone);
 }

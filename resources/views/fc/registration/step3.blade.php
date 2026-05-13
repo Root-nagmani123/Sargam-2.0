@@ -21,6 +21,7 @@
                 @php
                     $tabs = [
                         'qual'      => ['icon'=>'bi-mortarboard','label'=>'Qualifications'],
+                        'premed'    => ['icon'=>'bi-heart-pulse','label'=>'Pre-medical history'],
                         'higher'    => ['icon'=>'bi-book','label'=>'Higher Education'],
                         'employ'    => ['icon'=>'bi-briefcase','label'=>'Employment'],
                         'spouse'    => ['icon'=>'bi-people','label'=>'Family/Spouse'],
