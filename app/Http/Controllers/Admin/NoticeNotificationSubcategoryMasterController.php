@@ -7,16 +7,46 @@ use App\Models\NoticeCategoryMaster;
 use App\Models\NoticeNotification;
 use App\Models\NoticeSubcategoryMaster;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class NoticeNotificationSubcategoryMasterController extends Controller
 {
     public function index(Request $request)
     {
-        $categoryFilter = $request->input('notice_category_master_pk');
+        $categoryFilter = $request->input('filter_category_pk');
+        if ($categoryFilter === null || $categoryFilter === '') {
+            $categoryFilter = $request->input('notice_category_master_pk');
+        }
 
-        $categories = NoticeCategoryMaster::orderBy('sort_order')
+        $categoriesActive = NoticeCategoryMaster::query()
+            ->active()
+            ->orderBy('sort_order')
             ->orderBy('name')
             ->get();
+
+        $parentPksWithSubs = NoticeSubcategoryMaster::query()
+            ->distinct()
+            ->pluck('notice_category_master_pk')
+            ->filter();
+
+        $categoriesForEdit = NoticeCategoryMaster::query()
+            ->where(function ($q) use ($parentPksWithSubs) {
+                $q->where('active_inactive', '=', 1);
+                if ($parentPksWithSubs->isNotEmpty()) {
+                    $q->orWhereIn('pk', $parentPksWithSubs);
+                }
+            })
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get();
+
+        $filterCategoryExtra = null;
+        if ($categoryFilter !== null && $categoryFilter !== '') {
+            $cf = (int) $categoryFilter;
+            if (!$categoriesActive->contains(fn ($c) => (int) $c->pk === $cf)) {
+                $filterCategoryExtra = NoticeCategoryMaster::where('pk', $cf)->first();
+            }
+        }
 
         $query = NoticeSubcategoryMaster::with('category')
             ->orderBy('notice_category_master_pk')
@@ -40,8 +70,10 @@ class NoticeNotificationSubcategoryMasterController extends Controller
 
         return view('admin.NoticeNotification.subcategories.index', compact(
             'subcategories',
-            'categories',
+            'categoriesActive',
+            'categoriesForEdit',
             'categoryFilter',
+            'filterCategoryExtra',
             'usedSubcategoryIds'
         ));
     }
@@ -49,7 +81,12 @@ class NoticeNotificationSubcategoryMasterController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'notice_category_master_pk' => 'required|exists:notice_category_master,pk',
+            'notice_category_master_pk' => [
+                'required',
+                Rule::exists('notice_category_master', 'pk')->where(function ($q) {
+                    $q->where('active_inactive', 1);
+                }),
+            ],
             'name' => 'required|string|max:255',
             'sort_order' => 'nullable|integer|min:0|max:65535',
         ]);
@@ -66,14 +103,33 @@ class NoticeNotificationSubcategoryMasterController extends Controller
 
     public function update(Request $request, int $id)
     {
+        $sub = NoticeSubcategoryMaster::where('pk', $id)->firstOrFail();
+
         $request->validate([
-            'notice_category_master_pk' => 'required|exists:notice_category_master,pk',
+            'notice_category_master_pk' => [
+                'required',
+                'integer',
+                Rule::exists('notice_category_master', 'pk'),
+                function (string $attribute, mixed $value, \Closure $fail) use ($sub) {
+                    $cat = NoticeCategoryMaster::where('pk', $value)->first();
+                    if (!$cat) {
+                        $fail('Invalid category.');
+
+                        return;
+                    }
+                    if ((int) $cat->active_inactive === 1) {
+                        return;
+                    }
+                    if ((int) $value === (int) $sub->notice_category_master_pk) {
+                        return;
+                    }
+                    $fail('Select an active category.');
+                },
+            ],
             'name' => 'required|string|max:255',
             'sort_order' => 'nullable|integer|min:0|max:65535',
             'active_inactive' => 'nullable|in:0,1',
         ]);
-
-        $sub = NoticeSubcategoryMaster::where('pk', $id)->firstOrFail();
         $sub->update([
             'notice_category_master_pk' => (int) $request->notice_category_master_pk,
             'name' => $request->name,

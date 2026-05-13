@@ -46,11 +46,13 @@
                                 </a>
                             </li>
                             @endif
-                            <!-- Notice Notification Route -->
+                            @if(hasRole('Admin') || hasRole('Super Admin'))
+                            <!-- Notice Notification Route (admin manage list only) -->
                             <li class="sidebar-item"><a class="sidebar-link" href="{{ route('admin.notice.index') }}">
                                     <span class="hide-menu small small-sm-normal text-nowrap">Notice
                                         Notifications</span>
                                 </a></li>
+                            @endif
                             @if(hasRole('Admin') || hasRole('Training-Induction'))
                             <li class="sidebar-item"><a class="sidebar-link {{ request()->routeIs('admin.notice.category-master.*') ? 'active' : '' }}" href="{{ route('admin.notice.category-master.index') }}">
                                     <span class="hide-menu small small-sm-normal text-nowrap">Notice category master</span>

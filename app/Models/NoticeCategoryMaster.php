@@ -35,4 +35,10 @@ class NoticeCategoryMaster extends Model
     {
         return $this->hasMany(NoticeNotification::class, 'notice_category_master_pk', 'pk');
     }
+
+    /** @param  \Illuminate\Database\Eloquent\Builder  $query */
+    public function scopeActive($query)
+    {
+        return $query->where('active_inactive', '=', 1);
+    }
 }

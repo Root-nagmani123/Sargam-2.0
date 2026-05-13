@@ -15,7 +15,7 @@
             </div>
             <div class="d-flex flex-wrap gap-2">
                 <a href="{{ route('admin.notice.category-master.index') }}" class="btn btn-outline-primary btn-sm">Category master</a>
-                <a href="{{ route('admin.notice.index') }}" class="btn btn-outline-secondary btn-sm">Notices</a>
+                <a href="{{ route('admin.notice.feed') }}" class="btn btn-outline-secondary btn-sm">All notices</a>
                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalAddSubcategory">
                     <span class="material-symbols-rounded align-middle me-1">add</span>
                     Add subcategory
@@ -29,11 +29,14 @@
                     <div class="row g-3 align-items-end">
                         <div class="col-md-4">
                             <label class="form-label fw-semibold">Category</label>
-                            <select name="notice_category_master_pk" class="form-select form-select-sm" onchange="this.form.submit()">
+                            <select name="filter_category_pk" class="form-select form-select-sm" onchange="this.form.submit()">
                                 <option value="">All</option>
-                                @foreach($categories as $c)
+                                @foreach($categoriesActive as $c)
                                 <option value="{{ $c->pk }}" @selected((string) ($categoryFilter ?? '') === (string) $c->pk)>{{ $c->name }}</option>
                                 @endforeach
+                                @if($filterCategoryExtra)
+                                <option value="{{ $filterCategoryExtra->pk }}" @selected((string) ($categoryFilter ?? '') === (string) $filterCategoryExtra->pk)>{{ $filterCategoryExtra->name }} (inactive)</option>
+                                @endif
                             </select>
                         </div>
                         <div class="col-md-4">
@@ -144,12 +147,15 @@
                     @endif
                     @php
                         $addSelectedCategory = old('_form') === 'add_subcategory' ? old('notice_category_master_pk') : $categoryFilter;
+                        if ($addSelectedCategory !== null && $addSelectedCategory !== '' && !$categoriesActive->contains(fn ($c) => (string) $c->pk === (string) $addSelectedCategory)) {
+                            $addSelectedCategory = '';
+                        }
                     @endphp
                     <div class="mb-3">
                         <label class="form-label">Category <span class="text-danger">*</span></label>
                         <select name="notice_category_master_pk" class="form-select" required>
                             <option value="">Select category</option>
-                            @foreach($categories as $c)
+                            @foreach($categoriesActive as $c)
                             <option value="{{ $c->pk }}" @selected($addSelectedCategory !== null && $addSelectedCategory !== '' && (string) $addSelectedCategory === (string) $c->pk)>{{ $c->name }}</option>
                             @endforeach
                         </select>
@@ -193,8 +199,8 @@
                     <div class="mb-3">
                         <label class="form-label">Category <span class="text-danger">*</span></label>
                         <select name="notice_category_master_pk" id="edit_sub_category_pk" class="form-select" required>
-                            @foreach($categories as $c)
-                            <option value="{{ $c->pk }}">{{ $c->name }}</option>
+                            @foreach($categoriesForEdit as $c)
+                            <option value="{{ $c->pk }}">{{ $c->name }}@if((int) $c->active_inactive !== 1) (inactive)@endif</option>
                             @endforeach
                         </select>
                     </div>

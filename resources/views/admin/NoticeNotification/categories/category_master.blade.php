@@ -15,7 +15,7 @@
             </div>
             <div class="d-flex flex-wrap gap-2">
                 <a href="{{ route('admin.notice.subcategory-master.index') }}" class="btn btn-outline-primary btn-sm">Subcategory master</a>
-                <a href="{{ route('admin.notice.index') }}" class="btn btn-outline-secondary btn-sm">Notices</a>
+                <a href="{{ route('admin.notice.feed') }}" class="btn btn-outline-secondary btn-sm">All notices</a>
                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalAddCategory">
                     <span class="material-symbols-rounded align-middle me-1">add</span>
                     Add category
@@ -66,7 +66,7 @@
                             <td>{{ $cat->sort_order }}</td>
                             <td>
                                 <span class="badge bg-secondary-subtle text-secondary">{{ $cat->sub_categories_count }}</span>
-                                <a href="{{ route('admin.notice.subcategory-master.index', ['notice_category_master_pk' => $cat->pk]) }}" class="small ms-1">List</a>
+                                <a href="{{ route('admin.notice.subcategory-master.index', ['filter_category_pk' => $cat->pk]) }}" class="small ms-1">List</a>
                             </td>
                             <td class="text-center">
                                 <div class="form-check form-switch d-inline-flex align-items-center justify-content-center">

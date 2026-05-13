@@ -4,6 +4,9 @@
 
 @section('setup_content')
 
+@php
+    $todayMin = now()->format('Y-m-d');
+@endphp
 
 <div class="container-fluid">
     <x-breadcrum title="Notice List" />
@@ -60,19 +63,25 @@
                     <div class="col-6">
                         <div class="mb-3">
                             <label class="form-label">Display Date <span class="text-danger">*</span></label>
-                            <input type="date" name="display_date" class="form-control" value="{{ old('display_date') }}">
+                            <input type="date" name="display_date" id="noticeDisplayDate" class="form-control"
+                                value="{{ old('display_date') }}" min="{{ $todayMin }}" required>
+                            <div class="form-text">Must be today or a future date.</div>
                         </div>
                     </div>
                     <div class="col-6">
                         <div class="mb-3">
                             <label class="form-label">Expiry Date <span class="text-danger">*</span></label>
-                            <input type="date" name="expiry_date" class="form-control" value="{{ old('expiry_date') }}">
+                            <input type="date" name="expiry_date" id="noticeExpiryDate" class="form-control"
+                                value="{{ old('expiry_date') }}" min="{{ $todayMin }}" required>
+                            <div class="form-text">Must be on or after the display date.</div>
                         </div>
                     </div>
                     <div class="col-6">
                         <div class="mb-3">
-                            <label class="form-label">Upload Document</label>
-                            <input type="file" name="document" class="form-control">
+                            <label class="form-label">Upload document <span class="text-muted fw-normal">(optional)</span></label>
+                            <input type="file" name="document" class="form-control" id="noticeDocument"
+                                accept=".pdf,.png,.jpg,.jpeg,image/jpeg,image/png,application/pdf">
+                            <div class="form-text">Types: <strong>PDF, JPG, PNG</strong>. Max <strong>5&nbsp;MB</strong> per file.</div>
                         </div>
                     </div>
                     <div class="col-6">
@@ -229,6 +238,19 @@
                 $('#courseSelect').empty();
             }
         });
+
+        var todayMin = @json($todayMin);
+        function syncNoticeExpiryMin() {
+            var disp = $('input[name="display_date"]').val();
+            var $exp = $('input[name="expiry_date"]');
+            var floor = disp && disp >= todayMin ? disp : todayMin;
+            $exp.attr('min', floor);
+            if ($exp.val() && $exp.val() < floor) {
+                $exp.val(floor);
+            }
+        }
+        $('input[name="display_date"]').on('change', syncNoticeExpiryMin);
+        syncNoticeExpiryMin();
 
     });
 </script>

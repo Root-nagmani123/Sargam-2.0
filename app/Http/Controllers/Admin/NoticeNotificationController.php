@@ -7,15 +7,28 @@ use App\Models\NoticeCategoryMaster;
 use App\Models\NoticeNotification as Notice;
 use App\Models\NoticeSubcategoryMaster;
 use App\Models\CourseMaster;
+use App\Services\CampusNoticeNotificationDispatcher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 
 class NoticeNotificationController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware(function ($request, $next) {
+            if (!hasRole('Admin') && !hasRole('Super Admin')) {
+                abort(403, 'Only administrators can manage campus notices.');
+            }
+
+            return $next($request);
+        })->except(['feed']);
+    }
+
     public function index(Request $request)
     {
         $query = Notice::with(['course', 'user', 'noticeCategory', 'noticeSubcategory'])->orderBy('pk', 'DESC');
@@ -170,7 +183,7 @@ class NoticeNotificationController extends Controller
                         ->where('active_inactive', 1);
                 }),
             ],
-            'display_date' => 'required|date',
+            'display_date' => 'required|date|after_or_equal:today',
             'expiry_date' => 'required|date|after_or_equal:display_date',
             'document' => 'nullable|file|mimetypes:image/jpeg,image/png,application/pdf|max:5048',
             'target_audience' => 'required|string',
@@ -179,8 +192,9 @@ class NoticeNotificationController extends Controller
             'description.required' => 'Please enter description.',
             'notice_category_master_pk.required' => 'Please select notice category.',
             'display_date.required' => 'Please select display date.',
+            'display_date.after_or_equal' => 'Display date must be today or a future date.',
             'expiry_date.required' => 'Please select expiry date.',
-            'expiry_date.after_or_equal' => 'Expiry date must be equal or greater than display date.',
+            'expiry_date.after_or_equal' => 'Expiry date must be on or after the display date.',
             'document.file' => 'Uploaded file is not valid.',
             'document.mimetypes' => 'Unsupported file format. Only JPG, PNG and PDF files are allowed.',
             'target_audience.required' => 'Please select target audience.',
@@ -221,7 +235,17 @@ class NoticeNotificationController extends Controller
             $data['document'] = $request->file('document')->store('notice_docs', 'public');
         }
 
-        Notice::create($data);
+        $notice = Notice::create($data);
+
+        try {
+            if (!\Carbon\Carbon::parse($notice->display_date)->startOfDay()->isFuture()) {
+                app(CampusNoticeNotificationDispatcher::class)->dispatch($notice);
+            }
+        } catch (\Throwable $e) {
+            Log::error('Notice notification dispatch failed: '.$e->getMessage(), [
+                'notice_pk' => $notice->pk,
+            ]);
+        }
 
         return redirect()
             ->route('admin.notice.index')
@@ -270,10 +294,15 @@ class NoticeNotificationController extends Controller
                         ->where('active_inactive', 1);
                 }),
             ],
-            'display_date' => 'required|date',
+            'display_date' => 'required|date|after_or_equal:today',
             'expiry_date' => 'required|date|after_or_equal:display_date',
-            'document' => 'nullable|mimes:jpg,jpeg,png,pdf,doc,docx|max:2048',
+            'document' => 'nullable|file|mimetypes:image/jpeg,image/png,application/pdf|max:5048',
             'target_audience' => 'required|string',
+        ], [
+            'display_date.after_or_equal' => 'Display date must be today or a future date.',
+            'expiry_date.after_or_equal' => 'Expiry date must be on or after the display date.',
+            'document.file' => 'Uploaded file is not valid.',
+            'document.mimetypes' => 'Unsupported file format. Only JPG, PNG and PDF files are allowed.',
         ]);
 
         if ($request->filled('course_master_pk')) {

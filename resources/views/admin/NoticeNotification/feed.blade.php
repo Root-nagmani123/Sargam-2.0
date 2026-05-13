@@ -124,7 +124,7 @@
                                 {{ $tab['total'] === 1 ? 'notice' : 'notices' }}
                             </div>
                             <div class="d-flex align-items-center gap-3">
-                                @if(hasRole('Admin'))
+                                @if(hasRole('Admin') || hasRole('Super Admin'))
                                     <a href="{{ route('admin.notice.index') }}" class="small text-primary text-decoration-none fw-semibold">Manage notices</a>
                                 @endif
                             </div>

@@ -989,10 +989,12 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                         <span class="material-icons material-symbols-rounded text-primary">push_pin</span>
                         <h5 class="mb-0 fw-semibold">Notices</h5>
                     </div>
+                    @if(hasRole('Admin') || hasRole('Super Admin'))
                     <a href="{{ route('admin.notice.create') }}" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1 rounded-2">
                         <span class="material-icons material-symbols-rounded" style="font-size:18px;">note_add</span>
                         Add New Notice
                     </a>
+                    @endif
                 </div>
                 <div class="card-body p-3 p-md-4 pt-0 dashboard-list-scroll">
                     @if($noticeCategoryTabs->isEmpty())

@@ -346,6 +346,7 @@ if (!function_exists('get_notice_notification_by_role')) {
         $noticeSelect = function ($query) {
             $q = $query
                 ->where('notices_notification.active_inactive', 1)
+                ->where('notices_notification.display_date', '<=', date('Y-m-d'))
                 ->where('notices_notification.expiry_date', '>=', date('Y-m-d'))
                 ->orderBy('notices_notification.display_date', 'desc');
 

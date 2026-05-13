@@ -4,6 +4,12 @@
 
 @section('setup_content')
 
+@php
+    $todayMin = now()->format('Y-m-d');
+    $displayDateVal = old('display_date', \Carbon\Carbon::parse($notice->display_date)->format('Y-m-d'));
+    $expiryDateVal = old('expiry_date', \Carbon\Carbon::parse($notice->expiry_date)->format('Y-m-d'));
+@endphp
+
 <div class="container-fluid">
     <x-breadcrum title="Notice notification List" />
     <x-session_message />
@@ -59,21 +65,25 @@
 
                 <div class="mb-3">
                     <label class="form-label">Display Date <span class="text-danger">*</span></label>
-                    <input type="date" name="display_date" class="form-control"
-                           value="{{ $notice->display_date }}">
+                    <input type="date" name="display_date" id="noticeDisplayDate" class="form-control"
+                        value="{{ $displayDateVal }}" min="{{ $todayMin }}" required>
+                    <div class="form-text">Must be today or a future date.</div>
                 </div>
 
                 <div class="mb-3">
                     <label class="form-label">Expiry Date <span class="text-danger">*</span></label>
-                    <input type="date" name="expiry_date" class="form-control"
-                           value="{{ $notice->expiry_date }}">
+                    <input type="date" name="expiry_date" id="noticeExpiryDate" class="form-control"
+                        value="{{ $expiryDateVal }}" min="{{ $todayMin }}" required>
+                    <div class="form-text">Must be on or after the display date.</div>
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">Document (Optional)</label>
-                    <input type="file" name="document" class="form-control">
+                    <label class="form-label">Upload document <span class="text-muted fw-normal">(optional)</span></label>
+                    <input type="file" name="document" class="form-control" id="noticeDocument"
+                        accept=".pdf,.png,.jpg,.jpeg,image/jpeg,image/png,application/pdf">
+                    <div class="form-text">Types: <strong>PDF, JPG, PNG</strong>. Max <strong>5&nbsp;MB</strong> per file. Leave empty to keep the current file.</div>
                     @if($notice->document)
-                        <a href="{{ asset('storage/'.$notice->document) }}" target="_blank">View Document</a>
+                        <a href="{{ asset('storage/'.$notice->document) }}" target="_blank" rel="noopener" class="d-inline-block mt-2">View current document</a>
                     @endif
                 </div>
 
@@ -242,6 +252,19 @@ $(document).ready(function() {
             $('#courseSelect').empty();
         }
     });
+
+    var todayMin = @json($todayMin);
+    function syncNoticeExpiryMin() {
+        var disp = $('input[name="display_date"]').val();
+        var $exp = $('input[name="expiry_date"]');
+        var floor = disp && disp >= todayMin ? disp : todayMin;
+        $exp.attr('min', floor);
+        if ($exp.val() && $exp.val() < floor) {
+            $exp.val(floor);
+        }
+    }
+    $('input[name="display_date"]').on('change', syncNoticeExpiryMin);
+    syncNoticeExpiryMin();
 
 });
 </script>
