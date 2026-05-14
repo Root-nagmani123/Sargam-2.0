@@ -452,15 +452,15 @@
             border: 3px solid transparent;
         }
 
-    /* Brand text with letter-by-letter animation */
-    .sargam-loader-brand {
-        display: inline-flex;
-        gap: 2px;
-        font-size: clamp(1.75rem, 5vw, 3rem);
-        font-weight: 800;
-        font-family: 'Montserrat', 'Segoe UI', system-ui, sans-serif;
-        letter-spacing: 0.02em;
-    }
+        .sargam-loader-ring-outer {
+            width: 100%;
+            height: 100%;
+            border-top-color: #004a93;
+            border-right-color: #0d6efd;
+            border-bottom-color: #004a93;
+            border-left-color: transparent;
+            animation: sargamSpin 1.2s linear infinite;
+        }
 
         .sargam-loader-ring-mid {
             width: 100px;
@@ -665,71 +665,7 @@
     </div>
 
     <div id="main-wrapper">
-        @php
-            // Must run in this view (not in header include) so tab panes below see $activeNavTab.
-            $activeNavTab = '#home';
-            $path = request()->path();
-            if (request()->routeIs('admin.dashboard') || request()->routeIs('admin.dashboard.*')) {
-                $activeNavTab = '#home';
-            } elseif (
-                // Modules moved from Setup to Home
-                request()->routeIs('admin.estate.*') ||
-                request()->routeIs('admin.mess.*') ||
-                request()->routeIs('admin.issue-management*') ||
-                request()->routeIs('admin.issue-categories.*') ||
-                request()->routeIs('admin.issue-sub-categories.*') ||
-                request()->routeIs('admin.issue-priorities.*') ||
-                request()->routeIs('admin.issue-escalation-matrix.*') ||
-                request()->routeIs('admin.employee_idcard.*') ||
-                request()->routeIs('admin.duplicate_idcard.*') ||
-                request()->routeIs('admin.family_idcard.*') ||
-                request()->routeIs('admin.security.*') ||
-                str_starts_with($path, 'admin/estate') ||
-                str_starts_with($path, 'admin/mess') ||
-                str_starts_with($path, 'admin/issue-management') ||
-                str_starts_with($path, 'admin/issue-categories') ||
-                str_starts_with($path, 'admin/issue-sub-categories') ||
-                str_starts_with($path, 'admin/issue-priorities') ||
-                str_starts_with($path, 'admin/issue-escalation-matrix') ||
-                str_starts_with($path, 'admin/employee-idcard') ||
-                str_starts_with($path, 'admin/duplicate-idcard') ||
-                str_starts_with($path, 'admin/family-idcard') ||
-                str_starts_with($path, 'security/')
-            ) {
-                $activeNavTab = '#home';
-            } elseif (
-                request()->routeIs('member.*') || request()->routeIs('faculty.*') || request()->routeIs('programme.*') ||
-                request()->routeIs('admin.roles.*') || request()->routeIs('admin.users.*') ||
-                str_starts_with($path, 'setup/') || str_starts_with($path, 'admin/setup') ||
-                str_starts_with($path, 'courseAttendanceNoticeMap') || str_starts_with($path, 'course_memo') ||
-                str_starts_with($path, 'building_floor') || str_starts_with($path, 'group_mapping') ||
-                str_starts_with($path, 'course-repository') || str_starts_with($path, 'feedback') || str_starts_with($path, 'admin/feedback') ||
-                str_starts_with($path, 'admin/notice') || str_starts_with($path, 'attendance') ||
-                str_starts_with($path, 'ot_notice') ||
-                str_starts_with($path, 'forms') || str_starts_with($path, 'registration') ||
-                str_starts_with($path, 'mdo_escrot') || str_starts_with($path, 'student_medical') ||
-                str_starts_with($path, 'medical_exception') || str_starts_with($path, 'memo_discipline') ||
-                str_starts_with($path, 'country') || str_starts_with($path, 'state') || str_starts_with($path, 'city') ||
-                str_starts_with($path, 'stream') || str_starts_with($path, 'subject') || str_starts_with($path, 'Venue-Master') ||
-                str_starts_with($path, 'batch') || str_starts_with($path, 'curriculum') || str_starts_with($path, 'mapping') ||
-                str_starts_with($path, 'admin/master') || str_starts_with($path, 'master/') || str_contains($path, 'breadcrumb-showcase') || str_starts_with($path, 'password') ||
-                request()->routeIs('calendar.index') || request()->routeIs('feedback.*') || str_starts_with($path, 'calendar') ||
-                str_starts_with($path, 'expertise') || str_starts_with($path, 'faculty_notice') || str_starts_with($path, 'faculty_mdo')
-            ) {
-                $activeNavTab = '#tab-setup';
-            } elseif (
-                str_starts_with($path, 'communications') ||
-                request()->routeIs('*communications*') ||
-                request()->routeIs('admin.birthday-wish.*')
-            ) {
-                $activeNavTab = '#tab-communications';
-            } elseif (str_starts_with($path, 'academics') || request()->routeIs('*academics*')) {
-                $activeNavTab = '#tab-academics';
-            } elseif (str_starts_with($path, 'material') || request()->routeIs('*material*')) {
-                $activeNavTab = '#tab-material-management';
-            }
-        @endphp
-        @include('admin.layouts.header')
+        @include('admin.layouts.header_new')
         <div class="page-wrapper">
             @include('admin.layouts.sidebar_new')
             <div class="body-wrapper">
@@ -778,7 +714,6 @@
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     @stack('scripts')
-    @yield('scripts')
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const toggle = document.getElementById('searchToggle');
@@ -869,41 +804,10 @@
                 }
             } catch (e) { }
 
-    // Initialize collapsed state on page load
-    const sidebarType = body.getAttribute("data-sidebartype");
-    console.log('Initial sidebar type:', sidebarType);
-    console.log('Icon elements found:', icons.length);
-
-    if (sidebarType === "mini-sidebar") {
-        // Sidebar should be collapsed - ensure main-wrapper doesn't have show-sidebar
-        sidebar.classList.remove("show-sidebar");
-        // Add close class to sidebarmenu elements
-        sidebarmenus.forEach(function(el) {
-            el.classList.add("close");
-        });
-        // Set all icon instances to expand (collapsed state)
-        icons.forEach(function(icon) {
-            icon.textContent = "keyboard_double_arrow_right";
-            icon.classList.remove("rotated");
-        });
-        console.log('Set all icons to non-rotated (collapsed state)');
-        // After initial collapse state, adjust DataTables to new layout
-        setTimeout(adjustAllDataTables, 300);
-    } else {
-        // Sidebar should be expanded
-        sidebar.classList.add("show-sidebar");
-        sidebarmenus.forEach(function(el) {
-            el.classList.remove("close");
-        });
-        // Set all icon instances to rotated (expanded state)
-        icons.forEach(function(icon) {
-            icon.textContent = "keyboard_double_arrow_right";
-            icon.classList.add("rotated");
-        });
-        console.log('Set all icons to rotated (expanded state)');
-        // After initial expanded state, adjust DataTables to new layout
-        setTimeout(adjustAllDataTables, 300);
-    }
+            // Initialize collapsed state on page load
+            const sidebarType = body.getAttribute("data-sidebartype");
+            console.log('Initial sidebar type:', sidebarType);
+            console.log('Icon elements found:', icons.length);
 
             if (sidebarType === "mini-sidebar") {
                 // Sidebar should be collapsed - ensure main-wrapper doesn't have show-sidebar
@@ -936,26 +840,19 @@
                 setTimeout(adjustAllDataTables, 300);
             }
 
-  <!-- Final safeguard: Force light mode on window load -->
-  <script>
-    window.addEventListener('load', function() {
-      // Force light mode one final time after everything loads
-      document.documentElement.setAttribute('data-bs-theme', 'light');
-      document.documentElement.style.colorScheme = 'light';
-      document.documentElement.style.setProperty('--bs-body-bg', '#fff', 'important');
-      document.documentElement.style.setProperty('--bs-body-color', '#212529', 'important');
-
-      // Remove any dark mode classes
-      document.documentElement.classList.remove('dark');
-      if (document.body) {
-        document.body.classList.remove('dark');
-        document.body.style.colorScheme = 'light';
-      }
-
-      // Force reflow to apply styles
-      document.documentElement.offsetHeight;
-    });
-  </script>
+            // Sync all icon instances with data-sidebartype changes and adjust tables after toggle
+            function syncIconWithSidebar(type) {
+                const allIcons = document.querySelectorAll("#sidebarToggleIcon");
+                allIcons.forEach(function (icon) {
+                    icon.textContent = "keyboard_double_arrow_right";
+                    if (type === "full") {
+                        icon.classList.add("rotated");
+                    } else {
+                        icon.classList.remove("rotated");
+                    }
+                });
+                console.log('Synced', allIcons.length, 'icon(s) to type:', type);
+            }
 
             const observer = new MutationObserver(function (mutations) {
                 for (const m of mutations) {
