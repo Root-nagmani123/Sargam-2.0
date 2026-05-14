@@ -77,44 +77,51 @@
 @section('scripts')
 <script>
 $(function() {
-    let table = $('#coursegrouptype').DataTable({
-        processing: true,
-        serverSide: true,
-        searching: true,
-        ajax: {
-            url: "{{ route('master.course.group.type.grouptypeview') }}",
-            data: function(d) {
-                d.pk = $('#pk').val();
-                d.active_inactive = $('#active_inactive').val();
-                //  console.log(d.pk);
+    const tableSelector = '#coursegrouptype';
+    let table;
 
-            }
-        },
-        columns: [{
-                data: 'DT_RowIndex',
-                name: 'DT_RowIndex',
-                orderable: false,
-                searchable: false
-            },
-            {
-                data: 'type_name',
-                name: 'type_name'
-            },
-            {
-                data: 'status',
-                name: 'status',
-                orderable: false,
-                searchable: false
-            },
-            {
-                data: 'action',
-                name: 'action',
-                orderable: false,
-                searchable: false
-            }
-        ]
+    if ($.fn.DataTable.isDataTable(tableSelector)) {
+        table = $(tableSelector).DataTable();
+    } else {
+        table = $(tableSelector).DataTable({
+            processing: true,
+            serverSide: true,
+            searching: true,
+            ajax: {
+                url: "{{ route('master.course.group.type.grouptypeview') }}",
+                data: function(d) {
+                    d.pk = $('#pk').val();
+                    d.active_inactive = $('#active_inactive').val();
+                    //  console.log(d.pk);
 
-    });
+                }
+            },
+            columns: [{
+                    data: 'DT_RowIndex',
+                    name: 'DT_RowIndex',
+                    orderable: false,
+                    searchable: false
+                },
+                {
+                    data: 'type_name',
+                    name: 'type_name'
+                },
+                {
+                    data: 'status',
+                    name: 'status',
+                    orderable: false,
+                    searchable: false
+                },
+                {
+                    data: 'action',
+                    name: 'action',
+                    orderable: false,
+                    searchable: false
+                }
+            ]
+
+        });
+    }
 
     $(document).on('change', '.plain-status-toggle', function() {
         var checkbox = $(this);

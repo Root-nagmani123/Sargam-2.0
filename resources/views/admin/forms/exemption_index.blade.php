@@ -14,10 +14,10 @@
         /* Please ❤ this if you like it! */
 
 
-        @import url('https://fonts.googleapis.com/css?family=Poppins:400,500,600,700,800,900');
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Noto+Sans+Devanagari:wght@400;500;600;700&family=Noto+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
 
         body {
-            font-family: 'Poppins', sans-serif;
+            font-family: 'Noto Sans', 'Noto Sans Devanagari', sans-serif;
             font-weight: 300;
             font-size: 15px;
             line-height: 1.7;
@@ -51,12 +51,14 @@
 
         h4 {
             font-weight: 600;
+            font-family: 'Montserrat', 'Noto Sans', 'Noto Sans Devanagari', sans-serif;
         }
 
         h6 span {
             padding: 0 20px;
             text-transform: uppercase;
             font-weight: 700;
+            font-family: 'Montserrat', 'Noto Sans', 'Noto Sans Devanagari', sans-serif;
         }
 
         .section {

@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Selling Voucher')
-@section('setup_content')
+@section('content')
 @php
     $canDeleteSellingVoucher = hasRole('Admin') || hasRole('Mess-Admin');
 @endphp
@@ -35,12 +35,12 @@
                     <span class="fw-semibold">Add Selling Voucher</span>
                 </button>
             </div>
-            <div class="border rounded-3 bg-light p-3">
+            <div class="border rounded-3 bg-light p-3 sv-selling-voucher-filters">
                 <form method="GET" action="{{ route('admin.mess.material-management.index') }}">
-                    <div class="row g-3">
-                        <div class="col-md-2 col-sm-6">
+                    <div class="sv-filter-fields-grid">
+                        <div class="sv-filter-field">
                             <label class="form-label small text-muted mb-1">Status</label>
-                            <select name="status[]" id="filter_status" class="form-select form-select-sm" multiple>
+                            <select name="status[]" id="filter_status" class="form-select w-100" multiple>
                                 @php
                                     $selectedStatuses = request('status', []);
                                     if (!is_array($selectedStatuses)) {
@@ -49,12 +49,11 @@
                                 @endphp
                                 <option value="0" {{ in_array('0', $selectedStatuses) || in_array(0, $selectedStatuses) ? 'selected' : '' }}>Pending</option>
                                 <option value="2" {{ in_array('2', $selectedStatuses) || in_array(2, $selectedStatuses) ? 'selected' : '' }}>Approved</option>
-                                <option value="4" {{ in_array('4', $selectedStatuses) || in_array(4, $selectedStatuses) ? 'selected' : '' }}>Completed</option>
                             </select>
                         </div>
-                        <div class="col-md-2 col-sm-6">
+                        <div class="sv-filter-field">
                             <label class="form-label small text-muted mb-1">Store</label>
-                            <select name="store[]" id="filter_store" class="form-select form-select-sm" multiple>
+                            <select name="store[]" id="filter_store" class="form-select w-100" multiple>
                                 @php
                                     $selectedStores = request('store', []);
                                     if (!is_array($selectedStores)) {
@@ -66,24 +65,73 @@
                                 @endforeach
                             </select>
                         </div>
-                        <div class="col-md-2 col-sm-6">
+                        @php
+                            $filterClientTypes = [
+                                (string) \App\Models\KitchenIssueMaster::CLIENT_EMPLOYEE => 'Employee',
+                                (string) \App\Models\KitchenIssueMaster::CLIENT_OT => 'OT',
+                                (string) \App\Models\KitchenIssueMaster::CLIENT_COURSE => 'Course',
+                                (string) \App\Models\KitchenIssueMaster::CLIENT_SECTION => 'Section',
+                                (string) \App\Models\KitchenIssueMaster::CLIENT_OTHER => 'Other',
+                            ];
+                            $selectedClientType = (string) request('client_type', '');
+                        @endphp
+                        <div class="sv-filter-field">
+                            <label class="form-label small text-muted mb-1">Client type</label>
+                            <select name="client_type" id="filter_client_type" class="form-select w-100">
+                                <option value="" {{ $selectedClientType === '' ? 'selected' : '' }}>All</option>
+                                @foreach($filterClientTypes as $value => $label)
+                                    <option value="{{ $value }}" {{ $selectedClientType === $value ? 'selected' : '' }}>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="sv-filter-field">
+                            <label class="form-label small text-muted mb-1">Client category</label>
+                            <select name="client_type_pk" id="filter_client_type_pk" class="form-select w-100">
+                                <option value="">All categories</option>
+                                @foreach(($filterClientTypePkOptions ?? collect()) as $option)
+                                    <option value="{{ $option['value'] }}" {{ (string) ($selectedClientTypePk ?? '') === (string) $option['value'] ? 'selected' : '' }}>
+                                        {{ $option['text'] }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="sv-filter-field">
+                            <label class="form-label small text-muted mb-1">Buyer name</label>
+                            <select name="buyer_name" id="filter_buyer_name" class="form-select w-100">
+                                <option value="">All Buyers</option>
+                                @foreach(($filterBuyerNames ?? collect()) as $buyerName)
+                                    <option value="{{ $buyerName }}" {{ (string) ($selectedBuyerName ?? '') === (string) $buyerName ? 'selected' : '' }}>
+                                        {{ $buyerName }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="sv-filter-field">
+                            <label class="form-label small text-muted mb-1">Return status</label>
+                            <select name="return_status" id="filter_return_status" class="form-select w-100">
+                                <option value="" {{ request('return_status', '') === '' ? 'selected' : '' }}>All</option>
+                                <option value="returned" {{ request('return_status') === 'returned' ? 'selected' : '' }}>Returned</option>
+                                <option value="not_returned" {{ request('return_status') === 'not_returned' ? 'selected' : '' }}>Not returned</option>
+                            </select>
+                        </div>
+                        <div class="sv-filter-field">
                             <label class="form-label small text-muted mb-1">Start Date</label>
-                            <input type="date" name="start_date" id="filter_start_date" class="form-control" value="{{ request('start_date') ?? date('Y-m-d') }}">
+                            <input type="date" name="start_date" id="filter_start_date" class="form-control w-100" value="{{ request('start_date') }}">
                         </div>
-                        <div class="col-md-2 col-sm-6">
+                        <div class="sv-filter-field">
                             <label class="form-label small text-muted mb-1">End Date</label>
-                            <input type="date" name="end_date" id="filter_end_date" class="form-control" value="{{ request('end_date') }}" min="{{ request('start_date') ?? date('Y-m-d') }}">
+                            <input type="date" name="end_date" id="filter_end_date" class="form-control w-100" value="{{ request('end_date') }}" @if(request()->filled('start_date')) min="{{ request('start_date') }}" @endif>
                         </div>
-                        <div class="col-md-4 d-flex align-items-end justify-content-md-end gap-2">
-                            <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-1">
-                                <span class="material-symbols-rounded" style="font-size: 1rem;">filter_list</span>
-                                <span>Filter</span>
-                            </button>
-                            <a href="{{ route('admin.mess.material-management.index') }}" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1">
-                                <span class="material-symbols-rounded" style="font-size: 1rem;">refresh</span>
-                                <span>Clear</span>
-                            </a>
-                        </div>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2 justify-content-lg-end align-items-center mt-3 pt-2 border-top border-light-subtle">
+                        <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-1">
+                            <span class="material-symbols-rounded" style="font-size: 1rem;">filter_list</span>
+                            <span>Filter</span>
+                        </button>
+                        <a href="{{ route('admin.mess.material-management.index') }}" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1">
+                            <span class="material-symbols-rounded" style="font-size: 1rem;">refresh</span>
+                            <span>Clear</span>
+                        </a>
                     </div>
                 </form>
             </div>
@@ -111,103 +159,7 @@
                             <th scope="col" class="text-center text-secondary fw-semibold text-uppercase" style="width: 1%;">Action</th>
                         </tr>
                     </thead>
-                    @php($serial = 1)
-                    <tbody class="small">
-                        @forelse($kitchenIssues as $voucher)
-                            @forelse($voucher->items as $item)
-                                <tr>
-                                    <td class="text-center text-muted font-monospace">{{ $serial++ }}</td>
-                                    <td class="fw-medium">{{ $item->item_name ?: ($item->itemSubcategory->item_name ?? '—') }}</td>
-                                    <td class="text-end font-monospace">{{ $item->quantity }}</td>
-                                    <td class="text-end font-monospace">{{ $item->return_quantity ?? 0 }}</td>
-                                    <td>{{ $voucher->resolved_store_name }}</td>
-                                    <td>{{ $voucher->client_type_label ?? '—' }}</td>
-                                    <td>{{ $voucher->display_client_name }}</td>
-                                    <td>{{ $voucher->client_name ?? '—' }}</td>
-                                    <td>
-                                        @if($voucher->payment_type == 1)<span class="badge rounded-pill text-bg-warning">Credit</span>
-                                        @elseif($voucher->payment_type == 0)<span class="badge rounded-pill text-bg-secondary">Cash</span>
-                                        @elseif($voucher->payment_type == 2)<span class="badge rounded-pill text-bg-info">UPI</span>
-                                        @else<span class="text-muted">—</span>@endif
-                                    </td>
-                                    <td class="text-nowrap">{{ $voucher->created_at ? $voucher->created_at->format('d/m/Y') : '—' }}</td>
-                                    <td class="text-center">
-                                        @if($voucher->status == 0)<span class="badge rounded-pill text-bg-warning">Pending</span>
-                                        @elseif($voucher->status == 2)<span class="badge rounded-pill text-bg-success">Approved</span>
-                                        @elseif($voucher->status == 4)<span class="badge rounded-pill text-bg-primary">Completed</span>
-                                        @else<span class="badge rounded-pill text-bg-secondary">{{ $voucher->status }}</span>@endif
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="d-flex flex-wrap gap-2 align-items-center justify-content-center">
-                                            @if(($item->return_quantity ?? 0) > 0)
-                                                <span class="badge rounded-pill text-bg-info">Returned</span>
-                                            @endif
-                                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 btn-return-sv" data-voucher-id="{{ $voucher->pk }}" title="Return">Return</button>
-                                        </div>
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="d-inline-flex align-items-center justify-content-center gap-1">
-                                            <button type="button" class="btn btn-sm btn-light border btn-view-sv rounded-circle p-0 d-inline-flex align-items-center justify-content-center" style="width: 2.25rem; height: 2.25rem;" data-voucher-id="{{ $voucher->pk }}" title="View" aria-label="View voucher"><i class="material-symbols-rounded text-primary" style="font-size: 1.125rem;">visibility</i></button>
-                                            <button type="button" class="btn btn-sm btn-light border btn-edit-sv rounded-circle p-0 d-inline-flex align-items-center justify-content-center" style="width: 2.25rem; height: 2.25rem;" data-voucher-id="{{ $voucher->pk }}" title="{{ $voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED ? 'Edit is disabled for approved voucher' : 'Edit' }}" aria-label="Edit voucher" @if($voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED) disabled @endif><i class="material-symbols-rounded text-warning" style="font-size: 1.125rem;">edit</i></button>
-                                            @if($canDeleteSellingVoucher)
-                                                <form action="{{ route('admin.mess.material-management.destroy', $voucher->pk) }}" method="POST" class="d-inline m-0" onsubmit="return confirm('Are you sure you want to delete this Selling Voucher?');">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="btn btn-sm btn-light border rounded-circle p-0 d-inline-flex align-items-center justify-content-center" style="width: 2.25rem; height: 2.25rem;" title="Delete" aria-label="Delete voucher"><i class="material-symbols-rounded text-danger" style="font-size: 1.125rem;">delete</i></button>
-                                                </form>
-                                            @endif
-                                        </div>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td class="text-center text-muted font-monospace">{{ $serial++ }}</td>
-                                    <td class="text-muted">—</td>
-                                    <td class="text-end text-muted">—</td>
-                                    <td class="text-end text-muted">—</td>
-                                    <td>{{ $voucher->resolved_store_name }}</td>
-                                    <td>{{ $voucher->client_type_label ?? '—' }}</td>
-                                    <td>{{ $voucher->display_client_name }}</td>
-                                    <td>{{ $voucher->client_name ?? '—' }}</td>
-                                    <td><span class="text-muted">—</span></td>
-                                    <td class="text-nowrap">{{ $voucher->created_at ? $voucher->created_at->format('d/m/Y') : '—' }}</td>
-                                    <td class="text-center">
-                                        @if($voucher->status == 0)<span class="badge rounded-pill text-bg-warning">Pending</span>
-                                        @elseif($voucher->status == 2)<span class="badge rounded-pill text-bg-success">Approved</span>
-                                        @elseif($voucher->status == 4)<span class="badge rounded-pill text-bg-primary">Completed</span>
-                                        @else<span class="badge rounded-pill text-bg-secondary">{{ $voucher->status }}</span>@endif
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="d-flex flex-wrap gap-2 align-items-center justify-content-center">
-                                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 btn-return-sv" data-voucher-id="{{ $voucher->pk }}" title="Return">Return</button>
-                                        </div>
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="d-inline-flex align-items-center justify-content-center gap-1">
-                                            <button type="button" class="btn btn-sm btn-light border btn-view-sv rounded-circle p-0 d-inline-flex align-items-center justify-content-center" style="width: 2.25rem; height: 2.25rem;" data-voucher-id="{{ $voucher->pk }}" title="View" aria-label="View voucher"><i class="material-symbols-rounded text-primary" style="font-size: 1.125rem;">visibility</i></button>
-                                            <button type="button" class="btn btn-sm btn-light border btn-edit-sv rounded-circle p-0 d-inline-flex align-items-center justify-content-center" style="width: 2.25rem; height: 2.25rem;" data-voucher-id="{{ $voucher->pk }}" title="{{ $voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED ? 'Edit is disabled for approved voucher' : 'Edit' }}" aria-label="Edit voucher" @if($voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED) disabled @endif><i class="material-symbols-rounded text-warning" style="font-size: 1.125rem;">edit</i></button>
-                                            @if($canDeleteSellingVoucher)
-                                                <form action="{{ route('admin.mess.material-management.destroy', $voucher->pk) }}" method="POST" class="d-inline m-0" onsubmit="return confirm('Are you sure you want to delete this Selling Voucher?');">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="btn btn-sm btn-light border rounded-circle p-0 d-inline-flex align-items-center justify-content-center" style="width: 2.25rem; height: 2.25rem;" title="Delete" aria-label="Delete voucher"><i class="material-symbols-rounded text-danger" style="font-size: 1.125rem;">delete</i></button>
-                                                </form>
-                                            @endif
-                                        </div>
-                                    </td>
-                                </tr>
-                            @endforelse
-                        @empty
-                            <tr>
-                                <td class="text-center text-body-secondary py-5" colspan="13">
-                                    <span class="d-inline-flex align-items-center gap-2">
-                                        <span class="material-symbols-rounded text-secondary" style="font-size: 1.5rem;" aria-hidden="true">inbox</span>
-                                        <span>No kitchen issues found.</span>
-                                    </span>
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
+                    <tbody class="small"></tbody>
                 </table>
             </div>
     </div>
@@ -221,6 +173,13 @@
         'infoLabel' => 'selling vouchers',
         'searchDelay' => 0,
         'searchSmart' => false,
+        'serverSide' => true,
+        'ajaxUrlBase' => route('admin.mess.material-management.selling-vouchers-datatable'),
+        'serverSideColumnDefs' => [
+            ['className' => 'text-center text-muted', 'targets' => [0]],
+            ['className' => 'text-end', 'targets' => [2, 3]],
+            ['className' => 'text-center', 'targets' => [10, 11, 12]],
+        ],
     ])
     @include('mess.partials.modal-dropdown-stability')
 </div>
@@ -231,37 +190,141 @@
 
 {{-- Add Selling Voucher Modal (same UI/UX as Create Purchase Order) --}}
 <style>
-/* Filter dropdowns: Choices.js styling */
+/* Equal-width filter columns (grid); min-width 0 so Choices/Tom shrink inside fr tracks */
+.sv-selling-voucher-filters .sv-filter-fields-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 1rem;
+    align-items: end;
+}
+@media (max-width: 1199.98px) {
+    .sv-selling-voucher-filters .sv-filter-fields-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+@media (max-width: 767.98px) {
+    .sv-selling-voucher-filters .sv-filter-fields-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+@media (max-width: 575.98px) {
+    .sv-selling-voucher-filters .sv-filter-fields-grid {
+        grid-template-columns: 1fr;
+    }
+}
+.sv-selling-voucher-filters .sv-filter-field {
+    min-width: 0;
+}
+.sv-selling-voucher-filters .sv-filter-field .choices {
+    width: 100%;
+    max-width: 100%;
+}
+
+/* All filter fields: same surface, border, focus as theme form-select (admin styles.css) */
+.sv-selling-voucher-filters .form-select,
+.sv-selling-voucher-filters .form-control {
+    background-color: #fff;
+    box-shadow: none;
+    border: var(--bs-border-width) solid #e0e6eb;
+    color: #526b7a;
+}
+.sv-selling-voucher-filters .form-select:focus,
+.sv-selling-voucher-filters .form-control:focus {
+    background-color: #fff;
+    border-color: #b1adff;
+    color: #526b7a;
+    box-shadow: 0 0 0 0.25rem rgba(99, 91, 255, 0.25);
+}
+.sv-selling-voucher-filters input[type="date"].form-control {
+    color-scheme: light;
+}
+.sv-selling-voucher-filters input[type="date"].form-control::-webkit-calendar-picker-indicator {
+    opacity: 0.75;
+}
+
+/* Filter dropdowns: Choices.js — match native + chevron */
 #filter_status + .choices,
 #filter_store + .choices {
     margin-bottom: 0;
 }
 #filter_status + .choices .choices__inner,
 #filter_store + .choices .choices__inner {
-    min-height: calc(1.5em + 0.5rem + 2px);
-    padding: 0.25rem 0.5rem;
-    font-size: 0.875rem;
-    border: 1px solid var(--bs-border-color, #ced4da);
-    border-radius: var(--bs-border-radius-sm, 0.25rem);
-    background-color: var(--bs-body-bg, #fff);
+    min-height: calc(1.5em + 0.5rem + calc(var(--bs-border-width) * 2));
+    padding: 0.25rem 2.25rem 0.25rem 0.5rem;
+    font-size: 0.765625rem;
+    line-height: 1.5;
+    border: var(--bs-border-width) solid #e0e6eb;
+    border-radius: var(--bs-border-radius-sm);
+    background-color: #fff;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.65rem center;
+    background-size: 16px 12px;
+    box-shadow: none;
+    color: #526b7a;
+}
+#filter_status + .choices .choices__list--multiple,
+#filter_store + .choices .choices__list--multiple {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0.2rem;
+    max-height: none;
+    overflow-y: hidden;
+    overflow-x: hidden;
+    margin: 0;
+    padding-right: 0.15rem;
+    white-space: nowrap;
+}
+#filter_status + .choices .choices__input,
+#filter_store + .choices .choices__input {
+    margin: 0;
+}
+#filter_status + .choices .choices__placeholder,
+#filter_store + .choices .choices__placeholder {
+    color: #526b7a;
+    opacity: 0.65;
 }
 #filter_status + .choices.is-open .choices__inner,
 #filter_status + .choices.is-focused .choices__inner,
 #filter_store + .choices.is-open .choices__inner,
 #filter_store + .choices.is-focused .choices__inner {
-    border-color: var(--bs-primary, #86b7fe);
-    box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb, 13, 110, 253), 0.25);
+    border-color: #b1adff;
+    box-shadow: 0 0 0 0.25rem rgba(99, 91, 255, 0.25);
 }
 #filter_status + .choices .choices__list--dropdown,
 #filter_store + .choices .choices__list--dropdown {
     z-index: 1050;
-    border: 1px solid var(--bs-border-color, #ced4da);
-    border-radius: var(--bs-border-radius-sm, 0.25rem);
-    font-size: 0.875rem;
+    border: var(--bs-border-width) solid #e0e6eb;
+    border-radius: var(--bs-border-radius-sm);
+    font-size: 0.765625rem;
 }
 #filter_status + .choices .choices__item,
 #filter_store + .choices .choices__item {
-    font-size: 0.875rem;
+    font-size: 0.765625rem;
+    color: #526b7a;
+}
+.sv-selling-voucher-filters #filter_status + .choices .choices__list--multiple .choices__item,
+.sv-selling-voucher-filters #filter_store + .choices .choices__list--multiple .choices__item {
+    background-color: #eef2f5;
+    border: 1px solid #e0e6eb;
+    color: #526b7a;
+    border-radius: var(--bs-border-radius-sm);
+    font-size: 0.7rem;
+    margin-bottom: 0.125rem;
+    max-width: 9.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.sv-selling-voucher-filters #filter_status + .choices .choices__button,
+.sv-selling-voucher-filters #filter_store + .choices .choices__button {
+    border-left: 1px solid #d9e0e6;
+    margin-left: 0.35rem;
+    padding-left: 0.35rem;
+}
+.sv-selling-voucher-filters #filter_status + .choices .choices__list--multiple .choices__item.is-highlighted,
+.sv-selling-voucher-filters #filter_store + .choices .choices__list--multiple .choices__item.is-highlighted {
+    background-color: #e3e9ee;
 }
 
 #addSellingVoucherModal .modal-dialog,
@@ -499,13 +562,13 @@
                                     <select id="modalOtCourseSelect" class="form-select" style="display:none;">
                                         <option value="">Select Course</option>
                                         @foreach($otCourses ?? [] as $course)
-                                            <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }}</option>
+                                            <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }} [{{ (int)($course->active_inactive ?? 0) === 1 ? 'Active' : 'Archived' }}]</option>
                                         @endforeach
                                     </select>
                                     <select id="modalCourseSelect" class="form-select" style="display:none;">
                                         <option value="">Select Course</option>
                                         @foreach($otCourses ?? [] as $course)
-                                            <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }}</option>
+                                            <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }} [{{ (int)($course->active_inactive ?? 0) === 1 ? 'Active' : 'Archived' }}]</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -591,7 +654,7 @@
                                     <tbody id="modalItemsBody">
                                         <tr class="sv-item-row">
                                             <td>
-                                                <select name="items[0][item_subcategory_id]" class="form-select form-select-sm sv-item-select" required>
+                                                <select name="items[0][item_subcategory_id]" class="form-select sv-item-select" required>
                                                     <option value="">Select Item</option>
                                                     @foreach($itemSubcategories as $s)
                                                         <option value="{{ $s['id'] }}" data-unit="{{ e($s['unit_measurement'] ?? '') }}" data-rate="{{ e($s['standard_cost'] ?? 0) }}">{{ e($s['item_name'] ?? '—') }}</option>
@@ -684,13 +747,13 @@
                                     <select id="editModalOtCourseSelect" class="form-select" style="display:none;">
                                         <option value="">Select Course</option>
                                         @foreach($otCourses ?? [] as $course)
-                                            <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }}</option>
+                                            <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }} [{{ (int)($course->active_inactive ?? 0) === 1 ? 'Active' : 'Archived' }}]</option>
                                         @endforeach
                                     </select>
                                     <select id="editModalCourseSelect" class="form-select" style="display:none;">
                                         <option value="">Select Course</option>
                                         @foreach($otCourses ?? [] as $course)
-                                            <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }}</option>
+                                            <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }} [{{ (int)($course->active_inactive ?? 0) === 1 ? 'Active' : 'Archived' }}]</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -720,7 +783,7 @@
                                     <select id="editModalCourseNameSelect" class="form-select" style="display:none;">
                                         <option value="">Select Course</option>
                                         @foreach($otCourses ?? [] as $course)
-                                            <option value="{{ $course->pk }}">{{ e($course->course_name) }}</option>
+                                            <option value="{{ $course->pk }}">{{ e($course->course_name) }} [{{ (int)($course->active_inactive ?? 0) === 1 ? 'Active' : 'Archived' }}]</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -915,6 +978,7 @@
                                             <th style="color: #fff;">Item Name</th>
                                             <th style="color: #fff;">Issued Quantity</th>
                                             <th style="color: #fff;">Item Unit</th>
+                                            <th style="color: #fff;">Item Issue Date</th>
                                             <th style="color: #fff;">Return Quantity</th>
                                             <th style="color: #fff;">Return Date</th>
                                         </tr>
@@ -1559,19 +1623,15 @@ document.addEventListener('DOMContentLoaded', function() {
                                 input.scrollLeft = 0;
                             }
                         }
-                        // selection + search dono ko blank karo har open par
-                        self.clear(true);
+                        // Keep selected values; reset only search input each open
                         clearInputAndCursor();
                         setTimeout(function () {
-                            self.clear(true);
                             clearInputAndCursor();
                         }, 0);
                         setTimeout(function () {
-                            self.clear(true);
                             clearInputAndCursor();
                         }, 50);
                         setTimeout(function () {
-                            self.clear(true);
                             clearInputAndCursor();
                         }, 100);
                         setTimeout(function () {
@@ -1625,19 +1685,15 @@ document.addEventListener('DOMContentLoaded', function() {
                                 input.scrollLeft = 0;
                             }
                         }
-                        // selection + search dono ko blank karo har open par
-                        self.clear(true);
+                        // Keep selected values; reset only search input each open
                         clearInputAndCursor();
                         setTimeout(function () {
-                            self.clear(true);
                             clearInputAndCursor();
                         }, 0);
                         setTimeout(function () {
-                            self.clear(true);
                             clearInputAndCursor();
                         }, 50);
                         setTimeout(function () {
-                            self.clear(true);
                             clearInputAndCursor();
                         }, 100);
                         setTimeout(function () {
@@ -1657,6 +1713,139 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         console.warn('Choices.js library not loaded on Selling Voucher page');
     }
+
+    (function initSellingVoucherFilterCascade() {
+        var typeEl = document.getElementById('filter_client_type');
+        var typePkEl = document.getElementById('filter_client_type_pk');
+        var buyerEl = document.getElementById('filter_buyer_name');
+        if (!typeEl || !typePkEl || !buyerEl) return;
+
+        var selectedTypePk = @json((string) ($selectedClientTypePk ?? request('client_type_pk', '')));
+        var selectedBuyer = @json((string) ($selectedBuyerName ?? request('buyer_name', '')));
+        var employees = @json(($employees ?? collect())->pluck('full_name')->filter()->values()->all(), JSON_UNESCAPED_UNICODE);
+        var faculties = @json(($faculties ?? collect())->pluck('full_name')->filter()->values()->all(), JSON_UNESCAPED_UNICODE);
+        var messStaff = @json(($messStaff ?? collect())->pluck('full_name')->filter()->values()->all(), JSON_UNESCAPED_UNICODE);
+
+        var typeSlugMap = {
+            '{{ (string) \App\Models\KitchenIssueMaster::CLIENT_EMPLOYEE }}': 'employee',
+            '{{ (string) \App\Models\KitchenIssueMaster::CLIENT_OT }}': 'ot',
+            '{{ (string) \App\Models\KitchenIssueMaster::CLIENT_COURSE }}': 'course',
+            '{{ (string) \App\Models\KitchenIssueMaster::CLIENT_SECTION }}': 'section',
+            '{{ (string) \App\Models\KitchenIssueMaster::CLIENT_OTHER }}': 'other'
+        };
+        var typePkOptionsBySlug = {
+@foreach(($clientNamesByType ?? collect()) as $slug => $options)
+            '{{ $slug }}': [
+    @foreach($options as $option)
+                { value: '{{ (string) $option->id }}', text: '{{ addslashes((string) $option->client_name) }}' },
+    @endforeach
+            ],
+@endforeach
+        };
+        var otCourseOptions = [
+@foreach(($otCourses ?? collect()) as $course)
+            { value: '{{ (string) $course->pk }}', text: '{{ addslashes((string) $course->course_name) }}' },
+@endforeach
+        ];
+
+        function fillSelect(selectEl, options, placeholder, selectedValue) {
+            selectEl.innerHTML = '';
+            var defaultOpt = document.createElement('option');
+            defaultOpt.value = '';
+            defaultOpt.textContent = placeholder;
+            selectEl.appendChild(defaultOpt);
+            (options || []).forEach(function (option) {
+                var opt = document.createElement('option');
+                opt.value = String(option.value || '');
+                opt.textContent = String(option.text || '');
+                if (selectedValue !== undefined && selectedValue !== null && String(selectedValue) === opt.value) {
+                    opt.selected = true;
+                }
+                selectEl.appendChild(opt);
+            });
+        }
+
+        function setBuyerOptions(options, preserveSelection) {
+            fillSelect(buyerEl, (options || []).map(function (name) { return { value: name, text: name }; }), 'All Buyers', preserveSelection ? selectedBuyer : '');
+        }
+
+        function loadBuyerOptions(preserveSelection) {
+            var slug = typeSlugMap[String(typeEl.value || '')] || '';
+            var pk = String(typePkEl.value || '');
+            if (!slug || !pk) {
+                setBuyerOptions([], preserveSelection);
+                return;
+            }
+
+            if (slug === 'employee') {
+                var selectedLabel = ((typePkEl.options[typePkEl.selectedIndex] || {}).text || '').toLowerCase().trim();
+                if (selectedLabel === 'academy staff') {
+                    setBuyerOptions(employees, preserveSelection);
+                } else if (selectedLabel === 'faculty') {
+                    setBuyerOptions(faculties, preserveSelection);
+                } else if (selectedLabel === 'mess staff') {
+                    setBuyerOptions(messStaff, preserveSelection);
+                } else {
+                    setBuyerOptions([], preserveSelection);
+                }
+                return;
+            }
+
+            var url = '';
+            if (slug === 'ot') {
+                url = '{{ route('admin.mess.material-management.students-by-course', ['course_pk' => '__COURSE__']) }}'.replace('__COURSE__', encodeURIComponent(pk));
+            } else if (slug === 'course' || slug === 'section' || slug === 'other') {
+                var params = new URLSearchParams({
+                    client_type_slug: slug,
+                    client_type_pk: pk
+                });
+                url = '{{ route('admin.mess.material-management.buyer-names') }}' + '?' + params.toString();
+            }
+            if (!url) {
+                setBuyerOptions([], preserveSelection);
+                return;
+            }
+
+            fetch(url, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(function (response) { return response.ok ? response.json() : { buyers: [] }; })
+                .then(function (payload) {
+                    var buyers = [];
+                    if (slug === 'ot') {
+                        buyers = (payload.students || []).map(function (student) { return student.display_name || ''; }).filter(Boolean);
+                    } else {
+                        buyers = (payload.buyers || []).map(function (name) { return String(name || '').trim(); }).filter(Boolean);
+                    }
+                    setBuyerOptions(buyers, preserveSelection);
+                })
+                .catch(function () {
+                    setBuyerOptions([], preserveSelection);
+                });
+        }
+
+        function loadTypePkOptions(preserveSelection) {
+            var slug = typeSlugMap[String(typeEl.value || '')] || '';
+            var options = [];
+            if (slug === 'ot' || slug === 'course') {
+                options = otCourseOptions;
+            } else if (slug && typePkOptionsBySlug[slug]) {
+                options = typePkOptionsBySlug[slug];
+            }
+            fillSelect(typePkEl, options, 'All categories', preserveSelection ? selectedTypePk : '');
+            loadBuyerOptions(preserveSelection);
+        }
+
+        typeEl.addEventListener('change', function () {
+            selectedTypePk = '';
+            selectedBuyer = '';
+            loadTypePkOptions(false);
+        });
+        typePkEl.addEventListener('change', function () {
+            selectedBuyer = '';
+            loadBuyerOptions(false);
+        });
+
+        loadTypePkOptions(true);
+    })();
 
     function destroyAddModalTomSelects() {
         // Destroy tracked instances (payment, client, store, item selects only)
@@ -1890,9 +2079,21 @@ document.addEventListener('DOMContentLoaded', function() {
         storeSel.value = '';
     }
 
+    /** Rebuild Choices + item rows from current `filteredItems` (call after reset and/or fetchStoreItems). */
+    function reinitAddSellingVoucherModalItemGrid() {
+        initAddModalTomSelects();
+        if (typeof updateModalNameField === 'function') updateModalNameField();
+        updateAddItemDropdowns();
+        refreshAllAvailable();
+        document.querySelectorAll('#modalItemsBody .sv-item-row').forEach(function(row) { calcRow(row); });
+        updateGrandTotal();
+        syncAddModalChoicesToNative();
+    }
+
     // Helper: reset Add Selling Voucher modal form (without closing modal).
     // Keeps modal open; clears fields, item rows, and store-scoped item cache so the next entry starts fresh.
-    function resetSellingVoucherModalForm() {
+    // @param {boolean} skipDeferredReinit — if true, caller will refetch inventory and call reinitAddSellingVoucherModalItemGrid (e.g. after AJAX save).
+    function resetSellingVoucherModalForm(skipDeferredReinit) {
         var modalEl = document.getElementById('addSellingVoucherModal');
         if (!modalEl) return;
 
@@ -1937,17 +2138,15 @@ document.addEventListener('DOMContentLoaded', function() {
         var grandTotalEl = document.getElementById('modalGrandTotal');
         if (grandTotalEl) grandTotalEl.textContent = '₹0.00';
 
+        if (skipDeferredReinit) {
+            return;
+        }
+
         // Modal stays open after AJAX save; re-init dropdowns and item grid (defer so DOM + destroy settle).
         window.requestAnimationFrame(function () {
             window.setTimeout(function () {
                 try {
-                    initAddModalTomSelects();
-                    if (typeof updateModalNameField === 'function') updateModalNameField();
-                    updateAddItemDropdowns();
-                    refreshAllAvailable();
-                    document.querySelectorAll('#modalItemsBody .sv-item-row').forEach(function(row) { calcRow(row); });
-                    updateGrandTotal();
-                    syncAddModalChoicesToNative();
+                    reinitAddSellingVoucherModalItemGrid();
                 } catch (err) {
                     console.error('resetSellingVoucherModalForm re-init failed', err);
                 }
@@ -1984,10 +2183,24 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!$table.length || !$.fn.DataTable.isDataTable($table)) return;
 
         var dt = $table.DataTable();
-        var expectedCols = $table.find('thead tr:first th').length;
-        var url = window.location.pathname + window.location.search;
+        var canAjaxReload = dt.ajax && typeof dt.ajax.reload === 'function';
 
         isRefreshingSellingVouchersTable = true;
+
+        if (canAjaxReload) {
+            try {
+                dt.ajax.reload(function() {
+                    isRefreshingSellingVouchersTable = false;
+                }, false);
+            } catch (err) {
+                console.error('Failed to refresh selling vouchers table', err);
+                isRefreshingSellingVouchersTable = false;
+            }
+            return;
+        }
+
+        var expectedCols = $table.find('thead tr:first th').length;
+        var url = window.location.pathname + window.location.search;
 
         fetch(url, { headers: { 'Accept': 'text/html' } })
             .then(function(r) { return r.text(); })
@@ -1999,7 +2212,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 var newRowData = [];
                 newTbody.querySelectorAll('tr').forEach(function(tr) {
                     var cells = Array.from(tr.querySelectorAll('td,th'));
-                    if (expectedCols && cells.length !== expectedCols) return; // skip colspan/empty rows
+                    if (expectedCols && cells.length !== expectedCols) return;
                     newRowData.push(cells.map(function(td) { return td.innerHTML; }));
                 });
 
@@ -2072,7 +2285,46 @@ document.addEventListener('DOMContentLoaded', function() {
                     var data = res.data;
                     var success = !!(data && (data.success === true || data.success === 1 || data.success === '1' || data.voucher_id != null));
                     if (res.ok && success) {
-                        resetSellingVoucherModalForm();
+                        var modalRoot = document.getElementById('addSellingVoucherModal');
+                        var storeSel = modalRoot ? modalRoot.querySelector('select[name="store_id"]') : null;
+                        var savedStoreId = '';
+                        if (storeSel) {
+                            if (storeSel.tomselect && typeof storeSel.tomselect.getValue === 'function') {
+                                var gv = storeSel.tomselect.getValue();
+                                savedStoreId = Array.isArray(gv) ? (gv[0] || '') : (gv == null ? '' : String(gv));
+                            } else {
+                                savedStoreId = storeSel.value || '';
+                            }
+                        }
+
+                        resetSellingVoucherModalForm(true);
+
+                        function finishAddModalAfterSave() {
+                            try {
+                                reinitAddSellingVoucherModalItemGrid();
+                            } catch (err) {
+                                console.error('reinit after save failed', err);
+                            }
+                            var body = modalRoot && modalRoot.querySelector('.modal-body');
+                            if (body) body.scrollTop = 0;
+                        }
+
+                        if (savedStoreId) {
+                            if (storeSel) {
+                                storeSel.value = String(savedStoreId);
+                            }
+                            currentStoreId = String(savedStoreId);
+                            fetchStoreItems(String(savedStoreId), function() {
+                                finishAddModalAfterSave();
+                            });
+                        } else {
+                            currentStoreId = null;
+                            filteredItems = itemSubcategories;
+                            window.requestAnimationFrame(function() {
+                                window.setTimeout(finishAddModalAfterSave, 10);
+                            });
+                        }
+
                         refreshSellingVouchersTable();
                         if (window.toastr && data.message) {
                             toastr.success(data.message);
@@ -2215,7 +2467,8 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(err => {
             console.error(err);
             alert('Failed to load store items.');
-            filteredItems = [];
+            filteredItems = itemSubcategories || [];
+            if (callback) callback();
         });
     }
 
@@ -2261,7 +2514,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return '<option value="' + s.id + '" ' + attrs + '>' + (s.item_name || '—').replace(/</g, '&lt;') + '</option>';
         }).join('');
         return '<tr class="sv-item-row">' +
-            '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select form-select-sm sv-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
+            '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select sv-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
             '<td><input type="text" name="items[' + index + '][unit]" class="form-control  sv-unit" readonly placeholder="—"></td>' +
             '<td><input type="text" name="items[' + index + '][available_quantity]" class="form-control  sv-avail bg-light" readonly></td>' +
             '<td><input type="text" name="items[' + index + '][quantity]" class="form-control  sv-qty" step="0.01" min="0.01" required><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
@@ -2649,7 +2902,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (clientSelect) { setSelectVisible(clientSelect, true); clientSelect.setAttribute('required', 'required'); clientSelect.setAttribute('name', 'client_type_pk'); }
                 if (otCourseSelect) { setSelectVisible(otCourseSelect, false); otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
                 if (otStudentSelect) { setSelectVisible(otStudentSelect, false); otStudentSelect.removeAttribute('required'); otStudentSelect.innerHTML = '<option value="">Select Student</option>'; otStudentSelect.value = ''; }
-                if (courseSelect) { setSelectVisible(courseSelect, false); courseSelect.removeAttribute('required'); courseSelect.value = ''; }
+                if (courseSelect) { setSelectVisible(courseSelect, false); courseSelect.removeAttribute('required'); courseSelect.removeAttribute('name'); courseSelect.value = ''; }
                 if (courseNameSelect) { setSelectVisible(courseNameSelect, false); courseNameSelect.removeAttribute('required'); courseNameSelect.value = ''; }
                 if (clientSelect && clientNameOptionsAdd.length) {
                     rebuildClientNameSelect(clientSelect, clientNameOptionsAdd, this.value);
@@ -3002,7 +3255,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const left = item && (avail - qty) >= 0 ? (avail - qty) : 0;
         const originalQtyAttr = item ? (' data-original-qty="' + (parseFloat(item.quantity) || 0) + '"') : '';
         return '<tr class="sv-item-row edit-sv-item-row"' + originalQtyAttr + '>' +
-            '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select form-select-sm sv-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
+            '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select sv-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
             '<td><input type="text" name="items[' + index + '][unit]" class="form-control  sv-unit" readonly placeholder="—" value="' + (unit || '') + '"></td>' +
             '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control  sv-avail bg-light" step="0.01" min="0" value="' + avail + '" placeholder="0" readonly></td>' +
             '<td><input type="number" name="items[' + index + '][quantity]" class="form-control  sv-qty" step="0.01" min="0.01" placeholder="0" value="' + qty + '" required><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
@@ -3229,6 +3482,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     const todayYmd = new Date().toISOString().slice(0, 10);
                     const tbody = document.getElementById('returnItemModalBody');
                     tbody.innerHTML = '';
+                    function ymdToDmY(ymd) {
+                        if (!ymd) return '—';
+                        var p = String(ymd).split('-');
+                        if (p.length !== 3) return ymd;
+                        return p[2] + '/' + p[1] + '/' + p[0];
+                    }
                     (data.items || []).forEach(function(item, i) {
                         const id = (item.id != null) ? item.id : '';
                         const name = (item.item_name || '—').replace(/</g, '&lt;').replace(/"/g, '&quot;');
@@ -3237,10 +3496,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         const retQty = item.return_quantity != null ? item.return_quantity : 0;
                         const retDate = item.return_date || '';
                         const issuedQty = parseFloat(qty) || 0;
+                        const rowIssueYmd = (item.issue_date || issueDate || '').trim();
+                        const issueDisp = ymdToDmY(rowIssueYmd);
                         tbody.insertAdjacentHTML('beforeend',
-                            '<tr><td>' + name + '<input type="hidden" name="items[' + i + '][id]" value="' + id + '"></td><td>' + qty + '</td><td>' + unit + '</td>' +
+                            '<tr><td>' + name + '<input type="hidden" name="items[' + i + '][id]" value="' + id + '"></td><td>' + qty + '</td><td>' + unit + '</td><td class="text-nowrap">' + issueDisp + '</td>' +
                             '<td><input type="number" name="items[' + i + '][return_quantity]" class="form-control  sv-return-qty" step="0.01" min="0" max="' + issuedQty + '" data-issued="' + issuedQty + '" value="' + retQty + '"><div class="invalid-feedback">Return Qty cannot exceed Issued Qty.</div></td>' +
-                            '<td><input type="date" name="items[' + i + '][return_date]" class="form-control  sv-return-date" max="' + todayYmd + '" ' + (issueDate ? ('min="' + issueDate + '" data-issue-date="' + issueDate + '"') : '') + ' value="' + retDate + '"><div class="invalid-feedback">Return date must be between issue date and today.</div></td></tr>');
+                            '<td><input type="date" name="items[' + i + '][return_date]" class="form-control  sv-return-date" max="' + todayYmd + '" ' + (rowIssueYmd ? ('min="' + rowIssueYmd + '" data-issue-date="' + rowIssueYmd + '"') : '') + ' value="' + retDate + '"><div class="invalid-feedback">Return date must be between issue date and today.</div></td></tr>');
                     });
                     document.getElementById('returnItemForm').action = returnSvBaseUrl + '/' + voucherId + '/return';
                     const modal = new bootstrap.Modal(document.getElementById('returnItemModal'));

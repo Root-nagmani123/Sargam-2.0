@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'ID Card Approval Details')
-@section('setup_content')
+@section('content')
 @php
     $stage = isset($stage) ? (int) $stage : (int) request()->get('stage');
     if (!in_array($stage, [1, 2, 3], true)) {
@@ -193,10 +193,25 @@
                                 <tr><th>Request For</th><td>{{ $request->request_for ?? '--' }}</td></tr>
                                 <tr><th>Request Type</th>
                                     <td>
+                                        @php
+                                            $reqTypeEmpShort = match ($request->employee_type ?? null) {
+                                                'Permanent Employee' => 'Permanent',
+                                                'Contractual Employee' => 'Contractual',
+                                                default => null,
+                                            };
+                                        @endphp
                                         @if(isset($request->request_type) && $request->request_type === 'duplicate')
-                                            <span class="badge bg-info">Duplicate</span>
+                                            @if($reqTypeEmpShort)
+                                                <span class="badge bg-info">Duplicate ({{ $reqTypeEmpShort }})</span>
+                                            @else
+                                                <span class="badge bg-info">Duplicate</span>
+                                            @endif
                                         @else
-                                            <span class="badge bg-secondary">Fresh</span>
+                                            @if($reqTypeEmpShort)
+                                                <span class="badge bg-secondary">Fresh ({{ $reqTypeEmpShort }})</span>
+                                            @else
+                                                <span class="badge bg-secondary">Fresh</span>
+                                            @endif
                                         @endif
                                     </td>
                                 </tr>

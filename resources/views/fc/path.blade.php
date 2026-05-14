@@ -14,82 +14,92 @@
         $exEnd = $pathPage->exemption_end_date ? \Carbon\Carbon::parse($pathPage->exemption_end_date) : null;
 
     @endphp
-    <main style="flex: 1;">
-        <div class="container mt-5">
-            <div class="text-center">
-                <h4 style="color: #004a93; font-size: 30px; font-weight: 700;">Choose Your Path</h4>
-                <p class="text-muted" style="font-size: 20px;">
+
+    <main id="content" class="flex-grow-1 py-4 py-md-5">
+        <div class="container">
+            <header class="text-center mb-4 mb-lg-5">
+                <h1 class="h2 fw-bold text-primary mb-3">Choose Your Path</h1>
+                <p class="fs-6 mb-0 col-lg-8 mx-auto">
                     Please select the appropriate option based on your current status.
                 </p>
-            </div>
+            </header>
 
-            <div class="row g-4 mt-5">
+            <div class="row row-cols-1 row-cols-lg-3 g-4 g-lg-4 mb-5">
                 <!-- Register Card -->
-                <div class="col-md-4">
-                    <div class="card h-100">
-                        <div class="card-body">
-                            <div class="icon-circle mb-3" style="background-color: #dcfce7;">
-                                <i class="material-icons menu-icon fs-3"
-                                    style="color: #16a32a; transform: rotateY(180deg);">person_add</i>
+                <div class="col d-flex">
+                    <div class="card h-100 w-100 border-0 shadow-lg rounded-4">
+                        <div class="card-body p-4 d-flex flex-column text-start">
+                            <div
+                                class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3 bg-success-subtle align-self-start"
+                                style="width: 3.5rem; height: 3.5rem;" aria-hidden="true">
+                                <i class="bi bi-person-plus-fill fs-3 text-success"></i>
                             </div>
-                            <h5 class="fw-bold text-center" style="color: #004a93;">Register for Foundation Course</h5>
-
-                            {!! $pathPage->register_course ?? '' !!}
+                            <h2 class="h5 fw-bold text-primary mb-3">Register for Foundation Course</h2>
+                            <div class="path-card-content small flex-grow-1">
+                                {!! $pathPage->register_course ?? '' !!}
+                            </div>
                         </div>
-
-                        <div class="card-footer bg-white border-top-0">
+                        <div class="card-footer bg-transparent border-0 pt-0 px-4 pb-4">
                             @if ($showRegistration)
-                                <a href="{{ route('verify.authindex') }}" class="btn btn-success custom-btn w-100"
+                                <a href="{{ route('verify.authindex') }}" class="btn btn-success w-100 rounded-3 py-2 fw-semibold"
                                     style="background-color: #16a32a; border-color: #16a32a;">
                                     Start Registration
                                 </a>
                             @else
-                                <button class="btn btn-secondary w-100" disabled>Registration Closed</button>
+                                <button type="button" class="btn btn-secondary w-100 rounded-3 py-2 fw-semibold" disabled>
+                                    Registration Closed
+                                </button>
                             @endif
                         </div>
-
                     </div>
                 </div>
 
                 <!-- Exemption Card -->
-                <div class="col-md-4">
-                    <div class="card h-100">
-                        <div class="card-body">
-                            <div class="icon-circle mb-3" style="background-color: #fff4e5;">
-                                <i class="material-icons menu-icon fs-3" style="color: #ea5803;">article</i>
+                <div class="col d-flex">
+                    <div class="card h-100 w-100 border-0 shadow-lg rounded-4">
+                        <div class="card-body p-4 d-flex flex-column text-start">
+                            <div
+                                class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3 bg-warning-subtle align-self-start"
+                                style="width: 3.5rem; height: 3.5rem;" aria-hidden="true">
+                                <i class="bi bi-file-earmark-text-fill fs-3 text-warning-emphasis"></i>
                             </div>
-                            <h5 class="fw-bold text-center" style="color: #004a93;">Apply for Exemption</h5>
-
-                            {!! $pathPage->apply_exemption ?? '' !!}
-
+                            <h2 class="h5 fw-bold text-primary mb-3">Apply for Exemption</h2>
+                            <div class="path-card-content small flex-grow-1">
+                                {!! $pathPage->apply_exemption ?? '' !!}
+                            </div>
                         </div>
-                        <div class="card-footer bg-white border-top-0">
+                        <div class="card-footer bg-transparent border-0 pt-0 px-4 pb-4">
                             @if ($showExemption)
                                 <a href="{{ route('fc.exemption_category.index') }}"
-                                    class="btn btn-warning custom-btn w-100 text-white"
+                                    class="btn btn-warning w-100 rounded-3 py-2 fw-semibold "
                                     style="background-color: #ea5803; border-color: #ea5803;">
                                     Apply for Exemption
                                 </a>
                             @else
-                                <button class="btn btn-secondary custom-btn w-100" disabled>Exemption Closed</button>
+                                <button type="button" class="btn btn-secondary w-100 rounded-3 py-2 fw-semibold" disabled>
+                                    Exemption Closed
+                                </button>
                             @endif
                         </div>
                     </div>
                 </div>
 
                 <!-- Login Card -->
-                <div class="col-md-4">
-                    <div class="card h-100">
-                        <div class="card-body">
-                            <div class="icon-circle mb-3" style="background-color: #e5f2ff;">
-                                <i class="material-icons menu-icon fs-3" style="color: #2563eb;">login</i>
+                <div class="col d-flex">
+                    <div class="card h-100 w-100 border-0 shadow-lg rounded-4">
+                        <div class="card-body p-4 d-flex flex-column text-start">
+                            <div
+                                class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3 bg-primary-subtle align-self-start"
+                                style="width: 3.5rem; height: 3.5rem;" aria-hidden="true">
+                                <i class="bi bi-box-arrow-in-right fs-3 text-primary"></i>
                             </div>
-                            <h5 class="fw-bold text-center" style="color: #004a93;">Already Registered?</h5>
-
-                            {!! $pathPage->already_registered ?? '' !!}
+                            <h2 class="h5 fw-bold text-primary mb-3">Already Registered?</h2>
+                            <div class="path-card-content small flex-grow-1">
+                                {!! $pathPage->already_registered ?? '' !!}
+                            </div>
                         </div>
-                        <div class="card-footer bg-white border-top-0">
-                            <a href="{{ route('fc.login') }}" class="btn btn-primary custom-btn w-100"
+                        <div class="card-footer bg-transparent border-0 pt-0 px-4 pb-4">
+                            <a href="{{ route('fc.login') }}" class="btn btn-primary w-100 rounded-3 py-2 fw-semibold"
                                 style="background-color: #2563eb; border-color: #2563eb;">
                                 Login to Dashboard
                             </a>
@@ -97,58 +107,58 @@
                     </div>
                 </div>
             </div>
-            <!-- Guidelines Card -->
-            <div class="mt-4">
-                <h4 style="color: #004a93; font-size: 30px; font-weight: 700; margin-bottom: 1.5rem;">
-                    Guidelines for Registration & Exemption
-                </h4>
 
-                <div class="card"
-                    style="border-left: 4px solid #004a93; border-radius: 0.5rem;background-color:rgba(181, 216, 250, 0.2);">
-                    <div class="card-body">
-
+            <!-- Guidelines -->
+            <section class="mb-5" aria-labelledby="path-guidelines-heading">
+                <h2 id="path-guidelines-heading" class="h4 fw-bold text-primary mb-3">
+                    Guidelines for Registration &amp; Exemption
+                </h2>
+                <div class="card border border-primary border-opacity-25 bg-primary-subtle bg-opacity-10 rounded-4 shadow-sm">
+                    <div class="card-body p-4 path-card-content">
                         {!! $pathPage->guidelines ?? '' !!}
                     </div>
                 </div>
-            </div>
-            <!-- FAQ Section -->
-            <div class="row mt-4">
-                <div class="col-9">
-                    <h4 style="color: #004a93; font-size: 30px; font-weight: 700;">Frequently Asked Questions</h4>
-                    <span class="text-muted">Find your query from this list of frequently asked questions</span>
-                </div>
-                <div class="col-3 text-end">
-                    <a href="{{ route('fc.faqs.all') }}" class="btn btn-outline-primary">View All FAQs</a>
-                </div>
-            </div>
+            </section>
 
-            @if ($pathPage->faqs && $pathPage->faqs->count())
-                <div class="mt-4">
-                    <div class="accordion" id="faqAccordion">
+            <!-- FAQ Section -->
+            <section class="pt-2" aria-labelledby="path-faq-heading">
+                <div class="d-flex flex-column flex-md-row align-items-md-start justify-content-md-between gap-3 mb-3">
+                    <div>
+                        <h2 id="path-faq-heading" class="h4 fw-bold text-primary mb-1">Frequently Asked Questions</h2>
+                        <p class="-50 small mb-0">Find your query from this list of frequently asked questions</p>
+                    </div>
+                    <a href="{{ route('fc.faqs.all') }}"
+                        class="btn btn-outline-primary btn-sm rounded-3 px-3 align-self-start align-self-md-center">
+                        View All FAQs
+                    </a>
+                </div>
+
+                @if ($pathPage->faqs && $pathPage->faqs->count())
+                    <div class="accordion accordion-flush path-page-faq" id="faqAccordion">
                         @foreach ($pathPage->faqs as $index => $faq)
-                            <div class="accordion-item">
-                                <h2 class="accordion-header" id="heading{{ $index }}">
-                                    <button class="accordion-button {{ $index > 0 ? 'collapsed' : '' }}" type="button"
-                                        data-bs-toggle="collapse" data-bs-target="#collapse{{ $index }}"
+                            <div class="accordion-item border-start-0 border-end-0">
+                                <h3 class="accordion-header m-0" id="heading{{ $index }}">
+                                    <button class="accordion-button {{ $index > 0 ? 'collapsed' : '' }} shadow-none rounded-0"
+                                        type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ $index }}"
                                         aria-expanded="{{ $index === 0 ? 'true' : 'false' }}"
                                         aria-controls="collapse{{ $index }}">
                                         {{ $faq->header }}
                                     </button>
-                                </h2>
+                                </h3>
                                 <div id="collapse{{ $index }}"
                                     class="accordion-collapse collapse {{ $index === 0 ? 'show' : '' }}"
                                     aria-labelledby="heading{{ $index }}" data-bs-parent="#faqAccordion">
-                                    <div class="accordion-body">
+                                    <div class="accordion-body pt-0 small">
                                         {!! $faq->content !!}
                                     </div>
                                 </div>
                             </div>
                         @endforeach
                     </div>
-                </div>
-            @else
-                <p class="mt-3 text-muted">No FAQs available at the moment.</p>
-            @endif
+                @else
+                    <p class="-50 small mb-0">No FAQs available at the moment.</p>
+                @endif
+            </section>
         </div>
     </main>
 @endsection

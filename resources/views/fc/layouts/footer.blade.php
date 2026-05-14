@@ -12,11 +12,11 @@
                     <ul class="list-unstyled d-flex justify-content-end mb-0">
                         <li class="me-3">
                             <a href="#" class="text-white text-decoration-none"
-                                style="font-size: 14px; font-family: Inter;">Privacy Policy</a>
+                                style="font-size: 14px;">Privacy Policy</a>
                         </li>
                         <li>
                             <a href="#" class="text-white text-decoration-none"
-                                style="font-size: 14px; font-family: Inter;">Need Help</a>
+                                style="font-size: 14px;">Need Help</a>
                         </li>
                     </ul>
                 </div>

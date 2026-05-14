@@ -1,14 +1,27 @@
 /* Custom CSS for Sargam 2.0 Application */
-/* This file prevents 404 errors when loading custom.css */
+/* Typography: Noto Sans + Noto Sans Devanagari (body/UI); Montserrat (headings) — GIGW-friendly bilingual stack */
 
-/* Add any custom styles below as needed */
-
-/* Placeholder styles to ensure file is valid */
-body.custom-loaded {
-    /* Custom styles can be added here */
+:root {
+    --bs-font-sans-serif: "Noto Sans", "Noto Sans Devanagari", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --bs-body-font-family: var(--bs-font-sans-serif);
+    --sargam-font-heading: "Montserrat", "Noto Sans", "Noto Sans Devanagari", system-ui, sans-serif;
 }
 
-/* Fix for any layout issues if needed */
+html,
+body {
+    font-family: var(--bs-body-font-family);
+}
+
+h1, h2, h3, h4, h5, h6,
+.h1, .h2, .h3, .h4, .h5, .h6,
+.display-1, .display-2, .display-3, .display-4, .display-5, .display-6 {
+    font-family: var(--sargam-font-heading);
+}
+
+body.custom-loaded {
+    /* marker class if needed */
+}
+
 .error-fix {
     display: none;
 }

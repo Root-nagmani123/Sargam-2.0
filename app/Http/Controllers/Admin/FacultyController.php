@@ -14,6 +14,7 @@ use App\Models\{Country, State, City, District, FacultyMaster, FacultyQualificat
 use App\DataTables\FacultyDataTable;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Log;
+use App\Models\AppellationMaster;
 
 class FacultyController extends Controller
 {
@@ -31,12 +32,16 @@ class FacultyController extends Controller
         $district           = District::pluck('district_name', 'pk')->toArray();
         $city               = City::pluck('city_name', 'pk')->toArray();
 
+        $appellationMasterList = AppellationMaster::where('active_inactive', 1)
+            ->pluck('appettation_name', 'pk')
+            ->toArray();
+
         $years = [];
         for ($i = date('Y'); $i >= 1950; $i--) {
             $years[$i] = $i;
         }
 
-        return view("admin.faculty.create", compact('faculties', 'country', 'state', 'city', 'district', 'facultyTypeList', 'years'));
+        return view("admin.faculty.create", compact('faculties', 'country', 'state', 'city', 'district', 'facultyTypeList', 'years', 'appellationMasterList'));
     }
 
     /**
@@ -48,16 +53,40 @@ class FacultyController extends Controller
      */
     public function store(FacultyRequest $request)
     {
+
         try {
             DB::beginTransaction();
 
+            // Check for missing country
+            if (empty($request->country)) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Country is required.'
+                ], 422);
+            }
+
             // Step 1: Prepare Faculty Details
+            $faculty_sector = is_numeric($request->current_sector) ? (int)$request->current_sector : null;
+            if (!in_array($faculty_sector, [1, 2])) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Faculty sector is required and must be 1 or 2.'
+                ], 422);
+            }
+
+         $appellationName = null;
+            if ($request->appellation) {
+                $appellationName = AppellationMaster::where('pk', $request->appellation)->value('appettation_name');
+            }
+
             $facultyDetails = [
                 'faculty_type' => $request->facultyType,
+                'appellation' => $request->appellation,
                 'first_name' => $request->firstName,
                 'middle_name' => $request->middlename,
                 'last_name' => $request->lastname,
                 'full_name' => trim(
+                    ($appellationName ? $appellationName . ' ' : '') .
                     $request->firstName . ' ' .
                     ($request->middlename ? $request->middlename . ' ' : '') .
                     $request->lastname
@@ -78,10 +107,11 @@ class FacultyController extends Controller
                 'Account_No' => $request->accountnumber,
                 'IFSC_Code' => $request->ifsccode,
                 'PAN_No' => $request->pannumber,
-                'faculty_sector' => $request->current_sector,
+                'faculty_sector' => $faculty_sector,
                 'faculty_pa' => $request->facultyType == '1' ? $request->faculty_pa : null, // Only save for Internal faculty type
-                'created_by' => Auth::id(),
-                'last_update' => now(),
+                //'created_by' => Auth::id(),
+                'created_by' => Auth::user()->user_id,  // Employee Master PK,
+                //'last_update' => now(),
                 'active_inactive' => 1,
             ];
 
@@ -137,11 +167,19 @@ class FacultyController extends Controller
                         'message' => 'Faculty not found'
                     ], 404);
                 }
+                $originalFacultyType = $faculty->faculty_type;
                 $faculty->fill($facultyDetails);
                 $faculty->save();
+                // Regenerate faculty code if faculty type changed or code is missing
+                if ($originalFacultyType != $request->facultyType || empty($faculty->faculty_code)) {
+                    $this->generateFacultyCode($faculty, $request->facultyType);
+                    FacultyMaster::where('pk', $faculty->pk)->update(['faculty_code' => $faculty->faculty_code]);
+                }
             } else {
                 $faculty = FacultyMaster::create($facultyDetails);
                 $this->generateFacultyCode($faculty, $request->facultyType);
+                // Directly update the faculty code in the database for new faculty
+                FacultyMaster::where('pk', $faculty->pk)->update(['faculty_code' => $faculty->faculty_code]);
             }
 
             // Step 2: Handle Qualification Details
@@ -211,7 +249,7 @@ class FacultyController extends Controller
                     FacultyExpertiseMap::create([
                         'faculty_master_pk' => $faculty->pk,
                         'faculty_expertise_pk' => $expertisePk,
-                        'created_by' => Auth::id() ?? 1,
+                        'created_by' => Auth::user()->user_id ?? 1, // Employee Master PK
                         'created_date' => now(),
                         'updated_date' => now(),
                     ]);
@@ -220,10 +258,11 @@ class FacultyController extends Controller
 
             DB::commit();
 
+            FacultyDataTable::bumpListingCacheEpoch();
+
             return response()->json([
                 'status' => true,
                 'message' => $isUpdate ? 'Faculty updated successfully' : 'Faculty created successfully',
-                'data' => $faculty
             ]);
 
         } catch (\Exception $e) {
@@ -523,13 +562,17 @@ class FacultyController extends Controller
         $state      = State::pluck('state_name', 'pk')->toArray();
         $district   = District::pluck('district_name', 'pk')->toArray();
         $city       = City::pluck('city_name', 'pk')->toArray();
+        $appellationMasterList = AppellationMaster::where('active_inactive', 1)
+            ->pluck('appettation_name', 'pk')
+            ->toArray();
+
         $years = [];
         for ($i = date('Y'); $i >= 1950; $i--) {
             $years[$i] = $i;
         }
 
         $facultExpertise = $faculty->facultyExpertiseMap->isNotEmpty() ? $faculty->facultyExpertiseMap->pluck('faculty_expertise_pk')->toArray() : [];
-        return view('admin.faculty.edit', compact('faculties', 'faculty', 'country', 'state', 'district', 'city', 'facultExpertise', 'years'));
+        return view('admin.faculty.edit', compact('faculties', 'faculty', 'country', 'state', 'district', 'city', 'facultExpertise', 'years','appellationMasterList'));
     }
 
     public function update(Request $request)
@@ -541,15 +584,36 @@ class FacultyController extends Controller
         try {
             DB::beginTransaction();
 
+            // Fetch faculty and check if it exists
+            $faculty = FacultyMaster::find($request->faculty_id);
+            if (!$faculty) {
+                return redirect()->route('faculty.index')->with('error', 'Faculty not found');
+            }
+
+            // Capture the original faculty type to detect changes
+            $originalFacultyType = $faculty->faculty_type;
+
             # Step : 1
             // Store Faculty Details
 
+             // Get the display name for the appellation
+            $appellationName = null;
+            if ($request->appellation) {
+                $appellationName = AppellationMaster::where('pk', $request->appellation)->value('appettation_name');
+            }
+
             $facultyDetails = [
                 'faculty_type'  => $request->facultyType,
+                'appellation'   => $request->appellation,
                 'first_name'    => $request->firstName,
                 'middle_name'   => $request->middlename,
                 'last_name'     => $request->lastname,
-                'full_name'     => $request->fullname,
+               'full_name'     => trim(
+                    ($appellationName ? $appellationName . ' ' : '') .
+                    $request->firstName . ' ' .
+                    ($request->middlename ? $request->middlename . ' ' : '') .
+                    $request->lastname
+                ),
                 'gender'        => $request->gender,
                 'landline_no'   => $request->landline,
                 'mobile_no'        => $request->mobile,
@@ -608,16 +672,12 @@ class FacultyController extends Controller
 
             // Joining Date
             $facultyDetails['joining_date'] = Carbon::parse($request->joiningdate);
-            $facultyDetails['created_by']   = Auth::id();
+            //$facultyDetails['created_by']   = Auth::id();
+            $facultyDetails['created_by']   = Auth::user()->user_id; // Employee Master PK
             $facultyDetails['faculty_sector'] = $request->current_sector;
-
-            $facultyDetails['last_update']   = now();
+            //$facultyDetails['last_update']   = now();
             $facultyDetails['active_inactive'] = 1;
 
-            $faculty = FacultyMaster::find($request->faculty_id);
-            if (!$faculty) {
-                return redirect()->route('faculty.index')->with('error', 'Faculty not found');
-            }
             //print_r($facultyDetails);die;
             logger()->info('DB columns', \Schema::getColumnListing('faculty_master'));
            //$faculty->update($facultyDetails);
@@ -630,7 +690,14 @@ class FacultyController extends Controller
 
             $faculty->save();
 
-            $this->generateFacultyCode($faculty, $request->facultyType);
+            // Regenerate faculty code if faculty type has changed or code is missing
+            $facultyTypeChanged = ($originalFacultyType != $request->facultyType);
+            if ($facultyTypeChanged || empty($faculty->faculty_code)) {
+                $this->generateFacultyCode($faculty, $request->facultyType);
+                // Directly update the faculty code in the database
+                //FacultyMaster::where('pk', $faculty->pk)->update(['faculty_code' => $faculty->faculty_code, 'last_update' => now()]);
+            FacultyMaster::where('pk', $faculty->pk)->update(['faculty_code' => $faculty->faculty_code]);
+                }
 
             if ($faculty) {
 
@@ -712,7 +779,7 @@ class FacultyController extends Controller
                         $expertiseDetails[] = [
                             'faculty_master_pk' => $faculty->pk,
                             'faculty_expertise_pk' => $expertise,
-                            'created_by' => 1,
+                            'created_by' => Auth::user()->user_id ?? 1,
                             'created_date' => now(),
                             'updated_date' => now(),
                         ];
@@ -722,7 +789,10 @@ class FacultyController extends Controller
                 }
             }
             DB::commit();
-           return response()->json([
+
+            FacultyDataTable::bumpListingCacheEpoch();
+
+            return response()->json([
                 'status' => true,
                 'message' => 'Faculty updated successfully',
                 'data' => $faculty
@@ -741,23 +811,28 @@ class FacultyController extends Controller
     }
     function generateFacultyCode($faculty, $facultyType)
     {
-        $prefix = FacultyTypeMaster::where('pk', $facultyType)->pluck('shot_faculty_type_name')->first();
+        $prefix = FacultyTypeMaster::where('pk', $facultyType)->value('shot_faculty_type_name');
 
-        // Fetch latest code with this prefix
+        if (empty($prefix)) {
+            return;
+        }
+
+        // Fetch latest code with this prefix, ordered by the numeric suffix
         $latestFaculty = FacultyMaster::where('faculty_code', 'like', $prefix . '-%')
-            ->orderByDesc('faculty_code')
+            ->where('pk', '!=', $faculty->pk)
+            ->orderByRaw('CAST(SUBSTRING_INDEX(faculty_code, \'-\', -1) AS UNSIGNED) DESC')
             ->first();
 
-        if ($latestFaculty && preg_match('/\d+$/', $latestFaculty->faculty_code, $matches)) {
-            $nextNumber = (int) $matches[0] + 1;
+        if ($latestFaculty && preg_match('/-0*(\d+)$/', $latestFaculty->faculty_code, $matches)) {
+            $nextNumber = (int) $matches[1] + 1;
         } else {
             $nextNumber = 1;
         }
 
         $facultyCode = $prefix . '-' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
 
+        // Set the faculty code on the object (caller will handle saving)
         $faculty->faculty_code = $facultyCode;
-        $faculty->save(); // or update() if you prefer
     }
 
     function show(String $id)
@@ -783,6 +858,31 @@ class FacultyController extends Controller
     function excelExportFaculty()
     {
         return Excel::download(new \App\Exports\FacultyExport(), 'faculty_list_'.time().'.xlsx');
+    }
+
+    public function generateFacultyCodeAjax(Request $request)
+    {
+        $facultyType = $request->faculty_type;
+
+        $prefix = FacultyTypeMaster::where('pk', $facultyType)->value('shot_faculty_type_name');
+
+        if (!$prefix) {
+            return response()->json(['status' => false, 'message' => 'Invalid faculty type'], 422);
+        }
+
+        $latestFaculty = FacultyMaster::where('faculty_code', 'like', $prefix . '-%')
+            ->orderByDesc('faculty_code')
+            ->first();
+
+        if ($latestFaculty && preg_match('/\d+$/', $latestFaculty->faculty_code, $matches)) {
+            $nextNumber = (int) $matches[0] + 1;
+        } else {
+            $nextNumber = 1;
+        }
+
+        $code = $prefix . '-' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
+
+        return response()->json(['status' => true, 'code' => $code]);
     }
 
 	//check existing record implemented
@@ -892,6 +992,14 @@ class FacultyController extends Controller
                 ], 404);
             }
 
+            // Restrict deletion of active faculty
+            if ($faculty->active_inactive == 1) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Active faculty cannot be deleted. Please deactivate the faculty first before deleting.'
+                ], 422);
+            }
+
             // Delete related records first
             // Delete qualifications and their uploaded certificates
             $qualifications = FacultyQualificationMap::where('faculty_master_pk', $faculty->pk)->get();
@@ -929,6 +1037,8 @@ class FacultyController extends Controller
             $faculty->delete();
 
             DB::commit();
+
+            FacultyDataTable::bumpListingCacheEpoch();
 
             return response()->json([
                 'status' => true,

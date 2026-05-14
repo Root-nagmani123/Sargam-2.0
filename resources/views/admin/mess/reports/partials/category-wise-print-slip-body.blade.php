@@ -88,6 +88,9 @@
                         $selectedCourse = $otCourses->firstWhere('pk', $first->client_type_pk ?? null);
                         if ($selectedCourse) {
                             $courseDisplay = $selectedCourse->course_name;
+                            if ((int) ($selectedCourse->active_inactive ?? 0) !== 1) {
+                                $courseDisplay .= ' (Archived)';
+                            }
                         }
                     }
                     $messClientCategory = $first->clientTypeCategory?->client_name ?? null;
@@ -123,7 +126,6 @@
                                     <thead>
                                         <tr>
                                             <th class="th-slip-no">Slip No.</th>
-                                            <th class="th-remark">Remark</th>
                                             <th class="th-item">Item Name</th>
                                             <th class="th-date">Request Date</th>
                                             <th class="th-qty">Quantity</th>
@@ -152,7 +154,6 @@
                                 <thead>
                                     <tr>
                                         <th class="th-slip-no">Slip No.</th>
-                                        <th class="th-remark">Remark</th>
                                         <th class="th-item">Item Name</th>
                                         <th class="th-date">Request Date</th>
                                         <th class="th-qty">Quantity</th>

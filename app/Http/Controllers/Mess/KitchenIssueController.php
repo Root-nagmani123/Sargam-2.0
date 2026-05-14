@@ -17,6 +17,7 @@ use App\Models\EmployeeMaster;
 use App\Models\DepartmentMaster;
 use App\Models\CourseMaster;
 use App\Models\StudentMaster;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -32,95 +33,19 @@ class KitchenIssueController extends Controller
      */
     public function index(Request $request)
     {
-        // This page lists only Selling Vouchers (type 1); data is in kitchen_issue_master + kitchen_issue_items
-        $query = KitchenIssueMaster::query()
-            ->select([
-                'pk',
-                'client_type',
-                'payment_type',
-                'client_name',
-                'store_id',
-                'store_type',
-                'status',
-                'client_type_pk',
-                'issue_date',
-                'created_at',
-            ])
-            ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
-            ->with([
-                'store:id,store_name',
-                'subStore:id,sub_store_name',
-                'items' => function ($q) {
-                    $q->select('pk', 'kitchen_issue_master_pk', 'item_subcategory_id', 'item_name', 'quantity', 'return_quantity')
-                        ->with('itemSubcategory');
-                },
-                'clientTypeCategory:id,client_name',
-                'course:pk,course_name',
-            ]);
+        // Listing rows load via AJAX (server-side DataTables — sellingVouchersDatatable).
 
-        if ($request->filled('store')) {
-            $storeFilter = $request->store;
-            // Handle both single value and array of values
-            $storeFilters = is_array($storeFilter) ? $storeFilter : [$storeFilter];
-            
-            $query->where(function ($q) use ($storeFilters) {
-                foreach ($storeFilters as $filter) {
-                    if (str_starts_with((string) $filter, 'sub_')) {
-                        $q->orWhere(function ($subQ) use ($filter) {
-                            $subQ->where('store_type', 'sub_store')
-                                 ->where('store_id', (int) str_replace('sub_', '', $filter));
-                        });
-                    } else {
-                        $q->orWhere(function ($subQ) use ($filter) {
-                            $subQ->where('store_type', 'store')
-                                 ->where('store_id', $filter);
-                        });
-                    }
-                }
-            });
-        }
-        if ($request->filled('status')) {
-            $statusFilter = $request->status;
-            // Handle both single value and array of values
-            if (is_array($statusFilter)) {
-                $query->whereIn('status', $statusFilter);
-            } else {
-                $query->where('status', $statusFilter);
-            }
-        }
-        if ($request->filled('payment_type')) {
-            $query->where('payment_type', $request->payment_type);
-        }
-        if ($request->filled('client_type')) {
-            $query->where('client_type', $request->client_type);
-        }
-        if ($request->filled('kitchen_issue_type')) {
-            $query->where('kitchen_issue_type', $request->kitchen_issue_type);
-        }
-        // Date filter: support only start_date, only end_date, or both
-        if (! $request->filled('start_date') && ! $request->filled('end_date')) {
-            // Match the filter UI default (start date shows today when no query string) so the first load
-            // does not pull the full historical table into memory for client-side DataTables.
-            $query->whereDate('issue_date', now()->toDateString());
-        }
-        if ($request->filled('start_date')) {
-            $query->where('issue_date', '>=', $request->start_date);
-        }
-        if ($request->filled('end_date')) {
-            $query->where('issue_date', '<=', $request->end_date);
-        }
-
-        // DataTables handles pagination/search on the client; return full filtered set (bounded by filters above).
-        $kitchenIssues = $query->orderBy('issue_date', 'desc')
-            ->orderBy('pk', 'desc')
-            ->get();
-
-        $otCourses = CourseMaster::where('active_inactive', 1)
-            ->where(function ($q) {
-                $q->whereNull('end_date')->orWhere('end_date', '>=', now()->toDateString());
-            })
+        // All courses (active + archived) for Client Name dropdown; label in UI via active_inactive.
+        // Course end date before today is treated as archived (same idea as course list filters).
+        $otCourses = CourseMaster::orderByDesc('active_inactive')
             ->orderBy('course_name')
-            ->get(['pk', 'course_name']);
+            ->get(['pk', 'course_name', 'active_inactive', 'end_date']);
+        $today = Carbon::today();
+        $otCourses->each(function ($course) use ($today) {
+            if (filled($course->end_date) && Carbon::parse($course->end_date)->lt($today)) {
+                $course->active_inactive = 0;
+            }
+        });
 
         // Get active stores and sub-stores
         $stores = Store::active()->get(['id', 'store_name'])->map(function ($store) {
@@ -234,7 +159,455 @@ class KitchenIssueController extends Controller
                 ->values()
             : collect();
 
-        return view('mess.kitchen-issues.index', compact('kitchenIssues', 'stores', 'itemSubcategories', 'clientTypes', 'clientNamesByType', 'faculties', 'employees', 'messStaff', 'otCourses'));
+        $selectedClientType = (string) $request->input('client_type', '');
+        $selectedClientTypePk = (string) $request->input('client_type_pk', '');
+        $selectedBuyerName = trim((string) $request->input('buyer_name', ''));
+
+        $typeSlugMap = [
+            (string) KitchenIssueMaster::CLIENT_EMPLOYEE => 'employee',
+            (string) KitchenIssueMaster::CLIENT_OT => 'ot',
+            (string) KitchenIssueMaster::CLIENT_COURSE => 'course',
+            (string) KitchenIssueMaster::CLIENT_SECTION => 'section',
+            (string) KitchenIssueMaster::CLIENT_OTHER => 'other',
+        ];
+        $selectedTypeSlug = $typeSlugMap[$selectedClientType] ?? '';
+
+        $filterClientTypePkOptions = collect();
+        if (in_array($selectedTypeSlug, ['ot', 'course'], true)) {
+            $filterClientTypePkOptions = $otCourses->map(function ($course) {
+                return [
+                    'value' => (string) $course->pk,
+                    'text' => (string) $course->course_name,
+                ];
+            })->values();
+        } elseif ($selectedTypeSlug !== '' && isset($clientNamesByType[$selectedTypeSlug])) {
+            $filterClientTypePkOptions = $clientNamesByType[$selectedTypeSlug]
+                ->map(function ($category) {
+                    return [
+                        'value' => (string) $category->id,
+                        'text' => (string) $category->client_name,
+                    ];
+                })
+                ->values();
+        }
+
+        $filterBuyerNames = collect();
+        if ($selectedTypeSlug === 'employee' && $selectedClientTypePk !== '') {
+            $selectedEmployeeBucket = strtolower(trim((string) $filterClientTypePkOptions
+                ->firstWhere('value', $selectedClientTypePk)['text'] ?? ''));
+            if ($selectedEmployeeBucket === 'academy staff') {
+                $filterBuyerNames = $employees->pluck('full_name')->filter()->values();
+            } elseif ($selectedEmployeeBucket === 'faculty') {
+                $filterBuyerNames = $faculties->pluck('full_name')->filter()->values();
+            } elseif ($selectedEmployeeBucket === 'mess staff') {
+                $filterBuyerNames = $messStaff->pluck('full_name')->filter()->values();
+            }
+        } elseif ($selectedTypeSlug === 'ot' && $selectedClientTypePk !== '') {
+            $filterBuyerNames = StudentMaster::join('student_master_course__map', 'student_master.pk', '=', 'student_master_course__map.student_master_pk')
+                ->where('student_master_course__map.course_master_pk', (int) $selectedClientTypePk)
+                ->select('student_master.display_name', 'student_master.generated_OT_code')
+                ->orderBy('student_master.display_name')
+                ->get()
+                ->map(function ($student) {
+                    $displayName = trim((string) ($student->display_name ?? ''));
+                    $otCode = trim((string) ($student->generated_OT_code ?? ''));
+                    if ($displayName === '') {
+                        return null;
+                    }
+                    return $otCode !== '' ? ($displayName . ' (' . $otCode . ')') : $displayName;
+                })
+                ->filter()
+                ->values();
+        } elseif (in_array($selectedTypeSlug, ['course', 'section', 'other'], true) && $selectedClientTypePk !== '') {
+            $typeToNumber = [
+                'course' => KitchenIssueMaster::CLIENT_COURSE,
+                'section' => KitchenIssueMaster::CLIENT_SECTION,
+                'other' => KitchenIssueMaster::CLIENT_OTHER,
+            ];
+            $filterBuyerNames = KitchenIssueMaster::query()
+                ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+                ->where('client_type', $typeToNumber[$selectedTypeSlug])
+                ->where('client_type_pk', (int) $selectedClientTypePk)
+                ->whereNotNull('client_name')
+                ->where('client_name', '!=', '')
+                ->distinct()
+                ->orderBy('client_name')
+                ->pluck('client_name')
+                ->map(fn ($name) => trim((string) $name))
+                ->filter()
+                ->values();
+        }
+
+        return view('mess.kitchen-issues.index', compact(
+            'stores',
+            'itemSubcategories',
+            'clientTypes',
+            'clientNamesByType',
+            'faculties',
+            'employees',
+            'messStaff',
+            'otCourses',
+            'selectedClientType',
+            'selectedClientTypePk',
+            'selectedBuyerName',
+            'filterClientTypePkOptions',
+            'filterBuyerNames'
+        ));
+    }
+
+    /**
+     * Server-side DataTables JSON for Selling Voucher listing (one row per item line).
+     */
+    public function sellingVouchersDatatable(Request $request)
+    {
+        $draw = (int) $request->input('draw', 1);
+        $start = max(0, (int) $request->input('start', 0));
+        $length = (int) $request->input('length', 10);
+        if ($length < 1 || $length > 100) {
+            $length = 10;
+        }
+
+        $searchRaw = '';
+        $searchPayload = $request->input('search');
+        if (is_array($searchPayload) && isset($searchPayload['value'])) {
+            $searchRaw = (string) $searchPayload['value'];
+        }
+
+        $base = $this->sellingVoucherItemRowsBaseQuery($request);
+        $recordsTotal = (clone $base)->count('kii.pk');
+
+        $filtered = clone $base;
+        $this->applySellingVoucherItemSearch($filtered, $searchRaw);
+
+        // When the DataTables global search is empty, the filtered query matches `$base`; avoid a second COUNT.
+        $searchTrimmed = trim($searchRaw);
+        $recordsFiltered = $searchTrimmed === ''
+            ? $recordsTotal
+            : (clone $filtered)->count('kii.pk');
+
+        $rows = (clone $filtered)
+            ->orderByDesc('kim.issue_date')
+            ->orderByDesc('kim.pk')
+            ->orderByDesc('kii.pk')
+            ->offset($start)
+            ->limit($length)
+            ->get();
+
+        $canDeleteSellingVoucher = hasRole('Admin') || hasRole('Mess-Admin');
+
+        $data = [];
+        foreach ($rows as $idx => $row) {
+            $data[] = $this->buildSellingVoucherDatatableRow(
+                $row,
+                $start + $idx + 1,
+                $canDeleteSellingVoucher
+            );
+        }
+
+        return response()->json([
+            'draw' => $draw,
+            'recordsTotal' => $recordsTotal,
+            'recordsFiltered' => $recordsFiltered,
+            'data' => $data,
+        ]);
+    }
+
+    /**
+     * SQL fragment for subcategory display label (DBs may have item_name, subcategory_name, or name only).
+     */
+    private function messSubcategoryDisplayCoalesceSql(): string
+    {
+        $parts = [];
+        if (Schema::hasColumn('mess_item_subcategories', 'item_name')) {
+            $parts[] = 'mis.item_name';
+        }
+        if (Schema::hasColumn('mess_item_subcategories', 'subcategory_name')) {
+            $parts[] = 'mis.subcategory_name';
+        }
+        if (Schema::hasColumn('mess_item_subcategories', 'name')) {
+            $parts[] = 'mis.name';
+        }
+
+        return $parts === [] ? 'NULL' : ('COALESCE(' . implode(',', $parts) . ')');
+    }
+
+    /** @return string[] Qualified columns on alias mis for LIKE search */
+    private function messSubcategorySearchColumns(): array
+    {
+        $cols = [];
+        foreach (['item_name', 'subcategory_name', 'name'] as $c) {
+            if (Schema::hasColumn('mess_item_subcategories', $c)) {
+                $cols[] = 'mis.' . $c;
+            }
+        }
+
+        return $cols;
+    }
+
+    /**
+     * @return Builder
+     */
+    private function sellingVoucherItemRowsBaseQuery(Request $request)
+    {
+        $q = DB::table('kitchen_issue_items as kii')
+            ->join('kitchen_issue_master as kim', 'kii.kitchen_issue_master_pk', '=', 'kim.pk')
+            ->leftJoin('mess_item_subcategories as mis', 'kii.item_subcategory_id', '=', 'mis.id')
+            ->leftJoin('mess_stores as ms', function ($join) {
+                $join->on('kim.store_id', '=', 'ms.id')
+                    ->where('kim.store_type', '=', 'store');
+            })
+            ->leftJoin('mess_sub_stores as mss', function ($join) {
+                $join->on('kim.store_id', '=', 'mss.id')
+                    ->where('kim.store_type', '=', 'sub_store');
+            })
+            ->leftJoin('course_master as cm', function ($join) {
+                $join->on('kim.client_type_pk', '=', 'cm.pk')
+                    ->whereIn('kim.client_type', [KitchenIssueMaster::CLIENT_OT, KitchenIssueMaster::CLIENT_COURSE]);
+            })
+            ->leftJoin('mess_client_types as mct', function ($join) {
+                $join->on('kim.client_type_pk', '=', 'mct.id')
+                    ->whereNotIn('kim.client_type', [KitchenIssueMaster::CLIENT_OT, KitchenIssueMaster::CLIENT_COURSE]);
+            })
+            ->where('kim.kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER);
+
+        $misLabelSql = $this->messSubcategoryDisplayCoalesceSql();
+
+        $q->select([
+                'kii.pk as item_pk',
+                'kim.pk as voucher_pk',
+                'kii.item_name',
+                'kii.quantity',
+                'kii.return_quantity',
+                'kim.client_name as voucher_client_name',
+                'kim.payment_type',
+                'kim.status',
+                'kim.created_at',
+                DB::raw($misLabelSql . ' as sub_item_name'),
+                DB::raw($misLabelSql . ' as sub_name'),
+                DB::raw("(CASE
+                    WHEN kim.store_type = 'sub_store' AND mss.sub_store_name IS NOT NULL THEN CONCAT(mss.sub_store_name, ' (Sub-Store)')
+                    WHEN kim.store_type = 'store' AND ms.store_name IS NOT NULL THEN ms.store_name
+                    ELSE 'N/A' END) as resolved_store_name"),
+                DB::raw('(CASE kim.client_type
+                    WHEN 1 THEN \'Employee\' WHEN 2 THEN \'OT\' WHEN 3 THEN \'Course\'
+                    WHEN 4 THEN \'Other\' WHEN 5 THEN \'Section\' ELSE \'Unknown\' END) as client_type_label'),
+                DB::raw("(CASE
+                    WHEN kim.client_type IN (2, 3) AND cm.course_name IS NOT NULL THEN cm.course_name
+                    ELSE COALESCE(mct.client_name, '—') END) as display_client_name"),
+            ]);
+
+        if ($request->filled('store')) {
+            $storeFilter = $request->store;
+            $storeFilters = is_array($storeFilter) ? $storeFilter : [$storeFilter];
+            $q->where(function ($sub) use ($storeFilters) {
+                foreach ($storeFilters as $filter) {
+                    if (str_starts_with((string) $filter, 'sub_')) {
+                        $sub->orWhere(function ($subQ) use ($filter) {
+                            $subQ->where('kim.store_type', 'sub_store')
+                                ->where('kim.store_id', (int) str_replace('sub_', '', $filter));
+                        });
+                    } else {
+                        $sub->orWhere(function ($subQ) use ($filter) {
+                            $subQ->where('kim.store_type', 'store')
+                                ->where('kim.store_id', $filter);
+                        });
+                    }
+                }
+            });
+        }
+
+        if ($request->filled('status')) {
+            $statusFilter = $request->status;
+            if (is_array($statusFilter)) {
+                $q->whereIn('kim.status', $statusFilter);
+            } else {
+                $q->where('kim.status', $statusFilter);
+            }
+        }
+
+        if ($request->filled('payment_type')) {
+            $q->where('kim.payment_type', $request->payment_type);
+        }
+
+        if ($request->filled('client_type')) {
+            $q->where('kim.client_type', $request->client_type);
+        }
+        if ($request->filled('client_type_pk')) {
+            $q->where('kim.client_type_pk', (int) $request->input('client_type_pk'));
+        }
+        if ($request->filled('buyer_name')) {
+            $q->where('kim.client_name', trim((string) $request->input('buyer_name')));
+        }
+
+        if (! $request->filled('start_date') && ! $request->filled('end_date')) {
+            $q->whereDate('kim.issue_date', '>=', now()->subDays(30)->toDateString());
+        }
+        if ($request->filled('start_date')) {
+            $q->where('kim.issue_date', '>=', $request->start_date);
+        }
+        if ($request->filled('end_date')) {
+            $q->where('kim.issue_date', '<=', $request->end_date);
+        }
+
+        $returnStatus = strtolower(trim((string) $request->input('return_status', '')));
+        if ($returnStatus === 'returned') {
+            $q->where(DB::raw('COALESCE(kii.return_quantity, 0)'), '>', 0);
+        } elseif ($returnStatus === 'not_returned') {
+            $q->where(function ($rq) {
+                $rq->whereNull('kii.return_quantity')->orWhere('kii.return_quantity', '<=', 0);
+            });
+        }
+
+        return $q;
+    }
+
+    private function applySellingVoucherItemSearch(Builder $q, string $search): void
+    {
+        $search = trim($search);
+        if ($search === '') {
+            return;
+        }
+
+        $term = '%' . addcslashes($search, '%_\\') . '%';
+        $needle = strtolower($search);
+        $misCols = $this->messSubcategorySearchColumns();
+
+        $q->where(function ($w) use ($term, $needle, $search, $misCols) {
+            $w->where('kii.item_name', 'like', $term);
+            foreach ($misCols as $col) {
+                $w->orWhere($col, 'like', $term);
+            }
+            $w->orWhere('kim.client_name', 'like', $term)
+                ->orWhere('ms.store_name', 'like', $term)
+                ->orWhere('mss.sub_store_name', 'like', $term)
+                ->orWhere('cm.course_name', 'like', $term)
+                ->orWhere('mct.client_name', 'like', $term)
+                ->orWhereRaw(
+                    '(CASE kim.client_type
+                        WHEN ? THEN \'employee\' WHEN ? THEN \'ot\' WHEN ? THEN \'course\'
+                        WHEN ? THEN \'section\' WHEN ? THEN \'other\' ELSE \'\' END) LIKE ?',
+                    [
+                        KitchenIssueMaster::CLIENT_EMPLOYEE,
+                        KitchenIssueMaster::CLIENT_OT,
+                        KitchenIssueMaster::CLIENT_COURSE,
+                        KitchenIssueMaster::CLIENT_SECTION,
+                        KitchenIssueMaster::CLIENT_OTHER,
+                        $term,
+                    ]
+                );
+
+            if (is_numeric($search)) {
+                $w->orWhere('kii.quantity', 'like', $term)->orWhere('kii.return_quantity', 'like', $term);
+            }
+
+            if (str_contains($needle, 'credit')) {
+                $w->orWhere('kim.payment_type', KitchenIssueMaster::PAYMENT_CREDIT);
+            }
+            if (str_contains($needle, 'cash')) {
+                $w->orWhere('kim.payment_type', KitchenIssueMaster::PAYMENT_CASH);
+            }
+            if (str_contains($needle, 'upi') || str_contains($needle, 'online')) {
+                $w->orWhere('kim.payment_type', KitchenIssueMaster::PAYMENT_ONLINE);
+            }
+            if (str_contains($needle, 'pending')) {
+                $w->orWhere('kim.status', KitchenIssueMaster::STATUS_PENDING);
+            }
+            if (str_contains($needle, 'approv')) {
+                $w->orWhere('kim.status', KitchenIssueMaster::STATUS_APPROVED);
+            }
+            if (str_contains($needle, 'complet')) {
+                $w->orWhere('kim.status', KitchenIssueMaster::STATUS_COMPLETED);
+            }
+            if (str_contains($needle, 'return')) {
+                $w->orWhere(DB::raw('COALESCE(kii.return_quantity, 0)'), '>', 0);
+            }
+        });
+    }
+
+    /**
+     * @param  \stdClass  $row  Selected columns + joined fields
+     * @return array<int, string>
+     */
+    private function buildSellingVoucherDatatableRow(\stdClass $row, int $serial, bool $canDeleteSellingVoucher): array
+    {
+        $pk = (int) $row->voucher_pk;
+        $rq = isset($row->return_quantity) ? (float) $row->return_quantity : 0.0;
+        $status = isset($row->status) ? (int) $row->status : 0;
+        $paymentType = isset($row->payment_type) ? (int) $row->payment_type : -1;
+
+        $itemCell = '';
+        $rawItemName = trim((string) ($row->item_name ?? ''));
+        if ($rawItemName !== '') {
+            $itemCell = e($rawItemName);
+        } else {
+            $fallback = trim((string) (($row->sub_item_name ?? null) ?: ($row->sub_name ?? '') ?: ''));
+            $itemCell = $fallback !== '' ? e($fallback) : '—';
+        }
+
+        $paymentHtml = '<span class="text-muted">—</span>';
+        if ($paymentType === KitchenIssueMaster::PAYMENT_CREDIT) {
+            $paymentHtml = '<span class="badge rounded-pill text-bg-warning">Credit</span>';
+        } elseif ($paymentType === KitchenIssueMaster::PAYMENT_CASH) {
+            $paymentHtml = '<span class="badge rounded-pill text-bg-secondary">Cash</span>';
+        } elseif ($paymentType === KitchenIssueMaster::PAYMENT_ONLINE) {
+            $paymentHtml = '<span class="badge rounded-pill text-bg-info">UPI</span>';
+        }
+
+        $statusHtml = '<span class="badge rounded-pill text-bg-secondary">'.e((string) $status).'</span>';
+        if ($status === KitchenIssueMaster::STATUS_PENDING) {
+            $statusHtml = '<span class="badge rounded-pill text-bg-warning">Pending</span>';
+        } elseif ($status === KitchenIssueMaster::STATUS_APPROVED) {
+            $statusHtml = '<span class="badge rounded-pill text-bg-success">Approved</span>';
+        } elseif ($status === KitchenIssueMaster::STATUS_COMPLETED) {
+            $statusHtml = '<span class="badge rounded-pill text-bg-primary">Completed</span>';
+        }
+
+        $reqDateRaw = $row->created_at ?? '';
+        $reqDate = '—';
+        if ($reqDateRaw) {
+            try {
+                $reqDate = Carbon::parse($reqDateRaw)->format('d/m/Y');
+            } catch (\Exception $e) {
+                $reqDate = '—';
+            }
+        }
+
+        $returnBadge = '';
+        if ($rq > 0) {
+            $returnBadge = '<span class="badge rounded-pill text-bg-info">Returned</span>';
+        }
+
+        $deleteForm = '';
+        if ($canDeleteSellingVoucher) {
+            $destroyUrl = route('admin.mess.material-management.destroy', $pk);
+            $deleteForm = '<form action="'.e($destroyUrl).'" method="POST" class="d-inline m-0" onsubmit="return confirm(\'Are you sure you want to delete this Selling Voucher?\');">'
+                .csrf_field()
+                .method_field('DELETE')
+                .'<button type="submit" class="btn btn-sm btn-light border rounded-circle p-0 d-inline-flex align-items-center justify-content-center" style="width: 2.25rem; height: 2.25rem;" title="Delete" aria-label="Delete voucher"><i class="material-symbols-rounded text-danger" style="font-size: 1.125rem;">delete</i></button></form>';
+        }
+
+        $editDisabled = $status === KitchenIssueMaster::STATUS_APPROVED ? ' disabled' : '';
+
+        return [
+            '<span class="text-muted font-monospace">'.e((string) $serial).'</span>',
+            '<span class="fw-medium">'.$itemCell.'</span>',
+            '<span class="font-monospace">'.e((string) ($row->quantity ?? '')).'</span>',
+            '<span class="font-monospace">'.e((string) ($row->return_quantity ?? 0)).'</span>',
+            e((string) ($row->resolved_store_name ?? 'N/A')),
+            e((string) ($row->client_type_label ?? '—')),
+            e((string) ($row->display_client_name ?? '—')),
+            e((string) ($row->voucher_client_name ?? '—')),
+            $paymentHtml,
+            '<span class="text-nowrap">'.e($reqDate).'</span>',
+            $statusHtml,
+            '<div class="d-flex flex-wrap gap-2 align-items-center justify-content-center">'.$returnBadge
+                .'<button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 btn-return-sv" data-voucher-id="'.e((string) $pk).'" title="Return">Return</button></div>',
+            '<div class="d-inline-flex align-items-center justify-content-center gap-1">'
+                .'<button type="button" class="btn btn-sm btn-light border btn-view-sv rounded-circle p-0 d-inline-flex align-items-center justify-content-center" style="width: 2.25rem; height: 2.25rem;" data-voucher-id="'.e((string) $pk).'" title="View" aria-label="View voucher"><i class="material-symbols-rounded text-primary" style="font-size: 1.125rem;">visibility</i></button>'
+                .'<button type="button" class="btn btn-sm btn-light border btn-edit-sv rounded-circle p-0 d-inline-flex align-items-center justify-content-center" style="width: 2.25rem; height: 2.25rem;" data-voucher-id="'.e((string) $pk).'" title="'.($status === KitchenIssueMaster::STATUS_APPROVED ? e('Edit is disabled for approved voucher') : 'Edit').'" aria-label="Edit voucher"'.$editDisabled.'><i class="material-symbols-rounded text-warning" style="font-size: 1.125rem;">edit</i></button>'
+                .$deleteForm
+                .'</div>',
+        ];
     }
 
     /**
@@ -426,8 +799,7 @@ class KitchenIssueController extends Controller
             }],
             'payment_type' => 'required|integer|in:0,1,2',
             'client_type_slug' => 'required|string|in:employee,ot,course,section,other',
-            'client_type_pk' => ['nullable', function ($attribute, $value, $fail) use ($request) {
-                if ($value === null || $value === '') return;
+            'client_type_pk' => ['required', 'integer', 'min:1', function ($attribute, $value, $fail) use ($request) {
                 $slug = $request->client_type_slug ?? '';
                 if (in_array($slug, ['employee', 'section', 'other']) && !\App\Models\Mess\ClientType::where('id', $value)->exists()) {
                     $fail('The selected client is invalid.');
@@ -802,8 +1174,7 @@ class KitchenIssueController extends Controller
             }],
             'payment_type' => 'required|integer|in:0,1,2',
             'client_type_slug' => 'required|string|in:employee,ot,course,section,other',
-            'client_type_pk' => ['nullable', function ($attribute, $value, $fail) use ($request) {
-                if ($value === null || $value === '') return;
+            'client_type_pk' => ['required', 'integer', 'min:1', function ($attribute, $value, $fail) use ($request) {
                 $slug = $request->client_type_slug ?? '';
                 if (in_array($slug, ['employee', 'section', 'other']) && !\App\Models\Mess\ClientType::where('id', $value)->exists()) {
                     $fail('The selected client is invalid.');
@@ -983,12 +1354,15 @@ class KitchenIssueController extends Controller
             return redirect()->route('admin.mess.material-management.index');
         }
 
-        $items = $kitchenIssue->items->map(function ($item) {
+        $issueYmd = $kitchenIssue->issue_date ? $kitchenIssue->issue_date->format('Y-m-d') : '';
+
+        $items = $kitchenIssue->items->map(function ($item) use ($issueYmd) {
             return [
                 'id' => $item->pk,
                 'item_name' => $item->item_name ?: ($item->itemSubcategory->item_name ?? '—'),
                 'quantity' => (float) $item->quantity,
                 'unit' => $item->unit ?? '—',
+                'issue_date' => $issueYmd,
                 'return_quantity' => (float) ($item->return_quantity ?? 0),
                 'return_date' => $item->return_date ? $item->return_date->format('Y-m-d') : '',
             ];
@@ -996,7 +1370,7 @@ class KitchenIssueController extends Controller
 
         return response()->json([
             'store_name' => $kitchenIssue->resolved_store_name,
-            'issue_date' => $kitchenIssue->issue_date ? $kitchenIssue->issue_date->format('Y-m-d') : '',
+            'issue_date' => $issueYmd,
             'items' => $items,
         ]);
     }
@@ -1035,29 +1409,20 @@ class KitchenIssueController extends Controller
                     DB::rollBack();
                     return back()->withInput()->with('error', 'Return quantity cannot be greater than issued quantity.');
                 }
-                if (!empty($returnDate) && $kitchenIssue->issue_date) {
-                    try {
-                        $ret = Carbon::parse($returnDate)->startOfDay();
-                        $iss = Carbon::parse($kitchenIssue->issue_date)->startOfDay();
-                        if ($ret->gt(now()->startOfDay())) {
-                            DB::rollBack();
-                            return back()->withInput()->with('error', 'Return date cannot be in the future.');
-                        }
-                        if ($ret->lt($iss)) {
-                            DB::rollBack();
-                            return back()->withInput()->with('error', 'Return date cannot be earlier than issue date.');
-                        }
-                    } catch (\Exception $e) {
-                        DB::rollBack();
-                        return back()->withInput()->with('error', 'Invalid return date.');
-                    }
-                }
-                if (!empty($returnDate) && !$kitchenIssue->issue_date) {
+                if (!empty($returnDate)) {
                     try {
                         $ret = Carbon::parse($returnDate)->startOfDay();
                         if ($ret->gt(now()->startOfDay())) {
                             DB::rollBack();
                             return back()->withInput()->with('error', 'Return date cannot be in the future.');
+                        }
+                        $effectiveIssue = $item->issue_date ?? $kitchenIssue->issue_date;
+                        if ($effectiveIssue) {
+                            $iss = Carbon::parse($effectiveIssue)->startOfDay();
+                            if ($ret->lt($iss)) {
+                                DB::rollBack();
+                                return back()->withInput()->with('error', 'Return date cannot be earlier than issue date.');
+                            }
                         }
                     } catch (\Exception $e) {
                         DB::rollBack();
@@ -1341,4 +1706,5 @@ class KitchenIssueController extends Controller
 
         return response()->json($items->values());
     }
+
 }

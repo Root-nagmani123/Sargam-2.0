@@ -11,6 +11,7 @@ use App\Models\{EmployeeMaster, CourseMaster, FacultyMaster, UserRoleMaster};
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Crypt;
 use App\DataTables\CourseMasterDataTable;
+use App\Support\DataTableRedisCache;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use App\Services\CourseService;
@@ -22,18 +23,33 @@ class CourseController extends Controller
     
     public function index(CourseMasterDataTable $dataTable)
     {
-        $data_course_id =  get_Role_by_course();
+        $data_course_id = get_Role_by_course();
 
         // Default to active courses (matching the default status filter)
         $currentDate = Carbon::now()->format('Y-m-d');
-        $courses = CourseMaster::where('end_date', '>=', $currentDate);
-          if(!empty($data_course_id))
-            {
-                $courses = $courses->whereIn('pk',$data_course_id);
+        $epoch = DataTableRedisCache::readListEpoch(CourseMasterDataTable::LISTING_CACHE_EPOCH_KEY);
+        $cacheKey = 'programme_index_course_filter_options:v1:' . md5(json_encode([
+            'epoch' => $epoch,
+            'data_course_id' => $data_course_id,
+            'date' => $currentDate,
+        ]));
+
+        $courses = DataTableRedisCache::remember(
+            $cacheKey,
+            [
+                'enabled' => 'PROGRAMME_DATATABLE_CACHE_ENABLED',
+                'seconds' => 'PROGRAMME_DATATABLE_CACHE_SECONDS',
+            ],
+            'CourseController@programmeIndexCourseOptions',
+            function () use ($data_course_id, $currentDate) {
+                $q = CourseMaster::where('end_date', '>=', $currentDate);
+                if (! empty($data_course_id)) {
+                    $q->whereIn('pk', $data_course_id);
+                }
+
+                return $q->orderBy('course_name')->pluck('course_name', 'pk')->toArray();
             }
-            $courses = $courses->orderBy('course_name')
-            ->pluck('course_name', 'pk')
-            ->toArray();
+        );
 
         return $dataTable->render('admin.programme.index', compact('courses'));
     }
@@ -42,23 +58,38 @@ class CourseController extends Controller
     {
         $status = $request->input('status', 'active');
         $currentDate = Carbon::now()->format('Y-m-d');
+        $epoch = DataTableRedisCache::readListEpoch(CourseMasterDataTable::LISTING_CACHE_EPOCH_KEY);
+        $cacheKey = 'programme_get_courses_by_status:v1:' . md5(json_encode([
+            'epoch' => $epoch,
+            'status' => $status,
+            'date' => $currentDate,
+        ]));
 
-        if ($status === 'active') {
-            $courses = CourseMaster::where('end_date', '>=', $currentDate)
-                ->orderBy('course_name')
-                ->pluck('course_name', 'pk')
-                ->toArray();
-        } else {
-            $courses = CourseMaster::where('end_date', '<', $currentDate)
-                ->orderBy('course_name')
-                ->pluck('course_name', 'pk')
-                ->toArray();
-        }
+        $payload = DataTableRedisCache::remember(
+            $cacheKey,
+            [
+                'enabled' => 'PROGRAMME_DATATABLE_CACHE_ENABLED',
+                'seconds' => 'PROGRAMME_DATATABLE_CACHE_SECONDS',
+            ],
+            'CourseController@getCoursesByStatus',
+            function () use ($status, $currentDate) {
+                if ($status === 'active') {
+                    $courses = CourseMaster::where('end_date', '>=', $currentDate)
+                        ->orderBy('course_name')
+                        ->pluck('course_name', 'pk')
+                        ->toArray();
+                } else {
+                    $courses = CourseMaster::where('end_date', '<', $currentDate)
+                        ->orderBy('course_name')
+                        ->pluck('course_name', 'pk')
+                        ->toArray();
+                }
 
-        return response()->json([
-            'success' => true,
-            'courses' => $courses
-        ]);
+                return ['success' => true, 'courses' => $courses];
+            }
+        );
+
+        return response()->json($payload);
     }
 
     public function create()
@@ -125,6 +156,9 @@ class CourseController extends Controller
             $courseService->createOrUpdateCourse($validated, $request->course_id);
 
             DB::commit();
+
+            CourseMasterDataTable::bumpListingCacheEpoch();
+
             return redirect()->route('programme.index')->with('success', 'Course created successfully');
 
         } catch (\Exception $e) {
@@ -376,6 +410,9 @@ class CourseController extends Controller
             $course->delete();
             
             DB::commit();
+
+            CourseMasterDataTable::bumpListingCacheEpoch();
+
             return redirect()->route('programme.index')->with('success', 'Course deleted successfully');
         } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
             DB::rollBack();

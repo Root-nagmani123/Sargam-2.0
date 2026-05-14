@@ -63,4 +63,21 @@ class PurchaseOrder extends Model
     {
         return $this->belongsTo(\App\Models\User::class, 'approved_by');
     }
+
+    /**
+     * Single bill-group header line for Stock Purchase Details (screen, PDF, Excel).
+     * Shows system PO number and manual vendor invoice number (bill_no) when captured.
+     */
+    public function stockPurchaseReportBillLabel(): string
+    {
+        $storeName = optional($this->store)->store_name ?? 'N/A';
+        $poRef = $this->po_number ?? $this->id;
+        $manual = trim((string) ($this->bill_no ?? ''));
+        $manualDisplay = $manual !== '' ? $manual : '—';
+        $dateStr = $this->po_date ? $this->po_date->format('d-m-Y') : 'N/A';
+
+        return $storeName . '(Primary) PO No. ' . $poRef
+            . ' | Invoice/Bill No. ' . $manualDisplay
+            . ' (' . $dateStr . ')';
+    }
 }

@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Process Mess Bills')
-@section('setup_content')
+@section('content')
 <div class="container-fluid py-3 py-md-4 process-mess-bills-employee-report">
     <x-breadcrum title="Process Mess Bills"></x-breadcrum>
     {{-- Report Header (Print Only) --}}
@@ -48,7 +48,7 @@
                     </div>
                     <div>
                         <div class="text-muted small text-uppercase fw-semibold mb-1">Total Bills</div>
-                        <div class="fs-3 fw-bold text-dark">{{ number_format($stats['total_bills']) }}</div>
+                        <div class="fs-3 fw-bold text-dark" id="process-mess-stats-total-bills">{{ number_format($stats['total_bills']) }}</div>
                     </div>
                 </div>
             </div>
@@ -61,7 +61,7 @@
                     </div>
                     <div>
                         <div class="text-muted small text-uppercase fw-semibold mb-1">Unpaid</div>
-                        <div class="fs-3 fw-bold text-dark">{{ number_format($stats['unpaid_count']) }}</div>
+                        <div class="fs-3 fw-bold text-dark" id="process-mess-stats-unpaid">{{ number_format($stats['unpaid_count']) }}</div>
                     </div>
                 </div>
             </div>
@@ -74,7 +74,7 @@
                     </div>
                     <div>
                         <div class="text-muted small text-uppercase fw-semibold mb-1">Paid</div>
-                        <div class="fs-3 fw-bold text-dark">{{ number_format($stats['paid_count']) }}</div>
+                        <div class="fs-3 fw-bold text-dark" id="process-mess-stats-paid">{{ number_format($stats['paid_count']) }}</div>
                     </div>
                 </div>
             </div>
@@ -87,7 +87,7 @@
                     </div>
                     <div>
                         <div class="text-muted small text-uppercase fw-semibold mb-1">Total Amount</div>
-                        <div class="fs-3 fw-bold text-dark">₹ {{ number_format($stats['total_amount'], 2) }}</div>
+                        <div class="fs-3 fw-bold text-dark" id="process-mess-stats-total-amount">₹ {{ number_format($stats['total_amount'], 2) }}</div>
                     </div>
                 </div>
             </div>
@@ -289,7 +289,39 @@
     'orderColumn' => [[0, 'asc']],
     'actionColumnIndex' => 8,
     'infoLabel' => 'bills',
+    'serverSide' => true,
+    'ajaxUrlBase' => route('admin.mess.process-mess-bills-employee.index'),
 ])
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof window.jQuery === 'undefined') return;
+    var $ = window.jQuery;
+    var $table = $('#processMessBillsTable');
+    if (!$table.length) return;
+    $table.on('xhr.dt', function(e, settings, json) {
+        if (!json || !json.stats) return;
+        var s = json.stats;
+        var fmtInt = function(n) { return String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ','); };
+        var fmtAmt = function(n) {
+            var x = Number(n) || 0;
+            var parts = x.toFixed(2).split('.');
+            parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            return parts.join('.');
+        };
+        var elTotal = document.getElementById('process-mess-stats-total-bills');
+        var elUnpaid = document.getElementById('process-mess-stats-unpaid');
+        var elPaid = document.getElementById('process-mess-stats-paid');
+        var elAmt = document.getElementById('process-mess-stats-total-amount');
+        if (elTotal) elTotal.textContent = fmtInt(s.total_bills);
+        if (elUnpaid) elUnpaid.textContent = fmtInt(s.unpaid_count);
+        if (elPaid) elPaid.textContent = fmtInt(s.paid_count);
+        if (elAmt) elAmt.textContent = '₹ ' + fmtAmt(s.total_amount);
+    });
+});
+</script>
+@endpush
 
 {{-- Toast container for feedback --}}
 <div class="toast-container position-fixed bottom-0 end-0 p-3 no-print" id="processBillsToastContainer"></div>
@@ -934,6 +966,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     var modalBillsData = [];
     var modalBillsCurrentPage = 1;
+    var modalBillsTotal = 0;
+    var modalBillsFrom = 0;
+    var modalBillsTo = 0;
+    var modalAllBuyerNames = {!! json_encode(($allBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
     var paymentDetailsBillId = null;
     var paymentDetailsDateFrom = null;
     var paymentDetailsDateTo = null;
@@ -946,6 +982,17 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!val || !String(val).match(/^\d{1,2}-\d{1,2}-\d{4}$/)) return val;
         var p = String(val).split('-');
         return p[2] + '-' + p[1] + '-' + p[0];
+    }
+
+    /** Prefer Flatpickr's selected date so the modal request matches the picker (avoids stale input vs calendar). */
+    function getModalDateYmd(inputId) {
+        var el = document.getElementById(inputId);
+        if (!el) return '';
+        var fp = el._flatpickr;
+        if (fp && fp.selectedDates && fp.selectedDates.length > 0 && typeof fp.formatDate === 'function') {
+            return fp.formatDate(fp.selectedDates[0], 'Y-m-d');
+        }
+        return el.value ? toYmd(el.value) : '';
     }
 
     function showToast(message, type) {
@@ -961,21 +1008,24 @@ document.addEventListener('DOMContentLoaded', function() {
         toastEl.addEventListener('hidden.bs.toast', function() { toastEl.remove(); });
     }
 
-    function loadModalBills() {
-        modalBillsCurrentPage = 1;
-        var df = document.getElementById('modal_date_from');
-        var dt = document.getElementById('modal_date_to');
+    function loadModalBills(page) {
+        var requestedPage = parseInt(page, 10);
+        modalBillsCurrentPage = isNaN(requestedPage) ? 1 : Math.max(1, requestedPage);
         var ct = document.getElementById('modal_client_type');
         var ctp = document.getElementById('modal_client_type_pk');
         var bn = document.getElementById('modal_buyer_name');
-        var dateFrom = (df && df.value) ? toYmd(df.value) : '';
-        var dateTo = (dt && dt.value) ? toYmd(dt.value) : '';
+        var dateFrom = getModalDateYmd('modal_date_from');
+        var dateTo = getModalDateYmd('modal_date_to');
         var clientType = (ct && ct.value) ? ct.value : '';
         var clientTypePk = (ctp && ctp.value) ? ctp.value : '';
+        var perPage = parseInt((document.getElementById('modalPerPage') || {}).value || 10, 10);
+        var modalSearch = (document.getElementById('modalSearch') || {}).value || '';
         var buyerNames = bn
             ? Array.from(bn.selectedOptions || []).map(function (o) { return String(o.value || '').trim(); }).filter(Boolean)
             : [];
         var url = '{{ route("admin.mess.process-mess-bills-employee.modal-data") }}?date_from=' + encodeURIComponent(dateFrom) + '&date_to=' + encodeURIComponent(dateTo);
+        url += '&page=' + encodeURIComponent(modalBillsCurrentPage) + '&per_page=' + encodeURIComponent(perPage);
+        if (modalSearch) url += '&search=' + encodeURIComponent(modalSearch);
         if (clientType) url += '&client_type=' + encodeURIComponent(clientType);
         if (clientTypePk) url += '&client_type_pk=' + encodeURIComponent(clientTypePk);
         if (buyerNames.length) {
@@ -987,20 +1037,25 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 modalBillsData = data.bills || [];
+                var pagination = data.pagination || {};
+                modalBillsTotal = parseInt(pagination.total || modalBillsData.length || 0, 10);
+                modalBillsFrom = parseInt(pagination.from || (modalBillsTotal ? 1 : 0), 10);
+                modalBillsTo = parseInt(pagination.to || modalBillsData.length || 0, 10);
+                modalBillsCurrentPage = parseInt(pagination.page || modalBillsCurrentPage || 1, 10);
                 renderModalTable();
 
                 // Also refresh Buyer Name dropdown in modal based on loaded bills.
                 // IMPORTANT: Only do this when no client type is selected, otherwise it
                 // overrides the dependent "Client Type -> Buyer Name" behavior.
-                if (clientType) {
+                if (clientType || modalBillsCurrentPage > 1 || modalSearch) {
                     return;
                 }
                 try {
                     var buyerSelect = document.getElementById('modal_buyer_name');
                     if (buyerSelect) {
                         var buyers = Array.from(new Set(
-                            (modalBillsData || [])
-                                .map(function (b) { return b.buyer_name || b.client_name || ''; })
+                            ((modalAllBuyerNames || []).length ? modalAllBuyerNames : (modalBillsData || [])
+                                .map(function (b) { return b.buyer_name || b.client_name || ''; }))
                                 .filter(function (name) { return !!name; })
                         ));
 
@@ -1027,22 +1082,25 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(function() {
                 modalBillsData = [];
+                modalBillsTotal = 0;
+                modalBillsFrom = 0;
+                modalBillsTo = 0;
                 renderModalTable();
                 showToast('Failed to load bills.', 'error');
             });
     }
 
+    function focusAddProcessMessBillsModal() {
+        var addModalEl = document.getElementById('addProcessMessBillsModal');
+        if (!addModalEl || typeof bootstrap === 'undefined') return;
+        var wasVisible = addModalEl.classList.contains('show');
+        var addInst = bootstrap.Modal.getOrCreateInstance(addModalEl);
+        addInst.show();
+        if (wasVisible) loadModalBills();
+    }
+
     function getFilteredModalBills() {
-        var search = (document.getElementById('modalSearch') || {}).value || '';
-        search = String(search).toLowerCase().trim();
-        return modalBillsData.filter(function(b) {
-            if (!search) return true;
-            return (b.buyer_name || '').toLowerCase().indexOf(search) >= 0 ||
-                   String(b.invoice_no || '').indexOf(search) >= 0 ||
-                   (b.payment_type || '').toLowerCase().indexOf(search) >= 0 ||
-                   String(b.total || '').indexOf(search) >= 0 ||
-                   (b.invoice_notification_sent && 'invoice sent'.indexOf(search) >= 0);
-        });
+        return modalBillsData || [];
     }
 
     function updateModalPaginationNav(totalPages, filteredLength) {
@@ -1075,20 +1133,28 @@ document.addEventListener('DOMContentLoaded', function() {
         if (modalSelectAllEl) modalSelectAllEl.checked = false;
         var filtered = getFilteredModalBills();
         var perPage = parseInt((document.getElementById('modalPerPage') || {}).value || 10, 10);
-        var totalPages = filtered.length ? Math.ceil(filtered.length / perPage) : 0;
+        var totalPages = modalBillsTotal ? Math.ceil(modalBillsTotal / perPage) : 0;
         modalBillsCurrentPage = Math.max(1, Math.min(modalBillsCurrentPage, totalPages || 1));
-        var start = (modalBillsCurrentPage - 1) * perPage;
-        var pageData = filtered.slice(start, start + perPage);
+        var start = modalBillsFrom ? modalBillsFrom - 1 : 0;
+        var pageData = filtered;
 
         if (pageData.length === 0) {
             tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted">No unpaid bills found. Adjust date range and click Load Bills.</td></tr>';
         } else {
             tbody.innerHTML = pageData.map(function(b, i) {
-                var sn = start + i + 1;
-                var printUrl = printReceiptBaseUrl.replace('__ID__', b.id);
+                var sn = b.sno || (start + i + 1);
+                var printUrl = printReceiptBaseUrl.replace('__ID__', encodeURIComponent(b.id));
+                if (String(b.id || '').indexOf('combined-') === 0) {
+                    var receiptDf = b.date_from || getModalDateYmd('modal_date_from') || '';
+                    var receiptDt = b.date_to || getModalDateYmd('modal_date_to') || '';
+                    printUrl += (printUrl.indexOf('?') >= 0 ? '&' : '?') + 'date_from=' + encodeURIComponent(receiptDf) + '&date_to=' + encodeURIComponent(receiptDt);
+                }
                 var statusCell = b.invoice_notification_sent
                     ? '<span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle fw-semibold">Invoice Sent</span>'
                     : '<span class="text-muted small">—</span>';
+                var invoiceSent = !!b.invoice_notification_sent;
+                var invoiceBtnClass = invoiceSent ? 'btn btn-outline-secondary generate-invoice-btn' : 'btn btn-outline-primary generate-invoice-btn';
+                var invoiceBtnAttrs = 'data-bill-id="' + b.id + '" data-buyer-name="' + (b.buyer_name || '').replace(/"/g, '&quot;') + '" title="' + (invoiceSent ? 'Invoice already sent' : 'Generate Invoice') + '"' + (invoiceSent ? ' disabled data-invoice-sent="1"' : '');
                 return '<tr class="' + (i % 2 === 0 ? 'table-light' : '') + '">' +
                     '<td><input type="checkbox" class="form-check-input modal-bill-check" data-id="' + b.id + '" data-name="' + (b.buyer_name || '').replace(/"/g, '&quot;') + '"></td>' +
                     '<td>' + sn + '</td>' +
@@ -1098,7 +1164,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     '<td class="text-end">' + (b.total || '0') + '</td>' +
                     '<td class="text-center">' + statusCell + '</td>' +
                     '<td class="text-center"><div class="btn-group btn-group-sm">' +
-                    '<button type="button" class="btn btn-outline-primary generate-invoice-btn" data-bill-id="' + b.id + '" data-buyer-name="' + (b.buyer_name || '').replace(/"/g, '&quot;') + '" title="Generate Invoice">Invoice</button>' +
+                    '<button type="button" class="' + invoiceBtnClass + '" ' + invoiceBtnAttrs + '>Invoice</button>' +
                     '<button type="button" class="btn btn-outline-success generate-payment-btn" data-bill-id="' + b.id + '" data-buyer-name="' + (b.buyer_name || '').replace(/"/g, '&quot;') + '" title="Mark as Paid">Payment</button>' +
                     '</div></td>' +
                     '<td class="text-center"><a href="' + printUrl + '" target="_blank" class="btn  btn-outline-secondary" title="Print receipt"><i class="material-symbols-rounded" style="font-size:1.1rem;">receipt</i></a></td>' +
@@ -1106,8 +1172,8 @@ document.addEventListener('DOMContentLoaded', function() {
             }).join('');
         }
 
-        document.getElementById('modalPaginationInfo').textContent = 'Showing ' + (filtered.length ? start + 1 : 0) + ' to ' + Math.min(start + perPage, filtered.length) + ' of ' + filtered.length + ' entries';
-        updateModalPaginationNav(totalPages, filtered.length);
+        document.getElementById('modalPaginationInfo').textContent = 'Showing ' + modalBillsFrom + ' to ' + modalBillsTo + ' of ' + modalBillsTotal + ' entries';
+        updateModalPaginationNav(totalPages, modalBillsTotal);
         updateBulkActionsBar();
     }
 
@@ -1121,6 +1187,34 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             bar.classList.remove('d-none');
             countEl.textContent = checked.length + ' selected';
+        }
+    }
+
+    function clearChoicesSelection(el) {
+        if (!el) return;
+        if (el.choicesInstance) {
+            var inst = el.choicesInstance;
+            if (el.multiple && typeof inst.removeActiveItems === 'function') {
+                inst.removeActiveItems();
+                return;
+            }
+            if (typeof inst.setChoiceByValue === 'function') {
+                try {
+                    inst.setChoiceByValue(el.multiple ? [] : '');
+                } catch (e) {
+                    if (typeof inst.removeActiveItems === 'function') {
+                        inst.removeActiveItems();
+                    }
+                }
+            }
+            return;
+        }
+        if (el.multiple) {
+            Array.from(el.options || []).forEach(function (opt) {
+                opt.selected = false;
+            });
+        } else {
+            el.value = '';
         }
     }
 
@@ -1141,27 +1235,14 @@ document.addEventListener('DOMContentLoaded', function() {
         setDateInput('modal_invoice_date', defaultInvoiceDate);
 
         var ct = document.getElementById('modal_client_type');
+        clearChoicesSelection(ct);
         if (ct) {
-            ct.value = '';
-            if (ct.choicesInstance) {
-                ct.choicesInstance.setChoiceByValue('');
-            }
-        }
-        var ctp = document.getElementById('modal_client_type_pk');
-        if (ctp) {
-            ctp.innerHTML = '<option value=\"\">All</option>';
-            if (ctp.choicesInstance) {
-                ctp.choicesInstance.clearStore();
-                ctp.choicesInstance.setChoices([{ value: '', label: 'All', selected: true }], 'value', 'label', true);
-            }
+            ct.dispatchEvent(new Event('change', { bubbles: true }));
         }
         var bn = document.getElementById('modal_buyer_name');
-        if (bn) {
+        clearChoicesSelection(bn);
+        if (bn && !bn.choicesInstance) {
             bn.innerHTML = '';
-            if (bn.choicesInstance) {
-                bn.choicesInstance.clearStore();
-                bn.choicesInstance.setChoices([], 'value', 'label', true);
-            }
         }
         var mp = document.getElementById('modal_mode_of_payment');
         if (mp) {
@@ -1177,29 +1258,30 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     document.getElementById('addProcessMessBillsModal').addEventListener('show.bs.modal', function() { loadModalBills(); });
-    document.getElementById('modalLoadBillsBtn').addEventListener('click', loadModalBills);
+    var payNowModalForAddRedirect = document.getElementById('payNowModal');
+    if (payNowModalForAddRedirect) {
+        payNowModalForAddRedirect.addEventListener('hidden.bs.modal', function () {
+            focusAddProcessMessBillsModal();
+        });
+    }
+    document.getElementById('modalLoadBillsBtn').addEventListener('click', function() { loadModalBills(1); });
     document.getElementById('modalClearFiltersBtn').addEventListener('click', clearModalFilters);
     document.getElementById('modalSearch').addEventListener('input', function() {
-        modalBillsCurrentPage = 1;
-        renderModalTable();
+        loadModalBills(1);
     });
     document.getElementById('modalPerPage').addEventListener('change', function() {
-        modalBillsCurrentPage = 1;
-        renderModalTable();
+        loadModalBills(1);
     });
     document.getElementById('modalPaginationPrev').addEventListener('click', function() {
         if (modalBillsCurrentPage > 1) {
-            modalBillsCurrentPage--;
-            renderModalTable();
+            loadModalBills(modalBillsCurrentPage - 1);
         }
     });
     document.getElementById('modalPaginationNext').addEventListener('click', function() {
-        var filtered = getFilteredModalBills();
         var perPage = parseInt((document.getElementById('modalPerPage') || {}).value || 10, 10);
-        var totalPages = filtered.length ? Math.ceil(filtered.length / perPage) : 0;
+        var totalPages = modalBillsTotal ? Math.ceil(modalBillsTotal / perPage) : 0;
         if (modalBillsCurrentPage < totalPages) {
-            modalBillsCurrentPage++;
-            renderModalTable();
+            loadModalBills(modalBillsCurrentPage + 1);
         }
     });
 
@@ -1373,11 +1455,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             function getModalDateRangeYmd() {
-                var df = document.getElementById('modal_date_from');
-                var dt = document.getElementById('modal_date_to');
                 return {
-                    from: (df && df.value) ? toYmd(df.value) : '',
-                    to: (dt && dt.value) ? toYmd(dt.value) : ''
+                    from: getModalDateYmd('modal_date_from'),
+                    to: getModalDateYmd('modal_date_to')
                 };
             }
 
@@ -1413,14 +1493,24 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
             }
 
-            // When multiple slugs are selected, load buyers from all of them
-            if (selectedSlugs.length > 1 || selectedSlugs.length === 0) {
-                // Multiple client types or none selected: load buyers from all selected types
+            // No client type: show full buyer name list (same as legacy single-select "All" path)
+            if (selectedSlugs.length === 0) {
+                if ((allBuyerNames || []).length) {
+                    var listAllEmpty = (allBuyerNames || []).map(function (name) {
+                        return { value: name, text: name };
+                    });
+                    addBuyerOptions(listAllEmpty);
+                }
+                syncChoicesBuyer();
+                return;
+            }
+
+            // Multiple client types selected: merge buyer lists from each slug
+            if (selectedSlugs.length > 1) {
                 var allBuyers = [];
-                
-                selectedSlugs.forEach(function(slug) {
+
+                selectedSlugs.forEach(function (slug) {
                     if (slug === 'employee') {
-                        // Add all employee buyers
                         allBuyers = allBuyers.concat(employeeNames['academy staff'] || [])
                             .concat(employeeNames['faculty'] || [])
                             .concat(employeeNames['mess staff'] || []);
@@ -1434,19 +1524,18 @@ document.addEventListener('DOMContentLoaded', function() {
                         allBuyers = allBuyers.concat((sectionBuyerNames || []).map(function (name) { return { value: name, text: name }; }));
                     }
                 });
-                
-                // De-duplicate
-                var map = new Map();
+
+                var mapMulti = new Map();
                 allBuyers.forEach(function (o) {
                     var key = String(o.value || '').trim().toLowerCase();
                     if (!key) return;
-                    if (!map.has(key)) map.set(key, { value: o.value, text: o.text });
+                    if (!mapMulti.has(key)) mapMulti.set(key, { value: o.value, text: o.text });
                 });
-                var unique = Array.from(map.values()).sort(function (a, b) {
+                var uniqueMulti = Array.from(mapMulti.values()).sort(function (a, b) {
                     return String(a.text || '').localeCompare(String(b.text || ''), undefined, { sensitivity: 'base' });
                 });
-                
-                addBuyerOptions(unique);
+
+                addBuyerOptions(uniqueMulti);
                 syncChoicesBuyer();
                 return;
             }
@@ -2176,10 +2265,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (btnEl) { btnEl.disabled = true; btnEl.textContent = '…'; }
         var body = {};
         if (String(billId).indexOf('combined-') === 0) {
-            var mFrom = document.getElementById('modal_date_from');
-            var mTo = document.getElementById('modal_date_to');
-            if (mFrom && mFrom.value) body.date_from = toYmd(mFrom.value);
-            if (mTo && mTo.value) body.date_to = toYmd(mTo.value);
+            var fromYmd = getModalDateYmd('modal_date_from');
+            var toYmdVal = getModalDateYmd('modal_date_to');
+            if (fromYmd) body.date_from = fromYmd;
+            if (toYmdVal) body.date_to = toYmdVal;
         }
         fetch(generateInvoiceBaseUrl + '/' + encodeURIComponent(billId) + '/generate-invoice', {
             method: 'POST',
@@ -2190,7 +2279,7 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(function(data) {
             if (data.success) {
                 showToast(data.message || 'Invoice generated.');
-                loadModalBills();
+                loadModalBills(modalBillsCurrentPage);
             } else {
                 showToast(data.message || 'Failed to generate invoice.', 'error');
             }
@@ -2219,10 +2308,14 @@ document.addEventListener('DOMContentLoaded', function() {
             if (data.success) {
                 showToast('Payment completed for ' + (buyerName || data.client_name) + '.');
                 var payNowModalEl = document.getElementById('payNowModal');
-                if (payNowModalEl && bootstrap.Modal.getInstance(payNowModalEl)) bootstrap.Modal.getInstance(payNowModalEl).hide();
-                var addModalEl = document.getElementById('addProcessMessBillsModal');
-                if (addModalEl && bootstrap.Modal.getInstance(addModalEl)) bootstrap.Modal.getInstance(addModalEl).hide();
-                window.location.reload();
+                var payNowWasOpen = payNowModalEl && payNowModalEl.classList.contains('show');
+                if (payNowModalEl && typeof bootstrap !== 'undefined') {
+                    var payInst = bootstrap.Modal.getInstance(payNowModalEl);
+                    if (payInst) payInst.hide();
+                }
+                if (!payNowWasOpen) {
+                    focusAddProcessMessBillsModal();
+                }
             } else {
                 showToast(data.message || 'Failed to process payment.', 'error');
                 if (btnEl) { btnEl.disabled = false; btnEl.textContent = 'Payment'; }
@@ -2232,6 +2325,11 @@ document.addEventListener('DOMContentLoaded', function() {
             showToast('Request failed. Try again.', 'error');
             if (btnEl) { btnEl.disabled = false; btnEl.textContent = 'Payment'; }
         });
+    }
+
+    function formatAmountTwoDecimals(value) {
+        var num = parseFloat(value);
+        return isNaN(num) ? '0.00' : num.toFixed(2);
     }
 
     function renderPaymentDetailsContent(data) {
@@ -2279,9 +2377,9 @@ document.addEventListener('DOMContentLoaded', function() {
             '<div class="receipt-bottom">' +
             '<div></div>' +
             '<div class="payment-summary">' +
-            '<div class="summary-row"><span class="summary-label">Paid Amount</span><span class="summary-value">' + (data.paid_amount || '0.0') + '</span></div>' +
-            '<div class="summary-row"><span class="summary-label">Total Amount</span><span class="summary-value">' + (data.total_amount || '0.0') + '</span></div>' +
-            '<div class="summary-row"><span class="summary-label">Due Amount</span><span class="summary-value">' + (data.due_amount || '0.0') + '</span></div>' +
+            '<div class="summary-row"><span class="summary-label">Paid Amount</span><span class="summary-value">' + formatAmountTwoDecimals(data.paid_amount) + '</span></div>' +
+            '<div class="summary-row"><span class="summary-label">Total Amount</span><span class="summary-value">' + formatAmountTwoDecimals(data.total_amount) + '</span></div>' +
+            '<div class="summary-row"><span class="summary-label">Due Amount</span><span class="summary-value">' + formatAmountTwoDecimals(data.due_amount) + '</span></div>' +
             '</div>' +
             '</div>';
         return html;
@@ -2341,7 +2439,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var dueRaw = content && content.getAttribute('data-due-amount-raw');
         var due = dueRaw !== null && dueRaw !== '' ? parseFloat(dueRaw) : 0;
         var amountInput = document.getElementById('payNowAmount');
-        amountInput.value = isNaN(due) ? '' : due;
+        amountInput.value = isNaN(due) ? '' : due.toFixed(2);
         amountInput.setAttribute('max', (isNaN(due) || due < 0) ? '' : due);
         var pdModal = document.getElementById('paymentDetailsModal');
         if (pdModal && bootstrap.Modal.getInstance(pdModal)) bootstrap.Modal.getInstance(pdModal).hide();
@@ -2390,8 +2488,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!amount) { showToast('Please enter amount.', 'error'); return; }
         var amountNum = parseFloat(amount);
         if (isNaN(amountNum) || amountNum <= 0) { showToast('Please enter a valid amount.', 'error'); return; }
+        amountNum = Math.round(amountNum * 100) / 100;
+        if (amountEl) amountEl.value = amountNum.toFixed(2);
         if (amountNum > due) { showToast('Payment amount cannot exceed the balance due (₹ ' + (due.toFixed(2)) + ').', 'error'); return; }
-        var payload = { amount: amount, payment_mode: paymentMode, payment_date: paymentDate };
+        var payload = { amount: amountNum.toFixed(2), payment_mode: paymentMode, payment_date: paymentDate };
         if (paymentMode === 'cheque') {
             payload.bank_name = (document.getElementById('payNowBankName') || {}).value || '';
             payload.cheque_number = (document.getElementById('payNowChequeNumber') || {}).value || '';
@@ -2410,6 +2510,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (invoiceBtn) {
             e.preventDefault();
             e.stopPropagation();
+            if (invoiceBtn.disabled || invoiceBtn.getAttribute('data-invoice-sent') === '1') {
+                showToast('Already sent invoice.', 'error');
+                return;
+            }
             var billId = invoiceBtn.getAttribute('data-bill-id');
             var buyerName = invoiceBtn.getAttribute('data-buyer-name') || '';
             if (confirm('Generate invoice and send notification to ' + (buyerName || 'this employee') + '?')) {
@@ -2425,10 +2529,8 @@ document.addEventListener('DOMContentLoaded', function() {
             var dateFromYmd = null;
             var dateToYmd = null;
             if (String(billId).indexOf('combined-') === 0) {
-                var mFrom = document.getElementById('modal_date_from');
-                var mTo = document.getElementById('modal_date_to');
-                if (mFrom && mFrom.value) dateFromYmd = toYmd(mFrom.value);
-                if (mTo && mTo.value) dateToYmd = toYmd(mTo.value);
+                dateFromYmd = getModalDateYmd('modal_date_from') || null;
+                dateToYmd = getModalDateYmd('modal_date_to') || null;
             }
             openPaymentDetailsModal(billId, dateFromYmd, dateToYmd);
             return;
@@ -2439,13 +2541,23 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('modalBulkInvoiceBtn').addEventListener('click', function() {
         var ids = Array.from(document.querySelectorAll('#addProcessMessBillsModal .modal-bill-check:checked')).map(function(c) { return c.getAttribute('data-id'); });
         if (ids.length === 0) { showToast('Select at least one bill.', 'error'); return; }
-        if (!confirm('Generate invoice for ' + ids.length + ' selected bill(s)?')) return;
-        var done = 0;
-        ids.forEach(function(id) {
-            doGenerateInvoice(id, '', null);
-            done++;
+        var toSend = ids.filter(function(id) {
+            var b = (modalBillsData || []).find(function(x) { return String(x.id) === String(id); });
+            return !b || !b.invoice_notification_sent;
         });
-        showToast('Processing ' + ids.length + ' invoice(s)...');
+        var skipped = ids.length - toSend.length;
+        if (toSend.length === 0) {
+            showToast('Already sent invoice.', 'error');
+            return;
+        }
+        if (!confirm('Generate invoice for ' + toSend.length + ' selected bill(s)?')) return;
+        if (skipped > 0) {
+            showToast('Skipping ' + skipped + ' bill(s): already sent invoice.', 'error');
+        }
+        toSend.forEach(function(id) {
+            doGenerateInvoice(id, '', null);
+        });
+        showToast('Processing ' + toSend.length + ' invoice(s)...');
     });
 
     document.getElementById('modalBulkPaymentBtn').addEventListener('click', function() {

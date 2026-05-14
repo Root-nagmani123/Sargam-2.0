@@ -25,51 +25,52 @@
     <link href="{{ asset('admin_assets/css/accesibility-style_v1.css') }}?v={{ @filemtime(public_path('admin_assets/css/accesibility-style_v1.css')) ?: time() }}" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
+    @include('components.fonts-sargam')
     <link rel="stylesheet" href="{{ asset('admin_assets/css/material-icons-local.css') }}" />
     <link href="https://cdn.ux4g.gov.in/UX4G@2.0.8/css/ux4g-min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('css/custom.css') }}?v={{ @filemtime(public_path('css/custom.css')) ?: time() }}" />
 </head>
 <x-session_message />
 
-<body class="admin-force-light" style="min-height: 100vh; display: flex; flex-direction: column;background-color: #ffffff;">
+<body class="admin-force-light bg-light" style="min-height: 100vh; display: flex; flex-direction: column; font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;">
     <!-- Top Blue Bar (Govt of India) -->
 <!-- Government Header Strips -->
-<div class="govt-header">
+<div class="govt-header mb-2">
     <!-- Dark Blue Strip -->
-    <div class="govt-header-top bg-primary text-white py-2">
-        <div class="container-fluid">
-            <div class="row align-items-center">
+    <div class="govt-header-top bg-primary text-white py-2 shadow-sm rounded-bottom-4">
+        <div class="container-lg px-4">
+            <div class="row align-items-center gx-3">
                 <div class="col-md-6">
-                    <div class="d-flex align-items-center gap-2">
+                    <div class="d-flex align-items-center gap-3">
                         <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Flag_of_India.svg/330px-Flag_of_India.svg.png" 
                              alt="India Emblem" 
                              height="20" 
-                             class="d-inline-block">
-                        <span class="fw-semibold">भारत सरकार | Government of India</span>
+                             class="d-inline-block rounded-circle border border-2 border-white bg-white me-2">
+                        <span class="fw-bold fs-5 lh-1">भारत सरकार <span class="mx-1">|</span> Government of India</span>
                     </div>
                 </div>
                 <div class="col-md-6">
-                    <div class="d-flex align-items-center justify-content-end gap-3">
-                        <a href="#main-content" class="text-white text-decoration-none small">Skip to content</a>
+                    <div class="d-flex align-items-center justify-content-end gap-3 flex-wrap">
+                        <a href="#main-content" class="text-white text-decoration-underline small fw-semibold link-light link-opacity-75-hover">Skip to content</a>
                         <div class="d-flex align-items-center gap-1">
-                            <button class="btn btn-sm btn-link text-white p-0" aria-label="Increase font size">A+</button>
-                            <button class="btn btn-sm btn-link text-white p-0" aria-label="Normal font size">A</button>
-                            <button class="btn btn-sm btn-link text-white p-0" aria-label="Decrease font size">A-</button>
+                            <button class="btn btn-sm btn-outline-light rounded-pill px-2 fw-bold shadow-sm" aria-label="Increase font size">A+</button>
+                            <button class="btn btn-sm btn-outline-light rounded-pill px-2 fw-bold shadow-sm" aria-label="Normal font size">A</button>
+                            <button class="btn btn-sm btn-outline-light rounded-pill px-2 fw-bold shadow-sm" aria-label="Decrease font size">A-</button>
                         </div>
                         <div class="dropdown">
-                            <button class="btn btn-sm btn-link text-white dropdown-toggle p-0" 
+                            <button class="btn btn-sm btn-outline-light dropdown-toggle rounded-pill px-2 fw-semibold shadow-sm" 
                                     type="button" 
                                     id="languageDropdown" 
                                     data-bs-toggle="dropdown" 
                                     aria-expanded="false">
                                 English
                             </button>
-                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="languageDropdown">
+                            <ul class="dropdown-menu dropdown-menu-end shadow rounded-3" aria-labelledby="languageDropdown">
                                 <li><a class="dropdown-item" href="#">English</a></li>
                                 <li><a class="dropdown-item" href="#">हिंदी</a></li>
                             </ul>
                         </div>
-                        <button class="btn btn-sm btn-link text-white p-0" aria-label="Search">
+                        <button class="btn btn-sm btn-outline-light rounded-circle d-flex align-items-center justify-content-center shadow-sm" aria-label="Search" style="width:2rem; height:2rem; transition: box-shadow 0.2s;">
                             <i class="bi bi-search"></i>
                         </button>
                     </div>
@@ -79,61 +80,64 @@
     </div>
 </div>
     <!-- Sticky Header -->
-    <div class="header sticky-top bg-white shadow-sm mb-4">
-        <div class="container-fluid p-1">
-            <nav class="navbar navbar-expand-lg">
-                 <a class="navbar-brand me-2" href="#">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg"
-                            alt="Logo 1" height="80">
-                    </a>
-                    <span class="vr mx-2"></span>
-                    <a class="navbar-brand" href="#">
-                        <img src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png" alt="Logo 2" height="80">
-                    </a>
-
-                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
-                        aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                        <span class="navbar-toggler-icon"></span>
-                    </button>
-
-                    <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
-                        <ul class="navbar-nav align-items-center">
-                            <li class="nav-item">
-                                <a class="nav-link ms-4 me-4" href="https://www.lbsnaa.gov.in/menu/about-lbsnaa"
-                                    target="_blank">About Us</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link ms-4 me-4" href="https://www.lbsnaa.gov.in/footer_menu/contact-us"
-                                    target="_blank">Contact</a>
-                            </li>
-                        </ul>
-                    </div>
+    <div class="header sticky-top bg-white shadow rounded-bottom-4 mb-4">
+        <div class="container-lg py-2 px-3">
+            <nav class="navbar navbar-expand-lg navbar-light">
+                <a class="navbar-brand me-2 p-0" href="#">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg"
+                        alt="Logo 1" height="64" class="rounded bg-white border p-1 shadow-sm">
+                </a>
+                <span class="vr mx-2 d-none d-md-inline"></span>
+                <a class="navbar-brand p-0" href="#">
+                    <img src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png" alt="Logo 2" height="64" class="rounded bg-white border p-1 shadow-sm">
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                    aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+                    <ul class="navbar-nav align-items-center">
+                        <li class="nav-item">
+                            <a class="nav-link ms-4 me-4 fw-semibold text-primary-emphasis link-primary link-opacity-75-hover rounded-pill px-3 py-1" href="https://www.lbsnaa.gov.in/menu/about-lbsnaa"
+                                target="_blank">About Us</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link ms-4 me-4 fw-semibold text-primary-emphasis link-primary link-opacity-75-hover rounded-pill px-3 py-1" href="https://www.lbsnaa.gov.in/footer_menu/contact-us"
+                                target="_blank">Contact</a>
+                        </li>
+                    </ul>
+                </div>
             </nav>
         </div>
     </div>
 
 
-    <!-- Main Content -->
-    @yield('content')
+    <!-- Main Content (OT student pages use @section('content'); calendar uses @section('setup_content')) -->
+    <main id="main-content" class="flex-grow-1">
+        <div class="container-lg py-4">
+            <div class="card shadow rounded-4 border-0 mb-4">
+                <div class="card-body p-4">
+                    @yield('content')
+                    @yield('setup_content')
+                </div>
+            </div>
+        </div>
+    </main>
 
     <!-- Footer -->
-    <footer class="mt-auto text-white py-2" style="background-color: #004a93;">
-        <div class="container-fluid">
-            <div class="row">
-                <div class="col-md-8">
-                    <p class="mb-0 text-white" style="font-size: 14px;">&copy; {{ date('Y') }} Lal Bahadur Shastri
-                        National Academy
-                        of Administration, Mussoorie, Uttarakhand</p>
+    <footer class="mt-auto text-white py-4 shadow-lg rounded-top-4" style="background-color: #004a93;">
+        <div class="container-lg">
+            <div class="row align-items-center gy-2">
+                <div class="col-md-8 mb-2 mb-md-0">
+                    <p class="mb-0 text-white small fw-semibold">&copy; {{ date('Y') }} Lal Bahadur Shastri National Academy of Administration, Mussoorie, Uttarakhand</p>
                 </div>
-                <div class="col-md-4 text-end">
-                    <ul class="list-unstyled d-flex justify-content-end mb-0">
-                        <li class="me-3">
-                            <a href="#" class="text-white text-decoration-none"
-                                style="font-size: 14px; font-family: Inter;">Privacy Policy</a>
+                <div class="col-md-4">
+                    <ul class="list-unstyled d-flex justify-content-md-end justify-content-center mb-0 gap-4">
+                        <li>
+                            <a href="#" class="text-white text-decoration-underline small fw-semibold link-light link-opacity-75-hover">Privacy Policy</a>
                         </li>
                         <li>
-                            <a href="#" class="text-white text-decoration-none"
-                                style="font-size: 14px; font-family: Inter;">Need Help</a>
+                            <a href="#" class="text-white text-decoration-underline small fw-semibold link-light link-opacity-75-hover">Need Help</a>
                         </li>
                     </ul>
                 </div>
@@ -141,6 +145,46 @@
         </div>
     </footer>
 
+    <style id="timetable-layout-mobile">
+        @media (max-width: 767.98px) {
+            .govt-header-top .row > div {
+                flex: 0 0 100%;
+                max-width: 100%;
+            }
+
+            .govt-header-top .d-flex.justify-content-end {
+                justify-content: flex-start !important;
+                flex-wrap: wrap;
+                gap: 0.5rem !important;
+                margin-top: 0.5rem;
+            }
+
+            .govt-header-top .fw-semibold {
+                font-size: 0.75rem;
+            }
+
+            .header .navbar-brand img {
+                height: 44px !important;
+                width: auto !important;
+            }
+
+            .header .navbar .vr {
+                display: none;
+            }
+
+            .header .navbar-toggler {
+                border-color: rgba(0, 74, 147, 0.35);
+            }
+
+            footer .row > div {
+                text-align: center !important;
+            }
+
+            footer .d-flex.justify-content-end {
+                justify-content: center !important;
+            }
+        }
+    </style>
     <style id="admin-timetable-light-last-resort">
         html.admin-force-light,
         body.admin-force-light,
@@ -181,7 +225,10 @@
         $(document).ready(function() {
             // Initialize Bootstrap tabs
             const feedbackTabs = document.getElementById('feedbackTabs');
-            const tab = new bootstrap.Tab(feedbackTabs.querySelector('button[data-bs-target="#pending-tab-pane"]'));
+            const pendingTabBtn = feedbackTabs ? feedbackTabs.querySelector('button[data-bs-target="#pending-tab-pane"]') : null;
+            if (pendingTabBtn) {
+                new bootstrap.Tab(pendingTabBtn);
+            }
 
             // Handle tab click events
             $('#submitted-tab').on('click', function() {
@@ -195,7 +242,7 @@
             {{ session('success') }}
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>`;
-                $('.container.my-5').prepend(successAlert);
+                $('.session-feedback-main, .container.my-5').first().prepend(successAlert);
 
                 setTimeout(function() {
                     const submittedTab = new bootstrap.Tab(document.getElementById('submitted-tab'));
@@ -213,7 +260,7 @@
             {{ session('error') }}
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>`;
-                $('.container.my-5').prepend(errorAlert);
+                $('.session-feedback-main, .container.my-5').first().prepend(errorAlert);
             @endif
 
             // Add form validation

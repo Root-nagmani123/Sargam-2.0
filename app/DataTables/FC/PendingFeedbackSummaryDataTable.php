@@ -2,6 +2,7 @@
 
 namespace App\DataTables\FC;
 
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Services\DataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
@@ -43,6 +44,18 @@ class PendingFeedbackSummaryDataTable extends DataTable
                     // Apply course filter
                     if ($request->filled('filter_course_pk') && $request->filter_course_pk != '') {
                         $query->where('t.course_master_pk', $request->filter_course_pk);
+                    } elseif (!$request->filled('filter_session_id') || $request->filter_session_id == '') {
+                        $scope = $request->input('filter_course_scope', 'active');
+                        $currentDate = Carbon::now()->format('Y-m-d');
+                        if ($scope === 'archive') {
+                            $query->whereNotNull('c.end_date')
+                                ->where('c.end_date', '<', $currentDate);
+                        } else {
+                            $query->where(function ($q) use ($currentDate) {
+                                $q->whereNull('c.end_date')
+                                    ->orWhere('c.end_date', '>=', $currentDate);
+                            });
+                        }
                     }
 
                     // Apply session filter
@@ -305,6 +318,7 @@ class PendingFeedbackSummaryDataTable extends DataTable
                 'type' => 'GET',
                 'data' => 'function(d) {
                     d.filter_course_pk = $("#filter_course_pk").val();
+                    d.filter_course_scope = $("input[name=filter_course_scope]:checked").val();
                     d.filter_session_id = $("#filter_session_id").val();
                     d.filter_user_name = $("#filter_user_name").val();
                     d.filter_email = $("#filter_email").val();

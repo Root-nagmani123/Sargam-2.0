@@ -19,11 +19,24 @@
         <div class="card-body p-4">
             <div class="row g-3 g-md-4 align-items-end">
                 <div class="col-12 col-sm-6 col-md-4 col-lg-3">
-                    <label for="filter_course_pk" class="form-label fw-medium">Course</label>
+                    <span class="form-label fw-medium d-block mb-2">Program type</span>
+                    <div class="d-flex flex-wrap gap-3">
+                        <div class="form-check mb-0">
+                            <input class="form-check-input" type="radio" name="filter_course_scope" id="filter_course_scope_active" value="active" checked>
+                            <label class="form-check-label" for="filter_course_scope_active">Active (current)</label>
+                        </div>
+                        <div class="form-check mb-0">
+                            <input class="form-check-input" type="radio" name="filter_course_scope" id="filter_course_scope_archive" value="archive">
+                            <label class="form-check-label" for="filter_course_scope_archive">Archive</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                    <label for="filter_course_pk" class="form-label fw-medium">Program name</label>
                     <select class="form-select select2-course" id="filter_course_pk">
-                        <option value="">— All Courses —</option>
-                        @foreach ($courses ?? [] as $id => $name)
-                            <option value="{{ $id }}">{{ $name }}</option>
+                        <option value="">— All Programs —</option>
+                        @foreach ($coursesActive ?? [] as $id => $name)
+                            <option value="{{ $id }}" @if(isset($defaultCoursePk) && (string) $defaultCoursePk === (string) $id) selected @endif>{{ $name }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -81,14 +94,18 @@
             </div>
             
             <div class="row mt-3">
-                <div class="col-12 d-flex gap-2 justify-content-end">
+                <div class="col-12 d-flex flex-wrap gap-2 justify-content-end">
                     <button type="button" id="exportPDF" class="btn btn-danger d-inline-flex align-items-center gap-2">
                         <i class="material-symbols-rounded" style="font-size: 1.1rem;">picture_as_pdf</i>
                         Export PDF
                     </button>
-                    <button type="button" id="exportExcel" class="btn btn-success d-inline-flex align-items-center gap-2">
+                    <button type="button" id="exportExcelSummary" class="btn btn-success d-inline-flex align-items-center gap-2">
                         <i class="material-symbols-rounded" style="font-size: 1.1rem;">table_view</i>
-                        Export Excel
+                        Excel (without details)
+                    </button>
+                    <button type="button" id="exportExcelDetailed" class="btn btn-outline-success d-inline-flex align-items-center gap-2">
+                        <i class="material-symbols-rounded" style="font-size: 1.1rem;">view_list</i>
+                        Excel (with details)
                     </button>
                 </div>
             </div>
@@ -245,6 +262,10 @@
 
 <script>
 $(document).ready(function() {
+    var coursesActiveMap = @json(($coursesActive ?? collect())->toArray());
+    var coursesArchiveMap = @json(($coursesArchive ?? collect())->toArray());
+    var defaultCoursePk = @json(isset($defaultCoursePk) ? (string) $defaultCoursePk : null);
+
     // CSRF Setup
     $.ajaxSetup({
         headers: {
@@ -252,18 +273,48 @@ $(document).ready(function() {
             'X-Requested-With': 'XMLHttpRequest'
         }
     });
+
+    function escapeHtml(text) {
+        var div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function optionsHtmlFromCourseMap(map) {
+        var opts = '<option value="">— All Programs —</option>';
+        if (map && typeof map === 'object') {
+            Object.keys(map).sort(function(a, b) {
+                return String(map[a]).localeCompare(String(map[b]), undefined, { sensitivity: 'base' });
+            }).forEach(function(pk) {
+                opts += '<option value="' + escapeHtml(String(pk)) + '">' + escapeHtml(String(map[pk])) + '</option>';
+            });
+        }
+        return opts;
+    }
+
+    function rebuildCourseSelectForScope(scope) {
+        var map = scope === 'archive' ? coursesArchiveMap : coursesActiveMap;
+        var html = optionsHtmlFromCourseMap(map);
+        $('#filter_course_pk').html(html);
+        var toSelect = '';
+        if (scope === 'active' && defaultCoursePk && map.hasOwnProperty(defaultCoursePk)) {
+            toSelect = defaultCoursePk;
+        }
+        $('#filter_course_pk').val(toSelect).trigger('change.select2');
+        $('#filter_course_pk').trigger('change');
+    }
     
     // Initialize Select2 for Course filter
     function initCourseSelect2() {
         $('#filter_course_pk').select2({
-            placeholder: "— All Courses —",
+            placeholder: "— All Programs —",
             allowClear: true,
             width: '100%',
             dropdownParent: $('body'),
             dropdownAutoWidth: false,
             language: {
                 noResults: function() {
-                    return "No courses found";
+                    return "No programs found";
                 }
             }
         });
@@ -288,10 +339,18 @@ $(document).ready(function() {
     // Initialize both Select2
     initCourseSelect2();
     initSessionSelect2();
-    
-    // Store original sessions and courses for reset
+
+    // Snapshot before any async course→sessions load (reset restores server defaults)
     var originalSessions = $('#filter_session_id').html();
     var originalCourses = $('#filter_course_pk').html();
+
+    $('input[name="filter_course_scope"]').on('change', function() {
+        rebuildCourseSelectForScope($(this).val());
+    });
+
+    if ($('#filter_course_pk').val()) {
+        $('#filter_course_pk').trigger('change');
+    }
     
     // Initialize DataTable
     var table = window.LaravelDataTables['pendingFeedbackSummaryTable'];
@@ -328,18 +387,21 @@ $(document).ready(function() {
     
     // Reset filters button
     $('#btnResetFilters').on('click', function() {
-        // Reset course filter
+        $('#filter_course_scope_active').prop('checked', true);
+
         $('#filter_course_pk').html(originalCourses);
-        $('#filter_course_pk').val('').trigger('change.select2');
-        
-        // Reset session filter
+        $('#filter_course_pk').val(defaultCoursePk || '').trigger('change.select2');
+
         $('#filter_session_id').html(originalSessions);
         $('#filter_session_id').val('').trigger('change.select2');
-        
-        // Reset other filters
+
         $('#filter_user_name, #filter_email, #filter_from_date, #filter_to_date').val('');
-        
-        reloadTable();
+
+        if (defaultCoursePk) {
+            $('#filter_course_pk').trigger('change');
+        } else {
+            reloadTable();
+        }
     });
     
     // Course change handler - Load sessions for selected course
@@ -361,7 +423,7 @@ $(document).ready(function() {
         
         // Fetch sessions for selected course
         $.ajax({
-            url: "{{ route('admin.get.sessions.by.course') }}",
+            url: "{{ route('get.sessions.by.course') }}",
             type: "GET",
             data: { course_pk: courseId },
             dataType: 'json',
@@ -421,6 +483,7 @@ $(document).ready(function() {
         
         var filters = {
             filter_course_pk: $('#filter_course_pk').val(),
+            filter_course_scope: $('input[name="filter_course_scope"]:checked').val(),
             filter_session_id: $('#filter_session_id').val(),
             filter_user_name: $('#filter_user_name').val(),
             filter_email: $('#filter_email').val(),
@@ -430,7 +493,7 @@ $(document).ready(function() {
         };
         
         $.each(filters, function(key, value) {
-            if (value && value !== '') {
+            if (value !== undefined && value !== null && value !== '') {
                 $('<input>').attr({
                     type: 'hidden',
                     name: key,
@@ -448,27 +511,25 @@ $(document).ready(function() {
         }, 3000);
     });
     
-    // Export Excel
-    $('#exportExcel').on('click', function(e) {
-        e.preventDefault();
-        var $btn = $(this);
+    function submitSummaryExcelExport(routeUrl, $btn, loadingLabel) {
         var originalHtml = $btn.html();
-        $btn.html('<span class="spinner-border spinner-border-sm me-2" role="status"></span> Generating Excel...').prop('disabled', true);
-        
+        $btn.html('<span class="spinner-border spinner-border-sm me-2" role="status"></span> ' + loadingLabel).prop('disabled', true);
+
         var form = $('<form>', {
             method: 'POST',
-            action: "{{ route('admin.feedback.summary.export.excel') }}",
+            action: routeUrl,
             style: 'display: none'
         });
-        
+
         $('<input>').attr({
             type: 'hidden',
             name: '_token',
             value: "{{ csrf_token() }}"
         }).appendTo(form);
-        
+
         var filters = {
             filter_course_pk: $('#filter_course_pk').val(),
+            filter_course_scope: $('input[name="filter_course_scope"]:checked').val(),
             filter_session_id: $('#filter_session_id').val(),
             filter_user_name: $('#filter_user_name').val(),
             filter_email: $('#filter_email').val(),
@@ -476,9 +537,9 @@ $(document).ready(function() {
             filter_to_date: $('#filter_to_date').val(),
             ot_name: $('.dataTables_filter input').val()
         };
-        
+
         $.each(filters, function(key, value) {
-            if (value && value !== '') {
+            if (value !== undefined && value !== null && value !== '') {
                 $('<input>').attr({
                     type: 'hidden',
                     name: key,
@@ -486,14 +547,24 @@ $(document).ready(function() {
                 }).appendTo(form);
             }
         });
-        
+
         $('body').append(form);
         form.submit();
-        
+
         setTimeout(function() {
             $btn.html(originalHtml).prop('disabled', false);
             form.remove();
         }, 3000);
+    }
+
+    $('#exportExcelSummary').on('click', function(e) {
+        e.preventDefault();
+        submitSummaryExcelExport("{{ route('admin.feedback.summary.export.excel') }}", $(this), 'Generating Excel...');
+    });
+
+    $('#exportExcelDetailed').on('click', function(e) {
+        e.preventDefault();
+        submitSummaryExcelExport("{{ route('admin.feedback.summary.export.excel.detailed') }}", $(this), 'Generating detailed Excel...');
     });
     
     // Initial count

@@ -16,9 +16,15 @@ class VehiclePassTWApply extends Model
     protected $keyType = 'string';
     public $timestamps = false;
 
+    /** vehicle_pass_tw_apply.applicant_type: government_vehicle = 1, employee = 2, others = 3 */
+    public const APPLICANT_TYPE_GOVERNMENT_VEHICLE = 1;
+
+    public const APPLICANT_TYPE_EMPLOYEE = 2;
+
+    public const APPLICANT_TYPE_OTHERS = 3;
+
     /**
      * Fillable aligned with SQL: vehicle_pass_tw_apply (pk, vehicle_tw_pk, employee_id_card, vehicle_type, vehicle_no, ...).
-     * No applicant_type, applicant_name, designation, department in table; display from employee relation.
      */
     protected $fillable = [
         'vehicle_tw_pk',
@@ -51,6 +57,46 @@ class VehiclePassTWApply extends Model
         'created_date' => 'datetime',
         'veh_card_genrated_date' => 'datetime',
     ];
+
+    /**
+     * Map create/edit form value to DB flag.
+     */
+    public static function applicantTypeFormToInt(string $form): int
+    {
+        return match ($form) {
+            'government_vehicle' => self::APPLICANT_TYPE_GOVERNMENT_VEHICLE,
+            'employee' => self::APPLICANT_TYPE_EMPLOYEE,
+            'others' => self::APPLICANT_TYPE_OTHERS,
+            default => self::APPLICANT_TYPE_OTHERS,
+        };
+    }
+
+    /**
+     * Map DB flag (or legacy string) to form radio value for Blade/validation.
+     */
+    public static function applicantTypeToFormValue($stored): ?string
+    {
+        if ($stored === null || $stored === '') {
+            return null;
+        }
+        if (is_string($stored)) {
+            if (in_array($stored, ['employee', 'others', 'government_vehicle'], true)) {
+                return $stored;
+            }
+            if (is_numeric($stored)) {
+                $stored = (int) $stored;
+            } else {
+                return null;
+            }
+        }
+
+        return match ((int) $stored) {
+            self::APPLICANT_TYPE_GOVERNMENT_VEHICLE => 'government_vehicle',
+            self::APPLICANT_TYPE_EMPLOYEE => 'employee',
+            self::APPLICANT_TYPE_OTHERS => 'others',
+            default => null,
+        };
+    }
 
     public function employee()
     {
@@ -112,14 +158,34 @@ class VehiclePassTWApply extends Model
         }
         $name = null;
         if (Schema::hasColumn((new EmployeeMaster)->getTable(), 'emp_id')) {
-            $emp = EmployeeMaster::where('emp_id', $key)->first(['pk', 'first_name', 'last_name']);
+            $emp = EmployeeMaster::query()
+                ->where(function ($q) use ($key) {
+                    $q->where('emp_id', $key)->orWhereRaw('TRIM(emp_id) = ?', [trim($key)]);
+                })
+                ->orderBy('pk')
+                ->first(['pk', 'first_name', 'last_name']);
+            if ($emp) {
+                $name = trim(($emp->first_name ?? '') . ' ' . ($emp->last_name ?? ''));
+            }
+        }
+        if (($name === null || $name === '') && ctype_digit($key)) {
+            $emp = EmployeeMaster::query()
+                ->where(function ($q) use ($key) {
+                    $q->where('pk', $key);
+                    if (Schema::hasColumn((new EmployeeMaster)->getTable(), 'pk_old')) {
+                        $q->orWhere('pk_old', $key);
+                    }
+                })
+                ->first(['pk', 'first_name', 'last_name']);
             if ($emp) {
                 $name = trim(($emp->first_name ?? '') . ' ' . ($emp->last_name ?? ''));
             }
         }
         if (($name === null || $name === '') && Schema::hasTable('security_parm_id_apply')) {
             $row = DB::table('security_parm_id_apply')
-                ->where('id_card_no', $key)
+                ->where(function ($q) use ($key) {
+                    $q->where('id_card_no', $key)->orWhereRaw('TRIM(id_card_no) = ?', [trim($key)]);
+                })
                 ->value('employee_master_pk');
             if ($row) {
                 $emp = EmployeeMaster::find($row, ['pk', 'first_name', 'last_name']);
@@ -130,7 +196,9 @@ class VehiclePassTWApply extends Model
         }
         if (($name === null || $name === '') && Schema::hasTable('security_con_oth_id_apply')) {
             $row = DB::table('security_con_oth_id_apply')
-                ->where('id_card_no', $key)
+                ->where(function ($q) use ($key) {
+                    $q->where('id_card_no', $key)->orWhereRaw('TRIM(COALESCE(id_card_no, "")) = ?', [trim($key)]);
+                })
                 ->value('created_by');
             if ($row) {
                 $emp = EmployeeMaster::find($row, ['pk', 'first_name', 'last_name']);

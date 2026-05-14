@@ -66,6 +66,9 @@ class CategoryWisePrintSlipExport implements FromCollection, WithStyles, WithEve
                     $selectedCourse = $this->otCourses->firstWhere('pk', $first->client_type_pk ?? null);
                     if ($selectedCourse) {
                         $courseDisplay = $selectedCourse->course_name;
+                        if ((int) ($selectedCourse->active_inactive ?? 0) !== 1) {
+                            $courseDisplay .= ' (Archived)';
+                        }
                     }
                 }
                 $messClientCategory = $first->clientTypeCategory?->client_name ?? null;
@@ -83,39 +86,69 @@ class CategoryWisePrintSlipExport implements FromCollection, WithStyles, WithEve
                 $rows[] = ['Slip No.', 'Item Name', 'Request Date', 'Quantity', 'Price', 'Amount', 'Remark'];
 
                 $sectionTotal = 0.0;
+                $combinedSlipNo = mess_combined_bill_slip_no(
+                    trim((string) ($first->client_name ?? ($first->clientTypeCategory?->client_name ?? ''))),
+                    (string) ($first->client_type_slug ?? 'employee')
+                );
+                $combinedRemarks = $sectionVouchers
+                    ->map(fn ($v) => trim((string) ($v->remarks ?? '')))
+                    ->filter()
+                    ->unique()
+                    ->implode('; ');
+                if ($combinedRemarks === '') {
+                    $combinedRemarks = '—';
+                }
+                $firstSectionRow = true;
 
-                foreach ($sectionVouchers as $voucher) {
-                    $requestNo = $voucher->request_no ?? ('SV-' . str_pad($voucher->id ?? $voucher->pk ?? 0, 6, '0', STR_PAD_LEFT));
-                    $requestDate = $voucher->issue_date ? $voucher->issue_date->format('d-m-Y') : 'N/A';
-
-                    foreach ($voucher->items as $itemIndex => $item) {
-                        $issueQty = (float) ($item->quantity ?? 0);
-                        $returnQty = (float) ($item->return_quantity ?? 0);
-                        $netQty = max(0, $issueQty - $returnQty);
-                        $rate = (float) ($item->rate ?? 0);
-                        $itemAmount = $netQty * $rate;
-                        $sectionTotal += $itemAmount;
-
-                        $itemName = $item->item_name ?? ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? 'N/A');
-                        $itemIssueDate = $item->issue_date ?? null;
-                        $itemIssueDateFormatted = $itemIssueDate
-                            ? ($itemIssueDate instanceof \Carbon\Carbon
-                                ? $itemIssueDate->format('d-m-Y')
-                                : Carbon::parse($itemIssueDate)->format('d-m-Y'))
-                            : $requestDate;
-
-                        $row = ['', '', '', '', '', '', ''];
-                        if ($itemIndex === 0) {
-                            $row[0] = $requestNo;
-                            $row[6] = $voucher->remarks ?? '—';
+                foreach (mess_cw_slip_section_display_rows($sectionVouchers) as $row) {
+                    if ($row->kind === 'empty') {
+                        $voucher = $row->voucher;
+                        $requestDate = $voucher->issue_date ? $voucher->issue_date->format('d-m-Y') : 'N/A';
+                        $excelRow = ['', '', '', '', '', '', ''];
+                        if ($firstSectionRow) {
+                            $excelRow[0] = $combinedSlipNo;
+                            $excelRow[6] = $combinedRemarks;
+                            $firstSectionRow = false;
                         }
-                        $row[1] = $itemName;
-                        $row[2] = $itemIssueDateFormatted;
-                        $row[3] = number_format($netQty, 2);
-                        $row[4] = number_format($rate, 2);
-                        $row[5] = number_format($itemAmount, 2);
-                        $rows[] = $row;
+                        $excelRow[1] = '—';
+                        $excelRow[2] = $requestDate;
+                        $excelRow[3] = '—';
+                        $excelRow[4] = '—';
+                        $excelRow[5] = '—';
+                        $rows[] = $excelRow;
+                        continue;
                     }
+
+                    $voucher = $row->voucher;
+                    $item = $row->item;
+                    $requestDate = $voucher->issue_date ? $voucher->issue_date->format('d-m-Y') : 'N/A';
+                    $issueQty = (float) ($item->quantity ?? 0);
+                    $returnQty = (float) ($item->return_quantity ?? 0);
+                    $netQty = max(0, $issueQty - $returnQty);
+                    $rate = (float) ($item->rate ?? 0);
+                    $itemAmount = $netQty * $rate;
+                    $sectionTotal += $itemAmount;
+
+                    $itemName = $item->item_name ?? ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? 'N/A');
+                    $itemIssueDate = $item->issue_date ?? null;
+                    $itemIssueDateFormatted = $itemIssueDate
+                        ? ($itemIssueDate instanceof \Carbon\Carbon
+                            ? $itemIssueDate->format('d-m-Y')
+                            : Carbon::parse($itemIssueDate)->format('d-m-Y'))
+                        : $requestDate;
+
+                    $excelRow = ['', '', '', '', '', '', ''];
+                    if ($firstSectionRow) {
+                        $excelRow[0] = $combinedSlipNo;
+                        $excelRow[6] = $combinedRemarks;
+                        $firstSectionRow = false;
+                    }
+                    $excelRow[1] = $itemName;
+                    $excelRow[2] = $itemIssueDateFormatted;
+                    $excelRow[3] = number_format($netQty, 2);
+                    $excelRow[4] = number_format($rate, 2);
+                    $excelRow[5] = number_format($itemAmount, 2);
+                    $rows[] = $excelRow;
                 }
 
                 $rows[] = ['', '', '', '', 'TOTAL', number_format($sectionTotal, 2), ''];

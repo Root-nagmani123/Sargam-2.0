@@ -8,6 +8,7 @@
         @csrf
         @if(isset($edit_id))
             @method('POST')
+            <input type="hidden" id="dup_stored_payment_receipt" value="{{ !empty($existing_docs['payment_receipt'] ?? null) ? '1' : '0' }}" autocomplete="off">
         @endif
 
         <div class="card border-0 shadow-sm">
@@ -46,7 +47,11 @@
                             @endif
                         </div>
                         @error('id_card_number')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                        <small class="text-muted d-block">Enter existing ID card number and click Fetch to auto-fill employee details.</small>
+                        <small class="text-muted d-block">For <strong>Permanent</strong>, your current ID card number is filled automatically when on file (you can change it).</small>
+                        <small class="text-muted d-block">Otherwise enter the number and click <strong>Fetch</strong> to load details.</small>
+                        @if(!empty($userDepartmentName))
+                            <small class="text-muted d-block mt-1">You may request a duplicate only for staff in <strong>your department</strong>: <strong>{{ $userDepartmentName }}</strong>. Another department’s card number will be rejected.</small>
+                        @endif
                     </div>
 
                     <div class="col-md-4">
@@ -105,27 +110,42 @@
                     <div class="col-md-4"></div>
 
                     {{-- Contractual-specific fields: Section & Approval Authority --}}
+                    @php
+                        $sectionStored = old('section', $data['section'] ?? $userDepartmentName ?? '');
+                    @endphp
                     <div class="col-md-4 contractual-only" style="display:none;">
                         <label class="form-label">Section</label>
-                        <select name="section" id="section_contractual" class="form-select">
+                        <select id="section_contractual" class="form-select" @if(isset($edit_id)) name="" disabled @else name="section" @endif>
                             <option value="">--Select--</option>
                             @if(!empty($userDepartmentName))
-                                <option value="{{ $userDepartmentName }}" {{ old('section', $data['section'] ?? $userDepartmentName) == $userDepartmentName ? 'selected' : '' }}>{{ $userDepartmentName }}</option>
+                                <option value="{{ $userDepartmentName }}" {{ (string) $sectionStored === (string) $userDepartmentName ? 'selected' : '' }}>{{ $userDepartmentName }}</option>
+                            @endif
+                            @if($sectionStored !== '' && (string) $sectionStored !== (string) ($userDepartmentName ?? ''))
+                                <option value="{{ $sectionStored }}" selected>{{ $sectionStored }}</option>
                             @endif
                         </select>
+                        @if(isset($edit_id) && $sectionStored !== '')
+                            <input type="hidden" name="section" value="{{ $sectionStored }}">
+                        @endif
                         @error('section')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
+                    @php
+                        $approverStored = old('approval_authority', $data['approval_authority'] ?? '');
+                    @endphp
                     <div class="col-md-4 contractual-only" style="display:none;">
                         <label class="form-label">Approval Authority <span class="text-danger">*</span></label>
-                        <select name="approval_authority" id="approval_authority_contractual" class="form-select">
+                        <select id="approval_authority_contractual" class="form-select" @if(isset($edit_id)) name="" disabled @else name="approval_authority" @endif>
                             <option value="">--Select--</option>
                             @foreach($approvalAuthorityEmployees ?? [] as $emp)
                                 @php $empName = trim(($emp->first_name ?? '') . ' ' . ($emp->last_name ?? '')); @endphp
-                                <option value="{{ $emp->pk }}" {{ old('approval_authority', $data['approval_authority'] ?? '') == $emp->pk ? 'selected' : '' }}>
+                                <option value="{{ $emp->pk }}" {{ (string) $approverStored === (string) $emp->pk ? 'selected' : '' }}>
                                     {{ $empName }}{{ $emp->designation ? ' (' . $emp->designation->designation_name . ')' : '' }}
                                 </option>
                             @endforeach
                         </select>
+                        @if(isset($edit_id) && $approverStored !== '' && $approverStored !== null)
+                            <input type="hidden" name="approval_authority" value="{{ $approverStored }}">
+                        @endif
                         @error('approval_authority')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
 
@@ -223,9 +243,9 @@
                         @error('fir_doc')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
 
-                    <!-- Card Lost - Payment Receipt (optional) -->
+                    <!-- Card Lost - Payment Receipt (required on new request; on edit, required only if none on file) -->
                     <div class="col-md-6" id="payment_receipt_section" style="display: none;">
-                        <label class="form-label">Upload Payment Receipt</label>
+                        <label class="form-label">Upload Payment Receipt <span class="text-danger">*</span></label>
                         @if(isset($edit_id))
                             @php
                                 $payDoc = $existing_docs['payment_receipt'] ?? null;
@@ -305,6 +325,7 @@
         const btnFetch = document.getElementById('btnFetchByCard');
         const cardInput = document.getElementById('id_card_number');
         const typeSelect = document.getElementById('id_card_type');
+        const prefetchedPermanentCardNo = @json($prefetchedPermanentCardNo ?? null);
         if (!btnFetch || !cardInput || !typeSelect) {
             return;
         }
@@ -319,15 +340,18 @@
             alert(message);
         }
 
-        function fetchByCardNumber() {
+        function fetchByCardNumber(options) {
+            options = options || {};
             if (isFetching) {
                 return;
             }
             const cardNo = cardInput.value.trim();
             const type = typeSelect.value || 'Permanent';
             if (!cardNo) {
-                showToast('Please enter ID Card Number first.', true);
-                cardInput.focus();
+                if (!options.suppressCardEmptyPrompt) {
+                    showToast('Please enter ID Card Number first.', true);
+                    cardInput.focus();
+                }
                 return;
             }
             isFetching = true;
@@ -359,7 +383,9 @@
                     setVal('father_name', d.father_name || '');
                     setVal('card_valid_from', d.card_valid_from || '');
                     setVal('card_valid_to', d.card_valid_to || '');
-                    showToast('ID card details fetched successfully. Please select duplicate reason and upload required document.', false);
+                    if (!options.silentSuccess) {
+                        showToast('ID card details fetched successfully. Please select duplicate reason and upload required document.', false);
+                    }
                 })
                 .catch(function () {
                     isFetching = false;
@@ -368,16 +394,35 @@
                 });
         }
 
+        /** When Permanent is chosen, put the user's approved card number on file into the field and load details via lookup. */
+        function applyPermanentIdCardPrefetch() {
+            if (typeSelect.value !== 'Permanent' || !prefetchedPermanentCardNo) {
+                return;
+            }
+            if (cardInput.value.trim() !== '') {
+                return;
+            }
+            cardInput.value = prefetchedPermanentCardNo;
+            fetchByCardNumber({ silentSuccess: true, suppressCardEmptyPrompt: true });
+        }
+
+        function onIdCardTypeChange() {
+            cardInput.value = '';
+            applyPermanentIdCardPrefetch();
+        }
+        typeSelect.addEventListener('change', onIdCardTypeChange);
+        applyPermanentIdCardPrefetch();
+
         // Existing behaviour: user can click the fetch button.
         btnFetch.addEventListener('click', function () {
-            fetchByCardNumber();
+            fetchByCardNumber({});
         });
 
         // Trigger on Enter key in the input.
         cardInput.addEventListener('keydown', function (e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                fetchByCardNumber();
+                fetchByCardNumber({});
             }
         });
     }
@@ -469,9 +514,14 @@
                 console.log('🟠 Showing Card Lost section');
                 const el = document.getElementById('fir_doc_section');
                 const payEl = document.getElementById('payment_receipt_section');
+                const payStoredFlag = document.getElementById('dup_stored_payment_receipt');
+                const skipPayRequired = payStoredFlag && payStoredFlag.value === '1';
                 if (el) el.style.display = 'block';
                 if (payEl) payEl.style.display = 'block';
                 if (firDoc) firDoc.setAttribute('required', 'required');
+                if (paymentReceipt && !skipPayRequired) {
+                    paymentReceipt.setAttribute('required', 'required');
+                }
             } else if (reason === 'Service Extended') {
                 console.log('🟡 Showing Service Extended section');
                 const el = document.getElementById('service_ext_section');

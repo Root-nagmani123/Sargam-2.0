@@ -18,7 +18,7 @@
                 label="Professional Memberships :"
                 placeholder="Professional Memberships"
                 formLabelClass="form-label"
-                
+
                 helperSmallText="Please upload your professional memberships, if any"
                 />
                 <span>
@@ -38,7 +38,7 @@
                 label="Reference/Recommendation Details :"
                 placeholder="Reference/Recommendation Details"
                 formLabelClass="form-label"
-                
+
                 helperSmallText="Please upload your reference/recommendation details, if any"
                 />
 
@@ -57,7 +57,6 @@
                 label="Joining Date :"
                 placeholder="Joining Date"
                 formLabelClass="form-label"
-                
                 value="{{ optional($faculty->joining_date)->format('Y-m-d') }}"
             />
         </div>

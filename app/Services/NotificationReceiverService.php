@@ -221,7 +221,55 @@ class NotificationReceiverService
         // Remove duplicates and return
         return array_unique(array_filter($receiverUserIds));
     }
-    
-    
+
+    /**
+     * User IDs for users who can approve estate requests (Super Admin, Admin, Estate).
+     *
+     * @return int[]
+     */
+    public function getEstateRequestApproverUserIds(): array
+    {
+        $rolePks = UserRoleMaster::whereIn('user_role_name', ['Super Admin', 'Admin', 'Estate'])
+            ->pluck('pk');
+
+        if ($rolePks->isEmpty()) {
+            return [];
+        }
+
+        $userIds = EmployeeRoleMapping::query()
+            ->whereIn('user_role_master_pk', $rolePks)
+            ->join('user_credentials as uc', 'uc.pk', '=', 'employee_role_mapping.user_credentials_pk')
+            ->pluck('uc.user_id')
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+
+        return $userIds;
+    }
+
+    /**
+     * User IDs for HAC workflow (Put in HAC / HAC approved).
+     *
+     * @return int[]
+     */
+    public function getEstateHacPersonUserIds(): array
+    {
+        $rolePk = UserRoleMaster::where('user_role_name', 'HAC Person')->value('pk');
+        if (! $rolePk) {
+            return [];
+        }
+
+        return EmployeeRoleMapping::query()
+            ->where('user_role_master_pk', $rolePk)
+            ->join('user_credentials as uc', 'uc.pk', '=', 'employee_role_mapping.user_credentials_pk')
+            ->pluck('uc.user_id')
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+    }
 }
 

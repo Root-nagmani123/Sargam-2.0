@@ -4,123 +4,238 @@
 
 @section('setup_content')
     <style>
-        .export-btn-group {
-            min-width: 130px;
+        /* ── Variables ── */
+        :root {
+            --fb-primary: #0b4f8a;
+            --fb-primary-light: #eef4fb;
+            --fb-border: #d0d7de;
         }
 
+        /* ── Filter Card ── */
+        .filter-card {
+            border: 0;
+            border-radius: var(--bs-border-radius-lg);
+            box-shadow: 0 1px 4px rgba(0,0,0,.06);
+            overflow: hidden;
+        }
+
+        .filter-card .card-header {
+            background: var(--fb-primary);
+            color: #fff;
+            font-weight: 600;
+            font-size: 0.875rem;
+            padding: 0.7rem 1rem;
+            border: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .filter-card .card-body {
+            padding: 1.1rem 1rem;
+        }
+
+        .filter-card .form-label {
+            font-size: 0.78rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            color: var(--bs-secondary-color);
+            margin-bottom: 0.25rem;
+        }
+
+        .filter-card .form-select,
+        .filter-card .form-control {
+            font-size: 0.85rem;
+            border-color: var(--fb-border);
+            transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
+        }
+
+        .filter-card .form-select:focus,
+        .filter-card .form-control:focus {
+            border-color: var(--fb-primary);
+            box-shadow: 0 0 0 0.2rem rgba(11,79,138,.12);
+        }
+
+        /* ── Content Card ── */
+        .content-card {
+            border: 0;
+            border-radius: var(--bs-border-radius-lg);
+            box-shadow: 0 1px 4px rgba(0,0,0,.06);
+            overflow: hidden;
+        }
+
+        .content-card .card-header {
+            background: var(--fb-primary-light);
+            font-weight: 600;
+            font-size: 0.95rem;
+            padding: 0.7rem 1rem;
+            border-bottom: 1px solid rgba(11,79,138,.1);
+        }
+
+        /* ── Data Table ── */
+        #feedbackTable {
+            font-size: 0.85rem;
+            margin-bottom: 0;
+        }
+
+        #feedbackTable thead th {
+            font-weight: 600;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--bs-secondary-color);
+            border-bottom: 2px solid rgba(11,79,138,.15);
+            padding: 0.65rem 0.75rem;
+            white-space: nowrap;
+            vertical-align: middle;
+        }
+
+        #feedbackTable tbody td {
+            padding: 0.65rem 0.75rem;
+            vertical-align: middle;
+            border-color: var(--bs-border-color-translucent);
+        }
+
+        #feedbackTable tbody tr {
+            transition: background-color 0.15s ease;
+        }
+
+        #feedbackTable tbody tr:hover {
+            background-color: rgba(11,79,138,.03) !important;
+        }
+
+        /* ── Loading Overlay ── */
         .loading-overlay {
             display: none;
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: auto;
-            height: auto;
-            background: transparent;
+            inset: 0;
+            background: rgba(255,255,255,.75);
             z-index: 10;
+            justify-content: center;
+            align-items: center;
         }
 
-        #feedbackTableBody {
-            min-height: 300px;
+        .loading-overlay.active {
+            display: flex;
         }
-
-
 
         .loading-spinner {
-            width: 50px;
-            height: 50px;
-            border: 5px solid #f3f3f3;
-            border-top: 5px solid var(--lbsnaa-blue);
+            width: 44px;
+            height: 44px;
+            border: 4px solid var(--fb-primary-light);
+            border-top: 4px solid var(--fb-primary);
             border-radius: 50%;
-            animation: spin 1s linear infinite;
+            animation: spin 0.8s linear infinite;
         }
 
         @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
+            to { transform: rotate(360deg); }
         }
 
-        .table-row-hover:hover {
-            background-color: #f8f9fa;
-            transition: background-color 0.2s;
-        }
-
+        /* ── Percentage Badges ── */
         .percentage-badge {
             display: inline-block;
-            padding: 3px 8px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: 600;
+            min-width: 3.6rem;
+            padding: 0.25em 0.55em;
+            border-radius: var(--bs-border-radius-pill);
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-align: center;
         }
 
-        .percentage-excellent {
-            background-color: #d1f7c4;
-            color: #0d4629;
+        .percentage-excellent { background: rgba(25,135,84,.1); color: #146c43; }
+        .percentage-good      { background: rgba(180,83,9,.1);  color: #92400e; }
+        .percentage-average   { background: rgba(220,53,69,.1);  color: #b02a37; }
+
+        .filter-card .card-footer .disabled {
+            pointer-events: none;
+            opacity: 0.55;
         }
 
-        .percentage-good {
-            background-color: #ffeab6;
-            color: #663c00;
-        }
-
-        .percentage-average {
-            background-color: #ffd8d8;
-            color: #7c0a02;
-        }
-
-        /* Filter dropdown styling */
+        /* ── Dynamic Filter Transition ── */
         .dynamic-filter-container {
             transition: all 0.3s ease;
         }
 
-        .dynamic-filter-container.hidden {
-            opacity: 0;
-            height: 0;
-            overflow: hidden;
-            margin: 0;
-            padding: 0;
+        /* ── Pagination ── */
+        .pagination .page-link {
+            font-size: 0.82rem;
+            color: var(--fb-primary);
+            border-color: var(--fb-border);
         }
 
-        .dynamic-filter-container.visible {
-            opacity: 1;
-            height: auto;
+        .pagination .page-item.active .page-link {
+            background-color: var(--fb-primary);
+            border-color: var(--fb-primary);
+            color: #fff;
+        }
+
+        .pagination .page-link:hover {
+            background-color: var(--fb-primary-light);
+        }
+
+        /* ── Table Controls ── */
+        .table-controls .form-select,
+        .table-controls .form-control {
+            font-size: 0.82rem;
+            border-color: var(--fb-border);
+        }
+
+        .table-controls .form-select:focus,
+        .table-controls .form-control:focus {
+            border-color: var(--fb-primary);
+            box-shadow: 0 0 0 0.2rem rgba(11,79,138,.12);
+        }
+
+        /* ── Button Overrides ── */
+        .btn-primary { background: var(--fb-primary); border-color: var(--fb-primary); }
+        .btn-primary:hover { background: #083e6c; border-color: #083e6c; }
+
+        .record-count {
+            font-size: 0.8rem;
+            color: var(--bs-secondary-color);
         }
     </style>
 
-    <div class="container-fluid">
+    <div class="container-fluid py-3 feedback-database-page">
         <x-breadcrum title="Feedback Database"></x-breadcrum>
 
+        @if (session('error'))
+            <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+                {{ session('error') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        @endif
 
-        <div class="card" style="border-left: 4px solid #004a93;">
+        {{-- ── TOP FILTER BAR ── --}}
+        <div class="card filter-card mb-3">
+            <div class="card-header">
+                <i class="fas fa-sliders-h"></i> Filters
+            </div>
             <div class="card-body">
-                <!-- HEADER -->
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <div class="d-flex align-items-center gap-3">
-                        <div
-                            style="width: 40px; height: 40px; background: var(--lbsnaa-blue); 
-                       display: flex; align-items: center; justify-content: center; 
-                       border-radius: 6px; color: white; font-weight: bold;">
-                            S
-                        </div>
-                        <h4 class="page-title">Faculty Feedback Database</h4>
-                    </div>
-                    <div class="export-btn-group">
-                        <button class="btn btn-outline-primary btn-sm" id="exportExcelBtn">
-                            <i class="bi bi-file-earmark-excel me-1"></i> Excel
-                        </button>
-                        <button class="btn btn-outline-primary btn-sm" id="exportPdfBtn">
-                            <i class="bi bi-file-earmark-pdf me-1"></i> PDF
-                        </button>
-                    </div>
-                </div>
-                <hr class="my-2">
                 <div class="row g-3 align-items-end">
-                    <!-- Course Filter -->
+                    @php
+                        $courseType = $courseType ?? 'current';
+                    @endphp
+                    {{-- Active / Archived (same logic as Faculty Feedback Average) --}}
+                    <div class="col-12">
+                        <label class="form-label">Course list</label>
+                        <div class="d-flex flex-wrap gap-4">
+                            <div class="form-check mb-0">
+                                <input class="form-check-input" type="radio" name="course_type" value="current"
+                                       id="fdbCourseCurrent" {{ $courseType === 'current' ? 'checked' : '' }}>
+                                <label class="form-check-label" for="fdbCourseCurrent">Active (current) courses</label>
+                            </div>
+                            <div class="form-check mb-0">
+                                <input class="form-check-input" type="radio" name="course_type" value="archived"
+                                       id="fdbCourseArchived" {{ $courseType === 'archived' ? 'checked' : '' }}>
+                                <label class="form-check-label" for="fdbCourseArchived">Archived courses</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Program Name --}}
                     <div class="col-lg-3 col-md-4">
                         <label class="form-label">Program Name <span class="text-danger">*</span></label>
                         <select class="form-select" id="courseSelect" name="course_id">
@@ -135,8 +250,8 @@
                         </select>
                     </div>
 
-                    <!-- Search Parameter Filter -->
-                    <div class="col-lg-3 col-md-4">
+                    {{-- Filter By --}}
+                    <div class="col-lg-2 col-md-3">
                         <label class="form-label">Filter By</label>
                         <select class="form-select" id="searchParam" name="search_param">
                             <option value="all">All Records</option>
@@ -145,8 +260,8 @@
                         </select>
                     </div>
 
-                    <!-- Faculty Filter Container (Hidden by default) -->
-                    <div class="col-lg-3 col-md-4 dynamic-filter-container d-none" id="facultyFilterContainer">
+                    {{-- Faculty Filter (Hidden by default) --}}
+                    <div class="col-lg-3 col-md-3 dynamic-filter-container d-none" id="facultyFilterContainer">
                         <label class="form-label">Select Faculty</label>
                         <select class="form-select" id="facultyFilter" name="faculty_id">
                             <option value="">All Faculties</option>
@@ -158,8 +273,8 @@
                         </select>
                     </div>
 
-                    <!-- Topic Filter Container (Hidden by default) -->
-                    <div class="col-lg-3 col-md-4 dynamic-filter-container d-none" id="topicFilterContainer">
+                    {{-- Topic Filter (Hidden by default) --}}
+                    <div class="col-lg-3 col-md-3 dynamic-filter-container d-none" id="topicFilterContainer">
                         <label class="form-label">Enter Topic</label>
                         <div class="input-group">
                             <input type="text" class="form-control" id="topicFilter" name="topic_value"
@@ -170,86 +285,119 @@
                         </div>
                     </div>
 
-                    <!-- Clear Filters Button -->
-                    <div class="col-lg-2 col-md-3">
+                    {{-- Clear Filters --}}
+                    <div class="col-lg-2 col-md-2">
                         <button type="button" class="btn btn-outline-secondary w-100" id="clearFiltersBtn">
-                            <i class="bi bi-x-circle me-1"></i> Clear
+                            <i class="bi bi-x-circle me-1"></i> Clear Filters
                         </button>
                     </div>
                 </div>
-                <hr class="my-2">
-                <!-- TABLE CONTROLS -->
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <div>
-                        <label class="me-2">Show</label>
-                        <select class="form-select d-inline-block w-auto" id="perPageSelect">
+            </div>
+            <div class="card-footer bg-body-tertiary bg-opacity-50 border-top py-3 px-3 d-flex flex-wrap gap-2 align-items-center justify-content-end">
+                <button type="button" id="feedbackDbPrintBtn"
+                        class="btn btn-outline-primary rounded-1 px-3 d-inline-flex align-items-center gap-1"
+                        title="Print report (LBSNAA layout)">
+                    <span class="material-symbols-rounded" style="font-size: 1.1rem;">print</span>
+                    <span>Print</span>
+                </button>
+                <a href="#" id="feedbackDbPdfLink" target="_blank" rel="noopener"
+                   class="btn btn-outline-danger rounded-1 px-3 d-inline-flex align-items-center gap-1"
+                   title="Download PDF">
+                    <span class="material-symbols-rounded" style="font-size: 1.1rem;">picture_as_pdf</span>
+                    <span>PDF</span>
+                </a>
+                <a href="#" id="feedbackDbExcelLink"
+                   class="btn btn-success rounded-1 px-3 d-inline-flex align-items-center gap-1 shadow-sm"
+                   title="Export to Excel">
+                    <span class="material-symbols-rounded" style="font-size: 1.1rem;">table_view</span>
+                    <span>Export Excel</span>
+                </a>
+            </div>
+        </div>
+
+        {{-- ── CONTENT TABLE CARD ── --}}
+        <div class="card content-card">
+            <div class="card-header d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2">
+                <span class="d-flex align-items-center gap-2">
+                    <i class="fas fa-database text-primary"></i>
+                    Faculty Feedback Database
+                </span>
+            </div>
+            <div class="card-body p-0">
+                {{-- TABLE CONTROLS --}}
+                <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2 px-3 py-2 table-controls border-bottom"
+                     style="background: #fafbfc;">
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="text-muted mb-0" style="font-size: 0.82rem;">Show</label>
+                        <select class="form-select form-select-sm d-inline-block w-auto" id="perPageSelect">
                             <option value="10">10</option>
                             <option value="25">25</option>
                             <option value="50">50</option>
                             <option value="100">100</option>
                         </select>
-                        <label class="ms-2">entries</label>
+                        <label class="text-muted mb-0" style="font-size: 0.82rem;">entries</label>
                     </div>
-                    <div>
-                        <label class="me-2">Search within table:</label>
-                        <input type="text" class="form-control d-inline-block w-auto" id="tableSearch"
-                            placeholder="Type to search...">
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="text-muted mb-0" style="font-size: 0.82rem;"><i class="fas fa-search"></i></label>
+                        <input type="text" class="form-control form-control-sm" id="tableSearch"
+                            placeholder="Search within table..." style="min-width: 180px;">
                     </div>
                 </div>
 
-                <!-- TABLE -->
+                {{-- TABLE --}}
                 <div class="table-responsive position-relative" id="tableContainer">
-                    <!-- Loading Overlay -->
+                    {{-- Loading Overlay --}}
                     <div class="loading-overlay" id="loadingOverlay">
                         <div class="loading-spinner"></div>
                     </div>
-                    <table class="table table-hover bg-white" id="feedbackTable">
-                        <thead>
+                    <table class="table table-hover align-middle mb-0" id="feedbackTable">
+                        <thead class="table-light">
                             <tr>
-                                <th>S.No.</th>
+                                <th class="text-center" style="width:50px">S.No.</th>
                                 <th>Faculty Name</th>
                                 <th>Course Name</th>
                                 <th>Faculty Address</th>
                                 <th>Topic</th>
-                                <th>Content (%)</th>
-                                <th>Presentation (%)</th>
-                                <th>No. of Participants</th>
-                                <th>Session Date</th>
-                                <th>Comments</th>
+                                <th class="text-center">Content (%)</th>
+                                <th class="text-center">Presentation (%)</th>
+                                <th class="text-center">Participants</th>
+                                <th class="text-center">Session Date</th>
+                                <th class="text-center">Comments</th>
                             </tr>
                         </thead>
                         <tbody id="feedbackTableBody">
-                            <tr>
-                                <td colspan="10" class="text-center text-muted py-5">
-                                    <i class="bi bi-database me-2"></i>
-                                    Select a program to load feedback data
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+                                    <tr>
+                                        <td colspan="10" class="text-center text-muted py-5">
+                                            <div class="py-3">
+                                                <i class="fas fa-database fa-2x mb-2 opacity-25 d-block"></i>
+                                                Select a program to load feedback data
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
 
-                <!-- PAGINATION -->
-                <div class="d-flex justify-content-between align-items-center mt-4" id="paginationSection"
-                    style="display: none;">
-                    <small class="text-muted" id="paginationInfo">Showing 0 to 0 of 0 entries</small>
-                    <nav aria-label="Feedback pagination">
-                        <ul class="pagination mb-0" id="paginationLinks">
-                            <!-- Dynamic pagination links will be inserted here -->
-                        </ul>
-                    </nav>
+                        {{-- PAGINATION --}}
+                        <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center px-3 py-2 border-top"
+                             id="paginationSection" style="display: none; background: #fafbfc;">
+                            <small class="text-muted record-count" id="paginationInfo">Showing 0 to 0 of 0 entries</small>
+                            <nav aria-label="Feedback pagination">
+                                <ul class="pagination pagination-sm mb-0 mt-2 mt-sm-0" id="paginationLinks">
+                                </ul>
+                            </nav>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </div>
     </div>
 
-    <!-- Comments Modal -->
+    {{-- Comments Modal --}}
     <div class="modal fade" id="commentsModal" tabindex="-1" aria-labelledby="commentsModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="commentsModalLabel">Feedback Comments</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header" style="background: var(--fb-primary); color: #fff;">
+                    <h6 class="modal-title mb-0" id="commentsModalLabel"><i class="fas fa-comments me-2"></i>Feedback Comments</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <div id="commentsContent"></div>
@@ -260,13 +408,14 @@
 @endsection
 
 @section('scripts')
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css"></script>
-
     <script>
+        const FEEDBACK_DB_EXPORT_ROUTES = {
+            print: @json(route('admin.feedback.database.print')),
+            pdf: @json(route('admin.feedback.database.export.pdf')),
+            excel: @json(route('admin.feedback.database.export.excel')),
+        };
+        const FEEDBACK_DB_COURSES_URL = @json(route('admin.feedback.database.courses'));
+
         $(document).ready(function() {
             // Prevent duplicate execution
             if (window.feedbackPageLoaded) {
@@ -286,6 +435,7 @@
                 faculty_id: '',
                 topic_value: ''
             };
+            let courseType = @json($courseType ?? 'current');
             let debounceTimer;
 
             // Check if required elements exist
@@ -297,6 +447,8 @@
             // Initialize
             initializeEventListeners();
             autoSelectFirstCourse();
+            syncFeedbackDbExportLinks();
+            syncFeedbackDbCourseTypeUrl();
 
             function checkRequiredElements() {
                 const requiredElements = [
@@ -330,11 +482,11 @@
 
                     $('#feedbackTableBody').html(`
                 <tr>
-                    <td colspan="10" class="text-center text-muted py-3">
+                    <td colspan="10" class="text-center text-muted py-4">
                         <div class="spinner-border spinner-border-sm text-primary me-2" role="status">
                             <span class="visually-hidden">Loading...</span>
                         </div>
-                        Loading feedback data for "${courseName}"...
+                        Loading feedback data for <strong>${courseName}</strong>...
                     </td>
                 </tr>
             `);
@@ -342,6 +494,7 @@
                     loadFeedbackData();
                 } else {
                     showInitialMessage();
+                    syncFeedbackDbExportLinks();
                 }
             }
 
@@ -356,6 +509,7 @@
                         loadFeedbackData();
                     } else {
                         showInitialMessage();
+                        syncFeedbackDbExportLinks();
                     }
                 });
 
@@ -443,15 +597,110 @@
                     });
                 });
 
-                safeBind('#exportExcelBtn', 'click', function(e) {
+                safeBind('#feedbackDbPrintBtn', 'click', function(e) {
                     e.preventDefault();
-                    exportData('excel');
+                    if (!currentFilters.course_id) {
+                        alert('Please select a program first.');
+                        return;
+                    }
+                    const q = buildFeedbackDbExportQuery();
+                    window.open(FEEDBACK_DB_EXPORT_ROUTES.print + (q ? ('?' + q) : ''), '_blank', 'noopener');
                 });
 
-                safeBind('#exportPdfBtn', 'click', function(e) {
-                    e.preventDefault();
-                    exportData('pdf');
+                $('input[name="course_type"]').on('change', function() {
+                    reloadCourseListForType();
                 });
+            }
+
+            function reloadCourseListForType() {
+                const ct = document.querySelector('input[name="course_type"]:checked')?.value || 'current';
+                courseType = ct;
+                showLoading(true);
+                const url = FEEDBACK_DB_COURSES_URL + '?course_type=' + encodeURIComponent(ct);
+                fetch(url, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Bad response');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        showLoading(false);
+                        if (!data.success) {
+                            alert('Could not load programs for this course type.');
+                            return;
+                        }
+                        const sel = $('#courseSelect');
+                        sel.empty().append('<option value="">Select Program</option>');
+                        if (data.courses && data.courses.length > 0) {
+                            data.courses.forEach(function(c) {
+                                const label = $('<div/>').text(c.course_name || '').html();
+                                sel.append('<option value="' + c.pk + '">' + label + '</option>');
+                            });
+                        } else {
+                            sel.append('<option value="" disabled>No courses available</option>');
+                        }
+                        currentFilters.course_id = '';
+                        currentFilters.search_param = 'all';
+                        currentFilters.faculty_id = '';
+                        currentFilters.topic_value = '';
+                        $('#searchParam').val('all');
+                        $('#facultyFilter').val('');
+                        $('#topicFilter').val('');
+                        $('.dynamic-filter-container').addClass('d-none').removeClass('d-block');
+                        currentPage = 1;
+                        autoSelectFirstCourse();
+                        syncFeedbackDbExportLinks();
+                        syncFeedbackDbCourseTypeUrl();
+                    })
+                    .catch(function(err) {
+                        console.error(err);
+                        showLoading(false);
+                        alert('Could not load programs.');
+                    });
+            }
+
+            function syncFeedbackDbCourseTypeUrl() {
+                try {
+                    const u = new URL(window.location.href);
+                    u.searchParams.set('course_type', courseType || 'current');
+                    window.history.replaceState({}, '', u.toString());
+                } catch (e) { /* ignore */ }
+            }
+
+            function buildFeedbackDbExportQuery() {
+                if (!currentFilters.course_id) return '';
+                const params = new URLSearchParams();
+                params.set('course_id', currentFilters.course_id);
+                params.set('search_param', currentFilters.search_param || 'all');
+                if (currentFilters.faculty_id) {
+                    params.set('faculty_id', currentFilters.faculty_id);
+                }
+                if (currentFilters.topic_value) {
+                    params.set('topic_value', currentFilters.topic_value);
+                }
+                return params.toString();
+            }
+
+            function syncFeedbackDbExportLinks() {
+                const q = buildFeedbackDbExportQuery();
+                const $pdf = $('#feedbackDbPdfLink');
+                const $excel = $('#feedbackDbExcelLink');
+                const $print = $('#feedbackDbPrintBtn');
+                if (!q) {
+                    $pdf.attr('href', '#').addClass('disabled');
+                    $excel.attr('href', '#').addClass('disabled');
+                    $print.prop('disabled', true).addClass('disabled');
+                    return;
+                }
+                $pdf.attr('href', FEEDBACK_DB_EXPORT_ROUTES.pdf + '?' + q).removeClass('disabled');
+                $excel.attr('href', FEEDBACK_DB_EXPORT_ROUTES.excel + '?' + q).removeClass('disabled');
+                $print.prop('disabled', false).removeClass('disabled');
             }
 
             // Helper function to safely bind events
@@ -489,6 +738,7 @@
                 currentPage = 1;
 
                 showInitialMessage();
+                syncFeedbackDbExportLinks();
             }
 
             function showInitialMessage() {
@@ -498,8 +748,10 @@
                     $('#feedbackTableBody').html(`
                 <tr>
                     <td colspan="10" class="text-center text-muted py-5">
-                        <i class="bi bi-database me-2"></i>
-                        Select a program to view feedback data
+                        <div class="py-3">
+                            <i class="fas fa-database fa-2x mb-2 opacity-25 d-block"></i>
+                            Select a program to view feedback data
+                        </div>
                     </td>
                 </tr>
             `);
@@ -507,8 +759,10 @@
                     $('#feedbackTableBody').html(`
                 <tr>
                     <td colspan="10" class="text-center text-muted py-5">
-                        <i class="bi bi-exclamation-circle me-2"></i>
-                        No programs available. Please add courses first.
+                        <div class="py-3">
+                            <i class="fas fa-exclamation-circle fa-2x mb-2 opacity-25 d-block"></i>
+                            No programs available. Please add courses first.
+                        </div>
                     </td>
                 </tr>
             `);
@@ -519,6 +773,7 @@
             function loadFeedbackData() {
                 if (!currentFilters.course_id) {
                     showInitialMessage();
+                    syncFeedbackDbExportLinks();
                     return;
                 }
 
@@ -542,11 +797,13 @@
                             showErrorMessage(data.error || 'Error loading data');
                         }
                         showLoading(false);
+                        syncFeedbackDbExportLinks();
                     })
                     .catch(error => {
                         console.error('Error loading feedback data:', error);
                         showErrorMessage('Error loading data. Please try again.');
                         showLoading(false);
+                        syncFeedbackDbExportLinks();
                     });
             }
 
@@ -564,24 +821,24 @@
 
                 data.forEach((item, index) => {
                     const row = `
-                <tr class="table-row-hover">
+                <tr>
                     <td class="text-center">${((currentPage - 1) * perPage) + index + 1}</td>
                     <td>
-                                    <a href="javascript:void(0)" class="link-primary faculty-link" 
-   data-faculty-id="${item.faculty_enc_id || ''}"
-   title="View faculty details">
-    ${item.faculty_name}
-</a>
+                        <a href="javascript:void(0)" class="link-primary fw-semibold faculty-link" 
+                           data-faculty-id="${item.faculty_enc_id || ''}"
+                           title="View faculty details" style="color: var(--fb-primary);">
+                            ${item.faculty_name}
+                        </a>
                     </td>
                     <td>${item.course_name}</td>
                     <td>
-                        <small>
+                        <small class="text-body-secondary">
                             ${item.faculty_address || 'N/A'}
                             ${item.faculty_email ? `<br><a href="mailto:${item.faculty_email}" class="text-muted">${item.faculty_email}</a>` : ''}
                         </small>
                     </td>
                     <td>
-                        <small class="text-truncate" style="max-width: 200px; display: block;" 
+                        <small class="text-truncate d-block" style="max-width: 200px;" 
                                title="${item.subject_topic}">
                             ${item.subject_topic}
                         </small>
@@ -597,7 +854,7 @@
                         </span>
                     </td>
                     <td class="text-center">
-                        <span class="badge bg-primary">${item.participant_count}</span>
+                        <span class="badge bg-primary bg-opacity-10 text-primary fw-semibold">${item.participant_count}</span>
                     </td>
                     <td class="text-center">
                         <small>${formatDate(item.session_date)}</small>
@@ -605,10 +862,11 @@
                     <td class="text-center">
                         ${item.all_comments ? 
                             `<button class="btn btn-sm btn-outline-primary view-comments-btn" 
-                                                                                 data-comments="${escapeHtml(item.all_comments)}">
-                                                                            <i class="bi bi-chat-text"></i> View
-                                                                        </button>` : 
-                            '<span class="text-muted">No comments</span>'
+                                     data-comments="${escapeHtml(item.all_comments)}"
+                                     style="border-radius: 20px; font-size: 0.75rem;">
+                                <i class="fas fa-comment-dots"></i> View
+                            </button>` : 
+                            '<span class="text-muted" style="font-size: 0.8rem;">—</span>'
                         }
                     </td>
                 </tr>
@@ -623,17 +881,13 @@
                     const modalElement = document.getElementById('commentsModal');
                     if (modalElement) {
                         $('#commentsContent').html(`
-                    <div class="card">
-                        <div class="card-body">
-                            <h6 class="card-subtitle mb-2 text-muted">All Feedback Comments:</h6>
-                            <div style="max-height: 300px; overflow-y: auto;">
-                                ${comments.split(' | ').map(comment => `
-                                                                                <div class="border-bottom pb-2 mb-2">
-                                                                                    <p class="mb-1">${comment}</p>
-                                                                                </div>
-                                                                            `).join('')}
+                    <div style="max-height: 400px; overflow-y: auto;">
+                        ${comments.split(' | ').map((comment, i) => `
+                            <div class="d-flex gap-2 align-items-start border-bottom pb-2 mb-2">
+                                <span class="badge bg-primary bg-opacity-10 text-primary mt-1" style="min-width: 22px;">${i + 1}</span>
+                                <p class="mb-0 text-body-secondary" style="font-size: 0.88rem;">${comment}</p>
                             </div>
-                        </div>
+                        `).join('')}
                     </div>
                 `);
                         new bootstrap.Modal(modalElement).show();
@@ -715,287 +969,11 @@
                 });
             }
 
-            async function exportData(format) {
-                if (!currentFilters.course_id) {
-                    alert('Please select a program first');
-                    return;
-                }
-
-                showLoading(true);
-
-                try {
-                    const params = new URLSearchParams({
-                        ...currentFilters,
-                        export_type: format
-                    });
-
-                    const response = await fetch(`/faculty/database/export?${params.toString()}`);
-                    const data = await response.json();
-
-                    if (data.success) {
-                        if (format === 'excel') {
-                            await exportToExcel(data.data, data.filename);
-                        } else if (format === 'pdf') {
-                            await exportToPdf(data.data, data.filename);
-                        }
-                    } else {
-                        alert('Error exporting data: ' + (data.error || 'Unknown error'));
-                    }
-                } catch (error) {
-                    console.error('Export error:', error);
-                    alert('Error exporting data');
-                } finally {
-                    showLoading(false);
-                }
-            }
-
-            function exportToExcel(data, filename) {
-
-                const cleanText = value => {
-                    if (!value) return '';
-                    return value
-                        .toString()
-                        .replace(/[\r\n]+/g, ' ') 
-                        .replace(/\s+/g, ' ') 
-                        .trim();
-                };
-
-                const formattedData = data.map(row => ({
-                    ...row,
-                    'Faculty Address': cleanText(row['Faculty Address']),
-                    'Topic': cleanText(row['Topic']),
-                    'Comments': cleanText(row['Comments']) !== '' &&
-                        cleanText(row['Comments']).toLowerCase() !== 'null' ?
-                        cleanText(row['Comments']) :
-                        'NA'
-                }));
-
-                const worksheet = XLSX.utils.json_to_sheet(formattedData);
-                const workbook = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(workbook, worksheet, 'Feedback Database');
-
-                const range = XLSX.utils.decode_range(worksheet['!ref']);
-                const headers = Object.keys(formattedData[0]);
-
-                for (let C = range.s.c; C <= range.e.c; C++) {
-                    const addr = XLSX.utils.encode_cell({
-                        r: 0,
-                        c: C
-                    });
-                    if (!worksheet[addr]) continue;
-
-                    worksheet[addr].s = {
-                        font: {
-                            bold: true
-                        },
-                        fill: {
-                            patternType: "solid",
-                            fgColor: {
-                                rgb: "FFCC00"
-                            }
-                        },
-                        alignment: {
-                            horizontal: "center",
-                            vertical: "center"
-                        }
-                    };
-                }
-
-                for (let R = 1; R <= range.e.r; R++) {
-                    for (let C = range.s.c; C <= range.e.c; C++) {
-                        const addr = XLSX.utils.encode_cell({
-                            r: R,
-                            c: C
-                        });
-                        if (!worksheet[addr]) continue;
-
-                        worksheet[addr].s = worksheet[addr].s || {};
-                        worksheet[addr].s.alignment = {
-                            horizontal: ['Faculty Address', 'Topic', 'Comments'].includes(headers[C]) ?
-                                "left" :
-                                "center",
-                            vertical: "top",
-                            wrapText: false
-                        };
-                    }
-                }
-
-                worksheet['!cols'] = headers.map(h => {
-                    if (h === 'Faculty Address') return {
-                        wch: 65
-                    };
-                    if (h === 'Topic') return {
-                        wch: 60
-                    };
-                    if (h === 'Comments') return {
-                        wch: 70
-                    };
-                    return {
-                        wch: 22
-                    };
-                });
-
-                worksheet['!freeze'] = {
-                    ySplit: 1
-                };
-
-                XLSX.writeFile(workbook, `${filename}.xlsx`);
-            }
-
-
-
-
-            function exportToPdf(data, filename) {
-                const {
-                    jsPDF
-                } = window.jspdf;
-
-                const formattedData = data.map(row => ({
-                    ...row,
-                    'Comments': row['Comments'] && row['Comments'].toString().trim() !== '' && row[
-                            'Comments'].toString().toLowerCase() !== 'null' ?
-                        row['Comments'] : 'NA',
-                    'Content (%)': row['Content (%)'] != null && row['Content (%)'].toString()
-                        .toLowerCase() !== 'null' ?
-                        Number(row['Content (%)']).toFixed(2) : '0.00',
-                    'Presentation (%)': row['Presentation (%)'] != null && row['Presentation (%)']
-                        .toString().toLowerCase() !== 'null' ?
-                        Number(row['Presentation (%)']).toFixed(2) : '0.00',
-                    'Faculty Address': (row['Faculty Address'] || '').replace(/\n/g, ' ') // single line
-                }));
-
-                const doc = new jsPDF({
-                    orientation: 'landscape',
-                    unit: 'mm',
-                    format: 'a3'
-                });
-
-                const pageWidth = doc.internal.pageSize.getWidth();
-                const today = new Date().toLocaleDateString('en-GB');
-                const totalRecords = formattedData.length;
-
-                // Title
-                doc.setFontSize(16);
-                doc.setTextColor(11, 79, 138);
-                doc.text('Feedback Database Report', pageWidth / 2, 15, {
-                    align: 'center'
-                });
-
-                doc.setFontSize(10);
-                doc.setTextColor(80, 80, 80);
-                const program = getFiltersSummary().replace(/^Filters:\s*/i, '');
-                doc.text(`Program: ${program}`, 10, 25);
-                doc.setFontSize(9);
-                doc.text(`Date: ${today}`, 10, 31);
-                doc.text(`Total Records: ${totalRecords}`, 10, 36);
-
-                const tableData = formattedData.map(row => [
-                    row['S.No.'],
-                    row['Faculty Name'],
-                    row['Course Name'],
-                    row['Faculty Address'],
-                    row['Topic'],
-                    row['Content (%)'],
-                    row['Presentation (%)'],
-                    row['No. of Participants'],
-                    row['Session Date'],
-                    row['Comments']
-                ]);
-
-                doc.autoTable({
-                    head: [
-                        [
-                            'S.No.', 'Faculty Name', 'Course', 'Faculty Address', 'Topic',
-                            'Content %', 'Pres. %', 'Participants', 'Session Date', 'Comments'
-                        ]
-                    ],
-                    body: tableData,
-                    startY: 42,
-                    theme: 'grid',
-                    styles: {
-                        fontSize: 8,
-                        cellPadding: 2,
-                        overflow: 'linebreak', 
-                        halign: 'center', 
-                        valign: 'middle'
-                    },
-                    headStyles: {
-                        fillColor: [255, 204, 0], 
-                        textColor: 0,
-                        fontSize: 8,
-                        halign: 'center',
-                        valign: 'middle'
-                    },
-                    columnStyles: {
-                        0: {
-                            cellWidth: 14,
-                            halign: 'center'
-                        }, // S.No.
-                        1: {
-                            cellWidth: 40
-                        }, // Faculty Name
-                        2: {
-                            cellWidth: 42
-                        }, // Course
-                        3: {
-                            cellWidth: 55
-                        }, // Faculty Address
-                        4: {
-                            cellWidth: 60
-                        }, // Topic
-                        5: {
-                            cellWidth: 20,
-                            halign: 'center'
-                        }, // Content %
-                        6: {
-                            cellWidth: 20,
-                            halign: 'center'
-                        }, // Presentation %
-                        7: {
-                            cellWidth: 25,
-                            halign: 'center'
-                        }, // Participants
-                        8: {
-                            cellWidth: 28,
-                            halign: 'center'
-                        }, // Session Date
-                        9: {
-                            cellWidth: 70
-                        } // Comments
-                    },
-                    margin: {
-                        left: 6,
-                        right: 6
-                    }
-                });
-
-                doc.save(`${filename}.pdf`);
-            }
-
-
-
-
-            function getFiltersSummary() {
-                let summary = [];
-                if (currentFilters.course_id) {
-                    const courseName = $('#courseSelect option:selected').text();
-                    summary.push(`Program: ${courseName}`);
-                }
-                if (currentFilters.search_param === 'faculty' && currentFilters.faculty_id) {
-                    const facultyName = $('#facultyFilter option:selected').text();
-                    summary.push(`Faculty: ${facultyName}`);
-                }
-                if (currentFilters.search_param === 'topic' && currentFilters.topic_value) {
-                    summary.push(`Topic: ${currentFilters.topic_value}`);
-                }
-                return summary.length > 0 ? `Filters: ${summary.join(' | ')}` : 'All Records';
-            }
-
             function showLoading(show) {
                 if (show) {
-                    $('#loadingOverlay').fadeIn(200);
+                    $('#loadingOverlay').addClass('active');
                 } else {
-                    $('#loadingOverlay').fadeOut(200);
+                    $('#loadingOverlay').removeClass('active');
                 }
             }
 
@@ -1003,8 +981,10 @@
                 $('#feedbackTableBody').html(`
             <tr>
                 <td colspan="10" class="text-center text-muted py-5">
-                    <i class="bi bi-search me-2"></i>
-                    No feedback data found for the selected criteria
+                    <div class="py-3">
+                        <i class="fas fa-search fa-2x mb-2 opacity-25 d-block"></i>
+                        No feedback data found for the selected criteria
+                    </div>
                 </td>
             </tr>
         `);
@@ -1014,8 +994,10 @@
                 $('#feedbackTableBody').html(`
             <tr>
                 <td colspan="10" class="text-center text-danger py-5">
-                    <i class="bi bi-exclamation-triangle me-2"></i>
-                    ${message}
+                    <div class="py-3">
+                        <i class="fas fa-exclamation-triangle fa-2x mb-2 opacity-50 d-block"></i>
+                        ${message}
+                    </div>
                 </td>
             </tr>
         `);

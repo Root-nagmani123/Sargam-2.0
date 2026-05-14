@@ -130,14 +130,23 @@
                                     @elseif(hasRole('Internal Faculty') || hasRole('Guest Faculty') ||
                                     hasRole('Student-OT'))
                                     <span>Academics</span>
-                                    @elseif(hasRole('Staff'))
-                                    <span>Communication</span>
                                     @else
                                     <span>Setup</span>
                                     @endif
 
                                 </a>
                             </li>
+
+                            <!-- Communications -->
+                            <li class="nav-item" role="none">
+                                <a href="#tab-communications"
+                                    class="nav-link header-nav-link px-3 py-2 {{ $activeNavTab === '#tab-communications' ? 'active' : '' }}"
+                                    data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-communications' ? 'true' : 'false' }}" aria-controls="tab-communications"
+                                    id="communications-tab">
+                                    <span>Communication</span>
+                                </a>
+                            </li>
+
                         </ul>
                     </div>
 
@@ -160,10 +169,12 @@
             </i>
 
             @php
-                $unreadCount = notification()->getUnreadCount(
-                    Auth::user()->user_id ?? 0,
-                    hasRole('Admin') ? 10 : null
-                );
+                $unreadCount = (Auth::user() && Auth::user()->user_id)
+                    ? notification()->getUnreadCount(
+                        Auth::user()->user_id,
+                        hasRole('Admin') ? 10 : null
+                    )
+                    : 0;
             @endphp
 
             @if($unreadCount > 0)
@@ -191,12 +202,14 @@
 
             <div id="notificationList" class="notification-list">
                 @php
-                    $notifications = notification()->getNotifications(
-                        Auth::user()->user_id ?? 0,
-                        10,
-                        false,
-                        hasRole('Admin') ? 10 : null
-                    );
+                    $notifications = (Auth::user() && Auth::user()->user_id)
+                        ? notification()->getNotifications(
+                            Auth::user()->user_id,
+                            10,
+                            false,
+                            hasRole('Admin') ? 10 : null
+                        )
+                        : collect();
                 @endphp
 
                 @if($notifications->count() > 0)
@@ -269,6 +282,16 @@
                             @endif
                         </a>
                     </li>
+
+                    <!-- Communications -->
+                    <li class="nav-item" role="none">
+                        <a href="#tab-communications" class="nav-link mobile-tab-link {{ $activeNavTab === '#tab-communications' ? 'active' : '' }}"
+                            data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-communications' ? 'true' : 'false' }}" aria-controls="tab-communications"
+                            id="communications-tab-mobile">
+                            <i class="material-icons material-symbols-rounded" aria-hidden="true">forum</i>
+                            <span>Communication</span>
+                        </a>
+                    </li>
                         </ul>
                     </li>
 
@@ -280,7 +303,9 @@
                             aria-controls="notificationOffcanvasMobile" aria-label="Notifications" title="Notifications">
                             <i class="material-icons material-symbols-rounded" aria-hidden="true">notifications_active</i>
                             @php
-                            $unreadCountMobile = notification()->getUnreadCount(Auth::user()->user_id ?? 0);
+                            $unreadCountMobile = (Auth::user() && Auth::user()->user_id)
+                                ? notification()->getUnreadCount(Auth::user()->user_id)
+                                : 0;
                             @endphp
                             @if($unreadCountMobile > 0)
                             <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 9px;">
@@ -308,12 +333,14 @@
                 <div class="offcanvas-body p-0 overflow-y-auto notification-mobile-list" style="max-height: calc(70vh - 60px);">
                     <div id="notificationListMobile">
                         @php
-                        $notificationsMobile = notification()->getNotifications(
-                            Auth::user()->user_id ?? 0,
-                            10,
-                            false,
-                            hasRole('Admin') ? 10 : null
-                        );
+                        $notificationsMobile = (Auth::user() && Auth::user()->user_id)
+                            ? notification()->getNotifications(
+                                Auth::user()->user_id,
+                                10,
+                                false,
+                                hasRole('Admin') ? 10 : null
+                            )
+                            : collect();
                         @endphp
                         @if($notificationsMobile->count() > 0)
                         @foreach($notificationsMobile as $notification)
@@ -1610,8 +1637,8 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Determine initial tab.
-    // Prefer tab inferred from current URL + sidebar links,
-    // then server route tab, then localStorage fallback.
+    // Prefer server route tab first (source of truth),
+    // then infer from sidebar links, then localStorage fallback.
     function inferTabFromSidebarByUrl() {
         const current = new URL(window.location.href);
         const currentPath = current.pathname.replace(/\/+$/, '');
@@ -1667,12 +1694,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const hasInferredTab = !!document.querySelector(`[data-bs-toggle="tab"][href="${inferredTab}"]`);
     let initial = '#home';
 
-    if (hasInferredTab) {
-        initial = inferredTab;
-        console.log('Initial tab from sidebar URL match:', initial);
-    } else if (hasRouteTab) {
+    if (hasRouteTab) {
         initial = routeTab;
         console.log('Initial tab from route:', initial);
+    } else if (hasInferredTab) {
+        initial = inferredTab;
+        console.log('Initial tab from sidebar URL match:', initial);
     } else if (hasSavedTab) {
         initial = savedTab;
         console.log('Initial tab from storage fallback:', initial);

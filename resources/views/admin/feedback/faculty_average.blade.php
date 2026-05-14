@@ -4,87 +4,180 @@
 
 @section('setup_content')
     <style>
-        /* Keep your existing CSS styles */
+        /* ── Variables ── */
         :root {
-            --primary: #0b4f8a;
-            --secondary: #f4f6f9;
-            --accent: #f2b705;
-            --border: #d0d7de;
-            --text-dark: #1f2937;
+            --fb-primary: #0b4f8a;
+            --fb-primary-light: #eef4fb;
+            --fb-border: #d0d7de;
         }
 
-        body {
-            background: var(--secondary);
-            font-size: 14px;
-            color: var(--text-dark);
-        }
-
+        /* ── Filter Panel ── */
         .filter-card {
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            background: #fff;
+            border: 0;
+            border-radius: var(--bs-border-radius-lg);
+            box-shadow: 0 1px 4px rgba(0,0,0,.06);
+            overflow: hidden;
         }
 
         .filter-card .card-header {
-            background: var(--primary);
+            background: var(--fb-primary);
             color: #fff;
             font-weight: 600;
+            font-size: 0.875rem;
+            padding: 0.7rem 1rem;
+            border: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
         }
 
+        .filter-card .card-body {
+            padding: 1.1rem 1rem;
+        }
+
+        .filter-card .form-label {
+            font-size: 0.78rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            color: var(--bs-secondary-color);
+            margin-bottom: 0.25rem;
+        }
+
+        .filter-card .form-select,
+        .filter-card .form-control {
+            font-size: 0.85rem;
+            border-color: var(--fb-border);
+            transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
+        }
+
+        .filter-card .form-select:focus,
+        .filter-card .form-control:focus {
+            border-color: var(--fb-primary);
+            box-shadow: 0 0 0 0.2rem rgba(11,79,138,.12);
+        }
+
+        .filter-card fieldset legend {
+            font-size: 0.78rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            color: var(--bs-secondary-color);
+        }
+
+        .filter-card .form-check-label {
+            font-size: 0.85rem;
+        }
+
+        /* ── Content Card ── */
         .content-card {
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            background: #fff;
+            border: 0;
+            border-radius: var(--bs-border-radius-lg);
+            box-shadow: 0 1px 4px rgba(0,0,0,.06);
+            overflow: hidden;
         }
 
         .content-card .card-header {
-            background: #eef4fb;
+            background: var(--fb-primary-light);
             font-weight: 600;
+            font-size: 0.95rem;
+            padding: 0.7rem 1rem;
+            border-bottom: 1px solid rgba(11,79,138,.1);
+        }
+
+        /* ── Data Table ── */
+        #feedbackTable {
+            font-size: 0.85rem;
+            margin-bottom: 0;
+        }
+
+        #feedbackTable thead th {
+            font-weight: 600;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--bs-secondary-color);
+            border-bottom: 2px solid rgba(11,79,138,.15);
+            padding: 0.65rem 0.75rem;
+            white-space: nowrap;
+            vertical-align: middle;
+        }
+
+        #feedbackTable tbody td {
+            padding: 0.65rem 0.75rem;
+            vertical-align: middle;
+            border-color: var(--bs-border-color-translucent);
+        }
+
+        #feedbackTable tbody tr {
+            transition: background-color 0.15s ease;
+        }
+
+        #feedbackTable tbody tr:hover {
+            background-color: rgba(11,79,138,.03) !important;
         }
 
         .faculty-name {
             font-weight: 600;
-            color: #0b4f8a;
+            color: var(--fb-primary);
         }
 
-        .percentage-good {
-            color: #198754;
+        /* ── Percentage Badges ── */
+        .pct-badge {
+            display: inline-block;
+            min-width: 3.6rem;
+            padding: 0.25em 0.55em;
+            border-radius: var(--bs-border-radius-pill);
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .percentage-good   { background: rgba(25,135,84,.1); color: #146c43; }
+        .percentage-average { background: rgba(180,83,9,.1);  color: #92400e; }
+        .percentage-low    { background: rgba(220,53,69,.1);  color: #b02a37; }
+
+        /* ── Export Buttons ── */
+        .export-btn-group .btn {
+            font-size: 0.8rem;
             font-weight: 600;
+            padding: 0.35rem 0.85rem;
+            border-radius: var(--bs-border-radius-pill) !important;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
         }
 
-        .percentage-average {
-            color: #b45309;
-            font-weight: 600;
-        }
-
-        .percentage-low {
-            color: #dc3545;
-            font-weight: 600;
-        }
-
-        .pagination .page-link {
-            color: var(--primary);
-        }
-
-        .pagination .active .page-link {
-            background: var(--primary);
-            border-color: var(--primary);
-        }
-
-        .btn-primary {
-            background: var(--primary);
-            border-color: var(--primary);
-        }
-
-        .btn-primary:hover {
-            background: #083e6c;
-        }
-
-        /* Loading spinner */
+        /* ── Loading / Empty States ── */
         .loading-spinner {
             display: none;
             text-align: center;
-            padding: 20px;
+            padding: 2.5rem 1rem;
+        }
+
+        .loading-spinner p {
+            color: var(--bs-secondary-color);
+            font-size: 0.85rem;
+        }
+
+        .state-empty {
+            padding: 3rem 1rem;
+            text-align: center;
+        }
+
+        .state-empty i {
+            font-size: 2.5rem;
+            color: var(--bs-secondary-color);
+            opacity: 0.5;
+        }
+
+        /* ── Misc ── */
+        .btn-primary { background: var(--fb-primary); border-color: var(--fb-primary); }
+        .btn-primary:hover { background: #083e6c; border-color: #083e6c; }
+
+        .record-count {
+            font-size: 0.8rem;
+            color: var(--bs-secondary-color);
         }
     </style>
     <div class="container-fluid py-3">
@@ -94,21 +187,22 @@
             <!-- LEFT FILTER PANEL -->
             <aside class="col-lg-3 col-md-4">
                 <div class="card filter-card">
-                    <div class="card-header">Options</div>
+                    <div class="card-header">
+                        <i class="fas fa-sliders-h"></i> Filters
+                    </div>
                     <div class="card-body">
                         <form method="GET" action="{{ route('feedback.average') }}" id="filterForm">
                             <fieldset class="mb-3">
                                 <legend class="fs-6 fw-semibold">Course Status</legend>
                                 <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="course_type" value="archived"
-                                        id="archived" {{ ($courseType ?? 'current') == 'archived' ? 'checked' : '' }}>
-                                    <label class="form-check-label" for="archived">Archived Courses</label>
-                                </div>
-
-                                <div class="form-check">
                                     <input class="form-check-input" type="radio" name="course_type" value="current"
                                         id="current" {{ ($courseType ?? 'current') == 'current' ? 'checked' : '' }}>
                                     <label class="form-check-label" for="current">Current Courses</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="course_type" value="archived"
+                                        id="archived" {{ ($courseType ?? 'current') == 'archived' ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="archived">Archived Courses</label>
                                 </div>
                             </fieldset>
 
@@ -147,10 +241,14 @@
                                 <input type="date" class="form-control" name="to_date" value="{{ $toDate ?? '' }}" />
                             </div>
 
-                            <div class="d-flex gap-2">
-                                <button type="submit" class="btn btn-primary w-50">Apply</button>
-                                <button type="button" class="btn btn-outline-secondary w-50"
-                                    onclick="resetFilters()">Reset</button>
+                            <div class="d-grid gap-2 d-flex">
+                                <button type="submit" class="btn btn-primary flex-fill rounded-pill">
+                                    <i class="fas fa-search me-1"></i> Apply
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary flex-fill rounded-pill"
+                                    onclick="resetFilters()">
+                                    <i class="fas fa-undo me-1"></i> Reset
+                                </button>
                             </div>
                         </form>
                     </div>
@@ -160,9 +258,12 @@
             <!-- MAIN CONTENT -->
             <main class="col-lg-9 col-md-8">
                 <div class="card content-card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <span>Faculty Feedback Average</span>
-                        <div class="btn-group" role="group" style="margin-left: auto; gap: 10px;">
+                    <div class="card-header d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2">
+                        <span class="d-flex align-items-center gap-2">
+                            <i class="fas fa-chart-bar text-primary"></i>
+                            Faculty Feedback Average
+                        </span>
+                        <div class="export-btn-group d-flex flex-wrap gap-2">
                             <!-- Excel Export -->
                             <a href="{{ route('feedback.average.export.excel', [
                                 'course_type' => $courseType,
@@ -171,9 +272,8 @@
                                 'from_date' => $fromDate,
                                 'to_date' => $toDate,
                             ]) }}"
-                                class="btn btn-success" target="_blank" title="Export to Excel"
-                                style="padding: 10px 25px; font-size: 15px; font-weight: 600; border-radius: 6px;">
-                                <i class="fas fa-file-excel" style="margin-right: 8px;"></i> Export Excel
+                                class="btn btn-outline-success btn-sm" target="_blank" title="Export to Excel">
+                                <i class="fas fa-file-excel"></i> Excel
                             </a>
 
                             <!-- PDF Export -->
@@ -184,26 +284,28 @@
                                 'from_date' => $fromDate,
                                 'to_date' => $toDate,
                             ]) }}"
-                                class="btn btn-danger" target="_blank" title="Export to PDF"
-                                style="padding: 10px 25px; font-size: 15px; font-weight: 600; border-radius: 6px;">
-                                <i class="fas fa-file-pdf" style="margin-right: 8px;"></i> Export PDF
+                                class="btn btn-outline-danger btn-sm" target="_blank" title="Export to PDF">
+                                <i class="fas fa-file-pdf"></i> PDF
                             </a>
-                        </div>
 
-                        {{-- <small class="text-muted">Data refreshed: {{ $refreshTime ?? now()->format('d-M-Y H:i') }}</small> --}}
+                            <!-- Print -->
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="printReport()" title="Print Report">
+                                <i class="fas fa-print"></i> Print
+                            </button>
+                        </div>
                     </div>
 
-                    <div class="card-body">
+                    <div class="card-body p-0">
                         <!-- Loading Spinner -->
                         <div class="loading-spinner" id="loadingSpinner">
                             <div class="spinner-border text-primary" role="status">
                                 <span class="visually-hidden">Loading...</span>
                             </div>
-                            <p class="mt-2">Loading feedback data...</p>
+                            <p class="mt-2 mb-0">Loading feedback data...</p>
                         </div>
 
-                        <!-- Table Container (initially visible) -->
-                        <div id="tableContainer">
+                        <!-- Table Container -->
+                        <div id="tableContainer" class="p-3">
                             @if (!empty($currentProgramName))
                                 <div class="text-center mb-3">
                                     <h6 class="fw-semibold mb-0">{{ $currentProgramName }}</h6>
@@ -211,20 +313,30 @@
                             @endif
 
                             @if ($feedbackData->isEmpty())
-                                <div class="alert alert-info text-center">
-                                    No feedback data found for the selected filters.
+                                <div class="state-empty">
+                                    <i class="fas fa-search d-block mb-2"></i>
+                                    <p class="fw-medium text-body-secondary mb-1">No records found</p>
+                                    <p class="text-body-tertiary small mb-0">Try adjusting your filters.</p>
                                 </div>
                             @else
+                                <!-- Record Count -->
+                                <div class="d-flex justify-content-end mb-2">
+                                    <span class="record-count">
+                                        <i class="fas fa-list-ol me-1"></i>
+                                        {{ $feedbackData->count() }} {{ Str::plural('record', $feedbackData->count()) }}
+                                    </span>
+                                </div>
+
                                 <!-- TABLE -->
                                 <div class="table-responsive">
-                                    <table class="table table-hover" id="feedbackTable">
+                                    <table class="table table-hover align-middle mb-0" id="feedbackTable">
                                         <thead>
                                             <tr>
                                                 <th>Faculty</th>
                                                 <th>Topic</th>
-                                                <th>Content (%)</th>
-                                                <th>Presentation (%)</th>
-                                                <th>Participants</th>
+                                                <th class="text-center">Content (%)</th>
+                                                <th class="text-center">Presentation (%)</th>
+                                                <th class="text-center">Participants</th>
                                                 <th>Session Date & Time</th>
                                             </tr>
                                         </thead>
@@ -233,24 +345,27 @@
                                                 <tr>
                                                     <td class="faculty-name">{{ $data['faculty_name'] }}</td>
                                                     <td>{{ $data['topic_name'] }}</td>
-                                                    <td
-                                                        class="{{ $data['content_percentage'] >= 90 ? 'percentage-good' : ($data['content_percentage'] >= 70 ? 'percentage-average' : 'percentage-low') }}">
-                                                        {{ number_format($data['content_percentage'], 2) }}
+                                                    <td class="text-center">
+                                                        <span class="pct-badge {{ $data['content_percentage'] >= 90 ? 'percentage-good' : ($data['content_percentage'] >= 70 ? 'percentage-average' : 'percentage-low') }}">
+                                                            {{ number_format($data['content_percentage'], 2) }}
+                                                        </span>
                                                     </td>
-                                                    <td
-                                                        class="{{ $data['presentation_percentage'] >= 90 ? 'percentage-good' : ($data['presentation_percentage'] >= 70 ? 'percentage-average' : 'percentage-low') }}">
-                                                        {{ number_format($data['presentation_percentage'], 2) }}
+                                                    <td class="text-center">
+                                                        <span class="pct-badge {{ $data['presentation_percentage'] >= 90 ? 'percentage-good' : ($data['presentation_percentage'] >= 70 ? 'percentage-average' : 'percentage-low') }}">
+                                                            {{ number_format($data['presentation_percentage'], 2) }}
+                                                        </span>
                                                     </td>
-                                                    <td class="text-center">{{ $data['participants'] }}</td>
+                                                    <td class="text-center">
+                                                        <span class="badge bg-body-secondary text-body rounded-pill">{{ $data['participants'] }}</span>
+                                                    </td>
                                                     <td>
-                                                        <div class="fw-semibold">
+                                                        <div class="fw-semibold small">
                                                             {{ \Carbon\Carbon::parse($data['session_date'])->format('d M Y') }}
                                                         </div>
-                                                        <div class="text-muted small">
+                                                        <div class="text-body-tertiary" style="font-size:0.78rem">
                                                             {{ $data['class_session'] }}
                                                         </div>
                                                     </td>
-
                                                 </tr>
                                             @endforeach
                                         </tbody>
@@ -286,6 +401,18 @@
             document.getElementById('filterForm').submit();
         }
 
+        // Print function - opens LBSNAA themed print view
+        function printReport() {
+            const form = document.getElementById('filterForm');
+            const formData = new FormData(form);
+            const params = new URLSearchParams();
+            for (const [key, value] of formData.entries()) {
+                params.append(key, value);
+            }
+            const printUrl = `{{ route('feedback.average.print') }}?${params.toString()}`;
+            window.open(printUrl, '_blank');
+        }
+
         // Function to update export links with current filter values
         function updateExportLinks() {
             // Get current values from the filter form
@@ -300,7 +427,7 @@
             const pdfBaseUrl = "{{ route('feedback.average.export.pdf') }}";
 
             // Find all export links
-            const exportLinks = document.querySelectorAll('.btn-group a');
+            const exportLinks = document.querySelectorAll('.export-btn-group a');
 
             exportLinks.forEach(link => {
                 if (link.href.includes('export-excel')) {
@@ -402,6 +529,15 @@
                     // Update refresh time
                     if (newRefreshTime) {
                         document.querySelector('.card-header small').textContent = newRefreshTime.textContent;
+                    }
+
+                    // Update export button links from server-rendered response
+                    const newExportGroup = doc.querySelector('.export-btn-group');
+                    if (newExportGroup) {
+                        const currentExportGroup = document.querySelector('.export-btn-group');
+                        if (currentExportGroup) {
+                            currentExportGroup.innerHTML = newExportGroup.innerHTML;
+                        }
                     }
 
                     // IMPORTANT: Update export links with current filter values

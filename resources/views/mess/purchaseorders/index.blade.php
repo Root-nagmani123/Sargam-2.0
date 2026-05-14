@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Purchase Orders')
-@section('setup_content')
+@section('content')
 @php
     $canDeletePurchaseOrder = hasRole('Admin') || hasRole('Mess-Admin');
 @endphp
@@ -167,47 +167,7 @@
                                 <th scope="col" class="po-th border-0 py-3 pe-4 text-end d-print-none">Actions</th>
                             </tr>
                         </thead>
-                        <tbody>
-                        @foreach($purchaseOrders as $po)
-                            @php
-                                $statusBadgeClass = $po->status === 'approved' ? 'text-bg-success'
-                                    : ($po->status === 'rejected' ? 'text-bg-danger'
-                                    : ($po->status === 'completed' ? 'text-bg-primary' : 'text-bg-warning'));
-                            @endphp
-                            <tr class="po-row">
-                                <td class="ps-4 py-3 text-body-secondary fw-medium">{{ $loop->iteration }}</td>
-                                <td class="py-3">
-                                    <span class="fw-semibold text-body">{{ $po->po_number }}</span>
-                                </td>
-                                <td class="py-3 text-body-secondary">{{ $po->vendor->name ?? 'N/A' }}</td>
-                                <td class="py-3 text-body-secondary">{{ $po->store->store_name ?? 'N/A' }}</td>
-                                <td class="py-3">
-                                    <span class="badge rounded-pill {{ $statusBadgeClass }} px-3 py-1 fw-semibold" style="font-size: 0.72rem; letter-spacing: 0.02em;">
-                                        {{ ucfirst($po->status) }}
-                                    </span>
-                                </td>
-                                <td class="d-print-none text-end pe-4 py-3">
-                                    <div class="d-inline-flex align-items-center justify-content-end gap-1">
-                                    <button type="button" class="btn btn-sm btn-outline-primary btn-view-po rounded-2 po-action-btn" data-po-id="{{ $po->id }}" title="View">
-                                        <i class="material-icons material-symbol-rounded align-middle" style="font-size: 1rem;">visibility</i>
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-outline-info btn-edit-po rounded-2 po-action-btn" data-po-id="{{ $po->id }}" title="Edit">
-                                        <i class="material-icons material-symbol-rounded align-middle" style="font-size: 1rem;">edit</i>
-                                    </button>
-                                    @if($canDeletePurchaseOrder)
-                                        <form action="{{ route('admin.mess.purchaseorders.destroy', $po->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this purchase order?');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-outline-danger rounded-2 po-action-btn" title="Delete">
-                                                <i class="material-icons material-symbol-rounded align-middle" style="font-size: 1rem;">delete</i>
-                                            </button>
-                                        </form>
-                                    @endif
-                                    </div>
-                                </td>
-                            </tr>
-                        @endforeach
-                        </tbody>
+                        <tbody></tbody>
                     </table>
                 </div>
                 </div>{{-- /.po-print-area --}}
@@ -404,7 +364,9 @@
     'searchPlaceholder' => 'Search purchase orders...',
     'orderColumn' => 1,
     'actionColumnIndex' => 5,
-    'infoLabel' => 'purchase orders'
+    'infoLabel' => 'purchase orders',
+    'serverSide' => true,
+    'ajaxUrlBase' => route('admin.mess.purchaseorders.index')
 ])
 @include('mess.partials.modal-dropdown-stability')
 

@@ -3,30 +3,10 @@
 @section('title', 'Create Form - Sargam | Lal Bahadur')
 
 @section('setup_content')
+    @include('admin.partials.choices-bootstrap5')
 
-    <div class="container-fluid">
-        <div class="card card-body py-3">
-            <!-- Header + Breadcrumb -->
-            <div class="row align-items-center">
-                <div class="col-12">
-                    <div class="d-sm-flex align-items-center justify-space-between">
-                        <h4 class="mb-4 mb-sm-0 card-title">Create Form</h4>
-                        <nav aria-label="breadcrumb" class="ms-auto">
-                            <ol class="breadcrumb">
-                                <li class="breadcrumb-item">
-                                    <a href="{{ route('forms.index') }}" class="text-muted text-decoration-none">
-                                        <iconify-icon icon="solar:home-2-line-duotone" class="fs-6"></iconify-icon>
-                                    </a>
-                                </li>
-                                <li class="breadcrumb-item active" aria-current="page">
-                                    <span class="badge fw-medium fs-2 bg-primary-subtle text-primary">Forms</span>
-                                </li>
-                            </ol>
-                        </nav>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div class="container-fluid choices-bs-scope">
+        <x-breadcrum title="Create Form" />
 
         <!-- Form -->
         <div class="card mt-3">
@@ -107,30 +87,30 @@
 
 @endsection
 
+@push('scripts')
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const startDateInput = document.getElementById('course_sdate');
-        const endDateInput = document.getElementById('course_edate');
+    document.addEventListener('DOMContentLoaded', function () {
+        var startDateInput = document.getElementById('course_sdate');
+        var endDateInput = document.getElementById('course_edate');
+        var form = document.getElementById('createForm');
+        if (!startDateInput || !endDateInput || !form) return;
 
-        // Optional: Disable past dates
-        const today = new Date().toISOString().split('T')[0];
+        var today = new Date().toISOString().split('T')[0];
         startDateInput.setAttribute('min', today);
         endDateInput.setAttribute('min', today);
 
-        // Listen for form submission
-        document.querySelector('#createForm').addEventListener('submit', function(e) {
-            const startDate = new Date(startDateInput.value);
-            const endDate = new Date(endDateInput.value);
-
+        form.addEventListener('submit', function (e) {
+            var startDate = new Date(startDateInput.value);
+            var endDate = new Date(endDateInput.value);
             if (startDate > endDate) {
-                e.preventDefault(); // stop form submission
+                e.preventDefault();
                 alert('Course Start Date cannot be later than Course End Date.');
             }
         });
 
-        // Automatically adjust endDate's min attribute when startDate is selected
-        startDateInput.addEventListener('change', function() {
+        startDateInput.addEventListener('change', function () {
             endDateInput.setAttribute('min', this.value);
         });
     });
 </script>
+@endpush

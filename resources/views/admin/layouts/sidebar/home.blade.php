@@ -1,9 +1,16 @@
 @php
-    $showHomeEstateMini = hasRole('Admin') || hasRole('Super Admin') || hasRole('Estate');
-    $homeEstateMiniSelected = $showHomeEstateMini && request('scope') === 'self' && (
-        request()->routeIs('admin.estate.request-for-estate')
-        || request()->routeIs('admin.estate.generate-estate-bill*')
-    );
+    $isContractualEmployee = false;
+    $authUser = \Illuminate\Support\Facades\Auth::user();
+    if ($authUser && \Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'payroll')) {
+        $userId = $authUser->user_id ?? $authUser->pk ?? null;
+        if ($userId) {
+            $emp = \Illuminate\Support\Facades\DB::table('employee_master')
+                ->where('pk', $userId)
+                ->orWhere('pk_old', $userId)
+                ->first(['payroll']);
+            $isContractualEmployee = $emp && (int) ($emp->payroll ?? 0) !== 0;
+        }
+    }
 @endphp
 <aside class="side-mini-panel with-vertical sidebar-google-style" id="mainSidebar">
     <div class="vh-100 d-flex flex-column overflow-hidden">
@@ -34,7 +41,7 @@
                                     <div class="simplebar-content-wrapper" tabindex="0" role="region"
                                         aria-label="scrollable content" style="height: 100%; overflow: hidden scroll;">
                                         <div class="simplebar-content" style="padding: 0px;">
-                                            <li class="mini-nav-item {{ (request()->routeIs('admin.dashboard') || request()->is('dashboard')) && ! $homeEstateMiniSelected ? 'selected' : '' }}"
+                                            <li class="mini-nav-item {{ (request()->routeIs('admin.dashboard') || request()->is('dashboard')) ? 'selected' : '' }}"
                                                 id="mini-1">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3">
@@ -44,15 +51,45 @@
                                                     <span class="mini-nav-title sidebar-google-label">General</span>
                                                 </a>
                                             </li>
-                                            @if ($showHomeEstateMini)
-                                            <li class="mini-nav-item {{ $homeEstateMiniSelected ? 'selected' : '' }}"
-                                                id="home-mini-estate">
+                                            @if(hasRole('Admin') || hasRole('Super Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST') || hasRole('Estate') || hasRole('HAC Person') || hasRole('Staff') || hasRole('Student-OT') || hasRole('Doctor') || hasRole('Guest Faculty') || hasRole('Internal Faculty'))
+                                            <li class="mini-nav-item {{ request()->is('admin/estate*') ? 'selected' : '' }}" id="mini-11">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3">
                                                     <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
                                                         <i class="material-icons menu-icon material-symbols-rounded">house</i>
                                                     </span>
-                                                    <span class="mini-nav-title sidebar-google-label">Estate</span>
+                                                    <span class="mini-nav-title sidebar-google-label">Estate Management</span>
+                                                </a>
+                                            </li>
+                                            @endif
+                                            @if(canSeeMessSelfServiceSetup())
+                                            <li class="mini-nav-item {{ request()->is('admin/mess*') ? 'selected' : '' }}" id="setup-mini-9">
+                                                <a href="javascript:void(0)"
+                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3">
+                                                    <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
+                                                        <i class="material-icons menu-icon material-symbols-rounded">restaurant_menu</i>
+                                                    </span>
+                                                    <span class="mini-nav-title sidebar-google-label">Mess Management</span>
+                                                </a>
+                                            </li>
+                                            @endif
+                                            @if(! hasRole('Student-OT') && ! $isContractualEmployee)
+                                            <li class="mini-nav-item {{ request()->is('security*') ? 'selected' : '' }}" id="mini-9">
+                                                <a href="javascript:void(0)"
+                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3">
+                                                    <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
+                                                        <i class="material-icons menu-icon material-symbols-rounded">shield</i>
+                                                    </span>
+                                                    <span class="mini-nav-title sidebar-google-label">Security</span>
+                                                </a>
+                                            </li>
+                                            <li class="mini-nav-item {{ request()->is('admin/issue-management*') || request()->is('admin/issue-categories*') || request()->is('admin/issue-sub-categories*') ? 'selected' : '' }}" id="mini-10">
+                                                <a href="javascript:void(0)"
+                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3">
+                                                    <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
+                                                        <i class="material-icons menu-icon material-symbols-rounded">report_problem</i>
+                                                    </span>
+                                                    <span class="mini-nav-title sidebar-google-label">Centcom</span>
                                                 </a>
                                             </li>
                                             @endif
@@ -80,9 +117,11 @@
                     <!-- Dashboard -->
                     <!-- ---------------------------------- -->
                     <x-menu.general />
-
-                    @if ($showHomeEstateMini)
-                    <x-menu.home_estate />
+                    <x-menu.setup_estate_management />
+                    <x-menu.setup_mess_management />
+                    @if(! hasRole('Student-OT') && ! $isContractualEmployee)
+                    <x-menu.setup_security_management />
+                    <x-menu.setup_issue_management />
                     @endif
 
                 </div>

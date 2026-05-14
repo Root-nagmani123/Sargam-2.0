@@ -445,8 +445,9 @@ class CourseRepositoryController extends Controller
                         // Generate unique filename
                         $fileName = time() . '_' . uniqid() . '_' . $file->getClientOriginalName();
                         
-                        // Store file in hierarchical folder structure
-                        $filePath = $file->storeAs('course-repository/' . $folderPath, $fileName, 'public');
+                        // Store file in hierarchical folder structure under admin root
+                        $storageFolder = trim($folderPath, '/');
+                        $filePath = $file->storeAs($storageFolder, $fileName, 'public');
                         
                         // Insert into course_repository_documents
                         CourseRepositoryDocument::create([
@@ -522,24 +523,82 @@ class CourseRepositoryController extends Controller
         try {
             $document = CourseRepositoryDocument::findOrFail($pk);
             
-            if (!$document->full_path) {
+            if (!$document->full_path && !$document->normalized_full_path) {
                 return redirect()->back()->with('error', 'File not found');
             }
-            
-            // Check if file exists
-            if (!Storage::disk('public')->exists($document->full_path)) {
-                Log::error('File not found in storage: ' . $document->full_path);
+
+            $relativePath = $this->resolveDocumentRelativePath($document);
+            if (!$relativePath) {
+                Log::error('Course repository file not found', [
+                    'document_pk' => $document->pk,
+                    'full_path' => $document->full_path,
+                    'normalized_full_path' => $document->normalized_full_path,
+                ]);
                 return redirect()->back()->with('error', 'File not found in storage');
             }
             
             // Get original filename without timestamp prefix
             $originalName = preg_replace('/^\d+_[a-f0-9]+_/', '', $document->upload_document);
             
-            return Storage::disk('public')->download($document->full_path, $originalName);
+            return Storage::disk('public')->download($relativePath, $originalName);
         } catch (Exception $e) {
             Log::error('Error downloading document: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Download failed: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Resolve file path variations and return a valid relative path for public disk.
+     */
+    private function resolveDocumentRelativePath(CourseRepositoryDocument $document): ?string
+    {
+        $candidates = [];
+
+        if ($document->normalized_full_path) {
+            $candidates[] = ltrim(str_replace('\\', '/', $document->normalized_full_path), '/');
+        }
+
+        if ($document->full_path) {
+            $rawPath = trim((string) $document->full_path);
+            $rawPath = preg_replace('#^https?://[^/]+/#i', '', $rawPath);
+            $rawPath = str_replace('\\', '/', $rawPath);
+            $rawPath = preg_replace('#^/?storage/app/public/#', '', $rawPath);
+            $rawPath = preg_replace('#^/?storage/#', '', $rawPath);
+            $rawPath = preg_replace('#^/?app/public/#', '', $rawPath);
+            $rawPath = ltrim($rawPath, '/');
+            if ($rawPath !== '') {
+                $candidates[] = $rawPath;
+            }
+        }
+
+        $candidates = array_values(array_unique(array_filter($candidates)));
+
+        // Backward compatibility: many old rows don't include base repository folder
+        // in full_path, while files are physically stored under one of these roots.
+        $prefixedCandidates = [];
+        foreach ($candidates as $candidate) {
+            $normalizedCandidate = ltrim(str_replace('\\', '/', $candidate), '/');
+
+            $prefixedCandidates[] = $candidate;
+            $prefixedCandidates[] = 'course_repository/' . $normalizedCandidate;
+            $prefixedCandidates[] = 'course-repository/' . $normalizedCandidate;
+            $prefixedCandidates[] = 'Course Repository/' . $normalizedCandidate;
+
+            // Base folder replacement fallbacks (important for env mismatch)
+            $prefixedCandidates[] = preg_replace('#^course_repository/#', 'course-repository/', $normalizedCandidate);
+            $prefixedCandidates[] = preg_replace('#^course-repository/#', 'course_repository/', $normalizedCandidate);
+            $prefixedCandidates[] = preg_replace('#^Course Repository/#', 'course-repository/', $normalizedCandidate);
+            $prefixedCandidates[] = preg_replace('#^Course Repository/#', 'course_repository/', $normalizedCandidate);
+        }
+        $candidates = array_values(array_unique(array_filter($prefixedCandidates)));
+
+        foreach ($candidates as $candidate) {
+            if (Storage::disk('public')->exists($candidate)) {
+                return $candidate;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -847,30 +906,33 @@ class CourseRepositoryController extends Controller
 
     /**
      * Build folder hierarchy path from parent repository
-     * Example: "Central Course Repository of LBSNAA/Foundation Course/FC-89/Class Materials"
+     * Example: "course_repository/Central Course Repository of LBSNAA/Foundation Course/FC-89/Class Materials"
      */
     private function buildFolderPath($repository)
     {
-        $pathParts = [];
+        $hierarchyParts = [];
         $current = $repository;
         
         // Traverse up the hierarchy to build path
         while ($current) {
             // Sanitize folder name (remove special characters that are problematic for file systems)
-            $folderName = preg_replace('/[^\w\s\-()]/', '', $current->course_repository_name);
+            $folderName = preg_replace('/[^\w\s\-()]/', '', (string) $current->course_repository_name);
             $folderName = trim($folderName);
-            
-            array_unshift($pathParts, $folderName);
+
+            if ($folderName !== '') {
+                array_unshift($hierarchyParts, $folderName);
+            }
             
             // Get parent if exists
-            if ($current->parent_pk) {
-                $current = CourseRepositoryMaster::find($current->parent_pk);
+            if (!empty($current->parent_type)) {
+                $current = CourseRepositoryMaster::find($current->parent_type);
             } else {
                 break;
             }
         }
-        
-        return implode('/', $pathParts);
+
+        $pathParts = array_merge(['course_repository'], $hierarchyParts);
+        return implode('/', array_filter($pathParts));
     }
 
     /**

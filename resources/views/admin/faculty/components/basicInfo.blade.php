@@ -13,7 +13,8 @@
                 label="Faculty Type :"
                 formLabelClass="form-label"
                 :options="$facultyTypeList"
-
+                 required="true"
+                 labelRequired="true"
                 value="{{ $faculty->faculty_type }}"
                 />
         </div>
@@ -31,11 +32,25 @@
     </div>
     <div class="col-md-6">
         <div class="mb-3">
+            <x-select
+                name="appellation"
+                label="Appellation :"
+                formLabelClass="form-label"
+                :options="$appellationMasterList"
+                value="{{ old('appellation', $faculty->appellation ?? '') }}"
+                required
+            />
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="mb-3">
             <x-input
                 name="firstName"
                 label="First Name :"
                 placeholder="First Name"
                 formLabelClass="form-label"
+                required="true"
+                labelRequired="true"
                 value="{{ $faculty->first_name }}"
 
                 formInputClass="only-letters"
@@ -66,7 +81,8 @@
                 label="Last Name :"
                 placeholder="Last Name"
                 formLabelClass="form-label"
-
+                required="true"
+                labelRequired="true"
                 value="{{ $faculty->last_name }}"
                 formInputClass="only-letters"
                 />
@@ -94,6 +110,8 @@
                         label="Full Name :"
                         placeholder="Full Name"
                         formLabelClass="form-label"
+                        required
+                        :labelRequired="true"
                         value="{{ $faculty->full_name }}"
 
                         />
@@ -130,7 +148,8 @@
                 placeholder="Gender"
                 formLabelClass="form-label"
                 :options="$genderList"
-
+                required="true"
+                 labelRequired="true"
                 value="{{ $faculty->gender }}"
                 />
 
@@ -160,7 +179,8 @@
                 label="Mobile Number :"
                 placeholder="Mobile Number"
                 formLabelClass="form-label"
-
+                required="true"
+                labelRequired="true"
                 value="{{ $faculty->mobile_no }}"
                 formInputClass="only-numbers"
                 />
@@ -314,7 +334,7 @@
             label="Photo Upload:"
             placeholder="Photo upload :"
             formLabelClass="form-label"
-            labelRequired="true"
+
             helperSmallText="Please upload a recent passport-sized photo"
             />
 

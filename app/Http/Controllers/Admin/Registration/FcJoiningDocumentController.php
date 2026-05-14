@@ -154,8 +154,8 @@ class FcJoiningDocumentController extends Controller
         // $query = DB::table('user_credentials')->select('pk', 'first_name', 'last_name');
         // $query = DB::table('users')->select('id', 'name', 'id');
         $query = DB::table('user_credentials')
-            ->select('pk', DB::raw("CONCAT(first_name, ' ', last_name) as full_name"))
-            ->orderByRaw("CONCAT(first_name, ' ', last_name)");
+            ->select('pk', DB::raw("CONCAT(user_name, ' ', last_name) as full_name"))
+            ->orderByRaw("CONCAT(user_name, ' ', last_name)");
 
 
         $search = $request->input('search');
@@ -184,11 +184,14 @@ class FcJoiningDocumentController extends Controller
 
             foreach ($allStudentIds as $studentId) {
                 $upload = $allUploads->get($studentId);
-                $allUploaded = $upload && collect($fieldsKeys)->every(fn($key) => !empty($upload->$key));
+                $uploadedCount = $upload ? collect($fieldsKeys)->filter(fn($key) => !empty($upload->$key))->count() : 0;
+                $totalFields = count($fieldsKeys);
 
-                if ($status == '1' && $allUploaded) {
+                if ($status == '1' && $uploadedCount == $totalFields) {
                     $filteredUserIds[] = $studentId;
-                } elseif ($status == '0' && !$allUploaded) {
+                } elseif ($status == '2' && $uploadedCount > 0 && $uploadedCount < $totalFields) {
+                    $filteredUserIds[] = $studentId;
+                } elseif ($status == '0' && $uploadedCount == 0) {
                     $filteredUserIds[] = $studentId;
                 }
             }

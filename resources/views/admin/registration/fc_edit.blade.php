@@ -1,7 +1,7 @@
 @extends('admin.layouts.master')
 
 @section('title', 'Edit Form Fields - Sargam | Lal Bahadur')
-@section('setup_content')
+@section('content')
     <div class="container-fluid">
         <x-session_message />
         <x-breadcrum title="Edit Registration Form" />
@@ -625,4 +625,5 @@
             }
         });
     </script>
+@endsection
 @endsection

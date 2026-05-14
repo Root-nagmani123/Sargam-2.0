@@ -160,7 +160,7 @@ $(document).on('mousedown', 'select[data-readonly]', function (e) {
 $(document).on('change', '.status-toggle', function () {
     let $checkbox = $(this);
     let table = $checkbox.data('table');
-    
+
     let column = $checkbox.data('column');
     let id = $checkbox.data('id');
     let id_column = $checkbox.data('id_column');
@@ -325,16 +325,25 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     function updateFullName() {
+        // Get the display name (text) of the selected appellation, not the value (pk)
+        let appellation = $('select[name="appellation"] option:selected').text().trim();
         const first = $('input[name="firstName"]').val().trim();
         const middle = $('input[name="middlename"]').val().trim();
         const last = $('input[name="lastname"]').val().trim();
 
         // Construct full name, skipping empty values
-        const fullName = [first, middle, last].filter(Boolean).join(' ');
-        $('input[name="fullname"]').val(fullName);
+        /*const fullName = [first, middle, last].filter(Boolean).join(' ');
+        $('input[name="fullname"]').val(fullName);*/
+
+
+        let fullname = [appellation, first, middle, last].filter(Boolean).join(' ');
+        $('input[name="fullname"]').val(fullname);
     }
 
-    $('input[name="firstName"], input[name="middlename"], input[name="lastname"]').on('input', updateFullName);
+    //$('input[name="firstName"], input[name="middlename"], input[name="lastname"]').on('input', updateFullName);
+
+    $('select[name="appellation"], input[name="firstName"], input[name="middlename"], input[name="lastname"]')
+.on('keyup change', updateFullName);
 
     $('#saveFacultyForm').click(function (e) {
         const $btn = $(this);
@@ -344,10 +353,57 @@ document.addEventListener('DOMContentLoaded', function () {
         const formData = new FormData();
         // remove all error class
         $('label.text-danger').removeClass('text-danger');
-        $('input').removeClass('is-invalid');
-        $('span.text-danger').remove();
+        $('input, select').removeClass('is-invalid');
+        $('span.faculty-error-msg').remove();
+
+
+
+        // Client-side pre-validation for required fields
+        let clientErrors = false;
+        const requiredSelects = [
+            { name: 'facultytype', label: 'Faculty Type' },
+             { name: 'appellation', label: 'Appellation' },
+            { name: 'gender',      label: 'Gender' },
+            { name: 'country',     label: 'Country' },
+            { name: 'state',       label: 'State' },
+            { name: 'district',    label: 'District' },
+            { name: 'city',        label: 'City' },
+        ];
+        const requiredInputs = [
+            { name: 'firstName',   label: 'First Name' },
+            { name: 'lastname',    label: 'Last Name' },
+            { name: 'fullname',    label: 'Full Name' },
+            { name: 'mobile',      label: 'Mobile Number' },
+            { name: 'email',       label: 'Email' },
+        ];
+        requiredSelects.forEach(function(f) {
+            const $el = $('select[name="' + f.name + '"]');
+            if ($el.length && !$el.val()) {
+                $el.addClass('is-invalid');
+                $el.after('<span class="text-danger faculty-error-msg mt-1 d-block">' + f.label + ' is required.</span>');
+                clientErrors = true;
+            }
+        });
+        requiredInputs.forEach(function(f) {
+            const $el = $('input[name="' + f.name + '"]');
+            if ($el.length && !$el.val().trim()) {
+                $el.addClass('is-invalid');
+                $el.after('<span class="text-danger faculty-error-msg mt-1 d-block">' + f.label + ' is required.</span>');
+                clientErrors = true;
+            }
+        });
+        if (clientErrors) {
+            $btn.prop('disabled', false);
+            // Scroll to first error
+            const $firstErr = $('.is-invalid').first();
+            if ($firstErr.length) {
+                $('html, body').animate({ scrollTop: $firstErr.offset().top - 150 }, 400);
+            }
+            return;
+        }
 
         let facultyType = $('select[name="facultytype"]').val();
+        let appellation = $('select[name="appellation"]').val();
         let firstName = $('input[name="firstName"]').val();
         let middleName = $('input[name="middlename"]').val();
         let lastName = $('input[name="lastname"]').val();
@@ -372,6 +428,7 @@ document.addEventListener('DOMContentLoaded', function () {
         let faculty_pa = $('input[name="faculty_pa"]').val();
 
         formData.append('facultyType', facultyType);
+        formData.append('appellation', appellation);
         formData.append('firstName', firstName);
         formData.append('middlename', middleName);
         formData.append('lastname', lastName);
@@ -537,36 +594,38 @@ document.addEventListener('DOMContentLoaded', function () {
             type: 'POST',
             url: routes.facultyStoreUrl,
             data: formData,
+            dataType: 'json',
             contentType: false,
             processData: false,
             beforeSend: function () {
                 showLoader();
             },
             success: function (response) {
+                hideLoader();
+                console.log('Faculty Response:', response);
 
-                // Handle success response
-                if (response.status) {
-                    toastr.options = {
-                        timeOut: 50, // 1.5 seconds
-                        onHidden: function () {
-                            // Force redirect to faculty.index (relative path => same host always)
-                            var facultyIndexPathMeta = document.querySelector('meta[name="faculty-index-path"]');
-                            var facultyIndexPath = facultyIndexPathMeta ? facultyIndexPathMeta.getAttribute('content') : null;
-                            window.location.href = facultyIndexPath || routes.facultyIndexUrl;
-                        }
-                    };
+                if (response && response.status) {
+                    var facultyIndexPath = $('meta[name="faculty-index-path"]').attr('content');
 
-                    toastr.success(response.message);
-
+                    var redirectUrl = facultyIndexPath || routes.facultyIndexUrl;
+                    sessionStorage.setItem('facultyToast', response.message || 'Faculty saved successfully');
+                    window.location.href = redirectUrl;
                 } else {
-                    toastr.error(response.message);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error!',
+                        text: response && response.message ? response.message : 'An error occurred',
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#d33'
+                    });
                     $btn.prop('disabled', false);
                 }
             },
             error: function (error) {
+                hideLoader(); // Hide before Swal so preloader doesn't cover the dialog
                 console.log('Error:', error);
                 if (error.status == 422) {
-                    let errors = error.responseJSON.errors;
+                    let errors = error.responseJSON && error.responseJSON.errors;
 
                     for (let key in errors) {
                         // Handle array fields (e.g., degree.0, university_institution_name.1)
@@ -576,24 +635,45 @@ document.addEventListener('DOMContentLoaded', function () {
                             const label = $(`label[for="${inputField.attr('id')}"]`);
 
                             if (inputField.length > 0) {
-                                label.addClass('text-danger').append(` <span class="text-danger">*</span>`);
-                                const errorDiv = $('<span class="text-danger mt-1"></span><br/>').text(errors[key][0]);
+                                label.addClass('text-danger');
+                                const errorDiv = $('<span class="text-danger faculty-error-msg mt-1"></span><br/>').text(errors[key][0]);
                                 inputField.addClass('is-invalid').after(errorDiv);
                             }
                         }
                         // Handle regular fields
                         else {
-                            const inputField = $(`[name="${key}"], select[name="${key}"]`);
-                            const label = $(`label[for="${inputField.attr('id')}"]`);
-                            if (inputField.length > 0) {
-                                label.addClass('text-danger').append(` <span class="text-danger">*</span>`);
-                                const errorDiv = $('<span class="text-danger mt-1"></span><br/>').text(errors[key][0]);
-                                inputField.addClass('is-invalid').after(errorDiv);
+                            // Special handling for radio groups: place error below the group
+                            if (key === 'current_sector') {
+                                const $placeholder = $('#current-sector-error-placeholder');
+                                $placeholder.html('<span class="text-danger faculty-error-msg mt-1 d-block">' + errors[key][0] + '</span>');
+                            } else {
+                                // Try exact match first, then case-insensitive (e.g. facultyType vs facultytype)
+                                let inputField = $(`[name="${key}"], select[name="${key}"]`);
+                                if (!inputField.length) {
+                                    inputField = $('[name]').filter(function() {
+                                        return $(this).attr('name').toLowerCase() === key.toLowerCase();
+                                    });
+                                }
+                                const label = $(`label[for="${inputField.attr('id')}"]`);
+                                if (inputField.length > 0) {
+                                    label.addClass('text-danger');
+                                    const errorDiv = $('<span class="text-danger faculty-error-msg mt-1"></span><br/>').text(errors[key][0]);
+                                    inputField.addClass('is-invalid').after(errorDiv);
+                                }
                             }
                         }
                     }
                 } else {
-                    toastr.error('Something went wrong. Please try again.');
+                    let serverMsg = (error.responseJSON && error.responseJSON.message)
+                        ? error.responseJSON.message
+                        : 'Something went wrong. Please try again.';
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Oops!',
+                        text: serverMsg,
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#d33'
+                    });
                 }
                 $btn.prop('disabled', false);
             },
@@ -1677,7 +1757,7 @@ $(document).on('change', '#from_date, #to_date', function () {
     // Only trigger if at least one date is selected
     let fromDate = $('#from_date').val();
     let toDate = $('#to_date').val();
-    
+
     if (fromDate || toDate) {
         performAttendanceSearch();
     }
@@ -1698,29 +1778,29 @@ $(document).on('click', '#resetAttendance', function () {
     // Clear date fields
     $('#from_date').val('');
     $('#to_date').val('');
-    
+
     attendanceChoicesClear($('#programme'));
-    
+
     // Reset attendance type to 'full_day'
     $('#full_day').prop('checked', true);
     $('input[name="attendance_type"]').trigger('change');
-    
+
     attendanceChoicesClear($('#session'));
     attendanceChoicesClear($('#manual_session'));
-    
+
     // Hide session containers
     $('#normal_session_container').hide();
     $('#manual_session_container').hide();
-    
+
     // Destroy DataTable if it exists
     if ($.fn.DataTable.isDataTable('#attendanceTable')) {
         attendanceTable.destroy();
         attendanceTable = null;
     }
-    
+
     // Restore default message row - show all elements with this ID
     $('#defaultMessageRow').show();
-    
+
     // If no default message row exists, the table body should be empty after destroy
     // DataTable destroy should restore original HTML, but ensure default message is visible
     if ($('#attendanceTable tbody tr').length === 0) {

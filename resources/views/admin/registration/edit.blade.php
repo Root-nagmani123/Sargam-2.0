@@ -3,36 +3,15 @@
 @section('title', 'Edit Form - Sargam | Lal Bahadur')
 
 @section('setup_content')
+    @include('admin.partials.choices-bootstrap5')
 
-    <div class="container-fluid">
-        <div class="card card-body py-3">
-            <div class="row align-items-center">
-                <div class="col-12">
-                    <div class="d-sm-flex align-items-center justify-space-between">
-                        <h4 class="mb-4 mb-sm-0 card-title">Edit Form</h4>
-                        <nav aria-label="breadcrumb" class="ms-auto">
-                            <ol class="breadcrumb">
-                                <li class="breadcrumb-item d-flex align-items-center">
-                                    <a class="text-muted text-decoration-none d-flex" href="{{ route('forms.index') }}">
-                                        <iconify-icon icon="solar:home-2-line-duotone" class="fs-6"></iconify-icon>
-                                    </a>
-                                </li>
-                                <li class="breadcrumb-item" aria-current="page">
-                                    <span class="badge fw-medium fs-2 bg-warning-subtle text-warning">
-                                        Edit Form
-                                    </span>
-                                </li>
-                            </ol>
-                        </nav>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div class="container-fluid choices-bs-scope">
+        <x-breadcrum title="Edit Form"/>
 
         <!-- Start Edit Form Card -->
       <div class="card">
     <div class="card-body">
-        <form action="{{ route('forms.update', $form->id) }}" method="POST">
+        <form action="{{ route('forms.update', $form->id) }}" method="POST" id="editForm">
             @csrf
             @method('PUT')
 
@@ -97,10 +76,9 @@
 
             <!-- Submit Button -->
             <hr class="mt-4">
-            <div class="d-flex justify-content-end">
-                <button class="btn btn-warning" type="submit">
-                    <i class="material-icons menu-icon">edit</i> Update
-                </button>
+            <div class="d-flex justify-content-end gap-2">
+                <button class="btn btn-primary" type="submit">Update</button>
+                <button class="btn btn-outline-primary"><a href="{{ route('forms.index') }}">Cancel</a></button>
             </div>
         </form>
     </div>
@@ -111,3 +89,30 @@
     </div>
 
 @endsection
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var startDateInput = document.getElementById('course_sdate');
+        var endDateInput = document.getElementById('course_edate');
+        var form = document.getElementById('editForm');
+        if (!startDateInput || !endDateInput || !form) return;
+
+        startDateInput.addEventListener('change', function () {
+            endDateInput.setAttribute('min', this.value);
+        });
+        if (startDateInput.value) {
+            endDateInput.setAttribute('min', startDateInput.value);
+        }
+
+        form.addEventListener('submit', function (e) {
+            var startDate = new Date(startDateInput.value);
+            var endDate = new Date(endDateInput.value);
+            if (startDate > endDate) {
+                e.preventDefault();
+                alert('Course Start Date cannot be later than Course End Date.');
+            }
+        });
+    });
+</script>
+@endpush

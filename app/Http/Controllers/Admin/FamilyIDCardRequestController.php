@@ -7,7 +7,9 @@ use App\Exports\FamilyIDCardExport;
 use App\Models\EmployeeMaster;
 use App\Models\SecurityFamilyIdApply;
 use App\Models\SecurityParmIdApply;
+use App\Support\DataTableRedisCache;
 use App\Support\IdCardSecurityMapper;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -23,40 +25,39 @@ use Maatwebsite\Excel\Facades\Excel;
  */
 class FamilyIDCardRequestController extends Controller
 {
-    /**
-     * Group rows by (emp_id_apply, created_by, created_date) and return paginated group list.
-     * Supports search and filters
-     */
-    private function groupedFamilyRequests(int $idStatus, int $perPage, string $pageName = 'page'): LengthAwarePaginator
+    private const LISTING_CACHE_EPOCH_KEY = 'admin_family_idcard_index_list_epoch';
+
+    public static function bumpIndexListCacheEpoch(): void
     {
-        $query = SecurityFamilyIdApply::query();
-        $query->where('created_by', Auth::user()->user_id);
-        
-        if ($idStatus === 1) {
-            $query->where('id_status', 1);
-        } else {
-            $query->whereIn('id_status', [2, 3]);
-        }
-        
-        // Apply search filter
-        $search = request()->get('search', '');
-        if (!empty($search)) {
+        DataTableRedisCache::bumpListEpoch(self::LISTING_CACHE_EPOCH_KEY, 'FamilyIDCardRequestController@index');
+    }
+
+    /**
+     * @return Collection<int, SecurityFamilyIdApply>
+     */
+    private function fetchFamilyIdcardApplicantRows(mixed $createdBy, string $search): Collection
+    {
+        $query = SecurityFamilyIdApply::query()
+            ->where('created_by', $createdBy)
+            ->whereIn('id_status', [1, 2, 3]);
+
+        if ($search !== '') {
             $query->where(function ($q) use ($search) {
                 $q->where('emp_id_apply', 'LIKE', "%{$search}%")
-                  ->orWhere('family_name', 'LIKE', "%{$search}%")
-                  ->orWhere('family_relation', 'LIKE', "%{$search}%");
+                    ->orWhere('family_name', 'LIKE', "%{$search}%")
+                    ->orWhere('family_relation', 'LIKE', "%{$search}%");
             });
         }
-        
-        // Apply card type filter
-        $cardType = request()->get('card_type', '');
-        if (!empty($cardType)) {
-            // This filter would be applied at grouping level
-        }
-        
-        $all = $query->orderBy('created_date', 'desc')->get();
 
-        // Any approval action (L1 recommend / final / reject) blocks user-side delete for that member id.
+        return $query->orderBy('created_date', 'desc')->get();
+    }
+
+    /**
+     * @param  Collection<int, SecurityFamilyIdApply>  $all
+     * @return Collection<int, object>
+     */
+    private function buildFamilyIdcardGroupedListFromRows(Collection $all, string $cardType): Collection
+    {
         $fmlIdsAll = $all->pluck('fml_id_apply')->unique()->filter()->values();
         $blockedDeleteByFml = [];
         if ($fmlIdsAll->isNotEmpty()) {
@@ -75,6 +76,7 @@ class FamilyIDCardRequestController extends Controller
 
         $groupKey = function ($r) {
             $date = $r->created_date ? Carbon::parse($r->created_date)->format('Y-m-d H:i:s') : '';
+
             return $r->emp_id_apply . '|' . ($r->created_by ?? '') . '|' . $date;
         };
 
@@ -85,9 +87,8 @@ class FamilyIDCardRequestController extends Controller
             $empName = '--';
             $designation = '--';
             $section = '--';
-            
+
             if ($first->created_by) {
-                // created_by stores employee pk (from user_credentials.user_id which maps to employee_master.pk)
                 $emp = EmployeeMaster::with(['designation', 'department'])
                     ->where('pk', $first->created_by)
                     ->orWhere('pk_old', $first->created_by)
@@ -126,34 +127,95 @@ class FamilyIDCardRequestController extends Controller
                 'can_delete' => $canDelete,
             ];
         })->values();
-        
-        // Apply card type filter after grouping
-        $cardType = request()->get('card_type', '');
-        if (!empty($cardType)) {
-            $groupList = $groupList->filter(function ($group) use ($cardType) {
-                return $group->card_type === $cardType;
-            })->values();
+
+        if ($cardType !== '') {
+            $groupList = $groupList->filter(fn ($group) => $group->card_type === $cardType)->values();
         }
-        
-        $page = request()->get($pageName, 1);
-        $slice = $groupList->forPage($page, $perPage);
-        
+
+        return $groupList;
+    }
+
+    /**
+     * @return array{active: Collection<int, object>, archive: Collection<int, object>}
+     */
+    private function buildFamilyIdcardIndexGroupLists(mixed $createdBy, string $search, string $cardType): array
+    {
+        $rows = $this->fetchFamilyIdcardApplicantRows($createdBy, $search);
+        $activeRows = $rows->filter(fn ($r) => (int) ($r->id_status ?? 1) === 1)->values();
+        $archiveRows = $rows->filter(fn ($r) => in_array((int) ($r->id_status ?? 0), [2, 3], true))->values();
+
+        return [
+            'active' => $this->buildFamilyIdcardGroupedListFromRows($activeRows, $cardType),
+            'archive' => $this->buildFamilyIdcardGroupedListFromRows($archiveRows, $cardType),
+        ];
+    }
+
+    private static function paginateGroupCollection(Collection $groupList, int $perPage, int $page, string $path, string $pageName, array $query): LengthAwarePaginator
+    {
+        $page = max(1, $page);
+        $slice = $groupList->forPage($page, $perPage)->values();
+
         return new LengthAwarePaginator(
-            $slice->values(),
+            $slice,
             $groupList->count(),
             $perPage,
             $page,
-            ['path' => request()->url(), 'pageName' => $pageName, 'query' => request()->query()]
+            ['path' => $path, 'pageName' => $pageName, 'query' => $query]
         );
     }
 
     public function index(Request $request)
     {
+        $createdBy = Auth::user()->user_id;
+        $search = trim((string) $request->get('search', ''));
+        $cardType = trim((string) $request->get('card_type', ''));
         $perPage = (int) $request->get('per_page', 10);
         $perPage = in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 10;
-        $activeRequests = $this->groupedFamilyRequests(1, $perPage, 'page');
+
+        $epoch = DataTableRedisCache::readListEpoch(self::LISTING_CACHE_EPOCH_KEY);
+        $cacheKey = 'admin_family_idcard_index:v1:' . md5(json_encode([
+            'epoch' => $epoch,
+            'created_by' => $createdBy,
+            'search' => $search,
+            'card_type' => $cardType,
+        ]));
+
+        $lists = DataTableRedisCache::remember(
+            $cacheKey,
+            [
+                'enabled' => 'FAMILY_IDCARD_INDEX_CACHE_ENABLED',
+                'seconds' => 'FAMILY_IDCARD_INDEX_CACHE_SECONDS',
+            ],
+            'FamilyIDCardRequestController@index',
+            fn () => $this->buildFamilyIdcardIndexGroupLists($createdBy, $search, $cardType)
+        );
+        if (! is_array($lists) || ! isset($lists['active'], $lists['archive'])) {
+            $lists = $this->buildFamilyIdcardIndexGroupLists($createdBy, $search, $cardType);
+        }
+        $activeGroups = $lists['active'] instanceof Collection ? $lists['active'] : collect($lists['active'] ?? []);
+        $archiveGroups = $lists['archive'] instanceof Collection ? $lists['archive'] : collect($lists['archive'] ?? []);
+
+        $queryParams = $request->query();
+        $activePage = (int) $request->get('page', 1) ?: 1;
+        $archivePage = (int) $request->get('archive_page', 1) ?: 1;
+
+        $activeRequests = static::paginateGroupCollection(
+            $activeGroups,
+            $perPage,
+            $activePage,
+            $request->url(),
+            'page',
+            $queryParams
+        );
         $activeRequests->withQueryString();
-        $archivedRequests = $this->groupedFamilyRequests(0, $perPage, 'archive_page');
+        $archivedRequests = static::paginateGroupCollection(
+            $archiveGroups,
+            $perPage,
+            $archivePage,
+            $request->url(),
+            'archive_page',
+            $queryParams
+        );
         $archivedRequests->withQueryString();
 
         return view('admin.family_idcard.index', [
@@ -183,11 +245,27 @@ class FamilyIDCardRequestController extends Controller
         ]);
     }
 
+    /**
+     * Logged-in employee may only use Contractual path (same payroll rule as Employee ID Card create).
+     * payroll === 0 → Permanent (may choose Permanent or Contractual on family form); otherwise → Contractual only.
+     */
+    private function familyIdcardIsLoggedInContractualOnly(): bool
+    {
+        $authUserId = Auth::user()->user_id ?? null;
+        if (! $authUserId) {
+            return false;
+        }
+        $emp = EmployeeMaster::where('pk', $authUserId)->orWhere('pk_old', $authUserId)->first();
+        if (! $emp || ! Schema::hasColumn('employee_master', 'payroll')) {
+            return false;
+        }
+
+        return (int) ($emp->payroll ?? 0) !== 0;
+    }
+
     public function create()
     {
         $userDepartmentName = null;
-        $approvalAuthorityEmployees = collect();
-        $defaultApprovalAuthorityPk = null;
         $defaultEmployeeIdPermanent = '';
         $defaultEmployeeIdContractual = '';
         $defaultDesignation = '';
@@ -198,17 +276,9 @@ class FamilyIDCardRequestController extends Controller
                 ->orWhere('pk_old', $authUserId)
                 ->first();
                 if ($authEmp) {
-                    $defaultApprovalAuthorityPk = $authEmp->pk;
                     $defaultDesignation = $authEmp->designation->designation_name ?? '';
                     if ($authEmp->department_master_pk) {
                         $userDepartmentName = $authEmp->department->department_name ?? null;
-                        $approvalAuthorityEmployees = EmployeeMaster::with('designation')
-                            ->where('department_master_pk', $authEmp->department_master_pk)
-                            ->when(Schema::hasColumn('employee_master', 'payroll'), fn ($q) => $q->where('payroll', 0))
-                            ->when(Schema::hasColumn('employee_master', 'status'), fn ($q) => $q->where('status', 1))
-                            ->orderBy('first_name')
-                            ->orderBy('last_name')
-                            ->get(['pk', 'first_name', 'last_name', 'designation_master_pk']);
                     }
 
                     // Permanent Employee: default to EmployeeMaster.emp_id (Employee ID)
@@ -235,14 +305,185 @@ class FamilyIDCardRequestController extends Controller
             }
         }
 
+        // Same payroll rule as Employee ID Card create: payroll === 0 = Permanent (may choose Permanent or Contractual); else Contractual only.
+        $familyIdcardContractualEmployeeOnly = false;
+        if ($authEmp && Schema::hasColumn('employee_master', 'payroll')) {
+            $familyIdcardContractualEmployeeOnly = (int) ($authEmp->payroll ?? 0) !== 0;
+        }
+
+        $familyIdCardCapPermanentYmd = null;
+        $familyIdCardCapContractualYmd = null;
+        if ($authEmp) {
+            $canon = IdCardSecurityMapper::resolveCanonicalEmployeeMasterPk((int) $authEmp->pk);
+            if ($canon) {
+                $capP = IdCardSecurityMapper::approvedEmployeeIdCardValidityEnd($canon, 'Permanent Employee');
+                $capC = IdCardSecurityMapper::approvedEmployeeIdCardValidityEnd($canon, 'Contractual Employee');
+                $familyIdCardCapPermanentYmd = $capP ? $capP->format('Y-m-d') : null;
+                $familyIdCardCapContractualYmd = $capC ? $capC->format('Y-m-d') : null;
+            }
+        }
+
         return view('admin.family_idcard.create', [
             'userDepartmentName' => $userDepartmentName,
-            'approvalAuthorityEmployees' => $approvalAuthorityEmployees,
-            'defaultApprovalAuthorityPk' => $defaultApprovalAuthorityPk,
             'defaultEmployeeIdPermanent' => $defaultEmployeeIdPermanent,
             'defaultEmployeeIdContractual' => $defaultEmployeeIdContractual,
             'defaultDesignation' => $defaultDesignation,
+            'familyIdcardContractualEmployeeOnly' => $familyIdcardContractualEmployeeOnly,
+            'familyIdCardCapPermanentYmd' => $familyIdCardCapPermanentYmd,
+            'familyIdCardCapContractualYmd' => $familyIdCardCapContractualYmd,
         ]);
+    }
+
+    /**
+     * Create page only: resolve employee name, designation, department.
+     * 1) employee_master by emp_id / pk / pk_old
+     * 2) else security_con_oth_id_apply by id_card_no or emp_id_apply, then employee_master via employee_master_pk if present,
+     *    else fields stored on the contractual application row.
+     * Does not change store behaviour; used for contractual Employee ID autofill in the browser.
+     */
+    public function lookupEmployeeByIdForCreate(Request $request)
+    {
+        $lookup = trim((string) $request->get('employee_id', ''));
+        if ($lookup === '') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Employee ID is required.',
+            ], 422);
+        }
+
+        $em = $this->familyIdcardLookupEmployeeMasterRow($lookup);
+        if ($em) {
+            return response()->json([
+                'success' => true,
+                'data' => $this->familyIdcardLookupPayloadFromMasterRow($em, null),
+            ]);
+        }
+
+        if (! Schema::hasTable('security_con_oth_id_apply')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No employee found for this ID.',
+            ], 404);
+        }
+
+        $conParts = [];
+        $conBindings = [];
+        if (Schema::hasColumn('security_con_oth_id_apply', 'id_card_no')) {
+            $conParts[] = '(id_card_no = ? OR TRIM(id_card_no) = ?)';
+            $conBindings[] = $lookup;
+            $conBindings[] = $lookup;
+        }
+        if (Schema::hasColumn('security_con_oth_id_apply', 'emp_id_apply')) {
+            $conParts[] = '(emp_id_apply = ? OR TRIM(emp_id_apply) = ?)';
+            $conBindings[] = $lookup;
+            $conBindings[] = $lookup;
+        }
+
+        $con = $conParts === []
+            ? null
+            : DB::table('security_con_oth_id_apply')
+                ->whereRaw(implode(' OR ', $conParts), $conBindings)
+                ->orderByDesc('created_date')
+                ->first();
+
+        if (! $con) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No employee found for this ID in employee master or contractual ID card applications.',
+            ], 404);
+        }
+
+        $displayId = null;
+        if (Schema::hasColumn('security_con_oth_id_apply', 'id_card_no') && ! empty($con->id_card_no)) {
+            $displayId = (string) $con->id_card_no;
+        }
+        if ($displayId === null && Schema::hasColumn('security_con_oth_id_apply', 'emp_id_apply') && ! empty($con->emp_id_apply)) {
+            $displayId = (string) $con->emp_id_apply;
+        }
+
+        $empPk = 0;
+        if (Schema::hasColumn('security_con_oth_id_apply', 'employee_master_pk')) {
+            $empPk = (int) ($con->employee_master_pk ?? 0);
+        }
+        if ($empPk > 0) {
+            $emLinked = $this->familyIdcardLookupEmployeeMasterRow((string) $empPk);
+            if ($emLinked) {
+                return response()->json([
+                    'success' => true,
+                    'data' => $this->familyIdcardLookupPayloadFromMasterRow($emLinked, $displayId),
+                ]);
+            }
+        }
+
+        $name = Schema::hasColumn('security_con_oth_id_apply', 'employee_name')
+            ? trim((string) ($con->employee_name ?? ''))
+            : '';
+        $designation = Schema::hasColumn('security_con_oth_id_apply', 'designation_name')
+            ? (string) ($con->designation_name ?? '')
+            : '';
+        $department = '';
+        if (Schema::hasColumn('security_con_oth_id_apply', 'section') && ! empty($con->section) && Schema::hasTable('department_master')) {
+            $deptName = DB::table('department_master')->where('pk', $con->section)->value('department_name');
+            $department = $deptName ? (string) $deptName : '';
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'employee_name' => $name,
+                'designation' => $designation,
+                'department' => $department,
+                'emp_id' => $displayId,
+            ],
+        ]);
+    }
+
+    /**
+     * @return object|null row with first_name, last_name, emp_id, designation_name, department_name
+     */
+    private function familyIdcardLookupEmployeeMasterRow(string $lookup): ?object
+    {
+        return DB::table('employee_master as em')
+            ->leftJoin('designation_master as dm', 'dm.pk', '=', 'em.designation_master_pk')
+            ->leftJoin('department_master as dept', 'dept.pk', '=', 'em.department_master_pk')
+            ->where(function ($q) use ($lookup) {
+                $q->where('em.emp_id', $lookup)
+                    ->orWhereRaw('TRIM(em.emp_id) = ?', [trim($lookup)]);
+                if (ctype_digit($lookup)) {
+                    $q->orWhere('em.pk', $lookup);
+                    if (Schema::hasColumn('employee_master', 'pk_old')) {
+                        $q->orWhere('em.pk_old', $lookup);
+                    }
+                }
+            })
+            ->orderBy('em.pk')
+            ->select([
+                'em.pk',
+                'em.first_name',
+                'em.last_name',
+                'em.emp_id',
+                'dm.designation_name',
+                'dept.department_name',
+            ])
+            ->first();
+    }
+
+    /**
+     * @param  object  $em  employee_master join row
+     */
+    private function familyIdcardLookupPayloadFromMasterRow(object $em, ?string $preferredDisplayId): array
+    {
+        $name = trim(($em->first_name ?? '') . ' ' . ($em->last_name ?? ''));
+        $empId = ($preferredDisplayId !== null && $preferredDisplayId !== '')
+            ? $preferredDisplayId
+            : ($em->emp_id !== null && (string) $em->emp_id !== '' ? (string) $em->emp_id : null);
+
+        return [
+            'employee_name' => $name,
+            'designation' => (string) ($em->designation_name ?? ''),
+            'department' => (string) ($em->department_name ?? ''),
+            'emp_id' => $empId,
+        ];
     }
 
     public function store(Request $request)
@@ -262,7 +503,18 @@ class FamilyIDCardRequestController extends Controller
             'members.*.valid_to' => 'nullable|date',
         ];
 
+        $contractualOnly = $this->familyIdcardIsLoggedInContractualOnly();
+        if (! $contractualOnly) {
+            $rules['employee_type'] = ['required', 'in:Permanent Employee,Contractual Employee'];
+        }
+
         $request->validate($rules);
+
+        if ($contractualOnly && $request->filled('employee_type') && $request->input('employee_type') !== 'Contractual Employee') {
+            throw ValidationException::withMessages([
+                'employee_type' => 'Your account may only submit family ID card requests as Contractual Employee.',
+            ]);
+        }
 
         // Valid To must not be less than Valid From for each member
         $members = $request->input('members', []);
@@ -315,12 +567,13 @@ class FamilyIDCardRequestController extends Controller
             ]);
         }
 
+        $applicantCanonical = IdCardSecurityMapper::resolveCanonicalEmployeeMasterPk((int) (Auth::user()->user_id ?? Auth::id()));
+
         $employeeId = $request->input('employee_id');
         $createdBy = Auth::user()->user_id;
-        $employeeType = $request->input('employee_type', 'Permanent Employee');
-        $approvalAuthorityPk = $employeeType === 'Contractual Employee'
-            ? (int) $request->input('approval_authority')
-            : null;
+        $employeeType = $contractualOnly
+            ? 'Contractual Employee'
+            : $request->input('employee_type', 'Permanent Employee');
         $count = 0;
         $nextPk = (int) SecurityFamilyIdApply::max('pk') + 1;
         $groupPhotoPath = null;
@@ -347,6 +600,15 @@ class FamilyIDCardRequestController extends Controller
                 ]);
             }
 
+            IdCardSecurityMapper::assertOptionalDatePairWithinApprovedIdCardEnd(
+                $applicantCanonical,
+                $employeeType,
+                $member['valid_from'] ?? null,
+                $member['valid_to'] ?? null,
+                "members.{$index}.valid_from",
+                "members.{$index}.valid_to"
+            );
+
             $familyPhotoPath_individual = null;
             if ($request->hasFile('members.' . $index . '.family_photo')) {
                 $familyPhotoPath_individual = $request->file('members.' . $index . '.family_photo')->store('family_idcard/Individual_photos', 'public');
@@ -354,7 +616,7 @@ class FamilyIDCardRequestController extends Controller
             $fmlIdApply = 'FMD' . str_pad((string) $nextPk, 5, '0', STR_PAD_LEFT);
             $nextPk++;
 
-            SecurityFamilyIdApply::create([
+            $memberRow = [
                 'fml_id_apply' => $fmlIdApply,
                 'family_name' => $name,
                 'family_relation' => !empty($member['relation']) ? $member['relation'] : null,
@@ -367,8 +629,11 @@ class FamilyIDCardRequestController extends Controller
                 'family_photo' => $groupPhotoPath,
                 'employee_dob' => !empty($member['dob']) ? $member['dob'] : null,
                 'emp_id_apply' => $employeeId,
-               
-            ]);
+            ];
+            if (Schema::hasColumn('security_family_id_apply', 'employee_type')) {
+                $memberRow['employee_type'] = $employeeType;
+            }
+            SecurityFamilyIdApply::create($memberRow);
             $count++;
         }
 
@@ -376,6 +641,7 @@ class FamilyIDCardRequestController extends Controller
             ? 'Family ID Card request created successfully!'
             : "{$count} Family ID Card requests created successfully!";
 
+        static::bumpIndexListCacheEpoch();
         return redirect()->route('admin.family_idcard.index')->with('success', $message);
     }
 
@@ -390,15 +656,22 @@ class FamilyIDCardRequestController extends Controller
             ->get()
             ->map(fn ($r) => IdCardSecurityMapper::toFamilyRequestDto($r));
 
+        $canModify = ! $this->familyGroupHasApprovalProgress($row) && (int) $row->id_status !== 2;
+
         return view('admin.family_idcard.show', [
             'request' => $request,
             'members' => $members,
+            'can_modify_request' => $canModify,
         ]);
     }
 
     public function edit($id)
     {
         $row = SecurityFamilyIdApply::where('fml_id_apply', $id)->firstOrFail();
+        if ($this->familyGroupHasApprovalProgress($row) || (int) $row->id_status === 2) {
+            return redirect()->route('admin.family_idcard.show', $id)
+                ->with('error', 'This request cannot be edited because it has been approved or the approval process has already started.');
+        }
         $request = IdCardSecurityMapper::toFamilyRequestDto($row);
         // Same group = same emp_id_apply + created_by + created_date (include all members)
         $createdDate = $row->created_date instanceof \DateTimeInterface
@@ -443,6 +716,13 @@ class FamilyIDCardRequestController extends Controller
             }
         }
 
+        $familyIdCardCapYmd = null;
+        $canonEdit = IdCardSecurityMapper::resolveCanonicalEmployeeMasterPk((int) $row->created_by);
+        if ($canonEdit) {
+            $capEdit = IdCardSecurityMapper::approvedEmployeeIdCardValidityEnd($canonEdit, $employeeType ?? 'Permanent Employee');
+            $familyIdCardCapYmd = $capEdit ? $capEdit->format('Y-m-d') : null;
+        }
+
         return view('admin.family_idcard.edit', [
             'request' => $request,
             'existingFamilyMembers' => $existingFamilyMembers,
@@ -450,12 +730,17 @@ class FamilyIDCardRequestController extends Controller
             'approvalAuthorityEmployees' => $approvalAuthorityEmployees,
             'currentApprovalAuthorityPk' => $currentApprovalAuthorityPk,
             'can_remove_members' => !$this->familyGroupHasApprovalProgress($row) && (int) $row->id_status !== 2,
+            'familyIdCardCapYmd' => $familyIdCardCapYmd,
         ]);
     }
 
     public function update(Request $request, $id)
     {
         $row = SecurityFamilyIdApply::where('fml_id_apply', $id)->firstOrFail();
+        if ($this->familyGroupHasApprovalProgress($row) || (int) $row->id_status === 2) {
+            return redirect()->route('admin.family_idcard.show', $id)
+                ->with('error', 'This request cannot be updated because it has been approved or the approval process has already started.');
+        }
         $employeeType = $row->employee_type;
         
         $validated = $request->validate([
@@ -490,6 +775,17 @@ class FamilyIDCardRequestController extends Controller
             ]);
         }
 
+        $applicantCanonical = IdCardSecurityMapper::resolveCanonicalEmployeeMasterPk((int) $row->created_by);
+        $empTypeForCap = $employeeType ?? $row->employee_type ?? 'Permanent Employee';
+        IdCardSecurityMapper::assertOptionalDatePairWithinApprovedIdCardEnd(
+            $applicantCanonical,
+            $empTypeForCap,
+            $from,
+            $to,
+            'valid_from',
+            'valid_to'
+        );
+
         $row->family_name = $validated['name'];
         $row->family_relation = $validated['relation'] ?? null;
         $row->emp_id_apply = $validated['employee_id'];
@@ -521,6 +817,17 @@ class FamilyIDCardRequestController extends Controller
                         "members.{$idx}.valid_to" => 'Valid To date must not be earlier than Valid From date.',
                     ]);
                 }
+            }
+
+            foreach ($members as $idx => $member) {
+                IdCardSecurityMapper::assertOptionalDatePairWithinApprovedIdCardEnd(
+                    $applicantCanonical,
+                    $empTypeForCap,
+                    $member['valid_from'] ?? null,
+                    $member['valid_to'] ?? null,
+                    "members.{$idx}.valid_from",
+                    "members.{$idx}.valid_to"
+                );
             }
 
             // Existing group rows (all members for this application)
@@ -616,6 +923,7 @@ class FamilyIDCardRequestController extends Controller
             }
         }
 
+        static::bumpIndexListCacheEpoch();
         return redirect()->route('admin.family_idcard.show', $row->fml_id_apply)
             ->with('success', 'Family ID Card request updated successfully!');
     }
@@ -674,6 +982,16 @@ class FamilyIDCardRequestController extends Controller
         if (!empty($from) && !empty($to) && $to < $from) {
             throw ValidationException::withMessages(['valid_to' => 'Valid To must not be earlier than Valid From.']);
         }
+        $applicantCanonical = IdCardSecurityMapper::resolveCanonicalEmployeeMasterPk((int) $mainRow->created_by);
+        $empTypeForCap = $mainRow->employee_type ?? 'Permanent Employee';
+        IdCardSecurityMapper::assertOptionalDatePairWithinApprovedIdCardEnd(
+            $applicantCanonical,
+            $empTypeForCap,
+            $validated['valid_from'] ?? null,
+            $validated['valid_to'] ?? null,
+            'valid_from',
+            'valid_to'
+        );
         $nextPk = (int) SecurityFamilyIdApply::max('pk') + 1;
         $fmlIdApply = 'FMD' . str_pad((string) $nextPk, 5, '0', STR_PAD_LEFT);
         $createdDate = $mainRow->created_date instanceof \DateTimeInterface
@@ -699,6 +1017,7 @@ class FamilyIDCardRequestController extends Controller
             'employee_type' => $mainRow->employee_type ?? null,
             'department_approval_emp_pk' => $mainRow->department_approval_emp_pk ?? null,
         ]);
+        static::bumpIndexListCacheEpoch();
         return redirect()->route('admin.family_idcard.edit', $id)
             ->with('success', 'Family member added successfully.');
     }
@@ -726,6 +1045,16 @@ class FamilyIDCardRequestController extends Controller
         if (!empty($from) && !empty($to) && $to < $from) {
             throw ValidationException::withMessages(['valid_to' => 'Valid To must not be earlier than Valid From.']);
         }
+        $applicantCanonical = IdCardSecurityMapper::resolveCanonicalEmployeeMasterPk((int) $mainRow->created_by);
+        $empTypeForCap = $mainRow->employee_type ?? 'Permanent Employee';
+        IdCardSecurityMapper::assertOptionalDatePairWithinApprovedIdCardEnd(
+            $applicantCanonical,
+            $empTypeForCap,
+            $validated['valid_from'] ?? null,
+            $validated['valid_to'] ?? null,
+            'valid_from',
+            'valid_to'
+        );
         $memberRow->family_name = $validated['name'];
         $memberRow->family_relation = $validated['relation'] ?? null;
         $memberRow->employee_dob = $validated['dob'] ?? null;
@@ -736,6 +1065,7 @@ class FamilyIDCardRequestController extends Controller
             $memberRow->family_photo = $memberRow->family_photo ?? $memberRow->id_photo_path;
         }
         $memberRow->save();
+        static::bumpIndexListCacheEpoch();
         return redirect()->route('admin.family_idcard.edit', $id)
             ->with('success', 'Family member updated successfully.');
     }
@@ -759,6 +1089,7 @@ class FamilyIDCardRequestController extends Controller
         }
         $memberRow = $this->sameGroupQuery($mainRow)->where('fml_id_apply', $memberId)->firstOrFail();
         $memberRow->delete();
+        static::bumpIndexListCacheEpoch();
         return redirect()->route('admin.family_idcard.edit', $id)
             ->with('success', 'Family member removed successfully.');
     }
@@ -778,6 +1109,7 @@ class FamilyIDCardRequestController extends Controller
         }
 
         $row->delete();
+        static::bumpIndexListCacheEpoch();
         return redirect()->route('admin.family_idcard.index')
             ->with('success', 'Family ID Card request archived successfully!');
     }
@@ -807,6 +1139,7 @@ class FamilyIDCardRequestController extends Controller
             // Move all members in this group back to id_status = 1 (Active)
             $query->update(['id_status' => 1]);
 
+            static::bumpIndexListCacheEpoch();
             return redirect()
                 ->route('admin.family_idcard.index')
                 ->with('success', 'Family ID Card request restored to Active list successfully.');
@@ -848,6 +1181,7 @@ class FamilyIDCardRequestController extends Controller
         }
         $row->save();
 
+        static::bumpIndexListCacheEpoch();
         $membersUrl = route('admin.family_idcard.members', $id);
         return redirect($membersUrl)->with('success', 'Duplicate ID card request submitted successfully.');
     }

@@ -83,6 +83,20 @@ class PurchaseSaleQuantityExport implements FromCollection, WithCustomStartCell,
                     $row['avg_sale_price'] !== null ? number_format($row['avg_sale_price'], 2) : '—',
                 ];
             }
+            if ($section['reportData'] !== []) {
+                $purchaseTotal = collect($section['reportData'])->sum(fn ($r) => (float) ($r['purchase_qty'] ?? 0));
+                $saleTotal = collect($section['reportData'])->sum(fn ($r) => (float) ($r['sale_qty'] ?? 0));
+                $rows[] = [
+                    '',
+                    '',
+                    'Grand Total',
+                    '',
+                    number_format($purchaseTotal, 2),
+                    '—',
+                    number_format($saleTotal, 2),
+                    '—',
+                ];
+            }
             $sectionIndex++;
         }
 

@@ -65,6 +65,7 @@
                                             id="success2-radio" value="2" {{ $faculty->faculty_sector == 2 ? 'checked' : '' }}>
                                         <label class="form-check-label" for="success2-radio">Private Sector</label>
                                     </div>
+                                    <div id="current-sector-error-placeholder"></div>
                                 </div>
                             </div>
                             <div class="col-12">
@@ -75,7 +76,7 @@
                                     <fieldset>
                                         <div class="row">
                                             @foreach ($faculties as $key => $option)
-                                            <div class="col-3">
+                                            <div class="col-12 col-sm-6 col-md-3">
                                                 <div class="form-check py-2">
                                                     <input type="checkbox" name="faculties[]" value="{{ $key }}"
                                                         class="form-check-input" id="{{ $loop->index }}"
@@ -118,20 +119,65 @@
 <script>
 // Show/Hide Faculty (PA) field based on Faculty Type
 $(document).ready(function() {
+
+    // Show/Hide Faculty (PA) field based on Faculty Type
     function toggleFacultyPaField() {
         var facultyType = $('select[name="facultytype"]').val();
         if (facultyType == '1') { // Internal
             $('#facultyPaContainer').removeClass('d-none');
         } else {
             $('#facultyPaContainer').addClass('d-none');
-            $('input[name="faculty_pa"]').val(''); // Clear the field when hidden
+            $('input[name="faculty_pa"]').val('');
         }
     }
 
-    // On change of faculty type
+    // Fetch next faculty code preview for the selected type
+    function fetchFacultyCodePreview(facultyType) {
+        if (!facultyType) return;
+        fetch("{{ route('faculty.generate.code') }}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRF-TOKEN": "{{ csrf_token() }}"
+            },
+            body: JSON.stringify({ faculty_type: facultyType })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status) {
+                $('input[name="faculty_code"]').val(data.code);
+            }
+        })
+        .catch(err => console.error(err));
+    }
+
+    // On change of faculty type (user interaction only)
     $('select[name="facultytype"]').on('change', function() {
         toggleFacultyPaField();
+        // Only fetch new code if it's a user-triggered change (not programmatic)
+        if (!$(this).data('programmatic')) {
+            fetchFacultyCodePreview($(this).val());
+        }
     });
+
+    // Autofill logic for edit form
+    window.fillFacultyForm = function(faculty) {
+        // Mark as programmatic so the change event does NOT fetch a new code
+        $("select[name='facultytype']").data('programmatic', true)
+            .val(faculty.faculty_type ? String(faculty.faculty_type) : '')
+            .trigger('change')
+            .data('programmatic', false);
+
+        $("select[name='appellation']").val(faculty.appellation ?? '').trigger('change');
+        $("input[name='faculty_pa']").val(faculty.faculty_pa ?? '');
+        // Keep the existing faculty code — do NOT overwrite with preview
+        $("input[name='faculty_code']").val(faculty.faculty_code);
+        $("input[name='landline']").val(faculty.landline_no);
+        $("input[name='mobile']").val(faculty.mobile_no);
+    }
+
+    // Run on page load for initial state
+    toggleFacultyPaField();
 });
 </script>
 @endsection

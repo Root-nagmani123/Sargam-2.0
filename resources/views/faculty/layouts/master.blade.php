@@ -331,7 +331,7 @@
     .alphabet-loader .letters span {
         font-size: 32px;
         font-weight: 700;
-        font-family: 'Poppins', sans-serif;
+        font-family: 'Montserrat', sans-serif;
         color: #004a93;
         opacity: 0.2;
         animation: pulseText 1.2s infinite ease-in-out;
@@ -459,6 +459,7 @@
     <script src="{{ asset('js/mobile-sidebar.js') }}"></script>
     <script src="{{ asset('admin_assets/js/tab-memory.js') }}" defer></script>
     @stack('scripts')
+    @yield('scripts')
     <script>
 document.addEventListener('DOMContentLoaded', function () {
     const toggle = document.getElementById('searchToggle');

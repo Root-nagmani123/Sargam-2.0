@@ -112,6 +112,8 @@ class RoleController extends Controller
             'user_role_display_name' => $request->display_name,
         ]);
 
+        RoleDataTable::bumpListingCacheEpoch();
+
         return redirect()
             ->route('admin.roles.index')
             ->with('success', 'Role created successfully');
@@ -153,6 +155,8 @@ class RoleController extends Controller
             'user_role_display_name' => $request->display_name,
         ]);
 
+        RoleDataTable::bumpListingCacheEpoch();
+
         return redirect()
             ->route('admin.roles.index')
             ->with('success', 'Role updated successfully');
@@ -164,6 +168,8 @@ class RoleController extends Controller
          $role = UserRoleMaster::findOrFail($pk);
     
         $role->delete();
+
+        RoleDataTable::bumpListingCacheEpoch();
 
         return redirect()
             ->route('admin.roles.index')

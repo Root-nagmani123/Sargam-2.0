@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'All Employee ID Card Requests - Approval Status')
-@section('setup_content')
+@section('content')
 <div class="container-fluid">
     @include('components.breadcrum', ['title' => 'All ID Card Requests'])
     <div class="card" style="border-left:4px solid #004a93;">

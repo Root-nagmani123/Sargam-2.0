@@ -470,7 +470,8 @@
             $('#modal_doj_service').val($btn.data('doj_service') || '');
             var eligPk = $btn.data('eligibility_type_pk');
             var eligLabel = $btn.data('eligibility_type_label');
-            setEligibilityLock(true);
+            // Match add modal: editable only for Estate/Admin/Super Admin and not on ?scope=self.
+            setEligibilityLock(!window.requestEstateCanChooseEligibilityOnAdd || window.requestEstateLockEligibilityOnSelfScopeAdd);
             $('#modal_eligibility_self_scope_hint').addClass('d-none');
             ensureEligibilityOptionAndSetVal(eligPk, eligLabel, true);
             var statusVal = $btn.data('status') !== undefined ? String($btn.data('status')) : '0';

@@ -4,23 +4,14 @@
 
 @section('setup_content')
     <div class="container-fluid">
-        <div class="card card-body py-3">
-            <div class="row">
-                <div class="col-6">
-                    <h4>Inactive Registration Forms</h4>
-                </div>
-                <div class="col-6 text-end">
-                    <a href="{{ route('forms.index') }}" class="btn btn-primary"> Back to Active Forms</a>
-                </div>
-            </div>
-        </div>
+        <x-breadcrum title="Inactive Registration Forms" />
 
         <div class="card mt-3">
             <div class="card-body">
                 <div class="table-responsive">
                     <div id="zero_config_wrapper" class="dataTables_wrapper">
                         <table id="zero_config"
-                            class="table table-striped table-bordered text-nowrap align-middle dataTable"
+                            class="table text-nowrap align-middle dataTable"
                             aria-describedby="zero_config_info">
                             <thead>
                                 <tr>

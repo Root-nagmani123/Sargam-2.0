@@ -19,7 +19,8 @@ class IssueCategoryController extends Controller
     {
         $categories = IssueCategoryMaster::with('subCategories')
             ->orderBy('issue_category')
-            ->get();
+            ->paginate(20)
+            ->withQueryString();
 
         return view('admin.issue_management.categories.index', compact('categories'));
     }

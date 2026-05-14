@@ -1,6 +1,6 @@
 @extends(hasRole('Student-OT') ? 'admin.layouts.timetable' : 'admin.layouts.master')
 
-@section('title', 'Academic TimeTable - Sargam | Lal Bahadur Shastri National Academy of Administration')
+@section('title', 'Academic TimeTable')
 
 @section('setup_content')
 
@@ -152,6 +152,55 @@
 .calendar-choices-bootstrap .choices.is-open .choices__list--dropdown,
 .calendar-choices-bootstrap .choices.is-open .choices__list[aria-expanded] {
     z-index: 1250;
+}
+
+/*
+ * Dropdowns clipped / behind chrome: theme .page-wrapper { overflow-x: hidden }
+ * forces overflow-y to behave like auto and clips portaled-out content. Lift the
+ * control strip when open; relax page-wrapper only on this page (:has).
+ */
+#main-wrapper .page-wrapper:has(.calendar-admin-page) {
+    overflow-x: clip;
+    overflow-y: visible;
+}
+
+@supports not (overflow: clip) {
+    #main-wrapper .page-wrapper:has(.calendar-admin-page) {
+        overflow: visible;
+    }
+}
+
+.control-panel:has(.choices.is-open) {
+    position: relative;
+    z-index: 10800;
+}
+
+.calendar-choices-bootstrap .choices.is-open {
+    z-index: 10850;
+}
+
+.calendar-choices-bootstrap .choices.is-open .choices__list--dropdown,
+.calendar-choices-bootstrap .choices.is-open .choices__list[aria-expanded] {
+    z-index: 10860;
+}
+
+/* While Add/Edit Event modal is open, never show the course filter list above it */
+body.calendar-suppress-course-filter-dropdown .calendar-choices-bootstrap .choices__list--dropdown,
+body.calendar-suppress-course-filter-dropdown .calendar-choices-bootstrap .choices__list[aria-expanded] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    z-index: 0 !important;
+}
+
+body.calendar-suppress-course-filter-dropdown .control-panel {
+    z-index: auto !important;
+}
+
+body.calendar-suppress-course-filter-dropdown .calendar-choices-bootstrap .choices,
+body.calendar-suppress-course-filter-dropdown .calendar-choices-bootstrap .choices.is-open {
+    z-index: auto !important;
 }
 
 .fc-event-card::before {
@@ -926,6 +975,7 @@
 }
 
 .institution-name.english-text {
+    font-family: 'Montserrat', 'Noto Sans', 'Noto Sans Devanagari', system-ui, sans-serif;
     font-weight: 600;
     font-size: 1.1rem;
 }
@@ -1008,11 +1058,10 @@
 }
 
 .control-panel {
-    backdrop-filter: blur(10px);
+    /* backdrop-filter creates a stacking context; dropdown then stays under fixed chrome */
     border: 1px solid rgba(0, 74, 147, 0.1) !important;
     overflow: visible !important;
     position: relative;
-    z-index: 20;
 }
 
 .bg-gradient {
@@ -1502,6 +1551,16 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
         padding: 1rem !important;
     }
 
+    .calendar-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-x: contain;
+    }
+
+    #calendar .fc-view-harness {
+        min-height: 320px;
+    }
+
     /* FullCalendar Adjustments */
     .fc {
         font-size: 0.8rem;
@@ -1620,7 +1679,8 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
     }
 
     .week-cards .row > * {
-        flex: 0 0 calc(33.333% - 0.5rem);
+        flex: 0 0 100%;
+        max-width: 100%;
     }
 
     .week-card {
@@ -1639,6 +1699,12 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
     .timetable-container {
         border-radius: 0.5rem;
         overflow: hidden;
+    }
+
+    .timetable-container .table-responsive {
+        -webkit-overflow-scrolling: touch;
+        overflow-x: auto;
+        overscroll-behavior-x: contain;
     }
 
     .table-responsive {
@@ -1906,6 +1972,17 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
         min-width: 90px;
     }
 
+    .timetable-container .table-responsive {
+        -webkit-overflow-scrolling: touch;
+        overflow-x: auto;
+        overscroll-behavior-x: contain;
+    }
+
+    .calendar-container {
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-x: contain;
+    }
+
     .list-event-card {
         padding: 0.75rem;
     }
@@ -2083,7 +2160,7 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
     courseMasterCount: {{ isset($courseMaster) ? $courseMaster->count() : 0 }}
 });</script>
 
-<div class="container-fluid">
+<div class="container-fluid calendar-admin-page">
     @if(!isset($courseMaster) || $courseMaster->isEmpty())
         <div class="alert alert-warning m-4">
             <h4><i class="bi bi-exclamation-triangle me-2"></i>No Courses Available</h4>
@@ -2374,6 +2451,57 @@ function initCourseFilterChoices() {
 
     select._courseChoices = new Choices(select, courseChoicesOptions);
     select.dataset.choicesInitialized = 'true';
+}
+
+/**
+ * Close "Filter by Course" Choices and keep it hidden while #eventModal is open.
+ * (High z-index + stacking could leave the list painted on top of the modal even if API close fails.)
+ */
+function closeCourseFilterDropdown() {
+    const select = document.getElementById('courseFilter');
+    const inst = select && select._courseChoices;
+    if (inst) {
+        try {
+            if (typeof inst.hideDropdown === 'function') {
+                inst.hideDropdown();
+            }
+        } catch (e) { /* ignore */ }
+    }
+    const wrap = document.querySelector('.calendar-choices-bootstrap .choices');
+    if (wrap) {
+        wrap.classList.remove('is-open', 'is-flipped');
+        wrap.querySelectorAll('.choices__list--dropdown, .choices__list[aria-expanded]').forEach((el) => {
+            try {
+                el.setAttribute('aria-hidden', 'true');
+            } catch (e2) { /* ignore */ }
+        });
+    }
+    try {
+        const filterRoot = document.querySelector('.calendar-choices-bootstrap');
+        if (filterRoot && document.activeElement && filterRoot.contains(document.activeElement)) {
+            document.activeElement.blur();
+        }
+    } catch (e3) { /* ignore */ }
+    document.body.classList.add('calendar-suppress-course-filter-dropdown');
+}
+
+function releaseCourseFilterDropdownSuppression() {
+    document.body.classList.remove('calendar-suppress-course-filter-dropdown');
+    const wrap = document.querySelector('.calendar-choices-bootstrap .choices');
+    if (wrap) {
+        wrap.querySelectorAll('.choices__list--dropdown, .choices__list[aria-expanded]').forEach((el) => {
+            try {
+                el.removeAttribute('aria-hidden');
+            } catch (e) { /* ignore */ }
+        });
+    }
+    const select = document.getElementById('courseFilter');
+    const inst = select && select._courseChoices;
+    if (inst && typeof inst.hideDropdown === 'function') {
+        try {
+            inst.hideDropdown();
+        } catch (e2) { /* ignore */ }
+    }
 }
 
 // Calendar Manager Class
@@ -4313,6 +4441,27 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('Calendar element exists:', !!document.getElementById('calendar'));
     console.log('Loading overlay exists:', !!document.getElementById('calendarLoadingOverlay'));
     initCourseFilterChoices();
+
+    const eventModalEl = document.getElementById('eventModal');
+    if (eventModalEl) {
+        const syncCloseCourseFilter = () => {
+            closeCourseFilterDropdown();
+            requestAnimationFrame(() => closeCourseFilterDropdown());
+        };
+        eventModalEl.addEventListener('show.bs.modal', syncCloseCourseFilter);
+        eventModalEl.addEventListener('shown.bs.modal', syncCloseCourseFilter);
+        eventModalEl.addEventListener('hidden.bs.modal', () => {
+            releaseCourseFilterDropdownSuppression();
+        });
+    }
+
+    document.getElementById('createEventButton')?.addEventListener(
+        'pointerdown',
+        () => {
+            closeCourseFilterDropdown();
+        },
+        true
+    );
     
     // Absolute fallback - hide loader after 3 seconds no matter what
     setTimeout(() => {

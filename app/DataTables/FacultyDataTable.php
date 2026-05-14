@@ -2,8 +2,9 @@
 
 namespace App\DataTables;
 
-use App\Models\Faculty;
+use App\Support\DataTableRedisCache;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
+use Illuminate\Http\JsonResponse;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Yajra\DataTables\Html\Button;
@@ -15,6 +16,31 @@ use App\Models\FacultyMaster;
 
 class FacultyDataTable extends DataTable
 {
+    private const LISTING_CACHE_EPOCH_KEY = 'faculty_dt_list_epoch';
+
+    public static function bumpListingCacheEpoch(): void
+    {
+        DataTableRedisCache::bumpListEpoch(self::LISTING_CACHE_EPOCH_KEY, 'FacultyDataTable');
+    }
+
+    /**
+     * Server-side JSON for /faculty listing. .env: FACULTY_DATATABLE_CACHE_*.
+     */
+    public function ajax(): JsonResponse
+    {
+        return DataTableRedisCache::serveCachedAjax(
+            $this->request(),
+            'faculty_dt:v1:',
+            self::LISTING_CACHE_EPOCH_KEY,
+            [
+                'enabled' => 'FACULTY_DATATABLE_CACHE_ENABLED',
+                'seconds' => 'FACULTY_DATATABLE_CACHE_SECONDS',
+            ],
+            'FacultyDataTable',
+            fn () => parent::ajax()
+        );
+    }
+
     /**
      * Build DataTable class.
      *
@@ -37,26 +63,6 @@ class FacultyDataTable extends DataTable
             ->addColumn('mobile_number', function($row) {
                 return $row->mobile_no ?? '';
             })
-            // ->addColumn('faculty_type', function($row) {
-            //     return match((int)$row->faculty_type) {
-            //         1 => '<span class="badge bg-success-subtle text-success">Internal</span>',
-            //         2 => '<span class="badge bg-warning-subtle text-warning">Guest</span>',
-            //         3 => '<span class="badge bg-info-subtle text-info">Research</span>',
-            //         default => null,
-            //     };
-            // })
-            // ->addColumn('designation', function($row) {
-            //     return $row->designation ?? '';
-            // })
-            // ->addColumn('current_sector', function($row) {
-            //     $sector = $row->faculty_sector ?? $row->current_sector;
-            //     $sector = empty($sector) ? 1 : (int)$sector;
-            //     return match($sector) {
-            //         1 => '<span class="badge bg-success-subtle text-success">Government</span>',
-            //         2 => '<span class="badge bg-danger-subtle text-danger">Private</span>',
-            //         default => '<span class="badge bg-success-subtle text-success">Government</span>',
-            //     };
-            // })
             ->addColumn('action', function ($row) {
                 $id = encrypt($row->pk);
                 $csrf = csrf_token();
@@ -64,21 +70,27 @@ class FacultyDataTable extends DataTable
                 $editUrl = route('faculty.edit', ['id' => $id]);
                 $viewUrl = route('faculty.show', ['id' => $id]);
                 $deleteUrl = route('faculty.destroy', ['id' => $id]);
+                $isActive = $row->active_inactive == 1;
+                $disabledAttr = $isActive ? 'disabled' : '';
+                $deleteTitle = $isActive ? 'Deactivate faculty first to enable deletion' : 'Delete';
+                $deleteStyle = $isActive ? 'opacity:0.5;cursor:not-allowed;' : 'cursor:pointer;';
 
                 return '
-                    <a href="'.$editUrl.'" class="btn btn-primary btn-sm" title="Edit">
-                        <i class="material-icons" style="font-size:14px;">edit</i>
-                    </a>
-                    <a href="'.$viewUrl.'" class="btn btn-info btn-sm" title="View">
-                        <i class="material-icons" style="font-size:14px;">visibility</i>
-                    </a>
-                    <button type="button" class="btn btn-danger btn-sm delete-faculty-btn" 
-                        data-url="'.$deleteUrl.'" 
-                        data-name="'.htmlspecialchars($row->full_name, ENT_QUOTES).'" 
-                        data-token="'.$csrf.'" 
-                        title="Delete">
-                        <i class="material-icons" style="font-size:14px;">delete</i>
-                    </button>
+                    <div class="d-flex align-items-center gap-2" style="white-space:nowrap;">
+                        <a href="'.$editUrl.'" class="btn bg-transparent border-0 p-0 text-primary" title="Edit">
+                            <i class="material-icons" style="font-size:20px;">edit</i>
+                        </a>
+                        <a href="'.$viewUrl.'" class="btn bg-transparent border-0 p-0 text-info" title="View">
+                            <i class="material-icons" style="font-size:20px;">visibility</i>
+                        </a>
+                        <button type="button" class="btn bg-transparent border-0 p-0 text-danger delete-faculty-btn"
+                            data-url="'.$deleteUrl.'"
+                            data-name="'.htmlspecialchars($row->full_name, ENT_QUOTES).'"
+                            data-token="'.$csrf.'"
+                            title="'.$deleteTitle.'" '.$disabledAttr.' style="'.$deleteStyle.'">
+                            <i class="material-icons" style="font-size:20px;">delete</i>
+                        </button>
+                    </div>
                 ';
             })
             ->addColumn('status', function ($row) {
@@ -104,6 +116,14 @@ class FacultyDataTable extends DataTable
             ->filterColumn('mobile_number', function ($query, $keyword) {
                 $query->where('mobile_no', 'like', "%{$keyword}%");
             })
+
+        ->addColumn('last_update', function($row) {
+                return $row->last_update ? \Carbon\Carbon::parse($row->last_update)->format('d-m-Y H:i') : 'N/A';
+            })
+            ->addColumn('created_by', function($row) {
+                return $row->createdByUser?->name ?? 'N/A';
+            })
+
             ->filter(function ($query) {
                 $searchValue = request()->input('search.value');
 
@@ -122,13 +142,14 @@ class FacultyDataTable extends DataTable
     /**
      * Get query source of dataTable.
      *
-     * @param \App\Models\Faculty $model
+     * @param \App\Models\FacultyMaster $model
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function query(FacultyMaster $model): QueryBuilder
     {
         // return $model->newQuery();
         return $model->orderBy('pk', 'desc')->newQuery();
+
     }
 
     /**
@@ -178,50 +199,43 @@ class FacultyDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center'),
+            Column::computed('DT_RowIndex')->title('S.No.'),
             Column::make('faculty_code')
                 ->title('Faculty Code')
-                ->addClass('text-center')
                 ->searchable(true)
                 ->orderable(false),
             Column::make('full_name')
                 ->title('Faculty Name')
-                ->addClass('text-center')
                 ->searchable(true)
                 ->orderable(false),
             Column::make('faculty_email')
                 ->title('Faculty Email')
-                ->addClass('text-center')
                 ->searchable(true)
                 ->orderable(false),
             Column::make('mobile_number')
                 ->title('Mobile Number')
+                ->searchable(true)
+                ->orderable(false),
+
+            Column::make('last_update')
+                ->title('Modified Date')
+                ->addClass('text-center')
+                ->searchable(false)
+                ->orderable(false),
+            Column::make('created_by')
+                ->title('Modified By')
                 ->addClass('text-center')
                 ->searchable(true)
                 ->orderable(false),
-            // Column::make('faculty_type')
-            //     ->title('Faculty Type')
-            //     ->addClass('text-center')
-            //     ->searchable(false)
-            //     ->orderable(false),
-            // Column::make('designation')
-            //     ->title('Designation')
-            //     ->addClass('text-center')
-            //     ->searchable(false)
-            //     ->orderable(false),
-            // Column::make('current_sector')
-            //     ->title('Current Sector')
-            //     ->addClass('text-center')
-            //     ->searchable(false)
-            //     ->orderable(false),
-           Column::computed('action')
-                ->addClass('text-center')
-                ->exportable(false)
-                ->printable(false),
             Column::computed('status')
-                ->addClass('text-center')
                 ->exportable(false)
                 ->printable(false)
+                ->addClass('text-center'),
+            Column::computed('action')
+                ->exportable(false)
+                ->printable(false)
+                ->addClass('text-center')
+                ->width(120)
         ];
     }
 

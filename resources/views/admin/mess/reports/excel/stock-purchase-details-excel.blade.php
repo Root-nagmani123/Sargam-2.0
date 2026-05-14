@@ -71,13 +71,11 @@
         @php $vendorSectionTotal = 0; @endphp
         @foreach($vendorGroup['orders'] as $order)
             @php
-                $storeName    = $order->store ? $order->store->store_name : 'N/A';
-                $billLabel    = $storeName . ' (Primary) Bill No. ' . ($order->po_number ?? $order->id) . ' (' . $order->po_date->format('d-m-Y') . ')';
                 $billSubtotal = 0;
                 $billTaxTotal = 0;
             @endphp
             <tr>
-                <td colspan="8" style="font-weight:700;background:#5a6268;color:#fff;">{{ $billLabel }}</td>
+                <td colspan="8" style="font-weight:700;background:#5a6268;color:#fff;">{{ $order->stockPurchaseReportBillLabel() }}</td>
             </tr>
             @foreach($order->items as $item)
                 @php

@@ -24,9 +24,11 @@ class EmailService
     {
         $failed = [];
 
-        $emails->filter()
+        $emails
+            ->map(fn ($email) => is_string($email) ? trim($email) : (string) $email)
+            ->filter(fn ($email) => $email !== '')
             ->unique()
-            ->each(function (string $email) use ($message, &$failed) {
+            ->each(function ($email) use ($message, &$failed) {
                 try {
                     Mail::raw($message, function ($mail) use ($email) {
                         $mail->to($email)->subject($this->defaultSubject);

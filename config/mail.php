@@ -41,7 +41,8 @@ return [
             'encryption' => env('MAIL_ENCRYPTION', 'tls'),
             'username' => env('MAIL_USERNAME'),
             'password' => env('MAIL_PASSWORD'),
-            'timeout' => null,
+            // Avoid hanging requests (and PHP max-execution 500s) when SMTP is unreachable or misconfigured.
+            'timeout' => env('MAIL_TIMEOUT', 15),
         ],
 
         'ses' => [

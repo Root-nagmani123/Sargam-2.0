@@ -12,9 +12,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap"
-        rel="stylesheet">
+    @include('components.fonts-sargam')
+    <link rel="stylesheet" href="{{ asset('css/custom.css') }}?v={{ @filemtime(public_path('css/custom.css')) ?: time() }}" />
     <link rel="stylesheet" href="{{ asset('admin_assets/css/material-icons-local.css') }}" />
     <style>
     body {
@@ -1071,11 +1070,11 @@
                     <ul class="list-unstyled d-flex justify-content-end mb-0">
                         <li class="me-3">
                             <a href="#" class="text-white text-decoration-none"
-                                style="font-size: 14px; font-family: Inter;">Privacy Policy</a>
+                                style="font-size: 14px;">Privacy Policy</a>
                         </li>
                         <li>
                             <a href="#" class="text-white text-decoration-none"
-                                style="font-size: 14px; font-family: Inter;">Need Help</a>
+                                style="font-size: 14px;">Need Help</a>
                         </li>
                     </ul>
                 </div>

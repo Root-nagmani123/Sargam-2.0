@@ -284,18 +284,18 @@
 
         {{-- Data Table --}}
         <div class="card shadow-lg border-0 animate-fade-in">
-            <div class="card-header bg-gradient-primary py-4">
+            <div class="card-header py-4">
                 <div class="d-flex align-items-center justify-content-between">
                     <div class="d-flex align-items-center">
                         <div class="icon-box me-3">
-                            <i class="fas fa-table fa-lg text-white"></i>
+                            <i class="fas fa-table fa-lg"></i>
                         </div>
                         <div>
-                             <h5 class="mb-0 text-white fw-bold">Course Wise OT Records</h5>
-                            <small class="text-white-50">View and manage student enrollments</small>
+                             <h5 class="mb-0 fw-bold">Course Wise OT Records</h5>
+                            <small class="text-muted-50">View and manage student enrollments</small>
                         </div>
                     </div>
-                    <div class="text-white">
+                    <div class=">
                         <i class="fas fa-database fa-2x opacity-50"></i>
                     </div>
                 </div>

@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Register Visitor - Security Management')
-@section('setup_content')
+@section('content')
 <div class="container-fluid">
     @include('components.breadcrum', ['title' => 'Register New Visitor']) 
     <div class="card" style="border-left:4px solid #004a93;">

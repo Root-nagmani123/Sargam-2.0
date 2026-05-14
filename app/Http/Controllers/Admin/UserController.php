@@ -2,6 +2,13 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\DataTables\CourseMasterDataTable;
+use App\DataTables\FacultyDataTable;
+use App\DataTables\GroupMappingDataTable;
+use App\DataTables\Master\EmployeeTypeMasterDataTable;
+use App\DataTables\RoleDataTable;
+use App\Http\Controllers\Admin\Master\FacultyExpertiseMasterController;
+use App\Http\Controllers\Admin\Master\FacultyTypeMasterController;
 use App\DataTables\UserCredentialsDataTable;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\User\StoreUserRequest;
@@ -25,6 +32,7 @@ use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 use App\Models\StudentMedicalExemption;
 use App\Models\MDOEscotDutyMap;
@@ -44,11 +52,13 @@ use App\Models\SecurityFamilyIdApplyApproval;
 use App\Models\VehiclePassTWApply;
 use App\Models\VehiclePassFWApply;
 use App\Models\VehiclePassTWApplyApproval;
+use App\Support\DataTableRedisCache;
 use Carbon\Carbon;
 
 
 class UserController extends Controller
 {
+    private const ADMIN_USERS_INDEX_LIST_EPOCH_KEY = 'admin_users_index_list_epoch';
     /**
      * Display a listing of users.
      *
@@ -82,9 +92,30 @@ class UserController extends Controller
             ];
         }
 
+        // Add logged-in user's birthday to calendar
+        $currentUser = Auth::user();
+        $userEmployee = $currentUser ? EmployeeMaster::where('pk', $currentUser->user_id)->where('status', 1)->first() : null;
+        if ($userEmployee && $userEmployee->dob) {
+            $dob = \Carbon\Carbon::parse($userEmployee->dob);
+            $birthdayThisYear = $dob->copy()->year($year);
+            if ((int) $birthdayThisYear->month === (int) $month) {
+                $bdKey = $birthdayThisYear->format('Y-m-d');
+                if (!isset($events[$bdKey])) {
+                    $events[$bdKey] = [];
+                }
+                $events[$bdKey][] = [
+                    'title' => 'Your Birthday! 🎂',
+                    'type' => 'birthday',
+                    'description' => 'Happy Birthday!',
+                ];
+            }
+        }
+
       $emp_dob_data = EmployeeMaster::where('status', 1)->whereRaw("DATE_FORMAT(dob, '%m-%d') = DATE_FORMAT(CURDATE(), '%m-%d')")
+        ->where('employee_master.pk', '!=', Auth::user()->user_id ?? 0)
         ->leftjoin('designation_master', 'employee_master.designation_master_pk', '=', 'designation_master.pk')
         ->select(
+            'employee_master.pk',
             'employee_master.first_name',
             'employee_master.email',
             'employee_master.mobile',
@@ -95,6 +126,58 @@ class UserController extends Controller
             'employee_master.dob'
         )
       ->get();
+
+      // Check if today is logged-in user's birthday
+      $isMyBirthday = false;
+      if ($userEmployee && $userEmployee->dob) {
+          $myDob = \Carbon\Carbon::parse($userEmployee->dob);
+          $isMyBirthday = $myDob->format('m-d') === now()->format('m-d');
+      }
+
+      // Count wishes received today (birthday notifications for logged-in user)
+      $myBirthdayWishCount = 0;
+      if ($isMyBirthday) {
+          $myBirthdayWishCount = \App\Models\Notification::where('receiver_user_id', Auth::user()->user_id)
+              ->where('type', 'birthday')
+              ->whereDate('created_at', today())
+              ->count();
+      }
+
+      // Wish count per birthday person (how many wishes they received today)
+      $birthdayWishCounts = [];
+      if ($emp_dob_data->isNotEmpty()) {
+          $birthdayPks = $emp_dob_data->pluck('pk')->toArray();
+          $birthdayWishCounts = \App\Models\Notification::whereIn('receiver_user_id', $birthdayPks)
+              ->where('type', 'birthday')
+              ->whereDate('created_at', today())
+              ->selectRaw('receiver_user_id, COUNT(*) as wish_count')
+              ->groupBy('receiver_user_id')
+              ->pluck('wish_count', 'receiver_user_id')
+              ->toArray();
+      }
+
+      // Upcoming birthdays (next 7 days, excluding today)
+      $upcomingBirthdays = collect();
+      for ($i = 1; $i <= 7; $i++) {
+          $futureDate = now()->addDays($i);
+          $upcoming = EmployeeMaster::where('status', 1)
+              ->whereRaw("DATE_FORMAT(dob, '%m-%d') = ?", [$futureDate->format('m-d')])
+              ->leftjoin('designation_master', 'employee_master.designation_master_pk', '=', 'designation_master.pk')
+              ->select(
+                  'employee_master.pk',
+                  'employee_master.first_name',
+                  'employee_master.last_name',
+                  'employee_master.profile_picture',
+                  'employee_master.dob',
+                  'designation_master.designation_name'
+              )
+              ->get()
+              ->each(function ($emp) use ($futureDate) {
+                  $emp->birthday_date = $futureDate->format('d M');
+                  $emp->days_away = $futureDate->diffInDays(now());
+              });
+          $upcomingBirthdays = $upcomingBirthdays->merge($upcoming);
+      }
 
       $totalActiveCourses = CourseMaster::where('active_inactive', 1)->where('start_year', '<', now())->where('end_date', '>=', now())->count();
       $upcomingCourses = CourseMaster::where('active_inactive', 1)->where('start_year', '>', now())->count();
@@ -225,23 +308,34 @@ class UserController extends Controller
             ]);
         }
 
-        $todayFamilyApprovals = $this->getTodayPendingFamilyApprovalsCount();
-        $todayVehicleApprovals = $this->getTodayPendingVehicleApprovalsCount();
+        $todayFamilyApprovals = $this->getTodayPendingFamilyApprovalsCount(true);
+        $fullFamilyApprovals = $this->getTodayPendingFamilyApprovalsCount(false);
+        $todayVehicleApprovals = $this->getTodayPendingVehicleApprovalsCount(true);
+        $fullVehicleApprovals = $this->getTodayPendingVehicleApprovalsCount(false);
         $todayIdCardRequests = $this->getTodayPendingIdCardRequestsCount();
-        $todayPendingSplit = $this->getTodayPendingIdCardRequestsSplit();
+        $todayPendingSplit = $this->getTodayPendingIdCardRequestsSplit(true);
         $todayPendingPermanentIdCardRequests = (int) ($todayPendingSplit['perm'] ?? 0);
         $todayPendingContractualIdCardRequests = (int) ($todayPendingSplit['cont'] ?? 0);
+        $fullPendingSplit = $this->getTodayPendingIdCardRequestsSplit(false);
+        $fullPendingPermanentIdCardRequests = (int) ($fullPendingSplit['perm'] ?? 0);
+        $fullPendingContractualIdCardRequests = (int) ($fullPendingSplit['cont'] ?? 0);
         $todayApproval1Split = $this->getTodayPendingSecurityApproval1Split();
         $todayApproval1IdCardRequests = (int) ($todayApproval1Split['idcard'] ?? 0);
         $todayApproval1DuplicateIdCardRequests = (int) ($todayApproval1Split['duplicate'] ?? 0);
-        $todayDuplicatePermIdCardRequests = $this->getTodayDuplicatePermanentIdCardRequestsCount();
-        $todayDuplicateContractualIdCardRequests = $this->getTodayDuplicateContractualIdCardRequestsCount();
+        $todayDuplicatePermIdCardRequests = $this->getTodayDuplicatePermanentIdCardRequestsCount(true);
+        $todayDuplicateContractualIdCardRequests = $this->getTodayDuplicateContractualIdCardRequestsCount(true);
+        $fullDuplicatePermIdCardRequests = $this->getTodayDuplicatePermanentIdCardRequestsCount(false);
+        $fullDuplicateContractualIdCardRequests = $this->getTodayDuplicateContractualIdCardRequestsCount(false);
 
         return view('admin.dashboard', compact(
             'year',
             'month',
             'events',
             'emp_dob_data',
+            'isMyBirthday',
+            'myBirthdayWishCount',
+            'birthdayWishCounts',
+            'upcomingBirthdays',
             'totalActiveCourses',
             'upcomingCourses',
             'total_guest_faculty',
@@ -253,14 +347,20 @@ class UserController extends Controller
             'totalStudents',
             'isCCorACC',
             'todayFamilyApprovals',
+            'fullFamilyApprovals',
             'todayVehicleApprovals',
+            'fullVehicleApprovals',
             'todayIdCardRequests',
             'todayPendingPermanentIdCardRequests',
             'todayPendingContractualIdCardRequests',
+            'fullPendingPermanentIdCardRequests',
+            'fullPendingContractualIdCardRequests',
             'todayApproval1IdCardRequests',
             'todayApproval1DuplicateIdCardRequests',
             'todayDuplicatePermIdCardRequests',
-            'todayDuplicateContractualIdCardRequests'
+            'todayDuplicateContractualIdCardRequests',
+            'fullDuplicatePermIdCardRequests',
+            'fullDuplicateContractualIdCardRequests'
         ));
     }
 
@@ -270,8 +370,10 @@ class UserController extends Controller
      * - cont: pending Contractual ID cards
      *
      * Logic matches existing getTodayPendingIdCardRequestsCount(), but returns both parts separately.
+     *
+     * @param  bool  $todayOnly  When true, only applications created today; when false, all actionable pending at this approval level (any request date).
      */
-    private function getTodayPendingIdCardRequestsSplit(): array
+    private function getTodayPendingIdCardRequestsSplit(bool $todayOnly = true): array
     {
         $user = Auth::user();
         if (! $user) {
@@ -294,45 +396,60 @@ class UserController extends Controller
         }
 
         if ($isApproval2) {
-            $permCount = (int) DB::table('security_parm_id_apply as spa')
-                ->whereBetween('spa.created_date', [$start, $end])
+            // Match Approval II list: actionable “new request” contractual rows exclude L2-done
+            // (security_con_oth_id_apply_approval status=1, recommend_status=1). Rows with status=0 for
+            // Level 3 would incorrectly match legacy “pending ids with status 0”.
+            $contHasA2Recommended = DB::table('security_con_oth_id_apply_approval')
+                ->where('status', 1)
+                ->where('recommend_status', 1)
+                ->pluck('security_parm_id_apply_pk');
+
+            $permQuery = DB::table('security_parm_id_apply as spa')
                 ->where('spa.id_status', SecurityParmIdApply::ID_STATUS_PENDING)
                 ->whereNotExists(function ($q) {
                     $q->select(DB::raw(1))
                         ->from('security_parm_id_apply_approval as a')
                         ->whereColumn('a.security_parm_id_apply_pk', 'spa.emp_id_apply')
                         ->where('a.status', 2);
-                })
-                ->count();
-
-            $contPendingIds = DB::table('security_con_oth_id_apply_approval')
-                ->where('status', 0)
-                ->pluck('security_parm_id_apply_pk');
-
-            $contCount = 0;
-            if ($contPendingIds->isNotEmpty()) {
-                $contCount = (int) DB::table('security_con_oth_id_apply as sco')
-                    ->whereBetween('sco.created_date', [$start, $end])
-                    ->where('sco.id_status', 1)
-                    ->where('sco.depart_approval_status', 2)
-                    ->whereIn('sco.emp_id_apply', $contPendingIds)
-                    ->count();
+                });
+            if (Schema::hasColumn('security_parm_id_apply', 'id_card_generate_date')) {
+                $permQuery->whereNull('spa.id_card_generate_date');
             }
+            if ($todayOnly) {
+                $permQuery->whereBetween('spa.created_date', [$start, $end]);
+            }
+            $permCount = (int) $permQuery->count();
+
+            $contQuery = DB::table('security_con_oth_id_apply as sco')
+                ->where('sco.id_status', 1)
+                ->where('sco.depart_approval_status', 2);
+            if (Schema::hasColumn('security_con_oth_id_apply', 'id_card_generate_date')) {
+                $contQuery->whereNull('sco.id_card_generate_date');
+            }
+            if ($contHasA2Recommended->isNotEmpty()) {
+                $contQuery->whereNotIn('sco.emp_id_apply', $contHasA2Recommended);
+            }
+            if ($todayOnly) {
+                $contQuery->whereBetween('sco.created_date', [$start, $end]);
+            }
+            $contCount = (int) $contQuery->count();
 
             return ['perm' => $permCount, 'cont' => $contCount];
         }
 
         // Approval III final pending
-        $permFinalPending = (int) DB::table('security_parm_id_apply as spa')
-            ->whereBetween('spa.created_date', [$start, $end])
+        $permFinalQuery = DB::table('security_parm_id_apply as spa')
             ->where('spa.id_status', SecurityParmIdApply::ID_STATUS_PENDING)
             ->whereExists(function ($q) {
                 $q->select(DB::raw(1))
                     ->from('security_parm_id_apply_approval as a')
                     ->whereColumn('a.security_parm_id_apply_pk', 'spa.emp_id_apply')
                     ->where('a.status', 2);
-            })
-            ->count();
+            });
+        if ($todayOnly) {
+            $permFinalQuery->whereBetween('spa.created_date', [$start, $end]);
+        }
+        $permFinalPending = (int) $permFinalQuery->count();
 
         $contRecommendedIds = DB::table('security_con_oth_id_apply_approval')
             ->where('status', 1)
@@ -345,13 +462,15 @@ class UserController extends Controller
         $contFinalPending = 0;
         if ($contRecommendedIds->isNotEmpty()) {
             $contQuery = DB::table('security_con_oth_id_apply as sco')
-                ->whereBetween('sco.created_date', [$start, $end])
                 ->where('sco.id_status', 1)
                 ->where('sco.depart_approval_status', 2)
                 ->whereIn('sco.emp_id_apply', $contRecommendedIds);
 
             if ($contFinalDoneIds->isNotEmpty()) {
                 $contQuery->whereNotIn('sco.emp_id_apply', $contFinalDoneIds);
+            }
+            if ($todayOnly) {
+                $contQuery->whereBetween('sco.created_date', [$start, $end]);
             }
 
             $contFinalPending = (int) $contQuery->count();
@@ -360,7 +479,10 @@ class UserController extends Controller
         return ['perm' => $permFinalPending, 'cont' => $contFinalPending];
     }
 
-    private function getTodayPendingFamilyApprovalsCount(): int
+    /**
+     * @param  bool  $todayOnly  When false, counts all actionable pending family ID requests (any date).
+     */
+    private function getTodayPendingFamilyApprovalsCount(bool $todayOnly = true): int
     {
         $user = Auth::user();
         if (! $user) {
@@ -373,9 +495,11 @@ class UserController extends Controller
             return 0;
         }
 
-        $rows = SecurityFamilyIdApply::with('approvals')
-            ->whereDate('created_date', Carbon::today())
-            ->get();
+        $q = SecurityFamilyIdApply::with('approvals');
+        if ($todayOnly) {
+            $q->whereDate('created_date', Carbon::today());
+        }
+        $rows = $q->get();
 
         if ($rows->isEmpty()) {
             return 0;
@@ -412,7 +536,10 @@ class UserController extends Controller
         return $count;
     }
 
-    private function getTodayPendingVehicleApprovalsCount(): int
+    /**
+     * @param  bool  $todayOnly  When false, counts all actionable pending vehicle pass requests (any date).
+     */
+    private function getTodayPendingVehicleApprovalsCount(bool $todayOnly = true): int
     {
         $user = Auth::user();
         if (! $user) {
@@ -427,13 +554,14 @@ class UserController extends Controller
 
         $today = Carbon::today();
 
-        $twRows = VehiclePassTWApply::with('approvals')
-            ->whereDate('created_date', $today)
-            ->get();
-
-        $fwRows = VehiclePassFWApply::with('approvals')
-            ->whereDate('created_date', $today)
-            ->get();
+        $twQ = VehiclePassTWApply::with('approvals');
+        $fwQ = VehiclePassFWApply::with('approvals');
+        if ($todayOnly) {
+            $twQ->whereDate('created_date', $today);
+            $fwQ->whereDate('created_date', $today);
+        }
+        $twRows = $twQ->get();
+        $fwRows = $fwQ->get();
 
         $rows = $twRows->map(function ($r) {
             $r->kind = 'tw';
@@ -541,7 +669,10 @@ class UserController extends Controller
         return ['idcard' => $idcardCount, 'duplicate' => $duplicateCount];
     }
 
-    private function getTodayDuplicatePermanentIdCardRequestsCount(): int
+    /**
+     * @param  bool  $todayOnly  When false, counts all actionable pending duplicate permanent requests (any date).
+     */
+    private function getTodayDuplicatePermanentIdCardRequestsCount(bool $todayOnly = true): int
     {
         $user = Auth::user();
         if (! $user) {
@@ -559,8 +690,13 @@ class UserController extends Controller
 
         // Permanent Duplicate (security_dup_perm_id_apply)
         $base = DB::table('security_dup_perm_id_apply as dup')
-            ->whereBetween('dup.created_date', [$start, $end])
             ->where('dup.id_status', 1);
+        if (Schema::hasColumn('security_dup_perm_id_apply', 'id_card_generate_date')) {
+            $base->whereNull('dup.id_card_generate_date');
+        }
+        if ($todayOnly) {
+            $base->whereBetween('dup.created_date', [$start, $end]);
+        }
 
         if ($isApproval2) {
             // Actionable at Approval II = not yet recommended
@@ -590,7 +726,10 @@ class UserController extends Controller
         return (int) $base->count();
     }
 
-    private function getTodayDuplicateContractualIdCardRequestsCount(): int
+    /**
+     * @param  bool  $todayOnly  When false, counts all actionable pending duplicate contractual requests (any date).
+     */
+    private function getTodayDuplicateContractualIdCardRequestsCount(bool $todayOnly = true): int
     {
         $user = Auth::user();
         if (! $user) {
@@ -608,9 +747,14 @@ class UserController extends Controller
 
         // Contractual Duplicate (security_dup_other_id_apply with depart_approval_status = 2)
         $base = DB::table('security_dup_other_id_apply as duo')
-            ->whereBetween('duo.created_date', [$start, $end])
             ->where('duo.id_status', 1)
             ->where('depart_approval_status', 2);
+        if (Schema::hasColumn('security_dup_other_id_apply', 'id_card_generate_date')) {
+            $base->whereNull('duo.id_card_generate_date');
+        }
+        if ($todayOnly) {
+            $base->whereBetween('duo.created_date', [$start, $end]);
+        }
 
         if ($isApproval2) {
             // Actionable at Approval II = not yet recommended
@@ -1194,49 +1338,94 @@ class UserController extends Controller
         ));
     }
 
-   public function index(Request $request)
-{
-    $perPage = $request->input('per_page', 10); // Default 10 items per page
-    $search = $request->input('search');
-  $user_type = trim($request->input('User_type'));
+    public function index(Request $request)
+    {
+        $perPage = (int) $request->input('per_page', 10);
+        $search = $request->input('search');
+        $user_type = trim((string) $request->input('User_type', ''));
 
-    $usersQuery = DB::table('user_credentials as uc')
-        ->leftJoin('employee_role_mapping as erm', 'erm.user_credentials_pk', '=', 'uc.pk')
-        ->leftJoin('user_role_master as urm', 'urm.pk', '=', 'erm.user_role_master_pk')
-        ->select(
-            'uc.pk',
-            'uc.user_name',
-            'uc.first_name',
-            'uc.last_name',
-            'uc.email_id',
-            'uc.mobile_no',
-            DB::raw("GROUP_CONCAT(urm.user_role_display_name SEPARATOR ', ') as roles")
-        )
-        ->groupBy(
-            'uc.pk',
-            'uc.user_name',
-            'uc.first_name',
-            'uc.last_name',
-            'uc.email_id',
-            'uc.mobile_no'
+        $epoch = DataTableRedisCache::readListEpoch(self::ADMIN_USERS_INDEX_LIST_EPOCH_KEY);
+        $cacheKey = 'admin_users_index:v1:' . md5(json_encode([
+            'epoch' => $epoch,
+            'search' => $search,
+            'user_type' => $user_type,
+            'per_page' => $perPage,
+            'page' => (int) $request->input('page', 1),
+        ]));
+
+        $cached = DataTableRedisCache::remember(
+            $cacheKey,
+            [
+                'enabled' => 'ADMIN_USERS_INDEX_CACHE_ENABLED',
+                'seconds' => 'ADMIN_USERS_INDEX_CACHE_SECONDS',
+            ],
+            'UserController@adminUsersIndex',
+            fn () => $this->buildAdminUsersIndexPaginator($request, $perPage, $search, $user_type)
         );
 
-    if ($search) {
-        $usersQuery->where(function($q) use ($search) {
-            $q->where('uc.user_name', 'like', "%$search%")
-              ->orWhere('uc.first_name', 'like', "%$search%")
-              ->orWhere('uc.last_name', 'like', "%$search%")
-              ->orWhere('uc.email_id', 'like', "%$search%");
-        });
+        $users = new \Illuminate\Pagination\LengthAwarePaginator(
+            $cached['items'],
+            $cached['total'],
+            $cached['perPage'],
+            $cached['currentPage'],
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+
+        return view('admin.user_management.users.index', compact('users', 'perPage', 'search', 'user_type'));
     }
-   if (!empty($user_type)) {
-    $usersQuery->where('uc.user_category', $user_type);
-}
 
-    $users = $usersQuery->paginate($perPage)->withQueryString();
+    /**
+     * @return array{items: array<int, mixed>, total: int, perPage: int, currentPage: int}
+     */
+    private function buildAdminUsersIndexPaginator(Request $request, int $perPage, $search, string $user_type): array
+    {
+        $usersQuery = DB::table('user_credentials as uc')
+            ->leftJoin('employee_role_mapping as erm', 'erm.user_credentials_pk', '=', 'uc.pk')
+            ->leftJoin('user_role_master as urm', 'urm.pk', '=', 'erm.user_role_master_pk')
+            ->select(
+                'uc.pk',
+                'uc.user_name',
+                'uc.first_name',
+                'uc.last_name',
+                'uc.email_id',
+                'uc.mobile_no',
+                DB::raw("GROUP_CONCAT(urm.user_role_display_name SEPARATOR ', ') as roles")
+            )
+            ->groupBy(
+                'uc.pk',
+                'uc.user_name',
+                'uc.first_name',
+                'uc.last_name',
+                'uc.email_id',
+                'uc.mobile_no'
+            );
 
-    return view('admin.user_management.users.index', compact('users', 'perPage', 'search', 'user_type'));
-}
+        if ($search) {
+            $usersQuery->where(function ($q) use ($search) {
+                $q->where('uc.user_name', 'like', "%{$search}%")
+                    ->orWhere('uc.first_name', 'like', "%{$search}%")
+                    ->orWhere('uc.last_name', 'like', "%{$search}%")
+                    ->orWhere('uc.email_id', 'like', "%{$search}%");
+            });
+        }
+        if ($user_type !== '') {
+            $usersQuery->where('uc.user_category', $user_type);
+        }
+
+        $paginator = $usersQuery->paginate($perPage)->withQueryString();
+
+        return [
+            'items' => $paginator->items(),
+            'total' => $paginator->total(),
+            'perPage' => $paginator->perPage(),
+            'currentPage' => $paginator->currentPage(),
+        ];
+    }
+
+    private static function bumpAdminUsersIndexCacheEpoch(): void
+    {
+        DataTableRedisCache::bumpListEpoch(self::ADMIN_USERS_INDEX_LIST_EPOCH_KEY, 'UserController@adminUsersIndex');
+    }
 
     /**
      * Show the form for creating a new user.
@@ -1317,6 +1506,8 @@ class UserController extends Controller
             }
             
             DB::commit();
+
+            self::bumpAdminUsersIndexCacheEpoch();
             
             return redirect()->route('admin.users.index')
                 ->with('success', 'User created successfully');
@@ -1431,6 +1622,8 @@ class UserController extends Controller
         }
             
             DB::commit();
+
+            self::bumpAdminUsersIndexCacheEpoch();
             
             return redirect()->route('admin.users.index')
                 ->with('success', 'User updated successfully');
@@ -1457,6 +1650,8 @@ class UserController extends Controller
             }
             
             $user->delete();
+
+            self::bumpAdminUsersIndexCacheEpoch();
             
             return redirect()->route('admin.users.index')
                 ->with('success', 'User deleted successfully');
@@ -1477,6 +1672,31 @@ public function toggleStatus(Request $request)
     DB::table($request->table)
         ->where($idColumn, $id)
         ->update([$column => $status]);
+
+    if ($table === 'employee_type_master') {
+        EmployeeTypeMasterDataTable::bumpListingCacheEpoch();
+    }
+    if ($table === 'faculty_expertise_master') {
+        FacultyExpertiseMasterController::bumpListCacheEpoch();
+    }
+    if ($table === 'faculty_master') {
+        FacultyDataTable::bumpListingCacheEpoch();
+    }
+    if ($table === 'user_role_master') {
+        RoleDataTable::bumpListingCacheEpoch();
+    }
+    if ($table === 'venue_master') {
+        VenueMasterController::bumpIndexCacheEpoch();
+    }
+    if ($table === 'course_master') {
+        CourseMasterDataTable::bumpListingCacheEpoch();
+    }
+    if ($table === 'group_type_master_course_master_map') {
+        GroupMappingDataTable::bumpListingCacheEpoch();
+    }
+    if ($table === 'faculty_type_master') {
+        FacultyTypeMasterController::bumpListCacheEpoch();
+    }
 
     $newState = ((int) $status === 1) ? 'Active' : 'Inactive';
     session()->flash('success', "Status updated to {$newState}.");
@@ -1525,7 +1745,57 @@ public function assignRoleSave(Request $request){
         } else {
             $user->syncRoles([]); 
         }
-           return back()->with('success', 'Roles assigned successfully.');
+
+        if (!empty($roleIds)) {
+            foreach ($roleIds as $roleId) {
+                \DB::table('employee_role_mapping')->insert([
+                    'user_credentials_pk'  => $userId,
+                    'user_role_master_pk'  => $roleId,
+                    'active_inactive'      => 1,
+                    'created_date'         => now(),
+                    'updated_date'        => now(),
+                ]);
+                // Get role name for notification
+                $role = UserRoleMaster::find($roleId);
+                if ($role) {
+                    $assignedRoleNames[] = $role->user_role_display_name ?? $role->user_role_name;
+                }
+            }
+        }
+
+        \DB::commit();
+
+        self::bumpAdminUsersIndexCacheEpoch();
+        
+        // Send notification to the user if roles were assigned
+        if (!empty($assignedRoleNames)) {
+            try {
+                // Get user_id from user_credentials table
+                $userCredential = \DB::table('user_credentials')
+                    ->where('pk', $userId)
+                    ->first();
+                
+                if ($userCredential && $userCredential->user_id) {
+                    $notificationService = app(NotificationService::class);
+                    $roleNames = implode(', ', $assignedRoleNames);
+                    $notificationService->create(
+                        (int)$userCredential->user_id,
+                        'role_assignment',
+                        'Role Assignment',
+                        $userId,
+                        'Role Assigned',
+                        "You have been assigned the following role(s): {$roleNames}."
+                    );
+                }
+            } catch (\Exception $e) {
+                // Log error but don't fail the request
+                \Log::error('Failed to send role assignment notification: ' . $e->getMessage());
+            }
+        }
+
+        return redirect()->route('admin.users.index')
+                         ->with('success', 'Roles assigned successfully.');
+
     } catch (\Exception $e) {
         return back()->with('error', 'Error: '.$e->getMessage());
     }

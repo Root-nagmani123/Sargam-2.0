@@ -103,6 +103,14 @@ return [
         ],
     ],
 
+    // Birthday Wish Notifications
+    'birthday' => [
+        'BirthdayWish' => [
+            'route' => 'admin.dashboard',
+            'params' => [],
+        ],
+    ],
+
     // Faculty Notifications
     'faculty' => [
         'Faculty' => [
@@ -151,6 +159,18 @@ return [
     'mess_stock' => [
         'LowStock' => [
             'route' => 'admin.mess.reports.low-stock',
+            'params' => [],
+        ],
+    ],
+
+    // Estate: staff self-service request submitted (notify Super Admin / Admin / Estate)
+    'estate_request' => [
+        'Estate' => [
+            'route' => 'admin.estate.request-for-estate',
+            'params' => [],
+        ],
+        'EstateHac' => [
+            'route' => 'admin.estate.put-in-hac',
             'params' => [],
         ],
     ],

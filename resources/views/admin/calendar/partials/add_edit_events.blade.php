@@ -236,6 +236,32 @@
         box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15) !important;
         z-index: 2000 !important;
     }
+
+    /* modal-dialog-scrollable sets overflow:hidden on .modal-content and clips Choices lists */
+    #eventModal .modal-dialog.modal-dialog-scrollable .modal-content {
+        overflow: visible !important;
+        max-height: min(90vh, 920px);
+    }
+
+    #eventModal .modal-body {
+        overflow-x: visible !important;
+        max-height: min(70vh, 780px);
+        overflow-y: auto;
+    }
+
+    #eventModal .choices {
+        position: relative;
+        z-index: 1;
+    }
+
+    #eventModal .choices.is-open {
+        z-index: 10600;
+    }
+
+    #eventModal .choices.is-open .choices__list--dropdown,
+    #eventModal .choices.is-open .choices__list[aria-expanded] {
+        z-index: 10610 !important;
+    }
 </style>
 
 <div class="modal fade" id="eventModal" tabindex="-1" aria-labelledby="eventModalTitle" aria-hidden="true">
