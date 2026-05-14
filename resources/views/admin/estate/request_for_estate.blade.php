@@ -10,7 +10,7 @@
         $requestForEstateEmployeesListUrl .= (str_contains($requestForEstateEmployeesListUrl, '?') ? '&' : '?') . 'scope=self';
     }
 @endphp
-@section($estateSelfHomeTab ? 'content' : 'setup_content')
+@section($estateSelfHomeTab ? 'content' : 'content')
 <div class="container-fluid px-2 px-sm-3 px-md-4">
    <x-breadcrum title="Request For Estate" />
    <x-estate-workflow-stepper current="request-for-estate" />
