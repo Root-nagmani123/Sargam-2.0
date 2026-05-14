@@ -43,31 +43,32 @@
                                     }
                                 }
                                 // Estate block visible for:
-                                // - Admin / Super Admin / Training / IST (user management)
+                                // - Admin / Super Admin / Training / IST (user management; self-service estate items only)
                                 // - Estate / HAC Person
                                 // - All self-service estate roles (Staff, Student-OT, Doctor, Guest Faculty, Internal Faculty)
                                 //   They will still be restricted inside the menu to only their own-data items.
                                 $showEstateSection = $showUserManagement || hasRole('Estate') || hasRole('Super Admin') || hasRole('HAC Person') || $estateSelfServiceRoles;
-                                $isEstateAdmin = hasRole('Estate') || hasRole('Super Admin');
+                                $isEstateAdmin = hasRole('Estate');
                                 $isHACPerson = hasRole('HAC Person');
-                                // Estate authority menus (Put In HAC, Possession Details, etc.) should be visible only to Estate/Admin/Super Admin.
+                                // Estate authority menus (Put In HAC, Possession Details, etc.): Estate role only.
+                                // Admin / Super Admin use self-service items (Request + My Estate Bill) like Staff.
                                 // Training roles must NOT get "all estate" access.
-                                $canSeeAllEstate = $isEstateAdmin || hasRole('Admin');
+                                $canSeeAllEstate = hasRole('Estate');
                                 $estateManagementOpen = request()->routeIs('admin.estate.*');
                                 // HAC menus (Put In HAC / HAC Approved) visible ONLY to HAC Person + Estate/Admin.
                                 $canSeeHAC = $isHACPerson || $canSeeAllEstate;
                                 // Staff/self-service: Request For Estate + Generate Estate Bill only. HAC Person (without Staff) sees only Put In HAC + HAC Approved.
-                                $canSeeRequestAndBill = $canSeeAllEstate || $estateSelfServiceRoles;
-                                $canSeeSelfOnly = $canSeeAllEstate || $isHACPerson || $estateSelfServiceRoles;
-                                // Restricted menus: visible ONLY to Admin/Estate/Super Admin.
-                                $canSeeUpdateMeterNo = hasRole('Admin') || hasRole('Estate') || hasRole('Super Admin');
-                                $canSeeListMeterReading = hasRole('Admin') || hasRole('Estate') || hasRole('Super Admin');
-                                // "Other" estate operations (for other employees, Return House, Define House, etc.) are restricted strictly to Admin / Estate / Super Admin.
-                                $canManageOthersEstate = $isEstateAdmin || hasRole('Admin') || hasRole('Super Admin');
+                                $canSeeRequestAndBill = $canSeeAllEstate || $estateSelfServiceRoles || hasRole('Admin') || hasRole('Super Admin');
+                                $canSeeSelfOnly = $canSeeAllEstate || $isHACPerson || $estateSelfServiceRoles || hasRole('Admin') || hasRole('Super Admin');
+                                // Meter menus: Estate role only (Admin / Super Admin follow staff estate menu).
+                                $canSeeUpdateMeterNo = hasRole('Estate');
+                                $canSeeListMeterReading = hasRole('Estate');
+                                // "Other" estate operations: Estate role only.
+                                $canManageOthersEstate = $isEstateAdmin;
                                 // For client requirement: Return House menu should NOT appear for self-service users.
                                 $canSeeReturnHouse = $canManageOthersEstate;
-                                // Admin/Super Admin/Estate see "Generate Estate Bill"; everyone else sees "My Estate Bill".
-                                $estateBillMenuLabel = (hasRole('Admin') || hasRole('Super Admin') || hasRole('Estate')) ? 'View Estate Bill' : 'My Estate Bill';
+                                // Estate role sees full bill view label on authority screen; everyone else (incl. Admin / Super Admin) sees "My Estate Bill".
+                                $estateBillMenuLabel = hasRole('Estate') ? 'View Estate Bill' : 'My Estate Bill';
                             @endphp
 
                             @if($showEstateSection)
@@ -216,7 +217,7 @@
                             @endif
 
                             {{-- ESTATE MASTER --}}
-                            @if(hasRole('Admin') || hasRole('Estate') || hasRole('Super Admin'))
+                            @if(hasRole('Estate'))
                             <li class="sidebar-item mt-2" style="background: #4077ad;
                                 border-radius: 30px 0px 0px 30px;
                                 width: 100%;
@@ -289,7 +290,7 @@
                             @endif
 
                             {{-- ESTATE REPORTS --}}
-                            @if(hasRole('Admin') || hasRole('Estate') || hasRole('Super Admin'))
+                            @if(hasRole('Estate'))
                             <li class="sidebar-item mt-2" style="background: #4077ad;
                                 border-radius: 30px 0px 0px 30px;
                                 width: 100%;
