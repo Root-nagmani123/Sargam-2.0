@@ -130,7 +130,7 @@
             {{-- Bottom row: pagination left | per-page + total right --}}
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mt-3 no-print" id="smaBottomRow">
                 <div id="smaPaginationHolder"></div>
-                <div class="d-flex align-items-center gap-2">
+                <div class="d-flex align-items-center gap-1">
                     <span class="small text-muted">Showing</span>
                     <select id="smaLengthSelect" class="form-select form-select-sm" style="width:80px;">
                         <option value="50">50</option>
@@ -176,15 +176,15 @@
                 {{-- Attendance radios --}}
                 <p class="fw-semibold mb-2" style="font-size:0.875rem;">Attendance<span class="text-danger">*</span></p>
                 <div class="d-flex align-items-center gap-4 mb-3 sma-att-radio">
-                    <div class="form-check d-flex align-items-center gap-2 m-0 p-0">
+                    <div class="form-check d-flex align-items-center gap-1 m-0 p-0">
                         <input class="form-check-input m-0" type="radio" name="sma_att" id="smaPresent" value="1" checked>
                         <label class="form-check-label" for="smaPresent">Present</label>
                     </div>
-                    <div class="form-check d-flex align-items-center gap-2 m-0 p-0">
+                    <div class="form-check d-flex align-items-center gap-1 m-0 p-0">
                         <input class="form-check-input m-0" type="radio" name="sma_att" id="smaLate" value="2">
                         <label class="form-check-label" for="smaLate">Late</label>
                     </div>
-                    <div class="form-check d-flex align-items-center gap-2 m-0 p-0">
+                    <div class="form-check d-flex align-items-center gap-1 m-0 p-0">
                         <input class="form-check-input m-0" type="radio" name="sma_att" id="smaAbsent" value="3">
                         <label class="form-check-label" for="smaAbsent">Absent</label>
                     </div>

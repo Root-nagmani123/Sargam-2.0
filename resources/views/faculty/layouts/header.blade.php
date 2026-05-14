@@ -169,7 +169,7 @@
                 <!-- Home -->
                 <li class="nav-item" role="none">
                     <a href="#home" 
-                       class="nav-link active rounded-pill px-4 py-2 fw-semibold d-flex align-items-center gap-2"
+                       class="nav-link active rounded-pill px-4 py-2 fw-semibold d-flex align-items-center gap-1"
                        data-bs-toggle="tab" 
                        role="tab"
                        aria-selected="true"
@@ -183,7 +183,7 @@
                 <!-- Communications -->
                 <li class="nav-item" role="none">
                     <a href="#tab-communications" 
-                       class="nav-link rounded-pill px-4 py-2 fw-semibold d-flex align-items-center gap-2 hover-lift"
+                       class="nav-link rounded-pill px-4 py-2 fw-semibold d-flex align-items-center gap-1 hover-lift"
                        data-bs-toggle="tab" 
                        role="tab"
                        aria-selected="false"
@@ -197,7 +197,7 @@
                 <!-- Academics -->
                 <li class="nav-item" role="none">
                     <a href="#tab-academics" 
-                       class="nav-link rounded-pill px-4 py-2 fw-semibold d-flex align-items-center gap-2 hover-lift"
+                       class="nav-link rounded-pill px-4 py-2 fw-semibold d-flex align-items-center gap-1 hover-lift"
                        data-bs-toggle="tab" 
                        role="tab"
                        aria-selected="false"
@@ -211,7 +211,7 @@
                 <!-- Purchase Order -->
                 <li class="nav-item" role="none">
                     <a href="#tab-purchase-order" 
-                       class="nav-link rounded-pill px-4 py-2 fw-semibold d-flex align-items-center gap-2 hover-lift"
+                       class="nav-link rounded-pill px-4 py-2 fw-semibold d-flex align-items-center gap-1 hover-lift"
                        data-bs-toggle="tab" 
                        role="tab"
                        aria-selected="false"
@@ -224,7 +224,7 @@
 
                 <!-- Financial Dropdown - Enhanced -->
                 <li class="nav-item dropdown" role="none">
-                    <a class="nav-link rounded-pill px-4 py-2 fw-semibold d-flex align-items-center gap-2 hover-lift dropdown-toggle-custom"
+                    <a class="nav-link rounded-pill px-4 py-2 fw-semibold d-flex align-items-center gap-1 hover-lift dropdown-toggle-custom"
                        href="#" 
                        id="financialDropdown" 
                        role="menuitem"
@@ -242,7 +242,7 @@
                         aria-labelledby="financialDropdown"
                         role="menu">
                         <li role="none">
-                            <a class="dropdown-item d-flex align-items-center gap-2 px-3 py-2 rounded-lg hover-lift" 
+                            <a class="dropdown-item d-flex align-items-center gap-1 px-3 py-2 rounded-lg hover-lift" 
                                href="#"
                                role="menuitem">
                                 <i class="material-icons material-symbols-rounded fs-6" aria-hidden="true">account_balance</i>
@@ -250,7 +250,7 @@
                             </a>
                         </li>
                         <li role="none">
-                            <a class="dropdown-item d-flex align-items-center gap-2 px-3 py-2 rounded-lg hover-lift" 
+                            <a class="dropdown-item d-flex align-items-center gap-1 px-3 py-2 rounded-lg hover-lift" 
                                href="#"
                                role="menuitem">
                                 <i class="material-icons material-symbols-rounded fs-6" aria-hidden="true">receipt_long</i>

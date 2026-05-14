@@ -23,7 +23,7 @@
                                                     data-bs-toggle="tooltip" data-bs-custom-class="custom-tooltip"
                                                     data-bs-placement="right">
 
-                                                    <div class="d-flex align-items-center gap-2">
+                                                    <div class="d-flex align-items-center gap-1">
                                                         <i class="material-icons menu-icon material-symbols-rounded"
                                                             style="font-size: 32px;">
                                                             background_dot_large
@@ -154,8 +154,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 targetMenu.style.display = 'block';
                 document.body.setAttribute('data-sidebartype', 'full');
                 console.log('Displayed menu:', targetMenu.id);
-                // Periodically keep sidebar visible
-                keepSidebarVisible(targetMenuId, 3000);
             } else {
                 console.error('Target menu not found:', targetMenuId);
             }

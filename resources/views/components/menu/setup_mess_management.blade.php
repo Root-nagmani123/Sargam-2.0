@@ -9,9 +9,9 @@
             <div class="simplebar-offset" style="right: 0px; bottom: 0px;">
                 <div class="simplebar-content-wrapper" tabindex="0" role="region" aria-label="scrollable content"
                     style="height: 100%; overflow: hidden scroll;">
-                    <div class="simplebar-content" style="padding: 20px 0px 24px 20px;">
+                    <div class="simplebar-content">
 
-                        <div class="sidebar-section-header text-uppercase fw-bold mb-3"
+                        <div class="sidebar-section-header text-uppercase fw-bold mb-1"
                             style="font-size: 11px; letter-spacing: 2px; color: var(--sidebar-text-muted, #9aa0a6);">
                             Mess Management
                         </div>
@@ -23,7 +23,7 @@
                                 <a class="sidebar-link d-flex align-items-center justify-content-between gap-2"
                                     data-bs-toggle="collapse" href="#collapseMasterData" role="button"
                                     aria-expanded="false" aria-controls="collapseMasterData">
-                                    <span class="d-flex align-items-center gap-2">
+                                    <span class="d-flex align-items-center gap-1">
                                         <i class="material-icons material-symbols-rounded" style="font-size:20px;">inventory_2</i>
                                         <span class="hide-menu">Master Data</span>
                                     </span>
@@ -32,32 +32,32 @@
                             </li>
                             <ul class="collapse list-unstyled" id="collapseMasterData">
                                 <li class="sidebar-item">
-                                    <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('admin.mess.stores.index') }}">
+                                    <a class="sidebar-link d-flex align-items-center gap-1" href="{{ route('admin.mess.stores.index') }}">
                                         <span class="hide-menu">Store Master</span>
                                     </a>
                                 </li>
                                 <li class="sidebar-item">
-                                    <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('admin.mess.vendors.index') }}">
+                                    <a class="sidebar-link d-flex align-items-center gap-1" href="{{ route('admin.mess.vendors.index') }}">
                                         <span class="hide-menu">Vendor Master</span>
                                     </a>
                                 </li>
                                 <li class="sidebar-item">
-                                    <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('admin.mess.itemcategories.index') }}">
+                                    <a class="sidebar-link d-flex align-items-center gap-1" href="{{ route('admin.mess.itemcategories.index') }}">
                                         <span class="hide-menu">Category Item Master</span>
                                     </a>
                                 </li>
                                 <li class="sidebar-item">
-                                    <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('admin.mess.itemsubcategories.index') }}">
+                                    <a class="sidebar-link d-flex align-items-center gap-1" href="{{ route('admin.mess.itemsubcategories.index') }}">
                                         <span class="hide-menu">Subcategory Item Master</span>
                                     </a>
                                 </li>
                                 <li class="sidebar-item">
-                                    <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('admin.mess.client-types.index') }}">
+                                    <a class="sidebar-link d-flex align-items-center gap-1" href="{{ route('admin.mess.client-types.index') }}">
                                         <span class="hide-menu">Client Master</span>
                                     </a>
                                 </li>
                                 <li class="sidebar-item">
-                                    <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('admin.mess.sub-stores.index') }}">
+                                    <a class="sidebar-link d-flex align-items-center gap-1" href="{{ route('admin.mess.sub-stores.index') }}">
                                         <span class="hide-menu">Sub Store Master</span>
                                     </a>
                                 </li>
@@ -68,7 +68,7 @@
                                 <a class="sidebar-link d-flex align-items-center justify-content-between gap-2"
                                     data-bs-toggle="collapse" href="#collapsePurchaseOrder" role="button"
                                     aria-expanded="false" aria-controls="collapsePurchaseOrder">
-                                    <span class="d-flex align-items-center gap-2">
+                                    <span class="d-flex align-items-center gap-1">
                                         <i class="material-icons material-symbols-rounded" style="font-size:20px;">shopping_cart</i>
                                         <span class="hide-menu">Purchase Order</span>
                                     </span>
@@ -77,7 +77,7 @@
                             </li>
                             <ul class="collapse list-unstyled" id="collapsePurchaseOrder">
                                 <li class="sidebar-item">
-                                    <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('admin.mess.purchaseorders.index') }}">
+                                    <a class="sidebar-link d-flex align-items-center gap-1" href="{{ route('admin.mess.purchaseorders.index') }}">
                                         <span class="hide-menu">Purchase Orders</span>
                                     </a>
                                 </li>
@@ -88,7 +88,7 @@
                                 <a class="sidebar-link d-flex align-items-center justify-content-between gap-2"
                                     data-bs-toggle="collapse" href="#collapseMaterialManagement" role="button"
                                     aria-expanded="false" aria-controls="collapseMaterialManagement">
-                                    <span class="d-flex align-items-center gap-2">
+                                    <span class="d-flex align-items-center gap-1">
                                         <i class="material-icons material-symbols-rounded" style="font-size:20px;">local_shipping</i>
                                         <span class="hide-menu">Material Management</span>
                                     </span>
@@ -97,12 +97,12 @@
                             </li>
                             <ul class="collapse list-unstyled" id="collapseMaterialManagement">
                                 <li class="sidebar-item">
-                                    <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('admin.mess.material-management.index') }}">
+                                    <a class="sidebar-link d-flex align-items-center gap-1" href="{{ route('admin.mess.material-management.index') }}">
                                         <span class="hide-menu">Selling Voucher</span>
                                     </a>
                                 </li>
                                 <li class="sidebar-item">
-                                    <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('admin.mess.selling-voucher-date-range.index') }}">
+                                    <a class="sidebar-link d-flex align-items-center gap-1" href="{{ route('admin.mess.selling-voucher-date-range.index') }}">
                                         <span class="hide-menu">Selling Voucher With Date Range</span>
                                     </a>
                                 </li>
@@ -113,7 +113,7 @@
                                 <a class="sidebar-link d-flex align-items-center justify-content-between gap-2"
                                     data-bs-toggle="collapse" href="#collapseBillingFinance" role="button"
                                     aria-expanded="false" aria-controls="collapseBillingFinance">
-                                    <span class="d-flex align-items-center gap-2">
+                                    <span class="d-flex align-items-center gap-1">
                                         <i class="material-icons material-symbols-rounded" style="font-size:20px;">payments</i>
                                         <span class="hide-menu">Billing & Finance</span>
                                     </span>
@@ -122,13 +122,13 @@
                             </li>
                             <ul class="collapse list-unstyled" id="collapseBillingFinance">
                                 <li class="sidebar-item">
-                                    <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('admin.mess.process-mess-bills-employee.index') }}">
+                                    <a class="sidebar-link d-flex align-items-center gap-1" href="{{ route('admin.mess.process-mess-bills-employee.index') }}">
                                         <span class="hide-menu">Process Mess Bills</span>
                                     </a>
                                 </li>
                                 @if(canSeeMessSelfServiceSetup())
                                 <li class="sidebar-item">
-                                    <a class="sidebar-link d-flex align-items-center gap-2 {{ request()->routeIs('admin.mess.my-bills.index') ? 'active' : '' }}" href="{{ route('admin.mess.my-bills.index') }}">
+                                    <a class="sidebar-link d-flex align-items-center gap-1 {{ request()->routeIs('admin.mess.my-bills.index') ? 'active' : '' }}" href="{{ route('admin.mess.my-bills.index') }}">
                                         <span class="hide-menu">My Mess Bills</span>
                                     </a>
                                 </li>
@@ -140,7 +140,7 @@
                                 <a class="sidebar-link d-flex align-items-center justify-content-between gap-2"
                                     data-bs-toggle="collapse" href="#collapseReports" role="button"
                                     aria-expanded="false" aria-controls="collapseReports">
-                                    <span class="d-flex align-items-center gap-2">
+                                    <span class="d-flex align-items-center gap-1">
                                         <i class="material-icons material-symbols-rounded" style="font-size:20px;">assessment</i>
                                         <span class="hide-menu">Reports</span>
                                     </span>
@@ -149,33 +149,33 @@
                             </li>
                             <ul class="collapse list-unstyled" id="collapseReports">
                                 <li class="sidebar-item">
-                                    <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('admin.mess.reports.stock-purchase-details') }}">
+                                    <a class="sidebar-link d-flex align-items-center gap-1" href="{{ route('admin.mess.reports.stock-purchase-details') }}">
                                         <span class="hide-menu">Stock Purchase Details Report</span>
                                     </a>
                                 </li>
                                 <li class="sidebar-item">
-                                    <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('admin.mess.reports.stock-summary') }}">
+                                    <a class="sidebar-link d-flex align-items-center gap-1" href="{{ route('admin.mess.reports.stock-summary') }}">
                                         <span class="hide-menu">Stock Summary Report</span>
                                     </a>
                                 </li>
                                 <li class="sidebar-item">
-                                    <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('admin.mess.reports.category-wise-print-slip') }}">
+                                    <a class="sidebar-link d-flex align-items-center gap-1" href="{{ route('admin.mess.reports.category-wise-print-slip') }}">
                                         <span class="hide-menu">Sale Voucher Report</span>
                                     </a>
                                 </li>
                                 <li class="sidebar-item">
-                                    <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('admin.mess.reports.stock-balance-till-date') }}">
+                                    <a class="sidebar-link d-flex align-items-center gap-1" href="{{ route('admin.mess.reports.stock-balance-till-date') }}">
                                         <span class="hide-menu">Stock Balance as of Till Date</span>
                                     </a>
                                 </li>
                                 <li class="sidebar-item">
-                                    <a class="sidebar-link d-flex align-items-center gap-2 {{ request()->routeIs('admin.mess.reports.low-stock') ? 'active' : '' }}"
+                                    <a class="sidebar-link d-flex align-items-center gap-1 {{ request()->routeIs('admin.mess.reports.low-stock') ? 'active' : '' }}"
                                        href="{{ route('admin.mess.reports.low-stock') }}">
                                         <span class="hide-menu">Low Stock Report</span>
                                     </a>
                                 </li>
                                 <li class="sidebar-item">
-                                    <a class="sidebar-link d-flex align-items-center gap-2 {{ request()->routeIs('admin.mess.reports.purchase-sale-quantity') ? 'active' : '' }}" href="{{ route('admin.mess.reports.purchase-sale-quantity') }}">
+                                    <a class="sidebar-link d-flex align-items-center gap-1 {{ request()->routeIs('admin.mess.reports.purchase-sale-quantity') ? 'active' : '' }}" href="{{ route('admin.mess.reports.purchase-sale-quantity') }}">
                                         <span class="hide-menu">Item Report</span>
                                     </a>
                                 </li>
@@ -186,7 +186,7 @@
                                 <a class="sidebar-link d-flex align-items-center justify-content-between gap-2"
                                     data-bs-toggle="collapse" href="#collapseOtherModules" role="button"
                                     aria-expanded="false" aria-controls="collapseOtherModules">
-                                    <span class="d-flex align-items-center gap-2">
+                                    <span class="d-flex align-items-center gap-1">
                                         <i class="material-icons material-symbols-rounded" style="font-size:20px;">widgets</i>
                                         <span class="hide-menu">Other Modules</span>
                                     </span>
@@ -195,7 +195,7 @@
                             </li>
                             <ul class="collapse list-unstyled" id="collapseOtherModules">
                                 <li class="sidebar-item">
-                                    <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('admin.mess.storeallocations.index') }}">
+                                    <a class="sidebar-link d-flex align-items-center gap-1" href="{{ route('admin.mess.storeallocations.index') }}">
                                         <span class="hide-menu">Mess Store Allocation</span>
                                     </a>
                                 </li>
@@ -228,9 +228,9 @@
             <div class="simplebar-offset" style="right: 0px; bottom: 0px;">
                 <div class="simplebar-content-wrapper" tabindex="0" role="region" aria-label="scrollable content"
                     style="height: 100%; overflow: hidden scroll;">
-                    <div class="simplebar-content" style="padding: 20px 0px 24px 20px;">
+                    <div class="simplebar-content">
 
-                        <div class="sidebar-section-header text-uppercase fw-bold mb-3"
+                        <div class="sidebar-section-header text-uppercase fw-bold mb-1"
                             style="font-size: 11px; letter-spacing: 2px; color: var(--sidebar-text-muted, #9aa0a6);">
                             Mess
                         </div>
@@ -238,7 +238,7 @@
                         <ul class="sidebar-menu list-unstyled" id="sidebarnav">
 
                             <li class="sidebar-item mb-1">
-                                <a class="sidebar-link d-flex align-items-center gap-2 {{ request()->routeIs('admin.mess.my-bills.index') ? 'active' : '' }}" href="{{ route('admin.mess.my-bills.index') }}">
+                                <a class="sidebar-link d-flex align-items-center gap-1 {{ request()->routeIs('admin.mess.my-bills.index') ? 'active' : '' }}" href="{{ route('admin.mess.my-bills.index') }}">
                                     <i class="material-icons material-symbols-rounded" style="font-size:20px;">receipt_long</i>
                                     <span class="hide-menu">My Mess Bills</span>
                                 </a>

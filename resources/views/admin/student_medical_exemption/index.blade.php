@@ -15,7 +15,7 @@
 .sme-toggle-group .btn {
     border-radius: 0;
     border: none;
-    padding: 8px 28px;
+    padding: 8px;
     font-weight: 600;
     font-size: 0.875rem;
     transition: all 0.2s ease;
@@ -41,7 +41,7 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 8px 20px;
+    padding: 8px;
     border-radius: 6px;
     font-weight: 600;
     font-size: 0.875rem;
@@ -91,7 +91,7 @@
     color: #dc3545;
     font-weight: 600;
     border-radius: 6px;
-    padding: 6px 20px;
+    padding: 6px;
     font-size: 0.875rem;
     background: transparent;
     white-space: nowrap;
@@ -248,7 +248,7 @@
             <button type="button" id="filterActive" class="btn active-toggle">Active</button>
             <button type="button" id="filterArchive" class="btn inactive-toggle">Archived</button>
         </div>
-        <div class="d-flex align-items-center gap-2">
+        <div class="d-flex align-items-center gap-1">
             <button type="button" class="sme-action-btn" onclick="printTable()">
                 <i class="material-icons material-symbols-rounded">print</i>
                 <span>Print</span>
@@ -265,7 +265,7 @@
 
 
             <!-- ─── Filter Bar ─── -->
-            <div class="sme-filter-bar mb-4">
+            <div class="sme-filter-bar mb-2">
                 <span class="filter-label">Filters</span>
 
                 <!-- Course Filter -->
@@ -331,7 +331,7 @@
 
             <div class="modal-body px-4 pt-3 pb-4">
                 <!-- Progress bar -->
-                <div class="d-flex align-items-center gap-2 mb-4">
+                <div class="d-flex align-items-center gap-1 mb-4">
                     <div class="progress flex-grow-1" style="height:6px;border-radius:3px;">
                         <div class="progress-bar" id="smeProgressBar" role="progressbar"
                             style="width:50%;background-color:#1b3a5c;transition:width .3s ease;"></div>

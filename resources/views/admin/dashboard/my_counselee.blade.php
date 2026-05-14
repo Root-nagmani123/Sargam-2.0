@@ -14,7 +14,7 @@
         <div class="card-body">
         <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
         <div class="d-flex align-items-center gap-3">
-            <div class="d-flex align-items-center gap-2">
+            <div class="d-flex align-items-center gap-1">
                 <span class="rounded-3 bg-primary bg-opacity-10 p-2 d-flex align-items-center justify-content-center">
                     <i class="bi bi-people-fill text-primary fs-5"></i>
                 </span>

@@ -14,10 +14,10 @@
             <div class="simplebar-offset" style="right: 0px; bottom: 0px;">
                 <div class="simplebar-content-wrapper" tabindex="0" role="region" aria-label="scrollable content"
                     style="height: 100%; overflow: hidden scroll;">
-                    <div class="simplebar-content" style="padding: 20px 0px 24px 20px;">
+                    <div class="simplebar-content">
 
                         {{-- Section Header --}}
-                        <div class="sidebar-section-header text-uppercase fw-bold mb-3"
+                        <div class="sidebar-section-header text-uppercase fw-bold mb-1"
                             style="font-size: 11px; letter-spacing: 2px; color: var(--sidebar-text-muted, #9aa0a6);">
                             General
                         </div>
@@ -26,7 +26,7 @@
 
                             {{-- Dashboard --}}
                             <li class="sidebar-item mb-1">
-                                <a class="sidebar-link d-flex align-items-center gap-2 {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}"
+                                <a class="sidebar-link d-flex align-items-center gap-1 {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}"
                                     href="{{ route('admin.dashboard') }}">
                                     <i class="material-icons material-symbols-rounded" style="font-size:20px;">dashboard_customize</i>
                                     <span class="hide-menu">Dashboard</span>
@@ -36,7 +36,7 @@
                             @auth
                             {{-- Edit Profile --}}
                             <li class="sidebar-item mb-1">
-                                <a class="sidebar-link d-flex align-items-center gap-2 {{ request()->routeIs('member.profile.edit') ? 'active' : '' }}"
+                                <a class="sidebar-link d-flex align-items-center gap-1 {{ request()->routeIs('member.profile.edit') ? 'active' : '' }}"
                                     href="{{ (Auth::check() && Auth::user()->user_id) ? route('member.profile.edit', Auth::user()->user_id) : '#' }}">
                                     <i class="material-icons material-symbols-rounded" style="font-size:20px;">person_edit</i>
                                     <span class="hide-menu">Edit Profile</span>
@@ -47,7 +47,7 @@
                             @if(hasRole('Admin') || hasRole('Training-Induction'))
                             {{-- Batch Profile --}}
                             <li class="sidebar-item mb-1">
-                                <a class="sidebar-link d-flex align-items-center gap-2 {{ request()->routeIs('admin.dashboard-statistics.*') ? 'active' : '' }}"
+                                <a class="sidebar-link d-flex align-items-center gap-1 {{ request()->routeIs('admin.dashboard-statistics.*') ? 'active' : '' }}"
                                     href="{{ route('admin.dashboard-statistics.index') }}">
                                     <i class="material-icons material-symbols-rounded" style="font-size:20px;">groups</i>
                                     <span class="hide-menu">Batch Profile</span>
@@ -57,7 +57,7 @@
 
                             {{-- Notice Notifications --}}
                             <li class="sidebar-item mb-1">
-                                <a class="sidebar-link d-flex align-items-center gap-2 {{ request()->routeIs('admin.notice.*') ? 'active' : '' }}"
+                                <a class="sidebar-link d-flex align-items-center gap-1 {{ request()->routeIs('admin.notice.*') ? 'active' : '' }}"
                                     href="{{ route('admin.notice.index') }}">
                                     <i class="material-icons material-symbols-rounded" style="font-size:20px;">notifications</i>
                                     <span class="hide-menu">Notice Notifications</span>
@@ -67,7 +67,7 @@
                             @if(hasRole('Doctor'))
                             {{-- Student Medical Exemption --}}
                             <li class="sidebar-item mb-1">
-                                <a class="sidebar-link d-flex align-items-center gap-2"
+                                <a class="sidebar-link d-flex align-items-center gap-1"
                                     href="{{ route('student.medical.exemption.index') }}">
                                     <i class="material-icons material-symbols-rounded" style="font-size:20px;">medical_services</i>
                                     <span class="hide-menu">Student Medical Exemption (Doctor)</span>
@@ -80,7 +80,7 @@
                                 <a class="sidebar-link d-flex align-items-center justify-content-between gap-2"
                                     data-bs-toggle="collapse" href="#generalCollapse" role="button"
                                     aria-expanded="false" aria-controls="generalCollapse">
-                                    <span class="d-flex align-items-center gap-2">
+                                    <span class="d-flex align-items-center gap-1">
                                         <i class="material-icons material-symbols-rounded" style="font-size:20px;">link</i>
                                         <span class="hide-menu">Quick Links</span>
                                     </span>
@@ -113,7 +113,7 @@
 
                                 @foreach ($quickLinks as $link)
                                 <li class="sidebar-item">
-                                    <a class="sidebar-link d-flex align-items-center gap-2" href="{{ trim($link->url) }}"
+                                    <a class="sidebar-link d-flex align-items-center gap-1" href="{{ trim($link->url) }}"
                                         target="{{ $link->target_blank ? '_blank' : '_self' }}">
                                         <span class="hide-menu">{{ $link->label }}</span>
                                     </a>
@@ -126,7 +126,7 @@
                                 <a class="sidebar-link d-flex align-items-center justify-content-between gap-2"
                                     data-bs-toggle="collapse" href="#usefulLinksCollapse" role="button"
                                     aria-expanded="false" aria-controls="usefulLinksCollapse">
-                                    <span class="d-flex align-items-center gap-2">
+                                    <span class="d-flex align-items-center gap-1">
                                         <i class="material-icons material-symbols-rounded" style="font-size:20px;">bookmarks</i>
                                         <span class="hide-menu">Useful Links</span>
                                     </span>
@@ -135,12 +135,12 @@
                             </li>
                             <ul class="collapse list-unstyled" id="usefulLinksCollapse">
                                 <li class="sidebar-item">
-                                    <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('admin.directory.ot') }}">
+                                    <a class="sidebar-link d-flex align-items-center gap-1" href="{{ route('admin.directory.ot') }}">
                                         <span class="hide-menu">OT Directory</span>
                                     </a>
                                 </li>
                                 <li class="sidebar-item">
-                                    <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('admin.directory.lbsnaa') }}">
+                                    <a class="sidebar-link d-flex align-items-center gap-1" href="{{ route('admin.directory.lbsnaa') }}">
                                         <span class="hide-menu">LBSNAA Directory</span>
                                     </a>
                                 </li>
@@ -160,7 +160,7 @@
                                 @endphp
                                 @if ($url)
                                 <li class="sidebar-item">
-                                    <a class="sidebar-link d-flex align-items-center gap-2" href="{{ $url }}"
+                                    <a class="sidebar-link d-flex align-items-center gap-1" href="{{ $url }}"
                                         target="{{ $link->target_blank ? '_blank' : '_self' }}">
                                         <span class="hide-menu">{{ $link->label }}</span>
                                     </a>
@@ -174,7 +174,7 @@
                                 <a class="sidebar-link d-flex align-items-center justify-content-between gap-2"
                                     data-bs-toggle="collapse" href="#securityRequestsCollapse" role="button"
                                     aria-expanded="false" aria-controls="securityRequestsCollapse">
-                                    <span class="d-flex align-items-center gap-2">
+                                    <span class="d-flex align-items-center gap-1">
                                         <i class="material-icons material-symbols-rounded" style="font-size:20px;">security</i>
                                         <span class="hide-menu">Security Requests Links</span>
                                     </span>
@@ -183,22 +183,22 @@
                             </li>
                             <ul class="collapse list-unstyled" id="securityRequestsCollapse">
                                 <li class="sidebar-item">
-                                    <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('admin.employee_idcard.index') }}">
+                                    <a class="sidebar-link d-flex align-items-center gap-1" href="{{ route('admin.employee_idcard.index') }}">
                                         <span class="hide-menu">Request ID Card</span>
                                     </a>
                                 </li>
                                 <li class="sidebar-item">
-                                    <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('admin.duplicate_idcard.index') }}">
+                                    <a class="sidebar-link d-flex align-items-center gap-1" href="{{ route('admin.duplicate_idcard.index') }}">
                                         <span class="hide-menu">Request Duplicate ID Card</span>
                                     </a>
                                 </li>
                                 <li class="sidebar-item">
-                                    <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('admin.security.vehicle_pass.index') }}">
+                                    <a class="sidebar-link d-flex align-items-center gap-1" href="{{ route('admin.security.vehicle_pass.index') }}">
                                         <span class="hide-menu">Vehicle Pass Request</span>
                                     </a>
                                 </li>
                                 <li class="sidebar-item">
-                                    <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('admin.family_idcard.index') }}">
+                                    <a class="sidebar-link d-flex align-items-center gap-1" href="{{ route('admin.family_idcard.index') }}">
                                         <span class="hide-menu">Request Family ID Card</span>
                                     </a>
                                 </li>
@@ -209,7 +209,7 @@
                                 <a class="sidebar-link d-flex align-items-center justify-content-between gap-2"
                                     data-bs-toggle="collapse" href="#centcomCollapse" role="button"
                                     aria-expanded="false" aria-controls="centcomCollapse">
-                                    <span class="d-flex align-items-center gap-2">
+                                    <span class="d-flex align-items-center gap-1">
                                         <i class="material-icons material-symbols-rounded" style="font-size:20px;">folder_managed</i>
                                         <span class="hide-menu">Centcom Links</span>
                                     </span>
@@ -218,19 +218,19 @@
                             </li>
                             <ul class="collapse list-unstyled" id="centcomCollapse">
                                 <li class="sidebar-item">
-                                    <a class="sidebar-link d-flex align-items-center gap-2"
+                                    <a class="sidebar-link d-flex align-items-center gap-1"
                                         href="{{ route('admin.issue-management.index') }}">
                                         <span class="hide-menu">All Issues</span>
                                     </a>
                                 </li>
                                 <li class="sidebar-item">
-                                    <a class="sidebar-link d-flex align-items-center gap-2"
+                                    <a class="sidebar-link d-flex align-items-center gap-1"
                                         href="{{ route('admin.issue-management.centcom') }}">
                                         <span class="hide-menu">CENTCOM - Assigned Complaints</span>
                                     </a>
                                 </li>
                                 <li class="sidebar-item">
-                                    <a class="sidebar-link d-flex align-items-center gap-2"
+                                    <a class="sidebar-link d-flex align-items-center gap-1"
                                         href="{{ route('admin.issue-management.create') }}">
                                         <span class="hide-menu">Log New Issue</span>
                                     </a>
@@ -243,7 +243,7 @@
                                 <a class="sidebar-link d-flex align-items-center justify-content-between gap-2"
                                     data-bs-toggle="collapse" href="#estateManagementCollapse" role="button"
                                     aria-expanded="false" aria-controls="estateManagementCollapse">
-                                    <span class="d-flex align-items-center gap-2">
+                                    <span class="d-flex align-items-center gap-1">
                                         <i class="material-icons material-symbols-rounded" style="font-size:20px;">home_work</i>
                                         <span class="hide-menu">Estate Management</span>
                                     </span>
@@ -252,13 +252,13 @@
                             </li>
                             <ul class="collapse list-unstyled" id="estateManagementCollapse">
                                 <li class="sidebar-item">
-                                    <a class="sidebar-link d-flex align-items-center gap-2 {{ request()->routeIs('admin.estate.request-for-estate') && request('scope') === 'self' ? 'active' : '' }}"
+                                    <a class="sidebar-link d-flex align-items-center gap-1 {{ request()->routeIs('admin.estate.request-for-estate') && request('scope') === 'self' ? 'active' : '' }}"
                                         href="{{ route('admin.estate.request-for-estate', ['scope' => 'self']) }}">
                                         <span class="hide-menu">Request For Estate</span>
                                     </a>
                                 </li>
                                 <li class="sidebar-item">
-                                    <a class="sidebar-link d-flex align-items-center gap-2 {{ request()->routeIs('admin.estate.generate-estate-bill*') && request('scope') === 'self' ? 'active' : '' }}"
+                                    <a class="sidebar-link d-flex align-items-center gap-1 {{ request()->routeIs('admin.estate.generate-estate-bill*') && request('scope') === 'self' ? 'active' : '' }}"
                                         href="{{ route('admin.estate.generate-estate-bill', ['scope' => 'self']) }}">
                                         <span class="hide-menu">My Estate Bill</span>
                                     </a>

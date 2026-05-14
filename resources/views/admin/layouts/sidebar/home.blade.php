@@ -307,8 +307,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 targetMenu.style.display = 'block';
                 document.body.setAttribute('data-sidebartype', 'full');
                 console.log('Displayed menu:', targetMenu.id);
-                // Periodically keep sidebar visible
-                keepSidebarVisible(targetMenuId, 3000);
             } else {
                 console.error('Target menu not found:', targetMenuId);
             }

@@ -1003,7 +1003,7 @@
                     @csrf
                     <!-- Username -->
                     <div class="form-group mb-3">
-                        <label for="username" class="form-label d-flex align-items-center gap-2">
+                        <label for="username" class="form-label d-flex align-items-center gap-1">
                             <i class="bi bi-person-fill" aria-hidden="true"></i>
                             <span>Username <span class="text-danger">*</span></span>
                         </label>
@@ -1021,7 +1021,7 @@
                     <!-- Password -->
                     <div class="form-group mb-3">
                         <div class="d-flex justify-content-between align-items-center mb-2">
-                            <label for="password" class="form-label mb-0 d-flex align-items-center gap-2">
+                            <label for="password" class="form-label mb-0 d-flex align-items-center gap-1">
                                 <i class="bi bi-lock-fill" aria-hidden="true"></i>
                                 <span>Password <span class="text-danger">*</span></span>
                             </label>

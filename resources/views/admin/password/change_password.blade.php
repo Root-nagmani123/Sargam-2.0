@@ -142,7 +142,7 @@
         <div class="col-xl-5 col-lg-5">
             <div class="card rounded-4 border-0 shadow-sm h-100 bg-body-tertiary">
                 <div class="card-body p-4 d-flex flex-column">
-                    <h2 class="h6 fw-semibold mb-3 d-flex align-items-center gap-2">
+                    <h2 class="h6 fw-semibold mb-3 d-flex align-items-center gap-1">
                         <span class="material-icons material-symbols-rounded text-primary" style="font-size:1.35rem;">shield_lock</span>
                         Good habits
                     </h2>

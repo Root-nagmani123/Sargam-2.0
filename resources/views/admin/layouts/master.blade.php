@@ -727,13 +727,15 @@ document.addEventListener("DOMContentLoaded", function () {
     // Initialize collapsed state on page load
     const sidebarType = body.getAttribute("data-sidebartype");
 
+    // Right menu strip (.sidebarmenu): always has .close in DOM; flyout visibility uses
+    // sidebar-menu-enhanced.css (:hover / :focus-within on .side-mini-panel).
+    sidebarmenus.forEach(function(el) {
+        el.classList.add("close");
+    });
+
     if (sidebarType === "mini-sidebar") {
         // Sidebar should be collapsed - ensure main-wrapper doesn't have show-sidebar
         sidebar.classList.remove("show-sidebar");
-        // Add close class to sidebarmenu elements
-        sidebarmenus.forEach(function(el) {
-            el.classList.add("close");
-        });
         icons.forEach(function(icon) {
             icon.textContent = "bottom_panel_open";
             icon.classList.remove("rotated");
@@ -741,11 +743,8 @@ document.addEventListener("DOMContentLoaded", function () {
         // After initial collapse state, adjust DataTables to new layout
         setTimeout(adjustAllDataTables, 300);
     } else {
-        // Sidebar should be expanded
+        // Sidebar should be expanded (width / show-sidebar); .close on .sidebarmenu still applies until hover
         sidebar.classList.add("show-sidebar");
-        sidebarmenus.forEach(function(el) {
-            el.classList.remove("close");
-        });
         icons.forEach(function(icon) {
             icon.textContent = "bottom_panel_open";
             icon.classList.add("rotated");

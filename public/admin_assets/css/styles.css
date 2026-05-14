@@ -17596,7 +17596,7 @@ tr {
     border-width: 0;
     color: #000000 !important;
     font-weight: 500 !important;
-    font-size: 0.7rem !important;
+    font-size: 0.75rem !important;
 }
 
 label {
@@ -38312,7 +38312,7 @@ fieldset:disabled .btn {
 .container-sm,
 .container-xl,
 .container-xxl {
-    padding: 30px;
+    padding: 10px;
 }
 
 @media (max-width: 991.98px) {
@@ -38542,7 +38542,7 @@ pre.code-view code.hljs {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 11px 16px;
+    padding: 11px;
     font-size: 14px;
     font-weight: 600;
     white-space: normal;
@@ -39534,7 +39534,7 @@ html[data-layout="horizontal"]>.container-xxl {
     }
 
     html[data-layout="vertical"] [data-sidebartype="mini-sidebar"].link-sidebar .sidebar-nav ul .sidebar-item .sidebar-link {
-        padding: 13px 16px;
+        padding: 13px;
     }
 
     html[data-layout="vertical"] [data-sidebartype="mini-sidebar"].link-sidebar .sidebar-nav .sidebar-menu .sidebar-item .sidebar-link .hide-menu {

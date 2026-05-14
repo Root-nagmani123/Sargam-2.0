@@ -461,7 +461,7 @@
     <x-breadcrum title="Guest Faculty"></x-breadcrum>
     <div class="card guest-faculty-card border-0 shadow-sm rounded-4">
         <div class="card-header">
-            <div class="d-flex align-items-center gap-2">
+            <div class="d-flex align-items-center gap-1">
                 <span class="material-symbols-rounded card-header-icon">badge</span>
                 <span>Guest Faculty</span>
             </div>

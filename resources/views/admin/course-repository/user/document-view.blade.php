@@ -14,8 +14,8 @@
                     </button>
                     <span class="fw-semibold">{{ $pdfDocument->document_path ?? 'Document' }}</span>
                 </div>
-                <div class="d-flex align-items-center gap-2">
-                    <div class="d-flex align-items-center gap-2">
+                <div class="d-flex align-items-center gap-1">
+                    <div class="d-flex align-items-center gap-1">
                         <button class="btn btn-sm btn-outline-secondary" aria-label="Previous page">
                             <span class="material-icons material-symbols-rounded">chevron_left</span>
                         </button>

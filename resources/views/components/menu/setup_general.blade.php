@@ -7,11 +7,11 @@
             <div class="simplebar-offset" style="right: 0px; bottom: 0px;">
                 <div class="simplebar-content-wrapper" tabindex="0" role="region" aria-label="scrollable content"
                     style="height: 100%; overflow: hidden scroll;">
-                    <div class="simplebar-content" style="padding: 20px 0px 24px 20px;">
+                    <div class="simplebar-content">
 
                         @if(hasRole('Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST'))
 
-                        <div class="sidebar-section-header text-uppercase fw-bold mb-3"
+                        <div class="sidebar-section-header text-uppercase fw-bold mb-1"
                             style="font-size: 11px; letter-spacing: 2px; color: var(--sidebar-text-muted, #9aa0a6);">
                             Time Table
                         </div>
@@ -19,19 +19,19 @@
                         <ul class="sidebar-menu list-unstyled" id="sidebarnav">
 
                             <li class="sidebar-item mb-1">
-                                <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('calendar.index') }}">
+                                <a class="sidebar-link d-flex align-items-center gap-1" href="{{ route('calendar.index') }}">
                                     <i class="material-icons material-symbols-rounded" style="font-size:20px;">edit_calendar</i>
                                     <span class="hide-menu">Calendar Creation</span>
                                 </a>
                             </li>
                             <li class="sidebar-item mb-1">
-                                <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('attendance.index') }}">
+                                <a class="sidebar-link d-flex align-items-center gap-1" href="{{ route('attendance.index') }}">
                                     <i class="material-icons material-symbols-rounded" style="font-size:20px;">fact_check</i>
                                     <span class="hide-menu">Attendance</span>
                                 </a>
                             </li>
                             <li class="sidebar-item mb-1">
-                                <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('timetable-report.index') }}">
+                                <a class="sidebar-link d-flex align-items-center gap-1" href="{{ route('timetable-report.index') }}">
                                     <i class="material-icons material-symbols-rounded" style="font-size:20px;">summarize</i>
                                     <span class="hide-menu">Timetable Session Report</span>
                                 </a>
@@ -39,7 +39,7 @@
 
                             @if(hasRole('Training-MCTP') || hasRole('IST'))
                             <li class="sidebar-item mb-1">
-                                <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('mdo-escrot-exemption.index') }}">
+                                <a class="sidebar-link d-flex align-items-center gap-1" href="{{ route('mdo-escrot-exemption.index') }}">
                                     <i class="material-icons material-symbols-rounded" style="font-size:20px;">supervisor_account</i>
                                     <span class="hide-menu">Escort/Moderator Duty</span>
                                 </a>
@@ -48,25 +48,25 @@
 
                             @if(! hasRole('Training-MCTP') && ! hasRole('IST'))
                             <li class="sidebar-item mb-1">
-                                <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('send.notice.management.index') }}">
+                                <a class="sidebar-link d-flex align-items-center gap-1" href="{{ route('send.notice.management.index') }}">
                                     <i class="material-icons material-symbols-rounded" style="font-size:20px;">send</i>
                                     <span class="hide-menu">Send Direct Notice</span>
                                 </a>
                             </li>
                             <li class="sidebar-item mb-1">
-                                <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('memo.notice.management.index') }}">
+                                <a class="sidebar-link d-flex align-items-center gap-1" href="{{ route('memo.notice.management.index') }}">
                                     <i class="material-icons material-symbols-rounded" style="font-size:20px;">mail</i>
                                     <span class="hide-menu">Send Memo / Notice</span>
                                 </a>
                             </li>
                             <li class="sidebar-item mb-1">
-                                <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('memo.discipline.index') }}">
+                                <a class="sidebar-link d-flex align-items-center gap-1" href="{{ route('memo.discipline.index') }}">
                                     <i class="material-icons material-symbols-rounded" style="font-size:20px;">gavel</i>
                                     <span class="hide-menu">Send Discipline Memo</span>
                                 </a>
                             </li>
                             <li class="sidebar-item mb-1">
-                                <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('admin.memo-notice.index') }}">
+                                <a class="sidebar-link d-flex align-items-center gap-1" href="{{ route('admin.memo-notice.index') }}">
                                     <i class="material-icons material-symbols-rounded" style="font-size:20px;">article</i>
                                     <span class="hide-menu">Memo / Notice Template</span>
                                 </a>
@@ -79,7 +79,7 @@
                                 <a class="sidebar-link d-flex align-items-center justify-content-between gap-2"
                                     data-bs-toggle="collapse" href="#userFeedbackCollapse" role="button"
                                     aria-expanded="false" aria-controls="userFeedbackCollapse">
-                                    <span class="d-flex align-items-center gap-2">
+                                    <span class="d-flex align-items-center gap-1">
                                         <i class="material-icons material-symbols-rounded" style="font-size:20px;">rate_review</i>
                                         <span class="hide-menu">Session Feedback</span>
                                     </span>
@@ -88,12 +88,12 @@
                             </li>
                             <ul class="collapse list-unstyled" id="userFeedbackCollapse">
                                 <li class="sidebar-item">
-                                    <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('feedback.get.feedbackList') }}">
+                                    <a class="sidebar-link d-flex align-items-center gap-1" href="{{ route('feedback.get.feedbackList') }}">
                                         <span class="hide-menu">Feedback History</span>
                                     </a>
                                 </li>
                                 <li class="sidebar-item">
-                                    <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('feedback.get.studentFeedback') }}">
+                                    <a class="sidebar-link d-flex align-items-center gap-1" href="{{ route('feedback.get.studentFeedback') }}">
                                         <span class="hide-menu">Session Feedback</span>
                                     </a>
                                 </li>
@@ -104,7 +104,7 @@
                                 <a class="sidebar-link d-flex align-items-center justify-content-between gap-2"
                                     data-bs-toggle="collapse" href="#subjectCollapse" role="button"
                                     aria-expanded="false" aria-controls="subjectCollapse">
-                                    <span class="d-flex align-items-center gap-2">
+                                    <span class="d-flex align-items-center gap-1">
                                         <i class="material-icons material-symbols-rounded" style="font-size:20px;">auto_stories</i>
                                         <span class="hide-menu">Subject & Module Master</span>
                                     </span>
@@ -113,12 +113,12 @@
                             </li>
                             <ul class="collapse list-unstyled" id="subjectCollapse">
                                 <li class="sidebar-item">
-                                    <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('subject.index') }}">
+                                    <a class="sidebar-link d-flex align-items-center gap-1" href="{{ route('subject.index') }}">
                                         <span class="hide-menu">Subject Master</span>
                                     </a>
                                 </li>
                                 <li class="sidebar-item">
-                                    <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('subject-module.index') }}">
+                                    <a class="sidebar-link d-flex align-items-center gap-1" href="{{ route('subject-module.index') }}">
                                         <span class="hide-menu">Subject Module Master</span>
                                     </a>
                                 </li>

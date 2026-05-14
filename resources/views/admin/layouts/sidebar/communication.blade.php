@@ -262,7 +262,6 @@ document.addEventListener('DOMContentLoaded', function() {
             targetMenu.classList.add('d-block');
             targetMenu.style.display = 'block';
             document.body.setAttribute('data-sidebartype', 'full');
-            keepSidebarVisible(targetMenuId, 3000);
         }
         localStorage.setItem('selectedCommunicationMiniNav', miniId);
     }

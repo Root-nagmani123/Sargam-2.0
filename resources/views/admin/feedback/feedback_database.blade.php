@@ -161,7 +161,7 @@
             {{-- Bottom row --}}
             <div class="d-flex justify-content-between align-items-center mt-4 flex-wrap gap-2 no-print" id="paginationSection" style="display:none !important;">
                 <div id="fdbPaginationCell"></div>
-                <div class="d-flex align-items-center gap-2">
+                <div class="d-flex align-items-center gap-1">
                     <span class="text-muted small">Showing</span>
                     <select id="perPageSelect" class="form-select form-select-sm" style="width:78px;">
                         <option value="10">10</option>

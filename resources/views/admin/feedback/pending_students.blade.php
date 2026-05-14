@@ -156,7 +156,7 @@
                 </div>
                 <div class="d-flex justify-content-between align-items-center mt-4 flex-wrap gap-2 no-print" id="paginationSection" style="display:none !important;">
                     <div id="psPaginationCell"></div>
-                    <div class="d-flex align-items-center gap-2">
+                    <div class="d-flex align-items-center gap-1">
                         <span class="text-muted small">Showing</span>
                         <select id="perPageSelect" class="form-select form-select-sm" style="width:78px;">
                             <option value="10">10</option>
@@ -174,7 +174,7 @@
             <div id="studentDetailView">
                 {{-- Detail top bar --}}
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
-                    <div class="d-flex align-items-center gap-2">
+                    <div class="d-flex align-items-center gap-1">
                         <button class="ps-back-btn" id="detailBackBtn" title="Back to student list">
                             <span class="material-symbols-rounded" style="font-size:1.5rem;">arrow_back</span>
                         </button>
@@ -210,7 +210,7 @@
                 {{-- Detail bottom row --}}
                 <div class="d-flex justify-content-between align-items-center mt-4 flex-wrap gap-2 no-print">
                     <div id="detailPaginationCell"></div>
-                    <div class="d-flex align-items-center gap-2">
+                    <div class="d-flex align-items-center gap-1">
                         <span class="text-muted small">Showing</span>
                         <select id="detailPerPage" class="form-select form-select-sm" style="width:78px;">
                             <option value="50">50</option>

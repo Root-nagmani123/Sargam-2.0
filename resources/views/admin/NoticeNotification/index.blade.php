@@ -12,11 +12,11 @@
 
     <div class="card">
         <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
-            <div class="d-flex align-items-center gap-2">
+            <div class="d-flex align-items-center gap-1">
                 <span class="badge bg-primary-subtle text-primary fw-semibold text-uppercase">Notices</span>
                 <h4 class="card-title mb-0">Notice notification List</h4>
             </div>
-            <div class="d-flex align-items-center gap-2">
+            <div class="d-flex align-items-center gap-1">
                 <a href="{{ route('admin.notice.create') }}" class="btn btn-primary">
                     <span class="material-symbols-rounded align-middle me-1">add</span>
                     <span class="align-middle">Add Notice Notification</span>

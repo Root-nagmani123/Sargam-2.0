@@ -7,64 +7,64 @@
             <div class="simplebar-offset" style="right: 0px; bottom: 0px;">
                 <div class="simplebar-content-wrapper" tabindex="0" role="region" aria-label="scrollable content"
                     style="height: 100%; overflow: hidden scroll;">
-                    <div class="simplebar-content" style="padding: 20px 0px 24px 20px;">
+                    <div class="simplebar-content">
 
-                        <div class="sidebar-section-header text-uppercase fw-bold mb-3"
+                        <div class="sidebar-section-header text-uppercase fw-bold mb-1"
                             style="font-size: 11px; letter-spacing: 2px; color: var(--sidebar-text-muted, #9aa0a6);">
                             PA Management
                         </div>
 
                         <ul class="sidebar-menu list-unstyled" id="sidebarnav">
                             <li class="sidebar-item mb-1">
-                                <a class="sidebar-link d-flex align-items-center gap-2" href="#" aria-expanded="false">
+                                <a class="sidebar-link d-flex align-items-center gap-1" href="#" aria-expanded="false">
                                     <i class="material-icons material-symbols-rounded" style="font-size:20px;">contacts</i>
                                     <span class="hide-menu">Define Contacts</span>
                                 </a>
                             </li>
                             <li class="sidebar-item mb-1">
-                                <a class="sidebar-link d-flex align-items-center gap-2" href="#" aria-expanded="false">
+                                <a class="sidebar-link d-flex align-items-center gap-1" href="#" aria-expanded="false">
                                     <i class="material-icons material-symbols-rounded" style="font-size:20px;">group_add</i>
                                     <span class="hide-menu">Define Contacts Group</span>
                                 </a>
                             </li>
                             <li class="sidebar-item mb-1">
-                                <a class="sidebar-link d-flex align-items-center gap-2" href="#" aria-expanded="false">
+                                <a class="sidebar-link d-flex align-items-center gap-1" href="#" aria-expanded="false">
                                     <i class="material-icons material-symbols-rounded" style="font-size:20px;">account_tree</i>
                                     <span class="hide-menu">Contacts Group Mapping</span>
                                 </a>
                             </li>
                             <li class="sidebar-item mb-1">
-                                <a class="sidebar-link d-flex align-items-center gap-2" href="#" aria-expanded="false">
+                                <a class="sidebar-link d-flex align-items-center gap-1" href="#" aria-expanded="false">
                                     <i class="material-icons material-symbols-rounded" style="font-size:20px;">share</i>
                                     <span class="hide-menu">Define Sharing Mapping</span>
                                 </a>
                             </li>
                             <li class="sidebar-item mb-1">
-                                <a class="sidebar-link d-flex align-items-center gap-2" href="#" aria-expanded="false">
+                                <a class="sidebar-link d-flex align-items-center gap-1" href="#" aria-expanded="false">
                                     <i class="material-icons material-symbols-rounded" style="font-size:20px;">people</i>
                                     <span class="hide-menu">Shared Contacts</span>
                                 </a>
                             </li>
                             <li class="sidebar-item mb-1">
-                                <a class="sidebar-link d-flex align-items-center gap-2" href="#" aria-expanded="false">
+                                <a class="sidebar-link d-flex align-items-center gap-1" href="#" aria-expanded="false">
                                     <i class="material-icons material-symbols-rounded" style="font-size:20px;">import_contacts</i>
                                     <span class="hide-menu">Address Book</span>
                                 </a>
                             </li>
                             <li class="sidebar-item mb-1">
-                                <a class="sidebar-link d-flex align-items-center gap-2" href="#" aria-expanded="false">
+                                <a class="sidebar-link d-flex align-items-center gap-1" href="#" aria-expanded="false">
                                     <i class="material-icons material-symbols-rounded" style="font-size:20px;">person_add</i>
                                     <span class="hide-menu">Guest Contact Master</span>
                                 </a>
                             </li>
                             <li class="sidebar-item mb-1">
-                                <a class="sidebar-link d-flex align-items-center gap-2" href="#" aria-expanded="false">
+                                <a class="sidebar-link d-flex align-items-center gap-1" href="#" aria-expanded="false">
                                     <i class="material-icons material-symbols-rounded" style="font-size:20px;">call</i>
                                     <span class="hide-menu">Call Receive Records</span>
                                 </a>
                             </li>
                             <li class="sidebar-item mb-1">
-                                <a class="sidebar-link d-flex align-items-center gap-2" href="#" aria-expanded="false">
+                                <a class="sidebar-link d-flex align-items-center gap-1" href="#" aria-expanded="false">
                                     <i class="material-icons material-symbols-rounded" style="font-size:20px;">phone_in_talk</i>
                                     <span class="hide-menu">Call Details</span>
                                 </a>

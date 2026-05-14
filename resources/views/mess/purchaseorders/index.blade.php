@@ -41,7 +41,7 @@
                 <form method="GET" action="{{ route('admin.mess.purchaseorders.index') }}" class="card border-0 shadow-sm rounded-3 mb-4 no-print po-filter-card" aria-label="Purchase order list filters">
                     <div class="card-header bg-white border-bottom border-light-subtle py-3 px-3 px-md-4 position-relative" style="border-top:3px solid #0b4a7e !important;">
                         <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
-                            <div class="d-flex align-items-center gap-2">
+                            <div class="d-flex align-items-center gap-1">
                                 <span class="material-symbols-rounded text-primary" style="font-size:1.5rem;" aria-hidden="true">tune</span>
                                 <div>
                                     <h6 class="mb-0 fw-semibold text-body">Refine Results</h6>
@@ -54,7 +54,7 @@
                         <div class="row g-4 align-items-stretch">
                             <div class="col-12 col-lg-5 col-xl-4">
                                 <div class="h-100 rounded-3 border border-light-subtle bg-white p-3 p-md-4">
-                                    <div class="d-flex align-items-center gap-2 mb-3">
+                                    <div class="d-flex align-items-center gap-1 mb-3">
                                         <span class="badge rounded-pill bg-primary-subtle text-primary-emphasis fw-semibold px-3" style="font-size: 0.7rem; letter-spacing: 0.06em;">Period</span>
                                         <span class="small text-body-secondary">Order date range</span>
                                     </div>
@@ -86,7 +86,7 @@
                             </div>
                             <div class="col-12 col-lg-7 col-xl-8">
                                 <div class="h-100 rounded-3 border border-light-subtle bg-white p-3 p-md-4">
-                                    <div class="d-flex align-items-center gap-2 mb-3">
+                                    <div class="d-flex align-items-center gap-1 mb-3">
                                         <span class="badge rounded-pill bg-success-subtle text-success-emphasis fw-semibold px-3" style="font-size: 0.7rem; letter-spacing: 0.06em;">Scope</span>
                                         <span class="small text-body-secondary">Vendors & stores <span class="d-none d-sm-inline">(leave blank for all)</span></span>
                                     </div>
@@ -749,7 +749,7 @@
                         {{-- Order Details --}}
                         <div class="col-12">
                             <div class="card border border-light-subtle h-100 rounded-3">
-                                <div class="card-header bg-white py-2 px-3 d-flex align-items-center gap-2">
+                                <div class="card-header bg-white py-2 px-3 d-flex align-items-center gap-1">
                                     <i class="material-icons material-symbol-rounded text-primary" style="font-size:1.15rem;" aria-hidden="true">assignment</i>
                                     <span class="fw-semibold small text-body">Order Details</span>
                                 </div>
@@ -809,7 +809,7 @@
                                         </div>
                                     </div>
                                     <hr class="my-2">
-                                    <div class="bg-white py-2 px-3 d-flex align-items-center gap-2 mt-2">
+                                    <div class="bg-white py-2 px-3 d-flex align-items-center gap-1 mt-2">
                                     <i class="material-icons material-symbol-rounded text-success" style="font-size:1.15rem;" aria-hidden="true">attach_file</i>
                                     <span class="fw-semibold small text-body">Bill Upload</span>
                                     <span class="badge bg-body-secondary text-body-secondary ms-auto" style="font-size:.65rem;">Optional</span>
@@ -828,7 +828,7 @@
                     {{-- Item Details --}}
                     <div class="card border border-light-subtle mb-0 rounded-3">
                         <div class="card-header bg-white py-2 px-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
-                            <div class="d-flex align-items-center gap-2">
+                            <div class="d-flex align-items-center gap-1">
                                 <i class="material-icons material-symbol-rounded text-warning" style="font-size:1.15rem;" aria-hidden="true">inventory_2</i>
                                 <span class="fw-semibold small text-body">Line Items</span>
                             </div>
@@ -908,7 +908,7 @@
                 </div>
                 <div class="modal-body px-3 px-md-4 py-4" style="background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);">
                     <div class="card border-0 shadow-lg mb-4 rounded-4 overflow-hidden">
-                        <div class="card-header bg-gradient border-bottom py-3 px-4 d-flex align-items-center gap-2" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
+                        <div class="card-header bg-gradient border-bottom py-3 px-4 d-flex align-items-center gap-1" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
                             <div class="rounded-3 bg-warning bg-gradient text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm" style="width: 2.25rem; height: 2.25rem;">
                                 <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;" aria-hidden="true">assignment</i>
                             </div>
@@ -972,7 +972,7 @@
                     </div>
                     {{-- Bill / Attachment (Upload) --}}
                     <div class="card border-0 shadow-lg mb-4 rounded-4 overflow-hidden" style="border-left: 4px solid var(--bs-warning) !important;">
-                        <div class="card-header bg-gradient border-bottom py-3 px-4 d-flex align-items-center gap-2" style="background: linear-gradient(135deg, #ffffff 0%, #fff9e6 100%);">
+                        <div class="card-header bg-gradient border-bottom py-3 px-4 d-flex align-items-center gap-1" style="background: linear-gradient(135deg, #ffffff 0%, #fff9e6 100%);">
                             <div class="rounded-3 bg-warning bg-gradient text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm" style="width: 2.25rem; height: 2.25rem;">
                                 <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;" aria-hidden="true">attach_file</i>
                             </div>
@@ -1060,7 +1060,7 @@
             </div>
             <div class="modal-body p-3 p-lg-4" style="background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);">
                 <div class="card border-0 shadow-lg mb-4 overflow-hidden rounded-4">
-                    <div class="card-header bg-gradient border-0 py-3 px-4 d-flex align-items-center gap-2" style="background: linear-gradient(135deg, #ffffff 0%, #e7f3ff 100%);">
+                    <div class="card-header bg-gradient border-0 py-3 px-4 d-flex align-items-center gap-1" style="background: linear-gradient(135deg, #ffffff 0%, #e7f3ff 100%);">
                         <div class="rounded-3 bg-info bg-gradient text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm" style="width: 2.5rem; height: 2.5rem;">
                             <i class="material-icons material-symbol-rounded" style="font-size: 1.25rem;">receipt_long</i>
                         </div>
@@ -1142,7 +1142,7 @@
                 </div>
 
                 <div class="card border-0 shadow-lg mb-0 overflow-hidden rounded-4">
-                    <div class="card-header bg-gradient border-0 py-3 px-4 d-flex align-items-center gap-2" style="background: linear-gradient(135deg, #ffffff 0%, #e7f3ff 100%);">
+                    <div class="card-header bg-gradient border-0 py-3 px-4 d-flex align-items-center gap-1" style="background: linear-gradient(135deg, #ffffff 0%, #e7f3ff 100%);">
                         <div class="rounded-3 bg-info bg-gradient text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm" style="width: 2.5rem; height: 2.5rem;">
                             <i class="material-icons material-symbol-rounded" style="font-size: 1.25rem;">inventory_2</i>
                         </div>

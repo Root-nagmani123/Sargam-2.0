@@ -8,10 +8,10 @@
     <div class="datatables">
         <div class="card">
             <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
-                <div class="d-flex align-items-center gap-2">
+                <div class="d-flex align-items-center gap-1">
                     <h1 class="h4 fw-semibold mb-1">Issue Management - All Issues</h1>
                 </div>
-                <a href="{{ route('admin.issue-management.create') }}" class="btn btn-primary  d-flex align-items-center gap-2 shadow-sm">
+                <a href="{{ route('admin.issue-management.create') }}" class="btn btn-primary  d-flex align-items-center gap-1 shadow-sm">
                     <i class="material-icons material-symbols-rounded">add</i>
                     Add New Issue
                 </a>

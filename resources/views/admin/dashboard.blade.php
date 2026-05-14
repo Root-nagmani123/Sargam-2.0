@@ -1498,7 +1498,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
 
             @if(hasRole('Student-OT') || hasRole('Internal Faculty') || hasRole('Guest Faculty'))
             <div class="card dashboard-panel shadow-sm rounded-4 mb-4">
-                <div class="card-header py-3 px-4 d-flex align-items-center gap-2">
+                <div class="card-header py-3 px-4 d-flex align-items-center gap-1">
                     <span class="material-icons material-symbols-rounded text-primary">fact_check</span>
                     <h5 class="mb-0 fw-semibold">Today's Classes</h5>
                 </div>
@@ -1507,7 +1507,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                     <div class="dashboard-list-scroll pe-2">
                         @foreach($todayTimetable as $entry)
                         <div class="dashboard-class-card">
-                            <div class="d-flex align-items-center gap-2 mb-2">
+                            <div class="d-flex align-items-center gap-1 mb-2">
                                 <span class="dashboard-class-icon"><span
                                         class="material-icons material-symbols-rounded">schedule</span></span>
                                 <span class="text-primary fw-semibold">{{ $entry['session_date'] }} ·
@@ -1544,7 +1544,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                             <span>Today's Birthdays</span><span class="lh-1" aria-hidden="true">🎉</span>
                         </h4>
                         <div
-                            class="d-flex align-items-center gap-2 dashboard-birthday-header-actions flex-wrap w-100 w-sm-auto justify-content-between justify-content-sm-end">
+                            class="d-flex align-items-center gap-1 dashboard-birthday-header-actions flex-wrap w-100 w-sm-auto justify-content-between justify-content-sm-end">
                             <span class="badge dashboard-birthday-count-badge flex-shrink-0"
                                 title="Birthdays today">{{ $emp_dob_data->count() }}</span>
                         </div>

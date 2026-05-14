@@ -85,7 +85,7 @@
     <div class="card mb-4 border-0 rounded-4 shadow-sm no-print psq-filter-card">
         <div class="card-header bg-white border-0 py-3 px-4 psq-filter-header">
             <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-                <div class="d-flex align-items-center gap-2">
+                <div class="d-flex align-items-center gap-1">
                     <div class="psq-icon-circle bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width:38px;height:38px;">
                         <span class="material-symbols-rounded text-primary" style="font-size:1.25rem;">filter_list</span>
                     </div>
@@ -237,7 +237,7 @@
                 <div class="purchase-sale-view-section border-bottom border-secondary border-opacity-25" data-view-type="{{ $section['viewType'] }}">
                     @if($multiView)
                         <div class="px-4 pt-3 pb-1">
-                            <h6 class="purchase-sale-section-heading text-primary fw-semibold mb-0 d-flex align-items-center gap-2">
+                            <h6 class="purchase-sale-section-heading text-primary fw-semibold mb-0 d-flex align-items-center gap-1">
                                 <span class="material-symbols-rounded" style="font-size: 1.25rem;">layers</span>
                                 {{ $section['viewLabel'] }}
                             </h6>
@@ -303,7 +303,7 @@
                         @forelse($groupedData as $group)
                             <div class="purchase-sale-group-block mb-0 border-bottom border-secondary border-opacity-25">
                                 <div class="px-4 pt-3 pb-2">
-                                    <h6 class="text-primary fw-semibold mb-0 d-flex align-items-center gap-2">
+                                    <h6 class="text-primary fw-semibold mb-0 d-flex align-items-center gap-1">
                                         <span class="material-symbols-rounded" style="font-size: 1.25rem;">category</span>
                                         {{ $group['category_name'] }}
                                     </h6>

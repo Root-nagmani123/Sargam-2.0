@@ -23,7 +23,7 @@
 
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4 no-print p-4 rounded-3 shadow-sm" style="background: #004a93; color: white;">
         <div>
-            <h4 class="mb-2 fw-bold d-flex align-items-center gap-2">
+            <h4 class="mb-2 fw-bold d-flex align-items-center gap-1">
                 <i class="material-symbols-rounded" style="font-size: 2rem;">receipt_long</i>
                 My Mess Bills
             </h4>

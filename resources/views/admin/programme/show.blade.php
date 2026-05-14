@@ -61,7 +61,7 @@
         <div class="row row-cols-2 row-cols-sm-3 row-cols-lg-5 g-3 mb-4">
             <div class="col">
                 <div class="card border rounded-3 shadow-sm h-100">
-                    <div class="card-body py-3 d-flex align-items-center gap-2">
+                    <div class="card-body py-3 d-flex align-items-center gap-1">
                         <span
                             class="rounded-3 bg-primary-subtle text-primary d-inline-flex align-items-center justify-content-center flex-shrink-0 programme-view-stat-icon">
                             <i class="material-icons material-symbols-rounded fs-6 lh-1" aria-hidden="true">calendar_month</i>
@@ -75,7 +75,7 @@
             </div>
             <div class="col">
                 <div class="card border rounded-3 shadow-sm h-100">
-                    <div class="card-body py-3 d-flex align-items-center gap-2">
+                    <div class="card-body py-3 d-flex align-items-center gap-1">
                         <span
                             class="rounded-3 bg-success-subtle text-success d-inline-flex align-items-center justify-content-center flex-shrink-0 programme-view-stat-icon">
                             <i class="material-icons material-symbols-rounded fs-6 lh-1" aria-hidden="true">people</i>
@@ -89,7 +89,7 @@
             </div>
             <div class="col">
                 <div class="card border rounded-3 shadow-sm h-100">
-                    <div class="card-body py-3 d-flex align-items-center gap-2">
+                    <div class="card-body py-3 d-flex align-items-center gap-1">
                         <span
                             class="rounded-3 bg-warning-subtle text-warning d-inline-flex align-items-center justify-content-center flex-shrink-0 programme-view-stat-icon">
                             <i class="material-icons material-symbols-rounded fs-6 lh-1" aria-hidden="true">folder</i>
@@ -103,7 +103,7 @@
             </div>
             <div class="col">
                 <div class="card border rounded-3 shadow-sm h-100">
-                    <div class="card-body py-3 d-flex align-items-center gap-2">
+                    <div class="card-body py-3 d-flex align-items-center gap-1">
                         <span
                             class="rounded-3 bg-danger-subtle text-danger d-inline-flex align-items-center justify-content-center flex-shrink-0 programme-view-stat-icon">
                             <i class="material-icons material-symbols-rounded fs-6 lh-1" aria-hidden="true">description</i>
@@ -117,7 +117,7 @@
             </div>
             <div class="col">
                 <div class="card border rounded-3 shadow-sm h-100">
-                    <div class="card-body py-3 d-flex align-items-center gap-2">
+                    <div class="card-body py-3 d-flex align-items-center gap-1">
                         <span
                             class="rounded-3 bg-info-subtle text-info d-inline-flex align-items-center justify-content-center flex-shrink-0 programme-view-stat-icon">
                             <i class="material-icons material-symbols-rounded fs-6 lh-1" aria-hidden="true">check_circle</i>

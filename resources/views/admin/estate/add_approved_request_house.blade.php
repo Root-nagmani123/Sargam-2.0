@@ -18,7 +18,7 @@
 
                 <div class="row align-items-center gap-2 mb-4">
                     <label for="approver_pk" class="col-auto col-form-label">Request House Approved/Forward By</label>
-                    <div class="col-auto d-flex align-items-center gap-2">
+                    <div class="col-auto d-flex align-items-center gap-1">
                         <select name="approver_pk" id="approver_pk" class="form-select form-select-md" style="min-width: 220px;" required>
                             <option value="">— Select —</option>
                             @foreach($approvers as $pk => $name)

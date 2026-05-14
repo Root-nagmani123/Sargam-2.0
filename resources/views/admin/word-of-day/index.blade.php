@@ -96,7 +96,7 @@
     <div class="card rounded-4 border-0 shadow-sm">
         <div class="card-header bg-transparent border-0 py-3 px-4 d-flex flex-wrap align-items-center gap-2 justify-content-between">
             <div>
-                <h6 class="mb-0 fw-semibold d-flex align-items-center gap-2">
+                <h6 class="mb-0 fw-semibold d-flex align-items-center gap-1">
                     <span class="material-icons material-symbols-rounded text-primary">translate</span>
                     Entries
                 </h6>

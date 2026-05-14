@@ -7,9 +7,9 @@
             <div class="simplebar-offset" style="right: 0px; bottom: 0px;">
                 <div class="simplebar-content-wrapper" tabindex="0" role="region" aria-label="scrollable content"
                     style="height: 100%; overflow: hidden scroll;">
-                    <div class="simplebar-content" style="padding: 20px 0px 24px 20px;">
+                    <div class="simplebar-content">
 
-                        <div class="sidebar-section-header text-uppercase fw-bold mb-3"
+                        <div class="sidebar-section-header text-uppercase fw-bold mb-1"
                             style="font-size: 11px; letter-spacing: 2px; color: var(--sidebar-text-muted, #9aa0a6);">
                             Security
                         </div>
@@ -18,7 +18,7 @@
 
                             @if (hasRole('Security Card') || hasRole('Admin Security'))
                             <li class="sidebar-item mb-1">
-                                <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('admin.security.family_idcard_approval.index') }}">
+                                <a class="sidebar-link d-flex align-items-center gap-1" href="{{ route('admin.security.family_idcard_approval.index') }}">
                                     <i class="material-icons material-symbols-rounded" style="font-size:20px;">badge</i>
                                     <span class="hide-menu">Requested Family ID</span>
                                 </a>
@@ -27,7 +27,7 @@
 
                             @if (hasRole('Security Card') || hasRole('Admin Security'))
                             <li class="sidebar-item mb-1">
-                                <a class="sidebar-link d-flex align-items-center gap-2" href="{{ route('admin.security.vehicle_pass_approval.index') }}">
+                                <a class="sidebar-link d-flex align-items-center gap-1" href="{{ route('admin.security.vehicle_pass_approval.index') }}">
                                     <i class="material-icons material-symbols-rounded" style="font-size:20px;">directions_car</i>
                                     <span class="hide-menu">Requested Vehicle Pass</span>
                                 </a>
@@ -36,7 +36,7 @@
 
                             @if (!hasRole('Security Card') && !hasRole('Admin Security'))
                             <li class="sidebar-item mb-1">
-                                <a class="sidebar-link d-flex align-items-center gap-2 {{ request()->routeIs('admin.security.employee_idcard_approval.approval1') ? 'active' : '' }}"
+                                <a class="sidebar-link d-flex align-items-center gap-1 {{ request()->routeIs('admin.security.employee_idcard_approval.approval1') ? 'active' : '' }}"
                                    href="{{ route('admin.security.employee_idcard_approval.approval1') }}">
                                     <i class="material-icons material-symbols-rounded" style="font-size:20px;">approval</i>
                                     <span class="hide-menu">Id Card Approval</span>
@@ -46,7 +46,7 @@
 
                             @if (hasRole('Security Card'))
                             <li class="sidebar-item mb-1">
-                                <a class="sidebar-link d-flex align-items-center gap-2 {{ request()->routeIs('admin.security.employee_idcard_approval.approval2') ? 'active' : '' }}"
+                                <a class="sidebar-link d-flex align-items-center gap-1 {{ request()->routeIs('admin.security.employee_idcard_approval.approval2') ? 'active' : '' }}"
                                    href="{{ route('admin.security.employee_idcard_approval.approval2') }}">
                                     <i class="material-icons material-symbols-rounded" style="font-size:20px;">credit_card</i>
                                     <span class="hide-menu">Requested ID Card</span>
@@ -56,21 +56,21 @@
 
                             @if (hasRole('Admin Security'))
                             <li class="sidebar-item mb-1">
-                                <a class="sidebar-link d-flex align-items-center gap-2 {{ request()->routeIs('admin.security.employee_idcard_approval.approval3') ? 'active' : '' }}"
+                                <a class="sidebar-link d-flex align-items-center gap-1 {{ request()->routeIs('admin.security.employee_idcard_approval.approval3') ? 'active' : '' }}"
                                    href="{{ route('admin.security.employee_idcard_approval.approval3') }}">
                                     <i class="material-icons material-symbols-rounded" style="font-size:20px;">verified_user</i>
                                     <span class="hide-menu">Id Card Approval</span>
                                 </a>
                             </li>
                             <li class="sidebar-item mb-1">
-                                <a class="sidebar-link d-flex align-items-center gap-2 {{ request()->routeIs('admin.security.idcard_card_type.*') ? 'active' : '' }}"
+                                <a class="sidebar-link d-flex align-items-center gap-1 {{ request()->routeIs('admin.security.idcard_card_type.*') ? 'active' : '' }}"
                                    href="{{ route('admin.security.idcard_card_type.index') }}">
                                     <i class="material-icons material-symbols-rounded" style="font-size:20px;">style</i>
                                     <span class="hide-menu">Card Type Master</span>
                                 </a>
                             </li>
                             <li class="sidebar-item mb-1">
-                                <a class="sidebar-link d-flex align-items-center gap-2 {{ request()->routeIs('admin.security.idcard_sub_type.*') ? 'active' : '' }}"
+                                <a class="sidebar-link d-flex align-items-center gap-1 {{ request()->routeIs('admin.security.idcard_sub_type.*') ? 'active' : '' }}"
                                    href="{{ route('admin.security.idcard_sub_type.index') }}">
                                     <i class="material-icons material-symbols-rounded" style="font-size:20px;">account_tree</i>
                                     <span class="hide-menu">Sub Type Mapping</span>

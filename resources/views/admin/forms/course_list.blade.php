@@ -23,7 +23,7 @@
                         <!-- Export Section -->
                         <div class="d-flex justify-content-between align-items-center mb-4 float-end">
                             <form action="{{ route('forms.export', ['formid' => $formid]) }}" method="GET"
-                                class="d-flex align-items-center gap-2">
+                                class="d-flex align-items-center gap-1">
                                 <label for="format" class="form-label me-2 mb-0 fw-semibold">Export:</label>
                                 <select name="format" id="format" class="form-select w-auto" required>
                                     <option value="">Select Format </option>

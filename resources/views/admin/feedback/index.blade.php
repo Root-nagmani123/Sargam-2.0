@@ -527,17 +527,17 @@
                 Filter Feedback
             </div>
             <div class="filter-actions">
-                <button type="button" class="btn btn-outline-primary d-flex align-items-center gap-2" 
+                <button type="button" class="btn btn-outline-primary d-flex align-items-center gap-1" 
                         id="applyFiltersBtn" aria-label="Apply filters">
                     <i class="material-icons" aria-hidden="true">search</i>
                     Apply Filters
                 </button>
-                <button type="button" class="btn btn-outline-secondary d-flex align-items-center gap-2" 
+                <button type="button" class="btn btn-outline-secondary d-flex align-items-center gap-1" 
                         id="resetFiltersBtn" aria-label="Reset all filters">
                     <i class="material-icons" aria-hidden="true">refresh</i>
                     Reset
                 </button>
-                <button type="button" class="btn btn-outline-success d-flex align-items-center gap-2" 
+                <button type="button" class="btn btn-outline-success d-flex align-items-center gap-1" 
                         id="exportBtn" aria-label="Export filtered data">
                     <i class="material-icons" aria-hidden="true">download</i>
                     Export
@@ -605,7 +605,7 @@
             
             <!-- Advanced Filters (Collapsible) -->
             <div class="mt-3">
-                <button class="btn btn-link text-decoration-none d-flex align-items-center gap-2 p-0" 
+                <button class="btn btn-link text-decoration-none d-flex align-items-center gap-1 p-0" 
                         type="button" data-bs-toggle="collapse" data-bs-target="#advancedFilters" 
                         aria-expanded="false" aria-controls="advancedFilters" id="toggleAdvancedFilters">
                     <i class="material-icons" aria-hidden="true">expand_more</i>
@@ -671,7 +671,7 @@
                                             <span class="fw-semibold text-primary">{{ $activeEvents->firstItem() + $key }}</span>
                                         </td>
                                         <td>
-                                            <div class="d-flex align-items-center gap-2">
+                                            <div class="d-flex align-items-center gap-1">
                                                 <i class="material-icons text-primary" aria-hidden="true" style="font-size: 18px;">school</i>
                                                 <span>{{ $event->course_name ?? '-' }}</span>
                                             </div>

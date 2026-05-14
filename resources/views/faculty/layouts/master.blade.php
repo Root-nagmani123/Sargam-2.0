@@ -514,14 +514,13 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     } catch (e) {}
 
-    // Initialize collapsed state on page load
+    // Initialize collapsed state on page load (.sidebarmenu stays .close until hover — same as admin)
     const sidebarType = body.getAttribute("data-sidebartype");
+    sidebarmenus.forEach(function(el) {
+        el.classList.add("close");
+    });
     if (sidebarType === "mini-sidebar") {
         sidebar.classList.remove("show-sidebar");
-        sidebarmenus.forEach(function(el) {
-            el.classList.add("close");
-        });
-        // Set all icon instances to expand (collapsed state)
         icons.forEach(function(icon) {
             icon.textContent = "keyboard_double_arrow_right";
             icon.classList.remove("rotated");
@@ -529,10 +528,6 @@ document.addEventListener("DOMContentLoaded", function () {
         setTimeout(adjustAllDataTables, 300);
     } else {
         sidebar.classList.add("show-sidebar");
-        sidebarmenus.forEach(function(el) {
-            el.classList.remove("close");
-        });
-        // Set all icon instances to rotated (expanded state)
         icons.forEach(function(icon) {
             icon.textContent = "keyboard_double_arrow_right";
             icon.classList.add("rotated");

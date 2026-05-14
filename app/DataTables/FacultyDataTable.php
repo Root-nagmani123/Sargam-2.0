@@ -50,7 +50,7 @@ class FacultyDataTable extends DataTable
                 $deleteStyle = $isActive ? 'opacity:0.5;cursor:not-allowed;' : 'cursor:pointer;';
 
                 return '
-                    <div class="d-flex align-items-center gap-2" style="white-space:nowrap;">
+                    <div class="d-flex align-items-center gap-1" style="white-space:nowrap;">
                         <a href="'.$editUrl.'" class="btn bg-transparent border-0 p-0 text-primary" title="Edit">
                             <i class="material-icons" style="font-size:20px;">edit</i>
                         </a>

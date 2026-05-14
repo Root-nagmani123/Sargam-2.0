@@ -165,7 +165,7 @@
             };
 
             if (hasButtons && showExport) {
-              tableOptions.dom = "<'row mb-3'<'col-md-8 d-flex align-items-center gap-2 flex-wrap'Bl><'col-md-4'f>>" +
+              tableOptions.dom = "<'row mb-3'<'col-md-8 d-flex align-items-center gap-1 flex-wrap'Bl><'col-md-4'f>>" +
                                  "<'row'<'col-12'tr>>" +
                                  "<'row mt-3'<'col-md-5'i><'col-md-7'p>>";
               tableOptions.buttons = [

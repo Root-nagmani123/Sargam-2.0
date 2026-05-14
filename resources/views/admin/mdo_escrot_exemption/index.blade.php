@@ -338,7 +338,7 @@
             <button type="button" id="btn-active" class="btn active-toggle">Active</button>
             <button type="button" id="btn-archived" class="btn inactive-toggle">Archived</button>
         </div>
-        <div class="d-flex align-items-center gap-2">
+        <div class="d-flex align-items-center gap-1">
             <button type="button" class="mdo-action-btn text-primary" id="printBtn">
                 <i class="material-icons material-symbols-rounded text-primary">print</i>
                 <span>Print</span>
@@ -447,7 +447,7 @@
                     <button type="button" class="btn-close" id="smlClose" aria-label="Close"></button>
                 </div>
                 <hr class="mt-2 mb-0">
-                <div class="d-flex align-items-center gap-2 flex-wrap pt-2 pb-1">
+                <div class="d-flex align-items-center gap-1 flex-wrap pt-2 pb-1">
                     <span class="fw-semibold small text-muted" id="smlSelectedCount">0 Selected</span>
                     <div class="d-flex gap-1 flex-wrap" id="smlSelectedChips"></div>
                 </div>
@@ -598,7 +598,7 @@
                         </div>
 
                         {{-- Chips row (shown after students saved) --}}
-                        <div class="d-flex align-items-center gap-2 flex-wrap mt-2" id="mdoChipsRow" style="display:none !important;">
+                        <div class="d-flex align-items-center gap-1 flex-wrap mt-2" id="mdoChipsRow" style="display:none !important;">
                             <span class="fw-semibold small text-muted" id="mdoSelectedCount">0 Selected</span>
                             <div class="d-flex gap-1 flex-wrap" id="mdoSelectedChips"></div>
                         </div>

@@ -369,17 +369,17 @@
 
     <div class="d-flex flex-column flex-md-row align-items-start align-items-md-end justify-content-between gap-3 mt-2">
         <ul class="list-unstyled mb-0 small">
-            <li class="d-flex align-items-center gap-2 mb-1">
+            <li class="d-flex align-items-center gap-1 mb-1">
                 <span class="calendar-legend-dot" style="background-color: #e91e63;"></span>
                 <span class="text-body-secondary">Gazetted Holiday:</span>
                 <span class="fw-semibold text-dark">{{ str_pad((string) $holidayCounts['gazetted'], 2, '0', STR_PAD_LEFT) }}</span>
             </li>
-            <li class="d-flex align-items-center gap-2 mb-1">
+            <li class="d-flex align-items-center gap-1 mb-1">
                 <span class="calendar-legend-dot" style="background-color: #fb8c00;"></span>
                 <span class="text-body-secondary">Restricted Holiday:</span>
                 <span class="fw-semibold text-dark">{{ str_pad((string) $holidayCounts['restricted'], 2, '0', STR_PAD_LEFT) }}</span>
             </li>
-            <li class="d-flex align-items-center gap-2">
+            <li class="d-flex align-items-center gap-1">
                 <span class="calendar-legend-dot" style="background-color: #26a69a;"></span>
                 <span class="text-body-secondary">Optional Holiday:</span>
                 <span class="fw-semibold text-dark">{{ str_pad((string) $holidayCounts['optional'], 2, '0', STR_PAD_LEFT) }}</span>

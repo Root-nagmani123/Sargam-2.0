@@ -77,7 +77,7 @@
 
                 <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2">
                     <div id="mcPaginationCell"></div>
-                    <div class="d-flex align-items-center gap-2">
+                    <div class="d-flex align-items-center gap-1">
                         <span class="text-muted small">Showing</span>
                         <select id="mcPerPage" class="form-select form-select-sm" style="width:78px;">
                             <option value="10">10</option>

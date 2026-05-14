@@ -333,7 +333,7 @@
                 </div>
 
                 <div class="modal-body">
-                    <div class="d-flex align-items-center gap-2 mb-3" aria-hidden="true">
+                    <div class="d-flex align-items-center gap-1 mb-3" aria-hidden="true">
                         <div class="progress event-step-progress flex-grow-1">
                             <div class="progress-bar" role="progressbar" style="width: 30%;" aria-valuenow="30" aria-valuemin="0" aria-valuemax="100"></div>
                         </div>
@@ -343,7 +343,7 @@
                     <section class="event-modal-step mb-0" aria-labelledby="basicInfoHeading" data-event-step="1">
                         <div class="card border-0 shadow-sm rounded-4 event-modal-section-card">
                             <div class="card-header bg-transparent border-bottom py-3 px-3 px-md-4">
-                                <h3 id="basicInfoHeading" class="event-modal-section-title h6 mb-0 event-modal-section-heading fw-semibold d-flex align-items-center gap-2">
+                                <h3 id="basicInfoHeading" class="event-modal-section-title h6 mb-0 event-modal-section-heading fw-semibold d-flex align-items-center gap-1">
                                     <i class="bi bi-info-circle-fill fs-5 opacity-75" aria-hidden="true"></i>
                                     Basic Information
                                 </h3>
@@ -431,7 +431,7 @@
                     <section class="event-modal-step mb-0 d-none" aria-labelledby="facultyVenueHeading" data-event-step="2">
                         <div class="card border-0 shadow-sm rounded-4 event-modal-section-card">
                             <div class="card-header bg-transparent border-bottom py-3 px-3 px-md-4">
-                                <h3 id="facultyVenueHeading" class="event-modal-section-title h6 mb-0 event-modal-section-heading fw-semibold d-flex align-items-center gap-2">
+                                <h3 id="facultyVenueHeading" class="event-modal-section-title h6 mb-0 event-modal-section-heading fw-semibold d-flex align-items-center gap-1">
                                     <i class="bi bi-person-badge fs-5 opacity-75" aria-hidden="true"></i>
                                     Faculty &amp; Venue
                                 </h3>
@@ -495,7 +495,7 @@
                     <section class="event-modal-step mb-0 d-none" aria-labelledby="scheduleHeading" data-event-step="3">
                         <div class="card border-0 shadow-sm rounded-4 event-modal-section-card">
                             <div class="card-header bg-transparent border-bottom py-3 px-3 px-md-4">
-                                <h3 id="scheduleHeading" class="event-modal-section-title h6 mb-0 event-modal-section-heading fw-semibold d-flex align-items-center gap-2">
+                                <h3 id="scheduleHeading" class="event-modal-section-title h6 mb-0 event-modal-section-heading fw-semibold d-flex align-items-center gap-1">
                                     <i class="bi bi-clock-history fs-5 opacity-75" aria-hidden="true"></i>
                                     Schedule
                                 </h3>
@@ -569,7 +569,7 @@
                         </div>
 
                         <div class="mt-3 pt-2" aria-labelledby="additionalOptionsHeading">
-                            <h3 id="additionalOptionsHeading" class="event-modal-section-title h6 mb-3 event-modal-section-heading fw-semibold d-flex align-items-center gap-2">
+                            <h3 id="additionalOptionsHeading" class="event-modal-section-title h6 mb-3 event-modal-section-heading fw-semibold d-flex align-items-center gap-1">
                                 <i class="bi bi-sliders fs-5 opacity-75" aria-hidden="true"></i>
                                 Additional Options
                             </h3>

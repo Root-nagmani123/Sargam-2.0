@@ -12,7 +12,7 @@
         <div class="container-fluid px-3 px-xl-4 d-flex align-items-center justify-content-between flex-wrap py-1">
 
             <!-- Left: Government Identity -->
-            <div class="d-flex align-items-center gap-2">
+            <div class="d-flex align-items-center gap-1">
                 <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Flag_of_India.svg/330px-Flag_of_India.svg.png"
                     alt="Emblem of India" class="header-flag-icon">
                 <span class="fw-semibold small text-white">
@@ -61,7 +61,7 @@
                 </li>
             </ul>
 
-            <div class="header-brand d-flex align-items-center gap-2 py-2">
+            <div class="header-brand d-flex align-items-center gap-1 py-2">
                 <img src="{{ asset('images/ashoka.webp') }}" alt="ashoka emblem" class="header-logo-emblem"> <span style="border-right: 1px solid #c4c7cc !important; height: 55px;"></span>
                 <img src="{{ asset('admin_assets/images/logos/logo.svg') }}" alt="logo" class="header-logo">
             </div>
@@ -248,7 +248,7 @@
                         }
                     @endphp
                     <div class="dropdown d-none d-lg-block">
-                        <button class="btn border-0 p-1 d-flex align-items-center gap-2 header-profile-trigger"
+                        <button class="btn border-0 p-1 d-flex align-items-center gap-1 header-profile-trigger"
                             id="headerProfileDropdown" data-bs-toggle="dropdown" aria-expanded="false"
                             aria-label="User menu, {{ e($headerUserName) }}">
                             <span

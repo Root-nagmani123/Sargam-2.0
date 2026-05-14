@@ -189,9 +189,9 @@ class StudentMedicalExemptionController extends Controller
                 })
                  ->addColumn('status', function ($row) {
                     if ($row->active_inactive == 1) {
-                        return '<span class="badge rounded-1 px-3 py-2" style="background-color:#d1f5e0;color:#1a7f4b;font-size:0.8rem;font-weight:600;">Active</span>';
+                        return '<span class="badge rounded-1" style="background-color:#d1f5e0;color:#1a7f4b;font-size:0.8rem;font-weight:600;">Active</span>';
                     }
-                    return '<span class="badge rounded-1 px-3 py-2" style="background-color:#fde8ea;color:#c0392b;font-size:0.8rem;font-weight:600;">Inactive</span>';
+                    return '<span class="badge rounded-1" style="background-color:#fde8ea;color:#c0392b;font-size:0.8rem;font-weight:600;">Inactive</span>';
                 })
 
                 ->addColumn('action', function ($row) {
@@ -202,7 +202,7 @@ class StudentMedicalExemptionController extends Controller
                     $checked   = $row->active_inactive == 1 ? 'checked' : '';
 
                     return '
-                        <div class="d-flex align-items-center gap-2">
+                        <div class="d-flex align-items-center gap-1">
                             <button type="button"
                                 class="btn btn-sm p-1 border-0 edit-sme-btn"
                                 data-get-url="' . $getUrl . '"

@@ -656,7 +656,7 @@
                             </div>
                         </div>
                         <div class="card-footer bg-light d-flex justify-content-end align-items-center">
-                            <div class="d-flex align-items-center gap-2">
+                            <div class="d-flex align-items-center gap-1">
                                 <span class="fw-semibold">Grand Total:</span>
                                 <span class="fs-5 text-primary fw-bold" id="modalGrandTotal">₹0.00</span>
                             </div>
@@ -812,7 +812,7 @@
                             </div>
                         </div>
                         <div class="card-footer bg-light d-flex justify-content-end align-items-center">
-                            <div class="d-flex align-items-center gap-2">
+                            <div class="d-flex align-items-center gap-1">
                                 <span class="fw-semibold">Grand Total:</span>
                                 <span class="fs-5 text-primary fw-bold" id="editModalGrandTotal">₹0.00</span>
                             </div>

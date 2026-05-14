@@ -15,7 +15,7 @@
                         </div>
                         <div class="col-6">
                             <div class="d-flex justify-content-end align-items-end mb-3">
-                                <div class="d-flex align-items-center gap-2">
+                                <div class="d-flex align-items-center gap-1">
                                     <a href="{{ route('admin.mess.material-management.create') }}"
                                         class="btn btn-primary px-3 py-2 rounded-3 shadow-sm">
                                         <i class="material-icons menu-icon material-symbols-rounded"

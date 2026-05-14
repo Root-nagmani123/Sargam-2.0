@@ -102,7 +102,7 @@
     <div class="datatables">
         <div class="card fac-card">
             <div class="fac-header d-flex flex-wrap align-items-center justify-content-between gap-3">
-                <h4 class="fac-title d-flex align-items-center gap-2">
+                <h4 class="fac-title d-flex align-items-center gap-1">
                     <span class="material-icons material-symbols-rounded" style="font-size:1.4rem;">school</span>
                     Faculty
                 </h4>

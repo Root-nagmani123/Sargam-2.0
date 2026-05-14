@@ -238,7 +238,7 @@ $(function() {
         responsive: true,
         pageLength: 10,
         lengthMenu: [[10, 25, 50, 100, 200, -1], [10, 25, 50, 100, 200, 'All']],
-        dom: 'rt<"d-flex flex-wrap justify-content-between align-items-center gap-3 px-3 py-2 cgt-dt-footer"<"cgt-dt-paginate-wrap d-flex align-items-center"p><"cgt-dt-meta d-flex align-items-center gap-2 flex-wrap justify-content-end"li>>',
+        dom: 'rt<"d-flex flex-wrap justify-content-between align-items-center gap-3 px-3 py-2 cgt-dt-footer"<"cgt-dt-paginate-wrap d-flex align-items-center"p><"cgt-dt-meta d-flex align-items-center gap-1 flex-wrap justify-content-end"li>>',
         language: {
             info: 'of _TOTAL_ items',
             infoEmpty: 'of 0 items',

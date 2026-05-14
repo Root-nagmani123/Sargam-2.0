@@ -174,7 +174,7 @@
 @endphp
 
 <div class="modern-breadcrumb-wrapper mb-3" data-variant="{{ $variant }}">
-    <div class="bg-white border rounded-3" style="padding: 1rem 1.25rem;">
+    <div class="bg-white border rounded-3" style="padding: 0.5rem;">
         <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
             <div class="d-flex min-w-0 flex-grow-1" style="gap:.65rem;">
                 @if($showBack)
@@ -211,7 +211,7 @@
                 </div>
             </div>
             @if($slot->isNotEmpty())
-            <div class="d-flex align-items-center gap-2 flex-shrink-0" style="margin-top:.75rem;">
+            <div class="d-flex align-items-center gap-1 flex-shrink-0" style="margin-top:.75rem;">
                 {{ $slot }}
             </div>
             @endif

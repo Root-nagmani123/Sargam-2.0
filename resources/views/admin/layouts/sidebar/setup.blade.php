@@ -191,9 +191,6 @@
         flex-direction: column !important;
         align-items: center !important;
         justify-content: center !important;
-        padding: 12px 8px !important;
-        padding-left: 8px !important;
-        margin: 4px 8px !important;
         background: transparent !important;
         height: auto !important;
         min-height: 56px;
@@ -413,8 +410,6 @@
             targetMenu.style.display = 'block';
             document.body.setAttribute('data-sidebartype', 'full');
             console.log('Displayed menu:', targetMenu.id);
-            // Periodically keep sidebar visible for 3 seconds
-            keepSidebarVisible(targetMenuId, 3000);
         } else {
             console.error('Target menu not found:', targetMenuId);
         }

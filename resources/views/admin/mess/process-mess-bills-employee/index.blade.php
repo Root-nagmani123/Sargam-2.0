@@ -24,7 +24,7 @@
     {{-- Page header --}}
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4 no-print p-4 rounded-3 shadow-sm" style="background: #004a93; color: white;">
         <div>
-            <h4 class="mb-2 fw-bold d-flex align-items-center gap-2">
+            <h4 class="mb-2 fw-bold d-flex align-items-center gap-1">
                 <i class="material-symbols-rounded" style="font-size: 2rem;">receipt_long</i>
                 Process Mess Bills
             </h4>
@@ -208,7 +208,7 @@
                 @endforeach
                 <input type="hidden" name="status" value="{{ $statusFilter ?? request('status') }}">
                 <div class="d-flex flex-wrap justify-content-end align-items-right mb-3 gap-2">
-                    <div class="d-flex align-items-center gap-2">
+                    <div class="d-flex align-items-center gap-1">
                         <a href="{{ route('admin.mess.process-mess-bills-employee.export') }}?{{ http_build_query(request()->only(['date_from', 'date_to', 'client_type', 'client_type_pk', 'buyer_name', 'status', 'search'])) }}" class="btn btn-outline-success shadow-sm d-inline-flex align-items-center gap-2 px-3" title="Export to Excel">
                             <i class="material-symbols-rounded" style="font-size: 1.1rem;">file_download</i>
                             <span>Export</span>
@@ -563,7 +563,7 @@
     <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-md-down modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg rounded-3">
             <div class="modal-header bg-light border-0 py-3">
-                <h5 class="modal-title fw-semibold d-flex align-items-center gap-2" id="addProcessMessBillsModalLabel">
+                <h5 class="modal-title fw-semibold d-flex align-items-center gap-1" id="addProcessMessBillsModalLabel">
                     <span class="rounded-circle bg-primary-subtle text-primary d-inline-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
                         <i class="material-symbols-rounded" style="font-size: 1.3rem;">receipt_long</i>
                     </span>
@@ -655,7 +655,7 @@
                 </div>
 
                 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
-                    <div class="d-flex align-items-center gap-2">
+                    <div class="d-flex align-items-center gap-1">
                         <span class="small text-muted fw-semibold">Show</span>
                         <select id="modalPerPage" class="form-select form-select-sm" style="width: auto;">
                             <option value="10" selected>10</option>
@@ -665,7 +665,7 @@
                         </select>
                         <span class="small text-muted fw-semibold">entries</span>
                     </div>
-                    <div class="d-flex align-items-center gap-2">
+                    <div class="d-flex align-items-center gap-1">
                         <div class="input-group input-group-sm shadow-sm" style="width: 240px; max-width: 100%;">
                             <span class="input-group-text bg-white border-end-0">
                                 <i class="material-symbols-rounded text-muted" style="font-size: 1.1rem;">search</i>
@@ -2504,7 +2504,7 @@ function printProcessMessBillsMainTable() {
           <tr>
             <th colspan="${columnsCount}">
               <div class="d-flex justify-content-between align-items-center mb-2 lbsnaa-header">
-                <div class="d-flex align-items-center gap-2">
+                <div class="d-flex align-items-center gap-1">
                   <img src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg" alt="India Emblem" height="40">
                   <div>
                     <div class="brand-line-1">Government of India</div>
@@ -2644,7 +2644,7 @@ function printProcessMessBillsTable() {
           <tr>
             <th colspan="${columnsCount}">
               <div class="d-flex justify-content-between align-items-center mb-2">
-                <div class="d-flex align-items-center gap-2">
+                <div class="d-flex align-items-center gap-1">
                   <img src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg" alt="India Emblem" height="40">
                   <div>
                     <div class="brand-line-1">Government of India</div>

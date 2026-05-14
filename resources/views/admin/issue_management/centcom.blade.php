@@ -32,7 +32,7 @@
                 <!-- Filters -->
                 <form method="GET" action="{{ route('admin.issue-management.centcom') }}"
                     class="mb-4 p-3 rounded border bg-light">
-                    <div class="d-flex align-items-center gap-2 mb-3">
+                    <div class="d-flex align-items-center gap-1 mb-3">
                         <iconify-icon icon="solar:filter-bold-duotone" class="text-primary"></iconify-icon>
                         <span class="fw-semibold small">Filters</span>
                     </div>

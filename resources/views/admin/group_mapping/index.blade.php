@@ -18,7 +18,7 @@
             </button>
             <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-3 py-2">
                 <li>
-                    <a class="dropdown-item d-flex align-items-center gap-2 py-2 px-3" href="#" data-bs-toggle="modal"
+                    <a class="dropdown-item d-flex align-items-center gap-1 py-2 px-3" href="#" data-bs-toggle="modal"
                         data-bs-target="#addStudentModal">
                         <i class="material-icons material-symbols-rounded fs-6 text-muted"
                             aria-hidden="true">person_add</i>
@@ -26,7 +26,7 @@
                     </a>
                 </li>
                 <li>
-                    <a class="dropdown-item d-flex align-items-center gap-2 py-2 px-3" href="#" data-bs-toggle="modal"
+                    <a class="dropdown-item d-flex align-items-center gap-1 py-2 px-3" href="#" data-bs-toggle="modal"
                         data-bs-target="#importModal">
                         <i class="material-icons material-symbols-rounded fs-6 text-muted"
                             aria-hidden="true">group_add</i>
@@ -69,14 +69,14 @@
             <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-3 py-2"
                 aria-labelledby="groupMappingDownloadToggle">
                 <li>
-                    <a class="dropdown-item d-flex align-items-center gap-2 py-2 px-3" href="#" id="exportGroupMappingPdf">
+                    <a class="dropdown-item d-flex align-items-center gap-1 py-2 px-3" href="#" id="exportGroupMappingPdf">
                         <i class="material-icons material-symbols-rounded fs-6 text-muted"
                             aria-hidden="true">picture_as_pdf</i>
                         <span>PDF</span>
                     </a>
                 </li>
                 <li>
-                    <a class="dropdown-item d-flex align-items-center gap-2 py-2 px-3" href="#"
+                    <a class="dropdown-item d-flex align-items-center gap-1 py-2 px-3" href="#"
                         id="exportGroupMappingExcel">
                         <i class="material-icons material-symbols-rounded fs-6 text-muted"
                             aria-hidden="true">table_chart</i>
@@ -225,7 +225,7 @@
 
                                 <div class="modal-body py-4">
                                     {{-- Progress bar --}}
-                                    <div class="d-flex align-items-center gap-2 mb-4">
+                                    <div class="d-flex align-items-center gap-1 mb-4">
                                         <div class="progress flex-grow-1" role="progressbar" style="height: 8px;"
                                             aria-valuenow="50" aria-valuemin="0" aria-valuemax="100">
                                             <div class="progress-bar" id="importProgressBar" style="width: 50%;"></div>
@@ -259,7 +259,7 @@
                                     {{-- Step 2: Course Selection --}}
                                     <div id="importStep2" class="d-none">
                                         <div
-                                            class="alert alert-info border-0 rounded-3 d-flex align-items-center gap-2 mb-4">
+                                            class="alert alert-info border-0 rounded-3 d-flex align-items-center gap-1 mb-4">
                                             <i class="material-icons material-symbols-rounded fs-5"
                                                 aria-hidden="true">info</i>
                                             <span id="uploadInfoText">File uploaded successfully. Select a course to
@@ -292,7 +292,7 @@
                             </form>
 
                             <div id="importErrors" class="alert alert-danger border-0 rounded-3 m-3 d-none shadow-sm">
-                                <h6 class="fw-semibold mb-3 d-flex align-items-center gap-2">
+                                <h6 class="fw-semibold mb-3 d-flex align-items-center gap-1">
                                     <i class="bi bi-exclamation-triangle-fill flex-shrink-0" aria-hidden="true"></i>
                                     Validation errors found
                                 </h6>

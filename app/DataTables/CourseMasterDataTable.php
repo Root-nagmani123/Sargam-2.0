@@ -155,7 +155,7 @@ class CourseMasterDataTable extends DataTable
                 'pageLength' => 200,
                 'lengthMenu' => [[10, 25, 50, 100, 200, -1], [10, 25, 50, 100, 200, 'All']],
                 'order' => [],
-                'dom' => '<"d-flex flex-wrap justify-content-end gap-2 mb-2 programme-dt-export"B>rt<"d-flex flex-wrap justify-content-between align-items-center gap-3 p-3 border-top"<"programme-dt-paginate-wrap d-flex align-items-center"p><"programme-dt-meta d-flex align-items-center gap-2 flex-wrap justify-content-end"li>>',
+                'dom' => '<"d-flex flex-wrap justify-content-end gap-2 mb-2 programme-dt-export"B>rt<"d-flex flex-wrap justify-content-between align-items-center gap-3 p-3 border-top"<"programme-dt-paginate-wrap d-flex align-items-center"p><"programme-dt-meta d-flex align-items-center gap-1 flex-wrap justify-content-end"li>>',
                 'language' => [
                     'info' => 'of _TOTAL_ items',
                     'infoEmpty' => 'of 0 items',

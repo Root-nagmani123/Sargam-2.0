@@ -1942,7 +1942,7 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
     }
 
     .fc-event-card .meta-item {
-        font-size: 0.7rem !important;
+        font-size: 0.75rem !important;
         display: none !important;
         white-space: nowrap;
     }
@@ -3018,7 +3018,7 @@ console.log('Calendar view is rendering...', {
                         class="d-flex flex-wrap align-items-center justify-content-between gap-2 gap-md-3 mb-3 pb-3 border-bottom">
 
                         {{-- LEFT: Filters --}}
-                        <div class="d-flex align-items-center gap-2 gap-md-3 flex-wrap">
+                        <div class="d-flex align-items-center gap-1 gap-md-3 flex-wrap">
                             <span class="fw-semibold text-muted" style="font-size: 14px;">Filters</span>
 
                             @if(hasRole('Training') || hasRole('Admin') || hasRole('Training-MCTP') || hasRole('IST'))
@@ -3040,7 +3040,7 @@ console.log('Calendar view is rendering...', {
                         </div>
 
                         {{-- CENTER: Month Navigation --}}
-                        <div class="d-flex align-items-center gap-2">
+                        <div class="d-flex align-items-center gap-1">
                             <button type="button" class="cal-nav-btn" id="calCustomPrev" aria-label="Previous month">
                                 <i class="material-icons" style="font-size: 20px;">chevron_left</i>
                             </button>
