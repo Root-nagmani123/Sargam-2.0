@@ -2,7 +2,7 @@
 @section('title', 'Course List')
 
 @section('setup_content')
-    <div class="container-fluid mt-4">
+    <div class="container-fluid">
         <div class="card">
             <div class="card-body">
                 <h4>Total Registered Students: {{ $total_students }}</h4>

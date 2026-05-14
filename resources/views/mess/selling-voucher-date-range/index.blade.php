@@ -16,7 +16,7 @@ $selectedStores = collect((array) request()->input('store', []))
 $selectedReturnStatus = (string) request()->input('return_status', '');
 $selectedClientType = (string) request()->input('client_type', '');
 @endphp
-<div class="container-fluid py-2 py-lg-3">
+<div class="container-fluid">
     <x-breadcrum title="Selling Voucher with Date Range"></x-breadcrum>
 
 

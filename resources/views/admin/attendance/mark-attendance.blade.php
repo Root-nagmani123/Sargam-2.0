@@ -63,7 +63,7 @@
 @endsection
 
 @section('setup_content')
-<div class="container-fluid py-3 px-3 px-lg-4">
+<div class="container-fluid">
     @if(hasRole('Admin') || hasRole('Training-Induction'))
     <x-breadcrum title="Mark Attendance Of Officer Trainees">
         <a href="{{ route('attendance.index') }}" class="btn btn-outline-secondary btn-sm px-3 rounded-2 d-inline-flex align-items-center gap-1">

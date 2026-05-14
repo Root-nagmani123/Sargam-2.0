@@ -4,7 +4,7 @@
 
 @section('setup_content')
 
-<div class="container-fluid py-3">
+<div class="container-fluid">
     <x-breadcrum title="Course Group Mapping">
         {{-- Add Students Dropdown --}}
         <div class="dropdown d-inline-block">

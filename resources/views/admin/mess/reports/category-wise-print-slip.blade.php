@@ -5,7 +5,7 @@
     $cwBuyerReqTop = is_array(request('buyer_name')) ? request('buyer_name') : (request('buyer_name') !== null && request('buyer_name') !== '' ? [request('buyer_name')] : []);
     $preservedBuyerNames = array_values(array_filter(array_map(static fn ($n) => trim((string) $n), $cwBuyerReqTop), static fn ($n) => $n !== ''));
 @endphp
-<div class="container-fluid py-3 py-md-4 {{ request('print_all') ? 'print-all-mode' : '' }}">
+<div class="container-fluid {{ request('print_all') ? 'print-all-mode' : '' }}">
     <x-breadcrum title="Sale Voucher Report"></x-breadcrum>
     @if(session('error'))
         <div class="alert alert-danger alert-dismissible fade show no-print" role="alert">

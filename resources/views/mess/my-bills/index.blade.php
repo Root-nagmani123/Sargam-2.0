@@ -12,7 +12,7 @@
         $dateToDisplay = $effectiveDateTo ?? '';
     }
 @endphp
-<div class="container-fluid py-3 py-md-4 process-mess-bills-employee-report mess-my-bills-page">
+<div class="container-fluid process-mess-bills-employee-report mess-my-bills-page">
     <x-breadcrum title="My Mess Bills"></x-breadcrum>
 
     <div class="report-header text-center mb-4">

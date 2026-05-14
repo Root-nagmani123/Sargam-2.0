@@ -20,7 +20,7 @@
     </style>
 @endsection
 @section('setup_content')
-    <div class="container-fluid px-2 px-sm-3 px-md-4 pb-4 pb-lg-5 form-builder-page">
+    <div class="container-fluid form-builder-page">
         <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
             <div class="card-header bg-body-secondary bg-opacity-50 border-0 py-3 px-4">
                 <div class="d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between gap-3">

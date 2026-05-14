@@ -3,7 +3,7 @@
 @section('title', 'Change Password')
 
 @section('content')
-<div class="container-fluid px-3 px-lg-4 change-password-page pb-4">
+<div class="container-fluid change-password-page">
     <x-breadcrum title="Change Password" />
     <x-session_message />
 

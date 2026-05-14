@@ -34,7 +34,7 @@
     @media print { .no-print { display: none !important; } }
 </style>
 
-<div class="container-fluid py-3 px-3 px-lg-4">
+<div class="container-fluid">
     <x-breadcrum title="Feedback Database"></x-breadcrum>
 
     @if (session('error'))

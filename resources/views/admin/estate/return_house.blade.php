@@ -28,7 +28,7 @@
         z-index: 2;
     }
 </style>
-<div class="container-fluid py-2">
+<div class="container-fluid">
     <!-- Breadcrumb -->
     <x-breadcrum :title="'Return House'" :items="['Home', 'Estate Management', 'Return House']" />
 

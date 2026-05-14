@@ -49,9 +49,7 @@ class CourseController extends Controller
 
                 return $q->orderBy('course_name')->pluck('course_name', 'pk')->toArray();
             }
-            $courses = $courses->orderBy('couse_short_name')
-            ->pluck('couse_short_name', 'pk')
-            ->toArray();
+        );
 
         return $dataTable->render('admin.programme.index', compact('courses'));
     }

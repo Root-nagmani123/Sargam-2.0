@@ -39,7 +39,7 @@
 
 <meta name="csrf-token" content="{{ csrf_token() }}">
 
-<div class="container-fluid py-3 px-3 px-lg-4">
+<div class="container-fluid">
     <x-breadcrum title="Average Rating - Course / Topic wise"></x-breadcrum>
 
     <div id="fvLoadingSpinner">

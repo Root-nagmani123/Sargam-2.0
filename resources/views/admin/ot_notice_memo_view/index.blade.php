@@ -8,7 +8,7 @@
     Skip to main content
 </a>
 
-<main id="main-content" class="container-fluid py-4" role="main" aria-label="OT Notice and Memo Details">
+<main id="main-content" class="container-fluid" role="main" aria-label="OT Notice and Memo Details">
     <!-- Breadcrumb -->
     <nav aria-label="Breadcrumb navigation">
         <x-breadcrum title="OT Notice / Memo View"></x-breadcrum>

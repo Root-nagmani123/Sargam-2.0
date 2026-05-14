@@ -863,7 +863,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
     first_name ?? $user->name ?? 'User') : 'User';
     @endphp
 
-    <div class="container-fluid px-3 px-lg-4">
+    <div class="container-fluid">
         @if($isMyBirthday ?? false)
         {{-- Birthday Banner with Confetti --}}
         <div class="birthday-banner-wrapper mb-3" id="birthday-banner">

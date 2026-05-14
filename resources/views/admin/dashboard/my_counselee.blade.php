@@ -6,7 +6,7 @@
 @php
     $counselees = $counselees ?? [];
 @endphp
-<div class="container-fluid py-3 py-md-4 px-3 px-md-4">
+<div class="container-fluid">
     <x-breadcrum title="My Counselee" />
 
     {{-- Page header --}}

@@ -3,7 +3,7 @@
 @section('title', 'Student - Course Mapping')
 
 @section('setup_content')
-    <div class="container-fluid py-4" style="background-color: #f8f9fa;">
+    <div class="container-fluid" style="background-color: #f8f9fa;">
         <div class="mb-4">
             <x-breadcrum title="Course Wise OTs List" />
         </div>

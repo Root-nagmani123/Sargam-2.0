@@ -367,9 +367,9 @@
 
     <!-- Sticky Header -->
     <div class="header sticky-top bg-white shadow-sm session-feedback-header">
-        <div class="container-fluid py-2 py-md-3">
+        <div class="container-fluid">
             <nav class="navbar navbar-expand-lg">
-                <div class="container-fluid px-0">
+                <div class="container-fluid">
                     <a class="navbar-brand me-2" href="#">
                         <img src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg"
                             alt="Logo 1" height="80">

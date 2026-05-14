@@ -21,7 +21,7 @@
 @endphp
 @section('title', 'Low Stock Report')
 @section('content')
-<div class="container-fluid low-stock-report py-3 py-md-4">
+<div class="container-fluid low-stock-report">
     <x-breadcrum title="Low Stock Report"></x-breadcrum>
 
     <!-- Filters -->

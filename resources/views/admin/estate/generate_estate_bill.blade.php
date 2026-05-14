@@ -15,7 +15,7 @@
 @section('title', $estateBillPageLabel . ' - Sargam')
 
 @section($estateSelfHomeTab ? 'content' : 'setup_content')
-<div class="container-fluid py-4">
+<div class="container-fluid">
     <x-breadcrum title="{{ $estateBillPageLabel }}"></x-breadcrum>
     <x-session_message />
 

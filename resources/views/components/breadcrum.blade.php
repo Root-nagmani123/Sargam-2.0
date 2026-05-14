@@ -174,7 +174,7 @@
 @endphp
 
 <div class="modern-breadcrumb-wrapper mb-3" data-variant="{{ $variant }}">
-    <div class="bg-white border rounded-3" style="padding: 0.5rem;">
+    <div class="bg-white border rounded-3" style="padding: 1rem;">
         <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
             <div class="d-flex min-w-0 flex-grow-1" style="gap:.65rem;">
                 @if($showBack)

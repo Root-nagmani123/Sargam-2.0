@@ -3,7 +3,7 @@
 @section('title', 'Estate Possession for Other - Sargam')
 
 @section('content')
-<div class="container-fluid py-4">
+<div class="container-fluid">
     <x-breadcrum title="Estate Possession for Other"></x-breadcrum>
 
     <!-- Page Card - Bootstrap 5 -->

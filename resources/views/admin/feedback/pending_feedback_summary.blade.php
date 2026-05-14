@@ -3,7 +3,7 @@
 {{-- @section('title', 'Pending Feedback Summary - Students') --}}
 
 @section('setup_content')
-<div class="container-fluid px-2 px-sm-3 px-md-4">
+<div class="container-fluid">
     <x-breadcrum title="Pending Feedback Summary – Students"></x-breadcrum>
     
     <x-session_message />

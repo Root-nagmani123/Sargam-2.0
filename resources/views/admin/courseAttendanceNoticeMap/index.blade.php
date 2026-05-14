@@ -351,7 +351,7 @@
     padding-right: 2.25rem !important;
 }
 </style>
-<div class="container-fluid py-2 py-md-3">
+<div class="container-fluid">
        <x-breadcrum title="Notice /Memo Management" />
             <x-session_message />
 

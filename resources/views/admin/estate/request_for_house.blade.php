@@ -3,7 +3,7 @@
 @section('title', 'Change Request For House - Sargam')
 
 @section('content')
-<div class="container-fluid py-4">
+<div class="container-fluid">
     {{-- Breadcrumb: Home > My Requests / Complaints > Request For House --}}
     <nav aria-label="breadcrumb" class="mb-3">
         <ol class="breadcrumb mb-0">

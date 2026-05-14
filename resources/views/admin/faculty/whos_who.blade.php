@@ -4,7 +4,7 @@
 
 @section('setup_content')
 
-<div class="container-fluid py-4">
+<div class="container-fluid">
     <x-breadcrum title="Who's Who"></x-breadcrum>
 
     <!-- Filter Section -->

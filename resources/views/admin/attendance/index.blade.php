@@ -52,7 +52,7 @@
     @media print { .no-print { display: none !important; } }
 </style>
 
-<div class="container-fluid py-3 px-3 px-lg-4 attendance-page">
+<div class="container-fluid attendance-page">
     <x-breadcrum title="Attendance" />
 
     {{-- Top toolbar --}}

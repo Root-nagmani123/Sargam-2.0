@@ -9,7 +9,7 @@
     </a>
 
     <header class="header-top-bar d-none d-lg-block">
-        <div class="container-fluid px-3 px-xl-4 d-flex align-items-center justify-content-between flex-wrap py-1">
+        <div class="container-fluid d-flex align-items-center justify-content-between flex-wrap py-1">
 
             <!-- Left: Government Identity -->
             <div class="d-flex align-items-center gap-1">

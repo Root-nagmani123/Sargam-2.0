@@ -6,7 +6,7 @@
 <div class="document-viewer-wrapper">
     <!-- PDF Viewer Header -->
     <div class="pdf-viewer-header bg-white shadow-sm sticky-top">
-        <div class="container-fluid px-4 py-2">
+        <div class="container-fluid">
             <div class="d-flex align-items-center justify-content-between">
                 <div class="d-flex align-items-center gap-3">
                     <button class="btn btn-sm btn-link" aria-label="Menu">
@@ -51,7 +51,7 @@
 
     <!-- PDF Viewer Content -->
     <div class="pdf-viewer-content">
-        <div class="container-fluid px-4 py-4">
+        <div class="container-fluid">
             <div class="row justify-content-center">
                 <div class="col-lg-10">
                     <div class="pdf-container bg-white shadow-sm p-4">

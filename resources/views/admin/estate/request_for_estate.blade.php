@@ -11,7 +11,7 @@
     }
 @endphp
 @section($estateSelfHomeTab ? 'content' : 'setup_content')
-<div class="container-fluid px-2 px-sm-3 px-md-4">
+<div class="container-fluid">
    <x-breadcrum title="Request For Estate" />
    <x-estate-workflow-stepper current="request-for-estate" />
 

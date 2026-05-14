@@ -17,7 +17,7 @@
         $createdByLabel = filled(data_get($course, 'created_by')) ? (string) data_get($course, 'created_by') : 'N/A';
     @endphp
 
-    <main class="container-fluid px-3 px-lg-4 pb-4 programme-view-page" id="main-content" role="main" tabindex="-1">
+    <main class="container-fluid programme-view-page" id="main-content" role="main" tabindex="-1">
 
         {{-- Page header --}}
         <div class="card border rounded-3 shadow-sm mb-4 bg-white">

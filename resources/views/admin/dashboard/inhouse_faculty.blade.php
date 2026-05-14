@@ -457,7 +457,7 @@
     }
 </style>
 
-<div class="container-fluid px-2 px-md-3">
+<div class="container-fluid">
     <x-breadcrum title="Inhouse Faculty"></x-breadcrum>
     <div class="card inhouse-faculty-card border-0 shadow-sm rounded-4">
         <div class="card-header">

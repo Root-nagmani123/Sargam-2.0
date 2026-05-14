@@ -42,7 +42,6 @@ use App\Http\Controllers\Admin\{
     QuickLinkController,
     TimetableReportController,
 };
-use App\Http\Controllers\Dashboard\Calendar1Controller;
 use App\Http\Controllers\Admin\MemoNoticeController;
 use App\Http\Controllers\Admin\Master\DisciplineMasterController;
 use App\Http\Controllers\Admin\Master\AppellationMasterController;

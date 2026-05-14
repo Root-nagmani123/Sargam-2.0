@@ -74,7 +74,7 @@
         'lbsnaaLogoSvgInline' => $messLbsnaaLogoSvgInline,
     ];
 @endphp
-<div class="container-fluid purchase-sale-quantity-report py-3 py-md-4">
+<div class="container-fluid purchase-sale-quantity-report">
     <script>
         window.__purchaseSalePrintConfig = @json($purchaseSalePrintConfig);
         window.__purchaseSalePrintImages = @json($purchaseSalePrintImages);
