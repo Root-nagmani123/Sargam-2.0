@@ -79,23 +79,12 @@ SET @sql := (
 );
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
--- is_joined_marker
-SET @sql := (
-  SELECT IF(
-    (SELECT COUNT(*) FROM information_schema.COLUMNS
-     WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'fc_activity_master' AND COLUMN_NAME = 'is_joined_marker') = 0,
-    'ALTER TABLE fc_activity_master ADD COLUMN is_joined_marker TINYINT NOT NULL DEFAULT 0 COMMENT ''1 = joined marker'' AFTER status',
-    'SELECT 1'
-  )
-);
-PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
-
 -- entry_policy
 SET @sql := (
   SELECT IF(
     (SELECT COUNT(*) FROM information_schema.COLUMNS
      WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'fc_activity_master' AND COLUMN_NAME = 'entry_policy') = 0,
-    'ALTER TABLE fc_activity_master ADD COLUMN entry_policy ENUM(''unique'',''upsert'') NOT NULL DEFAULT ''unique'' AFTER is_joined_marker',
+    'ALTER TABLE fc_activity_master ADD COLUMN entry_policy ENUM(''unique'',''upsert'') NOT NULL DEFAULT ''unique'' AFTER status',
     'SELECT 1'
   )
 );
@@ -157,11 +146,8 @@ SET am.department_id = (SELECT id FROM fc_activity_department WHERE code = 'admi
 WHERE am.department_id IS NULL;
 
 -- -----------------------------------------------------------------------------
--- 6) Joined marker + upsert policies + sort_order (idempotent updates)
+-- 6) Upsert policies + sort_order (idempotent updates)
 -- -----------------------------------------------------------------------------
-UPDATE fc_activity_master SET is_joined_marker = 1 WHERE menuid = 'joined' AND status = 1;
-UPDATE fc_activity_master SET is_joined_marker = 0 WHERE IFNULL(menuid, '') <> 'joined';
-
 UPDATE fc_activity_master SET entry_policy = 'upsert'
 WHERE menuid IN ('height','weight','spo2','pulse','bp','preremarks','vialtube','bloodsample');
 

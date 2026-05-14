@@ -2,15 +2,14 @@
 
 namespace App\Http\Controllers\FC;
 
+use App\DataTables\FC\FcActivitiesHomeDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\FC\FcActivityMaster;
-use App\Models\FC\FcOtActivity;
 use App\Models\FC\FcOtDetail;
 use App\Models\FC\SessionMaster;
 use App\Services\FC\FcPostArrivalAccessService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
 class FcActivityHomeController extends Controller
@@ -21,30 +20,19 @@ class FcActivityHomeController extends Controller
 
     public function index(): View
     {
-        $user = Auth::user();
-
-        $deptIds = $this->access->departmentIdsForActivityEntry();
-        $q = FcOtActivity::query()
-            ->with(['ot', 'activityMaster.department'])
-            ->where('submitedby', $user->username)
-            ->where('status', 1)
-            ->latest('id');
-        if ($deptIds !== null) {
-            if ($deptIds === []) {
-                $q->whereRaw('0 = 1');
-            } else {
-                $q->whereHas('activityMaster', fn ($q2) => $q2->whereIn('department_id', $deptIds));
-            }
-        }
-
-        $activities = $q->get();
-
         return view('admin.fc-activities.home.index', [
-            'activities' => $activities,
-            'user' => $user,
             'showSetupLinks' => $this->access->canManageActivitySetup(),
             'canAccessMedical' => $this->access->canAccessMedicalModule(),
         ]);
+    }
+
+    /**
+     * Server-side list of activities entered by the current user (scoped by department access).
+     * Query params: DataTables standard + filter_course, filter_otcode, filter_activity.
+     */
+    public function dataTable(FcActivitiesHomeDataTable $dataTable): JsonResponse
+    {
+        return $dataTable->ajax();
     }
 
     public function ajaxCourses(): JsonResponse
