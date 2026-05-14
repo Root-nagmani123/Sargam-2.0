@@ -382,9 +382,9 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @forelse($categories as $index => $category)
+                            @forelse($categories as $category)
                             <tr>
-                                <td>{{ $index + 1 }}</td>
+                                <td>{{ $categories->firstItem() + $loop->index }}</td>
                                 <td>{{ $category->issue_category }}</td>
                                 <td>{{ Str::limit($category->description ?? 'No description', 50) }}</td>
                                 <td>{{ $category->subCategories->count() }}</td>

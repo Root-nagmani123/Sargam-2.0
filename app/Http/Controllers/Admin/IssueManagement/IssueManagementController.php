@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin\IssueManagement;
 
 use App\Http\Controllers\Controller;
 use App\Exports\IssueManagementExport;
+use App\Support\DataTableRedisCache;
 use App\Models\{
     IssueLogManagement,
     IssueCategoryMaster,
@@ -19,7 +20,10 @@ use App\Models\{
     EmployeeMaster,
     User
 };
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\{DB, Auth, Storage, Schema, Log};
 use Carbon\Carbon;
@@ -28,24 +32,46 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class IssueManagementController extends Controller
 {
+    private const LISTING_CACHE_EPOCH_KEY = 'admin_issue_management_index_list_epoch';
+
+    private const CENTCOM_LISTING_CACHE_EPOCH_KEY = 'admin_issue_management_centcom_list_epoch';
+
+    private const INDEX_PER_PAGE = 20;
+
     /**
-     * Display a listing of all issues.
+     * Bump cache epochs for main index and Centcom listing (shared issue mutations).
      */
-    public function index(Request $request)
+    public static function bumpIndexListCacheEpoch(): void
     {
-        // echo Auth::user()->user_id; exit;
-        $query = IssueLogManagement::with([
+        DataTableRedisCache::bumpListEpoch(self::LISTING_CACHE_EPOCH_KEY, 'IssueManagementController@index');
+        DataTableRedisCache::bumpListEpoch(self::CENTCOM_LISTING_CACHE_EPOCH_KEY, 'IssueManagementController@centcom');
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function issueManagementIndexEagerLoads(): array
+    {
+        return [
             'category',
             'priority',
             'reproducibility',
             'subCategoryMappings.subCategory',
             'buildingMapping.building',
             'hostelMapping.hostelBuilding',
-            'statusHistory'
-        ]);
+            'statusHistory',
+        ];
+    }
+
+    /**
+     * Filtered/ordered index query without eager loads (for count / pk slice — matches paginate SQL shape).
+     */
+    private function issueManagementIndexFilteredQuery(Request $request): Builder
+    {
+        $query = IssueLogManagement::query();
 
         $applyUserScope = function ($builder) {
-            if (!hasRole('Admin') && !hasRole('SuperAdmin')) {
+            if (! hasRole('Admin') && ! hasRole('SuperAdmin')) {
                 $ids = getEmployeeIdsForUser(Auth::user()->user_id);
                 if (empty($ids)) {
                     $ids = [Auth::user()->user_id];
@@ -86,12 +112,12 @@ class IssueManagementController extends Controller
             }
 
             // Filter by category
-            if ($request->has('category') && !empty($request->category)) {
+            if ($request->has('category') && ! empty($request->category)) {
                 $builder->where('issue_category_master_pk', $request->category);
             }
 
             // Filter by priority
-            if ($request->has('priority') && !empty($request->priority)) {
+            if ($request->has('priority') && ! empty($request->priority)) {
                 $builder->where('issue_priority_master_pk', $request->priority);
             }
 
@@ -119,7 +145,111 @@ class IssueManagementController extends Controller
 
         $applyFilters($query);
 
-        $issues = $query->paginate(20);
+        return $query;
+    }
+
+    /**
+     * Mirrors {@see Builder::paginate()} count + slice without hydrating rows (for cacheable snapshot).
+     *
+     * @return array{total: int, ids: array<int, int>}
+     */
+    private function issueManagementIndexPageSnapshot(Request $request, int $page): array
+    {
+        $base = $this->issueManagementIndexFilteredQuery($request);
+        $perPage = self::INDEX_PER_PAGE;
+        $total = (int) (clone $base)->toBase()->getCountForPagination();
+        $ids = [];
+        if ($total > 0) {
+            $ids = (clone $base)->forPage($page, $perPage)->pluck('pk')->values()->all();
+            $ids = array_map('intval', $ids);
+        }
+
+        return ['total' => $total, 'ids' => $ids];
+    }
+
+    /**
+     * @param  array<int, int>  $ids
+     * @return \Illuminate\Support\Collection<int, IssueLogManagement>
+     */
+    private function issueManagementHydrateIndexRows(array $ids): \Illuminate\Support\Collection
+    {
+        $ids = array_values(array_filter(array_map('intval', $ids)));
+        if ($ids === []) {
+            return collect();
+        }
+        $byPk = IssueLogManagement::with($this->issueManagementIndexEagerLoads())
+            ->whereIn('pk', $ids)
+            ->get()
+            ->keyBy(fn (IssueLogManagement $m) => (int) $m->pk);
+
+        return collect($ids)
+            ->map(fn (int $id) => $byPk->get($id))
+            ->filter()
+            ->values();
+    }
+
+    /**
+     * Display a listing of all issues.
+     */
+    public function index(Request $request)
+    {
+        $isAdmin = hasRole('Admin') || hasRole('SuperAdmin');
+        $userId = Auth::user()->user_id;
+        $scopedIds = null;
+        if (! $isAdmin) {
+            $scopedIds = getEmployeeIdsForUser($userId);
+            if (empty($scopedIds)) {
+                $scopedIds = [$userId];
+            }
+            $scopedIds = array_map('strval', $scopedIds);
+            sort($scopedIds);
+        }
+
+        $page = Paginator::resolveCurrentPage('page');
+        $epoch = DataTableRedisCache::readListEpoch(self::LISTING_CACHE_EPOCH_KEY);
+        $cacheKey = 'admin_issue_management_index:v2:' . md5(json_encode([
+            'epoch' => $epoch,
+            'is_admin' => $isAdmin,
+            'user_id' => $userId,
+            'scoped_ids' => $scopedIds,
+            'raised_by' => $request->get('raised_by'),
+            'status' => $request->get('status'),
+            'search' => trim((string) $request->get('search', '')),
+            'category' => $request->get('category'),
+            'priority' => $request->get('priority'),
+            'date_from' => $request->get('date_from'),
+            'date_to' => $request->get('date_to'),
+            'page' => $page,
+        ]));
+
+        $snapshot = DataTableRedisCache::remember(
+            $cacheKey,
+            [
+                'enabled' => 'ISSUE_MANAGEMENT_INDEX_CACHE_ENABLED',
+                'seconds' => 'ISSUE_MANAGEMENT_INDEX_CACHE_SECONDS',
+            ],
+            'IssueManagementController@index',
+            fn () => $this->issueManagementIndexPageSnapshot($request, $page)
+        );
+
+        if (! is_array($snapshot) || ! array_key_exists('total', $snapshot) || ! array_key_exists('ids', $snapshot) || ! is_array($snapshot['ids'])) {
+            $snapshot = $this->issueManagementIndexPageSnapshot($request, $page);
+        }
+
+        $total = (int) $snapshot['total'];
+        $ids = array_map('intval', $snapshot['ids']);
+        $items = $this->issueManagementHydrateIndexRows($ids);
+
+        $issues = new LengthAwarePaginator(
+            $items,
+            $total,
+            self::INDEX_PER_PAGE,
+            $page,
+            [
+                'path' => Paginator::resolveCurrentPath(),
+                'pageName' => 'page',
+            ]
+        );
 
         $categories = IssueCategoryMaster::active()->get();
         $priorities = IssuePriorityMaster::active()->ordered()->get();
@@ -213,32 +343,26 @@ class IssueManagementController extends Controller
     }
 
     /**
-     * Display issues reported on behalf (CENTCOM).
+     * Centcom listing query (nodal or assignee scope + filters), without eager loads — for count / pk slice.
      */
-    public function centcom(Request $request)
+    private function issueManagementCentcomFilteredQuery(Request $request): Builder
     {
-        $query = IssueLogManagement::with([
-                'category',
-                'priority',
-                'reproducibility',
-                'subCategoryMappings.subCategory',
-                'buildingMapping.building',
-                'hostelMapping.hostelBuilding',
-                'statusHistory'
-            ])->orderBy('created_date', 'desc');
+        $query = IssueLogManagement::query();
 
-            // Centcom listing: show only issues where the logged-in employee
-            // is either the configured nodal officer (employee_master_pk)
-            // or currently assigned handler (assigned_to).
-            $ids = getEmployeeIdsForUser(Auth::user()->user_id);
-            if (empty($ids)) {
-                $ids = [Auth::user()->user_id];
-            }
+        // Centcom listing: show only issues where the logged-in employee
+        // is either the configured nodal officer (employee_master_pk)
+        // or currently assigned handler (assigned_to).
+        $ids = getEmployeeIdsForUser(Auth::user()->user_id);
+        if (empty($ids)) {
+            $ids = [Auth::user()->user_id];
+        }
 
-            $query->where(function ($q) use ($ids) {
-                $q->whereIn('employee_master_pk', $ids)   // Nodal officer for the category
-                  ->orWhereIn('assigned_to', $ids);       // Currently assigned to this employee
-            });
+        $query->where(function ($q) use ($ids) {
+            $q->whereIn('employee_master_pk', $ids)
+                ->orWhereIn('assigned_to', $ids);
+        });
+
+        $query->orderBy('created_date', 'desc');
 
         // Search (ID, description, category name, sub-category)
         if ($request->filled('search')) {
@@ -278,8 +402,82 @@ class IssueManagementController extends Controller
             $query->where('created_date', '<=', $to);
         }
 
-        $issues = $query->paginate(20);
-        // print_r($issues); exit;
+        return $query;
+    }
+
+    /**
+     * @return array{total: int, ids: array<int, int>}
+     */
+    private function issueManagementCentcomPageSnapshot(Request $request, int $page): array
+    {
+        $base = $this->issueManagementCentcomFilteredQuery($request);
+        $perPage = self::INDEX_PER_PAGE;
+        $total = (int) (clone $base)->toBase()->getCountForPagination();
+        $ids = [];
+        if ($total > 0) {
+            $ids = (clone $base)->forPage($page, $perPage)->pluck('pk')->values()->all();
+            $ids = array_map('intval', $ids);
+        }
+
+        return ['total' => $total, 'ids' => $ids];
+    }
+
+    /**
+     * Display issues reported on behalf (CENTCOM).
+     */
+    public function centcom(Request $request)
+    {
+        $userId = Auth::user()->user_id;
+        $scopedIds = getEmployeeIdsForUser($userId);
+        if (empty($scopedIds)) {
+            $scopedIds = [$userId];
+        }
+        $scopedIds = array_map('strval', $scopedIds);
+        sort($scopedIds);
+
+        $page = Paginator::resolveCurrentPage('page');
+        $epoch = DataTableRedisCache::readListEpoch(self::CENTCOM_LISTING_CACHE_EPOCH_KEY);
+        $cacheKey = 'admin_issue_management_centcom:v1:' . md5(json_encode([
+            'epoch' => $epoch,
+            'user_id' => $userId,
+            'scoped_ids' => $scopedIds,
+            'status' => $request->get('status'),
+            'search' => trim((string) $request->get('search', '')),
+            'category' => $request->get('category'),
+            'priority' => $request->get('priority'),
+            'date_from' => $request->get('date_from'),
+            'date_to' => $request->get('date_to'),
+            'page' => $page,
+        ]));
+
+        $snapshot = DataTableRedisCache::remember(
+            $cacheKey,
+            [
+                'enabled' => 'ISSUE_MANAGEMENT_CENTCOM_CACHE_ENABLED',
+                'seconds' => 'ISSUE_MANAGEMENT_CENTCOM_CACHE_SECONDS',
+            ],
+            'IssueManagementController@centcom',
+            fn () => $this->issueManagementCentcomPageSnapshot($request, $page)
+        );
+
+        if (! is_array($snapshot) || ! array_key_exists('total', $snapshot) || ! array_key_exists('ids', $snapshot) || ! is_array($snapshot['ids'])) {
+            $snapshot = $this->issueManagementCentcomPageSnapshot($request, $page);
+        }
+
+        $total = (int) $snapshot['total'];
+        $ids = array_map('intval', $snapshot['ids']);
+        $items = $this->issueManagementHydrateIndexRows($ids);
+
+        $issues = new LengthAwarePaginator(
+            $items,
+            $total,
+            self::INDEX_PER_PAGE,
+            $page,
+            [
+                'path' => Paginator::resolveCurrentPath(),
+                'pageName' => 'page',
+            ]
+        );
 
         $categories = IssueCategoryMaster::active()->get();
         $priorities = IssuePriorityMaster::active()->ordered()->get();
@@ -546,6 +744,8 @@ class IssueManagementController extends Controller
                 'created_by' => $request->created_by,
             );
             DB::table('Issue_log_status')->insert($status_data);
+
+            static::bumpIndexListCacheEpoch();
 
             return redirect()->route('admin.issue-management.show', $id)
                 ->with('success', 'Complaint submitted successfully!');
@@ -854,6 +1054,8 @@ class IssueManagementController extends Controller
             }
 
             DB::commit();
+
+            static::bumpIndexListCacheEpoch();
 
             $showUrl = route('admin.issue-management.show', $issue->pk);
             if ($request->filled('from_modal')) {
@@ -1287,6 +1489,8 @@ class IssueManagementController extends Controller
 
             DB::commit();
 
+            static::bumpIndexListCacheEpoch();
+
             return redirect()->route('admin.issue-management.show', $issue->pk)
                 ->with('success', 'Issue status updated successfully.');
 
@@ -1313,6 +1517,8 @@ class IssueManagementController extends Controller
             'updated_by' => Auth::id(),
             'updated_date' => now(),
         ]);
+
+        static::bumpIndexListCacheEpoch();
 
         return back()->with('success', 'Feedback added successfully.');
     }

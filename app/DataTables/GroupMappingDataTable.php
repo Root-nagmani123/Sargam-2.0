@@ -2,8 +2,10 @@
 namespace App\DataTables;
 
 use App\Models\GroupTypeMasterCourseMasterMap;
+use App\Support\DataTableRedisCache;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
+use Illuminate\Http\JsonResponse;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Yajra\DataTables\Html\Button;
@@ -13,6 +15,37 @@ use Illuminate\Support\Facades\DB;
 
 class GroupMappingDataTable extends DataTable
 {
+    public const LISTING_CACHE_EPOCH_KEY = 'group_mapping_dt_list_epoch';
+
+    public static function bumpListingCacheEpoch(): void
+    {
+        DataTableRedisCache::bumpListEpoch(self::LISTING_CACHE_EPOCH_KEY, 'GroupMappingDataTable');
+    }
+
+    /**
+     * Server-side JSON for /group-mapping. .env: GROUP_MAPPING_DATATABLE_CACHE_*.
+     */
+    public function ajax(): JsonResponse
+    {
+        return DataTableRedisCache::serveCachedAjax(
+            $this->request(),
+            'group_mapping_dt:v1:',
+            self::LISTING_CACHE_EPOCH_KEY,
+            [
+                'enabled' => 'GROUP_MAPPING_DATATABLE_CACHE_ENABLED',
+                'seconds' => 'GROUP_MAPPING_DATATABLE_CACHE_SECONDS',
+            ],
+            'GroupMappingDataTable',
+            fn () => parent::ajax(),
+            [
+                'status_filter' => (string) $this->request()->input('status_filter', ''),
+                'course_filter' => (string) $this->request()->input('course_filter', ''),
+                'group_type_filter' => (string) $this->request()->input('group_type_filter', ''),
+                'role_course_ids' => get_Role_by_course(),
+            ]
+        );
+    }
+
     public function dataTable(QueryBuilder $query): EloquentDataTable
     {
         return (new EloquentDataTable($query))

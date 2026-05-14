@@ -129,10 +129,16 @@ class StudentMedicalExemptionController extends Controller
                 'speciality',
                 'course',
                 'employee'
-           ])
-           ->whereIn('pk', $ids)
-                ->orderByRaw("FIELD(pk, " . implode(',', $ids) . ")");
-            // // ->whereIn('pk', $ids);
+            ]);
+
+            if (empty($ids)) {
+                // Avoid invalid SQL like FIELD(pk, ) when there are no matches.
+                $query->whereRaw('1 = 0');
+            } else {
+                $idList = implode(',', array_map('intval', $ids));
+                $query->whereIn('pk', $ids)
+                    ->orderByRaw("FIELD(pk, {$idList})");
+            }
 
             /* ===============================
              | 4. DataTable Response

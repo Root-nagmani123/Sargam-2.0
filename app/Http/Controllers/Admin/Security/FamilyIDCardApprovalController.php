@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin\Security;
 
+use App\Http\Controllers\Admin\FamilyIDCardRequestController;
 use App\Http\Controllers\Controller;
 use App\Models\SecurityFamilyIdApply;
 use App\Models\SecurityFamilyIdApplyApproval;
@@ -383,6 +384,7 @@ class FamilyIDCardApprovalController extends Controller
             $application->save();
         }
 
+        FamilyIDCardRequestController::bumpIndexListCacheEpoch();
         return redirect()->route('admin.security.family_idcard_approval.index')
             ->with('success', 'Family ID Card approved successfully');
     }
@@ -419,6 +421,7 @@ class FamilyIDCardApprovalController extends Controller
             'created_date' => now(),
         ]);
 
+        FamilyIDCardRequestController::bumpIndexListCacheEpoch();
         return redirect()->route('admin.security.family_idcard_approval.index')
             ->with('success', 'Family ID Card rejected');
     }
@@ -523,6 +526,7 @@ class FamilyIDCardApprovalController extends Controller
             }
         }
 
+        FamilyIDCardRequestController::bumpIndexListCacheEpoch();
         return redirect()->route('admin.security.family_idcard_approval.index')
             ->with('success', 'Family ID Card group approved (' . $groupRows->count() . ' members)');
     }
@@ -570,6 +574,7 @@ class FamilyIDCardApprovalController extends Controller
             ]);
         }
 
+        FamilyIDCardRequestController::bumpIndexListCacheEpoch();
         return redirect()->route('admin.security.family_idcard_approval.index')
             ->with('success', 'Family ID Card group rejected (' . $groupRows->count() . ' members)');
     }

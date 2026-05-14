@@ -228,78 +228,61 @@
 @section('scripts')
 <script>
 $(function() {
-    if ($.fn.dataTable.isDataTable('#coursegrouptype')) {
-        $('#coursegrouptype').DataTable().destroy();
+    const tableSelector = '#coursegrouptype';
+    let table;
+
+    if ($.fn.DataTable.isDataTable(tableSelector)) {
+        table = $(tableSelector).DataTable();
+    } else {
+        table = $(tableSelector).DataTable({
+            processing: true,
+            serverSide: true,
+            searching: true,
+            ajax: {
+                url: "{{ route('master.course.group.type.grouptypeview') }}",
+                data: function(d) {
+                    d.pk = $('#pk').val();
+                    d.active_inactive = $('#active_inactive').val();
+                    //  console.log(d.pk);
+
+                }
+            },
+            columns: [{
+                    data: 'DT_RowIndex',
+                    name: 'DT_RowIndex',
+                    orderable: false,
+                    searchable: false
+                },
+                {
+                    data: 'type_name',
+                    name: 'type_name'
+                },
+                {
+                    data: 'status',
+                    name: 'status',
+                    orderable: false,
+                    searchable: false
+                },
+                {
+                    data: 'action',
+                    name: 'action',
+                    orderable: false,
+                    searchable: false
+                }
+            ]
+
+        });
     }
-    window.cgtTable = $('#coursegrouptype').DataTable({
-        processing: true,
-        serverSide: true,
-        searching: true,
-        responsive: true,
-        pageLength: 10,
-        lengthMenu: [[10, 25, 50, 100, 200, -1], [10, 25, 50, 100, 200, 'All']],
-        dom: 'rt<"d-flex flex-wrap justify-content-between align-items-center gap-3 px-3 py-2 cgt-dt-footer"<"cgt-dt-paginate-wrap d-flex align-items-center"p><"cgt-dt-meta d-flex align-items-center gap-1 flex-wrap justify-content-end"li>>',
-        language: {
-            info: 'of _TOTAL_ items',
-            infoEmpty: 'of 0 items',
-            infoFiltered: '(filtered from _MAX_)',
-            lengthMenu: 'Showing _MENU_',
-            paginate: { previous: '&lsaquo;', next: '&rsaquo;' },
-            emptyTable: '<div class="cgt-empty-state"><svg width="120" height="100" viewBox="0 0 120 100" fill="none" xmlns="http://www.w3.org/2000/svg"><ellipse cx="60" cy="78" rx="50" ry="12" fill="#f0f0f5"/><rect x="30" y="35" width="60" height="45" rx="4" fill="#e8eaf0"/><rect x="35" y="28" width="50" height="45" rx="4" fill="#d5dbe8"/><rect x="40" y="22" width="40" height="45" rx="4" fill="#fff" stroke="#c5cad8" stroke-width="1.5"/><circle cx="60" cy="38" r="8" fill="#4a7cff" opacity=".15"/><rect x="48" y="50" width="24" height="3" rx="1.5" fill="#c5cad8"/><rect x="52" y="56" width="16" height="3" rx="1.5" fill="#dde1ea"/></svg><p>No course group found!</p><a href="javascript:void(0)" class="btn btn-primary btn-sm px-3 d-inline-flex align-items-center gap-1 cgt-empty-add-btn"><i class="material-icons material-symbols-rounded fs-6">add</i> Add Courses Group Type</a></div>',
-            zeroRecords: '<div class="cgt-empty-state"><svg width="120" height="100" viewBox="0 0 120 100" fill="none" xmlns="http://www.w3.org/2000/svg"><ellipse cx="60" cy="78" rx="50" ry="12" fill="#f0f0f5"/><rect x="30" y="35" width="60" height="45" rx="4" fill="#e8eaf0"/><rect x="35" y="28" width="50" height="45" rx="4" fill="#d5dbe8"/><rect x="40" y="22" width="40" height="45" rx="4" fill="#fff" stroke="#c5cad8" stroke-width="1.5"/><circle cx="60" cy="38" r="8" fill="#4a7cff" opacity=".15"/><rect x="48" y="50" width="24" height="3" rx="1.5" fill="#c5cad8"/><rect x="52" y="56" width="16" height="3" rx="1.5" fill="#dde1ea"/></svg><p>No course group found!</p><a href="javascript:void(0)" class="btn btn-primary btn-sm px-3 d-inline-flex align-items-center gap-1 cgt-empty-add-btn"><i class="material-icons material-symbols-rounded fs-6">add</i> Add Courses Group Type</a></div>'
-        },
-        ajax: {
-            url: "{{ route('master.course.group.type.grouptypeview') }}",
-            data: function(d) {
-                d.pk = $('#pk').val();
-                d.active_inactive = $('#active_inactive').val();
-            }
-        },
-        columns: [{
-                data: 'DT_RowIndex',
-                name: 'DT_RowIndex',
-                orderable: false,
-                searchable: false
-            },
-            {
-                data: 'type_name',
-                name: 'type_name'
-            },
-            {
-                data: 'status',
-                name: 'status',
-                orderable: false,
-                searchable: false
-            },
-            {
-                data: 'action',
-                name: 'action',
-                orderable: false,
-                searchable: false
-            }
-        ]
-    });
 
-    var table = window.cgtTable;
+    $(document).on('change', '.plain-status-toggle', function() {
+        var checkbox = $(this);
+        var previousState = !checkbox.is(':checked'); // save previous state
+        var pk = checkbox.data('id');
+        var active_inactive = checkbox.is(':checked') ? 1 : 0;
 
-    // Custom search input
-    $('#cgtTableSearch').on('keyup change', function() {
-        table.search($(this).val() || '').draw();
-    });
-
-    // Empty state "Add" button triggers the main add modal
-    $(document).on('click', '.cgt-empty-add-btn', function(e) {
-        e.preventDefault();
-        document.getElementById('showAlert').click();
-    });
-
-    // ── Status toggle (Activate / Deactivate) ──
-    $(document).on('click', '.cgt-status-toggle-btn', function(e) {
-        e.preventDefault();
-        var btn = $(this);
-        var pk = btn.data('id');
-        var currentStatus = btn.data('status');
-        var newStatus = currentStatus == 1 ? 0 : 1;
+        var actionText = active_inactive ? 'activate' : 'deactivate';
+        var confirmBtnText = active_inactive ? 'Yes, activate' : 'Yes, deactivate';
+        var confirmBtnColor = active_inactive ? '#28a745' : '#d33';
 
         if (newStatus == 1) {
             // ACTIVATE

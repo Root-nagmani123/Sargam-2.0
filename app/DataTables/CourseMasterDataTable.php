@@ -3,18 +3,48 @@
 namespace App\DataTables;
 
 use App\Models\CourseMaster;
+use App\Support\DataTableRedisCache;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
+use Illuminate\Http\JsonResponse;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Yajra\DataTables\Html\Button;
 use Yajra\DataTables\Html\Column;
-use Yajra\DataTables\Html\Editor\Editor;
-use Yajra\DataTables\Html\Editor\Fields;
 use Yajra\DataTables\Services\DataTable;
 use Carbon\Carbon;
 
 class CourseMasterDataTable extends DataTable
 {
+    public const LISTING_CACHE_EPOCH_KEY = 'programme_course_master_dt_list_epoch';
+
+    public static function bumpListingCacheEpoch(): void
+    {
+        DataTableRedisCache::bumpListEpoch(self::LISTING_CACHE_EPOCH_KEY, 'CourseMasterDataTable');
+    }
+
+    /**
+     * Server-side JSON for /programme listing. .env: PROGRAMME_DATATABLE_CACHE_*.
+     * Extra fingerprint: programme index sends status_filter and course_filter on each XHR.
+     */
+    public function ajax(): JsonResponse
+    {
+        return DataTableRedisCache::serveCachedAjax(
+            $this->request(),
+            'programme_course_master_dt:v1:',
+            self::LISTING_CACHE_EPOCH_KEY,
+            [
+                'enabled' => 'PROGRAMME_DATATABLE_CACHE_ENABLED',
+                'seconds' => 'PROGRAMME_DATATABLE_CACHE_SECONDS',
+            ],
+            'CourseMasterDataTable',
+            fn () => parent::ajax(),
+            [
+                'status_filter' => (string) $this->request()->input('status_filter', ''),
+                'course_filter' => (string) $this->request()->input('course_filter', ''),
+            ]
+        );
+    }
+
     /**
      * Build DataTable class.
      *

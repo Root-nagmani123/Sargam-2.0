@@ -11,6 +11,7 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 use App\Models\{CourseMaster, CourseGroupTypeMaster, GroupTypeMasterCourseMasterMap, StudentCourseGroupMap, StudentMasterCourseMap, VenueMaster,FacultyMaster, StudentMaster};
 use App\Exports\GroupMappingExport;
 use App\DataTables\GroupMappingDataTable;
+use App\Support\DataTableRedisCache;
 use Carbon\Carbon;
 use App\Http\Requests\Admin\GroupMapping\BulkMessageRequest;
 use App\Services\Messaging\EmailService;
@@ -30,36 +31,45 @@ class GroupMappingController extends Controller
 
     public function index(GroupMappingDataTable $dataTable)
     {
-        $data_course_id =  get_Role_by_course();
+        $data_course_id = get_Role_by_course();
 
-        $activeCourseQuery = CourseMaster::where('active_inactive', '1')
-            ->where(function ($q) {
-                $q->whereNull('end_date')
-                  ->orWhere('end_date', '>=', now());
-            });
+        $epoch = DataTableRedisCache::readListEpoch(GroupMappingDataTable::LISTING_CACHE_EPOCH_KEY);
+        $cacheKey = 'group_mapping_index_dropdowns:v1:' . md5(json_encode([
+            'epoch' => $epoch,
+            'data_course_id' => $data_course_id,
+            'date' => now()->toDateString(),
+        ]));
 
-        $archivedCourseQuery = CourseMaster::where('active_inactive', '1')
-            ->whereNotNull('end_date')
-            ->where('end_date', '<', now());
+        $dropdowns = DataTableRedisCache::remember(
+            $cacheKey,
+            [
+                'enabled' => 'GROUP_MAPPING_DATATABLE_CACHE_ENABLED',
+                'seconds' => 'GROUP_MAPPING_DATATABLE_CACHE_SECONDS',
+            ],
+            'GroupMappingController@indexDropdowns',
+            function () use ($data_course_id) {
+                $courses = CourseMaster::where('active_inactive', '1')
+                    ->where('end_date', '>', now());
 
-        if(!empty($data_course_id))
-        {
-            $activeCourseQuery = $activeCourseQuery->whereIn('pk', $data_course_id);
-            $archivedCourseQuery = $archivedCourseQuery->whereIn('pk', $data_course_id);
-        }
+                if (! empty($data_course_id)) {
+                    $courses = $courses->whereIn('pk', $data_course_id);
+                }
 
-        $courses = $activeCourseQuery->orderBy('course_name')
-            ->pluck('couse_short_name', 'pk')
-            ->toArray();
+                $courses = $courses->orderBy('course_name')
+                    ->pluck('course_name', 'pk')
+                    ->toArray();
 
-        $archivedCourses = $archivedCourseQuery->orderBy('course_name')
-            ->pluck('couse_short_name', 'pk')
-            ->toArray();
+                $groupTypes = CourseGroupTypeMaster::where('active_inactive', 1)
+                    ->orderBy('type_name')
+                    ->pluck('type_name', 'pk')
+                    ->toArray();
 
-        $groupTypes = CourseGroupTypeMaster::where('active_inactive', 1)
-                ->orderBy('type_name')
-                ->pluck('type_name', 'pk')
-                ->toArray();
+                return compact('courses', 'groupTypes');
+            }
+        );
+
+        $courses = $dropdowns['courses'];
+        $groupTypes = $dropdowns['groupTypes'];
 
         $facilities = FacultyMaster::where('active_inactive', 1)
             ->orderBy('full_name')
@@ -257,6 +267,8 @@ class GroupMappingController extends Controller
                 );
             }
 
+            GroupMappingDataTable::bumpListingCacheEpoch();
+
             return redirect()->route('group.mapping.index')->with('success', $message);
         } catch (\Exception $e) {
             return redirect()->back()->with('error', $e->getMessage())->withInput();
@@ -291,6 +303,8 @@ class GroupMappingController extends Controller
                     'failures' => $failures,
                 ], 422);
             }
+
+            GroupMappingDataTable::bumpListingCacheEpoch();
 
             return response()->json([
                 'status' => 'success',
@@ -419,6 +433,8 @@ class GroupMappingController extends Controller
 
             $mapping = StudentCourseGroupMap::findOrFail($mappingId);
             $mapping->delete();
+
+            GroupMappingDataTable::bumpListingCacheEpoch();
 
             return response()->json([
                 'status' => 'success',
@@ -569,6 +585,8 @@ class GroupMappingController extends Controller
                 'modified_date' => now(),
             ]);
 
+            GroupMappingDataTable::bumpListingCacheEpoch();
+
             return response()->json([
                 'status' => 'success',
                 'message' => 'Student added to group successfully.',
@@ -624,6 +642,8 @@ class GroupMappingController extends Controller
             $groupMapping = GroupTypeMasterCourseMasterMap::findOrFail(decrypt($id));
             $groupMapping->studentCourseGroupMap()->delete();
             $groupMapping->delete();
+
+            GroupMappingDataTable::bumpListingCacheEpoch();
             
             return redirect()->route('group.mapping.index')->with('success', 'Group Mapping deleted successfully.');
         } catch (\Exception $e) {

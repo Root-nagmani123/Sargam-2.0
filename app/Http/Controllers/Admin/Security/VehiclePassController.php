@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin\Security;
 
 use App\Http\Controllers\Controller;
 use App\Exports\VehiclePassExport;
+use App\Support\DataTableRedisCache;
 use App\Support\IdCardSecurityMapper;
 use App\Models\VehiclePassTWApply;
 use App\Models\VehiclePassFWApply;
@@ -11,6 +12,8 @@ use App\Models\SecVehicleType;
 use App\Models\EmployeeMaster;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -20,18 +23,76 @@ use Carbon\Carbon;
 
 class VehiclePassController extends Controller
 {
-    public function index()
+    private const LISTING_CACHE_EPOCH_KEY = 'admin_security_vehicle_pass_index_list_epoch';
+
+    public static function bumpIndexListCacheEpoch(): void
+    {
+        DataTableRedisCache::bumpListEpoch(self::LISTING_CACHE_EPOCH_KEY, 'VehiclePassController@index');
+    }
+
+    public function index(Request $request)
     {
         $user = Auth::user();
         $user_old_pk = EmployeeMaster::where('pk', $user->user_id)->first();
-       
+
         $employeePk = $user->user_id ?? null;
         $pk_old = $user_old_pk->pk_old ?? null;
 
+        $epoch = DataTableRedisCache::readListEpoch(self::LISTING_CACHE_EPOCH_KEY);
+        $cacheKey = 'admin_security_vehicle_pass_index:v1:' . md5(json_encode([
+            'epoch' => $epoch,
+            'employee_pk' => $employeePk,
+            'pk_old' => $pk_old,
+        ]));
+
+        $allPasses = DataTableRedisCache::remember(
+            $cacheKey,
+            [
+                'enabled' => 'VEHICLE_PASS_INDEX_CACHE_ENABLED',
+                'seconds' => 'VEHICLE_PASS_INDEX_CACHE_SECONDS',
+            ],
+            'VehiclePassController@index',
+            fn () => $this->buildVehiclePassIndexAllCollection($employeePk, $pk_old)
+        );
+        if (! $allPasses instanceof Collection) {
+            $allPasses = collect($allPasses);
+        }
+
+        $activeCollection = $allPasses->filter(fn ($m) => (int) $m->vech_card_status === 1)->values();
+        $archiveCollection = $allPasses->filter(fn ($m) => in_array((int) $m->vech_card_status, [2, 3], true))->values();
+
+        $perPage = 10;
+        $activePasses = static::paginateCollection(
+            $activeCollection,
+            (int) $request->get('page', 1) ?: 1,
+            $perPage,
+            $request->url(),
+            'page'
+        );
+        $activePasses->withQueryString();
+        $archivedPasses = static::paginateCollection(
+            $archiveCollection,
+            (int) $request->get('archive_page', 1) ?: 1,
+            $perPage,
+            $request->url(),
+            'archive_page'
+        );
+        $archivedPasses->withQueryString();
+
+        return view('admin.security.vehicle_pass.index', compact('activePasses', 'archivedPasses'));
+    }
+
+    /**
+     * All two-wheeler passes for this applicant (cached; Active/Archive split + pagination in {@see index()}).
+     *
+     * @return Collection<int, VehiclePassTWApply>
+     */
+    private function buildVehiclePassIndexAllCollection(mixed $employeePk, mixed $pk_old): Collection
+    {
         // IMPORTANT: Group creator conditions so status filters apply correctly.
         // Otherwise "where(veh_created_by = X) OR (veh_created_by = pk_old AND status = ...)"
         // would cause records to appear in both Pending and Archive regardless of status.
-        $baseQuery = fn () => VehiclePassTWApply::with(['vehicleType', 'employee'])
+        return VehiclePassTWApply::with(['vehicleType', 'employee'])
             ->withExists(['approvals' => function ($q) {
                 $q->where(function ($w) {
                     $w->whereIn('status', [1, 2, 3])
@@ -44,13 +105,20 @@ class VehiclePassController extends Controller
                     $q->orWhere('veh_created_by', $pk_old);
                 }
             })
-            ->orderBy('created_date', 'desc');
-            
+            ->orderBy('created_date', 'desc')
+            ->get();
+    }
 
-        $activePasses = $baseQuery()->where('vech_card_status', 1)->paginate(10);
-        $archivedPasses = $baseQuery()->whereIn('vech_card_status', [2, 3])->paginate(10, ['*'], 'archive_page');
+    /**
+     * Paginate a collection with a custom page name (tab-specific pagination).
+     */
+    private static function paginateCollection(Collection $collection, int $currentPage, int $perPage, string $path, string $pageName): LengthAwarePaginator
+    {
+        $currentPage = max(1, $currentPage);
+        $total = $collection->count();
+        $slice = $collection->forPage($currentPage, $perPage)->values();
 
-        return view('admin.security.vehicle_pass.index', compact('activePasses', 'archivedPasses'));
+        return new LengthAwarePaginator($slice, $total, $perPage, $currentPage, ['path' => $path, 'pageName' => $pageName]);
     }
 
     /**
@@ -60,6 +128,8 @@ class VehiclePassController extends Controller
     {
         $user = Auth::user();
         $employeePk = $user->user_id ?? $user->pk ?? null;
+        $userOldPk = $employeePk ? EmployeeMaster::where('pk', $employeePk)->first() : null;
+        $pkOld = $userOldPk->pk_old ?? null;
         $tab = $request->get('tab', 'active');
         $format = $request->get('format', 'xlsx');
 
@@ -70,7 +140,12 @@ class VehiclePassController extends Controller
         $filename = 'vehicle_pass_requests_' . $tab . '_' . now()->format('Y-m-d_His');
 
         $baseQuery = VehiclePassTWApply::with(['vehicleType', 'employee'])
-            ->where('veh_created_by', $employeePk)
+            ->where(function ($q) use ($employeePk, $pkOld) {
+                $q->where('veh_created_by', $employeePk);
+                if ($pkOld) {
+                    $q->orWhere('veh_created_by', $pkOld);
+                }
+            })
             ->orderBy('created_date', 'desc');
 
         if ($format === 'pdf') {
@@ -95,14 +170,14 @@ class VehiclePassController extends Controller
 
         if ($format === 'csv') {
             return Excel::download(
-                new VehiclePassExport($tab, $employeePk),
+                new VehiclePassExport($tab, $employeePk, $pkOld),
                 $filename . '.csv',
                 \Maatwebsite\Excel\Excel::CSV
             );
         }
 
         return Excel::download(
-            new VehiclePassExport($tab, $employeePk),
+            new VehiclePassExport($tab, $employeePk, $pkOld),
             $filename . '.xlsx',
             \Maatwebsite\Excel\Excel::XLSX
         );
@@ -634,6 +709,7 @@ class VehiclePassController extends Controller
         // vehicle_pass_tw_apply_approval rows are inserted when approvers approve (VehiclePassApprovalController).
         // Condition: Employee ID card must be valid (not expired), vehicle no must be valid.
 
+        static::bumpIndexListCacheEpoch();
         return redirect()->route('admin.security.vehicle_pass.index')->with('success', 'Vehicle Pass application submitted successfully');
     }
 
@@ -920,6 +996,7 @@ class VehiclePassController extends Controller
         $vehiclePass->gov_veh = $govVeh;
         $vehiclePass->save();
 
+        static::bumpIndexListCacheEpoch();
         return redirect()->route('admin.security.vehicle_pass.index')->with('success', 'Vehicle Pass application updated successfully');
     }
 
@@ -949,6 +1026,7 @@ class VehiclePassController extends Controller
 
         $vehiclePass->delete();
 
+        static::bumpIndexListCacheEpoch();
         return redirect()->route('admin.security.vehicle_pass.index')->with('success', 'Vehicle Pass application deleted successfully');
     }
 

@@ -145,16 +145,22 @@
                                 </td>
                             </tr>
                             @empty
+                            {{-- DataTables does not support colspan/rowspan in tbody (tn/18); use exactly 7 <td> to match <th> --}}
                             <tr>
-                                <td colspan="7" class="p-0 border-0">
-                                    <div class="text-center py-5 px-3">
-                                        <div class="rounded-circle bg-body-secondary bg-opacity-50 d-inline-flex p-4 mb-3">
-                                            <iconify-icon icon="solar:clipboard-list-bold-duotone" class="fs-1 text-body-secondary"></iconify-icon>
-                                        </div>
-                                        <h6 class="text-body-secondary mb-1">No issues</h6>
-                                        <p class="small text-body-secondary mb-0">Try adjusting your filters or log a new issue.</p>
-                                        <a href="{{ route('admin.issue-management.create') }}" class="btn btn-primary  mt-3">Log New Issue</a>
+                                <td class="border-0 align-middle text-muted small">—</td>
+                                <td class="border-0 align-middle text-muted small">—</td>
+                                <td class="border-0 align-middle text-muted small">—</td>
+                                <td class="border-0 text-center py-5 px-2">
+                                    <div class="rounded-circle bg-body-secondary bg-opacity-50 d-inline-flex p-4 mb-3">
+                                        <iconify-icon icon="solar:clipboard-list-bold-duotone" class="fs-1 text-body-secondary"></iconify-icon>
                                     </div>
+                                    <h6 class="text-body-secondary mb-1">No issues</h6>
+                                    <p class="small text-body-secondary mb-0">Try adjusting your filters or log a new issue.</p>
+                                </td>
+                                <td class="border-0 align-middle text-muted small">—</td>
+                                <td class="border-0 align-middle text-muted small">—</td>
+                                <td class="border-0 align-middle text-end pe-4">
+                                    <a href="{{ route('admin.issue-management.create') }}" class="btn btn-primary mt-2">Log New Issue</a>
                                 </td>
                             </tr>
                             @endforelse

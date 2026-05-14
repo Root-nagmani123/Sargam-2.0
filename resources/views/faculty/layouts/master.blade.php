@@ -445,6 +445,7 @@
     <script src="{{ asset('js/mobile-sidebar.js') }}"></script>
     <script src="{{ asset('admin_assets/js/tab-memory.js') }}" defer></script>
     @stack('scripts')
+    @yield('scripts')
     <script>
 document.addEventListener('DOMContentLoaded', function () {
     const toggle = document.getElementById('searchToggle');

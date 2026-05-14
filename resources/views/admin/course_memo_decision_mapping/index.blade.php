@@ -234,206 +234,201 @@
 
 @push('scripts')
 <script>
-$(function () {
-
-    // ── Init DataTable (unchanged AJAX/columns logic) ──
-    var table = $('#memoDecisionTable').DataTable({
-        processing: true,
-        serverSide: true,
-        ajax: "{{ route('course.memo.decision.index') }}",
-        pagingType: 'full_numbers',
-        dom: 'rtp',
-        info: false,
-        pageLength: 10,
-        language: {
-            paginate: { first: '«', last: '»', next: '›', previous: '‹' }
-        },
-        columns: [
-            { data: 'DT_RowIndex',     name: 'DT_RowIndex',               orderable: false, searchable: false },
-            { data: 'course_name',     name: 'course.course_name' },
-            { data: 'memo_decision',   name: 'memo.memo_type_name' },
-            { data: 'memo_conclusion', name: 'memoConclusion.discussion_name' },
-            { data: 'status',          name: 'status',  orderable: false, searchable: false },
-            { data: 'action',          name: 'action',  orderable: false, searchable: false }
-        ],
-        order: [[1, 'asc']]
+    $(function() {
+        const tableSelector = '#memoDecisionTable';
+        if (!$.fn.DataTable.isDataTable(tableSelector)) {
+            $(tableSelector).DataTable({
+                processing: true,
+                serverSide: true,
+                ajax: "{{ route('course.memo.decision.index') }}",
+                order: [[0, 'desc']],
+                columns: [{
+                        data: 'DT_RowIndex',
+                        name: 'DT_RowIndex',
+                        orderable: false,
+                        searchable: false
+                    },
+                    {
+                        data: 'course_name',
+                        name: 'course.course_name'
+                    },
+                    {
+                        data: 'memo_decision',
+                        name: 'memo.memo_type_name'
+                    },
+                    {
+                        data: 'memo_conclusion',
+                        name: 'memoConclusion.discussion_name'
+                    },
+                    {
+                        data: 'status',
+                        name: 'status',
+                        orderable: false,
+                        searchable: false
+                    },
+                    {
+                        data: 'action',
+                        name: 'action',
+                        orderable: false,
+                        searchable: false
+                    }
+                ],
+                order: [
+                    [1, 'asc']
+                ]
+            });
+        }
     });
+</script>
 
-    // ── Move DT pagination into custom bottom row ──
-    var $paginate = $('#memoDecisionTable_wrapper .dataTables_paginate');
-    if ($paginate.length) { $paginate.appendTo('#cmdPaginationCell'); }
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
 
-    // ── Draw event: update total info + per-page select ──
-    $('#memoDecisionTable').on('draw.dt', function () {
-        var info = table.page.info();
-        $('#cmdTotalInfo').text('of ' + info.recordsTotal + ' items');
-        $('#cmdPerPage').val(table.page.len());
-    });
-
-    // ── Custom Search ──
-    $('#cmdSearch').on('input', function () {
-        clearTimeout(window._cmdSearchTimer);
-        var q = $(this).val();
-        window._cmdSearchTimer = setTimeout(function () { table.search(q).draw(); }, 350);
-    });
-
-    // ── Per-page change ──
-    $('#cmdPerPage').on('change', function () {
-        table.page.len(parseInt($(this).val())).draw();
-    });
-
-    // ── Edit btn → populate + open Bootstrap modal (unchanged logic) ──
-    $(document).on('click', '.editConclusion', function () {
-        $('#edit_id').val($(this).data('id'));
-        $('#edit_course_master_pk').val($(this).data('course')).trigger('change');
-        $('#edit_memo_type_master_pk').val($(this).data('memo')).trigger('change');
-        $('#edit_memo_conclusion_master_pk').val($(this).data('conclusion')).trigger('change');
-        $('#edit_active_inactive').val($(this).data('status')).trigger('change');
-        bootstrap.Modal.getOrCreateInstance(document.getElementById('editconclusionModal')).show();
-    });
-
-    // ── ADD: submit (unchanged fetch logic) ──
-    document.getElementById('submitConclusionForm').addEventListener('click', function (e) {
-        e.preventDefault();
-
-        var $course     = $('#course_master_pk');
-        var $memo       = $('#memo_type_master_pk');
-        var $conclusion = $('#memo_conclusion_master_pk');
-        var $status     = $('#active_inactive');
-        var valid       = true;
-
-        [$course, $memo, $conclusion, $status].forEach(function ($el) { $el.removeClass('is-invalid'); });
-        if (!$course.val())     { $course.addClass('is-invalid');     valid = false; }
-        if (!$memo.val())       { $memo.addClass('is-invalid');       valid = false; }
-        if (!$conclusion.val()) { $conclusion.addClass('is-invalid'); valid = false; }
-        if (!$status.val())     { $status.addClass('is-invalid');     valid = false; }
-        if (!valid) return;
-
-        var $btn = $(this).prop('disabled', true).text('Saving...');
-        var data = {
-            course_master_pk:          $course.val(),
-            memo_type_master_pk:       $memo.val(),
-            memo_conclusion_master_pk: $conclusion.val(),
-            active_inactive:           $status.val()
-        };
-
-        fetch("{{ route('course.memo.decision.store') }}", {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
-            body: JSON.stringify(data)
-        })
-        .then(function (res) { return res.json(); })
-        .then(function (res) {
-            $btn.prop('disabled', false).text('Create Memo Mapping');
-            if (res.status === true) {
-                Swal.fire({ icon: 'success', title: 'Success', text: res.message || 'Mapping saved successfully!', timer: 1500, showConfirmButton: false });
-                document.getElementById('conclusionForm').reset();
-                $('#conclusionForm .form-select').removeClass('is-invalid');
-                bootstrap.Modal.getInstance(document.getElementById('addCmdModal')).hide();
-                table.ajax.reload(null, false);
-            } else {
-                Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'Something went wrong!' });
-            }
-        })
-        .catch(function () {
-            $btn.prop('disabled', false).text('Create Memo Mapping');
-            Swal.fire({ icon: 'error', title: 'Server Error', text: 'Please try again later.' });
+        // Show modal on button click
+        document.getElementById('showConclusionAlert').addEventListener('click', function() {
+            var conclusionModal = new bootstrap.Modal(document.getElementById('conclusionModal'));
+            conclusionModal.show();
         });
-    });
 
-    document.getElementById('addCmdModal').addEventListener('hidden.bs.modal', function () {
-        document.getElementById('conclusionForm').reset();
-        $('#conclusionForm .form-select').removeClass('is-invalid');
-    });
+        // Handle form submission
+        document.getElementById('submitConclusionForm').addEventListener('click', function(e) {
+            e.preventDefault(); // ✅ prevent form double submit
 
-    // ── EDIT: submit (unchanged fetch logic) ──
-    $('#edit_submitConclusionForm').on('click', function (e) {
-        e.preventDefault();
+            const course = document.getElementById('course_master_pk').value;
+            const memo = document.getElementById('memo_type_master_pk').value;
+            const conclusion = document.getElementById('memo_conclusion_master_pk').value;
+            const status = document.getElementById('active_inactive').value;
 
-        var $course     = $('#edit_course_master_pk');
-        var $memo       = $('#edit_memo_type_master_pk');
-        var $conclusion = $('#edit_memo_conclusion_master_pk');
-        var $status     = $('#edit_active_inactive');
-        var valid       = true;
-
-        [$course, $memo, $conclusion, $status].forEach(function ($el) { $el.removeClass('is-invalid'); });
-        if (!$course.val())     { $course.addClass('is-invalid');     valid = false; }
-        if (!$memo.val())       { $memo.addClass('is-invalid');       valid = false; }
-        if (!$conclusion.val()) { $conclusion.addClass('is-invalid'); valid = false; }
-        if (!$status.val())     { $status.addClass('is-invalid');     valid = false; }
-        if (!valid) return;
-
-        var $btn = $(this).prop('disabled', true).text('Saving...');
-        var data = {
-            id:                        $('#edit_id').val(),
-            course_master_pk:          $course.val(),
-            memo_type_master_pk:       $memo.val(),
-            memo_conclusion_master_pk: $conclusion.val(),
-            active_inactive:           $status.val()
-        };
-
-        fetch("{{ route('course.memo.decision.update') }}", {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
-            body: JSON.stringify(data)
-        })
-        .then(function (res) { return res.json(); })
-        .then(function (res) {
-            $btn.prop('disabled', false).text('Update');
-            if (res.status) {
-                Swal.fire({ icon: 'success', title: 'Updated', text: res.message, timer: 1500, showConfirmButton: false });
-                bootstrap.Modal.getInstance(document.getElementById('editconclusionModal')).hide();
-                table.ajax.reload(null, false);
-            } else {
-                Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'Something went wrong!' });
+            // ✅ Client-side validation
+            if (!course || !memo || !conclusion || !status) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Required',
+                    text: 'Please fill all required fields!'
+                });
+                return;
             }
-        })
-        .catch(function () {
-            $btn.prop('disabled', false).text('Update');
-            Swal.fire({ icon: 'error', title: 'Server Error', text: 'Please try again later.' });
-        });
-    });
 
-    document.getElementById('editconclusionModal').addEventListener('hidden.bs.modal', function () {
-        document.getElementById('edit_conclusionForm').reset();
-        $('#edit_conclusionForm .form-select').removeClass('is-invalid');
-    });
+            const data = {
+                course_master_pk: course,
+                memo_type_master_pk: memo,
+                memo_conclusion_master_pk: conclusion,
+                active_inactive: status
+            };
 
-    // ── Delete (SweetAlert + fetch DELETE) ──
-    $(document).on('click', '.cmd-delete-btn', function () {
-        var url = $(this).data('url');
-        Swal.fire({
-            title: 'Are you sure?',
-            text: 'This action cannot be undone!',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
-            confirmButtonText: 'Yes, delete it!',
-            cancelButtonText: 'Cancel'
-        }).then(function (result) {
-            if (result.isConfirmed) {
-                fetch(url, {
-                    method: 'DELETE',
-                    headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'), 'Accept': 'application/json' }
+            console.log('Submitting:', data);
+
+            fetch("{{ route('course.memo.decision.store') }}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(data)
                 })
-                .then(function (res) { return res.json(); })
-                .then(function (res) {
-                    if (res.status) {
-                        Swal.fire({ icon: 'success', title: 'Deleted!', text: res.message, timer: 1500, showConfirmButton: false });
-                        table.ajax.reload(null, false);
+                .then(response => response.json())
+                .then(res => {
+                    if (res.status === true) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Success',
+                            text: res.message || 'Course Memo Decision Mapping saved successfully!',
+                            timer: 1500,
+                            showConfirmButton: false
+                        }).then(() => {
+                            // ✅ Reload DataTable
+                            $('#memoDecisionTable').DataTable().ajax.reload(null, false);
+
+                            // ✅ Reset form
+                            document.getElementById('conclusionForm').reset();
+                            $('#conclusionModal').modal('hide');
+                        });
                     } else {
-                        Swal.fire({ icon: 'error', title: 'Error!', text: res.message });
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: res.message || 'Something went wrong!'
+                        });
                     }
                 })
-                .catch(function () {
-                    Swal.fire({ icon: 'error', title: 'Error!', text: 'Something went wrong.' });
+                .catch(error => {
+                    console.error(error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Server Error',
+                        text: 'Please try again later.'
+                    });
                 });
-            }
+        });
+
+
+    });
+
+    //edit form//
+
+    document.addEventListener('DOMContentLoaded', function() {
+
+        // EDIT button click
+        $(document).on('click', '.editConclusion', function() {
+
+            let id = $(this).data('id');
+            let course = $(this).data('course');
+            let memo = $(this).data('memo');
+            let conclusion = $(this).data('conclusion');
+            let status = $(this).data('status');
+
+            console.log(id, course, memo, conclusion, status); // 🔍 debug
+            $('#edit_id').val(id);
+            $('#edit_course_master_pk').val(course).trigger('change');
+            $('#edit_memo_type_master_pk').val(memo).trigger('change');
+            $('#edit_memo_conclusion_master_pk').val(conclusion).trigger('change');
+            $('#edit_active_inactive').val(status).trigger('change');
+
+            // Show modal
+            new bootstrap.Modal(document.getElementById('editconclusionModal')).show();
         });
     });
 
+    $('#edit_submitConclusionForm').on('click', function (e) {
+    e.preventDefault();
+
+    const data = {
+        id: $('#edit_id').val(),
+        course_master_pk: $('#edit_course_master_pk').val(),
+        memo_type_master_pk: $('#edit_memo_type_master_pk').val(),
+        memo_conclusion_master_pk: $('#edit_memo_conclusion_master_pk').val(),
+        active_inactive: $('#edit_active_inactive').val()
+    };
+    alert(data.course_master_pk);
+
+
+    fetch("{{ route('course.memo.decision.update') }}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify(data)
+    })
+    .then(res => res.json())
+    .then(res => {
+        if (res.status) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Updated',
+                text: res.message,
+                timer: 1500,
+                showConfirmButton: false
+            }).then(() => {
+                $('#memoDecisionTable').DataTable().ajax.reload(null, false);
+                $('#editconclusionModal').modal('hide');
+            });
+        }
+    });
 });
+
 </script>
 
 @if(session('success'))

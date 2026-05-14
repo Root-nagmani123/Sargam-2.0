@@ -3,7 +3,9 @@
 namespace App\DataTables\Master;
 
 use App\Models\EmployeeTypeMaster;
+use App\Support\DataTableRedisCache;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
+use Illuminate\Http\JsonResponse;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Yajra\DataTables\Html\Button;
@@ -14,6 +16,31 @@ use Yajra\DataTables\Services\DataTable;
 
 class EmployeeTypeMasterDataTable extends DataTable
 {
+    private const LISTING_CACHE_EPOCH_KEY = 'master_employee_type_dt_list_epoch';
+
+    public static function bumpListingCacheEpoch(): void
+    {
+        DataTableRedisCache::bumpListEpoch(self::LISTING_CACHE_EPOCH_KEY, 'EmployeeTypeMasterDataTable');
+    }
+
+    /**
+     * Server-side JSON. .env: EMPLOYEE_TYPE_MASTER_DATATABLE_CACHE_*; store via {@see \App\Support\RedisBackedCache} through {@see DataTableRedisCache}.
+     */
+    public function ajax(): JsonResponse
+    {
+        return DataTableRedisCache::serveCachedAjax(
+            $this->request(),
+            'master_etm_dt:v1:',
+            self::LISTING_CACHE_EPOCH_KEY,
+            [
+                'enabled' => 'EMPLOYEE_TYPE_MASTER_DATATABLE_CACHE_ENABLED',
+                'seconds' => 'EMPLOYEE_TYPE_MASTER_DATATABLE_CACHE_SECONDS',
+            ],
+            'EmployeeTypeMasterDataTable',
+            fn () => parent::ajax()
+        );
+    }
+
     /**
      * Build DataTable class.
      *

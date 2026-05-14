@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Admin\Security;
 
+use App\Http\Controllers\Admin\DuplicateIDCardRequestController;
+use App\Http\Controllers\Admin\EmployeeIDCardRequestController;
 use App\Http\Controllers\Controller;
 use App\Models\SecurityParmIdApply;
 use App\Models\SecurityParmIdApplyApproval;
@@ -9,6 +11,7 @@ use App\Models\SecurityDupPermIdApply;
 use App\Models\SecurityDupPermIdApplyApproval;
 use App\Models\SecurityDupOtherIdApply;
 use App\Models\SecurityDupOtherIdApplyApproval;
+use App\Support\DataTableRedisCache;
 use App\Support\IdCardSecurityMapper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -23,6 +26,20 @@ use Illuminate\Pagination\LengthAwarePaginator;
  */
 class EmployeeIDCardApprovalController extends Controller
 {
+    private const APPROVAL1_LIST_EPOCH_KEY = 'employee_idcard_approval1_list_epoch';
+
+    public static function bumpApproval1ListCacheEpoch(): void
+    {
+        DataTableRedisCache::bumpListEpoch(self::APPROVAL1_LIST_EPOCH_KEY, 'EmployeeIDCardApprovalController@approval1');
+        self::bumpApplicantEmployeeIdcardIndexCaches();
+    }
+
+    private static function bumpApplicantEmployeeIdcardIndexCaches(): void
+    {
+        EmployeeIDCardRequestController::bumpIndexListCacheEpoch();
+        DuplicateIDCardRequestController::bumpIndexListCacheEpoch();
+    }
+
     /**
      * Default “Request Date From” on Approval II (and dashboard “total pending” counts for the same scope).
      */
@@ -41,6 +58,51 @@ class EmployeeIDCardApprovalController extends Controller
         $user = Auth::user();
         $currentEmployeePk = $user->user_id ?? $user->pk ?? null;
 
+        $epoch = DataTableRedisCache::readListEpoch(self::APPROVAL1_LIST_EPOCH_KEY);
+        $cacheKey = 'employee_idcard_approval1:v1:' . md5(json_encode([
+            'epoch' => $epoch,
+            'emp_pk' => $currentEmployeePk,
+            'search' => $request->get('search'),
+            'date_from' => $request->get('date_from'),
+            'date_to' => $request->get('date_to'),
+            'card_type' => $request->get('card_type'),
+        ]));
+
+        $payload = DataTableRedisCache::remember(
+            $cacheKey,
+            [
+                'enabled' => 'EMPLOYEE_IDCARD_APPROVAL1_CACHE_ENABLED',
+                'seconds' => 'EMPLOYEE_IDCARD_APPROVAL1_CACHE_SECONDS',
+            ],
+            'EmployeeIDCardApprovalController@approval1',
+            fn () => $this->buildApproval1ListPayload($request, $currentEmployeePk)
+        );
+
+        $merged = $payload['merged'] ?? collect();
+        if (! $merged instanceof \Illuminate\Support\Collection) {
+            $merged = collect($merged);
+        }
+        $cardTypes = $payload['cardTypes'] ?? [];
+
+        $perPage = (int) $request->get('per_page', 10);
+        $perPage = in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 10;
+        $page = (int) $request->get('page', 1);
+        $requests = new LengthAwarePaginator(
+            $merged->forPage($page, $perPage),
+            $merged->count(),
+            $perPage,
+            $page,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+
+        return view('admin.security.employee_idcard_approval.approval1', compact('requests', 'cardTypes'));
+    }
+
+    /**
+     * @return array{merged: \Illuminate\Support\Collection, cardTypes: array}
+     */
+    private function buildApproval1ListPayload(Request $request, $currentEmployeePk): array
+    {
         // Contractual regular ID Card requests - Approval 1
         $contA1Done = DB::table('security_con_oth_id_apply_approval')
             ->where('status', 1)
@@ -113,7 +175,7 @@ class EmployeeIDCardApprovalController extends Controller
             ->where('card_type', 'Contractual')
             // Approval-I scope: requests assigned to current authority
             ->where('department_approval_emp_pk', $currentEmployeePk);
-            
+
         // (No whereNotIn here: we want already-approved rows to still appear as view-only.)
         $dupContQuery->orderByDesc('created_date');
 
@@ -181,20 +243,9 @@ class EmployeeIDCardApprovalController extends Controller
 
         $merged = $contDtos->concat($dupContDtos)->sortByDesc('created_at')->values();
 
-        $perPage = (int) $request->get('per_page', 10);
-        $perPage = in_array($perPage, [10, 25, 50, 100]) ? $perPage : 10;
-        $page = (int) $request->get('page', 1);
-        $requests = new LengthAwarePaginator(
-            $merged->forPage($page, $perPage),
-            $merged->count(),
-            $perPage,
-            $page,
-            ['path' => $request->url(), 'query' => $request->query()]
-        );
-
         $cardTypes = DB::table('sec_id_cardno_master')->orderBy('sec_card_name')->pluck('sec_card_name', 'pk')->toArray();
 
-        return view('admin.security.employee_idcard_approval.approval1', compact('requests', 'cardTypes'));
+        return ['merged' => $merged, 'cardTypes' => $cardTypes];
     }
 
     public function approval2(Request $request)
@@ -935,7 +986,8 @@ class EmployeeIDCardApprovalController extends Controller
             DB::table('security_dup_other_id_apply')
                 ->where('emp_id_apply', $applyId)
                 ->update(['id_card_generate_date' => $now]);
-            return redirect()->back()->with('success', 'Record marked as issued. You can view it under the Issued tab.');
+            self::bumpApproval1ListCacheEpoch();
+            return redirect()->back()->with('success', 'Record moved to archive successfully.');
         }
 
         if (is_string($decoded) && str_starts_with($decoded, 'p-dup-')) {
@@ -943,6 +995,7 @@ class EmployeeIDCardApprovalController extends Controller
             DB::table('security_dup_perm_id_apply')
                 ->where('emp_id_apply', $applyId)
                 ->update(['id_card_generate_date' => $now]);
+            self::bumpApplicantEmployeeIdcardIndexCaches();
             return redirect()->back()->with('success', 'Record marked as issued. You can view it under the Issued tab.');
         }
 
@@ -951,7 +1004,8 @@ class EmployeeIDCardApprovalController extends Controller
             DB::table('security_con_oth_id_apply')
                 ->where('pk', $pk)
                 ->update(['id_card_generate_date' => $now]);
-            return redirect()->back()->with('success', 'Record marked as issued. You can view it under the Issued tab.');
+            self::bumpApproval1ListCacheEpoch();
+            return redirect()->back()->with('success', 'Record moved to archive successfully.');
         }
 
         // Permanent regular (emp_id_apply)
@@ -959,6 +1013,7 @@ class EmployeeIDCardApprovalController extends Controller
             ->where('emp_id_apply', $decoded)
             ->update(['id_card_generate_date' => $now]);
 
+        self::bumpApplicantEmployeeIdcardIndexCaches();
         return redirect()->back()->with('success', 'Record marked as issued. You can view it under the Issued tab.');
     }
 
@@ -1523,6 +1578,8 @@ class EmployeeIDCardApprovalController extends Controller
                 'modified_date' => now()->format('Y-m-d H:i:s'),
             ]);
 
+            self::bumpApproval1ListCacheEpoch();
+
             return redirect()->route('admin.security.employee_idcard_approval.approval1')
                 ->with('success', 'Contractual duplicate ID Card request approved at Level 1 and forwarded to Security for further approval.');
          }
@@ -1568,6 +1625,8 @@ class EmployeeIDCardApprovalController extends Controller
                 ]);
                
 
+            self::bumpApproval1ListCacheEpoch();
+
             return redirect()->route('admin.security.employee_idcard_approval.approval1')
                 ->with('success', 'Contractual ID Card request approved at Level 1 and forwarded to Security for further approval.');
         }
@@ -1590,6 +1649,8 @@ class EmployeeIDCardApprovalController extends Controller
             'modified_by' => $employeePk,
             'modified_date' => now()->format('Y-m-d H:i:s'),
         ]);
+
+        self::bumpApproval1ListCacheEpoch();
 
         return redirect()->route('admin.security.employee_idcard_approval.approval1')
             ->with('success', 'Request approved successfully. It will now move to Approver 2.');
@@ -1663,6 +1724,7 @@ class EmployeeIDCardApprovalController extends Controller
                 // ignore if columns don't exist
             }
 
+            self::bumpApplicantEmployeeIdcardIndexCaches();
             return redirect()->route('admin.security.employee_idcard_approval.approval2')
                 ->with('success', 'Duplicate ID Card request recommended at Level 2. It will now move to Approval III.');
         }
@@ -1699,7 +1761,7 @@ class EmployeeIDCardApprovalController extends Controller
                 'modified_date' => now()->format('Y-m-d H:i:s'),
             ]);
 
-
+            self::bumpApplicantEmployeeIdcardIndexCaches();
             return redirect()->route('admin.security.employee_idcard_approval.approval2')
                 ->with('success', 'Duplicate ID Card request approved successfully.');
         }
@@ -1753,6 +1815,7 @@ class EmployeeIDCardApprovalController extends Controller
             }
 
             // Do not mark id_status approved here; final approval at Level 3 (ID number generated there).
+            self::bumpApplicantEmployeeIdcardIndexCaches();
             return redirect()->route('admin.security.employee_idcard_approval.approval2')
                 ->with('success', 'Contractual ID Card request approved at Level 2 and forwarded for final approval.');
         }
@@ -1815,6 +1878,7 @@ class EmployeeIDCardApprovalController extends Controller
         // Keep id_status as Pending; final Approval III will mark as Approved.
         $row->save();
 
+        self::bumpApplicantEmployeeIdcardIndexCaches();
         return redirect()->route('admin.security.employee_idcard_approval.approval2')
             ->with('success', 'Request recommended successfully at Level 2. It will now move to Approval III.');
     }
@@ -1891,6 +1955,7 @@ class EmployeeIDCardApprovalController extends Controller
                 'id_status' => 2,
             ]);
 
+            self::bumpApplicantEmployeeIdcardIndexCaches();
             return redirect()->route('admin.security.employee_idcard_approval.approval3')
                 ->with('success', 'Duplicate ID Card request approved successfully at final level.');
         }
@@ -1937,6 +2002,7 @@ class EmployeeIDCardApprovalController extends Controller
                 'id_status' => 2,
             ]);
 
+            self::bumpApplicantEmployeeIdcardIndexCaches();
             return redirect()->route('admin.security.employee_idcard_approval.approval3')
                 ->with('success', 'Duplicate ID Card request approved successfully at final level.');
         }
@@ -2054,9 +2120,10 @@ class EmployeeIDCardApprovalController extends Controller
             // return redirect()->route('admin.security.employee_idcard_approval.approval3')
             //     ->with('success', 'Contractual ID Card request approved at Level 3. ID card is now fully approved.');
 
-                    return redirect()->route('admin.security.employee_idcard_approval.approval3')
+            self::bumpApplicantEmployeeIdcardIndexCaches();
+            return redirect()->route('admin.security.employee_idcard_approval.approval3')
                 ->with('success', 'Contractual ID Card request approved successfully at final level.');
-    }
+        }
 
         // Permanent regular ID Card request (emp_id_apply string, primary key on security_parm_id_apply)
         $row = SecurityParmIdApply::with('employee')->findOrFail($empIdApply);
@@ -2124,6 +2191,7 @@ class EmployeeIDCardApprovalController extends Controller
             return redirect()->back()->with('error', 'Unable to complete final approval. Please try again.');
         }
 
+        self::bumpApplicantEmployeeIdcardIndexCaches();
         return redirect()->route('admin.security.employee_idcard_approval.approval3')
             ->with('success', 'Request approved successfully at Level 3. ID card is now fully approved.');
     }
@@ -2186,6 +2254,11 @@ class EmployeeIDCardApprovalController extends Controller
             $route = $stage === 1
                 ? 'admin.security.employee_idcard_approval.approval1'
                 : ($stage === 2 ? 'admin.security.employee_idcard_approval.approval2' : 'admin.security.employee_idcard_approval.approval3');
+            if ($stage === 1) {
+                self::bumpApproval1ListCacheEpoch();
+            } else {
+                self::bumpApplicantEmployeeIdcardIndexCaches();
+            }
             return redirect()->route($route)->with('success', 'Request rejected.');
         }
 
@@ -2229,6 +2302,7 @@ class EmployeeIDCardApprovalController extends Controller
             $route = $stage === 2
                 ? 'admin.security.employee_idcard_approval.approval2'
                 : 'admin.security.employee_idcard_approval.approval3';
+            self::bumpApplicantEmployeeIdcardIndexCaches();
             return redirect()->route($route)->with('success', 'Request rejected.');
         }
 
@@ -2276,6 +2350,11 @@ class EmployeeIDCardApprovalController extends Controller
             $route = $stage === 1
                 ? 'admin.security.employee_idcard_approval.approval1'
                 : ($stage === 2 ? 'admin.security.employee_idcard_approval.approval2' : 'admin.security.employee_idcard_approval.approval3');
+            if ($stage === 1) {
+                self::bumpApproval1ListCacheEpoch();
+            } else {
+                self::bumpApplicantEmployeeIdcardIndexCaches();
+            }
             return redirect()->route($route)->with('success', 'Request rejected.');
         }
 
@@ -2316,6 +2395,11 @@ class EmployeeIDCardApprovalController extends Controller
         $route = $stage === 1
             ? 'admin.security.employee_idcard_approval.approval1'
             : ($stage === 2 ? 'admin.security.employee_idcard_approval.approval2' : 'admin.security.employee_idcard_approval.approval3');
+        if ($stage === 1) {
+            self::bumpApproval1ListCacheEpoch();
+        } else {
+            self::bumpApplicantEmployeeIdcardIndexCaches();
+        }
         return redirect()->route($route)->with('success', 'Request rejected.');
     }
 

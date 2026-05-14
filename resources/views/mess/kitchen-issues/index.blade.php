@@ -49,7 +49,6 @@
                                 @endphp
                                 <option value="0" {{ in_array('0', $selectedStatuses) || in_array(0, $selectedStatuses) ? 'selected' : '' }}>Pending</option>
                                 <option value="2" {{ in_array('2', $selectedStatuses) || in_array(2, $selectedStatuses) ? 'selected' : '' }}>Approved</option>
-                                <option value="4" {{ in_array('4', $selectedStatuses) || in_array(4, $selectedStatuses) ? 'selected' : '' }}>Completed</option>
                             </select>
                         </div>
                         <div class="sv-filter-field">
@@ -82,6 +81,28 @@
                                 <option value="" {{ $selectedClientType === '' ? 'selected' : '' }}>All</option>
                                 @foreach($filterClientTypes as $value => $label)
                                     <option value="{{ $value }}" {{ $selectedClientType === $value ? 'selected' : '' }}>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="sv-filter-field">
+                            <label class="form-label small text-muted mb-1">Client category</label>
+                            <select name="client_type_pk" id="filter_client_type_pk" class="form-select w-100">
+                                <option value="">All categories</option>
+                                @foreach(($filterClientTypePkOptions ?? collect()) as $option)
+                                    <option value="{{ $option['value'] }}" {{ (string) ($selectedClientTypePk ?? '') === (string) $option['value'] ? 'selected' : '' }}>
+                                        {{ $option['text'] }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="sv-filter-field">
+                            <label class="form-label small text-muted mb-1">Buyer name</label>
+                            <select name="buyer_name" id="filter_buyer_name" class="form-select w-100">
+                                <option value="">All Buyers</option>
+                                @foreach(($filterBuyerNames ?? collect()) as $buyerName)
+                                    <option value="{{ $buyerName }}" {{ (string) ($selectedBuyerName ?? '') === (string) $buyerName ? 'selected' : '' }}>
+                                        {{ $buyerName }}
+                                    </option>
                                 @endforeach
                             </select>
                         </div>
@@ -1692,6 +1713,139 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         console.warn('Choices.js library not loaded on Selling Voucher page');
     }
+
+    (function initSellingVoucherFilterCascade() {
+        var typeEl = document.getElementById('filter_client_type');
+        var typePkEl = document.getElementById('filter_client_type_pk');
+        var buyerEl = document.getElementById('filter_buyer_name');
+        if (!typeEl || !typePkEl || !buyerEl) return;
+
+        var selectedTypePk = @json((string) ($selectedClientTypePk ?? request('client_type_pk', '')));
+        var selectedBuyer = @json((string) ($selectedBuyerName ?? request('buyer_name', '')));
+        var employees = @json(($employees ?? collect())->pluck('full_name')->filter()->values()->all(), JSON_UNESCAPED_UNICODE);
+        var faculties = @json(($faculties ?? collect())->pluck('full_name')->filter()->values()->all(), JSON_UNESCAPED_UNICODE);
+        var messStaff = @json(($messStaff ?? collect())->pluck('full_name')->filter()->values()->all(), JSON_UNESCAPED_UNICODE);
+
+        var typeSlugMap = {
+            '{{ (string) \App\Models\KitchenIssueMaster::CLIENT_EMPLOYEE }}': 'employee',
+            '{{ (string) \App\Models\KitchenIssueMaster::CLIENT_OT }}': 'ot',
+            '{{ (string) \App\Models\KitchenIssueMaster::CLIENT_COURSE }}': 'course',
+            '{{ (string) \App\Models\KitchenIssueMaster::CLIENT_SECTION }}': 'section',
+            '{{ (string) \App\Models\KitchenIssueMaster::CLIENT_OTHER }}': 'other'
+        };
+        var typePkOptionsBySlug = {
+@foreach(($clientNamesByType ?? collect()) as $slug => $options)
+            '{{ $slug }}': [
+    @foreach($options as $option)
+                { value: '{{ (string) $option->id }}', text: '{{ addslashes((string) $option->client_name) }}' },
+    @endforeach
+            ],
+@endforeach
+        };
+        var otCourseOptions = [
+@foreach(($otCourses ?? collect()) as $course)
+            { value: '{{ (string) $course->pk }}', text: '{{ addslashes((string) $course->course_name) }}' },
+@endforeach
+        ];
+
+        function fillSelect(selectEl, options, placeholder, selectedValue) {
+            selectEl.innerHTML = '';
+            var defaultOpt = document.createElement('option');
+            defaultOpt.value = '';
+            defaultOpt.textContent = placeholder;
+            selectEl.appendChild(defaultOpt);
+            (options || []).forEach(function (option) {
+                var opt = document.createElement('option');
+                opt.value = String(option.value || '');
+                opt.textContent = String(option.text || '');
+                if (selectedValue !== undefined && selectedValue !== null && String(selectedValue) === opt.value) {
+                    opt.selected = true;
+                }
+                selectEl.appendChild(opt);
+            });
+        }
+
+        function setBuyerOptions(options, preserveSelection) {
+            fillSelect(buyerEl, (options || []).map(function (name) { return { value: name, text: name }; }), 'All Buyers', preserveSelection ? selectedBuyer : '');
+        }
+
+        function loadBuyerOptions(preserveSelection) {
+            var slug = typeSlugMap[String(typeEl.value || '')] || '';
+            var pk = String(typePkEl.value || '');
+            if (!slug || !pk) {
+                setBuyerOptions([], preserveSelection);
+                return;
+            }
+
+            if (slug === 'employee') {
+                var selectedLabel = ((typePkEl.options[typePkEl.selectedIndex] || {}).text || '').toLowerCase().trim();
+                if (selectedLabel === 'academy staff') {
+                    setBuyerOptions(employees, preserveSelection);
+                } else if (selectedLabel === 'faculty') {
+                    setBuyerOptions(faculties, preserveSelection);
+                } else if (selectedLabel === 'mess staff') {
+                    setBuyerOptions(messStaff, preserveSelection);
+                } else {
+                    setBuyerOptions([], preserveSelection);
+                }
+                return;
+            }
+
+            var url = '';
+            if (slug === 'ot') {
+                url = '{{ route('admin.mess.material-management.students-by-course', ['course_pk' => '__COURSE__']) }}'.replace('__COURSE__', encodeURIComponent(pk));
+            } else if (slug === 'course' || slug === 'section' || slug === 'other') {
+                var params = new URLSearchParams({
+                    client_type_slug: slug,
+                    client_type_pk: pk
+                });
+                url = '{{ route('admin.mess.material-management.buyer-names') }}' + '?' + params.toString();
+            }
+            if (!url) {
+                setBuyerOptions([], preserveSelection);
+                return;
+            }
+
+            fetch(url, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(function (response) { return response.ok ? response.json() : { buyers: [] }; })
+                .then(function (payload) {
+                    var buyers = [];
+                    if (slug === 'ot') {
+                        buyers = (payload.students || []).map(function (student) { return student.display_name || ''; }).filter(Boolean);
+                    } else {
+                        buyers = (payload.buyers || []).map(function (name) { return String(name || '').trim(); }).filter(Boolean);
+                    }
+                    setBuyerOptions(buyers, preserveSelection);
+                })
+                .catch(function () {
+                    setBuyerOptions([], preserveSelection);
+                });
+        }
+
+        function loadTypePkOptions(preserveSelection) {
+            var slug = typeSlugMap[String(typeEl.value || '')] || '';
+            var options = [];
+            if (slug === 'ot' || slug === 'course') {
+                options = otCourseOptions;
+            } else if (slug && typePkOptionsBySlug[slug]) {
+                options = typePkOptionsBySlug[slug];
+            }
+            fillSelect(typePkEl, options, 'All categories', preserveSelection ? selectedTypePk : '');
+            loadBuyerOptions(preserveSelection);
+        }
+
+        typeEl.addEventListener('change', function () {
+            selectedTypePk = '';
+            selectedBuyer = '';
+            loadTypePkOptions(false);
+        });
+        typePkEl.addEventListener('change', function () {
+            selectedBuyer = '';
+            loadBuyerOptions(false);
+        });
+
+        loadTypePkOptions(true);
+    })();
 
     function destroyAddModalTomSelects() {
         // Destroy tracked instances (payment, client, store, item selects only)

@@ -3,7 +3,9 @@
 namespace App\DataTables;
 
 use App\Models\UserRoleMaster;
+use App\Support\DataTableRedisCache;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
+use Illuminate\Http\JsonResponse;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Yajra\DataTables\Html\Button;
@@ -13,6 +15,31 @@ use Illuminate\Support\Facades\Crypt;
 
 class RoleDataTable extends DataTable
 {
+    private const LISTING_CACHE_EPOCH_KEY = 'admin_roles_dt_list_epoch';
+
+    public static function bumpListingCacheEpoch(): void
+    {
+        DataTableRedisCache::bumpListEpoch(self::LISTING_CACHE_EPOCH_KEY, 'RoleDataTable');
+    }
+
+    /**
+     * Server-side JSON for /admin/roles. .env: ADMIN_ROLES_DATATABLE_CACHE_*.
+     */
+    public function ajax(): JsonResponse
+    {
+        return DataTableRedisCache::serveCachedAjax(
+            $this->request(),
+            'admin_roles_dt:v1:',
+            self::LISTING_CACHE_EPOCH_KEY,
+            [
+                'enabled' => 'ADMIN_ROLES_DATATABLE_CACHE_ENABLED',
+                'seconds' => 'ADMIN_ROLES_DATATABLE_CACHE_SECONDS',
+            ],
+            'RoleDataTable',
+            fn () => parent::ajax()
+        );
+    }
+
     public function dataTable(QueryBuilder $query): EloquentDataTable
     {
         return (new EloquentDataTable($query))

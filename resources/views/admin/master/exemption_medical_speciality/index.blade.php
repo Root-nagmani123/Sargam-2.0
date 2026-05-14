@@ -121,24 +121,22 @@
                         <i class="material-icons material-symbols-rounded ems-search-icon">search</i>
                         <input type="text" id="emsSearch" class="form-control" placeholder="Search">
                     </div>
-                </div>
-
-                <div class="table-responsive">
-                    <table class="table mb-0" id="exemptionMedSpecTable">
-                        <thead>
-                            <tr>
-                                <th>S. No.</th>
-                                <th>Speciality Name</th>
-                                <th>Created Date</th>
-                                <th>Status</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                    </table>
-                </div>
-
-                <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2">
-                    <div id="emsPageInfo" class="text-muted small"></div>
+                    <hr>
+                    <div class="table-responsive">
+                        <table class="table" id="exemptionMedicalSpecialityTable">
+                            <thead>
+                                <!-- start row -->
+                                <tr>
+                                    <th class="col">S.No.</th>
+                                    <th class="col">Speciality Name</th>
+                                    <th class="col">Created Date</th>
+                                    <th class="col">Status</th>
+                                    <th class="col">Actions</th>
+                                </tr>
+                                <!-- end row -->
+                            </thead>
+                        </table>
+                    </div>
                 </div>
 
             </div>
@@ -226,77 +224,97 @@
 
 @push('scripts')
 <script>
-$(function () {
+    $(function() {
+        const tableSelector = '#exemptionMedicalSpecialityTable';
+        let table;
 
-    // ── DataTable ──
-    let table = $('#exemptionMedSpecTable').DataTable({
-        processing: true,
-        serverSide: true,
-        searching: true,
-        paging: false,
-        info: false,
-        dom: 'rt',
-        ajax: {
-            url: "{{ route('master.exemption.medical.speciality.exemption_med_spec_mst') }}",
-            data: function (d) {
-                d.pk = $('#pk').val();
-                d.active_inactive = $('#active_inactive').val();
-            }
-        },
-        columns: [
-            { data: 'DT_RowIndex',    name: 'DT_RowIndex',    orderable: false, searchable: false },
-            { data: 'speciality_name', name: 'speciality_name' },
-            { data: 'created_date',   name: 'created_date' },
-            { data: 'status',         name: 'status',  orderable: false, searchable: false },
-            { data: 'action',         name: 'action',  orderable: false, searchable: false }
-        ],
-        drawCallback: function () {
-            var info  = this.api().page.info();
-            var start = info.start + 1;
-            var end   = info.end;
-            var total = info.recordsTotal;
-            $('#emsPageInfo').text(
-                info.recordsDisplay > 0
-                    ? 'Showing ' + start + '\u2013' + end + ' of ' + total + ' items'
-                    : 'Showing 0 of ' + total + ' items'
-            );
+        if ($.fn.DataTable.isDataTable(tableSelector)) {
+            table = $(tableSelector).DataTable();
+        } else {
+            table = $(tableSelector).DataTable({
+                processing: true,
+                serverSide: true,
+                searching: true,
+                ajax: {
+                    url: "{{ route('master.exemption.medical.speciality.exemption_med_spec_mst') }}",
+                    data: function(d) {
+                        d.pk = $('#pk').val();
+                        d.active_inactive = $('#active_inactive').val();
+                        // console.log('jjj');
+                    }
+                },
+                columns: [{
+                        data: 'DT_RowIndex',
+                        name: 'DT_RowIndex',
+                        orderable: false,
+                        searchable: false
+                    },
+                    {
+                        data: 'speciality_name',
+                        name: 'speciality_name'
+                    },
+                    {
+                        data: 'created_date',
+                        name: 'created_date'
+                    },
+                    {
+                        data: 'status',
+                        name: 'status',
+                        orderable: false,
+                        searchable: false
+                    },
+                    {
+                        data: 'action',
+                        name: 'action',
+                        orderable: false,
+                        searchable: false
+                    }
+                ]
+
+            });
         }
-    });
 
-    // ── Custom Search ──
-    $('#emsSearch').on('input', function () {
-        clearTimeout(window._emsSearchTimer);
-        var q = $(this).val();
-        window._emsSearchTimer = setTimeout(function () { table.search(q).draw(); }, 350);
-    });
-
-    // ── Status Toggle (unchanged) ──
-    $(document).on('change', '.plain-status-toggle', function () {
-        var checkbox        = $(this);
-        var pk              = checkbox.data('id');
-        var active_inactive = checkbox.is(':checked') ? 1 : 0;
-
-        Swal.fire({
-            title: 'Are you sure?',
-            text: "Are you sure? You want to deactivate this item?",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
-            confirmButtonText: 'Yes, deactivate',
-            cancelButtonText: 'Cancel'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                $('#pk').val(pk);
-                $('#active_inactive').val(active_inactive);
-                table.ajax.reload(null, false);
-                Swal.fire({ icon: 'success', title: 'Updated!', text: 'Status has been updated successfully.', timer: 1500, showConfirmButton: false });
-            } else if (result.dismiss === Swal.DismissReason.cancel) {
-                checkbox.prop('checked', !active_inactive);
-                Swal.fire({ icon: 'info', title: 'Cancelled', text: 'Status change has been cancelled.', timer: 1500, showConfirmButton: false });
-            }
+        $(document).on('change', '.plain-status-toggle', function() {
+            var checkbox = $(this); // save reference
+            var pk = checkbox.data('id');
+           // alert(pk);
+            var active_inactive = checkbox.is(':checked') ? 1 : 0;
+          //  alert(active_inactive);
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "Are you sure? You want to deactivate this item?",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes, deactivate',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Set hidden input values if needed
+                    $('#pk').val(pk);
+                    $('#active_inactive').val(active_inactive);
+                    table.ajax.reload(null, false);
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Updated!',
+                        text: 'Status has been updated successfully.',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                }
+                else if (result.dismiss === Swal.DismissReason.cancel) {
+                    checkbox.prop('checked', !active_inactive);
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Cancelled',
+                        text: 'Status change has been cancelled.',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                }
+            });
         });
-    });
 
     // ── Delete (unchanged) ──
     $(document).on('click', '.delete-btn', function (e) {
@@ -321,118 +339,245 @@ $(function () {
         });
     });
 
-    // ── Edit btn → open Bootstrap modal ──
-    $(document).on('click', '.edit-btn', function () {
-        var id              = $(this).data('id');
-        var speciality_name = $(this).data('speciality_name');
-        var status          = $(this).data('active_inactive');
+    }); //endclose
+</script>
+<button id="showAlert">Add</button>
 
-        $('#edit_ems_id').val(id);
-        $('#edit_speciality_name').val(speciality_name).removeClass('is-invalid');
-        $('#edit_status').val(status).removeClass('is-invalid');
+<script>
+document.getElementById('showAlert').addEventListener('click', function () {
+    Swal.fire({
+        title: '<strong>Add Exemption medical speciality</strong>',
+        html: `
+            <form id="exemptionCategoryForm">
+                <input type="hidden" name="_token" value="{{ csrf_token() }}">
 
-        bootstrap.Modal.getOrCreateInstance(document.getElementById('editEmsModal')).show();
-    });
+                <!-- Type Name -->
+                <div class="row mb-2 align-items-center">
+                    <label class="col-auto col-form-label fw-semibold">
+                        Type Name <span class="text-danger">*</span>
+                    </label>
+                    <div class="col">
+                        <input type="text" name="speciality_name" id="speciality_name" class="form-control">
+                        <small class="text-danger d-none" id="speciality_name_error">
+                            Type Name is required
+                        </small>
+                    </div>
+                </div>
 
-    // ── ADD: submit (unchanged fetch logic) ──
-    $('#addEmsSubmit').on('click', function () {
-        var $name   = $('#add_speciality_name');
-        var $status = $('#add_status');
-        var valid   = true;
+                <!-- Status -->
+                <div class="row mb-2 align-items-center">
+                    <label class="col-auto col-form-label fw-semibold">
+                        Status <span class="text-danger">*</span>
+                    </label>
+                    <div class="col">
+                        <select name="active_inactive" id="status" class="form-control">
+                            <option value="">-- Select Status --</option>
+                            <option value="1">Active</option>
+                            <option value="0">Inactive</option>
+                        </select>
+                        <small class="text-danger d-none" id="status_error">
+                            Status is required
+                        </small>
+                    </div>
+                </div>
+            </form>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Submit',
+        showLoaderOnConfirm: true,
+        focusConfirm: false,
 
-        $name.removeClass('is-invalid');
-        $status.removeClass('is-invalid');
-        if (!$name.val().trim()) { $name.addClass('is-invalid');   valid = false; }
-        if (!$status.val())      { $status.addClass('is-invalid'); valid = false; }
-        if (!valid) return;
+        preConfirm: () => {
+            const popup = Swal.getPopup();
 
-        var $btn = $(this).prop('disabled', true).text('Saving...');
+            const typeName  = popup.querySelector('#speciality_name');
+            const status    = popup.querySelector('#status');
 
-        fetch("{{ route('master.exemption.medical.speciality.store') }}", {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                speciality_name: $name.val(),
-                status: $status.val()
+            const typeErr   = popup.querySelector('#speciality_name_error');
+            const statusErr = popup.querySelector('#status_error');
+
+            // reset
+            [typeName, status].forEach(el => el.classList.remove('is-invalid'));
+            [typeErr, statusErr].forEach(el => el.classList.add('d-none'));
+
+            let valid = true;
+
+            if (!typeName.value.trim()) {
+                typeName.classList.add('is-invalid');
+                typeErr.classList.remove('d-none');
+                valid = false;
+            }
+
+            if (!status.value) {
+                status.classList.add('is-invalid');
+                statusErr.classList.remove('d-none');
+                valid = false;
+            }
+
+            if (!valid) return false;
+
+            // AJAX request
+            return fetch("{{ route('master.exemption.medical.speciality.store') }}", {
+                method: "POST",
+                headers: {
+                    "X-CSRF-TOKEN": "{{ csrf_token() }}",
+                    "Accept": "application/json",
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    speciality_name: typeName.value,
+                    status: status.value
+                })
             })
-        })
-        .then(response => {
-            if (!response.ok) return response.json().then(err => { throw new Error(err.message || 'Validation failed'); });
-            return response.json();
-        })
-        .then(data => {
-            $btn.prop('disabled', false).text('Add');
-            bootstrap.Modal.getInstance(document.getElementById('addEmsModal')).hide();
-            Swal.fire({ icon: 'success', title: 'Saved!', text: 'Exemption medical speciality added successfully', timer: 1500, showConfirmButton: false });
-            table.ajax.reload(null, false);
-        })
-        .catch(error => {
-            $btn.prop('disabled', false).text('Add');
-            Swal.fire('Error', error.message, 'error');
-        });
-    });
-
-    document.getElementById('addEmsModal').addEventListener('hidden.bs.modal', function () {
-        $('#addEmsForm')[0].reset();
-        $('#addEmsForm .form-control, #addEmsForm .form-select').removeClass('is-invalid');
-    });
-
-    // ── EDIT: submit (unchanged $.ajax logic) ──
-    $('#editEmsSubmit').on('click', function () {
-        var $name   = $('#edit_speciality_name');
-        var $status = $('#edit_status');
-        var valid   = true;
-
-        $name.removeClass('is-invalid');
-        $status.removeClass('is-invalid');
-        if (!$name.val().trim()) { $name.addClass('is-invalid');   valid = false; }
-        if (!$status.val())      { $status.addClass('is-invalid'); valid = false; }
-        if (!valid) return;
-
-        var $btn = $(this).prop('disabled', true).text('Saving...');
-        var id   = $('#edit_ems_id').val();
-
-        $.ajax({
-            url: "{{ route('master.exemption.medical.speciality.store') }}",
-            type: 'POST',
-            dataType: 'json',
-            data: {
-                _token: '{{ csrf_token() }}',
-                id: id,
-                speciality_name: $name.val(),
-                status: $status.val()
-            }
-        })
-        .done(function (result) {
-            $btn.prop('disabled', false).text('Update');
-            bootstrap.Modal.getInstance(document.getElementById('editEmsModal')).hide();
-            Swal.fire({ icon: 'success', title: 'Updated!', text: result.message, timer: 1500, showConfirmButton: false });
-            table.ajax.reload(null, false);
-        })
-        .fail(function (xhr) {
-            $btn.prop('disabled', false).text('Update');
-            if (xhr.status === 422) {
-                var errors = xhr.responseJSON.errors;
-                if (errors && errors.medical_speciality_name) {
-                    $name.addClass('is-invalid');
-                    $name.siblings('.invalid-feedback').text(errors.medical_speciality_name[0]);
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => {
+                        throw new Error(err.message || 'Validation failed');
+                    });
                 }
-            } else {
-                Swal.fire('Error', 'Something went wrong!', 'error');
+                return response.json();
+            })
+            .catch(error => {
+                Swal.showValidationMessage(error.message);
+            });
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Saved!',
+                text: 'Exemption category added successfully',
+                timer: 1500,
+                showConfirmButton: false
+            });
+
+            // reload datatable / page if needed
+             $('#exemptionMedicalSpecialityTable').DataTable().ajax.reload();
+        }
+    });
+});
+</script>
+<script>
+$(document).on('click', '.edit-btn', function () {
+
+    let id              = $(this).data('id');
+    let speciality_name = $(this).data('speciality_name');
+    let status          = $(this).data('active_inactive');
+
+    Swal.fire({
+        title: '<strong><small>Edit Exemption medical speciality</small></strong>',
+        html: `
+            <form id="exemptionCategoryeditForm">
+                <input type="hidden" id="id" value="${id}">
+                <input type="hidden" id="csrf" value="{{ csrf_token() }}">
+
+                <!-- Type Name -->
+                <div class="row mb-2 align-items-center">
+                    <label class="col-auto col-form-label fw-semibold">
+                        Type Name <span class="text-danger">*</span>
+                    </label>
+                    <div class="col">
+                        <input type="text" id="speciality_name" name="speciality_name" class="form-control"
+                               value="${speciality_name}">
+                        <small class="text-danger d-none" id="speciality_name_error">
+                            Type Name is required
+                        </small>
+                    </div>
+                </div>
+
+                <!-- Status -->
+                <div class="row mb-2 align-items-center">
+                    <label class="col-auto col-form-label fw-semibold">
+                        Status <span class="text-danger">*</span>
+                    </label>
+                    <div class="col">
+                        <select id="status" name="status" class="form-control">
+                            <option value="">-- Select Status --</option>
+                            <option value="1">Active</option>
+                            <option value="0">Inactive</option>
+                        </select>
+                        <small class="text-danger d-none" id="status_error">
+                            Status is required
+                        </small>
+                    </div>
+                </div>
+            </form>
+        `,
+        didOpen: () => {
+            $('#status').val(status);
+        },
+        showCancelButton: true,
+        confirmButtonText: 'Update',
+        showLoaderOnConfirm: true,
+        focusConfirm: false,
+
+        preConfirm: () => {
+
+            const popup = Swal.getPopup();
+            const nameEl   = popup.querySelector('#speciality_name');
+            const statusEl = popup.querySelector('#status');
+            const nameErr  = popup.querySelector('#speciality_name_error');
+            const statErr  = popup.querySelector('#status_error');
+            // reset
+            [nameEl, statusEl].forEach(el => el.classList.remove('is-invalid'));
+            [nameErr, statErr].forEach(el => el.classList.add('d-none'));
+
+            let valid = true;
+
+            if (!nameEl.value.trim()) {
+                nameEl.classList.add('is-invalid');
+                nameErr.classList.remove('d-none');
+                valid = false;
             }
-        });
-    });
 
-    document.getElementById('editEmsModal').addEventListener('hidden.bs.modal', function () {
-        $('#editEmsForm')[0].reset();
-        $('#editEmsForm .form-control, #editEmsForm .form-select').removeClass('is-invalid');
-    });
+            if (!statusEl.value) {
+                statusEl.classList.add('is-invalid');
+                statErr.classList.remove('d-none');
+                valid = false;
+            }
 
-}); //endclose
+            if (!valid) return false;
+
+            // AJAX call
+            return $.ajax({
+                url: "{{ route('master.exemption.medical.speciality.store') }}",
+                type: "POST",
+                dataType: "json",
+                data: {
+                    _token: "{{ csrf_token() }}",
+                    id: id,
+                    speciality_name: nameEl.value,
+                    status: statusEl.value
+                }
+            }).catch(xhr => {
+                if (xhr.status === 422) {
+                    let errors = xhr.responseJSON.errors;
+                    if (errors.medical_speciality_name) {
+                        nameEl.classList.add('is-invalid');
+                        nameErr.textContent = errors.medical_speciality_name[0];
+                        nameErr.classList.remove('d-none');
+                    }
+                } else {
+                    Swal.showValidationMessage('Something went wrong!');
+                }
+            });
+        }
+    }).then((result) => {
+
+        if (result.isConfirmed) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Updated!',
+                text: result.value.message,
+                timer: 1500,
+                showConfirmButton: false
+            });
+
+            // Reload datatable if exists
+            $('#exemptionMedicalSpecialityTable').DataTable().ajax.reload(null, false);
+        }
+    });
+});
 </script>
 
 @if(session('success'))
