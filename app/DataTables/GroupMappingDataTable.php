@@ -81,8 +81,8 @@ class GroupMappingDataTable extends DataTable
 
                 $editHtml = '<a href="' . $editUrl . '" title="Edit" style="' . $s . 'color:#1b3a5c;"><i class="material-icons material-symbols-rounded" style="font-size:20px;">edit</i></a>';
 
-                $statusHtml = '<div class="form-check form-switch d-inline-flex align-items-center mb-0" style="min-height:auto;padding-left:2.5em;">'
-                    . '<input class="form-check-input status-toggle" type="checkbox" role="switch" data-table="group_type_master_course_master_map" data-column="active_inactive" data-id="' . $row->pk . '" ' . $checked . ' style="cursor:pointer;width:2.2em;height:1.1em;">'
+                $statusHtml = '<div class="form-check form-switch d-inline-flex align-items-center mb-0">'
+                    . '<input class="form-check-input status-toggle" type="checkbox" role="switch" data-table="group_type_master_course_master_map" data-column="active_inactive" data-id="' . $row->pk . '" ' . $checked . '>'
                     . '</div>';
 
                 $downloadHtml = $hasStudents

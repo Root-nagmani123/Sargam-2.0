@@ -36,6 +36,20 @@
     color: #495057;
 }
 
+/* Compact active/inactive switch in table action column */
+.sme-row-status-switch {
+    min-height: auto;
+    padding-left: 1.85em;
+}
+.sme-row-status-switch .form-check-input {
+    width: 1.45em;
+    height: 0.72em;
+    margin-left: -1.85em;
+    margin-top: 0.06em;
+    cursor: pointer;
+    background-size: auto 88%;
+}
+
 /* ─── Action Buttons (Print / Download) ─── */
 .sme-action-btn {
     display: inline-flex;

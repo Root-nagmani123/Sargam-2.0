@@ -217,12 +217,11 @@ class StudentMedicalExemptionController extends Controller
                                 <i class="material-icons material-symbols-rounded" style="font-size:18px;color:#6c757d;">edit</i>
                             </button>
 
-                            <div class="form-check form-switch mb-0">
-                                <input class="form-check-input status-toggle" type="checkbox"
+                            <div class="form-check form-switch mb-0 sme-row-status-switch">
+                                <input class="form-check-input status-toggle" type="checkbox" role="switch"
                                     data-table="student_medical_exemption"
                                     data-column="active_inactive"
-                                    data-id="' . $row->pk . '" ' . $checked . '
-                                    style="cursor:pointer;width:36px;height:20px;">
+                                    data-id="' . $row->pk . '" ' . $checked . '>
                             </div>
 
                             <button type="button"

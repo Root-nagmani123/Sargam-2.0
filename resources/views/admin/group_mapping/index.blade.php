@@ -674,10 +674,19 @@
         border-bottom: none !important;
     }
 
-    /* Toggle switch in action column */
+    /* Compact status toggle in action column */
     .custom-mapping-table .form-check.form-switch {
         margin-bottom: 0;
         min-height: auto;
+        padding-left: 1.95em;
+    }
+    .custom-mapping-table .form-check.form-switch .form-check-input {
+        width: 1.5em;
+        height: 0.78em;
+        margin-left: -1.95em;
+        margin-top: 0.06em;
+        cursor: pointer;
+        background-size: auto 88%;
     }
 
     /* Dashed border for drop zone */

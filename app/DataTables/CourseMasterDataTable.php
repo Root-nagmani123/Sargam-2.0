@@ -81,7 +81,7 @@ class CourseMasterDataTable extends DataTable
                 $csrf = csrf_token();
 
                 $statusToggle = '<a href="javascript:void(0)" class="programme-status-toggle-btn" data-table="course_master" data-column="active_inactive" data-id="'.$row->pk.'" data-status="'.($isActive ? '1' : '0').'" aria-label="'.($isActive ? 'Deactivate' : 'Activate').' course">'
-                    .'<span class="material-icons material-symbols-rounded" style="font-size:24px; color:'.($isActive ? '#198754' : '#6c757d').';">'.($isActive ? 'toggle_on' : 'toggle_off').'</span></a>';
+                    .'<span class="material-icons material-symbols-rounded" style="font-size:18px; color:'.($isActive ? '#198754' : '#6c757d').';">'.($isActive ? 'toggle_on' : 'toggle_off').'</span></a>';
 
                 $deleteBtn = '<a href="javascript:void(0)" class="programme-delete-btn" data-delete-url="'.$deleteUrl.'" data-csrf="'.$csrf.'" aria-label="Delete course">'
                     .'<span class="material-icons material-symbols-rounded" style="font-size:20px; color:#dc3545;">delete</span></a>';
