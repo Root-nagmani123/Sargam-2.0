@@ -51,10 +51,13 @@ class FcActivityDepartmentController extends Controller
                 $json = e(json_encode($payload, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT));
                 $destroy = route('fc-reg.admin.activity-setup.departments.destroy', $d);
 
-                return '<button type="button" class="btn btn-link btn-sm p-0 js-dept-edit" data-bs-toggle="modal" data-bs-target="#modalDeptEdit" data-dept-edit="'.$json.'">Edit</button>'
-                    .'<form action="'.e($destroy).'" method="POST" class="d-inline" onsubmit="return confirm(\'Delete?\')">'
+                return '<span class="d-inline-flex align-items-center gap-1 flex-shrink-0">'
+                    .'<button type="button" class="btn btn-link btn-sm p-0 js-dept-edit" data-bs-toggle="modal" data-bs-target="#modalDeptEdit" data-dept-edit="'.$json.'" aria-label="Edit department">'
+                    .'<i class="bi bi-pencil" aria-hidden="true"></i></button>'
+                    .'<form action="'.e($destroy).'" method="POST" class="d-inline m-0" onsubmit="return confirm(\'Delete this department?\')">'
                     .csrf_field().method_field('DELETE')
-                    .'<button type="submit" class="btn btn-link btn-sm text-danger p-0">Delete</button></form>';
+                    .'<button type="submit" class="btn btn-link btn-sm text-danger p-0" aria-label="Delete department">'
+                    .'<i class="bi bi-trash" aria-hidden="true"></i></button></form></span>';
             })
             ->rawColumns(['code', 'action'])
             ->toJson();
