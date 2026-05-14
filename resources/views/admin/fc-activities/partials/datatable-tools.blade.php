@@ -91,12 +91,14 @@
                     return parts.length ? parts.join(' | ') : '';
                 }
 
-                function getVisibleColumnIndexes(dt) {
-                    var vis = [];
+                function getExportColumnIndexes(dt) {
+                    var out = [];
                     dt.columns().every(function (idx) {
-                        if (this.visible()) vis.push(idx);
+                        if (!this.visible()) return;
+                        if ($(this.header()).hasClass('fc-dt-no-export')) return;
+                        out.push(idx);
                     });
-                    return vis;
+                    return out;
                 }
 
                 function buildPrintableTableHtml(dt, visIdx) {
@@ -204,56 +206,7 @@
                     return widths;
                 }
 
-                function setupTable($table) {
-                    if ($table.hasClass('dataTable')) return;
-
-                    var title = $table.data('export-title') || document.title || 'FC Activities Report';
-                    var $thead = $table.find('thead');
-                    if (!$thead.length) return;
-
-                    var toolbarId = 'fcdt-toolbar-' + Math.random().toString(36).slice(2, 10);
-                    var $toolbar = $(
-                        '<div class="fc-dt-toolbar-wrap no-print" id="' + toolbarId + '">' +
-                            '<div class="dropdown d-inline-block" data-bs-auto-close="outside">' +
-                                '<button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle d-inline-flex align-items-center" data-bs-toggle="dropdown" aria-expanded="false">' +
-                                    '<i class="material-icons material-symbols-rounded">view_column</i><span>Columns</span>' +
-                                '</button>' +
-                                '<ul class="dropdown-menu dropdown-menu-end py-2 fc-colvis-menu"></ul>' +
-                            '</div>' +
-                            '<div class="btn-group shadow-sm" role="group" aria-label="Print or download PDF">' +
-                                '<button type="button" class="btn btn-outline-primary btn-sm fc-btn-print"><i class="material-icons material-symbols-rounded">print</i><span>Print</span></button>' +
-                                '<button type="button" class="btn btn-outline-primary btn-sm fc-btn-pdf"><i class="material-icons material-symbols-rounded">picture_as_pdf</i><span>PDF</span></button>' +
-                            '</div>' +
-                            '<button type="button" class="btn btn-success btn-sm fc-btn-excel"><i class="material-icons material-symbols-rounded">table_view</i><span>Excel</span></button>' +
-                        '</div>'
-                    );
-                    $table.before($toolbar);
-
-                    var dt = $table.DataTable({
-                        pageLength: 25,
-                        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
-                        orderCellsTop: true,
-                        fixedHeader: false,
-                        scrollX: true,
-                        autoWidth: false,
-                        responsive: false,
-                        deferRender: true,
-                        processing: true,
-                        dom: '<"row align-items-center mb-2"<"col-md-6"l><"col-md-6"f>>rt<"row align-items-center mt-2"<"col-md-5"i><"col-md-7"p>>',
-                        buttons: [
-                            {
-                                extend: 'excelHtml5',
-                                className: 'fc-dt-hidden-buttons fc-dt-excel',
-                                title: title,
-                                messageTop: function () {
-                                    var line = buildFilterSummary(dt);
-                                    return line || null;
-                                },
-                                exportOptions: { columns: ':visible' }
-                            }
-                        ]
-                    });
-
+                function wireFcDtToolbar($table, $toolbar, dt, title) {
                     $toolbar.show();
                     var $wrapper = $table.closest('.dataTables_wrapper');
                     var $filter = $wrapper.find('.dataTables_filter');
@@ -285,12 +238,20 @@
                         $colMenu.append(item);
                     });
 
+                    function exportRowCount() {
+                        var info = dt.page.info();
+                        if (info.serverSide) {
+                            return info.recordsDisplay;
+                        }
+                        return dt.rows({ search: 'applied' }).count();
+                    }
+
                     $toolbar.find('.fc-btn-print').on('click', function () {
-                        var n = dt.rows({ search: 'applied' }).count();
-                        if (n > 4000 && !window.confirm('This table has ' + n + ' rows. Printing may take a long time or freeze the tab. Continue?')) {
+                        var n = exportRowCount();
+                        if (n > 4000 && !window.confirm('This export has ' + n + ' rows. Printing may take a long time or freeze the tab. Continue?')) {
                             return;
                         }
-                        var vis = getVisibleColumnIndexes(dt);
+                        var vis = getExportColumnIndexes(dt);
                         openBrandedPrintWindow(title, buildFilterSummary(dt), buildPrintableTableHtml(dt, vis), true);
                     });
 
@@ -302,7 +263,7 @@
                         var $pdfBtn = $(this);
                         if ($pdfBtn.prop('disabled')) return;
 
-                        var rowCount = dt.rows({ search: 'applied' }).count();
+                        var rowCount = exportRowCount();
                         if (rowCount > 4000 && !window.confirm('This export has ' + rowCount + ' rows. PDF generation may freeze the page for a minute or more. Continue?')) {
                             return;
                         }
@@ -313,7 +274,7 @@
                         setTimeout(function () {
                             (async function () {
                                 try {
-                        var vis = getVisibleColumnIndexes(dt);
+                        var vis = getExportColumnIndexes(dt);
                         var filterLine = buildFilterSummary(dt);
                         var emblemUrl = '{{ asset("images/ashoka.png") }}';
                         var logoUrl = '{{ asset("admin_assets/images/logos/logo.png") }}';
@@ -397,6 +358,103 @@
                             })();
                         }, 50);
                     });
+                }
+
+                function setupTable($table) {
+                    if ($table.hasClass('dataTable')) return;
+
+                    var title = $table.data('export-title') || document.title || 'FC Activities Report';
+                    var $thead = $table.find('thead');
+                    if (!$thead.length) return;
+
+                    var toolbarId = 'fcdt-toolbar-' + Math.random().toString(36).slice(2, 10);
+                    var $toolbar = $(
+                        '<div class="fc-dt-toolbar-wrap no-print" id="' + toolbarId + '">' +
+                            '<div class="dropdown d-inline-block" data-bs-auto-close="outside">' +
+                                '<button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle d-inline-flex align-items-center" data-bs-toggle="dropdown" aria-expanded="false">' +
+                                    '<i class="material-icons material-symbols-rounded">view_column</i><span>Columns</span>' +
+                                '</button>' +
+                                '<ul class="dropdown-menu dropdown-menu-end py-2 fc-colvis-menu"></ul>' +
+                            '</div>' +
+                            '<div class="btn-group shadow-sm" role="group" aria-label="Print or download PDF">' +
+                                '<button type="button" class="btn btn-outline-primary btn-sm fc-btn-print"><i class="material-icons material-symbols-rounded">print</i><span>Print</span></button>' +
+                                '<button type="button" class="btn btn-outline-primary btn-sm fc-btn-pdf"><i class="material-icons material-symbols-rounded">picture_as_pdf</i><span>PDF</span></button>' +
+                            '</div>' +
+                            '<button type="button" class="btn btn-success btn-sm fc-btn-excel"><i class="material-icons material-symbols-rounded">table_view</i><span>Excel</span></button>' +
+                        '</div>'
+                    );
+                    $table.before($toolbar);
+
+                    var serverAjax = $table.data('serverAjax');
+                    var dt;
+                    var commonDom = '<"row align-items-center mb-2"<"col-md-6"l><"col-md-6"f>>rt<"row align-items-center mt-2"<"col-md-5"i><"col-md-7"p>>';
+                    var excelBtn = {
+                        extend: 'excelHtml5',
+                        className: 'fc-dt-hidden-buttons fc-dt-excel',
+                        title: title,
+                        messageTop: function () {
+                            var line = buildFilterSummary(dt);
+                            return line || null;
+                        },
+                        exportOptions: { columns: ':visible:not(.fc-dt-no-export)' }
+                    };
+
+                    if (serverAjax) {
+                        var fcCourseSel = $table.data('filterCourse');
+                        var fcOtcodeInp = $table.data('filterOtcode');
+                        var fcActSel = $table.data('filterActivity');
+                        dt = $table.DataTable({
+                            processing: true,
+                            serverSide: true,
+                            pageLength: 25,
+                            lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
+                            orderCellsTop: true,
+                            fixedHeader: false,
+                            scrollX: true,
+                            autoWidth: false,
+                            responsive: false,
+                            deferRender: true,
+                            order: [[6, 'desc']],
+                            ajax: {
+                                url: serverAjax,
+                                data: function (d) {
+                                    d.filter_course = fcCourseSel ? String($(fcCourseSel).val() || '').trim() : '';
+                                    d.filter_otcode = fcOtcodeInp ? String($(fcOtcodeInp).val() || '').trim() : '';
+                                    d.filter_activity = fcActSel ? String($(fcActSel).val() || '').trim() : '';
+                                }
+                            },
+                            columns: [
+                                { data: null, name: 'rownum', searchable: false, orderable: false, className: 'text-muted text-nowrap', render: function (data, type, row, meta) {
+                                    return meta.row + 1 + meta.settings._iDisplayStart;
+                                }},
+                                { data: 'ot_name', name: 'ot_name', searchable: false, orderable: true },
+                                { data: 'ot_code', name: 'ot_code', searchable: false, orderable: true },
+                                { data: 'course', name: 'course', searchable: true, orderable: true },
+                                { data: 'activity_label', name: 'activity_label', searchable: false, orderable: true },
+                                { data: 'activityval', name: 'activityval', searchable: true, orderable: true },
+                                { data: 'activitydt', name: 'activitydt', searchable: true, orderable: true },
+                                { data: 'action', name: 'action', searchable: false, orderable: false, className: 'fc-dt-no-export', render: function (d) { return d; } }
+                            ],
+                            dom: commonDom,
+                            buttons: [excelBtn]
+                        });
+                    } else {
+                        dt = $table.DataTable({
+                            pageLength: 25,
+                            lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
+                            orderCellsTop: true,
+                            fixedHeader: false,
+                            scrollX: true,
+                            autoWidth: false,
+                            responsive: false,
+                            deferRender: true,
+                            processing: true,
+                            dom: commonDom,
+                            buttons: [excelBtn]
+                        });
+                    }
+
+                    wireFcDtToolbar($table, $toolbar, dt, title);
                 }
 
                 $(function () {

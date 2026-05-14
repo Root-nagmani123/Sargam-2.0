@@ -5,10 +5,11 @@ namespace App\Http\Controllers\FC;
 use App\Http\Controllers\Controller;
 use App\Models\FC\FcActivityDepartment;
 use App\Models\FC\FcActivityMaster;
+use App\Models\FC\SessionMaster;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 use Yajra\DataTables\Facades\DataTables;
 
@@ -18,8 +19,33 @@ class FcActivityMasterManageController extends Controller
     {
         $deptFilter = $request->query('department_id');
         $departments = FcActivityDepartment::query()->ordered()->get();
+        $courseFilterOptions = $this->courseFilterOptionList();
 
-        return view('admin.fc-activities.setup.masters.index', compact('departments', 'deptFilter'));
+        return view('admin.fc-activities.setup.masters.index', compact('departments', 'deptFilter', 'courseFilterOptions'));
+    }
+
+    /**
+     * Values for activity master "course filter" (matches FC post-arrival course / session).
+     * Merges active sessions with any ccode already stored so edits stay valid.
+     *
+     * @return Collection<int, string>
+     */
+    private function courseFilterOptionList(): Collection
+    {
+        $fromSessions = SessionMaster::query()
+            ->where('is_active', 1)
+            ->orderBy('session_name')
+            ->pluck('session_name');
+
+        $fromMaster = FcActivityMaster::query()
+            ->whereNotNull('ccode')
+            ->whereRaw('TRIM(ccode) != ?', [''])
+            ->distinct()
+            ->pluck('ccode')
+            ->map(fn ($c) => trim((string) $c))
+            ->filter();
+
+        return $fromSessions->merge($fromMaster)->unique()->sort()->values();
     }
 
     public function dataTable(Request $request): JsonResponse
@@ -41,7 +67,6 @@ class FcActivityMasterManageController extends Controller
             ->editColumn('menuid', fn (FcActivityMaster $m) => '<code>'.e($m->menuid).'</code>')
             ->editColumn('ccode', fn (FcActivityMaster $m) => $m->ccode ? e($m->ccode) : '—')
             ->addColumn('status_display', fn (FcActivityMaster $m) => $m->status ? 'On' : 'Off')
-            ->addColumn('joined_display', fn (FcActivityMaster $m) => $m->is_joined_marker ? 'Yes' : '')
             ->addColumn('action', function (FcActivityMaster $m) use ($request) {
                 $returnDept = (string) $request->input('department_id', '');
                 $payload = [
@@ -54,7 +79,6 @@ class FcActivityMasterManageController extends Controller
                     'sort_order' => (int) $m->sort_order,
                     'status' => (int) $m->status,
                     'entry_policy' => $m->entry_policy,
-                    'is_joined_marker' => (int) $m->is_joined_marker,
                 ];
                 $json = e(json_encode($payload, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT));
                 $destroy = route('fc-reg.admin.activity-setup.masters.destroy', $m);
@@ -73,12 +97,7 @@ class FcActivityMasterManageController extends Controller
     {
         $validated = $this->validatePayload($request, null);
 
-        DB::transaction(function () use ($validated) {
-            if (($validated['is_joined_marker'] ?? 0) === 1) {
-                FcActivityMaster::query()->update(['is_joined_marker' => 0]);
-            }
-            FcActivityMaster::create($validated);
-        });
+        FcActivityMaster::create($validated);
 
         return $this->redirectToMastersIndex($request, 'Activity created.');
     }
@@ -87,12 +106,7 @@ class FcActivityMasterManageController extends Controller
     {
         $validated = $this->validatePayload($request, (int) $master->id);
 
-        DB::transaction(function () use ($validated, $master) {
-            if (($validated['is_joined_marker'] ?? 0) === 1) {
-                FcActivityMaster::query()->where('id', '!=', $master->id)->update(['is_joined_marker' => 0]);
-            }
-            $master->update($validated);
-        });
+        $master->update($validated);
 
         return $this->redirectToMastersIndex($request, 'Activity updated.');
     }
@@ -130,7 +144,6 @@ class FcActivityMasterManageController extends Controller
 
         $validated['ccode'] = trim((string) ($validated['ccode'] ?? '')) ?: null;
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
-        $validated['is_joined_marker'] = $request->boolean('is_joined_marker') ? 1 : 0;
 
         return $validated;
     }
