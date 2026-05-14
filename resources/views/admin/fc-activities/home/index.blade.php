@@ -26,87 +26,91 @@
 
     <div class="card border-0 shadow-sm mb-3">
         <div class="card-body">
-            <div class="row g-2 align-items-end">
-                <div class="col-md-3">
-                    <label class="form-label small">Course</label>
-                    <select id="selcourse" class="form-select form-select-sm"><option value="">Select Course</option></select>
+            <p class="small fw-semibold text-secondary text-uppercase mb-3" style="letter-spacing: 0.04em;">Record new activity</p>
+            <p class="small text-muted mb-2"><span class="text-danger" aria-hidden="true">*</span> Required to save an activity.</p>
+            <div class="row g-3 align-items-end">
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <label class="form-label small mb-1" for="selcourse">Course <span class="text-danger" title="Required">*</span></label>
+                    <select id="selcourse" class="form-select form-select-sm" required aria-required="true"><option value="">Select Course</option></select>
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label small">OT Code</label>
-                    <input type="text" id="txtotcode" class="form-control form-control-sm" placeholder="Enter OT code">
+                <div class="col-12 col-sm-6 col-lg-2">
+                    <label class="form-label small mb-1" for="txtotcode">OT code <span class="text-danger" title="Required">*</span></label>
+                    <input type="text" id="txtotcode" class="form-control form-control-sm" placeholder="Enter OT code" autocomplete="off" required aria-required="true">
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label small">OT Name</label>
+                <div class="col-12 col-lg-3">
+                    <label class="form-label small mb-1" for="selot">OT name</label>
                     <input type="text" id="selot" class="form-control form-control-sm" readonly>
-                    <small id="prewarning" class="text-danger d-none">Consultation required</small>
+                    <small id="prewarning" class="text-danger d-none mt-1">Consultation required</small>
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label small">House</label>
-                    <input type="text" id="txthouse" class="form-control form-control-sm mb-1" readonly>
-                    <label class="form-label small">Rank</label>
+                <div class="col-6 col-sm-6 col-lg-2">
+                    <label class="form-label small mb-1" for="txthouse">House</label>
+                    <input type="text" id="txthouse" class="form-control form-control-sm" readonly>
+                </div>
+                <div class="col-6 col-sm-6 col-lg-2">
+                    <label class="form-label small mb-1" for="txthousen">Rank</label>
                     <input type="text" id="txthousen" class="form-control form-control-sm" readonly>
                 </div>
-                <div class="col-md-4">
-                    <label class="form-label small">Activity</label>
-                    <select id="selactivity" class="form-select form-select-sm"><option value="">Select Activity</option></select>
+            </div>
+            <div class="row g-3 align-items-end mt-1 mt-lg-2">
+                <div class="col-12 col-md-6 col-lg-4">
+                    <label class="form-label small mb-1" for="selactivity">Activity <span class="text-danger" title="Required">*</span></label>
+                    <select id="selactivity" class="form-select form-select-sm" required aria-required="true"><option value="">Select Activity</option></select>
                 </div>
-                <div class="col-md-5">
-                    <label class="form-label small">Value</label>
-                    <input type="text" id="txtactvalue" class="form-control form-control-sm">
+                <div class="col-12 col-md-6 col-lg-5">
+                    <label class="form-label small mb-1" for="txtactvalue">Value <span class="text-danger" title="Required">*</span></label>
+                    <input type="text" id="txtactvalue" class="form-control form-control-sm" maxlength="500" autocomplete="off" required aria-required="true">
                 </div>
-                <div class="col-md-3">
-                    <button type="button" id="btnSaveActivity" class="btn btn-sm btn-primary w-100">Save Activity</button>
+                <div class="col-12 col-lg-3 d-grid d-md-block">
+                    <label class="form-label small mb-1 d-none d-lg-block">&nbsp;</label>
+                    <button type="button" id="btnSaveActivity" class="btn btn-sm btn-primary w-100 w-lg-auto px-lg-4">Save activity</button>
                 </div>
             </div>
-            <p class="small text-muted mb-0 mt-2"><strong>FC activity coordinators</strong> and users with <strong>full setup access</strong> see every active activity. Other users see only activities for <strong>departments you are assigned to</strong> (Activity setup → Departments, or your single department in staff access). <strong>Upsert</strong> updates the last value; <strong>repeat</strong> keeps a new reading each time (medical report shows full history). If the list stays empty after choosing a course, ask a coordinator to assign the right department(s).</p>
+            <p class="small text-muted mb-0 mt-3 pt-2 border-top"><strong>FC activity coordinators</strong> and users with <strong>full setup access</strong> see every active activity. Other users see only activities for <strong>departments you are assigned to</strong> (Activity setup → Departments, or your single department in staff access). <strong>Upsert</strong> updates the last value; <strong>repeat</strong> keeps a new reading each time (medical report shows full history). If the list stays empty after choosing a course, ask a coordinator to assign the right department(s).</p>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body">
+            <p class="small fw-semibold text-secondary text-uppercase mb-3" style="letter-spacing: 0.04em;">Activity log filters</p>
+            <div class="row g-3 align-items-end">
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <label class="form-label small mb-1" for="fcGridCourse">Course</label>
+                    <select id="fcGridCourse" class="form-select form-select-sm"><option value="">All courses</option></select>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <label class="form-label small mb-1" for="fcGridOtcode">OT code contains</label>
+                    <input type="text" id="fcGridOtcode" class="form-control form-control-sm" placeholder="Optional" autocomplete="off">
+                </div>
+                <div class="col-12 col-md-8 col-lg-4">
+                    <label class="form-label small mb-1" for="fcGridActivity">Activity</label>
+                    <select id="fcGridActivity" class="form-select form-select-sm"><option value="">All activities</option></select>
+                </div>
+                <div class="col-12 col-md-4 col-lg-2">
+                    <label class="form-label small mb-1 d-none d-md-block">&nbsp;</label>
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <button type="button" id="fcGridApply" class="btn btn-sm btn-primary">Apply filters</button>
+                        <button type="button" id="fcGridClear" class="btn btn-sm btn-outline-secondary">Clear</button>
+                    </div>
+                </div>
+            </div>
+            <p class="small text-muted mb-0 mt-3 pt-2 border-top">Filters apply to the table below (AJAX). Use the search box on the table for free-text across name, code, course, activity name, value, and date. Print, PDF, and Excel use the rows currently loaded in the table (choose <strong>All</strong> in page length to export everything that matches).</p>
         </div>
     </div>
 
     <div class="card border-0 shadow-sm">
         <div class="table-responsive">
-            <table class="table table-sm table-hover mb-0 js-fc-datatable" data-export-title="FC Post-Arrival Activities">
+            <table id="fcActivitiesDataTable" class="table table-sm table-hover mb-0 js-fc-datatable"
+                data-export-title="FC Post-Arrival Activities"
+                data-server-ajax="{{ route('fc-reg.admin.activities.data') }}"
+                data-filter-course="#fcGridCourse"
+                data-filter-otcode="#fcGridOtcode"
+                data-filter-activity="#fcGridActivity">
                 <thead class="table-light">
                     <tr>
-                        <th>#</th><th>Name</th><th>OT Code</th><th>Course</th><th>Activity</th><th>Value</th><th>Date/Time</th><th>Action</th>
+                        <th>#</th><th>Name</th><th>OT Code</th><th>Course</th><th>Activity</th><th>Value</th><th>Date/Time</th><th class="fc-dt-no-export">Action</th>
                     </tr>
                 </thead>
-                <tbody>
-                    @forelse($activities as $i => $act)
-                    @php
-                        $actEditPayload = [
-                            'updateUrl' => route('fc-reg.admin.activities.update', $act->activityid),
-                            'course' => $act->course,
-                            'menuid' => $act->activity,
-                            'menun' => $act->activityMaster->menun ?? $act->activity,
-                            'activityval' => $act->activityval,
-                            'otname' => $act->ot->otname ?? '',
-                            'otcode' => $act->ot->otcode ?? '',
-                            'house' => $act->ot->house ?? '',
-                            'housen' => $act->ot->housen ?? '',
-                        ];
-                    @endphp
-                    <tr>
-                        <td>{{ $i + 1 }}</td>
-                        <td>{{ $act->ot->otname ?? '' }}</td>
-                        <td>{{ $act->ot->otcode ?? '' }}</td>
-                        <td>{{ $act->course }}</td>
-                        <td>{{ $act->activityMaster->menun ?? $act->activity }}</td>
-                        <td>{{ $act->activityval }}</td>
-                        <td>{{ $act->activitydt }}</td>
-                        <td>
-                            <button type="button" class="btn btn-link btn-sm p-0 js-fc-act-edit"
-                                data-bs-toggle="modal" data-bs-target="#modalFcActEdit"
-                                data-fc-act-edit='@json($actEditPayload)'>Edit</button>
-                            <form method="POST" action="{{ route('fc-reg.admin.activities.destroy', $act->activityid) }}" class="d-inline" onsubmit="return confirm('Delete this record?')">
-                                @csrf @method('DELETE')
-                                <button type="submit" class="btn btn-link btn-sm text-danger p-0 ms-1">Delete</button>
-                            </form>
-                        </td>
-                    </tr>
-                    @empty
-                    <tr><td colspan="8" class="text-center text-muted py-3">No activities recorded yet.</td></tr>
-                    @endforelse
-                </tbody>
+                <tbody></tbody>
             </table>
         </div>
     </div>
@@ -141,12 +145,12 @@
                 </div>
                 <div class="row g-2 align-items-end">
                     <div class="col-md-6">
-                        <label class="form-label small">Activity</label>
-                        <select id="fcActEditActivity" class="form-select form-select-sm"><option value="">Loading…</option></select>
+                        <label class="form-label small" for="fcActEditActivity">Activity <span class="text-danger" title="Required">*</span></label>
+                        <select id="fcActEditActivity" class="form-select form-select-sm" required aria-required="true"><option value="">Loading…</option></select>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label small">Value</label>
-                        <input type="text" id="fcActEditValue" class="form-control form-control-sm" maxlength="500">
+                        <label class="form-label small" for="fcActEditValue">Value <span class="text-danger" title="Required">*</span></label>
+                        <input type="text" id="fcActEditValue" class="form-control form-control-sm" maxlength="500" required aria-required="true">
                     </div>
                 </div>
                 <div id="fcActEditErr" class="alert alert-danger py-2 small mt-2 d-none mb-0"></div>
@@ -180,33 +184,60 @@
         return [];
     }
 
+    function reloadFcActivitiesGrid() {
+        var $t = $('#fcActivitiesDataTable');
+        if ($t.length && $.fn.dataTable && $.fn.dataTable.isDataTable($t)) {
+            $t.DataTable().ajax.reload(null, false);
+        }
+    }
+
+    function fillActivitySelect($sel, ccode, defaultFirstLabel) {
+        $.get(R.activities, { ccode: ccode || '' }, function(data) {
+            const rows = asArray(data);
+            $sel.empty().append('<option value="">' + defaultFirstLabel + '</option>');
+            rows.forEach(function(a){
+                let hint = '';
+                if (a.entry_policy === 'upsert') hint = ' (upsert)';
+                else if (a.entry_policy === 'repeat') hint = ' (repeat)';
+                $sel.append(`<option value="${a.menuid}">${a.menun}${hint}</option>`);
+            });
+            if (rows.length === 0 && defaultFirstLabel.indexOf('All') === -1) {
+                $sel.append('<option value="" disabled>No activities in your scope</option>');
+            }
+        }).fail(function(xhr) {
+            $sel.empty()
+                .append('<option value="">' + defaultFirstLabel + '</option>')
+                .append('<option value="" disabled>Failed to load activities</option>');
+            console.error('Activity load failed', xhr && xhr.responseText);
+        });
+    }
+
     $.get(R.courses, function(data) {
-        const sel = $('#selcourse');
-        asArray(data).forEach(function(c){ sel.append(`<option value="${c.c_code}">${c.c_name}</option>`); });
+        const rows = asArray(data);
+        const selEntry = $('#selcourse');
+        const selGrid = $('#fcGridCourse');
+        rows.forEach(function(c){
+            selEntry.append(`<option value="${c.c_code}">${c.c_name}</option>`);
+            selGrid.append(`<option value="${c.c_code}">${c.c_name}</option>`);
+        });
+        fillActivitySelect($('#fcGridActivity'), '', 'All activities');
     }).fail(function() {
         alert('Unable to load courses. Please refresh the page.');
     });
 
     $('#selcourse').on('change', function() {
-        $.get(R.activities, { ccode: this.value }, function(data) {
-            const sel = $('#selactivity').empty().append('<option value="">Select Activity</option>');
-            const rows = asArray(data);
-            rows.forEach(function(a){
-                let hint = '';
-                if (a.entry_policy === 'upsert') hint = ' (upsert)';
-                else if (a.entry_policy === 'repeat') hint = ' (repeat)';
-                sel.append(`<option value="${a.menuid}">${a.menun}${hint}</option>`);
-            });
-            if (rows.length === 0) {
-                sel.append('<option value="" disabled>No activities in your scope</option>');
-            }
-        }).fail(function(xhr) {
-            $('#selactivity')
-                .empty()
-                .append('<option value="">Select Activity</option>')
-                .append('<option value="" disabled>Failed to load activities</option>');
-            console.error('Activity load failed', xhr?.responseText);
-        });
+        fillActivitySelect($('#selactivity'), this.value, 'Select Activity');
+    });
+    $('#fcGridCourse').on('change', function() {
+        fillActivitySelect($('#fcGridActivity'), this.value, 'All activities');
+    });
+
+    $('#fcGridApply').on('click', function() { reloadFcActivitiesGrid(); });
+    $('#fcGridClear').on('click', function() {
+        $('#fcGridCourse').val('');
+        $('#fcGridOtcode').val('');
+        fillActivitySelect($('#fcGridActivity'), '', 'All activities');
+        reloadFcActivitiesGrid();
     });
     $('#txtotcode').on('blur', function() {
         const otcode = this.value.trim();
@@ -234,7 +265,10 @@
             return;
         }
         $.post(R.store, payload, function(resp) {
-            if (resp.status === 'ok') return window.location.reload();
+            if (resp.status === 'ok') {
+                $('#txtactvalue').val('');
+                return reloadFcActivitiesGrid();
+            }
             if (resp.status === 'al') return alert('Already submitted for this OT and activity (unique policy).');
             alert('Unable to save activity.');
         });
@@ -291,7 +325,15 @@
             data: { _token: R.csrf, _method: 'PUT', uactivity: uactivity, actvalue: actvalue },
             headers: { 'X-Requested-With': 'XMLHttpRequest', Accept: 'application/json' },
         }).done(function (resp) {
-            if (resp && resp.status === 'ok') return window.location.reload();
+            if (resp && resp.status === 'ok') {
+                var el = document.getElementById('modalFcActEdit');
+                if (el && window.bootstrap && bootstrap.Modal) {
+                    var inst = bootstrap.Modal.getInstance(el);
+                    if (inst) inst.hide();
+                }
+                reloadFcActivitiesGrid();
+                return;
+            }
             $('#fcActEditErr').removeClass('d-none').text('Unable to save changes.');
         }).fail(function (xhr) {
             var msg = 'Unable to save changes.';

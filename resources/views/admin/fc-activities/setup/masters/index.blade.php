@@ -1,10 +1,49 @@
 @extends('admin.layouts.master')
 @section('title', 'Activity master')
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/styles/choices.min.css">
+<style>
+    /* Choices.js department dropdowns — aligned with admin/mess/process-mess-bills-employee (Choices + Bootstrap) */
+    .fc-master-choices-scope .choices { margin-bottom: 0; max-width: 100%; font-size: 0.875rem; }
+    .fc-master-choices-scope .choices .choices__inner {
+        min-height: calc(1.5em + 0.5rem + 2px);
+        padding: 0.25rem 2rem 0.25rem 0.5rem;
+        font-size: 0.875rem;
+        line-height: 1.5;
+        color: var(--bs-body-color);
+        background-color: var(--bs-body-bg);
+        border: 1px solid var(--bs-border-color);
+        border-radius: var(--bs-border-radius);
+    }
+    .fc-master-choices-scope .choices.is-focused .choices__inner,
+    .fc-master-choices-scope .choices.is-open .choices__inner {
+        border-color: var(--bs-primary);
+        box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.25);
+    }
+    .fc-master-choices-scope .input-group .choices { flex: 1 1 auto; min-width: 0; }
+    .fc-master-choices-scope .input-group .choices .choices__inner {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+    }
+    .fc-master-choices-scope .choices__list--dropdown,
+    .fc-master-choices-scope .choices__list[aria-expanded] {
+        z-index: 2005;
+        border-radius: var(--bs-border-radius);
+        box-shadow: var(--bs-box-shadow);
+    }
+    .fc-master-choices-scope .choices__list--dropdown .choices__item--selectable.is-highlighted,
+    .fc-master-choices-scope .choices__list[aria-expanded] .choices__item--selectable.is-highlighted {
+        background-color: var(--bs-primary-bg-subtle);
+        color: var(--bs-primary);
+    }
+</style>
+@endpush
 @section('setup_content')
 @php
     $departmentsActive = $departments->where('status', 1)->values();
     $createDeptPreselect = old('_form') === 'master_create' ? old('department_id') : request('department_id');
 @endphp
+<div class="fc-master-choices-scope">
 <div class="container-fluid px-3">
     <x-breadcrum title="FC — Activity master"></x-breadcrum>
     <div class="row align-items-center g-2 mb-3">
@@ -15,7 +54,7 @@
             <div class="d-flex flex-column flex-sm-row align-items-stretch align-items-sm-center gap-2 justify-content-lg-end">
                 <div class="input-group input-group-sm flex-grow-1 flex-sm-grow-0" style="min-width: min(100%, 16rem); max-width: 22rem;">
                     <label class="input-group-text text-muted small mb-0" for="fcMasterDeptFilter">Department</label>
-                    <select id="fcMasterDeptFilter" name="department_id" class="form-select" aria-label="Department filter">
+                    <select id="fcMasterDeptFilter" name="department_id" class="form-select form-select-sm fc-master-dept-choices" aria-label="Department filter" data-placeholder="All departments" data-search="true">
                         <option value="">All departments</option>
                         @foreach($departments as $d)
                             <option value="{{ $d->id }}" @selected((string)$deptFilter === (string)$d->id)>{{ $d->name }}</option>
@@ -41,7 +80,7 @@
         <table id="fcMasterSetupTable" class="table table-sm table-hover mb-0 w-100" data-export-title="FC Activity master">
             <thead class="table-light">
                 <tr>
-                    <th>Dept</th><th>Code</th><th>Label</th><th>Course</th><th>Order</th><th>Status</th><th>Joined marker</th><th>Policy</th><th></th>
+                    <th>Dept</th><th>Code</th><th>Label</th><th>Course</th><th>Order</th><th>Status</th><th>Policy</th><th></th>
                 </tr>
             </thead>
             <tbody></tbody>
@@ -64,30 +103,42 @@
                 <div class="modal-body">
                     @if($departmentsActive->isEmpty())
                         <p class="text-danger small mb-0">Add an active department first.</p>
+                    @else
+                        <p class="small text-muted mb-2"><span class="text-danger" aria-hidden="true">*</span> Required fields.</p>
                     @endif
                     <div class="row g-2">
                         <div class="col-md-6">
-                            <label class="form-label small">Department</label>
-                            <select name="department_id" class="form-select form-select-sm @error('department_id') is-invalid @enderror" @if($departmentsActive->isEmpty()) disabled @else required @endif>
+                            <label class="form-label small">Department <span class="text-danger" title="Required">*</span></label>
+                            <select name="department_id" id="masterCreateDept" class="form-select form-select-sm fc-master-dept-choices @error('department_id') is-invalid @enderror" @if($departmentsActive->isEmpty()) disabled @else required aria-required="true" @endif data-placeholder="Select department" data-search="true">
                                 @foreach($departmentsActive as $d)
-                                    <option value="{{ $d->id }}" @selected((string)$createDeptPreselect === (string)$d->id)>{{ $d->name }} ({{ $d->code }})</option>
+                                    <option value="{{ $d->id }}" @selected((string)$createDeptPreselect === (string)$d->id)>{{ $d->name }}</option>
                                 @endforeach
                             </select>
                             @error('department_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small">Activity code (menuid)</label>
-                            <input name="menuid" class="form-control form-control-sm @error('menuid') is-invalid @enderror" value="{{ old('_form') === 'master_create' ? old('menuid') : '' }}" required pattern="[a-z0-9_]+" maxlength="30">
+                            <label class="form-label small">Activity code (menuid) <span class="text-danger" title="Required">*</span></label>
+                            <input name="menuid" class="form-control form-control-sm @error('menuid') is-invalid @enderror" value="{{ old('_form') === 'master_create' ? old('menuid') : '' }}" required aria-required="true" pattern="[a-z0-9_]+" maxlength="30" title="Lowercase letters, digits, underscores only; max 30">
+                            <small class="form-text text-muted">Lowercase letters, numbers, and underscores only; no spaces. Up to 30 characters (e.g. <code class="small">uan_update</code>).</small>
                             @error('menuid')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small">Display name</label>
-                            <input name="menun" class="form-control form-control-sm @error('menun') is-invalid @enderror" value="{{ old('_form') === 'master_create' ? old('menun') : '' }}" required maxlength="100">
+                            <label class="form-label small">Display name <span class="text-danger" title="Required">*</span></label>
+                            <input name="menun" class="form-control form-control-sm @error('menun') is-invalid @enderror" value="{{ old('_form') === 'master_create' ? old('menun') : '' }}" required aria-required="true" maxlength="100">
                             @error('menun')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small">Course filter (blank = all)</label>
-                            <input name="ccode" class="form-control form-control-sm @error('ccode') is-invalid @enderror" value="{{ old('_form') === 'master_create' ? old('ccode') : '' }}" maxlength="120" placeholder="Session name or empty">
+                            <label class="form-label small">Course / session</label>
+                            <select name="ccode" class="form-select form-select-sm @error('ccode') is-invalid @enderror">
+                                <option value="">All courses</option>
+                                @php $createCcode = old('_form') === 'master_create' ? (string) old('ccode', '') : ''; @endphp
+                                @foreach($courseFilterOptions as $sn)
+                                    <option value="{{ $sn }}" @selected($createCcode === $sn)>{{ $sn }}</option>
+                                @endforeach
+                                @if($createCcode !== '' && ! $courseFilterOptions->contains($createCcode))
+                                    <option value="{{ $createCcode }}" selected>{{ $createCcode }} (not in list)</option>
+                                @endif
+                            </select>
                             @error('ccode')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-md-4">
@@ -96,27 +147,21 @@
                             @error('sort_order')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label small">Status</label>
-                            <select name="status" class="form-select form-select-sm @error('status') is-invalid @enderror">
+                            <label class="form-label small">Status <span class="text-danger" title="Required">*</span></label>
+                            <select name="status" class="form-select form-select-sm @error('status') is-invalid @enderror" required aria-required="true">
                                 <option value="1" @selected(old('_form') === 'master_create' && old('status', '1') == '1')>Active</option>
                                 <option value="0" @selected(old('_form') === 'master_create' && old('status') === '0')>Inactive</option>
                             </select>
                             @error('status')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label small">Entry policy</label>
-                            <select name="entry_policy" class="form-select form-select-sm @error('entry_policy') is-invalid @enderror">
+                            <label class="form-label small">Entry policy <span class="text-danger" title="Required">*</span></label>
+                            <select name="entry_policy" class="form-select form-select-sm @error('entry_policy') is-invalid @enderror" required aria-required="true">
                                 <option value="unique" @selected(old('_form') === 'master_create' && old('entry_policy', 'unique') === 'unique')>Unique</option>
                                 <option value="upsert" @selected(old('_form') === 'master_create' && old('entry_policy') === 'upsert')>Upsert</option>
                                 <option value="repeat" @selected(old('_form') === 'master_create' && old('entry_policy') === 'repeat')>Repeat (history)</option>
                             </select>
                             @error('entry_policy')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                        </div>
-                        <div class="col-12">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="is_joined_marker" value="1" id="jmMasterCreate" @checked(old('_form') === 'master_create' && old('is_joined_marker'))>
-                                <label class="form-check-label small" for="jmMasterCreate">Joined / arrival marker</label>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -145,29 +190,39 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
+                    <p class="small text-muted mb-2"><span class="text-danger" aria-hidden="true">*</span> Required fields.</p>
                     <div class="row g-2">
                         <div class="col-md-6">
-                            <label class="form-label small">Department</label>
-                            <select name="department_id" id="masterEditDept" class="form-select form-select-sm @error('department_id') is-invalid @enderror" required>
+                            <label class="form-label small">Department <span class="text-danger" title="Required">*</span></label>
+                            <select name="department_id" id="masterEditDept" class="form-select form-select-sm fc-master-dept-choices @error('department_id') is-invalid @enderror" required aria-required="true" data-placeholder="Select department" data-search="true">
                                 @foreach($departments as $d)
-                                    <option value="{{ $d->id }}" @selected(old('_form') === 'master_edit' && (string)old('department_id') === (string)$d->id)>{{ $d->name }} ({{ $d->code }}){{ $d->status ? '' : ' — inactive' }}</option>
+                                    <option value="{{ $d->id }}" @selected(old('_form') === 'master_edit' && (string)old('department_id') === (string)$d->id)>{{ $d->name }}{{ $d->status ? '' : ' — inactive' }}</option>
                                 @endforeach
                             </select>
                             @error('department_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small">Activity code (menuid)</label>
-                            <input name="menuid" id="masterEditMenuid" class="form-control form-control-sm @error('menuid') is-invalid @enderror" value="{{ old('_form') === 'master_edit' ? old('menuid') : '' }}" required pattern="[a-z0-9_]+" maxlength="30">
+                            <label class="form-label small">Activity code (menuid) <span class="text-danger" title="Required">*</span></label>
+                            <input name="menuid" id="masterEditMenuid" class="form-control form-control-sm @error('menuid') is-invalid @enderror" value="{{ old('_form') === 'master_edit' ? old('menuid') : '' }}" required aria-required="true" pattern="[a-z0-9_]+" maxlength="30" title="Lowercase letters, digits, underscores only; max 30">
+                            <small class="form-text text-muted">Lowercase letters, numbers, and underscores only; no spaces. Up to 30 characters (e.g. <code class="small">uan_update</code>).</small>
                             @error('menuid')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small">Display name</label>
-                            <input name="menun" id="masterEditMenun" class="form-control form-control-sm @error('menun') is-invalid @enderror" value="{{ old('_form') === 'master_edit' ? old('menun') : '' }}" required maxlength="100">
+                            <label class="form-label small">Display name <span class="text-danger" title="Required">*</span></label>
+                            <input name="menun" id="masterEditMenun" class="form-control form-control-sm @error('menun') is-invalid @enderror" value="{{ old('_form') === 'master_edit' ? old('menun') : '' }}" required aria-required="true" maxlength="100">
                             @error('menun')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small">Course filter</label>
-                            <input name="ccode" id="masterEditCcode" class="form-control form-control-sm @error('ccode') is-invalid @enderror" value="{{ old('_form') === 'master_edit' ? old('ccode') : '' }}" maxlength="120">
+                            <label class="form-label small">Course / session</label>
+                            <select name="ccode" id="masterEditCcode" class="form-select form-select-sm @error('ccode') is-invalid @enderror">
+                                <option value="">All courses</option>
+                                @foreach($courseFilterOptions as $sn)
+                                    <option value="{{ $sn }}" @selected(old('_form') === 'master_edit' && (string) old('ccode', '') === $sn)>{{ $sn }}</option>
+                                @endforeach
+                                @if(old('_form') === 'master_edit' && (string) old('ccode', '') !== '' && ! $courseFilterOptions->contains((string) old('ccode')))
+                                    <option value="{{ old('ccode') }}" selected>{{ old('ccode') }} (not in list)</option>
+                                @endif
+                            </select>
                             @error('ccode')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-md-4">
@@ -176,27 +231,21 @@
                             @error('sort_order')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label small">Status</label>
-                            <select name="status" id="masterEditStatus" class="form-select form-select-sm @error('status') is-invalid @enderror">
+                            <label class="form-label small">Status <span class="text-danger" title="Required">*</span></label>
+                            <select name="status" id="masterEditStatus" class="form-select form-select-sm @error('status') is-invalid @enderror" required aria-required="true">
                                 <option value="1" @selected(old('_form') === 'master_edit' && (string)old('status', '1') === '1')>Active</option>
                                 <option value="0" @selected(old('_form') === 'master_edit' && (string)old('status') === '0')>Inactive</option>
                             </select>
                             @error('status')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label small">Entry policy</label>
-                            <select name="entry_policy" id="masterEditPolicy" class="form-select form-select-sm @error('entry_policy') is-invalid @enderror">
+                            <label class="form-label small">Entry policy <span class="text-danger" title="Required">*</span></label>
+                            <select name="entry_policy" id="masterEditPolicy" class="form-select form-select-sm @error('entry_policy') is-invalid @enderror" required aria-required="true">
                                 <option value="unique" @selected(old('_form') === 'master_edit' && old('entry_policy', 'unique') === 'unique')>Unique</option>
                                 <option value="upsert" @selected(old('_form') === 'master_edit' && old('entry_policy') === 'upsert')>Upsert</option>
                                 <option value="repeat" @selected(old('_form') === 'master_edit' && old('entry_policy') === 'repeat')>Repeat (history)</option>
                             </select>
                             @error('entry_policy')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                        </div>
-                        <div class="col-12">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="is_joined_marker" value="1" id="jmMasterEdit" @checked(old('_form') === 'master_edit' && old('is_joined_marker'))>
-                                <label class="form-check-label small" for="jmMasterEdit">Joined / arrival marker</label>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -208,12 +257,80 @@
         </div>
     </div>
 </div>
-@endsection
+</div>
 
 @include('admin.fc-activities.partials.datatable-tools')
 
+@endsection
+
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/scripts/choices.min.js"></script>
 <script>
+function normalizeFcMasterDeptChoicesSearchText(text) {
+    return String(text || '').replace(/\s+/g, ' ').trim().toLowerCase();
+}
+function applyFcMasterDeptChoicesSearchFilter(instance, rawQuery) {
+    if (!instance || !instance.dropdown || !instance.dropdown.element) return;
+    var dropdownEl = instance.dropdown.element;
+    var query = normalizeFcMasterDeptChoicesSearchText(rawQuery);
+    var choiceItems = dropdownEl.querySelectorAll('.choices__item--choice');
+    if (!choiceItems || !choiceItems.length) return;
+    choiceItems.forEach(function (item) {
+        if (item.classList.contains('choices__placeholder')) return;
+        var label = normalizeFcMasterDeptChoicesSearchText(item.textContent || '');
+        var value = normalizeFcMasterDeptChoicesSearchText(item.getAttribute('data-value') || '');
+        var show = !query || label.indexOf(query) !== -1 || value.indexOf(query) !== -1;
+        item.style.display = show ? '' : 'none';
+    });
+}
+function initFcMasterDeptChoices() {
+    if (typeof Choices === 'undefined') return;
+    document.querySelectorAll('select.fc-master-dept-choices').forEach(function (el) {
+        if (el.disabled) return;
+        if (el._fcMasterDeptChoicesInstance) return;
+        if (el.closest('.choices')) return;
+        var placeholder = el.getAttribute('data-placeholder') || 'Select…';
+        var useCustomSearch = el.getAttribute('data-search') !== 'false';
+        var inst = new Choices(el, {
+            searchEnabled: true,
+            searchChoices: !useCustomSearch,
+            shouldSort: false,
+            allowHTML: false,
+            itemSelectText: '',
+            position: 'bottom',
+            placeholder: true,
+            placeholderValue: placeholder,
+            closeDropdownOnSelect: true
+        });
+        el._fcMasterDeptChoicesInstance = inst;
+        if (useCustomSearch) {
+            function applySearchFilterAfterRender() {
+                var typed = (inst.input && inst.input.element) ? (inst.input.element.value || '') : '';
+                requestAnimationFrame(function () {
+                    applyFcMasterDeptChoicesSearchFilter(inst, typed);
+                });
+            }
+            el.addEventListener('showDropdown', applySearchFilterAfterRender);
+            if (inst.input && inst.input.element) {
+                inst.input.element.addEventListener('input', applySearchFilterAfterRender);
+                inst.input.element.addEventListener('keyup', applySearchFilterAfterRender);
+            }
+        }
+    });
+}
+function syncFcMasterDeptChoicesValue(selectEl) {
+    if (!selectEl || !selectEl._fcMasterDeptChoicesInstance) return;
+    var v = selectEl.value;
+    try {
+        if (v === '' || v === null || typeof v === 'undefined') {
+            selectEl._fcMasterDeptChoicesInstance.setChoiceByValue('');
+        } else {
+            selectEl._fcMasterDeptChoicesInstance.setChoiceByValue(String(v));
+        }
+    } catch (err) {
+        try { selectEl._fcMasterDeptChoicesInstance.setChoiceByValue(''); } catch (e2) {}
+    }
+}
 (function () {
     var hadMasterCreateErr = @json($errors->any() && old('_form') === 'master_create');
     var hadMasterEditErr = @json($errors->any() && old('_form') === 'master_edit');
@@ -238,19 +355,31 @@
             var form = document.getElementById('formMasterEdit');
             form.action = row.updateUrl;
             document.getElementById('masterEditId').value = row.edit_master_id;
-            document.getElementById('masterEditDept').value = String(row.department_id);
+            var deptEl = document.getElementById('masterEditDept');
+            deptEl.value = String(row.department_id);
+            syncFcMasterDeptChoicesValue(deptEl);
             document.getElementById('masterEditMenuid').value = row.menuid;
             document.getElementById('masterEditMenun').value = row.menun;
-            document.getElementById('masterEditCcode').value = row.ccode || '';
+            var cSel = document.getElementById('masterEditCcode');
+            var cVal = (row.ccode || '').trim();
+            cSel.querySelectorAll('option[data-fc-master-ccode-fallback]').forEach(function (el) { el.remove(); });
+            if (cVal && !Array.prototype.some.call(cSel.options, function (o) { return o.value === cVal; })) {
+                var o = document.createElement('option');
+                o.value = cVal;
+                o.textContent = cVal + ' (current)';
+                o.setAttribute('data-fc-master-ccode-fallback', '1');
+                cSel.appendChild(o);
+            }
+            cSel.value = cVal || '';
             document.getElementById('masterEditSort').value = row.sort_order;
             document.getElementById('masterEditStatus').value = String(row.status);
             document.getElementById('masterEditPolicy').value = row.entry_policy;
-            document.getElementById('jmMasterEdit').checked = !!row.is_joined_marker;
         });
     }
 })();
 
 $(function () {
+    initFcMasterDeptChoices();
     var $t = $('#fcMasterSetupTable');
     var $filter = $('#fcMasterDeptFilter');
     if (!$t.length || !$.fn.DataTable) return;
@@ -277,7 +406,6 @@ $(function () {
             { data: 'ccode', name: 'ccode' },
             { data: 'sort_order', name: 'sort_order' },
             { data: 'status_display', name: 'status_display', orderable: false, searchable: false },
-            { data: 'joined_display', name: 'joined_display', orderable: false, searchable: false },
             { data: 'entry_policy', name: 'entry_policy' },
             { data: 'action', name: 'action', orderable: false, searchable: false }
         ]

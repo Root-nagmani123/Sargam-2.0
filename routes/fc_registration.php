@@ -146,6 +146,7 @@ Route::middleware(['auth'])->prefix('fc-reg/admin')->name('fc-reg.admin.')->grou
     // ── FC Post-Arrival Activities ───────────────────────────────────────
     Route::prefix('activities')->name('activities.')->group(function () {
         Route::get('/', [FcActivityHomeController::class, 'index'])->name('index');
+        Route::get('/data', [FcActivityHomeController::class, 'dataTable'])->name('data');
 
         Route::post('/', [FcActivityController::class, 'store'])->name('store');
 

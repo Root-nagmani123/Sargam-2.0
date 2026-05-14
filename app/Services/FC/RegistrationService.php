@@ -19,6 +19,10 @@ use Illuminate\Support\Facades\Hash;
 
 class RegistrationService
 {
+    public function __construct(
+        private readonly DynamicFormService $dynamicFormService,
+    ) {}
+
     /**
      * Return a progress array for the dashboard progress bar.
      * Mirrors the logic used in HomeController.java to determine step completion.
@@ -306,7 +310,7 @@ class RegistrationService
                 if ($groupFields->isEmpty()) {
                     continue;
                 }
-                $rows = DB::table($group->target_table)->where('username', $username)->get();
+                $rows = $this->dynamicFormService->getExistingGroupRows($group, $username);
                 $body = [];
                 foreach ($rows as $r) {
                     $line = [];

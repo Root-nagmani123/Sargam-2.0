@@ -16,12 +16,10 @@ class FcActivityMaster extends Model
         'ccode',
         'sort_order',
         'status',
-        'is_joined_marker',
         'entry_policy',
     ];
 
     protected $casts = [
-        'is_joined_marker' => 'integer',
         'sort_order' => 'integer',
     ];
 
@@ -66,10 +64,12 @@ class FcActivityMaster extends Model
         return $q->orderBy('sort_order')->orderBy('menun');
     }
 
+    /**
+     * Activity menuid used for joined/arrival reporting (not-joined list, service-wise counts).
+     * Uses the active master row whose menuid is the literal string `joined`.
+     */
     public static function joinedMarkerMenuid(): ?string
     {
-        $m = static::active()->where('is_joined_marker', 1)->orderByDesc('sort_order')->value('menuid');
-
-        return $m ?: (static::active()->where('menuid', 'joined')->value('menuid'));
+        return static::active()->where('menuid', 'joined')->value('menuid');
     }
 }
