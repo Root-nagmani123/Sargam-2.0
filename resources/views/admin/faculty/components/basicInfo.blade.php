@@ -334,14 +334,14 @@
             label="Photo Upload:"
             placeholder="Photo upload :"
             formLabelClass="form-label"
-            accept="image/jpeg,image/png,image/gif"
-            helperSmallText="Please upload a recent passport-sized photo (Max 2 MB, JPG or PNG or GIF only)"
+            accept="image/jpeg,image/png"
+            helperSmallText="Please upload a recent passport-sized photo (Max 2 MB, JPG or PNG only)"
             />
 
-            <!-- File Size Validation Message -->
+            <!-- File Validation Message -->
             <div id="photoErrorMessageBasic" class="alert alert-danger alert-dismissible fade show mt-2 d-none" role="alert">
                 <i class="material-icons align-middle me-2">error</i>
-                <strong>File size exceeds limit!</strong> Maximum file size allowed is 2 MB. Please select a smaller file.
+                <span id="photoErrorTextBasic"></span>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
 

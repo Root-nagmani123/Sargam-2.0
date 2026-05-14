@@ -431,15 +431,15 @@ input.is-invalid {
                                     label="Photo Upload:"
                                     placeholder="Photo Upload:"
                                     formLabelClass="form-label"
-                                    accept="image/jpeg,image/png,image/gif"
-                                    helperSmallText="Please upload a recent passport-sized photo (Max 2 MB, JPG or PNG or GIF only)"
+                                    accept="image/jpeg,image/png"
+                                    helperSmallText="Please upload a recent passport-sized photo (Max 2 MB, JPG or PNG only)"
 
                                 />
 
-                                <!-- File Size Validation Message -->
+                                <!-- File Validation Message -->
                                 <div id="photoErrorMessage" class="alert alert-danger alert-dismissible fade show mt-2 d-none" role="alert">
                                     <i class="material-icons align-middle me-2">error</i>
-                                    <strong>File size exceeds limit!</strong> Maximum file size allowed is 2 MB. Please select a smaller file.
+                                    <span id="photoErrorText"></span>
                                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                                 </div>
 
@@ -1330,47 +1330,51 @@ if (faculty.Reference_Recommendation) {
     });
 });
 
-    // ======= PHOTO FILE SIZE VALIDATION =======
+    // ======= PHOTO FILE VALIDATION (type + size) =======
     $("input[name='photo']").on("change", function (e) {
         try {
             const file = this.files[0];
-            const maxSizeInMB = 2;
-            const maxSizeInBytes = maxSizeInMB * 1024 * 1024; // 2 MB in bytes
+            const maxSizeInBytes = 2 * 1024 * 1024; // 2 MB
+            const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
             const errorMessageDiv = $("#photoErrorMessage");
+            const errorText = $("#photoErrorText");
 
             if (!file) {
                 errorMessageDiv.addClass("d-none");
                 return;
             }
 
-            // Get file size in MB for display
-            const fileSizeInMB = (file.size / (1024 * 1024)).toFixed(2);
-
-            // Check file size
-            if (file.size > maxSizeInBytes) {
-                // Show error message alert
+            // Check file type
+            if (!allowedTypes.includes(file.type)) {
+                errorText.text("Unsupported format. Only JPG and PNG files are allowed.");
                 errorMessageDiv.removeClass("d-none");
-
-                // Reset the input and preview
                 this.value = "";
                 $("#photoPreview").addClass("d-none").attr("src", "#");
                 return;
-            } else {
-                errorMessageDiv.addClass("d-none");
-
-                // Show preview for valid files
-                const reader = new FileReader();
-                reader.onload = function (event) {
-                    try {
-                        $("#photoPreview")
-                            .attr("src", event.target.result)
-                            .removeClass("d-none");
-                    } catch (err) {
-                        console.warn("Photo preview error:", err);
-                    }
-                };
-                reader.readAsDataURL(file);
             }
+
+            // Check file size
+            if (file.size > maxSizeInBytes) {
+                errorText.text("File size exceeds limit. Maximum file size allowed is 2 MB.");
+                errorMessageDiv.removeClass("d-none");
+                this.value = "";
+                $("#photoPreview").addClass("d-none").attr("src", "#");
+                return;
+            }
+
+            // Valid file — show preview
+            errorMessageDiv.addClass("d-none");
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                try {
+                    $("#photoPreview")
+                        .attr("src", event.target.result)
+                        .removeClass("d-none");
+                } catch (err) {
+                    console.warn("Photo preview error:", err);
+                }
+            };
+            reader.readAsDataURL(file);
         } catch (err) {
             console.error("Photo validation error:", err);
         }
