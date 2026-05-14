@@ -10,93 +10,88 @@
 @endphp
 <style>
     #eventModal {
-        --lbsnaa-blue: #004a93;
-        --lbsnaa-blue-dark: #003566;
-        --lbsnaa-blue-rgb: 0, 74, 147;
+        --lbsnaa-blue: #00539b;
+        --lbsnaa-blue-dark: #003f78;
+        --lbsnaa-blue-rgb: 0, 83, 155;
         --event-modal-accent: var(--lbsnaa-blue);
-        --event-modal-accent-rgb: var(--lbsnaa-blue-rgb);
-        --event-modal-header-gradient: linear-gradient(160deg, #003566 0%, #004a93 42%, #0a5aa8 100%);
-        --event-modal-card-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-        --event-modal-card-shadow-hover: 0 0.5rem 1rem rgba(0, 74, 147, 0.12);
-        --event-modal-focus-ring: 0 0 0 0.25rem rgba(var(--lbsnaa-blue-rgb), 0.22);
+        --event-modal-focus-ring: 0 0 0 0.2rem rgba(var(--lbsnaa-blue-rgb), 0.16);
+    }
+
+    #eventModal .calendar-event-dialog {
+        max-width: 360px;
     }
 
     #eventModal .modal-content {
         border: 0;
-        box-shadow: 0 1rem 3rem rgba(0, 36, 70, 0.2);
+        border-radius: 0.75rem;
+        box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.22);
     }
 
     #eventModal .modal-header {
-        background: var(--event-modal-header-gradient) !important;
-        border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+        background: var(--bs-body-bg) !important;
+        border-bottom: 1px solid var(--bs-border-color);
+        padding: 1rem 1rem 0.75rem;
     }
 
-    #eventModal .event-modal-emblem {
-        width: 36px;
-        height: 36px;
-        object-fit: contain;
-        flex-shrink: 0;
-        filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
-    }
-
-    #eventModal .event-modal-lbsnaa-logo {
-        height: 40px;
-        width: auto;
-        max-width: 150px;
-        object-fit: contain;
-        flex-shrink: 0;
-        filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.15));
-    }
-
-    #eventModal .event-modal-brand-lines .event-modal-brand-line-1 {
-        font-size: 0.65rem;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-        color: rgba(255, 255, 255, 0.72);
+    #eventModal .modal-title {
+        color: var(--bs-emphasis-color) !important;
+        font-size: 1rem;
         font-weight: 600;
     }
 
-    #eventModal .event-modal-brand-lines .event-modal-brand-line-2 {
-        font-size: 0.78rem;
-        font-weight: 700;
-        color: #fff;
-        line-height: 1.2;
-        max-width: 16rem;
+    #eventModal .btn-close {
+        --bs-btn-close-opacity: 1;
+        width: 0.75rem;
+        height: 0.75rem;
+        padding: 0.25rem;
     }
 
     #eventModal .modal-body {
-        background: linear-gradient(
-            to bottom,
-            rgba(var(--lbsnaa-blue-rgb), 0.05) 0%,
-            var(--bs-secondary-bg) 12%,
-            var(--bs-body-bg) 42%
-        );
+        background: var(--bs-body-bg);
         overflow-x: visible !important;
-        max-height: min(70vh, 780px);
+        max-height: min(78vh, 760px);
         overflow-y: auto;
+        padding: 0.75rem 1rem 1rem;
     }
 
     #eventModal .modal-footer {
         background-color: var(--bs-body-bg);
-        border-top: 1px solid var(--bs-border-color-translucent);
+        border-top: 0;
         gap: 0.5rem;
+        padding: 0.75rem 1rem 1rem;
+    }
+
+    #eventModal .event-step-progress {
+        height: 0.25rem;
+        background-color: var(--bs-tertiary-bg);
+        border-radius: var(--bs-border-radius-pill);
+    }
+
+    #eventModal .event-step-progress .progress-bar {
+        background-color: var(--lbsnaa-blue);
+        border-radius: var(--bs-border-radius-pill);
+        transition: width 0.2s ease;
+    }
+
+    #eventModal .event-step-percent {
+        font-size: 0.625rem;
+        line-height: 1;
+        min-width: 1.75rem;
+        text-align: right;
     }
 
     #eventModal .form-label {
         font-weight: 500;
         color: var(--bs-emphasis-color);
-        margin-bottom: 0.375rem;
+        margin-bottom: 0.3rem;
         display: flex;
         align-items: center;
-        gap: 0.5rem;
-        font-size: 0.875rem;
+        gap: 0.25rem;
+        font-size: 0.6875rem;
     }
 
     #eventModal .form-label i {
-        color: var(--lbsnaa-blue);
-        opacity: 0.85;
-        font-size: 1rem;
-        flex-shrink: 0;
+        display: none;
     }
 
     #eventModal .required::after {
@@ -108,6 +103,10 @@
     #eventModal .form-control,
     #eventModal .form-select {
         border-width: 1px;
+        border-radius: 0.375rem;
+        font-size: 0.75rem;
+        min-height: 2rem;
+        padding: 0.45rem 0.65rem;
         transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
     }
 
@@ -119,7 +118,7 @@
 
     #eventModal textarea.form-control {
         resize: vertical;
-        min-height: 5.5rem;
+        min-height: 2rem;
     }
 
     #eventModal .helper-text,
@@ -129,27 +128,34 @@
 
     #eventModal .event-modal-section-title {
         position: relative;
-        padding-bottom: 0.5rem;
+        padding-bottom: 0.55rem;
+        border-bottom: 1px solid var(--bs-border-color);
+        color: var(--bs-emphasis-color) !important;
+        font-size: 0.75rem;
+        font-weight: 600;
     }
 
     #eventModal .event-modal-section-title::after {
-        content: '';
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        width: 2.5rem;
-        height: 3px;
-        background: var(--lbsnaa-blue);
-        border-radius: 2px;
+        display: none;
     }
 
     #eventModal .event-modal-section-heading {
         color: var(--lbsnaa-blue) !important;
     }
 
+    #eventModal .event-modal-section-card {
+        box-shadow: none !important;
+        border: 0 !important;
+        border-radius: 0 !important;
+    }
+
     #eventModal .event-modal-section-card > .card-header {
-        border-left: 4px solid var(--lbsnaa-blue);
-        border-radius: var(--bs-border-radius-xl) 0 0 0;
+        border: 0 !important;
+        padding: 0 0 0.75rem !important;
+    }
+
+    #eventModal .event-modal-section-card > .card-body {
+        padding: 0 !important;
     }
 
     #eventModal .btn-primary {
@@ -172,21 +178,36 @@
         border-color: var(--lbsnaa-blue);
     }
 
+    #eventModal .form-check-input {
+        width: 0.875rem;
+        height: 0.875rem;
+        margin-top: 0.15rem;
+    }
+
+    #eventModal .form-switch .form-check-input {
+        width: 2rem;
+        height: 1.25rem;
+        border: 0;
+        background-color: #c6c6c6;
+    }
+
     #eventModal .form-switch .form-check-input:checked {
-        background-color: var(--lbsnaa-blue);
-        border-color: var(--lbsnaa-blue);
+        background-color: #6947f5;
     }
 
     #eventModal #type_name_container {
-        background: linear-gradient(135deg, var(--bs-secondary-bg) 0%, var(--bs-tertiary-bg) 100%);
-        border: 2px dashed var(--bs-border-color);
+        background: var(--bs-body-bg);
+        border: 1px solid var(--bs-border-color);
+        border-radius: 0.375rem !important;
+        font-size: 0.75rem;
+        min-height: 2rem;
+        padding: 0.45rem 0.65rem !important;
         transition: border-color 0.2s ease, background 0.2s ease;
-        min-height: 3.75rem;
     }
 
     #eventModal #type_name_container:hover {
-        border-color: rgba(var(--lbsnaa-blue-rgb), 0.35);
-        background: linear-gradient(135deg, var(--bs-body-bg) 0%, rgba(var(--lbsnaa-blue-rgb), 0.06) 100%);
+        border-color: rgba(var(--lbsnaa-blue-rgb), 0.45);
+        background: var(--bs-body-bg);
     }
 
     #eventModal #type_name_container.border-danger {
@@ -212,21 +233,17 @@
         user-select: none;
     }
 
-    #eventModal .card {
-        transition: box-shadow 0.2s ease, transform 0.2s ease;
-    }
-
-    #eventModal .card:hover {
-        box-shadow: var(--event-modal-card-shadow-hover) !important;
-    }
-
     #eventModal input[type="time"],
     #eventModal input[type="date"] {
         cursor: pointer;
     }
 
     #eventModal .modal-footer .btn {
-        min-width: 6.5rem;
+        min-width: 4.125rem;
+        border-radius: 0.375rem !important;
+        font-size: 0.75rem;
+        padding: 0.6rem 0.95rem;
+        font-weight: 500;
     }
 
     /* Choices.js inside event modal */
@@ -237,9 +254,10 @@
     }
 
     #eventModal .choices__inner.form-select {
-        min-height: 2.625rem !important;
+        min-height: 2rem !important;
         background: var(--bs-body-bg) !important;
-        padding: 0.375rem 0.75rem !important;
+        padding: 0.25rem 0.65rem !important;
+        font-size: 0.75rem;
     }
 
     #eventModal .choices.is-focused .choices__inner.form-select,
@@ -266,7 +284,7 @@
 
     #eventModal .modal-dialog.modal-dialog-scrollable .modal-content {
         overflow: visible !important;
-        max-height: min(90vh, 920px);
+        max-height: min(96vh, 920px);
     }
 
     #eventModal .choices.is-open {
@@ -277,45 +295,52 @@
     #eventModal .choices.is-open .choices__list[aria-expanded] {
         z-index: 10610 !important;
     }
+
+    #eventModal .event-options-row {
+        min-height: 1.85rem;
+    }
+
+    #eventModal .event-options-row .form-check-input {
+        float: none;
+        margin-left: 0;
+        flex-shrink: 0;
+    }
+
+    #eventModal .event-step-actions [data-event-step-prev].d-none,
+    #eventModal .event-step-actions [data-event-step-next].d-none,
+    #eventModal .event-step-actions #submitEventBtn.d-none {
+        display: none !important;
+    }
+
+    @media (max-width: 575.98px) {
+        #eventModal .calendar-event-dialog {
+            max-width: none;
+            margin: 0.5rem;
+        }
+    }
 </style>
 
 <div class="modal fade" id="eventModal" tabindex="-1" aria-labelledby="eventModalTitle" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-scrollable modal-lg modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-scrollable modal-dialog-centered calendar-event-dialog">
         <form id="eventForm" novalidate>
             @csrf
-            <div class="modal-content rounded-4 overflow-hidden">
-                <div class="modal-header text-white px-3 px-md-4 pt-3 pb-3 flex-column align-items-stretch gap-2">
-                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 gap-md-3 w-100">
-                        <div class="d-flex align-items-center gap-2 min-w-0 flex-grow-1">
-                            <img src="{{ $calendarEventModalEmblemSrc }}" width="36" height="36" class="event-modal-emblem" alt="National Emblem" loading="lazy">
-                            <div class="event-modal-brand-lines text-start lh-sm d-none d-sm-block min-w-0">
-                                <div class="event-modal-brand-line-1">Government of India</div>
-                                <div class="event-modal-brand-line-2">Lal Bahadur Shastri National Academy of Administration</div>
-                            </div>
-                        </div>
-                        <div class="d-flex align-items-center gap-2 flex-shrink-0">
-                            <img src="{{ $calendarEventModalLbsnaaLogoSrc }}" class="event-modal-lbsnaa-logo" alt="LBSNAA" loading="lazy">
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                    </div>
-                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 w-100 border-top border-white border-opacity-25 pt-2">
-                        <h2 class="modal-title h5 mb-0 text-white text-break d-flex align-items-center gap-2">
-                            <i class="bi bi-calendar-plus d-sm-none" aria-hidden="true"></i>
-                            <span id="eventModalTitle">Add Calendar Event</span>
-                        </h2>
-                        <div class="d-flex flex-wrap align-items-center gap-2">
-                            <label for="start_datetime" class="form-label text-white mb-0 small fw-semibold text-nowrap mb-0">
-                                <i class="bi bi-calendar3 me-1" aria-hidden="true"></i>Event date
-                            </label>
-                            <input type="date" name="start_datetime" id="start_datetime"
-                                class="form-control form-control-sm bg-white text-dark border-0 shadow-sm w-auto min-w-0"
-                                required aria-required="true">
-                        </div>
-                    </div>
+            <div class="modal-content overflow-hidden">
+                <div class="modal-header align-items-center justify-content-between">
+                    <h2 class="modal-title mb-0 text-break">
+                        <span id="eventModalTitle">Add Event</span>
+                    </h2>
+                    <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
 
-                <div class="modal-body px-3 px-md-4 py-3 py-md-4">
-                    <section class="mb-3 mb-md-4" aria-labelledby="basicInfoHeading">
+                <div class="modal-body">
+                    <div class="d-flex align-items-center gap-2 mb-3" aria-hidden="true">
+                        <div class="progress event-step-progress flex-grow-1">
+                            <div class="progress-bar" role="progressbar" style="width: 30%;" aria-valuenow="30" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <span class="event-step-percent text-body-secondary" data-event-step-percent>30%</span>
+                    </div>
+
+                    <section class="event-modal-step mb-0" aria-labelledby="basicInfoHeading" data-event-step="1">
                         <div class="card border-0 shadow-sm rounded-4 event-modal-section-card">
                             <div class="card-header bg-transparent border-bottom py-3 px-3 px-md-4">
                                 <h3 id="basicInfoHeading" class="event-modal-section-title h6 mb-0 event-modal-section-heading fw-semibold d-flex align-items-center gap-2">
@@ -325,19 +350,27 @@
                             </div>
                             <div class="card-body p-3 p-md-4">
                                 <div class="row g-3">
-                                    <div class="col-md-6">
+                                    <div class="col-12">
+                                        <label for="start_datetime" class="form-label required">
+                                            <i class="bi bi-calendar3" aria-hidden="true"></i>Date
+                                        </label>
+                                        <input type="date" name="start_datetime" id="start_datetime"
+                                            class="form-control" required aria-required="true">
+                                    </div>
+
+                                    <div class="col-12">
                                         <label for="Course_name" class="form-label required">
                                             <i class="bi bi-book" aria-hidden="true"></i>Course Name
                                         </label>
                                         <select name="Course_name" id="Course_name" class="form-select" required aria-required="true">
-                                            <option value="">Select Course</option>
+                                            <option value="">Select Course Name</option>
                                             @foreach($courseMaster as $course)
                                             <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
                                             @endforeach
                                         </select>
                                     </div>
 
-                                    <div class="col-md-6">
+                                    <div class="col-12">
                                         <label for="group_type" class="form-label required">
                                             <i class="bi bi-people" aria-hidden="true"></i>Group Type
                                         </label>
@@ -360,9 +393,9 @@
                                         </div>
                                     </div>
 
-                                    <div class="col-md-6">
+                                    <div class="col-12">
                                         <label for="subject_module" class="form-label required">
-                                            <i class="bi bi-grid-3x3-gap" aria-hidden="true"></i>Subject Module
+                                            <i class="bi bi-grid-3x3-gap" aria-hidden="true"></i>Module Name
                                         </label>
                                         <select name="subject_module" id="subject_module" class="form-select" required aria-required="true">
                                             <option value="">Select Subject Module</option>
@@ -374,7 +407,7 @@
                                         </select>
                                     </div>
 
-                                    <div class="col-md-6">
+                                    <div class="col-12">
                                         <label for="subject_name" class="form-label required">
                                             <i class="bi bi-journal-text" aria-hidden="true"></i>Subject Name
                                         </label>
@@ -387,15 +420,15 @@
                                         <label for="topic" class="form-label required">
                                             <i class="bi bi-pencil-square" aria-hidden="true"></i>Topic
                                         </label>
-                                        <textarea name="topic" id="topic" class="form-control" rows="3"
-                                            placeholder="Enter topic details" required aria-required="true"></textarea>
+                                        <textarea name="topic" id="topic" class="form-control" rows="1"
+                                            placeholder="eg. Lorem ipsum dolor sit amet" required aria-required="true"></textarea>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </section>
 
-                    <section class="mb-3 mb-md-4" aria-labelledby="facultyVenueHeading">
+                    <section class="event-modal-step mb-0 d-none" aria-labelledby="facultyVenueHeading" data-event-step="2">
                         <div class="card border-0 shadow-sm rounded-4 event-modal-section-card">
                             <div class="card-header bg-transparent border-bottom py-3 px-3 px-md-4">
                                 <h3 id="facultyVenueHeading" class="event-modal-section-title h6 mb-0 event-modal-section-heading fw-semibold d-flex align-items-center gap-2">
@@ -405,7 +438,7 @@
                             </div>
                             <div class="card-body p-3 p-md-4">
                                 <div class="row g-3">
-                                    <div class="col-md-6">
+                                    <div class="col-12">
                                         <label for="faculty" class="form-label required">
                                             <i class="bi bi-person-circle" aria-hidden="true"></i>Faculty
                                         </label>
@@ -418,7 +451,7 @@
                                         </select>
                                     </div>
 
-                                    <div class="col-md-6">
+                                    <div class="col-12">
                                         <label for="faculty_type" class="form-label required">
                                             <i class="bi bi-diagram-3" aria-hidden="true"></i>Faculty Type
                                         </label>
@@ -430,7 +463,7 @@
                                         </select>
                                     </div>
 
-                                    <div class="col-md-6">
+                                    <div class="col-12">
                                         <label for="vanue" class="form-label required">
                                             <i class="bi bi-geo-alt" aria-hidden="true"></i>Location
                                         </label>
@@ -441,7 +474,7 @@
                                             @endforeach
                                         </select>
                                     </div>
-                                    <div class="col-md-6" id="internalFacultyDiv">
+                                    <div class="col-12" id="internalFacultyDiv">
                                         <label for="internal_faculty" class="form-label required">
                                             <i class="bi bi-person-check" aria-hidden="true"></i>Internal Faculty
                                         </label>
@@ -459,7 +492,7 @@
                         </div>
                     </section>
 
-                    <section class="mb-3 mb-md-4" aria-labelledby="scheduleHeading">
+                    <section class="event-modal-step mb-0 d-none" aria-labelledby="scheduleHeading" data-event-step="3">
                         <div class="card border-0 shadow-sm rounded-4 event-modal-section-card">
                             <div class="card-header bg-transparent border-bottom py-3 px-3 px-md-4">
                                 <h3 id="scheduleHeading" class="event-modal-section-title h6 mb-0 event-modal-section-heading fw-semibold d-flex align-items-center gap-2">
@@ -472,7 +505,7 @@
                                     <label class="form-label d-block required">
                                         <i class="bi bi-toggle-on" aria-hidden="true"></i>Shift Type
                                     </label>
-                                    <div class="d-flex flex-wrap gap-3 p-3 rounded-3 bg-body-secondary border border-secondary border-opacity-25">
+                                    <div class="d-flex flex-wrap gap-3">
                                         <div class="form-check m-0">
                                             <input type="radio" name="shift_type" id="normalShift" value="1"
                                                 class="form-check-input" checked aria-controls="shiftSelect">
@@ -534,27 +567,20 @@
                                 </div>
                             </div>
                         </div>
-                    </section>
 
-                    <section class="mb-0" aria-labelledby="additionalOptionsHeading">
-                        <div class="card border-0 shadow-sm rounded-4 event-modal-section-card">
-                            <div class="card-header bg-transparent border-bottom py-3 px-3 px-md-4">
-                                <h3 id="additionalOptionsHeading" class="event-modal-section-title h6 mb-0 event-modal-section-heading fw-semibold d-flex align-items-center gap-2">
-                                    <i class="bi bi-sliders fs-5 opacity-75" aria-hidden="true"></i>
-                                    Additional Options
-                                </h3>
-                            </div>
-                            <div class="card-body p-3 p-md-4">
-                                <div class="row g-3">
-                                    <div class="col-lg-8">
-                                        <div class="card h-100 border border-secondary border-opacity-25 shadow-sm rounded-4 bg-body-secondary bg-opacity-25">
-                                            <div class="card-body p-3 p-md-4">
-                                                <div class="form-check form-switch mb-3">
-                                                    <input class="form-check-input" type="checkbox" id="feedback_checkbox"
-                                                        name="feedback_checkbox" value="1" aria-controls="feedbackOptions">
-                                                    <label class="form-check-label fw-semibold" for="feedback_checkbox">
+                        <div class="mt-3 pt-2" aria-labelledby="additionalOptionsHeading">
+                            <h3 id="additionalOptionsHeading" class="event-modal-section-title h6 mb-3 event-modal-section-heading fw-semibold d-flex align-items-center gap-2">
+                                <i class="bi bi-sliders fs-5 opacity-75" aria-hidden="true"></i>
+                                Additional Options
+                            </h3>
+                            <div class="d-grid gap-2">
+                                <div>
+                                                <div class="form-check form-switch event-options-row d-flex align-items-center justify-content-between gap-3 ps-0 mb-2">
+                                                    <label class="form-check-label fw-medium" for="feedback_checkbox">
                                                         Feedback
                                                     </label>
+                                                    <input class="form-check-input" type="checkbox" id="feedback_checkbox"
+                                                        name="feedback_checkbox" value="1" aria-controls="feedbackOptions">
                                                 </div>
 
                                                 <div id="feedbackOptions" class="ms-1 ps-3 border-start border-2 event-modal-accent-border d-none">
@@ -578,35 +604,31 @@
                                                         Select at least one feedback component.
                                                     </div>
                                                 </div>
-                                            </div>
-                                        </div>
-                                    </div>
+                                </div>
 
-                                    <div class="col-lg-4">
-                                        <div class="card h-100 border shadow-sm rounded-4 event-modal-bio-card">
-                                            <div class="card-body p-3 p-md-4 d-flex align-items-center">
-                                                <div class="form-check form-switch mb-0 w-100">
-                                                    <input class="form-check-input" type="checkbox" id="bio_attendanceCheckbox"
-                                                        name="bio_attendanceCheckbox" value="1">
-                                                    <label class="form-check-label fw-semibold" for="bio_attendanceCheckbox">
+                                <div class="form-check form-switch event-options-row d-flex align-items-center justify-content-between gap-3 ps-0">
+                                                    <label class="form-check-label fw-medium" for="bio_attendanceCheckbox">
                                                         Bio Attendance
                                                     </label>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
+                                                    <input class="form-check-input" type="checkbox" id="bio_attendanceCheckbox"
+                                                        name="bio_attendanceCheckbox" value="1">
                                 </div>
                             </div>
                         </div>
                     </section>
                 </div>
 
-                <div class="modal-footer px-3 px-md-4 py-3 flex-wrap justify-content-end">
-                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">
+                <div class="modal-footer event-step-actions flex-wrap justify-content-end">
+                    <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">
                         Cancel
                     </button>
-                    <button type="submit" class="btn btn-primary rounded-pill px-4 shadow-sm" id="submitEventBtn">
-                        <i class="bi bi-check-circle me-1" aria-hidden="true"></i>
+                    <button type="button" class="btn btn-outline-primary d-none" data-event-step-prev>
+                        Back
+                    </button>
+                    <button type="button" class="btn btn-primary" data-event-step-next>
+                        Next
+                    </button>
+                    <button type="submit" class="btn btn-primary d-none" id="submitEventBtn">
                         <span class="btn-text">Add Event</span>
                     </button>
                 </div>
@@ -622,6 +644,70 @@ document.addEventListener('DOMContentLoaded', function() {
     const remark = document.getElementById('remarkCheckbox');
     const rating = document.getElementById('ratingCheckbox');
     const faculty_review_rating = document.getElementById('facultyReviewRatingDiv');
+    const eventModal = document.getElementById('eventModal');
+    const eventSteps = Array.from(document.querySelectorAll('#eventModal [data-event-step]'));
+    const eventStepProgress = document.querySelector('#eventModal .event-step-progress .progress-bar');
+    const eventStepPercent = document.querySelector('#eventModal [data-event-step-percent]');
+    const eventStepNext = document.querySelector('#eventModal [data-event-step-next]');
+    const eventStepPrev = document.querySelector('#eventModal [data-event-step-prev]');
+    const eventSubmitBtn = document.getElementById('submitEventBtn');
+    let activeEventStep = 1;
+
+    function setEventStep(step) {
+        activeEventStep = Math.min(Math.max(step, 1), eventSteps.length || 1);
+        const progressValues = {
+            1: 30,
+            2: 60,
+            3: 100
+        };
+        const progress = progressValues[activeEventStep] || 100;
+
+        eventSteps.forEach((section) => {
+            const isActive = Number(section.dataset.eventStep) === activeEventStep;
+            section.classList.toggle('d-none', !isActive);
+        });
+
+        if (eventStepProgress) {
+            eventStepProgress.style.width = `${progress}%`;
+            eventStepProgress.setAttribute('aria-valuenow', String(progress));
+        }
+        if (eventStepPercent) {
+            eventStepPercent.textContent = `${progress}%`;
+        }
+        if (eventStepPrev) {
+            eventStepPrev.classList.toggle('d-none', activeEventStep === 1);
+        }
+        if (eventStepNext) {
+            eventStepNext.classList.toggle('d-none', activeEventStep === eventSteps.length);
+        }
+        if (eventSubmitBtn) {
+            eventSubmitBtn.classList.toggle('d-none', activeEventStep !== eventSteps.length);
+        }
+
+        eventModal?.querySelector('.modal-body')?.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    }
+
+    eventStepNext?.addEventListener('click', function() {
+        setEventStep(activeEventStep + 1);
+    });
+
+    eventStepPrev?.addEventListener('click', function() {
+        setEventStep(activeEventStep - 1);
+    });
+
+    eventModal?.addEventListener('show.bs.modal', function() {
+        setEventStep(1);
+    });
+
+    window.calendarEventModalStepper = {
+        reset: function() {
+            setEventStep(1);
+        },
+        goTo: setEventStep
+    };
 
     feedbackToggle.addEventListener('change', function() {
         if (this.checked) {

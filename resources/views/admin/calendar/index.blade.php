@@ -5,59 +5,143 @@
 @section('setup_content')
 
 @php
-    // Debug: Check if courseMaster is available
-    if (!isset($courseMaster) || $courseMaster->isEmpty()) {
-        \Log::error('Calendar view: courseMaster is empty or not set');
-    }
+// Debug: Check if courseMaster is available
+if (!isset($courseMaster) || $courseMaster->isEmpty()) {
+\Log::error('Calendar view: courseMaster is empty or not set');
+}
 @endphp
 
 <link rel="stylesheet" href="{{asset('admin_assets/css/styles.css')}}">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
 <style>
-        :root {
-        --primary: #004a93;
-        --primary-color: #004a93;
-        --primary-dark: #003366;
-        --accent: #eef5ff;
-        --bg-light: #f4f6f9;
-        --text-main: #1f2937;
-        --text-muted: #6b7280;
-        --border: #e5e7eb;
-    }
-        .course-header {
-        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-        color: #fff;
-        padding: 2.75rem 1.5rem;
-        border-radius: 1rem 1rem 1rem 1rem;
-        text-align: center;
+:root {
+    --primary: #004a93;
+    --primary-color: #004a93;
+    --primary-dark: #003366;
+    --accent: #eef5ff;
+    --bg-light: #f4f6f9;
+    --text-main: #1f2937;
+    --text-muted: #6b7280;
+    --border: #e5e7eb;
+}
+
+/* ---- Calendar filter bar ---- */
+.cal-filter-select {
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 6px 32px 6px 14px;
+    font-size: 14px;
+    color: #495057;
+    background-color: #fff;
+    min-width: 160px;
+    cursor: pointer;
+}
+.cal-btn-reset-filters {
+    border: 1px solid #dc3545;
+    color: #dc3545;
+    background: transparent;
+    border-radius: 6px;
+    padding: 6px 16px;
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    white-space: nowrap;
+}
+.cal-btn-reset-filters:hover {
+    background: #dc3545;
+    color: #fff;
+}
+
+/* ---- Custom calendar month nav ---- */
+.cal-nav-btn {
+    background: transparent;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #495057;
+    transition: all 0.15s ease;
+    padding: 0;
+}
+.cal-nav-btn:hover {
+    background: #f0f0f0;
+    color: #212529;
+}
+.cal-month-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #212529;
+    white-space: nowrap;
+    user-select: none;
+}
+
+/* ---- View toggle icon buttons ---- */
+.cal-view-icon-btn {
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 5px 8px;
+    background: #fff;
+    color: #6c757d;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+.cal-view-icon-btn:hover {
+    background: #f8f9fa;
+    color: #495057;
+}
+.cal-view-icon-btn.active {
+    background: #e9ecef;
+    color: #004a93;
+    border-color: #004a93;
+}
+
+/* ---- Hide FullCalendar's built-in toolbar ---- */
+.fc .fc-toolbar.fc-header-toolbar {
+    display: none !important;
+}
+
+.course-header {
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: #fff;
+    padding: 2.75rem 1.5rem;
+    border-radius: 1rem 1rem 1rem 1rem;
+    text-align: center;
+}
+
+.course-header h1 {
+    font-size: 1.85rem;
+    font-weight: 600;
+    color: #fff;
+}
+
+.course-header .badge {
+    background: #ffffff;
+    color: #000;
+}
+
+/* Responsive Design for Smaller Screens */
+@media (max-width: 768px) {
+    .course-header {
+        padding: 1.5rem 1rem;
     }
 
     .course-header h1 {
-        font-size: 1.85rem;
-        font-weight: 600;
-        color: #fff;
+        font-size: 1.25rem;
     }
 
-    .course-header .badge {
-        background: #ffffff;
-        color: #000;
+    .course-header p {
+        font-size: 0.9rem;
     }
+}
 
-    /* Responsive Design for Smaller Screens */
-    @media (max-width: 768px) {
-        .course-header {
-            padding: 1.5rem 1rem;
-        }
-
-        .course-header h1 {
-            font-size: 1.25rem;
-        }
-
-        .course-header p {
-            font-size: 0.9rem;
-        }
-    }
-    /* Accessibility improvements */
+/* Accessibility improvements */
 .visually-hidden {
     position: absolute;
     width: 1px;
@@ -328,26 +412,26 @@ body.calendar-suppress-course-filter-dropdown .calendar-choices-bootstrap .choic
     margin-bottom: 0.4rem;
 }
 
-.fc-daygrid-day.dense-day .fc-event-card .event-meta { 
+.fc-daygrid-day.dense-day .fc-event-card .event-meta {
     margin-top: 0.35rem;
     padding-top: 0.35rem;
     gap: 0.4rem 0.6rem;
 }
 
-.fc-daygrid-day.dense-day .fc-event-card .event-meta .meta-item { 
+.fc-daygrid-day.dense-day .fc-event-card .event-meta .meta-item {
     font-size: 0.75rem;
     padding: 0.2rem 0.4rem;
 }
 
-.fc-daygrid-day.dense-day .fc-event-card .event-meta .meta-item--time { 
+.fc-daygrid-day.dense-day .fc-event-card .event-meta .meta-item--time {
     display: inline-flex;
 }
 
-.fc-daygrid-day.dense-day .fc-event-card .event-meta .meta-item--venue { 
+.fc-daygrid-day.dense-day .fc-event-card .event-meta .meta-item--venue {
     display: inline-flex;
 }
 
-.fc-daygrid-day.dense-day .fc-event-card .event-meta .meta-item--faculty { 
+.fc-daygrid-day.dense-day .fc-event-card .event-meta .meta-item--faculty {
     display: none;
 }
 
@@ -598,14 +682,14 @@ body.calendar-suppress-course-filter-dropdown .calendar-choices-bootstrap .choic
     text-overflow: ellipsis;
 }
 
-.fc-daygrid-day-frame .fc-event-card .event-title { 
+.fc-daygrid-day-frame .fc-event-card .event-title {
     font-size: 0.9rem;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.fc-daygrid-day-frame .fc-event-card .meta-item { 
+.fc-daygrid-day-frame .fc-event-card .meta-item {
     font-size: 0.8rem;
     display: none;
 }
@@ -940,12 +1024,19 @@ body.calendar-suppress-course-filter-dropdown .calendar-choices-bootstrap .choic
 }
 
 @keyframes bounce {
-    0%, 20%, 50%, 80%, 100% {
+
+    0%,
+    20%,
+    50%,
+    80%,
+    100% {
         transform: translateX(-50%) translateY(0);
     }
+
     40% {
         transform: translateX(-50%) translateY(-5px);
     }
+
     60% {
         transform: translateX(-50%) translateY(-3px);
     }
@@ -1402,7 +1493,10 @@ body.calendar-suppress-course-filter-dropdown .calendar-choices-bootstrap .choic
     .fc-event-card {
         border-width: 2px;
     }
-    .list-event-card { border-width: 2px; }
+
+    .list-event-card {
+        border-width: 2px;
+    }
 }
 
 /* Reduced motion */
@@ -1415,22 +1509,52 @@ body.calendar-suppress-course-filter-dropdown .calendar-choices-bootstrap .choic
 }
 
 /* Compact density mode */
-body.compact-mode .fc { font-size: 0.85rem; }
+body.compact-mode .fc {
+    font-size: 0.85rem;
+}
+
 body.compact-mode .fc-event-card {
     padding: 0.35rem 0.5rem;
     border-left-width: 3px;
     border-radius: 0.375rem;
 }
-body.compact-mode .fc-event-card .event-title { font-size: 0.85rem; }
-body.compact-mode .fc-event-card .event-meta .meta-item { display: none; }
-body.compact-mode .fc-event-card .event-meta .meta-item--time { display: inline-flex; }
-body.compact-mode .fc-timegrid-event .fc-event-main { border-left-width: 3px; }
-body.compact-mode .fc-popover .fc-popover-body .fc-event-card { padding: 0.5rem 0.625rem; }
 
-body.compact-mode .list-event-card { padding: 0.5rem 0.625rem !important; border-radius: 10px; }
-body.compact-mode .list-event-card .title { font-size: 0.95rem; }
-body.compact-mode .list-event-card .meta:not(:first-of-type) { display: none; }
-body.compact-mode .list-event-card .event-tooltip { display: none; }
+body.compact-mode .fc-event-card .event-title {
+    font-size: 0.85rem;
+}
+
+body.compact-mode .fc-event-card .event-meta .meta-item {
+    display: none;
+}
+
+body.compact-mode .fc-event-card .event-meta .meta-item--time {
+    display: inline-flex;
+}
+
+body.compact-mode .fc-timegrid-event .fc-event-main {
+    border-left-width: 3px;
+}
+
+body.compact-mode .fc-popover .fc-popover-body .fc-event-card {
+    padding: 0.5rem 0.625rem;
+}
+
+body.compact-mode .list-event-card {
+    padding: 0.5rem 0.625rem !important;
+    border-radius: 10px;
+}
+
+body.compact-mode .list-event-card .title {
+    font-size: 0.95rem;
+}
+
+body.compact-mode .list-event-card .meta:not(:first-of-type) {
+    display: none;
+}
+
+body.compact-mode .list-event-card .event-tooltip {
+    display: none;
+}
 
 /* Compact mode - reduce cell height for better fit */
 body.compact-mode .timetable-grid td {
@@ -1674,6 +1798,7 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
 
 /* Extra Small Devices (< 576px) */
 @media (max-width: 575.98px) {
+
     /* General Layout */
     .container-fluid {
         padding: 0.5rem;
@@ -1891,7 +2016,7 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
         gap: 0.75rem !important;
     }
 
-    .week-cards .row > * {
+    .week-cards .row>* {
         flex: 0 0 100%;
         max-width: 100%;
     }
@@ -2145,15 +2270,15 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
         padding: 0.2rem 0.4rem !important;
         gap: 0.3rem;
     }
-    
+
     .fc-event-card .meta-item--time {
         display: inline-flex !important;
     }
-    
+
     .fc-event-card .meta-item--venue {
         display: inline-flex !important;
     }
-    
+
     .fc-event-card .meta-item--faculty {
         display: none !important;
     }
@@ -2245,12 +2370,12 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
         flex-wrap: wrap;
         gap: 0.5rem 0.8rem;
     }
-    
+
     .fc-event-card .meta-item {
         font-size: 0.82rem;
         padding: 0.25rem 0.45rem;
     }
-    
+
     .fc-event-card .meta-item--time,
     .fc-event-card .meta-item--venue {
         display: inline-flex !important;
@@ -2318,7 +2443,7 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
         flex-wrap: wrap;
         gap: 0.65rem 1.1rem;
     }
-    
+
     .fc-event-card .meta-item {
         font-size: 0.875rem;
         display: inline-flex !important;
@@ -2340,6 +2465,7 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
 
 /* Print Styles */
 @media print {
+
     .control-panel,
     #createEventButton,
     .btn,
@@ -2380,10 +2506,12 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
     body.timetable-print-only * {
         visibility: hidden;
     }
+
     body.timetable-print-only #eventListView,
     body.timetable-print-only #eventListView * {
         visibility: visible;
     }
+
     body.timetable-print-only #eventListView {
         position: absolute;
         left: 0;
@@ -2394,6 +2522,7 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
         background: #fff;
     }
 }
+
 .control-panel:focus-within {
     outline: 2px solid #004a93;
     outline-offset: 2px;
@@ -2404,103 +2533,462 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
     box-shadow: 0 0 0 0.2rem rgba(0, 74, 147, 0.25);
 }
 
+/* Screenshot-style calendar surface */
+.calendar-admin-page {
+    background: #f7f7f7;
+}
+
+.calendar-container > .card {
+    border-radius: 0.75rem;
+    overflow: hidden;
+}
+
+#calendarSheetToolbar {
+    border-bottom: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+#calendarSheetToolbar .text-muted {
+    color: #8b8b8b !important;
+    font-size: 0.75rem !important;
+    font-weight: 400 !important;
+}
+
+.cal-filter-select,
+.calendar-choices-bootstrap .choices__inner.form-select {
+    min-height: 2rem !important;
+    border: 1px solid #d9d9d9 !important;
+    border-radius: 0.375rem !important;
+    color: #111827;
+    font-size: 0.75rem !important;
+    box-shadow: none !important;
+}
+
+.calendar-choices-bootstrap {
+    min-width: 6rem !important;
+}
+
+.calendar-choices-bootstrap .choices__inner.form-select {
+    padding: 0.25rem 1.75rem 0.25rem 0.625rem !important;
+}
+
+.calendar-choices-bootstrap .choices__list--single {
+    padding: 0;
+}
+
+.calendar-choices-bootstrap .choices[data-type*=select-one]::after {
+    right: 0.75rem;
+}
+
+.cal-btn-reset-filters {
+    border-radius: 0.375rem;
+    padding: 0.55rem 1rem;
+    font-size: 0.75rem;
+    line-height: 1;
+    color: #dc3545;
+    border-color: #dc3545;
+}
+
+.cal-nav-btn,
+.cal-view-icon-btn {
+    width: 2rem;
+    height: 2rem;
+    border: 0;
+    border-radius: 0.375rem;
+    background: #edf5ff;
+    color: #004a93;
+    padding: 0;
+}
+
+.cal-nav-btn:hover,
+.cal-view-icon-btn:hover,
+.cal-view-icon-btn.active {
+    background: #dcecff;
+    color: #004a93;
+    border: 0;
+}
+
+.cal-month-title {
+    color: #111827;
+    font-size: 1rem;
+    font-weight: 600;
+    min-width: 7.5rem;
+    text-align: center;
+}
+
+#calendar {
+    margin-bottom: 0 !important;
+}
+
+.fc {
+    --fc-border-color: #e5e5e5;
+    font-size: 0.875rem;
+}
+
+.fc .fc-scrollgrid {
+    border: 1px solid #e5e5e5 !important;
+    border-radius: 0;
+}
+
+.fc .fc-scrollgrid-section > * {
+    border-right-width: 0 !important;
+}
+
+.fc-theme-standard td,
+.fc-theme-standard th {
+    border-color: #e5e5e5;
+}
+
+.fc-col-header-cell {
+    background: #cfe3fb !important;
+    color: #004a93 !important;
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 0.55rem 0.5rem !important;
+}
+
+.fc .fc-col-header-cell-cushion,
+.fc .fc-scrollgrid-section-header .fc-col-header-cell a,
+.fc .fc-col-header-cell a {
+    color: #004a93 !important;
+    text-decoration: none;
+}
+
+.fc-daygrid-day {
+    background: #fff;
+}
+
+.fc-daygrid-day:hover {
+    background: #fff;
+}
+
+.fc-daygrid-day.fc-day-today {
+    background-color: #dcecfb !important;
+}
+
+.fc .fc-daygrid-day-frame {
+    min-height: 106px;
+    padding: 0.35rem 0.5rem;
+}
+
+.fc .fc-daygrid-day-top {
+    flex-direction: row;
+    justify-content: flex-end;
+}
+
+.fc .fc-daygrid-day-number {
+    color: #111827;
+    font-size: 0.875rem;
+    padding: 0;
+    text-decoration: none;
+}
+
+.fc .fc-day-other .fc-daygrid-day-number {
+    color: #c8c8c8;
+}
+
+.fc-daygrid-event {
+    margin-top: 0.25rem !important;
+}
+
+.fc .fc-event,
+.fc .fc-daygrid-event,
+.fc .fc-daygrid-block-event,
+.fc .fc-daygrid-dot-event,
+.fc .fc-event-main {
+    display: block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+.fc .fc-daygrid-event {
+    background: transparent !important;
+    border: 0 !important;
+    color: inherit !important;
+    white-space: normal !important;
+}
+
+.fc .fc-daygrid-event-harness {
+    display: block !important;
+    visibility: visible !important;
+}
+
+.fc .fc-daygrid-day-events {
+    min-height: 1.75rem;
+}
+
+.fc-event-card,
+.fc-daygrid-day-frame .fc-event-card {
+    background: #f3f8ff !important;
+    border-left: 4px solid #00539b !important;
+    border-radius: 0.5rem !important;
+    box-shadow: none !important;
+    margin: 0.15rem 0 0 !important;
+    min-height: 2.75rem;
+    overflow: hidden;
+    padding: 0.45rem 0.6rem !important;
+    transform: none !important;
+}
+
+.fc-event-card::before,
+.fc-event-card::after,
+.fc-event-card .event-badge {
+    display: none !important;
+}
+
+.fc-event-card:hover {
+    background: #edf5ff !important;
+    border-left-width: 4px !important;
+    box-shadow: none !important;
+    transform: none !important;
+}
+
+.fc-event-card .event-title,
+.fc-daygrid-day-frame .fc-event-card .event-title {
+    color: #111827 !important;
+    font-size: 0.6875rem !important;
+    font-weight: 500 !important;
+    line-height: 1.2;
+    margin-bottom: 0.2rem !important;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fc-event-card .event-meta {
+    border-top: 0 !important;
+    display: block !important;
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+.fc-event-card .meta-item {
+    background: transparent !important;
+    border: 0 !important;
+    color: #6b7280 !important;
+    display: none !important;
+    font-size: 0.6875rem !important;
+    padding: 0 !important;
+}
+
+.fc-event-card .meta-item--time {
+    display: inline-flex !important;
+}
+
+.fc-event-card .meta-item i {
+    display: none !important;
+}
+
+.fc-daygrid-day-more-link,
+.fc-more-link {
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #00539b !important;
+    display: inline-block !important;
+    font-size: 0.75rem !important;
+    font-weight: 500 !important;
+    padding: 0.25rem 0 0 !important;
+    text-decoration: none !important;
+    transform: none !important;
+}
+
+/* Event card matching the compact reference design */
+.fc-event-card.calendar-reference-card,
+.fc-daygrid-day-frame .fc-event-card.calendar-reference-card {
+    background: #ffffff !important;
+    border: 0 !important;
+    border-radius: 0.5rem !important;
+    box-shadow: 0 0.25rem 0.85rem rgba(15, 23, 42, 0.1) !important;
+    color: #111827;
+    margin: 0.2rem 0 0 !important;
+    min-height: 0;
+    overflow: visible;
+    padding: 0.65rem !important;
+}
+
+.fc-daygrid-day-frame .fc-event-card.calendar-reference-card {
+    box-shadow: none !important;
+    min-height: 2.35rem !important;
+    overflow: hidden !important;
+    padding: 0.45rem 0.55rem !important;
+}
+
+.fc-event-card.calendar-reference-card:hover {
+    background: #ffffff !important;
+    box-shadow: 0 0.35rem 1rem rgba(15, 23, 42, 0.14) !important;
+}
+
+.fc-event-card.calendar-reference-card .event-card-title {
+    color: #111827 !important;
+    font-size: 0.875rem;
+    font-weight: 700;
+    line-height: 1.15;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fc-daygrid-day-frame .fc-event-card.calendar-reference-card .event-card-title {
+    font-size: 0.6875rem;
+}
+
+.fc-event-card.calendar-reference-card .event-card-time {
+    color: #4b5563;
+    font-size: 0.6875rem;
+    line-height: 1.2;
+}
+
+.fc-daygrid-day-frame .fc-event-card.calendar-reference-card .event-card-time {
+    display: block !important;
+    font-size: 0.625rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fc-event-card.calendar-reference-card .event-card-action {
+    align-items: center;
+    background: #f2f4f7;
+    border-radius: 0.375rem;
+    color: #00539b;
+    display: inline-flex;
+    height: 1.375rem;
+    justify-content: center;
+    width: 1.375rem;
+}
+
+.fc-event-card.calendar-reference-card .event-card-action.event-card-action-danger {
+    color: #d93025;
+}
+
+.fc-event-card.calendar-reference-card .event-card-action i {
+    font-size: 0.85rem;
+    line-height: 1;
+}
+
+.fc-event-card.calendar-reference-card .event-card-topic {
+    color: #111827;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.25;
+}
+
+.fc-daygrid-day-frame .fc-event-card.calendar-reference-card .event-card-topic {
+    font-size: 0.625rem;
+    font-weight: 500;
+    margin-bottom: 0 !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fc-event-card.calendar-reference-card .event-card-info,
+.fc-event-card.calendar-reference-card .event-card-venue {
+    background: #eaf4ff;
+    border-radius: 0.375rem;
+    color: #1f2937;
+    font-size: 0.6875rem;
+    line-height: 1.45;
+    padding: 0.55rem 0.65rem;
+}
+
+.fc-event-card.calendar-reference-card .event-card-info p,
+.fc-event-card.calendar-reference-card .event-card-venue p {
+    margin-bottom: 0.1rem;
+}
+
+.fc-event-card.calendar-reference-card .event-card-venue {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.fc-event-card.calendar-reference-card .event-card-venue i {
+    color: #00539b;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.fc-daygrid-day-frame .fc-event-card.calendar-reference-card .event-card-action,
+.fc-daygrid-day-frame .fc-event-card.calendar-reference-card .event-card-info,
+.fc-daygrid-day-frame .fc-event-card.calendar-reference-card .event-card-venue {
+    display: none !important;
+}
+
+.fc-daygrid-day-frame .fc-event-card.calendar-reference-card .d-flex {
+    margin-bottom: 0.2rem !important;
+}
+
+.fc-event-card.calendar-visible-card,
+.fc-daygrid-day-frame .fc-event-card.calendar-visible-card {
+    background: #eaf4ff !important;
+    border-left: 4px solid #00539b !important;
+    color: #111827 !important;
+    display: block !important;
+    min-height: 2rem !important;
+    opacity: 1 !important;
+    padding: 0.4rem 0.55rem !important;
+    visibility: visible !important;
+    width: 100% !important;
+}
 </style>
 
 <!-- Debug: Page is loading -->
-<script>console.log('Calendar view is rendering...', {
+<script>
+console.log('Calendar view is rendering...', {
     courseMasterExists: {{ isset($courseMaster) ? 'true' : 'false' }},
     courseMasterCount: {{ isset($courseMaster) ? $courseMaster->count() : 0 }}
-});</script>
+});
+</script>
 
 <div class="container-fluid calendar-admin-page">
     @if(!isset($courseMaster) || $courseMaster->isEmpty())
-        <div class="alert alert-warning m-4">
-            <h4><i class="bi bi-exclamation-triangle me-2"></i>No Courses Available</h4>
-            <p>No active courses found. Please contact the administrator.</p>
-        </div>
+    <div class="alert alert-warning m-4">
+        <h4><i class="bi bi-exclamation-triangle me-2"></i>No Courses Available</h4>
+        <p>No active courses found. Please contact the administrator.</p>
+    </div>
     @endif
-    
+
     <!-- Page Header with ARIA landmark -->
     @if(hasRole('Admin'))
-        <header aria-label="Page header">
-            <x-breadcrum title="Academic TimeTable" />
-        </header>
+    <header aria-label="Page header">
+        <x-breadcrum title="Academic TimeTable">
+            @if(hasRole('Training') || hasRole('Admin') || hasRole('Training-MCTP') || hasRole('IST'))
+            <a href="javascript:void(0)" id="createEventButton" data-bs-toggle="modal" data-bs-target="#eventModal"
+                class="btn btn-sm btn-primary d-inline-flex align-items-center justify-content-center gap-1 rounded-1 shadow-sm px-3 fw-semibold text-nowrap">
+                <i class="material-icons material-symbols-rounded fs-6 lh-1" aria-hidden="true">add</i>
+                <span>Add New Event</span>
+            </a>
+            @endif
+        </x-breadcrum>
+    </header>
     @endif
-        <div class="course-header mb-3">
-            <h1>{{ $courseMaster->first()->course_name ?? 'Course Name' }}</h1>
-            <p class="mb-0 text-white fw-medium">
-                <span class="badge">{{ $courseMaster->first()->couse_short_name ?? 'Course Code' }}</span>
-                | <strong>Year:</strong> {{ $courseMaster->first()->course_year ?? date('Y') }}
-            </p>
-        </div>
+    <div class="course-header mb-3 d-none">
+        <h1>{{ $courseMaster->first()->course_name ?? 'Course Name' }}</h1>
+        <p class="mb-0 text-white fw-medium">
+            <span class="badge">{{ $courseMaster->first()->couse_short_name ?? 'Course Code' }}</span>
+            | <strong>Year:</strong> {{ $courseMaster->first()->course_year ?? date('Y') }}
+        </p>
+    </div>
 
     <!-- Main Content Area -->
     <main id="main-content" role="main">
         <!-- Action Controls with proper semantics -->
-         @if(hasRole('Training') || hasRole('Admin') ||  hasRole('Training-MCTP') || hasRole('IST'))
-        <section
-    class="control-panel bg-white p-3 p-md-4 rounded-3 shadow-sm border mb-3"
-    role="region"
-    aria-labelledby="controlPanelHeading"
-    style="border-left: 4px solid #004a93;"
->
-    <h2 id="controlPanelHeading" class="visually-hidden">
-        Calendar Control Panel
-    </h2>
-
-    <div class="d-flex flex-column flex-xl-row justify-content-between align-items-stretch align-items-xl-center gap-3 gap-xl-4">
-
-        <!-- Filters & View Controls -->
-        <fieldset class="d-flex flex-column flex-md-row align-items-stretch align-items-md-end gap-3 mb-0">
-            <legend class="visually-hidden">View and Filter Controls</legend>
-
-            <!-- Course Filter -->
-            <div class="calendar-choices-bootstrap d-flex flex-column gap-1 min-w-0" style="min-width: 260px;">
-                <label for="courseFilter" class="form-label mb-0 fw-semibold text-secondary small">Filter by Course</label>
-                <select
-                    class="form-select js-calendar-course-choice"
-                    id="courseFilter"
-                    aria-describedby="courseFilterHelp"
-                >
-                    <option value="">All Courses</option>
-                    @foreach($courseMaster as $course)
-                        <option value="{{ $course->pk }}"
-                            {{ $courseMaster->first() && $course->pk == $courseMaster->first()->pk ? 'selected' : '' }}>
-                            {{ $course->course_name }} ({{ $course->couse_short_name }})
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-        </fieldset>
-
-        <!-- Primary Actions -->
         @if(hasRole('Training') || hasRole('Admin') || hasRole('Training-MCTP') || hasRole('IST'))
-        <div class="d-flex align-items-center justify-content-start justify-content-xl-end gap-2">
-            <button
-                type="button"
-                class="btn btn-primary px-4 py-2 d-inline-flex align-items-center gap-2 shadow-sm rounded-2"
-                id="createEventButton"
-                data-bs-toggle="modal"
-                data-bs-target="#eventModal"
-            >
-                <i class="bi bi-plus-circle" aria-hidden="true"></i>
-                <span>Add New Event</span>
-            </button>
-        </div>
-        @endif
-
-    </div>
-</section>
-
+        {{-- Filters are now inside the calendar card toolbar --}}
         @endif
 
         <!-- Calendar Container -->
         <section class="calendar-container" aria-label="Academic calendar">
-            <div class="card border-start-4 border-primary shadow-sm">
+            <div class="card border-0 shadow-sm">
                 <div class="card-body p-3 p-md-4 position-relative">
-                    
+
                     <!-- Loading overlay -->
-                    <div id="calendarLoadingOverlay" class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-white" style="min-height: 400px; z-index: 100;">
+                    <div id="calendarLoadingOverlay"
+                        class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-white"
+                        style="min-height: 400px; z-index: 100;">
                         <div class="text-center">
                             <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
                                 <span class="visually-hidden">Loading calendar...</span>
@@ -2508,44 +2996,99 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
                             <p class="mt-3 text-muted">Loading calendar...</p>
                         </div>
                     </div>
-                    
+
                     <script>
-                        // IMMEDIATE fallback - hide loader after 3 seconds
-                        (function() {
-                            console.log('Inline script: Setting up emergency timeout');
-                            setTimeout(function() {
-                                var overlay = document.getElementById('calendarLoadingOverlay');
-                                if (overlay) {
-                                    console.log('EMERGENCY TIMEOUT: Hiding loader');
-                                    overlay.style.display = 'none';
-                                } else {
-                                    console.error('Overlay element not found in timeout');
-                                }
-                            }, 3000);
-                        })();
+                    // IMMEDIATE fallback - hide loader after 3 seconds
+                    (function() {
+                        console.log('Inline script: Setting up emergency timeout');
+                        setTimeout(function() {
+                            var overlay = document.getElementById('calendarLoadingOverlay');
+                            if (overlay) {
+                                console.log('EMERGENCY TIMEOUT: Hiding loader');
+                                overlay.style.display = 'none';
+                            } else {
+                                console.error('Overlay element not found in timeout');
+                            }
+                        }, 3000);
+                    })();
                     </script>
 
-                    <!-- View switch + week exports: outside #eventListView so controls stay visible on calendar modes -->
-                    <div id="calendarSheetToolbar" class="d-flex flex-wrap align-items-stretch align-items-sm-center justify-content-between gap-2 mb-3 pb-3 border-bottom border-light">
-                        <div class="btn-group btn-group-sm shadow-sm flex-shrink-0" role="group" aria-label="Calendar view">
-                            <button type="button" class="btn btn-outline-primary active" data-view="month" id="calendarViewMonthBtn" aria-pressed="true">Calendar</button>
-                            <button type="button" class="btn btn-outline-primary" data-view="week" id="calendarViewWeekBtn" aria-pressed="false">Week</button>
-                            <button type="button" class="btn btn-outline-primary" data-view="list" id="calendarViewSheetBtn" aria-pressed="false">Timetable sheet</button>
+                    <!-- Unified toolbar: Filters | Month Nav | View Icons -->
+                    <div id="calendarSheetToolbar"
+                        class="d-flex flex-wrap align-items-center justify-content-between gap-2 gap-md-3 mb-3 pb-3 border-bottom">
+
+                        {{-- LEFT: Filters --}}
+                        <div class="d-flex align-items-center gap-2 gap-md-3 flex-wrap">
+                            <span class="fw-semibold text-muted" style="font-size: 14px;">Filters</span>
+
+                            @if(hasRole('Training') || hasRole('Admin') || hasRole('Training-MCTP') || hasRole('IST'))
+                            <div class="calendar-choices-bootstrap" style="min-width: 180px;">
+                                <select class="form-select js-calendar-course-choice cal-filter-select" id="courseFilter"
+                                    aria-describedby="courseFilterHelp">
+                                    <option value="">Course Name</option>
+                                    @foreach($courseMaster as $course)
+                                    <option value="{{ $course->pk }}"
+                                        {{ $courseMaster->first() && $course->pk == $courseMaster->first()->pk ? 'selected' : '' }}>
+                                        {{ $course->course_name }} ({{ $course->couse_short_name }})
+                                    </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            @endif
+
+                            <a href="javascript:void(0)" id="calResetFilters" class="cal-btn-reset-filters">Reset Filters</a>
                         </div>
-                        <div class="btn-group btn-group-sm shadow-sm flex-wrap" role="group" aria-label="Week timetable export">
-                            <button type="button" class="btn btn-outline-secondary" id="weekTimetablePrintBtn" title="Print weekly timetable">
+
+                        {{-- CENTER: Month Navigation --}}
+                        <div class="d-flex align-items-center gap-2">
+                            <button type="button" class="cal-nav-btn" id="calCustomPrev" aria-label="Previous month">
+                                <i class="material-icons" style="font-size: 20px;">chevron_left</i>
+                            </button>
+                            <span class="cal-month-title" id="calCustomTitle"></span>
+                            <button type="button" class="cal-nav-btn" id="calCustomNext" aria-label="Next month">
+                                <i class="material-icons" style="font-size: 20px;">chevron_right</i>
+                            </button>
+                        </div>
+
+                        {{-- RIGHT: View Toggle Icons --}}
+                        <div class="d-flex align-items-center gap-1" role="group" aria-label="Calendar view">
+                            <button type="button" class="cal-view-icon-btn" data-view="list"
+                                id="calendarViewSheetBtn" aria-pressed="false" title="Timetable sheet">
+                                <i class="material-icons" style="font-size: 22px;">view_list</i>
+                            </button>
+                            <button type="button" class="cal-view-icon-btn active" data-view="month"
+                                id="calendarViewMonthBtn" aria-pressed="true" title="Calendar view">
+                                <i class="material-icons" style="font-size: 22px;">calendar_view_month</i>
+                            </button>
+                            <button type="button" class="cal-view-icon-btn" data-view="week"
+                                id="calendarViewWeekBtn" aria-pressed="false" title="Week view" style="display:none;">
+                                <i class="material-icons" style="font-size: 22px;">view_week</i>
+                            </button>
+                        </div>
+                    </div>
+
+                    {{-- Export buttons (shown contextually) --}}
+                    <div id="calendarExportToolbar" class="d-flex flex-wrap justify-content-end gap-2 mb-3 d-none">
+                        <div class="btn-group btn-group-sm shadow-sm flex-wrap" role="group"
+                            aria-label="Week timetable export">
+                            <button type="button" class="btn btn-outline-secondary" id="weekTimetablePrintBtn"
+                                title="Print weekly timetable">
                                 <i class="bi bi-printer me-1" aria-hidden="true"></i>Print
                             </button>
-                            <button type="button" class="btn btn-outline-danger" id="weekTimetablePdfViewBtn" title="Open weekly timetable PDF in a new tab">
+                            <button type="button" class="btn btn-outline-danger" id="weekTimetablePdfViewBtn"
+                                title="Open weekly timetable PDF in a new tab">
                                 <i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i>PDF
                             </button>
-                            <button type="button" class="btn btn-outline-danger" id="weekTimetablePdfDownloadBtn" title="Download weekly timetable as PDF file">
+                            <button type="button" class="btn btn-outline-danger" id="weekTimetablePdfDownloadBtn"
+                                title="Download weekly timetable as PDF file">
                                 <i class="bi bi-download me-1" aria-hidden="true"></i>PDF file
                             </button>
-                            <button type="button" class="btn btn-outline-success" id="weekTimetableExcelBtn" title="Download weekly timetable as Excel (grid + sessions)">
+                            <button type="button" class="btn btn-outline-success" id="weekTimetableExcelBtn"
+                                title="Download weekly timetable as Excel (grid + sessions)">
                                 <i class="bi bi-file-earmark-spreadsheet me-1" aria-hidden="true"></i>Excel
                             </button>
-                            <button type="button" class="btn btn-outline-dark" id="weekTimetablePrintPageBtn" title="Print only the timetable sheet (this page)">
+                            <button type="button" class="btn btn-outline-dark" id="weekTimetablePrintPageBtn"
+                                title="Print only the timetable sheet (this page)">
                                 <i class="bi bi-printer-fill me-1" aria-hidden="true"></i>Print sheet
                             </button>
                         </div>
@@ -2563,34 +3106,41 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
                                         <div class="row g-3 align-items-center">
                                             <div class="col-auto">
                                                 <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png"
-                                                    width="44" height="44" class="timetable-pdf-emblem" alt="National Emblem" loading="lazy">
+                                                    width="44" height="44" class="timetable-pdf-emblem"
+                                                    alt="National Emblem" loading="lazy">
                                             </div>
                                             <div class="col min-w-0">
-                                                <p class="timetable-pdf-hindi institution-name hindi-text mb-1 small text-body-secondary">
+                                                <p
+                                                    class="timetable-pdf-hindi institution-name hindi-text mb-1 small text-body-secondary">
                                                     लाल बहादुर शास्त्री राष्ट्रीय प्रशासन अकादमी, मसूरी
                                                 </p>
                                                 <p class="timetable-pdf-english fw-semibold text-primary mb-1 mb-md-2">
                                                     Lal Bahadur Shastri National Academy of Administration, Mussoorie
                                                 </p>
-                                                <p class="timetable-pdf-course text-body-secondary small mb-0 fw-medium" id="timetableCourseTitle">
+                                                <p class="timetable-pdf-course text-body-secondary small mb-0 fw-medium"
+                                                    id="timetableCourseTitle">
                                                     Academic timetable — select a course filter when available
                                                 </p>
-                                                <p class="timetable-pdf-period small text-muted mb-0 mt-1 fst-italic d-none" id="timetableCoursePeriod" aria-live="polite"></p>
+                                                <p class="timetable-pdf-period small text-muted mb-0 mt-1 fst-italic d-none"
+                                                    id="timetableCoursePeriod" aria-live="polite"></p>
                                             </div>
                                             <div class="col-auto text-end d-none d-md-block">
                                                 <img src="{{ asset('images/lbsnaa_logo.jpg') }}"
                                                     onerror="this.onerror=null;this.src='https://www.lbsnaa.gov.in/admin_assets/images/logo.png'"
-                                                    class="timetable-pdf-logo" alt="LBSNAA" width="160" height="48" loading="lazy">
+                                                    class="timetable-pdf-logo" alt="LBSNAA" width="160" height="48"
+                                                    loading="lazy">
                                             </div>
                                         </div>
 
                                         <div class="row align-items-end g-2 mt-3">
                                             <div class="col-lg-8">
-                                                <h1 class="h4 fw-bold text-dark mb-1 d-flex flex-wrap align-items-center gap-2">
+                                                <h1
+                                                    class="h4 fw-bold text-dark mb-1 d-flex flex-wrap align-items-center gap-2">
                                                     <span>Time Table</span>
                                                     <span class="text-secondary fw-normal">:</span>
                                                     <span class="text-secondary fw-normal">Week</span>
-                                                    <span id="currentWeekNumber" class="text-primary" aria-live="polite">—</span>
+                                                    <span id="currentWeekNumber" class="text-primary"
+                                                        aria-live="polite">—</span>
                                                     <span class="text-secondary fw-normal ms-1 small">Revised</span>
                                                 </h1>
                                                 <p class="text-muted small mb-0" id="weekRangeText" aria-live="polite">
@@ -2599,14 +3149,21 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
                                             </div>
                                             <div class="col-lg-4">
                                                 <div class="d-flex flex-wrap justify-content-lg-end gap-2">
-                                                    <div class="btn-group shadow-sm" role="group" aria-label="Week navigation">
-                                                        <button type="button" class="btn btn-outline-primary btn-sm px-2" id="prevWeekBtn" aria-label="Previous week">
+                                                    <div class="btn-group shadow-sm" role="group"
+                                                        aria-label="Week navigation">
+                                                        <button type="button"
+                                                            class="btn btn-outline-primary btn-sm px-2" id="prevWeekBtn"
+                                                            aria-label="Previous week">
                                                             <i class="bi bi-chevron-left" aria-hidden="true"></i>
                                                         </button>
-                                                        <button type="button" class="btn btn-primary btn-sm px-3" id="currentWeekBtn" aria-label="Current week">
-                                                            <i class="bi bi-calendar-check me-1" aria-hidden="true"></i>Today
+                                                        <button type="button" class="btn btn-primary btn-sm px-3"
+                                                            id="currentWeekBtn" aria-label="Current week">
+                                                            <i class="bi bi-calendar-check me-1"
+                                                                aria-hidden="true"></i>Today
                                                         </button>
-                                                        <button type="button" class="btn btn-outline-primary btn-sm px-2" id="nextWeekBtn" aria-label="Next week">
+                                                        <button type="button"
+                                                            class="btn btn-outline-primary btn-sm px-2" id="nextWeekBtn"
+                                                            aria-label="Next week">
                                                             <i class="bi bi-chevron-right" aria-hidden="true"></i>
                                                         </button>
                                                     </div>
@@ -2614,24 +3171,29 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
                                             </div>
                                         </div>
 
-                                        <p class="small text-center text-body-secondary border-top border-light pt-2 mt-3 mb-0 px-md-5">
+                                        <p
+                                            class="small text-center text-body-secondary border-top border-light pt-2 mt-3 mb-0 px-md-5">
                                             <span class="fw-semibold text-dark">Note:</span>
-                                            Tea break, lunch break, and venue lines follow the official programme when entered as session titles in the calendar.
+                                            Tea break, lunch break, and venue lines follow the official programme when
+                                            entered as session titles in the calendar.
                                         </p>
                                     </header>
 
                                     @php
-                                        $ttFootnotes = array_values(array_filter(array_map('trim', config('week_timetable.footnotes', []))));
+                                    $ttFootnotes = array_values(array_filter(array_map('trim',
+                                    config('week_timetable.footnotes', []))));
                                     @endphp
                                     @if(count($ttFootnotes))
-                                        <div class="timetable-footnotes small text-body-secondary border border-light rounded-2 px-3 py-2 mb-2 bg-light" role="note" aria-label="Programme notes">
-                                            @foreach ($ttFootnotes as $fn)
-                                                <p class="mb-1 lh-sm">{{ e($fn) }}</p>
-                                            @endforeach
-                                        </div>
+                                    <div class="timetable-footnotes small text-body-secondary border border-light rounded-2 px-3 py-2 mb-2 bg-light"
+                                        role="note" aria-label="Programme notes">
+                                        @foreach ($ttFootnotes as $fn)
+                                        <p class="mb-1 lh-sm">{{ e($fn) }}</p>
+                                        @endforeach
+                                    </div>
                                     @endif
 
-                                    <div class="timetable-container border border-dark border-opacity-25 rounded-1 overflow-hidden bg-white">
+                                    <div
+                                        class="timetable-container border border-dark border-opacity-25 rounded-1 overflow-hidden bg-white">
                                         <div class="table-responsive" role="region" aria-label="Weekly timetable grid">
                                             <table class="table table-bordered timetable-grid mb-0" id="timetableTable"
                                                 aria-describedby="timetableDescription">
@@ -2640,7 +3202,8 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
                                                 </caption>
                                                 <thead id="timetableHead">
                                                     <tr class="day-names-row">
-                                                        <th scope="col" rowspan="2" class="time-column align-middle">TIME</th>
+                                                        <th scope="col" rowspan="2" class="time-column align-middle">
+                                                            TIME</th>
                                                         <th scope="col" class="text-center">Monday</th>
                                                         <th scope="col" class="text-center">Tuesday</th>
                                                         <th scope="col" class="text-center">Wednesday</th>
@@ -2662,26 +3225,33 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
                                         </div>
                                     </div>
 
-                                    <div class="accordion accordion-flush mt-4 border-top pt-3" id="timetableLegendAccordion">
+                                    <div class="accordion accordion-flush mt-4 border-top pt-3"
+                                        id="timetableLegendAccordion">
                                         <div class="accordion-item border rounded-2 overflow-hidden">
                                             <h2 class="accordion-header" id="timetableLegendHeading">
-                                                <button class="accordion-button collapsed py-2 small fw-semibold" type="button"
-                                                    data-bs-toggle="collapse" data-bs-target="#timetableLegendCollapse"
-                                                    aria-expanded="false" aria-controls="timetableLegendCollapse">
-                                                    <i class="bi bi-journal-text me-2 text-primary" aria-hidden="true"></i>
+                                                <button class="accordion-button collapsed py-2 small fw-semibold"
+                                                    type="button" data-bs-toggle="collapse"
+                                                    data-bs-target="#timetableLegendCollapse" aria-expanded="false"
+                                                    aria-controls="timetableLegendCollapse">
+                                                    <i class="bi bi-journal-text me-2 text-primary"
+                                                        aria-hidden="true"></i>
                                                     Venues, cadres &amp; abbreviations (reference)
                                                 </button>
                                             </h2>
-                                            <div id="timetableLegendCollapse" class="accordion-collapse collapse" aria-labelledby="timetableLegendHeading"
+                                            <div id="timetableLegendCollapse" class="accordion-collapse collapse"
+                                                aria-labelledby="timetableLegendHeading"
                                                 data-bs-parent="#timetableLegendAccordion">
                                                 <div class="accordion-body small text-body-secondary">
-                                                    <p class="mb-2 text-dark fw-semibold">Sample reference (from official time table format)</p>
+                                                    <p class="mb-2 text-dark fw-semibold">Sample reference (from
+                                                        official time table format)</p>
                                                     <div class="row g-3">
                                                         <div class="col-md-6">
-                                                            <p class="fw-semibold text-primary mb-1">Venue abbreviations</p>
+                                                            <p class="fw-semibold text-primary mb-1">Venue abbreviations
+                                                            </p>
                                                             <ul class="list-unstyled mb-0 lh-sm">
                                                                 <li><strong>TH</strong> — Tagore Hall</li>
-                                                                <li><strong>AH</strong> — Ambedkar Hall (Aadharshila)</li>
+                                                                <li><strong>AH</strong> — Ambedkar Hall (Aadharshila)
+                                                                </li>
                                                                 <li><strong>SA</strong> — Sampoornanand Auditorium</li>
                                                                 <li><strong>SPH</strong> — Sardar Patel Hall</li>
                                                             </ul>
@@ -2691,12 +3261,15 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
                                                             <ul class="list-unstyled mb-0 lh-sm">
                                                                 <li><strong>GM</strong> — Governance Module</li>
                                                                 <li><strong>L</strong> — Law</li>
-                                                                <li><strong>RAM</strong> — Rural &amp; Agriculture Module</li>
+                                                                <li><strong>RAM</strong> — Rural &amp; Agriculture
+                                                                    Module</li>
                                                                 <li><strong>TM</strong> — Technology Module</li>
                                                             </ul>
                                                         </div>
                                                     </div>
-                                                    <p class="mb-0 mt-2 fst-italic">Your live grid uses calendar data; expand rows to read full topic, faculty, and venue from each cell.</p>
+                                                    <p class="mb-0 mt-2 fst-italic">Your live grid uses calendar data;
+                                                        expand rows to read full topic, faculty, and venue from each
+                                                        cell.</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -2716,8 +3289,8 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
 @include('admin.calendar.partials.events_details')
 @include('admin.calendar.partials.confirmation')
 
-  <script src="{{asset('admin_assets/libs/fullcalendar/index.global.min.js')}}"></script>
-  <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+<script src="{{asset('admin_assets/libs/fullcalendar/index.global.min.js')}}"></script>
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 <!-- Modern JavaScript with improved accessibility -->
 <script>
 console.log('FullCalendar loaded:', typeof FullCalendar !== 'undefined');
@@ -2801,7 +3374,8 @@ function closeCourseFilterDropdown() {
             if (typeof inst.hideDropdown === 'function') {
                 inst.hideDropdown();
             }
-        } catch (e) { /* ignore */ }
+        } catch (e) {
+            /* ignore */ }
     }
     const wrap = document.querySelector('.calendar-choices-bootstrap .choices');
     if (wrap) {
@@ -2809,7 +3383,8 @@ function closeCourseFilterDropdown() {
         wrap.querySelectorAll('.choices__list--dropdown, .choices__list[aria-expanded]').forEach((el) => {
             try {
                 el.setAttribute('aria-hidden', 'true');
-            } catch (e2) { /* ignore */ }
+            } catch (e2) {
+                /* ignore */ }
         });
     }
     try {
@@ -2817,7 +3392,8 @@ function closeCourseFilterDropdown() {
         if (filterRoot && document.activeElement && filterRoot.contains(document.activeElement)) {
             document.activeElement.blur();
         }
-    } catch (e3) { /* ignore */ }
+    } catch (e3) {
+        /* ignore */ }
     document.body.classList.add('calendar-suppress-course-filter-dropdown');
 }
 
@@ -2828,7 +3404,8 @@ function releaseCourseFilterDropdownSuppression() {
         wrap.querySelectorAll('.choices__list--dropdown, .choices__list[aria-expanded]').forEach((el) => {
             try {
                 el.removeAttribute('aria-hidden');
-            } catch (e) { /* ignore */ }
+            } catch (e) {
+                /* ignore */ }
         });
     }
     const select = document.getElementById('courseFilter');
@@ -2836,7 +3413,8 @@ function releaseCourseFilterDropdownSuppression() {
     if (inst && typeof inst.hideDropdown === 'function') {
         try {
             inst.hideDropdown();
-        } catch (e2) { /* ignore */ }
+        } catch (e2) {
+            /* ignore */ }
     }
 }
 
@@ -2857,14 +3435,38 @@ class CalendarManager {
         try {
             console.log('Initializing calendar manager...');
             this.initFullCalendar();
-            
-            try { this.bindEvents(); } catch (e) { console.error('bindEvents error:', e); }
-            try { this.setupAccessibility(); } catch (e) { console.error('setupAccessibility error:', e); }
-            try { this.validateDates(); } catch (e) { console.error('validateDates error:', e); }
-            try { this.updateCurrentWeek(); } catch (e) { console.error('updateCurrentWeek error:', e); }
-            try { this.observeMoreLinksChanges(); } catch (e) { console.error('observeMoreLinksChanges error:', e); }
-            try { this.initDensity(); } catch (e) { console.error('initDensity error:', e); }
-            
+
+            try {
+                this.bindEvents();
+            } catch (e) {
+                console.error('bindEvents error:', e);
+            }
+            try {
+                this.setupAccessibility();
+            } catch (e) {
+                console.error('setupAccessibility error:', e);
+            }
+            try {
+                this.validateDates();
+            } catch (e) {
+                console.error('validateDates error:', e);
+            }
+            try {
+                this.updateCurrentWeek();
+            } catch (e) {
+                console.error('updateCurrentWeek error:', e);
+            }
+            try {
+                this.observeMoreLinksChanges();
+            } catch (e) {
+                console.error('observeMoreLinksChanges error:', e);
+            }
+            try {
+                this.initDensity();
+            } catch (e) {
+                console.error('initDensity error:', e);
+            }
+
             console.log('Calendar manager initialized successfully');
         } catch (error) {
             console.error('Error in init():', error);
@@ -2891,30 +3493,26 @@ class CalendarManager {
         console.log('Starting initFullCalendar...');
         const calendarEl = document.getElementById('calendar');
         const loadingOverlay = document.getElementById('calendarLoadingOverlay');
-        
+
         if (!calendarEl) {
             throw new Error('Calendar element not found');
         }
-        
+
         console.log('Calendar element found:', calendarEl);
-        
+
         // Get initial course ID from filter dropdown
         const courseFilter = document.getElementById('courseFilter');
         this.selectedCourseId = courseFilter && courseFilter.value ? courseFilter.value : null;
-        
+
         console.log('Selected course ID:', this.selectedCourseId);
-        
+
         // Update course header with initial selection
         // this.updateCourseHeader();
 
         this.calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'dayGridMonth',
-            hiddenDays: [0, 6], // Initially hide Sunday (0) and Saturday (6)
-            headerToolbar: {
-                left: 'prev,next today',
-                center: 'title',
-                right: 'dayGridMonth,timeGridWeek'
-            },
+            hiddenDays: [],
+            headerToolbar: false,
             buttonText: {
                 today: 'Today',
                 month: 'Month',
@@ -2942,7 +3540,7 @@ class CalendarManager {
             },
             views: {
                 dayGridMonth: {
-                    dayMaxEvents: 2, // Show max 2 events, then +x more
+                    dayMaxEvents: false,
                     displayEventEnd: true
                 },
                 timeGridWeek: {
@@ -2960,17 +3558,11 @@ class CalendarManager {
             loading: (isLoading) => {
                 console.log('Calendar loading state:', isLoading);
                 const loadingOverlay = document.getElementById('calendarLoadingOverlay');
-                
+
                 if (!isLoading) {
                     // Events have finished loading
                     console.log('Events loaded, hiding overlay');
-                    
-                    try {
-                        this.updateWeekendVisibility();
-                    } catch (error) {
-                        console.error('Error updating weekend visibility:', error);
-                    }
-                    
+
                     // Hide loading overlay
                     if (loadingOverlay) {
                         loadingOverlay.style.display = 'none';
@@ -2983,15 +3575,29 @@ class CalendarManager {
             eventClick: this.handleEventClick.bind(this),
             select: this.handleDateSelect.bind(this),
             eventDidMount: this.setEventAccessibility.bind(this),
-            dayCellDidMount: this.setDayCellAccessibility.bind(this)
+            dayCellDidMount: this.setDayCellAccessibility.bind(this),
+            datesSet: () => {
+                this.updateCustomTitle();
+            }
         });
 
         this.calendar.render();
         console.log('Calendar rendered');
-        
+
+        // Update custom title on initial render
+        this.updateCustomTitle();
+
+        // Wire custom prev/next nav buttons
+        document.getElementById('calCustomPrev')?.addEventListener('click', () => {
+            this.calendar.prev();
+        });
+        document.getElementById('calCustomNext')?.addEventListener('click', () => {
+            this.calendar.next();
+        });
+
         this.styleMoreLinks();
         this.applyDenseMode();
-        
+
         // Fallback: Hide loading overlay after calendar renders (in case loading callback doesn't fire)
         setTimeout(() => {
             const loadingOverlay = document.getElementById('calendarLoadingOverlay');
@@ -3006,7 +3612,7 @@ class CalendarManager {
         // Build URL with course filter
         let url = CalendarConfig.api.events;
         const params = new URLSearchParams();
-        
+
         if (info.start) {
             params.append('start', info.start.toISOString().split('T')[0]);
         }
@@ -3016,7 +3622,7 @@ class CalendarManager {
         if (this.selectedCourseId) {
             params.append('course_id', this.selectedCourseId);
         }
-        
+
         if (params.toString()) {
             url += '?' + params.toString();
         }
@@ -3024,32 +3630,104 @@ class CalendarManager {
         console.log('Fetching events from:', url);
 
         fetch(url, {
-            headers: {
-                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                'Accept': 'application/json'
-            }
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            console.log('Events loaded:', data.length);
-            // Filter out holidays and restricted holidays
-            const filteredData = data.filter(event => {
-                const type = (event.type || event.event_type || event.session_type || '').toString().toLowerCase();
-                return type !== 'holiday' && type !== 'restricted holiday' && type !== 'restricted' && !type.includes('holiday');
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Events loaded:', data.length);
+                // Filter out holidays and restricted holidays
+                const filteredData = data.filter(event => {
+                    const type = (event.type || event.event_type || event.session_type || '').toString()
+                        .toLowerCase();
+                    return type !== 'holiday' && type !== 'restricted holiday' && type !==
+                        'restricted' && !type.includes('holiday');
+                });
+                const visibleEvents = data.length > 0 && filteredData.length === 0 ? data : filteredData;
+                if (data.length > 0 && filteredData.length === 0) {
+                    console.info('Holiday filter removed all fetched events; showing fetched events instead.');
+                }
+                const normalizedEvents = this.normalizeCalendarEvents(visibleEvents);
+                console.log('Events after filtering:', normalizedEvents.length);
+                console.log('Events normalized sample:', normalizedEvents[0] || null);
+                successCallback(normalizedEvents);
+            })
+            .catch(error => {
+                console.error('Error fetching events:', error);
+                this.showNotification('Failed to load calendar events. Please refresh the page.', 'danger');
+                failureCallback(error);
             });
-            console.log('Events after filtering:', filteredData.length);
-            successCallback(filteredData);
-        })
-        .catch(error => {
-            console.error('Error fetching events:', error);
-            this.showNotification('Failed to load calendar events. Please refresh the page.', 'danger');
-            failureCallback(error);
-        });
+    }
+
+    updateHiddenDaysForEvents(events) {
+        if (!this.calendar || !Array.isArray(events)) return;
+
+        const eventDates = events
+            .map(event => event.start || event.START_DATE || event.holiday_date || null)
+            .filter(Boolean)
+            .map(value => new Date(value));
+
+        const hasSundayEvents = eventDates.some(date => !Number.isNaN(date.getTime()) && date.getDay() === 0);
+        const hasSaturdayEvents = eventDates.some(date => !Number.isNaN(date.getTime()) && date.getDay() === 6);
+        const hiddenDays = [];
+
+        if (!hasSundayEvents) hiddenDays.push(0);
+        if (!hasSaturdayEvents) hiddenDays.push(6);
+
+        this.calendar.setOption('hiddenDays', hiddenDays);
+    }
+
+    normalizeCalendarEvents(events) {
+        if (!Array.isArray(events)) return [];
+
+        return events
+            .map((event, index) => {
+                const start = event.start || event.START_DATE || event.start_datetime || event.holiday_date || event.date;
+                if (!start) {
+                    console.warn('Skipping calendar event without start date:', event);
+                    return null;
+                }
+
+                const rawEnd = event.end || event.END_DATE || null;
+                const isDateOnlyStart = /^\d{4}-\d{2}-\d{2}$/.test(String(start));
+                let end = rawEnd;
+
+                if (!end && isDateOnlyStart) {
+                    const nextDate = new Date(`${start}T00:00:00`);
+                    nextDate.setDate(nextDate.getDate() + 1);
+                    end = nextDate.toISOString().slice(0, 10);
+                }
+
+                const title = event.title ||
+                    event.subject_topic ||
+                    event.holiday_name ||
+                    event.topic ||
+                    event.course_name ||
+                    'Calendar Event';
+
+                return {
+                    ...event,
+                    id: event.id || event.pk || `calendar_event_${index}`,
+                    title,
+                    start,
+                    end,
+                    allDay: typeof event.allDay === 'boolean' ? event.allDay : isDateOnlyStart,
+                    display: 'block',
+                    classNames: ['calendar-visible-event'],
+                    extendedProps: {
+                        ...event,
+                        ...(event.extendedProps || {})
+                    }
+                };
+            })
+            .filter(Boolean);
     }
 
     handleWeekendVisibility(events) {
@@ -3059,16 +3737,20 @@ class CalendarManager {
             this.eventsLoaded = true;
             return;
         }
-        
-        // Check if any events fall on Saturday (day 6)
+
+        const hasSundayEvents = events.some(event => {
+            const eventDate = new Date(event.start || event.START_DATE);
+            return !Number.isNaN(eventDate.getTime()) && eventDate.getDay() === 0;
+        });
         const hasSaturdayEvents = events.some(event => {
-            const eventDate = new Date(event.start);
-            return eventDate.getDay() === 6; // 6 = Saturday
+            const eventDate = new Date(event.start || event.START_DATE);
+            return !Number.isNaN(eventDate.getTime()) && eventDate.getDay() === 6; // 6 = Saturday
         });
 
-        // Update hiddenDays: always hide Sunday (0), conditionally hide Saturday (6)
-        const hiddenDays = hasSaturdayEvents ? [0] : [0, 6];
-        
+        const hiddenDays = [];
+        if (!hasSundayEvents) hiddenDays.push(0);
+        if (!hasSaturdayEvents) hiddenDays.push(6);
+
         // Use setTimeout to ensure calendar is fully rendered
         setTimeout(() => {
             this.calendar.setOption('hiddenDays', hiddenDays);
@@ -3079,20 +3761,33 @@ class CalendarManager {
     updateWeekendVisibility() {
         // Get all events currently in the calendar
         const events = this.calendar.getEvents();
-        
-        // Check if any events fall on Saturday (day 6)
+
+        const hasSundayEvents = events.some(event => {
+            const eventDate = new Date(event.start);
+            return eventDate.getDay() === 0;
+        });
         const hasSaturdayEvents = events.some(event => {
             const eventDate = new Date(event.start);
             return eventDate.getDay() === 6;
         });
 
-        // Update hiddenDays: always hide Sunday (0), conditionally hide Saturday (6)
-        const newHiddenDays = hasSaturdayEvents ? [0] : [0, 6];
+        const newHiddenDays = [];
+        if (!hasSundayEvents) newHiddenDays.push(0);
+        if (!hasSaturdayEvents) newHiddenDays.push(6);
         const currentHiddenDays = this.calendar.getOption('hiddenDays') || [];
-        
+
         // Only update if changed to prevent unnecessary re-renders
         if (JSON.stringify(newHiddenDays.sort()) !== JSON.stringify(currentHiddenDays.sort())) {
             this.calendar.setOption('hiddenDays', newHiddenDays);
+        }
+    }
+
+    updateCustomTitle() {
+        const titleEl = document.getElementById('calCustomTitle');
+        if (titleEl && this.calendar) {
+            const date = this.calendar.getDate();
+            const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+            titleEl.textContent = months[date.getMonth()] + ' ' + date.getFullYear();
         }
     }
 
@@ -3100,7 +3795,7 @@ class CalendarManager {
         const headerTitle = document.querySelector('.course-header h1');
         const headerBadge = document.querySelector('.course-header .badge');
         const headerYear = document.querySelector('.course-header p');
-        
+
         if (!this.selectedCourseId) {
             // If "All Courses" selected, show default message
             if (headerTitle) {
@@ -3136,36 +3831,29 @@ class CalendarManager {
     }
 
     styleMoreLinks() {
-        // Style all "+ more" links including timeGrid views
         const moreLinks = document.querySelectorAll(
-            '.fc-daygrid-day-more-link, .fc-more-link, .fc-timegrid-more-link, .fc-daygrid-day-frame a[data-date], .fc-timegrid a[aria-label*="more"]');
+            '.fc-daygrid-day-more-link, .fc-more-link, .fc-timegrid-more-link, .fc-daygrid-day-frame a[data-date], .fc-timegrid a[aria-label*="more"]'
+            );
         moreLinks.forEach(link => {
             if (link.textContent.includes('+') || link.textContent.toLowerCase().includes('more')) {
-                // Check if it's a timeGrid link (smaller styling)
-                const isTimeGrid = link.closest('.fc-timegrid') !== null;
-                
-                link.style.fontSize = isTimeGrid ? '1rem' : '1.25rem';
-                link.style.fontWeight = '700';
-                link.style.color = '#ffffff';
-                link.style.backgroundColor = '#004a93';
-                link.style.padding = isTimeGrid ? '0.4rem 0.6rem' : '0.5rem 0.75rem';
-                link.style.borderRadius = '0.375rem';
+                link.style.fontSize = '0.75rem';
+                link.style.fontWeight = '500';
+                link.style.color = '#00539b';
+                link.style.backgroundColor = 'transparent';
+                link.style.padding = '0.25rem 0 0';
+                link.style.borderRadius = '0';
                 link.style.display = 'inline-block';
                 link.style.textDecoration = 'none';
-                link.style.background = 'linear-gradient(135deg, #004a93, #0066cc)';
+                link.style.background = 'transparent';
                 link.style.transition = 'all 0.2s ease';
-                link.style.boxShadow = '0 2px 4px rgba(0, 74, 147, 0.2)';
+                link.style.boxShadow = 'none';
 
                 link.addEventListener('mouseenter', () => {
-                    link.style.background = 'linear-gradient(135deg, #003366, #004a93)';
-                    link.style.transform = isTimeGrid ? 'scale(1.05)' : 'scale(1.08)';
-                    link.style.boxShadow = '0 4px 12px rgba(0, 74, 147, 0.4)';
+                    link.style.color = '#003f78';
                 });
 
                 link.addEventListener('mouseleave', () => {
-                    link.style.background = 'linear-gradient(135deg, #004a93, #0066cc)';
-                    link.style.transform = 'scale(1)';
-                    link.style.boxShadow = '0 2px 4px rgba(0, 74, 147, 0.2)';
+                    link.style.color = '#00539b';
                 });
             }
         });
@@ -3213,46 +3901,135 @@ class CalendarManager {
     }
 
     renderEventContent(arg) {
-        // Normalize type and derive color
-        const type = (arg.event.extendedProps.type || arg.event.extendedProps.event_type || arg.event.extendedProps
-            .session_type || '').toString();
-        const typeAttr = type.toLowerCase();
-        const fallbackIdx = arg.event.id ?
-            parseInt(arg.event.id) % CalendarConfig.colors.length :
-            arg.event._index % CalendarConfig.colors.length;
-        const cardColor = CalendarConfig.eventTypeColors[typeAttr] || CalendarConfig.colors[fallbackIdx];
-
-        const topic = arg.event.title || '';
-        const venue = arg.event.extendedProps.vanue || '';
-        const faculty = arg.event.extendedProps.faculty_name || '';
-        const idStr = (arg.event.id || arg.event._def?.publicId || Math.random().toString(36).slice(2));
-        const titleId = `fc-evt-${idStr}-title`;
-        const descId = `fc-evt-${idStr}-desc`;
+        const props = arg.event.extendedProps || {};
+        const escapeHtml = (value) => String(value || '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        }[char]));
+        const title = escapeHtml(arg.event.title || props.subject_topic || props.holiday_name || 'Calendar Event');
+        const timeText = escapeHtml(arg.timeText || props.class_session || '');
 
         return {
             html: `
-                <div class="fc-event-card" 
-                     style="border-left-color: ${cardColor};"
+                <div class="fc-event-card calendar-reference-card calendar-visible-card">
+                    <div class="event-card-title">${title}</div>
+                    ${timeText ? `<div class="event-card-time">${timeText}</div>` : ''}
+                </div>
+            `
+        };
+
+        try {
+            const props = arg.event.extendedProps || {};
+            const escapeHtml = (value) => String(value || '').replace(/[&<>"']/g, (char) => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            }[char]));
+            const normalizeGroupText = (value) => {
+                let parsed = value;
+                if (typeof parsed === 'string' && parsed.trim().startsWith('[')) {
+                    try {
+                        parsed = JSON.parse(parsed);
+                    } catch (e) {
+                        parsed = value;
+                    }
+                }
+                if (Array.isArray(parsed)) {
+                    return parsed.map((item) => {
+                        if (typeof item === 'string') return item;
+                        if (item && typeof item === 'object') {
+                            return item.group_name || item.type_name || item.name || '';
+                        }
+                        return '';
+                    }).filter(Boolean).join(', ');
+                }
+                return parsed || '';
+            };
+            const formatDate = (date) => {
+                if (!date) return '';
+                const day = date.toLocaleDateString('en-IN', { day: 'numeric' });
+                const month = date.toLocaleDateString('en-IN', { month: 'short' });
+                const year = date.toLocaleDateString('en-IN', { year: 'numeric' });
+                const weekday = date.toLocaleDateString('en-IN', { weekday: 'long' });
+                return `${day} ${month} ${year} ${weekday}`;
+            };
+            const startTime = arg.event.start ? arg.event.start.toLocaleTimeString('en-IN', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            }) : '';
+            const endTime = arg.event.end ? arg.event.end.toLocaleTimeString('en-IN', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            }) : '';
+            const idStr = (arg.event.id || arg.event._def && arg.event._def.publicId || Math.random().toString(36).slice(2));
+            const titleId = `fc-evt-${idStr}-title`;
+            const descId = `fc-evt-${idStr}-desc`;
+            const type = (props.type || props.event_type || props.session_type || '').toString();
+            const eventTitle = escapeHtml(props.event_name || props.course_name || arg.event.title || 'Calendar Event');
+            const topic = escapeHtml(props.topic || props.subject_name || props.module_name || arg.event.title || '');
+            const venue = escapeHtml(props.vanue || props.venue_name || '');
+            const faculty = escapeHtml(props.faculty_name || '');
+            const groupText = escapeHtml(normalizeGroupText(props.group_name || props.group_names || ''));
+            const dateLine = escapeHtml([formatDate(arg.event.start), [startTime, endTime].filter(Boolean).join(' - ')].filter(Boolean).join(' '));
+            const typeAttr = escapeHtml(type.toLowerCase());
+
+        return {
+            html: `
+                <div class="fc-event-card calendar-reference-card"
                      tabindex="0"
                      role="button"
                      aria-labelledby="${titleId}"
                      aria-describedby="${descId}"
-                     ${type ? `data-event-type="${typeAttr}"` : ''}>
-                    <div class="d-flex align-items-start justify-content-between gap-2" style="margin-bottom: 0.65rem;">
-                        <div class="event-title flex-grow-1" id="${titleId}" style="color: ${cardColor}; flex: 1; min-width: 0;">
-                            ${topic}
+                     ${typeAttr ? `data-event-type="${typeAttr}"` : ''}>
+                    <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
+                        <div class="min-w-0 flex-grow-1">
+                            <div class="event-card-title" id="${titleId}">${eventTitle}</div>
+                            ${dateLine ? `<div class="event-card-time">${dateLine}</div>` : ''}
                         </div>
-                        ${type ? `<span class="event-badge flex-shrink-0" style="margin-left: 0.5rem;">${type}</span>` : ''}
+                        <div class="d-flex align-items-center gap-1 flex-shrink-0">
+                            <span class="event-card-action event-card-action-danger" aria-hidden="true">
+                                <i class="bi bi-trash3-fill"></i>
+                            </span>
+                            <span class="event-card-action" aria-hidden="true">
+                                <i class="bi bi-pencil-fill"></i>
+                            </span>
+                        </div>
                     </div>
-                    <div class="event-meta" style="width: 100%;">
-                        ${arg.timeText ? `<span class=\"meta-item meta-item--time\"><i class=\"bi bi-clock-fill\" aria-hidden=\"true\"></i><span>${arg.timeText}</span></span>` : ''}
-                        ${venue ? `<span class=\"meta-item meta-item--venue\"><i class=\"bi bi-geo-alt-fill\" aria-hidden=\"true\"></i><span>${venue}</span></span>` : ''}
-                        ${faculty ? `<span class=\"meta-item meta-item--faculty\"><i class=\"bi bi-person-fill\" aria-hidden=\"true\"></i><span>${faculty}</span></span>` : ''}
-                    </div>
-                    <span class="visually-hidden" id="${descId}">${type ? `${type} ` : ''}${arg.timeText ? `${arg.timeText} ` : ''}${venue ? `at ${venue} ` : ''}${faculty ? `with ${faculty}` : ''}</span>
+                    ${topic ? `<div class="event-card-topic mb-2">${topic}</div>` : ''}
+                    ${(faculty || groupText) ? `
+                        <div class="event-card-info mb-2">
+                            ${faculty ? `<p>Faculty: ${faculty}</p>` : ''}
+                            ${groupText ? `<p>Group Name: ${groupText}</p>` : ''}
+                        </div>
+                    ` : ''}
+                    ${venue ? `
+                        <div class="event-card-venue">
+                            <span>Venue: ${venue}</span>
+                            <i class="bi bi-geo-alt" aria-hidden="true"></i>
+                        </div>
+                    ` : ''}
+                    <span class="visually-hidden" id="${descId}">${type ? `${escapeHtml(type)} ` : ''}${dateLine ? `${dateLine} ` : ''}${venue ? `at ${venue} ` : ''}${faculty ? `with ${faculty}` : ''}</span>
                 </div>
             `
         };
+        } catch (error) {
+            console.error('Event render error:', error, arg.event);
+            return {
+                html: `
+                    <div class="fc-event-card calendar-reference-card" tabindex="0" role="button">
+                        <div class="event-card-title">${arg.event.title || 'Calendar Event'}</div>
+                        ${arg.timeText ? `<div class="event-card-time">${arg.timeText}</div>` : ''}
+                    </div>
+                `
+            };
+        }
     }
 
     setEventAccessibility(arg) {
@@ -3265,7 +4042,12 @@ class CalendarManager {
         try {
             const cell = arg.el;
             const date = arg.date; // FullCalendar provides date in v5/v6
-            const dayLabel = date ? new Date(date).toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '';
+            const dayLabel = date ? new Date(date).toLocaleDateString('en-IN', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            }) : '';
             cell.setAttribute('role', 'gridcell');
             cell.setAttribute('tabindex', '0');
             if (dayLabel) cell.setAttribute('aria-label', dayLabel);
@@ -3278,17 +4060,30 @@ class CalendarManager {
                 if (idx === -1) return;
                 let targetIdx = null;
                 switch (e.key) {
-                    case 'ArrowRight': targetIdx = idx + 1; break;
-                    case 'ArrowLeft': targetIdx = idx - 1; break;
-                    case 'ArrowDown': targetIdx = idx + cols; break;
-                    case 'ArrowUp': targetIdx = idx - cols; break;
+                    case 'ArrowRight':
+                        targetIdx = idx + 1;
+                        break;
+                    case 'ArrowLeft':
+                        targetIdx = idx - 1;
+                        break;
+                    case 'ArrowDown':
+                        targetIdx = idx + cols;
+                        break;
+                    case 'ArrowUp':
+                        targetIdx = idx - cols;
+                        break;
                     case 'Enter':
                     case ' ': {
                         // Open "+ more" or focus first event
                         const more = cell.querySelector('.fc-daygrid-day-more-link, .fc-more-link');
                         const evt = cell.querySelector('.fc-event, .fc-event-card');
-                        if (more) { more.click(); e.preventDefault(); }
-                        else if (evt) { evt.dispatchEvent(new MouseEvent('click')); e.preventDefault(); }
+                        if (more) {
+                            more.click();
+                            e.preventDefault();
+                        } else if (evt) {
+                            evt.dispatchEvent(new MouseEvent('click'));
+                            e.preventDefault();
+                        }
                         return;
                     }
                 }
@@ -3303,7 +4098,7 @@ class CalendarManager {
     handleEventClick(info) {
         // Close any open popover when an event is clicked
         this.closePopover();
-        
+
         this.currentEventId = info.event.id;
         this.loadEventDetails(info.event.id);
     }
@@ -3314,7 +4109,7 @@ class CalendarManager {
         openPopovers.forEach(popover => {
             popover.remove();
         });
-        
+
         // Also remove any popover backdrops or overlays
         const popoverBackdrops = document.querySelectorAll('.fc-popover-backdrop');
         popoverBackdrops.forEach(backdrop => {
@@ -3334,7 +4129,7 @@ class CalendarManager {
 
             const data = await response.json();
             this.showEventDetails(data);
-            
+
         } catch (error) {
             // this.showNotification('Error loading event details', 'danger');
             console.error('Event details error:', error);
@@ -3372,7 +4167,7 @@ class CalendarManager {
     }
 
     handleDateSelect(info) {
-        if (!@json(hasRole('Training') || hasRole('Admin') ||  hasRole('Training-MCTP') || hasRole('IST'))) return;
+        if (!@json(hasRole('Training') || hasRole('Admin') || hasRole('Training-MCTP') || hasRole('IST'))) return;
 
         this.resetEventForm();
         this.setFormDate(info.start);
@@ -3413,9 +4208,10 @@ class CalendarManager {
         }
 
         // Update button text
-        document.getElementById('eventModalTitle').textContent = 'Add Calendar Event';
+        document.getElementById('eventModalTitle').textContent = 'Add Event';
         document.querySelector('.btn-text').textContent = 'Add Event';
         document.getElementById('submitEventBtn').dataset.action = 'create';
+        window.calendarEventModalStepper?.reset();
 
         // Reset date field
         document.getElementById('start_datetime').removeAttribute('readonly');
@@ -3556,17 +4352,33 @@ class CalendarManager {
         document.getElementById('courseFilter')?.addEventListener('change', (e) => {
             this.handleCourseFilterChange(e.target.value);
         });
+
+        // Reset filters button
+        document.getElementById('calResetFilters')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            const courseSelect = document.getElementById('courseFilter');
+            if (courseSelect) {
+                // If Choices.js is active, use its API
+                if (courseSelect._courseChoices) {
+                    courseSelect._courseChoices.setChoiceByValue('');
+                } else {
+                    courseSelect.value = '';
+                    courseSelect.dispatchEvent(new Event('change'));
+                }
+            }
+            this.handleCourseFilterChange('');
+        });
     }
 
     handleCourseFilterChange(courseId) {
         this.selectedCourseId = courseId || null;
         this.updateCourseHeader();
-        
+
         // Refresh calendar events
         if (this.calendar) {
             this.calendar.refetchEvents();
         }
-        
+
         // If in list view, reload it
         const listViewEl = document.getElementById('eventListView');
         if (listViewEl && !listViewEl.classList.contains('d-none')) {
@@ -3579,7 +4391,9 @@ class CalendarManager {
         let isCompact;
         if (saved === null) {
             isCompact = false; // Default to comfortable mode for full cards
-            try { localStorage.setItem('calendarDensity', 'comfortable'); } catch {}
+            try {
+                localStorage.setItem('calendarDensity', 'comfortable');
+            } catch {}
         } else {
             isCompact = saved === 'compact';
         }
@@ -3624,15 +4438,19 @@ class CalendarManager {
         const view = button.dataset.view;
         const calendarEl = document.getElementById('calendar');
         const listViewEl = document.getElementById('eventListView');
+        const exportToolbar = document.getElementById('calendarExportToolbar');
 
         if (view === 'list') {
             calendarEl.style.display = 'none';
             listViewEl.classList.remove('d-none');
+            if (exportToolbar) exportToolbar.classList.remove('d-none');
             this.loadListView();
         } else {
             calendarEl.style.display = '';
             listViewEl.classList.add('d-none');
+            if (exportToolbar) exportToolbar.classList.add('d-none');
             this.calendar.changeView(this.getCalendarView(view));
+            this.updateCustomTitle();
             // Style "+ more" links after view change
             setTimeout(() => this.styleMoreLinks(), 100);
         }
@@ -3718,7 +4536,7 @@ class CalendarManager {
         groups.forEach(group => {
             // Convert group.pk to string for consistent comparison
             const groupPkStr = String(group.pk);
-            
+
             // Check if this group is selected (handle both string and number types)
             let isChecked = false;
             if (this.selectedGroupNames === 'ALL') {
@@ -3728,7 +4546,7 @@ class CalendarManager {
                 const selectedAsStrings = this.selectedGroupNames.map(String);
                 isChecked = selectedAsStrings.includes(groupPkStr);
             }
-            
+
             const checked = isChecked ? 'checked' : '';
 
             html += `
@@ -3757,8 +4575,9 @@ class CalendarManager {
             checkbox.addEventListener('change', () => {
                 const typeNameContainer = document.getElementById('type_name_container');
                 const typeNameError = document.getElementById('type_names_error');
-                const checkedCount = container.querySelectorAll('input[name="type_names[]"]:checked').length;
-                
+                const checkedCount = container.querySelectorAll(
+                    'input[name="type_names[]"]:checked').length;
+
                 if (checkedCount > 0) {
                     if (typeNameContainer) {
                         typeNameContainer.classList.remove('border-danger');
@@ -3807,7 +4626,7 @@ class CalendarManager {
         const facultyType = selectedOption?.dataset.faculty_type;
 
         if (facultyType) {
-           
+
             document.getElementById('faculty_type').value = facultyType;
             this.updateCheckboxState();
         }
@@ -3946,10 +4765,27 @@ class CalendarManager {
 
             // Close modal and refresh calendar
             bootstrap.Modal.getInstance(document.getElementById('eventModal')).hide();
+            const savedCourseId = formData.get('Course_name');
+            const savedDate = formData.get('start_datetime');
+
+            if (savedCourseId) {
+                this.selectedCourseId = savedCourseId;
+                const courseFilter = document.getElementById('courseFilter');
+                if (courseFilter) {
+                    if (courseFilter._courseChoices) {
+                        courseFilter._courseChoices.setChoiceByValue(String(savedCourseId));
+                    } else {
+                        courseFilter.value = savedCourseId;
+                    }
+                }
+            }
+
+            if (savedDate) {
+                this.calendar.gotoDate(savedDate);
+                this.updateCustomTitle();
+            }
+
             this.calendar.refetchEvents();
-            setTimeout(() => {
-               window.location.reload(); 
-            }, 1000);
 
         } catch (error) {
             this.showNotification(error.message, 'danger');
@@ -4021,7 +4857,7 @@ class CalendarManager {
         const groupTypeCheckboxes = document.querySelectorAll('input[name="type_names[]"]:checked');
         const typeNameContainer = document.getElementById('type_name_container');
         const typeNameError = document.getElementById('type_names_error');
-        
+
         if (groupTypeCheckboxes.length === 0) {
             typeNameContainer.classList.add('border-danger');
             if (typeNameError) {
@@ -4079,7 +4915,9 @@ class CalendarManager {
             Array.from(facultySelectEl.options).forEach(option => {
                 option.selected = normalizedFacultyIds.includes(String(option.value));
             });
-            facultySelectEl.dispatchEvent(new Event('change', { bubbles: true }));
+            facultySelectEl.dispatchEvent(new Event('change', {
+                bubbles: true
+            }));
         }
         document.getElementById('faculty_type').value = event.faculty_type;
         document.getElementById('vanue').value = event.venue_id;
@@ -4113,13 +4951,13 @@ class CalendarManager {
         // Checkboxes
         document.getElementById('fullDayCheckbox').checked = event.full_day == 1;
         document.getElementById('bio_attendanceCheckbox').checked = event.Bio_attendance == 1;
-        
+
         // Handle feedback checkboxes - set them in correct order
         const feedbackCheckbox = document.getElementById('feedback_checkbox');
         const remarkCheckbox = document.getElementById('remarkCheckbox');
         const ratingCheckbox = document.getElementById('ratingCheckbox');
         const feedbackOptions = document.getElementById('feedbackOptions');
-        
+
         // First, show/hide feedback options div based on saved state
         if (event.feedback_checkbox == 1 && feedbackOptions) {
             feedbackOptions.classList.remove('d-none');
@@ -4128,12 +4966,12 @@ class CalendarManager {
         } else if (feedbackOptions) {
             feedbackOptions.classList.add('d-none');
         }
-        
+
         // Then set the checkbox values
         if (feedbackCheckbox) feedbackCheckbox.checked = event.feedback_checkbox == 1;
         if (remarkCheckbox) remarkCheckbox.checked = event.Remark_checkbox == 1;
         if (ratingCheckbox) ratingCheckbox.checked = event.Ratting_checkbox == 1;
-        
+
         // Handle faculty review rating div visibility based on internal faculty div
         if (event.feedback_checkbox == 1) {
             const facultyReviewRatingDiv = document.getElementById('facultyReviewRatingDiv');
@@ -4154,81 +4992,81 @@ class CalendarManager {
         // Store current event ID
         this.currentEventId = event.pk;
         await this.updateinternal_faculty(event.faculty_type);
-        if(event.faculty_type == 2){
-                await this.setInternalFaculty(event.internal_faculty);
+        if (event.faculty_type == 2) {
+            await this.setInternalFaculty(event.internal_faculty);
         }
     }
-async updateinternal_faculty(facultyType) {
-    
-// console.log(facultyType + 'kkkkk');
+    async updateinternal_faculty(facultyType) {
+
+        // console.log(facultyType + 'kkkkk');
         switch (facultyType) {
             case '1': // Internal
                 console.log('internal');
-              internalFacultyDiv.style.display = 'none';
+                internalFacultyDiv.style.display = 'none';
                 break;
             case '2': // Guest
-                  console.log('guest');
-               internalFacultyDiv.style.display = 'block';
+                console.log('guest');
+                internalFacultyDiv.style.display = 'block';
                 break;
             default: // Research/Other
-            console.log('rtyuio');
+                console.log('rtyuio');
                 internalFacultyDiv.style.display = 'block';
 
         }
     }
-   async setInternalFaculty_bkp(internalFacultyIds) {
+    async setInternalFaculty_bkp(internalFacultyIds) {
 
-    if (!internalFacultyIds) return;
+        if (!internalFacultyIds) return;
 
-    // Agar CSV string aa rahi ho
-    if (typeof internalFacultyIds === 'string') {
-        internalFacultyIds = internalFacultyIds.split(',').map(id => id.trim());
-    }
-
-    const select = document.getElementById('internal_faculty');
-
-    Array.from(select.options).forEach(option => {
-        option.selected = internalFacultyIds.includes(option.value);
-    });
-// console.log(internalFacultyIds);
-// console.log([...select.options].map(o => o.value));
-
-    // Agar Choices.js / Select2 use kar rahe ho
-    select.dispatchEvent(new Event('change'));
-}
-async setInternalFaculty(internalFacultyIds) {
-
-    if (!internalFacultyIds) return;
-
-    // ✅ FIX 1: agar JSON string aa rahi ho
-    if (typeof internalFacultyIds === 'string') {
-
-        internalFacultyIds = internalFacultyIds.trim();
-
-        // JSON array string: '["23","67"]'
-        if (internalFacultyIds.startsWith('[')) {
-            internalFacultyIds = JSON.parse(internalFacultyIds);
-        } 
-        // normal CSV: '23,67'
-        else {
+        // Agar CSV string aa rahi ho
+        if (typeof internalFacultyIds === 'string') {
             internalFacultyIds = internalFacultyIds.split(',').map(id => id.trim());
         }
+
+        const select = document.getElementById('internal_faculty');
+
+        Array.from(select.options).forEach(option => {
+            option.selected = internalFacultyIds.includes(option.value);
+        });
+        // console.log(internalFacultyIds);
+        // console.log([...select.options].map(o => o.value));
+
+        // Agar Choices.js / Select2 use kar rahe ho
+        select.dispatchEvent(new Event('change'));
     }
+    async setInternalFaculty(internalFacultyIds) {
 
-    // ✅ FIX 2: force string comparison
-    internalFacultyIds = internalFacultyIds.map(id => String(id));
+        if (!internalFacultyIds) return;
 
-    const select = document.getElementById('internal_faculty');
+        // ✅ FIX 1: agar JSON string aa rahi ho
+        if (typeof internalFacultyIds === 'string') {
 
-    Array.from(select.options).forEach(option => {
-        option.selected = internalFacultyIds.includes(String(option.value));
-    });
+            internalFacultyIds = internalFacultyIds.trim();
 
-    // console.log(internalFacultyIds);           // ["23","67"]
-    // console.log([...select.options].map(o => o.value));
+            // JSON array string: '["23","67"]'
+            if (internalFacultyIds.startsWith('[')) {
+                internalFacultyIds = JSON.parse(internalFacultyIds);
+            }
+            // normal CSV: '23,67'
+            else {
+                internalFacultyIds = internalFacultyIds.split(',').map(id => id.trim());
+            }
+        }
 
-    select.dispatchEvent(new Event('change'));
-}
+        // ✅ FIX 2: force string comparison
+        internalFacultyIds = internalFacultyIds.map(id => String(id));
+
+        const select = document.getElementById('internal_faculty');
+
+        Array.from(select.options).forEach(option => {
+            option.selected = internalFacultyIds.includes(String(option.value));
+        });
+
+        // console.log(internalFacultyIds);           // ["23","67"]
+        // console.log([...select.options].map(o => o.value));
+
+        select.dispatchEvent(new Event('change'));
+    }
 
     async loadGroupTypesForEdit(event) {
         // Set selected group names for edit
@@ -4257,24 +5095,24 @@ async setInternalFaculty(internalFacultyIds) {
             // Set the group_type value after dropdown is populated
             if (groupTypeValue) {
                 const groupTypeSelect = document.getElementById('group_type');
-                
+
                 // Try to find matching value (handle both string and number comparisons)
                 let matchingValue = null;
                 for (let option of groupTypeSelect.options) {
-                    if (option.value === groupTypeValue || 
-                        option.value === String(groupTypeValue) || 
+                    if (option.value === groupTypeValue ||
+                        option.value === String(groupTypeValue) ||
                         String(option.value) === String(groupTypeValue)) {
                         matchingValue = option.value;
                         break;
                     }
                 }
-                
+
                 if (matchingValue) {
                     groupTypeSelect.value = matchingValue;
                     if (window.calendarModalChoices?.syncById) {
                         window.calendarModalChoices.syncById('group_type');
                     }
-                    
+
                     // Use the grouped data to populate checkboxes directly with selected values
                     const groups = groupedData[matchingValue] || [];
                     this.populateGroupCheckboxes(groups);
@@ -4397,7 +5235,7 @@ async setInternalFaculty(internalFacultyIds) {
             if (params.toString()) {
                 url += '?' + params.toString();
             }
-            
+
             const response = await fetch(url, {
                 headers: {
                     'X-CSRF-TOKEN': '{{ csrf_token() }}',
@@ -4423,9 +5261,9 @@ async setInternalFaculty(internalFacultyIds) {
             const weekDiff = Math.floor(timeDiff / (7 * 24 * 60 * 60 * 1000));
             let weekNum = weekDiff + 1;
 
-            const cmeta = CalendarConfig.courseMeta && this.selectedCourseId
-                ? CalendarConfig.courseMeta[String(this.selectedCourseId)]
-                : null;
+            const cmeta = CalendarConfig.courseMeta && this.selectedCourseId ?
+                CalendarConfig.courseMeta[String(this.selectedCourseId)] :
+                null;
             if (cmeta && cmeta.start_year) {
                 try {
                     const prog = new Date(cmeta.start_year);
@@ -4482,15 +5320,19 @@ async setInternalFaculty(internalFacultyIds) {
 
         const setPeriodFromMeta = () => {
             if (!periodEl) return;
-            const cmeta = CalendarConfig.courseMeta && this.selectedCourseId
-                ? CalendarConfig.courseMeta[String(this.selectedCourseId)]
-                : null;
+            const cmeta = CalendarConfig.courseMeta && this.selectedCourseId ?
+                CalendarConfig.courseMeta[String(this.selectedCourseId)] :
+                null;
             if (cmeta && cmeta.start_year && cmeta.end_date) {
                 try {
                     const s = new Date(cmeta.start_year);
                     const e = new Date(cmeta.end_date);
                     if (!Number.isNaN(s.getTime()) && !Number.isNaN(e.getTime())) {
-                        const fmt = (d) => d.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+                        const fmt = (d) => d.toLocaleDateString('en-IN', {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric'
+                        });
                         periodEl.textContent = '(' + fmt(s) + ' to ' + fmt(e) + ')';
                         periodEl.classList.remove('d-none');
                         return;
@@ -4552,7 +5394,8 @@ async setInternalFaculty(internalFacultyIds) {
             events.forEach((ev) => {
                 if (this.isCalendarHoliday(ev)) return;
                 const evd = new Date(ev.start);
-                if (evd.getFullYear() !== d.getFullYear() || evd.getMonth() !== d.getMonth() || evd.getDate() !== d.getDate()) {
+                if (evd.getFullYear() !== d.getFullYear() || evd.getMonth() !== d.getMonth() || evd
+                    .getDate() !== d.getDate()) {
                     return;
                 }
                 const title = String(ev.title || '').trim();
@@ -4566,7 +5409,8 @@ async setInternalFaculty(internalFacultyIds) {
         if (!inners.some(Boolean)) {
             return '';
         }
-        const cells = inners.map((inner) => `<td class="event-cell text-center">${inner ? this.escapeHtml(inner) : ''}</td>`);
+        const cells = inners.map((inner) =>
+            `<td class="event-cell text-center">${inner ? this.escapeHtml(inner) : ''}</td>`);
         return `<tr class="break-notes-row break-row"><th scope="row" class="time-column"></th>${cells.join('')}</tr>`;
     }
 
@@ -4653,15 +5497,16 @@ async setInternalFaculty(internalFacultyIds) {
 
         const breakRow = this.buildBreakNoticeRowHtml(events, ws);
         const venueText = this.buildVenueSummaryLine(events);
-        const venueRow = venueText
-            ? `<tr class="venue-summary-row"><th scope="row" class="time-column"></th><td colspan="5" class="event-cell text-center">${this.escapeHtml(venueText)}</td></tr>`
-            : '';
+        const venueRow = venueText ?
+            `<tr class="venue-summary-row"><th scope="row" class="time-column"></th><td colspan="5" class="event-cell text-center">${this.escapeHtml(venueText)}</td></tr>` :
+            '';
 
         let html = breakRow + venueRow;
         sortedTimes.forEach((time) => {
             const dayEvents = timeSlots[time];
             const sample = this.pickSampleEventForTimeSlot(dayEvents);
-            const timeCell = sample ? this.formatTimeColumnDisplay(sample) : String(time).replace(/\s+/g, '\n');
+            const timeCell = sample ? this.formatTimeColumnDisplay(sample) : String(time).replace(/\s+/g,
+                '\n');
             html += `
                 <tr>
                     <th scope="row" class="time-slot time-column">${timeCell.replace(/\n/g, '<br>')}</th>
@@ -4693,7 +5538,8 @@ async setInternalFaculty(internalFacultyIds) {
         const end = new Date(weekStart);
         end.setDate(end.getDate() + 6);
         const endStr = fmt(end);
-        el.innerHTML = `<i class="bi bi-calendar-week me-1" aria-hidden="true"></i><span class="fw-medium text-dark">${startStr}</span> <span class="text-muted">to</span> <span class="fw-medium text-dark">${endStr}</span>`;
+        el.innerHTML =
+            `<i class="bi bi-calendar-week me-1" aria-hidden="true"></i><span class="fw-medium text-dark">${startStr}</span> <span class="text-muted">to</span> <span class="fw-medium text-dark">${endStr}</span>`;
     }
 
     pad2(n) {
@@ -4809,9 +5655,9 @@ async setInternalFaculty(internalFacultyIds) {
         const t1 = st.getHours() * 60 + st.getMinutes();
         const en = event.end ? new Date(event.end) : new Date(st.getTime() + 50 * 60 * 1000);
         let t2 = en.getHours() * 60 + en.getMinutes();
-        const sameCalDay = st.getFullYear() === en.getFullYear()
-            && st.getMonth() === en.getMonth()
-            && st.getDate() === en.getDate();
+        const sameCalDay = st.getFullYear() === en.getFullYear() &&
+            st.getMonth() === en.getMonth() &&
+            st.getDate() === en.getDate();
         if (!sameCalDay && t2 < t1) {
             t2 += 1440;
         }
@@ -4919,9 +5765,9 @@ async setInternalFaculty(internalFacultyIds) {
     /** Calendar / API holiday entries — hidden on the revised timetable sheet only. */
     isCalendarHoliday(event) {
         const ex = event.extendedProps || {};
-        return event.type === 'holiday'
-            || ex.type === 'holiday'
-            || String(event.id || '').startsWith('holiday_');
+        return event.type === 'holiday' ||
+            ex.type === 'holiday' ||
+            String(event.id || '').startsWith('holiday_');
     }
 
     /**
@@ -4931,7 +5777,8 @@ async setInternalFaculty(internalFacultyIds) {
         const ex = event.extendedProps || {};
         const gn = event.group_name ?? ex.group_name ?? '';
         const gns = event.group_names ?? ex.group_names;
-        const namesArr = Array.isArray(gns) ? gns : (gn ? String(gn).split(',').map(s => s.trim()).filter(Boolean) : []);
+        const namesArr = Array.isArray(gns) ? gns : (gn ? String(gn).split(',').map(s => s.trim()).filter(Boolean) :
+            []);
         return {
             ...ex,
             group_name: gn || namesArr.join(', '),
@@ -4973,12 +5820,18 @@ async setInternalFaculty(internalFacultyIds) {
 
         const isHoliday = (ev) => ev.type === 'holiday' || String(ev.id || '').startsWith('holiday_');
         if (list.every(isHoliday)) {
-            return [{ letter: '', events: list }];
+            return [{
+                letter: '',
+                events: list
+            }];
         }
 
         const letters = list.map((ev, idx) => {
             const p = this.getListEventProps(ev);
-            return { ev, letter: this.inferPdfGroupRowLetter(p, idx) };
+            return {
+                ev,
+                letter: this.inferPdfGroupRowLetter(p, idx)
+            };
         });
 
         const allBlank = letters.every(x => !x.letter);
@@ -4990,7 +5843,10 @@ async setInternalFaculty(internalFacultyIds) {
         }
 
         const map = new Map();
-        letters.forEach(({ ev, letter }) => {
+        letters.forEach(({
+            ev,
+            letter
+        }) => {
             const key = letter || '_';
             if (!map.has(key)) map.set(key, []);
             map.get(key).push(ev);
@@ -5014,10 +5870,12 @@ async setInternalFaculty(internalFacultyIds) {
         const arr = Array.isArray(dayEvents) ? dayEvents : [dayEvents];
         const rows = this.bucketEventsForPdfRows(arr);
         const html = rows.map((row) => {
-            const labelHtml = row.letter
-                ? `<span class="tt-pdf-group-label" aria-label="Group row ${row.letter}">${row.letter}</span>`
-                : '';
-            const body = row.events.map((ev) => this.renderSingleListEventCard(ev, { suppressGroupBadge: !!row.letter })).join('');
+            const labelHtml = row.letter ?
+                `<span class="tt-pdf-group-label" aria-label="Group row ${row.letter}">${row.letter}</span>` :
+                '';
+            const body = row.events.map((ev) => this.renderSingleListEventCard(ev, {
+                suppressGroupBadge: !!row.letter
+            })).join('');
             return `<div class="tt-pdf-group-row">${labelHtml}<div class="tt-pdf-group-body">${body}</div></div>`;
         }).join('');
         return `<div class="tt-pdf-group-rows">${html}</div>`;
@@ -5036,8 +5894,16 @@ async setInternalFaculty(internalFacultyIds) {
         const faculty = p.faculty_name || '';
         const venue = p.vanue || p.venue_name || '';
         const classSession = p.class_session || '';
-        const startTime = event.start ? new Date(event.start).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
-        const endTime = event.end ? new Date(event.end).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
+        const startTime = event.start ? new Date(event.start).toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        }) : '';
+        const endTime = event.end ? new Date(event.end).toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        }) : '';
         const timeRange = startTime && endTime ? `${startTime} - ${endTime}` : '';
         const showBadge = !opts.suppressGroupBadge && groupName;
         const eid = event.id != null ? String(event.id).replace(/"/g, '&quot;') : '';
@@ -5089,25 +5955,27 @@ async setInternalFaculty(internalFacultyIds) {
     initializeScrollIndicators() {
         // Add scroll event listeners to table cells to show/hide scroll indicators
         const cells = document.querySelectorAll('.timetable-grid td.event-cell');
-        
+
         cells.forEach(cell => {
             // Check if cell content exceeds max height
             if (cell.scrollHeight > cell.clientHeight) {
                 cell.classList.add('has-scroll');
-                
+
                 // Add scroll event listener
                 cell.addEventListener('scroll', function() {
-                    const isScrolledToBottom = Math.abs(this.scrollHeight - this.clientHeight - this.scrollTop) < 5;
-                    
+                    const isScrolledToBottom = Math.abs(this.scrollHeight - this.clientHeight - this
+                        .scrollTop) < 5;
+
                     if (isScrolledToBottom) {
                         this.classList.add('scrolled-bottom');
                     } else {
                         this.classList.remove('scrolled-bottom');
                     }
                 });
-                
+
                 // Initial check
-                const isScrolledToBottom = Math.abs(cell.scrollHeight - cell.clientHeight - cell.scrollTop) < 5;
+                const isScrolledToBottom = Math.abs(cell.scrollHeight - cell.clientHeight - cell
+                    .scrollTop) < 5;
                 if (isScrolledToBottom) {
                     cell.classList.add('scrolled-bottom');
                 }
@@ -5267,7 +6135,7 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         true
     );
-    
+
     // Absolute fallback - hide loader after 3 seconds no matter what
     setTimeout(() => {
         const overlay = document.getElementById('calendarLoadingOverlay');
@@ -5276,14 +6144,14 @@ document.addEventListener('DOMContentLoaded', () => {
             overlay.style.display = 'none';
         }
     }, 3000);
-    
+
     try {
         window.calendarManager = new CalendarManager();
         console.log('Calendar manager initialized successfully');
     } catch (error) {
         console.error('Error initializing calendar:', error);
         console.error('Error stack:', error.stack);
-        
+
         // Hide loading overlay and show error message
         const loadingOverlay = document.getElementById('calendarLoadingOverlay');
         if (loadingOverlay) {
