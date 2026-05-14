@@ -12,6 +12,7 @@ use App\Models\Mess\SubStore;
 use App\Models\Mess\Inventory;
 use App\Models\Mess\ItemSubcategory;
 use App\Models\Mess\ClientType;
+use App\Models\Mess\SellingVoucherDateRangeReport;
 use App\Models\FacultyMaster;
 use App\Models\EmployeeMaster;
 use App\Models\DepartmentMaster;
@@ -224,17 +225,31 @@ class KitchenIssueController extends Controller
                 'section' => KitchenIssueMaster::CLIENT_SECTION,
                 'other' => KitchenIssueMaster::CLIENT_OTHER,
             ];
-            $filterBuyerNames = KitchenIssueMaster::query()
+            $pk = (int) $selectedClientTypePk;
+            $kiBuyerNames = KitchenIssueMaster::query()
                 ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
                 ->where('client_type', $typeToNumber[$selectedTypeSlug])
-                ->where('client_type_pk', (int) $selectedClientTypePk)
+                ->where('client_type_pk', $pk)
                 ->whereNotNull('client_name')
                 ->where('client_name', '!=', '')
                 ->distinct()
                 ->orderBy('client_name')
                 ->pluck('client_name')
                 ->map(fn ($name) => trim((string) $name))
-                ->filter()
+                ->filter();
+            $drBuyerNames = SellingVoucherDateRangeReport::query()
+                ->where('client_type_slug', $selectedTypeSlug)
+                ->where('client_type_pk', $pk)
+                ->whereHas('items')
+                ->whereNotNull('client_name')
+                ->where('client_name', '!=', '')
+                ->distinct()
+                ->pluck('client_name')
+                ->map(fn ($name) => trim((string) $name))
+                ->filter();
+            $filterBuyerNames = $kiBuyerNames->concat($drBuyerNames)
+                ->unique()
+                ->sort()
                 ->values();
         }
 
@@ -665,7 +680,17 @@ class KitchenIssueController extends Controller
             'other' => KitchenIssueMaster::CLIENT_OTHER,
         };
 
-        $buyers = KitchenIssueMaster::query()
+        $svBuyers = SellingVoucherDateRangeReport::query()
+            ->where('client_type_slug', $slug)
+            ->where('client_type_pk', $clientTypePk)
+            ->whereHas('items')
+            ->whereNotNull('client_name')
+            ->where('client_name', '!=', '')
+            ->distinct()
+            ->pluck('client_name')
+            ->map(fn ($n) => trim((string) $n));
+
+        $kiBuyers = KitchenIssueMaster::query()
             ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
             ->where('client_type', $clientType)
             ->where('client_type_pk', $clientTypePk)
@@ -674,7 +699,9 @@ class KitchenIssueController extends Controller
             ->where('client_name', '!=', '')
             ->distinct()
             ->pluck('client_name')
-            ->map(fn ($n) => trim((string) $n))
+            ->map(fn ($n) => trim((string) $n));
+
+        $buyers = $svBuyers->concat($kiBuyers)
             ->filter(fn ($n) => $n !== '')
             ->unique()
             ->sort()
