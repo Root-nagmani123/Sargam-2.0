@@ -14,6 +14,7 @@ use App\Models\FC\{
 };
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -284,7 +285,13 @@ class ReportController extends Controller
                     'Content-Disposition' => 'inline; filename="'.$filename.'"',
                 ]);
             }
+            Log::info('FC registration PDF: using Dompdf fallback (Chrome unavailable or failed)', [
+                'engine' => $engine,
+                'chrome_bin' => $this->fcRegistrationChromeBinary(),
+            ]);
         }
+
+        $this->fcEnsureDompdfFontCacheDir();
 
         return Pdf::loadHTML($html)
             ->setOption('isRemoteEnabled', true)
@@ -292,6 +299,29 @@ class ReportController extends Controller
             ->setPaper('a4', 'portrait')
             ->addInfo(['Title' => 'FC Registration - '.$username])
             ->stream($filename);
+    }
+
+    /**
+     * Dompdf writes .ufm/.ttf font metrics under storage/fonts when rendering @font-face (FcRegPdf).
+     * Production often lacks this directory (storage/ is not in git); without it fopen(...ufm) fails.
+     */
+    private function fcEnsureDompdfFontCacheDir(): void
+    {
+        $fontDir = storage_path('fonts');
+
+        if (! is_dir($fontDir)) {
+            File::makeDirectory($fontDir, 0775, true);
+        }
+
+        if (! is_dir($fontDir) || ! is_writable($fontDir)) {
+            Log::error('FC registration PDF: storage/fonts missing or not writable for Dompdf', [
+                'path' => $fontDir,
+                'exists' => is_dir($fontDir),
+                'writable' => is_writable($fontDir),
+            ]);
+
+            abort(500, 'PDF cannot be generated: the font cache directory (storage/fonts) is missing or not writable by the web server. On the server, run: mkdir -p storage/fonts && chown -R www-data:www-data storage/fonts && chmod -R 775 storage/fonts. Alternatively install Google Chrome/Chromium for headless PDF rendering.');
+        }
     }
 
     /**
