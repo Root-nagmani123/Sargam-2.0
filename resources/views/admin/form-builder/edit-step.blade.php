@@ -1,12 +1,33 @@
 @extends('admin.layouts.master')
 @section('title', 'Edit Step: ' . $step->step_name)
 
+@push('styles')
+<style>
+    .fc-fb-actions-col { width: 1%; white-space: nowrap; }
+    .fc-fb-actions {
+        display: inline-flex;
+        align-items: center;
+        flex-wrap: nowrap;
+        gap: 0.25rem;
+    }
+    .fc-fb-actions .btn { flex-shrink: 0; }
+    .fc-fb-actions__form { display: inline-flex; margin: 0; padding: 0; }
+    .fc-field-form-section .border { border-color: var(--bs-border-color) !important; }
+</style>
+@endpush
+
 @section('setup_content')
 <div class="container py-4">
     {{-- Flash messages --}}
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show" role="alert">
             {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+    @if(session('error'))
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            {{ session('error') }}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
@@ -24,15 +45,9 @@
 
     {{-- Header --}}
     <div class="d-flex align-items-center mb-4">
-        @if($step->form)
-            <a href="{{ route('fc-reg.admin.forms.edit', $step->form) }}" class="btn btn-sm btn-outline-secondary me-3">
-                <i class="bi bi-arrow-left"></i>
-            </a>
-        @else
-            <a href="{{ route('fc-reg.admin.form-builder.index') }}" class="btn btn-sm btn-outline-secondary me-3">
-                <i class="bi bi-arrow-left"></i>
-            </a>
-        @endif
+        <a href="{{ $step->form ? route('fc-reg.admin.forms.edit', $step->form) : route('fc-reg.admin.forms.index') }}" class="btn btn-sm btn-outline-secondary me-3" title="Back to form">
+            <i class="bi bi-arrow-left"></i>
+        </a>
         <h4 class="mb-0"><i class="bi {{ $step->icon ?? 'bi-file-text' }} me-2"></i>{{ $step->step_name }}</h4>
         @if($step->form)
             <span class="badge bg-info ms-2">{{ $step->form->form_name }}</span>
@@ -95,7 +110,7 @@
     @if($step->step_slug !== 'step3')
     <div class="card border-0 shadow-sm mb-4" style="border-radius:10px;">
         <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
-            <h6 class="mb-0 text-uppercase small fw-bold text-muted">Fields ({{ $step->fields->count() }})</h6>
+            <h6 class="mb-0 text-uppercase small fw-bold text-muted" id="fcFieldsCountLabel">Fields ({{ $step->fields->count() }})</h6>
             <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addFieldModal">
                 <i class="bi bi-plus-circle me-1"></i>Add Field
             </button>
@@ -113,48 +128,12 @@
                             <th>Section</th>
                             <th>Required</th>
                             <th>Active</th>
-                            <th style="width:140px;">Actions</th>
+                            <th class="fc-fb-actions-col">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="fieldsList">
                         @foreach($step->fields as $field)
-                            <tr data-id="{{ $field->id }}">
-                                <td class="text-muted small">{{ $field->display_order }}</td>
-                                <td class="fw-semibold small">{{ $field->label }}</td>
-                                <td><code class="small">{{ $field->field_name }}</code></td>
-                                <td><span class="badge bg-light text-dark">{{ $field->field_type }}</span></td>
-                                <td><code class="small">{{ $field->target_column }}</code></td>
-                                <td class="small text-muted">{{ $field->section_heading ?? '—' }}</td>
-                                <td>
-                                    @if($field->is_required)
-                                        <span class="badge bg-danger">Yes</span>
-                                    @else
-                                        <span class="badge bg-secondary">No</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    @if($field->is_active)
-                                        <span class="badge bg-success">Yes</span>
-                                    @else
-                                        <span class="badge bg-secondary">No</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    <button class="btn btn-sm btn-outline-primary py-0 px-1" onclick="editField({{ json_encode($field) }})" title="Edit">
-                                        <i class="bi bi-pencil"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-secondary py-0 px-1" onclick="moveField({{ $field->id }}, 'up')" title="Move Up">
-                                        <i class="bi bi-arrow-up"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-secondary py-0 px-1" onclick="moveField({{ $field->id }}, 'down')" title="Move Down">
-                                        <i class="bi bi-arrow-down"></i>
-                                    </button>
-                                    <form method="POST" action="{{ route('fc-reg.admin.form-builder.field.delete', $field) }}" class="d-inline" onsubmit="return confirm('Delete this field?')">
-                                        @csrf @method('DELETE')
-                                        <button class="btn btn-sm btn-outline-danger py-0 px-1" title="Delete"><i class="bi bi-trash"></i></button>
-                                    </form>
-                                </td>
-                            </tr>
+                            @include('admin.form-builder.partials.field-row', ['field' => $field])
                         @endforeach
                     </tbody>
                 </table>
@@ -182,7 +161,7 @@
                             <th>Code</th>
                             <th>Mandatory</th>
                             <th>Active</th>
-                            <th style="width:140px;">Actions</th>
+                            <th class="fc-fb-actions-col">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="docMastersList">
@@ -205,20 +184,22 @@
                                         <span class="badge bg-secondary">No</span>
                                     @endif
                                 </td>
-                                <td>
-                                    <button class="btn btn-sm btn-outline-primary py-0 px-1" onclick="editDocMaster({{ json_encode($doc) }})" title="Edit">
-                                        <i class="bi bi-pencil"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-secondary py-0 px-1" onclick="moveDocMaster({{ $doc->id }}, 'up')" title="Move Up">
-                                        <i class="bi bi-arrow-up"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-secondary py-0 px-1" onclick="moveDocMaster({{ $doc->id }}, 'down')" title="Move Down">
-                                        <i class="bi bi-arrow-down"></i>
-                                    </button>
-                                    <form method="POST" action="{{ route('fc-reg.admin.form-builder.doc-master.delete', $doc) }}" class="d-inline" onsubmit="return confirm('Delete this document?')">
-                                        @csrf @method('DELETE')
-                                        <button class="btn btn-sm btn-outline-danger py-0 px-1" title="Delete"><i class="bi bi-trash"></i></button>
-                                    </form>
+                                <td class="fc-fb-actions-col">
+                                    <div class="fc-fb-actions">
+                                        <button type="button" class="btn btn-sm btn-outline-primary py-0 px-1" onclick="editDocMaster({{ json_encode($doc) }})" title="Edit">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1" onclick="moveDocMaster({{ $doc->id }}, 'up')" title="Move Up">
+                                            <i class="bi bi-arrow-up"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1" onclick="moveDocMaster({{ $doc->id }}, 'down')" title="Move Down">
+                                            <i class="bi bi-arrow-down"></i>
+                                        </button>
+                                        <form method="POST" action="{{ route('fc-reg.admin.form-builder.doc-master.delete', $doc) }}" class="fc-fb-actions__form" onsubmit="return confirm('Delete this document?')">
+                                            @csrf @method('DELETE')
+                                            <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1" title="Delete"><i class="bi bi-trash"></i></button>
+                                        </form>
+                                    </div>
                                 </td>
                             </tr>
                         @endforeach
@@ -310,7 +291,7 @@
                             <table class="table table-sm table-hover mb-0">
                                 <thead>
                                     <tr class="small text-muted">
-                                        <th>#</th><th>Label</th><th>Field Name</th><th>Type</th><th>Target Column</th><th>Required</th><th>Active</th><th>Actions</th>
+                                        <th>#</th><th>Label</th><th>Field Name</th><th>Type</th><th>Target Column</th><th>Required</th><th>Active</th><th class="fc-fb-actions-col">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -323,14 +304,23 @@
                                             <td><code class="small">{{ $gf->target_column }}</code></td>
                                             <td>{!! $gf->is_required ? '<span class="badge bg-danger">Yes</span>' : '<span class="badge bg-secondary">No</span>' !!}</td>
                                             <td>{!! $gf->is_active ? '<span class="badge bg-success">Yes</span>' : '<span class="badge bg-secondary">No</span>' !!}</td>
-                                            <td>
-                                                <button class="btn btn-sm btn-outline-primary py-0 px-1" onclick="editGroupField({{ json_encode($gf) }})">
-                                                    <i class="bi bi-pencil"></i>
-                                                </button>
-                                                <form method="POST" action="{{ route('fc-reg.admin.form-builder.group-field.delete', $gf) }}" class="d-inline" onsubmit="return confirm('Delete?')">
-                                                    @csrf @method('DELETE')
-                                                    <button class="btn btn-sm btn-outline-danger py-0 px-1"><i class="bi bi-trash"></i></button>
-                                                </form>
+                                            <td class="fc-fb-actions-col">
+                                                <div class="fc-fb-actions">
+                                                    <button type="button" class="btn btn-sm btn-outline-primary py-0 px-1" onclick="editGroupField({{ json_encode($gf) }})" title="Edit">
+                                                        <i class="bi bi-pencil"></i>
+                                                    </button>
+                                                    @if($gf->is_active)
+                                                        <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1" title="Cannot delete — field is in use"
+                                                            onclick="alert('This field is currently in use on the form and cannot be deleted. Set it to inactive first, then try again.')">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    @else
+                                                        <form method="POST" action="{{ route('fc-reg.admin.form-builder.group-field.delete', $gf) }}" class="fc-fb-actions__form" onsubmit="return confirm('Delete?')">
+                                                            @csrf @method('DELETE')
+                                                            <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1" title="Delete"><i class="bi bi-trash"></i></button>
+                                                        </form>
+                                                    @endif
+                                                </div>
                                             </td>
                                         </tr>
                                     @endforeach
@@ -350,18 +340,19 @@
 {{-- ═══════════════════════════════════════════════════════════════════ --}}
 <div class="modal fade" id="addFieldModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
-        <form method="POST" action="{{ route('fc-reg.admin.form-builder.field.store', $step) }}" class="modal-content">
+        <form method="POST" id="addFieldForm" action="{{ route('fc-reg.admin.form-builder.field.store', $step) }}" class="modal-content">
             @csrf
             <div class="modal-header">
                 <h5 class="modal-title">Add Field</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
+                <div id="addFieldFormAlert" class="alert py-2 small mb-3 d-none" role="alert"></div>
                 @include('admin.form-builder._field-form', ['prefix' => 'add', 'field' => null, 'showTargetTable' => true])
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="submit" class="btn btn-primary">Add Field</button>
+                <button type="submit" class="btn btn-primary" id="addFieldSubmitBtn">Add Field</button>
             </div>
         </form>
     </div>
@@ -537,14 +528,291 @@ function bindFieldNameSync(form) {
     });
 }
 
-document.querySelectorAll('#addFieldModal form, #editFieldModal form, #groupFieldModal form').forEach(function(form) {
+function fcOptionsJsonToCommaList(jsonStr) {
+    if (!jsonStr || !String(jsonStr).trim()) return '';
+    try {
+        var arr = JSON.parse(jsonStr);
+        if (!Array.isArray(arr)) return String(jsonStr).trim();
+        return arr.map(function (item) {
+            if (item && typeof item === 'object') {
+                var v = item.label != null ? item.label : item.value;
+                return v != null ? String(v).trim() : '';
+            }
+            return String(item).trim();
+        }).filter(Boolean).join(', ');
+    } catch (e) {
+        return String(jsonStr).trim();
+    }
+}
+
+function fcCommaListToOptionsJson(commaStr) {
+    var parts = String(commaStr || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+    if (!parts.length) return '';
+    return JSON.stringify(parts.map(function (p) { return { value: p, label: p }; }));
+}
+
+function syncOptionsJsonFromList(form) {
+    var visible = form.querySelector('.fc-options-list-input');
+    var hidden = form.querySelector('.fc-options-json-input');
+    if (!hidden) return;
+    hidden.value = visible ? fcCommaListToOptionsJson(visible.value) : '';
+}
+
+function syncOptionsListFromJson(form, jsonStr) {
+    var visible = form.querySelector('.fc-options-list-input');
+    var hidden = form.querySelector('.fc-options-json-input');
+    if (!hidden) return;
+    hidden.value = jsonStr || '';
+    if (visible) visible.value = fcOptionsJsonToCommaList(jsonStr);
+}
+
+function getFcChoiceSource(form) {
+    var checked = form.querySelector('.fc-choice-source-input:checked');
+    return checked ? checked.value : 'fixed';
+}
+
+function setFcChoiceSource(form, source) {
+    var radio = form.querySelector('.fc-choice-source-input[value="' + source + '"]');
+    if (radio) radio.checked = true;
+}
+
+function detectFcChoiceSourceFromForm(form) {
+    var lookupTable = form.querySelector('[name="lookup_table"]');
+    if (lookupTable && String(lookupTable.value || '').trim()) {
+        return 'lookup';
+    }
+    return 'fixed';
+}
+
+function clearInactiveChoiceFields(form) {
+    var typeEl = form.querySelector('[name="field_type"]');
+    if (!typeEl) return;
+    var type = typeEl.value;
+    if (['select', 'radio', 'checkbox'].indexOf(type) === -1) return;
+
+    var source = type === 'select' ? getFcChoiceSource(form) : 'fixed';
+    if (source === 'fixed') {
+        ['lookup_table', 'lookup_value_column', 'lookup_label_column', 'lookup_order_column'].forEach(function (name) {
+            var el = form.querySelector('[name="' + name + '"]');
+            if (el) el.value = '';
+        });
+    } else {
+        var hidden = form.querySelector('.fc-options-json-input');
+        var visible = form.querySelector('.fc-options-list-input');
+        if (hidden) hidden.value = '';
+        if (visible) visible.value = '';
+    }
+}
+
+function toggleFcFieldFormSections(form) {
+    if (!form) return;
+    var typeEl = form.querySelector('[name="field_type"]');
+    if (!typeEl) return;
+    var type = typeEl.value;
+    var needsChoices = ['select', 'radio', 'checkbox'].indexOf(type) !== -1;
+    var showPicker = type === 'select';
+    var showFile = type === 'file';
+
+    if (needsChoices && type !== 'select') {
+        setFcChoiceSource(form, 'fixed');
+    }
+
+    var source = type === 'select' ? getFcChoiceSource(form) : 'fixed';
+    var showStatic = needsChoices && source === 'fixed';
+    var showLookup = type === 'select' && source === 'lookup';
+
+    form.querySelectorAll('[data-fc-field-section="choice-picker"]').forEach(function (el) {
+        el.classList.toggle('d-none', !showPicker);
+    });
+    form.querySelectorAll('[data-fc-field-section="choice-static"]').forEach(function (el) {
+        el.classList.toggle('d-none', !showStatic);
+    });
+    form.querySelectorAll('[data-fc-field-section="choice-lookup"]').forEach(function (el) {
+        el.classList.toggle('d-none', !showLookup);
+    });
+    form.querySelectorAll('[data-fc-field-section="file"]').forEach(function (el) {
+        el.classList.toggle('d-none', !showFile);
+    });
+
+    if (showFile) {
+        var maxKb = form.querySelector('[name="file_max_kb"]');
+        var ext = form.querySelector('[name="file_extensions"]');
+        if (maxKb && !String(maxKb.value || '').trim()) maxKb.value = '500';
+        if (ext && !String(ext.value || '').trim()) ext.value = 'jpeg,jpg,png,pdf';
+    }
+}
+
+function bindFcFieldTypeVisibility(form) {
+    var typeEl = form.querySelector('[name="field_type"]');
+    if (!typeEl) return;
+    if (typeEl.dataset.fcTypeBound !== '1') {
+        typeEl.dataset.fcTypeBound = '1';
+        typeEl.addEventListener('change', function () {
+            toggleFcFieldFormSections(form);
+        });
+    }
+    form.querySelectorAll('.fc-choice-source-input').forEach(function (radio) {
+        if (radio.dataset.fcSourceBound === '1') return;
+        radio.dataset.fcSourceBound = '1';
+        radio.addEventListener('change', function () {
+            toggleFcFieldFormSections(form);
+        });
+    });
+    toggleFcFieldFormSections(form);
+}
+
+function showAddFieldAlert(message, type) {
+    var alertEl = document.getElementById('addFieldFormAlert');
+    if (!alertEl) return;
+    alertEl.className = 'alert py-2 small mb-3 alert-' + (type || 'success');
+    alertEl.textContent = message;
+    alertEl.classList.remove('d-none');
+}
+
+function hideAddFieldAlert() {
+    var alertEl = document.getElementById('addFieldFormAlert');
+    if (alertEl) alertEl.classList.add('d-none');
+}
+
+function resetAddFieldForm(form) {
+    if (!form) return;
+    form.reset();
+    form.querySelectorAll('.target-column-sync').forEach(function (el) { el.value = ''; });
+    form.querySelectorAll('.fc-options-json-input, .fc-options-list-input').forEach(function (el) { el.value = ''; });
+    ['lookup_table', 'lookup_value_column', 'lookup_label_column', 'lookup_order_column'].forEach(function (name) {
+        var el = form.querySelector('[name="' + name + '"]');
+        if (el) el.value = '';
+    });
+    var typeEl = form.querySelector('[name="field_type"]');
+    if (typeEl) typeEl.value = 'text';
+    setFcChoiceSource(form, 'fixed');
+    var css = form.querySelector('[name="css_class"]');
+    if (css) css.value = 'col-md-6';
+    var active = form.querySelector('[name="is_active"]');
+    if (active) active.checked = true;
+    var req = form.querySelector('[name="is_required"]');
+    if (req) req.checked = false;
+    toggleFcFieldFormSections(form);
+    var nameInput = form.querySelector('.field-name-input');
+    if (nameInput) nameInput.focus();
+}
+
+function bindOptionsListSync(form) {
+    var optionsInput = form.querySelector('.fc-options-list-input');
+    if (!optionsInput || optionsInput.dataset.fcOptionsBound === '1') return;
+    optionsInput.dataset.fcOptionsBound = '1';
+    optionsInput.addEventListener('input', function () { syncOptionsJsonFromList(form); });
+    optionsInput.addEventListener('blur', function () { syncOptionsJsonFromList(form); });
+}
+
+document.querySelectorAll('#editFieldModal form, #groupFieldModal form').forEach(function (form) {
     bindFieldNameSync(form);
-    form.addEventListener('submit', function() {
+    bindFcFieldTypeVisibility(form);
+    bindOptionsListSync(form);
+    form.addEventListener('submit', function () {
         syncTargetColumnFromFieldName(form);
+        syncOptionsJsonFromList(form);
+        clearInactiveChoiceFields(form);
     });
 });
 
-// ── Edit field: set Select2 value ────────────────────────────────
+var addFieldForm = document.getElementById('addFieldForm');
+if (addFieldForm) {
+    bindFieldNameSync(addFieldForm);
+    bindFcFieldTypeVisibility(addFieldForm);
+    bindOptionsListSync(addFieldForm);
+
+    addFieldForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        syncTargetColumnFromFieldName(addFieldForm);
+        syncOptionsJsonFromList(addFieldForm);
+        clearInactiveChoiceFields(addFieldForm);
+
+        var submitBtn = document.getElementById('addFieldSubmitBtn');
+        var originalHtml = submitBtn ? submitBtn.innerHTML : 'Add Field';
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving…';
+        }
+
+        fetch(addFieldForm.action, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: new FormData(addFieldForm)
+        })
+        .then(function (res) {
+            return res.json().then(function (data) {
+                return { ok: res.ok, data: data };
+            });
+        })
+        .then(function (result) {
+            if (!result.ok) {
+                var msg = result.data.message || 'Could not add field.';
+                if (result.data.errors) {
+                    msg = Object.values(result.data.errors).flat().join(' ');
+                }
+                showAddFieldAlert(msg, 'danger');
+                return;
+            }
+            showAddFieldAlert(result.data.message || 'Field added successfully.', 'success');
+            var tbody = document.getElementById('fieldsList');
+            if (tbody && result.data.row_html) {
+                tbody.insertAdjacentHTML('beforeend', result.data.row_html);
+            }
+            var countEl = document.getElementById('fcFieldsCountLabel');
+            if (countEl && result.data.fields_count != null) {
+                countEl.textContent = 'Fields (' + result.data.fields_count + ')';
+            }
+            resetAddFieldForm(addFieldForm);
+        })
+        .catch(function () {
+            showAddFieldAlert('Could not add field. Please try again.', 'danger');
+        })
+        .finally(function () {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalHtml;
+            }
+        });
+    });
+}
+
+var addFieldModalEl = document.getElementById('addFieldModal');
+if (addFieldModalEl) {
+    addFieldModalEl.addEventListener('shown.bs.modal', function () {
+        if (addFieldForm) bindFcFieldTypeVisibility(addFieldForm);
+    });
+    addFieldModalEl.addEventListener('hidden.bs.modal', function () {
+        hideAddFieldAlert();
+        resetAddFieldForm(addFieldForm);
+    });
+}
+
+['editFieldModal', 'groupFieldModal'].forEach(function (modalId) {
+    var modalEl = document.getElementById(modalId);
+    if (!modalEl) return;
+    modalEl.addEventListener('shown.bs.modal', function () {
+        var form = modalEl.querySelector('form');
+        if (form) bindFcFieldTypeVisibility(form);
+    });
+});
+
+function normalizeFieldColumnLayout(value) {
+    var allowed = ['col-md-3', 'col-md-6', 'col-md-9', 'col-md-12'];
+    var v = (value || '').trim();
+    if (allowed.indexOf(v) !== -1) return v;
+    if (v === 'col-12' || v === 'col-md-12') return 'col-md-12';
+    if (v === 'col-md-4' || v === 'col-3' || v === 'col-md-3') return 'col-md-3';
+    if (v === 'col-9' || v === 'col-md-9') return 'col-md-9';
+    if (v === 'col-6' || v === 'col-md-6') return 'col-md-6';
+    return 'col-md-6';
+}
+
+// ── Edit field ─────────────────────────────────────────────────────
 function editField(field) {
     const form = document.getElementById('editFieldForm');
     form.action = '{{ url("fc-reg/admin/form-builder/fields") }}/' + field.id;
@@ -555,18 +823,23 @@ function editField(field) {
         target_table: field.target_table, target_column: field.target_column,
         validation_rules: field.validation_rules, placeholder: field.placeholder,
         help_text: field.help_text, default_value: field.default_value,
-        options_json: field.options_json, lookup_table: field.lookup_table,
+        lookup_table: field.lookup_table,
         lookup_value_column: field.lookup_value_column, lookup_label_column: field.lookup_label_column,
         lookup_order_column: field.lookup_order_column, section_heading: field.section_heading,
-        css_class: field.css_class, file_max_kb: field.file_max_kb, file_extensions: field.file_extensions
+        file_max_kb: field.file_max_kb, file_extensions: field.file_extensions
     };
     for (const [k, v] of Object.entries(inputs)) {
         const el = form.querySelector(`[name="${k}"]`);
         if (el) el.value = v || '';
     }
+    const cssEl = form.querySelector('[name="css_class"]');
+    if (cssEl) cssEl.value = normalizeFieldColumnLayout(field.css_class);
+    syncOptionsListFromJson(form, field.options_json || '');
+    setFcChoiceSource(form, (field.lookup_table && String(field.lookup_table).trim()) ? 'lookup' : 'fixed');
     syncTargetColumnFromFieldName(form);
     form.querySelector('[name="is_required"]').checked = !!field.is_required;
     form.querySelector('[name="is_active"]').checked = field.is_active !== false && field.is_active !== 0;
+    toggleFcFieldFormSections(form);
 
     new bootstrap.Modal(document.getElementById('editFieldModal')).show();
 }
@@ -593,11 +866,16 @@ function openAddGroupFieldModal(groupId) {
     document.getElementById('groupFieldModalTitle').textContent = 'Add Group Field';
     document.getElementById('gfSubmitBtn').textContent = 'Add Field';
     form.querySelectorAll('input[type=text], input[type=number], textarea').forEach(el => el.value = '');
+    form.querySelectorAll('.fc-options-json-input').forEach(el => { el.value = ''; });
     form.querySelectorAll('.target-column-sync').forEach(el => { el.value = ''; });
     form.querySelectorAll('input[type=checkbox]').forEach(el => el.checked = false);
     form.querySelector('[name="css_class"]').value = 'col-md-6';
+    var typeEl = form.querySelector('[name="field_type"]');
+    if (typeEl) typeEl.value = 'text';
+    setFcChoiceSource(form, 'fixed');
     const isActiveEl = form.querySelector('[name="is_active"]');
     if (isActiveEl) isActiveEl.checked = true;
+    toggleFcFieldFormSections(form);
 
     new bootstrap.Modal(document.getElementById('groupFieldModal')).show();
 }
@@ -612,18 +890,23 @@ function editGroupField(field) {
         field_name: field.field_name,
         label: field.label, field_type: field.field_type,
         target_column: field.target_column, validation_rules: field.validation_rules,
-        placeholder: field.placeholder, options_json: field.options_json,
+        placeholder: field.placeholder,
         lookup_table: field.lookup_table, lookup_value_column: field.lookup_value_column,
-        lookup_label_column: field.lookup_label_column, css_class: field.css_class
+        lookup_label_column: field.lookup_label_column
     };
     for (const [k, v] of Object.entries(inputs)) {
         const el = form.querySelector(`[name="${k}"]`);
         if (el) el.value = v || '';
     }
+    const gfCssEl = form.querySelector('[name="css_class"]');
+    if (gfCssEl) gfCssEl.value = normalizeFieldColumnLayout(field.css_class);
+    syncOptionsListFromJson(form, field.options_json || '');
+    setFcChoiceSource(form, (field.lookup_table && String(field.lookup_table).trim()) ? 'lookup' : 'fixed');
     syncTargetColumnFromFieldName(form);
     form.querySelector('[name="is_required"]').checked = !!field.is_required;
     const isActiveEl = form.querySelector('[name="is_active"]');
     if (isActiveEl) isActiveEl.checked = field.is_active !== false && field.is_active !== 0;
+    toggleFcFieldFormSections(form);
 
     new bootstrap.Modal(document.getElementById('groupFieldModal')).show();
 }

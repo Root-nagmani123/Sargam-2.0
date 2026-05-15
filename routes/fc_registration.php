@@ -77,31 +77,26 @@ Route::middleware(['auth'])->prefix('fc-reg')->name('fc-reg.')->group(function (
 
 Route::middleware(['auth'])->prefix('fc-reg/admin')->name('fc-reg.admin.')->group(function () {
 
-    // ── Form Builder ─────────────────────────────────────────────────
+    // Step field editor (opened from Form Management → Edit form → Fields)
     Route::prefix('form-builder')->name('form-builder.')->group(function () {
-        Route::get('/',                       [FormBuilderController::class, 'index'])->name('index');
         Route::get('/steps/{step}',           [FormBuilderController::class, 'editStep'])->name('step');
         Route::put('/steps/{step}',           [FormBuilderController::class, 'updateStep'])->name('step.update');
         Route::get('/steps/{step}/preview',   [FormBuilderController::class, 'preview'])->name('preview');
 
-        // Field CRUD
         Route::post('/steps/{step}/fields',   [FormBuilderController::class, 'storeField'])->name('field.store');
         Route::put('/fields/{field}',         [FormBuilderController::class, 'updateField'])->name('field.update');
         Route::delete('/fields/{field}',      [FormBuilderController::class, 'deleteField'])->name('field.delete');
         Route::post('/fields/reorder',        [FormBuilderController::class, 'reorderFields'])->name('field.reorder');
 
-        // Group CRUD
         Route::post('/steps/{step}/groups',   [FormBuilderController::class, 'storeGroup'])->name('group.store');
         Route::put('/groups/{group}',         [FormBuilderController::class, 'updateGroup'])->name('group.update');
         Route::delete('/groups/{group}',      [FormBuilderController::class, 'deleteGroup'])->name('group.delete');
 
-        // Group Field CRUD
         Route::post('/groups/{group}/fields', [FormBuilderController::class, 'storeGroupField'])->name('group-field.store');
         Route::put('/group-fields/{field}',   [FormBuilderController::class, 'updateGroupField'])->name('group-field.update');
         Route::delete('/group-fields/{field}',[FormBuilderController::class, 'deleteGroupField'])->name('group-field.delete');
         Route::post('/group-fields/reorder',  [FormBuilderController::class, 'reorderGroupFields'])->name('group-field.reorder');
 
-        // Document Master CRUD (documents step)
         Route::post('/doc-masters',           [FormBuilderController::class, 'storeDocMaster'])->name('doc-master.store');
         Route::put('/doc-masters/{doc}',      [FormBuilderController::class, 'updateDocMaster'])->name('doc-master.update');
         Route::delete('/doc-masters/{doc}',   [FormBuilderController::class, 'deleteDocMaster'])->name('doc-master.delete');

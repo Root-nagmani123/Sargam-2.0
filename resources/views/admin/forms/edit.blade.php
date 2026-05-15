@@ -175,7 +175,7 @@
                                             data-step-b64="{{ $stepEditB64 }}">
                                             <i class="bi bi-gear me-1"></i>Step
                                         </button>
-                                        <a href="{{ route('fc-reg.admin.form-builder.step', $step) }}" class="btn btn-sm btn-outline-primary py-0 px-2" title="Edit Fields">
+                                        <a href="{{ route('fc-reg.admin.form-builder.step', $step) }}" class="btn btn-sm btn-outline-primary py-0 px-2" title="Edit fields for this step">
                                             <i class="bi bi-pencil me-1"></i>Fields
                                         </a>
                                         <button class="btn btn-sm btn-outline-secondary py-0 px-1" onclick="moveStep({{ $step->id }}, 'up')" title="Move Up">
@@ -205,7 +205,7 @@
             <div class="input-group mb-3">
                 <span class="input-group-text"><i class="bi bi-link-45deg"></i></span>
                 <input type="text" class="form-control" readonly value="{{ route('fc-reg.forms.dashboard', $form) }}" id="formUrl">
-                <button type="button" class="btn btn-outline-secondary" onclick="navigator.clipboard.writeText(document.getElementById('formUrl').value); this.innerHTML='<i class=\'bi bi-check\'></i> Copied'; setTimeout(()=>this.innerHTML='<i class=\'bi bi-clipboard\'></i> Copy', 2000);">
+                <button type="button" class="btn btn-outline-secondary" onclick="copyInputToClipboard('formUrl', this)">
                     <i class="bi bi-clipboard"></i> Copy
                 </button>
             </div>
@@ -214,7 +214,7 @@
             <div class="input-group">
                 <span class="input-group-text"><i class="bi bi-link-45deg"></i></span>
                 <input type="text" class="form-control" readonly value="{{ route('frontpage.index', ['form' => $form->getRouteKey()]) }}" id="landingUrl">
-                <button type="button" class="btn btn-outline-secondary" onclick="navigator.clipboard.writeText(document.getElementById('landingUrl').value); this.innerHTML='<i class=\'bi bi-check\'></i> Copied'; setTimeout(()=>this.innerHTML='<i class=\'bi bi-clipboard\'></i> Copy', 2000);">
+                <button type="button" class="btn btn-outline-secondary" onclick="copyInputToClipboard('landingUrl', this)">
                     <i class="bi bi-clipboard"></i> Copy
                 </button>
             </div>
@@ -475,6 +475,59 @@ document.querySelector('#addStepModal [name="step_name"]').addEventListener('inp
         }
     });
 })();
+
+function copyTextToClipboard(text) {
+    if (!text) {
+        return Promise.reject(new Error('Nothing to copy'));
+    }
+    if (navigator.clipboard && window.isSecureContext) {
+        return navigator.clipboard.writeText(text);
+    }
+    return new Promise(function (resolve, reject) {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        ta.style.top = '0';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        ta.setSelectionRange(0, text.length);
+        try {
+            var ok = document.execCommand('copy');
+            document.body.removeChild(ta);
+            if (ok) {
+                resolve();
+            } else {
+                reject(new Error('Copy failed'));
+            }
+        } catch (err) {
+            document.body.removeChild(ta);
+            reject(err);
+        }
+    });
+}
+
+function copyInputToClipboard(inputId, btn) {
+    var el = document.getElementById(inputId);
+    if (!el) {
+        return;
+    }
+    var defaultHtml = '<i class="bi bi-clipboard"></i> Copy';
+    copyTextToClipboard(el.value || '').then(function () {
+        btn.innerHTML = '<i class="bi bi-check"></i> Copied';
+        setTimeout(function () {
+            btn.innerHTML = defaultHtml;
+        }, 2000);
+    }).catch(function () {
+        btn.innerHTML = '<i class="bi bi-x"></i> Failed';
+        setTimeout(function () {
+            btn.innerHTML = defaultHtml;
+        }, 2000);
+        window.alert('Could not copy automatically. Select the URL in the box and press Ctrl+C (or Cmd+C).');
+    });
+}
 
 function moveStep(stepId, direction) {
     const rows = [...document.querySelectorAll('#stepsList tr')];
