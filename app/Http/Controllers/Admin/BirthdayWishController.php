@@ -44,10 +44,7 @@ class BirthdayWishController extends Controller
                 $isMyBirthday = Carbon::parse($myDob)->format('m-d') === now()->format('m-d');
             }
             if ($isMyBirthday) {
-                $myBirthdayWishCount = Notification::where('receiver_user_id', $myEmployeePk)
-                    ->where('type', 'birthday')
-                    ->whereDate('created_at', today())
-                    ->count();
+                $myBirthdayWishCount = $this->countBirthdayWishesReceivedToday($myEmployeePk);
             }
         }
 
@@ -77,6 +74,10 @@ class BirthdayWishController extends Controller
             ->leftJoin('employee_master as se', 'n.sender_user_id', '=', 'se.pk')
             ->where('n.receiver_user_id', $myEmployeePk)
             ->where('n.type', 'birthday')
+            ->where(function ($query) {
+                $query->where('n.module_name', 'BirthdayWish')
+                    ->orWhereNull('n.module_name');
+            })
             ->whereDate('n.created_at', today())
             ->orderByDesc('n.created_at')
             ->select([
@@ -104,6 +105,11 @@ class BirthdayWishController extends Controller
         $repliedSet = array_fill_keys($repliedReferencePks, true);
 
         $wishes->transform(function ($row) use ($repliedSet) {
+            $name = trim((string) ($row->sender_name ?? ''));
+            if ($name === '' && ! empty($row->message) && preg_match('/^(.+?)\s+wished you/i', (string) $row->message, $matches)) {
+                $name = trim($matches[1]);
+            }
+            $row->sender_name = $name !== '' ? $name : 'Colleague';
             $row->already_replied = isset($repliedSet[(int) $row->pk]);
 
             return $row;
@@ -343,18 +349,32 @@ class BirthdayWishController extends Controller
 
     /**
      * Create a birthday wish notification for the recipient.
+     * Each sender gets their own notification (reference_pk = sender id, not receiver).
      */
     private function createBirthdayNotification(int $employeePk, string $senderName): void
     {
+        $senderUserId = Auth::user()?->user_id;
+
+        if ($senderUserId) {
+            $alreadySentToday = Notification::birthdayWishesReceivedToday($employeePk)
+                ->where('sender_user_id', $senderUserId)
+                ->exists();
+
+            if ($alreadySentToday) {
+                return;
+            }
+        }
+
         try {
             $notificationService = app(NotificationService::class);
             $notificationService->create(
                 receiverUserId: $employeePk,
                 type: 'birthday',
                 moduleName: 'BirthdayWish',
-                referencePk: $employeePk,
+                referencePk: $senderUserId ? (int) $senderUserId : $employeePk,
                 title: 'Birthday Wish Received!',
-                message: "$senderName wished you a Happy Birthday! 🎂"
+                message: "$senderName wished you a Happy Birthday! 🎂",
+                senderUserId: $senderUserId ? (int) $senderUserId : null
             );
         } catch (\Throwable $e) {
             Log::error('BirthdayWishController: notification create failed', [
@@ -362,5 +382,10 @@ class BirthdayWishController extends Controller
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    private function countBirthdayWishesReceivedToday(int $receiverEmployeePk): int
+    {
+        return Notification::birthdayWishesReceivedToday($receiverEmployeePk)->count();
     }
 }

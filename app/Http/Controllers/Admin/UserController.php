@@ -137,10 +137,7 @@ class UserController extends Controller
       // Count wishes received today (birthday notifications for logged-in user)
       $myBirthdayWishCount = 0;
       if ($isMyBirthday) {
-          $myBirthdayWishCount = \App\Models\Notification::where('receiver_user_id', Auth::user()->user_id)
-              ->where('type', 'birthday')
-              ->whereDate('created_at', today())
-              ->count();
+          $myBirthdayWishCount = \App\Models\Notification::birthdayWishesReceivedToday(Auth::user()->user_id)->count();
       }
 
       // Upcoming birthdays (next 7 days, excluding today)

@@ -866,138 +866,231 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
     <div class="container-fluid">
         @if($isMyBirthday ?? false)
         {{-- Birthday Banner with Confetti --}}
-        <div class="birthday-banner-wrapper mb-3" id="birthday-banner">
+        <div class="birthday-banner-wrapper mb-3 position-relative" id="birthday-banner">
             <canvas id="confetti-canvas"></canvas>
-            <div class="birthday-banner-content">
-                <div class="birthday-banner-inner">
-                    <span class="birthday-banner-emoji" aria-hidden="true">🎂</span>
-                    <div class="birthday-banner-text text-center flex-grow-1 px-1">
-                        <h3 class="birthday-banner-heading mb-1 mb-md-2 fw-bold text-white">Happy Birthday,
-                            {{ $userName }}! 🎉</h3>
-                        <p class="mb-0 text-white-50 birthday-banner-sub">Wishing you a wonderful year ahead!</p>
-                        @if(($myBirthdayWishCount ?? 0) > 0)
-                        <div class="mt-2 mt-md-3">
+            <div class="card birthday-banner-card border rounded-3 shadow-sm bg-white overflow-hidden mb-0">
+                <div class="d-flex align-items-stretch min-h-0">
+                    <div class="birthday-banner-stripe flex-shrink-0" aria-hidden="true"></div>
+                    <div class="d-flex flex-grow-1 align-items-center justify-content-between min-w-0 position-relative">
+                        <div class="birthday-banner-body flex-grow-1 min-w-0 py-3 py-md-4 ps-3 ps-md-4 pe-2">
+                            <h5 class="birthday-banner-heading fw-bold text-dark mb-2">Happy Birthday
+                                {{ $userName }}</h5>
+                            <p class="mb-0 birthday-banner-sub text-body lh-base">
+                                Wishing you a fantastic year ahead 🎉
+                                @if(($myBirthdayWishCount ?? 0) > 0)
+                                <span id="birthday-wishers-summary" class="birthday-wishers-summary"
+                                    data-wish-count="{{ $myBirthdayWishCount }}">{{ $myBirthdayWishCount }}
+                                    {{ $myBirthdayWishCount === 1 ? 'person has' : 'people have' }} sent their
+                                    wishes.</span>
+                                <button type="button"
+                                    class="birthday-banner-wishes-btn btn btn-link text-decoration-underline p-0 border-0 align-baseline"
+                                    data-bs-toggle="modal" data-bs-target="#birthdayWishesReceivedModal"
+                                    title="See who wished you and send a reply">View all wishes →</button>
+                                @endif
+                            </p>
+                        </div>
+                        <div class="birthday-banner-graphic d-flex flex-shrink-0 align-self-stretch d-none d-sm-flex position-relative"
+                            aria-hidden="true">
+                            <svg class="birthday-banner-svg" viewBox="0 0 160 120" fill="none"
+                                xmlns="http://www.w3.org/2000/svg" role="img" aria-label="">
+                                <ellipse cx="118" cy="108" rx="38" ry="8" fill="#000" fill-opacity="0.06" />
+                                <rect x="88" y="82" width="22" height="18" rx="2" fill="#c9a227" />
+                                <rect x="88" y="82" width="22" height="6" fill="#e8c84a" />
+                                <rect x="97" y="76" width="4" height="12" rx="1" fill="#b8860b" />
+                                <rect x="112" y="88" width="18" height="14" rx="2" fill="#c9a227" />
+                                <rect x="112" y="88" width="18" height="5" fill="#e8c84a" />
+                                <rect x="119" y="83" width="4" height="10" rx="1" fill="#b8860b" />
+                                <rect x="68" y="90" width="16" height="12" rx="2" fill="#c9a227" />
+                                <rect x="68" y="90" width="16" height="4" fill="#e8c84a" />
+                                <path d="M76 84v8" stroke="#b8860b" stroke-width="2" stroke-linecap="round" />
+                                <line x1="102" y1="58" x2="102" y2="76" stroke="#888" stroke-width="1.2" />
+                                <ellipse cx="102" cy="50" rx="11" ry="14" fill="#e53935" />
+                                <ellipse cx="102" cy="50" rx="7" ry="9" fill="#ff6659" opacity="0.45" />
+                                <line x1="78" y1="62" x2="78" y2="84" stroke="#888" stroke-width="1.2" />
+                                <ellipse cx="78" cy="54" rx="10" ry="13" fill="#1e88e5" />
+                                <ellipse cx="78" cy="54" rx="6" ry="8" fill="#64b5f6" opacity="0.45" />
+                                <line x1="128" y1="55" x2="128" y2="82" stroke="#888" stroke-width="1.2" />
+                                <ellipse cx="128" cy="47" rx="10" ry="13" fill="#43a047" />
+                                <ellipse cx="128" cy="47" rx="6" ry="8" fill="#81c784" opacity="0.45" />
+                                <line x1="58" y1="68" x2="58" y2="88" stroke="#888" stroke-width="1.2" />
+                                <ellipse cx="58" cy="60" rx="9" ry="12" fill="#fdd835" />
+                                <ellipse cx="58" cy="60" rx="5" ry="7" fill="#fff59d" opacity="0.5" />
+                                <line x1="140" y1="64" x2="140" y2="86" stroke="#888" stroke-width="1.2" />
+                                <ellipse cx="140" cy="56" rx="8" ry="11" fill="#8e24aa" />
+                                <ellipse cx="140" cy="56" rx="5" ry="7" fill="#ce93d8" opacity="0.45" />
+                                <line x1="112" y1="42" x2="112" y2="58" stroke="#888" stroke-width="1.2" />
+                                <ellipse cx="112" cy="34" rx="8" ry="10" fill="#fafafa" stroke="#e0e0e0"
+                                    stroke-width="1" />
+                            </svg>
                             <button type="button"
-                                class="birthday-banner-wishes-btn btn btn-light text-primary rounded-1 px-3 py-2 fw-semibold border-0 shadow-sm w-100"
-                                data-bs-toggle="modal" data-bs-target="#birthdayWishesReceivedModal"
-                                title="See who wished you and send a reply">
-                                <span
-                                    class="d-inline-flex align-items-center justify-content-center gap-2 flex-wrap text-break">
-                                    <span aria-hidden="true">🎁</span>
-                                    <span>{{ $myBirthdayWishCount }}
-                                        {{ $myBirthdayWishCount === 1 ? 'wish' : 'wishes' }} received today</span>
-                                    <span class="text-primary-emphasis small fw-semibold d-none d-sm-inline">· View
-                                        &amp; reply</span>
-                                </span>
+                                class="birthday-banner-dismiss btn p-0 border-0 position-absolute top-0 end-0"
+                                onclick="var b=document.getElementById('birthday-banner'); if(b) b.classList.add('d-none');"
+                                aria-label="Dismiss birthday message" title="Dismiss">
+                                <span class="birthday-banner-dismiss-icon" aria-hidden="true">&times;</span>
                             </button>
                         </div>
-                        @endif
+                        <button type="button"
+                            class="birthday-banner-dismiss birthday-banner-dismiss--mobile btn p-0 border-0 position-absolute top-0 end-0 d-sm-none"
+                            onclick="var b=document.getElementById('birthday-banner'); if(b) b.classList.add('d-none');"
+                            aria-label="Dismiss birthday message" title="Dismiss">
+                            <span class="birthday-banner-dismiss-icon" aria-hidden="true">&times;</span>
+                        </button>
                     </div>
-                    <span class="birthday-banner-emoji d-none d-sm-inline" aria-hidden="true">🎈</span>
                 </div>
             </div>
         </div>
         <style>
         .birthday-banner-wrapper {
             position: relative;
-            border-radius: clamp(0.85rem, 2vw, 1.15rem);
-            overflow: hidden;
-            background: linear-gradient(135deg, #e91e63 0%, #9c27b0 38%, #673ab7 72%, #3949ab 100%);
-            box-shadow: 0 8px 32px rgba(233, 30, 99, 0.32), 0 1px 0 rgba(255, 255, 255, 0.12) inset;
-            min-height: clamp(5.5rem, 18vw, 7.5rem);
         }
 
         #confetti-canvas {
             position: absolute;
-            top: 0;
-            left: 0;
+            inset: 0;
             width: 100%;
             height: 100%;
             pointer-events: none;
             z-index: 1;
         }
 
-        .birthday-banner-content {
+        .birthday-banner-card {
             position: relative;
             z-index: 2;
-            padding: clamp(1rem, 3.5vw, 1.65rem) clamp(0.85rem, 3vw, 2rem);
+            border-color: #e3e6ea !important;
         }
 
-        .birthday-banner-inner {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: clamp(0.5rem, 2vw, 1.25rem);
-            flex-wrap: wrap;
-            max-width: 48rem;
-            margin-inline: auto;
-        }
-
-        .birthday-banner-emoji {
-            font-size: clamp(1.75rem, 6vw, 2.75rem);
-            line-height: 1;
-            filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.15));
-            flex-shrink: 0;
+        .birthday-banner-stripe {
+            width: 0.45rem;
+            background: #1a2b5f;
         }
 
         .birthday-banner-heading {
-            font-size: clamp(1.05rem, 3.8vw, 1.65rem);
-            line-height: 1.25;
-            text-wrap: balance;
-            text-shadow: 0 1px 12px rgba(0, 0, 0, 0.12);
+            font-size: 1.125rem;
+            line-height: 1.35;
         }
 
         .birthday-banner-sub {
-            font-size: clamp(0.8rem, 2.2vw, 0.95rem);
-            opacity: 0.95;
+            font-size: 0.875rem;
+        }
+
+        .birthday-wishers-summary::before,
+        .birthday-banner-wishes-btn::before {
+            content: ' ';
         }
 
         .birthday-banner-wishes-btn {
-            font-size: clamp(0.78rem, 2vw, 0.88rem) !important;
-            cursor: pointer;
-            transition: transform 0.15s ease, box-shadow 0.15s ease;
-            max-width: 100%;
+            color: #1a2b5f !important;
+            font-size: inherit;
+            font-weight: 400;
+            vertical-align: baseline;
         }
 
         .birthday-banner-wishes-btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12) !important;
+            color: #0f1a3d !important;
         }
 
         .birthday-banner-wishes-btn:focus-visible {
-            outline: 2px solid #fff;
-            outline-offset: 3px;
+            outline: 2px solid #1a2b5f;
+            outline-offset: 2px;
+            border-radius: 0.125rem;
+        }
+
+        .birthday-banner-graphic {
+            width: clamp(7.5rem, 18vw, 10.5rem);
+            padding: 0.35rem 0.75rem 0.35rem 0;
+            align-items: flex-end;
+            justify-content: flex-end;
+        }
+
+        .birthday-banner-svg {
+            width: 100%;
+            height: auto;
+            max-height: 6.5rem;
+            display: block;
+        }
+
+        .birthday-banner-dismiss-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 1.65rem;
+            height: 1.65rem;
+            background: #eceff1;
+            color: #e53935;
+            font-size: 1.15rem;
+            line-height: 1;
+            font-weight: 400;
+            border-radius: 0.2rem;
+        }
+
+        .birthday-banner-dismiss:hover .birthday-banner-dismiss-icon {
+            background: #e2e6ea;
+        }
+
+        .birthday-banner-dismiss--mobile {
+            z-index: 3;
+            margin: 0.4rem;
         }
 
         @media (min-width: 576px) {
-            .birthday-banner-wishes-btn {
-                width: auto !important;
+            .birthday-banner-heading {
+                font-size: 1.25rem;
             }
-        }
 
-        .birthday-banner-wrapper::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -20%;
-            width: 60%;
-            height: 200%;
-            background: radial-gradient(ellipse, rgba(255, 255, 255, 0.14) 0%, transparent 68%);
-            pointer-events: none;
-        }
+            .birthday-banner-sub {
+                font-size: 0.9375rem;
+            }
 
-        .birthday-banner-wrapper::after {
-            content: '';
-            position: absolute;
-            bottom: -30%;
-            left: -15%;
-            width: 50%;
-            height: 120%;
-            background: radial-gradient(ellipse, rgba(255, 255, 255, 0.06) 0%, transparent 65%);
-            pointer-events: none;
+            .birthday-banner-graphic .birthday-banner-dismiss {
+                margin: 0.35rem 0.15rem 0 0;
+            }
         }
         </style>
         @if(($myBirthdayWishCount ?? 0) > 0)
+        <script>
+        (function () {
+            var el = document.getElementById('birthday-wishers-summary');
+            if (!el) return;
+            var url = @json(route('admin.birthday-wish.my-wishes-today'));
+
+            function buildWishersText(wishes) {
+                var seen = {};
+                var names = [];
+                (wishes || []).forEach(function (w) {
+                    var sid = w.sender_user_id != null ? String(w.sender_user_id) : '';
+                    var key = sid !== '' ? sid : ('wish:' + String(w.pk || names.length));
+                    if (seen[key]) return;
+                    seen[key] = true;
+                    names.push((w.sender_name || '').trim() || 'Colleague');
+                });
+                var total = names.length;
+                if (total === 0) return { text: '', count: 0 };
+                var text = '';
+                if (total === 1) text = names[0] + ' has sent their wish.';
+                else if (total === 2) text = names[0] + ' and ' + names[1] + ' have sent their wishes.';
+                else {
+                    var others = total - 2;
+                    text = names[0] + ', ' + names[1] + ' and ' + others + ' other' + (others === 1 ? '' : 's') + ' have sent their wishes.';
+                }
+                return { text: text, count: total };
+            }
+
+            fetch(url, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (!data || !data.success || !data.wishes || !data.wishes.length) return;
+                    var summary = buildWishersText(data.wishes);
+                    if (!summary.text) return;
+                    el.textContent = summary.text;
+                    el.setAttribute('data-wish-count', String(summary.count));
+                    document.querySelectorAll('.dashboard-birthday-wishes-pill').forEach(function (badge) {
+                        badge.textContent = '🎁 ' + summary.count + (summary.count === 1 ? ' wish' : ' wishes');
+                        badge.setAttribute('title', summary.count + ' wishes received');
+                    });
+                })
+                .catch(function () {});
+        })();
+        </script>
         @include('admin.birthday-wish.partials.received_wishes_modal')
         @endif
         @endif
