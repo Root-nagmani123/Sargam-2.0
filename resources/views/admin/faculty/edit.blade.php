@@ -180,40 +180,55 @@ $(document).ready(function() {
     toggleFacultyPaField();
 
     // ======= PHOTO FILE SIZE VALIDATION =======
+    // Custom close button handler for photo error
+    $(document).on('click', '.photo-close-btn-basic', function() {
+        $('#photoErrorMessageBasic').addClass('d-none').removeClass('show');
+    });
+
     $('input[name="photo"]').on('change', function () {
         try {
             const file = this.files[0];
             const maxSizeInBytes = 2 * 1024 * 1024; // 2 MB
             const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
             const errorMessageDiv = $('#photoErrorMessageBasic');
+            const errorText = $('#photoErrorTextBasic');
+            const photoPreview = $('#photoPreview');
 
+            // Reset error state completely - remove all Bootstrap alert classes and add d-none
+            errorMessageDiv.removeClass('show').addClass('d-none');
+            if (errorText.length) {
+                errorText.text('');
+            }
+            photoPreview.addClass('d-none').attr('src', '#');
+
+            // If no file selected, just return
             if (!file) {
-                errorMessageDiv.addClass('d-none');
                 return;
             }
 
             // Check file type
             if (!allowedTypes.includes(file.type)) {
-                errorMessageDiv.removeClass('d-none').find('span').text('Unsupported format. Only JPG and PNG files are allowed.');
+                errorText.text('Unsupported format. Only JPG and PNG files are allowed.');
+                errorMessageDiv.removeClass('d-none').addClass('show');
                 this.value = '';
-                $('#photoPreview').addClass('d-none').attr('src', '#');
+                console.warn('Photo validation failed: unsupported format', file.type);
                 return;
             }
 
             // Check file size
             if (file.size > maxSizeInBytes) {
-                errorMessageDiv.removeClass('d-none').find('span').text('File size exceeds limit. Maximum file size allowed is 2 MB.');
+                errorText.text('File size exceeds limit. Maximum file size allowed is 2 MB.');
+                errorMessageDiv.removeClass('d-none').addClass('show');
                 this.value = '';
-                $('#photoPreview').addClass('d-none').attr('src', '#');
+                console.warn('Photo validation failed: file size exceeded', file.size);
                 return;
             }
 
             // Valid file — show preview
-            errorMessageDiv.addClass('d-none');
             const reader = new FileReader();
             reader.onload = function (event) {
                 try {
-                    $('#photoPreview')
+                    photoPreview
                         .attr('src', event.target.result)
                         .removeClass('d-none');
                 } catch (err) {
