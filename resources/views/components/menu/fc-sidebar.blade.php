@@ -65,10 +65,10 @@
             </li>
             <ul class="collapse list-unstyled ps-3" id="collapseRegistration">
                 <li class="sidebar-item {{ request()->routeIs('forms.*') ? 'active' : '' }}">
-                    <a class="sidebar-link {{ request()->routeIs('forms.*') ? 'active' : '' }}"
+                    {{-- <a class="sidebar-link {{ request()->routeIs('forms.*') ? 'active' : '' }}"
                         href="{{ route('forms.index') }}">
                         <span class="hide-menu small small-sm-normal text-nowrap">Registration Forms</span>
-                    </a>
+                    </a> --}}
                 </li>
                 <li class="sidebar-item">
                     <a class="sidebar-link" href="{{ route('admin.registration.index') }}">
@@ -214,12 +214,6 @@
                 </a>
             </li>
             <ul class="collapse list-unstyled ps-3" id="collapseFcRegAdmin" data-sidebar-no-auto-expand="true">
-                <li class="sidebar-item {{ request()->routeIs('fc-reg.admin.form-builder.*') ? 'active' : '' }}">
-                    <a class="sidebar-link {{ request()->routeIs('fc-reg.admin.form-builder.*') ? 'active' : '' }}"
-                        href="{{ route('fc-reg.admin.form-builder.index') }}">
-                        <span class="hide-menu small small-sm-normal text-nowrap">Form Builder</span>
-                    </a>
-                </li>
                 <li class="sidebar-item {{ request()->routeIs('fc-reg.admin.forms.*') ? 'active' : '' }}">
                     <a class="sidebar-link {{ request()->routeIs('fc-reg.admin.forms.*') ? 'active' : '' }}"
                         href="{{ route('fc-reg.admin.forms.index') }}">
