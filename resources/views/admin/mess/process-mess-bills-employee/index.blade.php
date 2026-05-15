@@ -1142,6 +1142,26 @@ document.addEventListener('DOMContentLoaded', function() {
         if (pageLi) pageLi.classList.add('disabled');
     }
 
+    function formatInvoiceNotificationStatusCell(b) {
+        if (!b || !b.invoice_notification_sent) {
+            return '<span class="text-muted small">—</span>';
+        }
+        var readBadge = b.invoice_notification_read
+            ? '<span class="badge rounded-pill bg-info-subtle text-info border border-info-subtle fw-semibold">Read</span>'
+            : '<span class="badge rounded-pill bg-warning-subtle text-warning border border-warning-subtle fw-semibold">Unread</span>';
+        return '<div class="d-flex flex-column align-items-center gap-1">' +
+            '<span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle fw-semibold">Invoice Sent</span>' +
+            readBadge +
+            '</div>';
+    }
+
+    function formatInvoiceNotificationStatusText(b) {
+        if (!b || !b.invoice_notification_sent) {
+            return '—';
+        }
+        return 'Invoice Sent · ' + (b.invoice_notification_read ? 'Read' : 'Unread');
+    }
+
     function renderModalTable() {
         var tbody = document.getElementById('modalBillsTableBody');
         var modalSelectAllEl = document.getElementById('modalSelectAll');
@@ -1164,9 +1184,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     var receiptDt = b.date_to || getModalDateYmd('modal_date_to') || '';
                     printUrl += (printUrl.indexOf('?') >= 0 ? '&' : '?') + 'date_from=' + encodeURIComponent(receiptDf) + '&date_to=' + encodeURIComponent(receiptDt);
                 }
-                var statusCell = b.invoice_notification_sent
-                    ? '<span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle fw-semibold">Invoice Sent</span>'
-                    : '<span class="text-muted small">—</span>';
+                var statusCell = formatInvoiceNotificationStatusCell(b);
                 var invoiceSent = !!b.invoice_notification_sent;
                 var invoiceBtnClass = invoiceSent ? 'btn btn-outline-secondary generate-invoice-btn' : 'btn btn-outline-primary generate-invoice-btn';
                 var invoiceBtnAttrs = 'data-bill-id="' + b.id + '" data-buyer-name="' + (b.buyer_name || '').replace(/"/g, '&quot;') + '" title="' + (invoiceSent ? 'Invoice already sent' : 'Generate Invoice') + '"' + (invoiceSent ? ' disabled data-invoice-sent="1"' : '');
@@ -2762,7 +2780,7 @@ function printProcessMessBillsTable() {
             '<td>' + (b.invoice_no || '—') + '</td>' +
             '<td>' + (b.payment_type || '—') + '</td>' +
             '<td class="text-end">' + (b.total || '0') + '</td>' +
-            '<td>' + (b.invoice_notification_sent ? 'Invoice Sent' : '—') + '</td>' +
+            '<td>' + (b && b.invoice_notification_sent ? ('Invoice Sent · ' + (b.invoice_notification_read ? 'Read' : 'Unread')) : '—') + '</td>' +
             '</tr>';
     }).join('');
 

@@ -727,10 +727,10 @@ class ProcessMessBillsEmployeeController extends Controller
     }
 
     /**
-     * For modal rows: map "receiver_user_id|combined_id" => true when a MessInvoiceCombined notification exists.
+     * For modal rows: map "receiver_user_id|combined_id" => ['read' => bool] when a MessInvoiceCombined notification exists.
      *
      * @param  \Illuminate\Support\Collection<int, object>  $combinedBills
-     * @return array<string, true>
+     * @return array<string, array{read: bool}>
      */
     private function messCombinedInvoiceNotificationSentKeys($combinedBills): array
     {
@@ -751,7 +751,8 @@ class ProcessMessBillsEmployeeController extends Controller
             ->where('type', 'mess')
             ->where('module_name', 'MessInvoiceCombined')
             ->whereIn('receiver_user_id', $receiverIds)
-            ->get(['receiver_user_id', 'message']);
+            ->orderByDesc('pk')
+            ->get(['pk', 'receiver_user_id', 'message', 'is_read']);
 
         foreach ($notifications as $n) {
             $parsed = NotificationService::parseMessCombinedReceiptPayload($n->message);
@@ -759,8 +760,11 @@ class ProcessMessBillsEmployeeController extends Controller
                 continue;
             }
             $rid = (int) $n->receiver_user_id;
-            if ($rid > 0) {
-                $keys[$rid . '|' . $parsed['i']] = true;
+            $mapKey = $rid . '|' . $parsed['i'];
+            if ($rid > 0 && ! isset($keys[$mapKey])) {
+                $keys[$mapKey] = [
+                    'read' => (int) $n->is_read === 1,
+                ];
             }
         }
 
@@ -1650,7 +1654,11 @@ class ProcessMessBillsEmployeeController extends Controller
             $sentKey = ($receiverId !== null && $receiverId > 0)
                 ? $receiverId . '|' . $cb->combined_id
                 : null;
-            $invoiceNotificationSent = $sentKey !== null && isset($invoiceSentKeys[$sentKey]);
+            $notificationStatus = ($sentKey !== null && isset($invoiceSentKeys[$sentKey]))
+                ? $invoiceSentKeys[$sentKey]
+                : null;
+            $invoiceNotificationSent = $notificationStatus !== null;
+            $invoiceNotificationRead = $notificationStatus !== null && ($notificationStatus['read'] ?? false);
 
             return [
                 'id' => $cb->combined_id,
@@ -1664,6 +1672,7 @@ class ProcessMessBillsEmployeeController extends Controller
                 'paid_amount' => number_format($cb->paid, 2),
                 'bill_no' => $invoiceNo,
                 'invoice_notification_sent' => $invoiceNotificationSent,
+                'invoice_notification_read' => $invoiceNotificationRead,
                 // Same range used for this row; receipt/print must pass these or server defaults to current month.
                 'date_from' => $dateFrom,
                 'date_to' => $dateTo,
