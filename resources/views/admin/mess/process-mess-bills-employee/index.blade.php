@@ -174,6 +174,14 @@
                             <option value="paid" {{ $currentStatus === 'paid' ? 'selected' : '' }}>Paid</option>
                         </select>
                     </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">mail</i>Invoice Sent</label>
+                        @php $currentInvoiceSent = $invoiceSentFilter ?? (request()->has('invoice_sent') ? request('invoice_sent') : 'sent'); @endphp
+                        <select name="invoice_sent" id="filterInvoiceSent" class="form-select">
+                            <option value="">All</option>
+                            <option value="sent" {{ ($currentInvoiceSent ?? '') === 'sent' ? 'selected' : '' }}>Invoice Sent</option>
+                        </select>
+                    </div>
                     <div class="col-md-2 d-flex gap-1">
                         <button type="submit" class="btn btn-primary  flex-grow-1">
                             <i class="material-symbols-rounded align-middle">filter_list</i>
@@ -207,9 +215,16 @@
                     <input type="hidden" name="buyer_name[]" value="{{ $selectedBuyerName }}">
                 @endforeach
                 <input type="hidden" name="status" value="{{ $statusFilter ?? request('status') }}">
+                <input type="hidden" name="invoice_sent" value="{{ $invoiceSentFilter ?? (request()->has('invoice_sent') ? request('invoice_sent') : 'sent') }}">
                 <div class="d-flex flex-wrap justify-content-end align-items-right mb-3 gap-2">
                     <div class="d-flex align-items-center gap-2">
-                        <a href="{{ route('admin.mess.process-mess-bills-employee.export') }}?{{ http_build_query(request()->only(['date_from', 'date_to', 'client_type', 'client_type_pk', 'buyer_name', 'status', 'search'])) }}" class="btn btn-outline-success shadow-sm d-inline-flex align-items-center gap-2 px-3" title="Export to Excel">
+                        @php
+                            $exportQuery = request()->only(['date_from', 'date_to', 'client_type', 'client_type_pk', 'buyer_name', 'status', 'search']);
+                            $exportQuery['invoice_sent'] = request()->has('invoice_sent')
+                                ? request('invoice_sent')
+                                : ($invoiceSentFilter ?? 'sent');
+                        @endphp
+                        <a href="{{ route('admin.mess.process-mess-bills-employee.export') }}?{{ http_build_query($exportQuery) }}" class="btn btn-outline-success shadow-sm d-inline-flex align-items-center gap-2 px-3" title="Export to Excel">
                             <i class="material-symbols-rounded" style="font-size: 1.1rem;">file_download</i>
                             <span>Export</span>
                         </a>

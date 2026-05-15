@@ -66,6 +66,7 @@ class ProcessMessBillsEmployeeController extends Controller
         $buyerNames = $this->normalizeBuyerNames($request->input('buyer_name'));
         $buyerName = $buyerNames[0] ?? null;
         $statusFilter = $request->filled('status') ? $request->status : null;
+        $invoiceSentFilter = $this->resolveInvoiceSentFilter($request);
 
         // Query 1: Selling Voucher with Date Range (sv_date_range_reports)
         $dateRangeQuery = SellingVoucherDateRangeReport::query()
@@ -155,6 +156,8 @@ class ProcessMessBillsEmployeeController extends Controller
                 }
             }
 
+            $combinedBills = $this->filterCombinedBillsByInvoiceSent($combinedBills, $invoiceSentFilter);
+
             return $this->processMessBillsDatatableResponse(
                 $request,
                 $combinedBills,
@@ -237,6 +240,7 @@ class ProcessMessBillsEmployeeController extends Controller
             'clientType',
             'clientTypes',
             'statusFilter',
+            'invoiceSentFilter',
             'clientTypePk',
             'clientTypePks',
             'buyerName',
@@ -764,6 +768,43 @@ class ProcessMessBillsEmployeeController extends Controller
     }
 
     /**
+     * Default: invoice_sent=sent. Explicit invoice_sent= (empty) means show all.
+     */
+    private function resolveInvoiceSentFilter(Request $request): ?string
+    {
+        if (! $request->has('invoice_sent')) {
+            return 'sent';
+        }
+
+        $value = $request->input('invoice_sent');
+
+        return ($value !== null && $value !== '') ? (string) $value : null;
+    }
+
+    /**
+     * When invoice_sent=sent, keep only combined bills with a MessInvoiceCombined notification.
+     *
+     * @param  \Illuminate\Support\Collection<int, object>  $combinedBills
+     */
+    private function filterCombinedBillsByInvoiceSent(Collection $combinedBills, ?string $invoiceSentFilter): Collection
+    {
+        if ($invoiceSentFilter !== 'sent') {
+            return $combinedBills;
+        }
+
+        $invoiceSentKeys = $this->messCombinedInvoiceNotificationSentKeys($combinedBills);
+
+        return $combinedBills->filter(function ($cb) use ($invoiceSentKeys) {
+            $receiverId = $this->resolveReceiverUserIdFromAnyBill($cb->bills->all());
+            if ($receiverId === null || $receiverId <= 0) {
+                return false;
+            }
+
+            return isset($invoiceSentKeys[$receiverId . '|' . $cb->combined_id]);
+        })->values();
+    }
+
+    /**
      * True if a MessInvoice notification was already sent for this bill reference and receiver.
      */
     private function messSingleInvoiceAlreadySent(int $receiverUserId, int $referencePk): bool
@@ -869,6 +910,7 @@ class ProcessMessBillsEmployeeController extends Controller
         $buyerNames = $this->normalizeBuyerNames($request->input('buyer_name'));
         $buyerName = $buyerNames[0] ?? null;
         $statusFilter = $request->filled('status') ? $request->status : null;
+        $invoiceSentFilter = $this->resolveInvoiceSentFilter($request);
 
         // Same union query as index, but get all results
         $dateRangeQuery = SellingVoucherDateRangeReport::query()
@@ -971,6 +1013,7 @@ class ProcessMessBillsEmployeeController extends Controller
                 $combinedBills = $combinedBills->where('status', $normalized)->values();
             }
         }
+        $combinedBills = $this->filterCombinedBillsByInvoiceSent($combinedBills, $invoiceSentFilter);
         $paymentTypeMap = [0 => 'Cash', 1 => 'Deduct From Salary', 2 => 'Online', 5 => 'Deduct From Salary'];
         $statusMap = [0 => 'Unpaid', 1 => 'Pending', 2 => 'Paid'];
 
