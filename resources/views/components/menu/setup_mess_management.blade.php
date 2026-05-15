@@ -1,5 +1,5 @@
 @if(canSeeLowStockAlert())
-<nav class="sidebar-nav d-block simplebar-scrollable-y" id="menu-right-setup-mini-9" data-simplebar="init"
+<nav class="sidebar-nav sargam-menu-flyout simplebar-scrollable-y" id="menu-right-setup-mini-9" data-mini-nav-target="setup-mini-9" data-simplebar="init"
     data-mess-module="{{ request()->is('admin/mess*') ? '1' : '0' }}">
     <div class="simplebar-wrapper" style="margin: 0px -20px -24px;">
         <div class="simplebar-height-auto-observer-wrapper">
@@ -218,7 +218,7 @@
     </div>
 </nav>
 @elseif(canSeeMessSelfServiceSetup())
-<nav class="sidebar-nav d-block simplebar-scrollable-y" id="menu-right-setup-mini-9" data-simplebar="init"
+<nav class="sidebar-nav sargam-menu-flyout simplebar-scrollable-y" id="menu-right-setup-mini-9" data-mini-nav-target="setup-mini-9" data-simplebar="init"
     data-mess-module="{{ request()->is('admin/mess*') ? '1' : '0' }}">
     <div class="simplebar-wrapper" style="margin: 0px -20px -24px;">
         <div class="simplebar-height-auto-observer-wrapper">

@@ -1,5 +1,5 @@
 {{-- Home sidebar: personal estate shortcuts --}}
-<nav class="sidebar-nav d-block simplebar-scrollable-y" id="menu-right-home-mini-estate" data-simplebar="init">
+<nav class="sidebar-nav sargam-menu-flyout simplebar-scrollable-y" id="menu-right-home-mini-estate" data-mini-nav-target="home-mini-estate" data-simplebar="init">
     <div class="simplebar-wrapper" style="margin: 0px -20px -24px;">
         <div class="simplebar-height-auto-observer-wrapper">
             <div class="simplebar-height-auto-observer"></div>

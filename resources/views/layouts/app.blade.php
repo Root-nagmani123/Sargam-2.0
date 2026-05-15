@@ -50,6 +50,7 @@
     <link rel="stylesheet" type="text/css" href="{{asset('css/mobile-sidebar.css')}}">
     <!-- Custom css-->
     <link rel="stylesheet" type="text/css" href="{{asset('css/custom.css')}}">
+    <link rel="stylesheet" href="{{ asset('css/sidebar-menu-enhanced.css') }}">
 </head>
 
 <body>

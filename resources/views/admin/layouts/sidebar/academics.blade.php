@@ -83,15 +83,15 @@
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Academics sidebar script started');
     // Scope to ONLY the academics tab
-    const academicsTab = document.getElementById('tab-academics');
-    if (!academicsTab) {
-        console.error('Academics tab not found');
+    const academicsPane = document.getElementById('sidebar-academics') || document.getElementById('tab-academics');
+    if (!academicsPane) {
+        console.error('Academics sidebar not found');
         return;
     }
 
         // Initialize mini-navbar functionality for academics ONLY
-        const miniNavItems = academicsTab.querySelectorAll('.mini-nav .mini-nav-item');
-        const sidebarMenus = academicsTab.querySelectorAll('.sidebarmenu nav');
+        const miniNavItems = academicsPane.querySelectorAll('.mini-nav .mini-nav-item');
+        const sidebarMenus = academicsPane.querySelectorAll('.sidebarmenu nav');
 
         console.log('Found mini-nav items in academics tab:', miniNavItems.length);
         console.log('Found sidebar menus in academics tab:', sidebarMenus.length);
@@ -132,32 +132,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Function to show sidebar menu and save state
         function showSidebarMenu(miniId) {
-            console.log('Showing sidebar for miniId:', miniId);
-            // Remove selected from all mini-nav-items
-            miniNavItems.forEach(function(navItem) {
-                navItem.classList.remove('selected');
-            });
-            // Add selected only to the clicked/active one
+            const miniNav = academicsPane.querySelector('.mini-nav');
             const selectedItem = document.getElementById(miniId);
-            if (selectedItem) {
-                selectedItem.classList.add('selected');
-                console.log('Selected mini-nav item:', miniId);
+            if (miniNav && selectedItem && typeof window.sargamActivateMiniNavItem === 'function') {
+                window.sargamActivateMiniNavItem(miniNav, selectedItem, true);
             }
-            sidebarMenus.forEach(function(nav) {
-                nav.classList.remove('d-block');
-                nav.style.display = 'none';
-            });
-            const targetMenuId = 'menu-right-' + miniId;
-            const targetMenu = document.getElementById(targetMenuId);
-            if (targetMenu) {
-                targetMenu.classList.add('d-block');
-                targetMenu.style.display = 'block';
-                document.body.setAttribute('data-sidebartype', 'full');
-                console.log('Displayed menu:', targetMenu.id);
-            } else {
-                console.error('Target menu not found:', targetMenuId);
-            }
-            localStorage.setItem('selectedAcademicsMiniNav', miniId);
         }
 
         // MutationObserver to keep sidebar visible

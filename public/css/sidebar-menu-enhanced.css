@@ -612,7 +612,187 @@
 }
 
 /* ════════════════════════════════════════════
-   9. RESPONSIVE
+   9. FLOATING HOVER FLYOUT (desktop overlay)
+   ════════════════════════════════════════════ */
+@media (min-width: 992px) {
+    /* Allow flyout to extend outside mini rail (all sidebar layout variants in this project). */
+    .side-mini-panel,
+    .side-mini-panel > .vh-100.overflow-hidden,
+    .side-mini-panel > div:not(.sidebarmenu),
+    .side-mini-panel .iconbar,
+    .side-mini-panel .iconbar > div {
+        overflow: visible !important;
+    }
+
+    .side-mini-panel .mini-nav,
+    .side-mini-panel .mini-nav-ul,
+    .side-mini-panel .mini-nav .simplebar-mask {
+        overflow: hidden;
+    }
+
+    /* Keep flyout on-screen; theme hides it at left:-240px in mini-sidebar mode */
+    html[data-layout="vertical"] body[data-sidebartype="mini-sidebar"] .side-mini-panel .sidebarmenu .sidebar-nav,
+    html[data-layout="vertical"] body[data-sidebartype="full"] .side-mini-panel .sidebarmenu .sidebar-nav,
+    body[data-sidebartype="mini-sidebar"] .side-mini-panel .sidebarmenu .sidebar-nav,
+    body[data-sidebartype="full"] .side-mini-panel .sidebarmenu .sidebar-nav,
+    .side-mini-panel .sidebarmenu .sidebar-nav {
+        left: 90px !important;
+    }
+
+    .side-mini-panel {
+        width: 90px;
+        overflow: visible;
+    }
+
+    .side-mini-panel .iconbar {
+        position: relative;
+        overflow: visible;
+    }
+
+    /* Invisible hover bridge: mini strip → flyout (prevents flicker) */
+    .side-mini-panel .sidebarmenu {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: calc(90px + 290px);
+        height: 100%;
+        min-height: 100vh;
+        pointer-events: none;
+        z-index: 1040;
+    }
+
+    .side-mini-panel .mini-nav {
+        position: relative;
+        z-index: 1051;
+        pointer-events: auto;
+    }
+
+    .side-mini-panel .sidebarmenu .sidebar-nav {
+        position: absolute !important;
+        top: 128px;
+        left: 90px !important;
+        width: 275px;
+        max-width: min(275px, calc(100vw - 110px));
+        height: calc(100vh - 140px);
+        display: block !important;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateX(-10px);
+        pointer-events: none;
+        transition:
+            opacity 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+            transform 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+            visibility 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 1050;
+        box-shadow: 0 10px 40px rgba(60, 64, 67, 0.18);
+        border: 1px solid var(--sidebar-border);
+        border-radius: 0 12px 12px 0 !important;
+        overflow: hidden;
+    }
+
+    .side-mini-panel .sidebarmenu nav.sidebar-nav:not(.d-block):not(.is-active):not(.sargam-menu-visible) {
+        display: none !important;
+    }
+
+    /* Flyout panels: hidden until JS marks the active menu */
+    .side-mini-panel .sidebarmenu .sargam-menu-flyout:not(.is-active):not(.d-block):not(.sargam-menu-visible) {
+        display: none !important;
+    }
+
+  .side-mini-panel:has(.mini-nav .mini-nav-item:hover) .sidebarmenu,
+  .side-mini-panel:has(.sidebarmenu:hover) .sidebarmenu,
+  .side-mini-panel:focus-within .sidebarmenu,
+  .side-mini-panel.expanded .sidebarmenu,
+  .side-mini-panel.sidebar-flyout-open .sidebarmenu,
+  .side-mini-panel[data-flyout-open="true"] .sidebarmenu {
+        pointer-events: auto;
+    }
+
+  .side-mini-panel:has(.mini-nav .mini-nav-item:hover) .sidebarmenu .sidebar-nav.d-block,
+  .side-mini-panel:has(.sidebarmenu:hover) .sidebarmenu .sidebar-nav.d-block,
+  .side-mini-panel:focus-within .sidebarmenu .sidebar-nav.d-block,
+  .side-mini-panel.expanded .sidebarmenu .sidebar-nav.d-block,
+  .side-mini-panel.sidebar-flyout-open .sidebarmenu .sidebar-nav.d-block,
+  .side-mini-panel:has(.mini-nav .mini-nav-item:hover) .sidebarmenu .sidebar-nav.is-active,
+  .side-mini-panel:has(.sidebarmenu:hover) .sidebarmenu .sidebar-nav.is-active,
+  .side-mini-panel:focus-within .sidebarmenu .sidebar-nav.is-active,
+  .side-mini-panel.expanded .sidebarmenu .sidebar-nav.is-active,
+  .side-mini-panel.sidebar-flyout-open .sidebarmenu .sidebar-nav.is-active,
+  .side-mini-panel.expanded .sidebarmenu nav.sidebar-nav.is-active,
+  .side-mini-panel.sidebar-flyout-open .sidebarmenu nav.sidebar-nav.is-active,
+  .side-mini-panel[data-flyout-open="true"] .sidebarmenu nav.sidebar-nav.is-active,
+  .side-mini-panel.expanded .sidebarmenu nav.sidebar-nav,
+  .side-mini-panel.sidebar-flyout-open .sidebarmenu nav.sidebar-nav,
+  .side-mini-panel[data-flyout-open="true"] .sidebarmenu nav.sidebar-nav {
+        opacity: 1;
+        visibility: visible;
+        transform: translateX(0);
+        pointer-events: auto;
+    }
+
+    /* Active flyout panel — beats theme display:none and left:-240px */
+    .side-mini-panel.expanded .sidebarmenu .sidebar-nav.is-active,
+    .side-mini-panel.sidebar-flyout-open .sidebarmenu .sidebar-nav.is-active,
+    .side-mini-panel[data-flyout-open="true"] .sidebarmenu .sidebar-nav.is-active,
+    .side-mini-panel:has(.mini-nav .mini-nav-item:hover) .sidebarmenu .sidebar-nav.is-active {
+        display: block !important;
+        left: 90px !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        transform: translateX(0) !important;
+        pointer-events: auto !important;
+    }
+
+    /* Single-menu sidebars (e.g. academics): hide inactive panels only */
+    .side-mini-panel.expanded .sidebarmenu nav.sidebar-nav:not(.d-block):not(.is-active),
+    .side-mini-panel.sidebar-flyout-open .sidebarmenu nav.sidebar-nav:not(.d-block):not(.is-active) {
+        display: none !important;
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+    }
+
+    html[dir="rtl"][data-layout="vertical"] body[data-sidebartype="mini-sidebar"] .side-mini-panel .sidebarmenu .sidebar-nav {
+        left: auto !important;
+        right: 90px !important;
+        border-radius: 12px 0 0 12px;
+    }
+
+    html[dir="rtl"] .side-mini-panel .sidebarmenu {
+        left: auto;
+        right: 0;
+    }
+}
+
+@media (max-width: 991.98px) {
+    .side-mini-panel .sidebarmenu {
+        position: static;
+        width: auto;
+        height: auto;
+        min-height: 0;
+        pointer-events: auto;
+    }
+
+    .side-mini-panel .sidebarmenu .sidebar-nav {
+        display: block !important;
+        opacity: 1;
+        visibility: visible;
+        transform: none;
+        pointer-events: auto;
+        box-shadow: none;
+        border: none;
+    }
+
+    #main-wrapper.show-sidebar .side-mini-panel .sidebarmenu .sidebar-nav.d-block {
+        opacity: 1;
+        visibility: visible;
+        transform: none;
+        pointer-events: auto;
+    }
+}
+
+/* ════════════════════════════════════════════
+   10. RESPONSIVE (link density)
    ════════════════════════════════════════════ */
 @media (max-width: 575.98px) {
     .sidebar-nav ul .sidebar-item .sidebar-link {
@@ -628,7 +808,7 @@
 }
 
 /* ════════════════════════════════════════════
-   10. PRINT
+   11. PRINT
    ════════════════════════════════════════════ */
 @media print {
     .sidebar-menu .sidebar-link,
@@ -640,5 +820,21 @@
     .sidebar-menu .collapse,
     .sidebar-nav .collapse {
         display: block !important;
+    }
+}
+
+/* Final override: theme hides flyouts at left:-240px / display:none (styles.css) */
+@media (min-width: 992px) {
+    html[data-layout="vertical"] body[data-sidebartype="mini-sidebar"] .side-mini-panel[data-flyout-open="true"] .sidebarmenu .sidebar-nav.is-active,
+    html[data-layout="vertical"] body[data-sidebartype="mini-sidebar"] .side-mini-panel.expanded .sidebarmenu .sidebar-nav.is-active,
+    html[data-layout="vertical"] body[data-sidebartype="mini-sidebar"] .side-mini-panel.sidebar-flyout-open .sidebarmenu .sidebar-nav.is-active,
+    html[data-layout="vertical"] body[data-sidebartype="mini-sidebar"] .side-mini-panel .sidebarmenu.hovermenus .sidebar-nav.is-active.left-none {
+        display: block !important;
+        left: 90px !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        transform: translateX(0) !important;
+        pointer-events: auto !important;
+        z-index: 1060 !important;
     }
 }

@@ -46,6 +46,7 @@
   <script src="{{asset('admin_assets/js/theme/theme.js')}}"></script>
   <script src="{{asset('admin_assets/js/theme/app.min.js')}}"></script>
   <script src="{{asset('admin_assets/js/theme/sidebarmenu.js')}}"></script>
+  <script src="{{ asset('admin_assets/js/sidebar-navigation-fixed.js') }}"></script>
 
   <!-- solar icons -->
   <script src="{{asset('admin_assets/css/iconify-icon.min.js')}}"></script>

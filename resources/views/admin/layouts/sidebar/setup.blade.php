@@ -20,15 +20,7 @@
         <div class="iconbar flex-fill d-flex flex-column" style="min-height: 0;">
             <div class="flex-fill d-flex flex-column" style="min-height: 0;">
                 <div class="mini-nav flex-fill d-flex flex-column" style="min-height: 0;">
-                    <div class="d-flex align-items-center justify-content-center sidebar-google-hamburger">
-                        <a class="nav-link sidebartoggler" id="headerCollapse" href="javascript:void(0)" data-bs-toggle="tooltip"
-                            data-bs-custom-class="custom-tooltip" data-bs-placement="right" aria-label="Toggle menu">
-
-                            <i id="sidebarToggleIcon" class="material-icons menu-icon material-symbols-rounded fs-4">
-                                menu
-                            </i>
-                        </a>
-                    </div>
+                    
                     <ul class="mini-nav-ul simplebar-scrollable-y flex-fill" data-simplebar="init" style="min-height: 0;">
                         <div class="simplebar-wrapper" style="margin: 0px;">
                             <div class="simplebar-height-auto-observer-wrapper">
@@ -388,33 +380,13 @@
 
     // Function to show sidebar menu and save state
     function showSidebarMenu(miniId) {
-        console.log('Showing sidebar for miniId:', miniId);
-        // Remove selected from all mini-nav-items
-        miniNavItems.forEach(function(navItem) {
-            navItem.classList.remove('selected');
-        });
-        // Add selected only to the clicked/active one
+        const miniNav = setupSidebar.querySelector('.mini-nav');
         const selectedItem = document.getElementById(miniId);
-        if (selectedItem) {
-            selectedItem.classList.add('selected');
-            console.log('Selected mini-nav item:', miniId);
+        if (miniNav && selectedItem && typeof window.sargamActivateMiniNavItem === 'function') {
+            window.sargamActivateMiniNavItem(miniNav, selectedItem, true);
+            return;
         }
-        sidebarMenus.forEach(function(nav) {
-            nav.classList.remove('d-block');
-            nav.style.display = 'none';
-        });
-        const targetMenuId = 'menu-right-' + miniId;
-        const targetMenu = document.getElementById(targetMenuId);
-        if (targetMenu) {
-            targetMenu.classList.add('d-block');
-            targetMenu.style.display = 'block';
-            document.body.setAttribute('data-sidebartype', 'full');
-            console.log('Displayed menu:', targetMenu.id);
-        } else {
-            console.error('Target menu not found:', targetMenuId);
-        }
-        localStorage.setItem('selectedMiniNav', miniId);
-        // Don't force tab switch - let user's navigation determine the active tab
+        console.warn('Flyout menu activation fallback for:', miniId);
     }
 
     // MutationObserver to keep sidebar visible

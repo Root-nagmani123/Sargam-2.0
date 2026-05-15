@@ -7,17 +7,6 @@
         <div class="iconbar flex-fill d-flex flex-column" style="min-height: 0;">
             <div class="flex-fill d-flex flex-column" style="min-height: 0;">
                 <div class="mini-nav flex-fill d-flex flex-column" style="min-height: 0;">
-                    <div class="d-flex align-items-center justify-content-center sidebar-google-hamburger">
-                        <a class="nav-link sidebartoggler" id="headerCollapse" href="javascript:void(0)"
-                            data-bs-toggle="tooltip" data-bs-custom-class="custom-tooltip" data-bs-placement="right"
-                            aria-label="Toggle menu">
-
-                            <i id="sidebarToggleIcon" class="material-icons menu-icon material-symbols-rounded fs-4">
-                                menu
-                            </i>
-
-                        </a>
-                    </div>
                     <ul class="mini-nav-ul simplebar-scrollable-y flex-fill" data-simplebar="init"
                         style="min-height: 0;">
                         <div class="simplebar-wrapper" style="margin: 0px;">
@@ -245,25 +234,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function showSidebarMenu(miniId) {
-        miniNavItems.forEach(function(navItem) {
-            navItem.classList.remove('selected');
-        });
+        const miniNav = sidebarComm.querySelector('.mini-nav');
         const selectedItem = document.getElementById(miniId);
-        if (selectedItem) {
-            selectedItem.classList.add('selected');
+        if (miniNav && selectedItem && typeof window.sargamActivateMiniNavItem === 'function') {
+            window.sargamActivateMiniNavItem(miniNav, selectedItem, true);
         }
-        sidebarMenus.forEach(function(nav) {
-            nav.classList.remove('d-block');
-            nav.style.display = 'none';
-        });
-        const targetMenuId = 'menu-right-' + miniId;
-        const targetMenu = document.getElementById(targetMenuId);
-        if (targetMenu) {
-            targetMenu.classList.add('d-block');
-            targetMenu.style.display = 'block';
-            document.body.setAttribute('data-sidebartype', 'full');
-        }
-        localStorage.setItem('selectedCommunicationMiniNav', miniId);
     }
 
     sidebarMenus.forEach(function(nav) {

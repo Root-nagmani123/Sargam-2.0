@@ -2057,21 +2057,9 @@ window.SARGAM_DASHBOARD_URL = "{{ route('admin.dashboard') }}";
         }
         if (!itemEl || !itemEl.id) return;
 
-            pane.querySelectorAll('.mini-nav .mini-nav-item').forEach(el => el.classList.remove('selected'));
-            itemEl.classList.add('selected');
-
-            const targetMenuId = 'menu-right-' + itemEl.id;
-            const allMenus = pane.querySelectorAll('.sidebarmenu nav');
-            allMenus.forEach(nav => {
-                nav.classList.remove('d-block');
-                nav.style.display = 'none';
-            });
-            const safeId = targetMenuId.replace(/([#.;?+*^$[\]\\(){}|\-])/g, '\\$1');
-            const targetMenu = pane.querySelector('#' + safeId);
-            if (targetMenu) {
-                targetMenu.classList.add('d-block');
-                targetMenu.style.display = 'block';
-                document.body.setAttribute('data-sidebartype', 'full');
+            const miniNav = pane.querySelector('.mini-nav');
+            if (miniNav && typeof window.sargamActivateMiniNavItem === 'function') {
+                window.sargamActivateMiniNavItem(miniNav, itemEl, false);
             }
 
         }

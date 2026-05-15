@@ -76,9 +76,21 @@
     };
 })(typeof window !== 'undefined' ? window : this);
 
-document.addEventListener('DOMContentLoaded', function() {
+function sargamRunSidebarNavigationInit() {
     'use strict';
-    
+
+    /* Browser has no bare `global`; all APIs below use this alias. */
+    var global =
+        typeof window !== 'undefined'
+            ? window
+            : typeof globalThis !== 'undefined'
+              ? globalThis
+              : this;
+
+    if (document.documentElement.getAttribute('data-sargam-sidebar-nav-init') === '1') {
+        return;
+    }
+
     console.log('Sidebar navigation system initializing...');
 
     // ==========================================
@@ -140,112 +152,331 @@ document.addEventListener('DOMContentLoaded', function() {
     // MINI-NAV: Controls sidebar menu visibility
     // ==========================================
     
+    function getSidebarPaneFromMiniNav(container) {
+        return (
+            container.closest('.side-mini-panel') ||
+            container.closest('.tab-pane') ||
+            document
+        );
+    }
+
+    function getFlyoutPanelRoot(container) {
+        return container.closest('.side-mini-panel') || getSidebarPaneFromMiniNav(container);
+    }
+
+    function getMiniNavStorageKey(pane) {
+        const paneId = pane && pane.id ? pane.id : 'global';
+        return 'active-mini-nav-' + paneId;
+    }
+
+    function escapeMenuId(id) {
+        if (typeof CSS !== 'undefined' && CSS.escape) {
+            return CSS.escape(id);
+        }
+        return String(id).replace(/([#.;?+*^$[\]\\(){}|\-])/g, '\\$1');
+    }
+
+    function getPaneFlyoutMenus(paneRoot) {
+        return paneRoot.querySelectorAll('.sidebarmenu nav.sidebar-nav, .sidebarmenu nav.sargam-menu-flyout');
+    }
+
+    function hidePaneFlyoutMenus(paneRoot) {
+        getPaneFlyoutMenus(paneRoot).forEach(function (nav) {
+            nav.classList.remove('d-block', 'is-active', 'sargam-menu-visible', 'left-none');
+            nav.style.removeProperty('display');
+        });
+    }
+
+    function showPaneFlyoutMenu(nav) {
+        if (!nav) {
+            return;
+        }
+        nav.classList.add('d-block', 'is-active', 'sargam-menu-visible', 'left-none');
+        nav.style.removeProperty('display');
+    }
+
+    function setPanelFlyoutOpen(panel, open) {
+        if (!panel) {
+            return;
+        }
+        panel.classList.toggle('expanded', open);
+        panel.classList.toggle('sidebar-flyout-open', open);
+        panel.setAttribute('data-flyout-open', open ? 'true' : 'false');
+        var sidebarmenu = panel.querySelector('.sidebarmenu');
+        if (sidebarmenu) {
+            sidebarmenu.classList.toggle('hovermenus', open);
+        }
+    }
+
+    /**
+     * Resolve flyout <nav> for a mini-nav item id within a sidebar pane.
+     * @param {Element} paneRoot
+     * @param {string} itemId - li.mini-nav-item id (e.g. mini-1, setup-mini-9)
+     * @returns {Element|null}
+     */
+    function resolveMenuForMiniItem(paneRoot, itemId) {
+        if (!paneRoot || !itemId) {
+            return null;
+        }
+        var byId = paneRoot.querySelector('#' + escapeMenuId('menu-right-' + itemId));
+        if (byId) {
+            return byId;
+        }
+        var dataMenus = paneRoot.querySelectorAll('.sidebarmenu nav[data-mini-nav-target]');
+        for (var i = 0; i < dataMenus.length; i++) {
+            if (dataMenus[i].getAttribute('data-mini-nav-target') === itemId) {
+                return dataMenus[i];
+            }
+        }
+        return document.getElementById('menu-right-' + itemId);
+    }
+
+    global.sargamResolveMenuForMiniItem = resolveMenuForMiniItem;
+    global.sargamShowPaneFlyoutMenu = showPaneFlyoutMenu;
+    global.sargamHidePaneFlyoutMenus = hidePaneFlyoutMenus;
+
+    /**
+     * Restore saved mini-nav, match active route, or open first item / sole menu for a pane.
+     */
+    function restoreOrActivatePaneMiniNav(container) {
+        if (!container) {
+            return;
+        }
+
+        const paneRoot = getFlyoutPanelRoot(container);
+        const storageKey = getMiniNavStorageKey(
+            container.closest('.tab-pane') || paneRoot
+        );
+        let activeId = null;
+
+        try {
+            activeId = localStorage.getItem(storageKey);
+        } catch (e) {}
+
+        if (activeId) {
+            const storedItem = paneRoot.querySelector('#' + escapeMenuId(activeId));
+            if (storedItem) {
+                global.sargamActivateMiniNavItem(container, storedItem, false);
+                return;
+            }
+        }
+
+        const menus = getPaneFlyoutMenus(paneRoot);
+        if (typeof global.sargamMarkSidebarActiveLinks === 'function') {
+            global.sargamMarkSidebarActiveLinks(menus);
+        }
+
+        let menuFromRoute = null;
+        menus.forEach(function (nav) {
+            if (!menuFromRoute && nav.querySelector('.sidebar-link.active')) {
+                menuFromRoute = nav;
+            }
+        });
+
+        if (menuFromRoute) {
+            var miniIdFromMenu =
+                menuFromRoute.getAttribute('data-mini-nav-target') ||
+                (menuFromRoute.id ? menuFromRoute.id.replace(/^menu-right-/, '') : '');
+            const miniItem = miniIdFromMenu
+                ? paneRoot.querySelector('#' + escapeMenuId(miniIdFromMenu))
+                : null;
+            if (miniItem) {
+                global.sargamActivateMiniNavItem(container, miniItem, false);
+                return;
+            }
+            hidePaneFlyoutMenus(paneRoot);
+            showPaneFlyoutMenu(menuFromRoute);
+            return;
+        }
+
+        const firstMini = container.querySelector('.mini-nav-item[id]');
+        if (firstMini) {
+            global.sargamActivateMiniNavItem(container, firstMini, false);
+            return;
+        }
+
+        hidePaneFlyoutMenus(paneRoot);
+        if (menus.length === 1) {
+            showPaneFlyoutMenu(menus[0]);
+        } else if (menus.length > 0) {
+            showPaneFlyoutMenu(menus[0]);
+        }
+    }
+
+    global.sargamRestoreOrActivatePaneMiniNav = restoreOrActivatePaneMiniNav;
+
+    /**
+     * Show flyout menu for a mini-nav item without changing page layout (data-sidebartype).
+     * @param {Element} container - .mini-nav element
+     * @param {Element} miniNavItem - li.mini-nav-item
+     * @param {boolean} persist - write selection to localStorage
+     */
+    global.sargamActivateMiniNavItem = function (container, miniNavItem, persist) {
+        if (!container || !miniNavItem || !miniNavItem.id) {
+            return;
+        }
+        const paneRoot = getFlyoutPanelRoot(container);
+        const itemId = miniNavItem.id;
+
+        paneRoot.querySelectorAll('.mini-nav-item').forEach(function (navItem) {
+            navItem.classList.remove('selected');
+        });
+        miniNavItem.classList.add('selected');
+
+        hidePaneFlyoutMenus(paneRoot);
+
+        const targetMenu = resolveMenuForMiniItem(paneRoot, itemId);
+        showPaneFlyoutMenu(targetMenu);
+
+        if (persist && itemId) {
+            try {
+                var tabPane = container.closest('.tab-pane');
+                localStorage.setItem(getMiniNavStorageKey(tabPane || paneRoot), itemId);
+            } catch (e) {}
+        }
+    };
+
     function initializeMiniNav() {
-        // GLOBAL SINGLE-CLICK HANDLER using event delegation
-        // This prevents multiple event listeners from causing multi-click issues
-        
         const miniNavContainers = document.querySelectorAll('.mini-nav');
-        
+
         if (miniNavContainers.length === 0) {
             console.warn('No mini-nav containers found');
             return;
         }
-        
+
         console.log('Found', miniNavContainers.length, 'mini-nav containers');
-        
-        function getSidebarPaneFromContainer(container) {
-            return container.closest('.tab-pane') || document;
+
+        function isDesktopFlyout() {
+            return global.matchMedia && global.matchMedia('(min-width: 992px)').matches;
         }
 
-        function getStorageKeyForPane(pane) {
-            const paneId = pane && pane.id ? pane.id : 'global';
-            return 'active-mini-nav-' + paneId;
+        function panelHasFlyoutHover(panel) {
+            if (!panel) {
+                return false;
+            }
+            return !!(
+                panel.querySelector('.mini-nav .mini-nav-item:hover') ||
+                panel.querySelector('.sidebarmenu:hover') ||
+                panel.matches(':hover')
+            );
         }
 
-        // Use event delegation on each container to handle all clicks
-        miniNavContainers.forEach(function(container) {
-            container.addEventListener('click', function(e) {
+        document.querySelectorAll('.side-mini-panel').forEach(function (panel) {
+            hidePaneFlyoutMenus(panel);
+            setPanelFlyoutOpen(panel, false);
+
+            if (panel.getAttribute('data-sargam-flyout-bound') === '1') {
+                return;
+            }
+            panel.setAttribute('data-sargam-flyout-bound', '1');
+
+            panel.addEventListener('mouseover', function (e) {
+                if (!isDesktopFlyout()) {
+                    return;
+                }
+                var miniNavItem = e.target.closest('.mini-nav-item');
+                if (!miniNavItem || !panel.contains(miniNavItem)) {
+                    return;
+                }
+                var miniNav = panel.querySelector('.mini-nav');
+                if (!miniNav || !miniNavItem.id) {
+                    return;
+                }
+                global.sargamActivateMiniNavItem(miniNav, miniNavItem, false);
+                setPanelFlyoutOpen(panel, true);
+            });
+
+            panel.addEventListener('mouseout', function (e) {
+                if (!isDesktopFlyout()) {
+                    return;
+                }
+                var to = e.relatedTarget;
+                if (to && panel.contains(to)) {
+                    return;
+                }
+                global.requestAnimationFrame(function () {
+                    if (!panelHasFlyoutHover(panel)) {
+                        setPanelFlyoutOpen(panel, false);
+                    }
+                });
+            });
+
+            panel.addEventListener('focusin', function () {
+                if (isDesktopFlyout()) {
+                    setPanelFlyoutOpen(panel, true);
+                }
+            });
+
+            panel.addEventListener('focusout', function (e) {
+                if (!isDesktopFlyout()) {
+                    return;
+                }
+                if (e.relatedTarget && panel.contains(e.relatedTarget)) {
+                    return;
+                }
+                global.requestAnimationFrame(function () {
+                    if (!panelHasFlyoutHover(panel)) {
+                        setPanelFlyoutOpen(panel, false);
+                    }
+                });
+            });
+        });
+
+        miniNavContainers.forEach(function (container) {
+            const aside = container.closest('.side-mini-panel');
+
+            container.addEventListener('click', function (e) {
                 const miniNavItem = e.target.closest('.mini-nav-item');
-                
                 if (!miniNavItem || !container.contains(miniNavItem)) return;
-                
+
                 e.preventDefault();
                 e.stopPropagation();
-                
-                const itemId = miniNavItem.id;
-                console.log('Mini-nav item clicked:', itemId);
-                const paneRoot = getSidebarPaneFromContainer(container);
-                
-                // Remove selected class only within current pane
-                paneRoot.querySelectorAll('.mini-nav-item').forEach(function(navItem) {
-                    navItem.classList.remove('selected');
-                });
-                
-                // Add selected class to clicked item
-                miniNavItem.classList.add('selected');
-                
-                // Hide sidebar menus only within current pane
-                paneRoot.querySelectorAll('.sidebarmenu nav').forEach(function(nav) {
-                    nav.classList.remove('d-block');
-                    nav.style.display = 'none';
-                });
-                
-                // Show the target menu
-                const targetMenuId = 'menu-right-' + itemId;
-                let targetMenu = paneRoot.querySelector('#' + CSS.escape(targetMenuId));
-                if (!targetMenu) {
-                    targetMenu = document.getElementById(targetMenuId);
-                }
-                if (targetMenu) {
-                    targetMenu.classList.add('d-block');
-                    targetMenu.style.display = 'block';
-                    document.body.setAttribute('data-sidebartype', 'full');
-                    console.log('Displayed menu:', targetMenuId);
-                }
-                
-                // Store active mini-nav in localStorage
-                if (itemId) {
-                    localStorage.setItem(getStorageKeyForPane(paneRoot), itemId);
-                }
+
+                global.sargamActivateMiniNavItem(container, miniNavItem, true);
+                const asideEl = miniNavItem.closest('.side-mini-panel') || aside;
+                setPanelFlyoutOpen(asideEl, true);
             });
         });
         
-        // Restore active mini-nav per pane
-        miniNavContainers.forEach(function(container) {
-            const paneRoot = getSidebarPaneFromContainer(container);
-            const activeId = localStorage.getItem(getStorageKeyForPane(paneRoot));
-            if (!activeId) return;
+        // Restore / default active mini-nav for every sidebar pane in the project
+        miniNavContainers.forEach(function (container) {
+            restoreOrActivatePaneMiniNav(container);
+        });
 
-            const activeItem = paneRoot.querySelector('#' + CSS.escape(activeId));
-            if (!activeItem) return;
-
-            paneRoot.querySelectorAll('.mini-nav-item').forEach(function(navItem) {
-                navItem.classList.remove('selected');
-            });
-            activeItem.classList.add('selected');
-
-            const targetMenuId = 'menu-right-' + activeId;
-            let targetMenu = paneRoot.querySelector('#' + CSS.escape(targetMenuId));
-            if (!targetMenu) {
-                targetMenu = document.getElementById(targetMenuId);
+        document.querySelectorAll('#sidebarTabContent .tab-pane').forEach(function (pane) {
+            const miniNav = pane.querySelector('.mini-nav');
+            if (miniNav) {
+                restoreOrActivatePaneMiniNav(miniNav);
             }
-            if (targetMenu) {
-                paneRoot.querySelectorAll('.sidebarmenu nav').forEach(function(nav) {
-                    nav.classList.remove('d-block');
-                    nav.style.display = 'none';
-                });
-                targetMenu.classList.add('d-block');
-                targetMenu.style.display = 'block';
+        });
+
+        document.querySelectorAll('.side-mini-panel').forEach(function (panel) {
+            panel.classList.add('sargam-hover-sidebar');
+            const miniNav = panel.querySelector('.mini-nav');
+            if (miniNav) {
+                restoreOrActivatePaneMiniNav(miniNav);
             }
-            console.log('Restored active mini-nav:', activeId, 'for pane:', paneRoot.id || 'global');
         });
     }
+
+    function initAllSidebarPanels() {
+        document.querySelectorAll('.side-mini-panel .mini-nav').forEach(function (container) {
+            restoreOrActivatePaneMiniNav(container);
+        });
+    }
+
+    global.sargamInitAllSidebarPanels = initAllSidebarPanels;
     
     // ==========================================
     // SIDEBAR MENUS: Collapse functionality
     // ==========================================
     
     function initializeSidebarCollapse() {
+        if (typeof bootstrap === 'undefined' || !bootstrap.Collapse) {
+            console.warn('Bootstrap Collapse not available; sidebar collapse handlers skipped');
+            return;
+        }
+
         const collapseLinks = document.querySelectorAll('.sidebar-link[data-bs-toggle="collapse"]');
         
         console.log('Found', collapseLinks.length, 'collapse links in sidebar');
@@ -266,7 +497,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 console.log('Toggling collapse:', targetId);
                 
-                // Use Bootstrap's collapse API
                 const bsCollapse = bootstrap.Collapse.getOrCreateInstance(targetElement, {
                     toggle: false
                 });
@@ -358,6 +588,20 @@ document.addEventListener('DOMContentLoaded', function() {
         if (targetSidebarPane) {
             targetSidebarPane.classList.add('show', 'active');
             console.log('Sidebar pane activated:', sidebarTargetId);
+
+            const miniNav = targetSidebarPane.querySelector('.mini-nav');
+            if (miniNav) {
+                restoreOrActivatePaneMiniNav(miniNav);
+            }
+            const paneMenus = targetSidebarPane.querySelectorAll('.sidebarmenu nav.sidebar-nav');
+            if (typeof global.sargamMarkSidebarActiveLinks === 'function') {
+                global.sargamMarkSidebarActiveLinks(paneMenus);
+            }
+            setTimeout(function () {
+                if (typeof global.sargamInitAllSidebarPanels === 'function') {
+                    global.sargamInitAllSidebarPanels();
+                }
+            }, 50);
         } else {
             // Safe fallback: keep home sidebar visible instead of leaving empty state
             const homeSidebarPane = sidebarTabContent.querySelector('#sidebar-home.tab-pane');
@@ -443,7 +687,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // INITIALIZE ALL FUNCTIONALITY
     // ==========================================
     
-    setTimeout(function() {
+    try {
         initializeSidebarLinks();
         initializeMiniNav();
         initializeSidebarCollapse();
@@ -496,5 +740,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 150);
         
         console.log('Sidebar navigation system initialized successfully');
-    }, 100);
-});
+        document.documentElement.setAttribute('data-sargam-sidebar-nav-init', '1');
+    } catch (initErr) {
+        console.error('Sidebar navigation init failed:', initErr);
+    }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', sargamRunSidebarNavigationInit);
+} else {
+    sargamRunSidebarNavigationInit();
+}

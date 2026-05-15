@@ -526,7 +526,6 @@ document.addEventListener('DOMContentLoaded', function() {
             if (targetMenu) {
                 targetMenu.classList.add('d-block');
                 targetMenu.style.display = 'block';
-                document.body.setAttribute('data-sidebartype', 'full');
             }
         }
     }

@@ -5,7 +5,7 @@
         || request()->routeIs('admin.estate.generate-estate-bill*')
     );
 @endphp
-<nav class="sidebar-nav d-block simplebar-scrollable-y" id="menu-right-mini-1" data-simplebar="init">
+<nav class="sidebar-nav sargam-menu-flyout simplebar-scrollable-y" id="menu-right-mini-1" data-mini-nav-target="mini-1" data-simplebar="init">
     <div class="simplebar-wrapper" style="margin: 0px -20px -24px;">
         <div class="simplebar-height-auto-observer-wrapper">
             <div class="simplebar-height-auto-observer"></div>

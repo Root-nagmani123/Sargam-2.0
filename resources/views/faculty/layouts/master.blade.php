@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zxx">
+<html lang="en" dir="ltr" data-bs-theme="light" data-color-theme="Blue_Theme" data-layout="vertical">
 
 <head>
     @include('admin.layouts.pre_header')
@@ -404,10 +404,9 @@
         </div>
     </div>
     <div id="main-wrapper">
-        @include('faculty.layouts.sidebar')
-        <div class="page-wrapper">
+            <div class="page-wrapper">
             @include('faculty.layouts.header')
-            @include('admin.layouts.aside')
+            @include('faculty.layouts.sidebar')
             <div class="body-wrapper">
                 <!-- Tab Content Container -->
                 <div class="tab-content" id="mainNavbarContent">
