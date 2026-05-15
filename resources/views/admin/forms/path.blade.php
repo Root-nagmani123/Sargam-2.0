@@ -2,239 +2,227 @@
 
 @section('title', 'Path Page - Sargam | Lal Bahadur')
 
+@push('styles')
+<link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.css" rel="stylesheet">
+@endpush
+
 @section('setup_content')
-    <link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.css" rel="stylesheet">
-    <div class="container-fluid">
-        <!-- Page Header -->
+<div class="container-fluid">
     <x-breadcrum title="Create Path Page" />
     <x-session_message />
-        <!-- Form Card -->
-        <div class="card" >
-            <div class="card-body">
-                <h4 class="card-title mb-3">Create Path Page</h4>
+    <div class="card" style="border-left: 4px solid #004a93;">
+        <div class="card-body">
+            <h4 class="card-title mb-3">Create Path Page</h4>
+            <hr>
+
+            <form method="POST" action="{{ route('admin.path.page.save') }}" enctype="multipart/form-data" id="pathPageForm">
+                @csrf
+
+                @php
+                    $today = date('Y-m-d');
+                @endphp
+
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <label for="course_start_date" class="form-label fw-semibold">Course Start Date</label>
+                        <input type="date" name="course_start_date" id="course_start_date" class="form-control"
+                            min="{{ $today }}"
+                            value="{{ old('course_start_date', $pathPage?->course_start_date?->format('Y-m-d') ?? '') }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label for="course_end_date" class="form-label fw-semibold">Course End Date</label>
+                        <input type="date" name="course_end_date" id="course_end_date" class="form-control"
+                            min="{{ old('course_start_date', $pathPage?->course_start_date?->format('Y-m-d') ?? $today) }}"
+                            value="{{ old('course_end_date', $pathPage?->course_end_date?->format('Y-m-d') ?? '') }}">
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <label for="registration_start_date" class="form-label fw-semibold">Registration Start Date</label>
+                        <input type="date" name="registration_start_date" id="registration_start_date"
+                            class="form-control" min="{{ $today }}"
+                            value="{{ old('registration_start_date', $pathPage?->registration_start_date?->format('Y-m-d') ?? '') }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label for="registration_end_date" class="form-label fw-semibold">Registration End Date</label>
+                        <input type="date" name="registration_end_date" id="registration_end_date"
+                            class="form-control"
+                            min="{{ old('registration_start_date', $pathPage?->registration_start_date?->format('Y-m-d') ?? $today) }}"
+                            value="{{ old('registration_end_date', $pathPage?->registration_end_date?->format('Y-m-d') ?? '') }}">
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <label for="exemption_start_date" class="form-label fw-semibold">Exemption Start Date</label>
+                        <input type="date" name="exemption_start_date" id="exemption_start_date" class="form-control"
+                            min="{{ $today }}"
+                            value="{{ old('exemption_start_date', $pathPage?->exemption_start_date?->format('Y-m-d') ?? '') }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label for="exemption_end_date" class="form-label fw-semibold">Exemption End Date</label>
+                        <input type="date" name="exemption_end_date" id="exemption_end_date" class="form-control"
+                            min="{{ old('exemption_start_date', $pathPage?->exemption_start_date?->format('Y-m-d') ?? $today) }}"
+                            value="{{ old('exemption_end_date', $pathPage?->exemption_end_date?->format('Y-m-d') ?? '') }}">
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">Register for Foundation Course <span class="text-danger">*</span></label>
+                    <textarea name="register_course" class="form-control summernote" required>{{ old('register_course', $pathPage?->register_course ?? '') }}</textarea>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">Apply for Exemption <span class="text-danger">*</span></label>
+                    <textarea name="apply_exemption" class="form-control summernote" required>{{ old('apply_exemption', $pathPage?->apply_exemption ?? '') }}</textarea>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">Already Registered <span class="text-danger">*</span></label>
+                    <textarea name="already_registered" class="form-control summernote" required>{{ old('already_registered', $pathPage?->already_registered ?? '') }}</textarea>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">Guidelines <span class="text-danger">*</span></label>
+                    <textarea name="guidelines" class="form-control summernote" required>{{ old('guidelines', $pathPage?->guidelines ?? '') }}</textarea>
+                </div>
+
                 <hr>
+                <h5 class="fw-bold mt-4 mb-3">FAQs Section</h5>
 
-                <form method="POST" action="{{ route('admin.path.page.save') }}" enctype="multipart/form-data">
-                    @csrf
-
-                    <!-- Registration Section -->
-
-                    @php
-                        $today = date('Y-m-d');
-                    @endphp
-
-                    <div class="row mb-4">
-                        <div class="col-md-6">
-                            <label for="course_start_date" class="form-label fw-semibold">Course Start Date</label>
-                            <input type="date" name="course_start_date" id="course_start_date" class="form-control"
-                                min="{{ $today }}"
-                                value="{{ old('course_start_date', $pathPage->course_start_date?->format('Y-m-d')) ?? '' }}">
-                        </div>
-
-                        <div class="col-md-6">
-                            <label for="course_end_date" class="form-label fw-semibold">Course End Date</label>
-                            <input type="date" name="course_end_date" id="course_end_date" class="form-control"
-                                min="{{ old('course_start_date', $pathPage->course_start_date ?? $today) }}"
-                                value="{{ old('course_end_date', $pathPage->course_end_date?->format('Y-m-d')) ?? '' }}">
-                        </div>
-                    </div>
-                    <div class="row mb-4">
-                        <div class="col-md-6">
-                            <label for="registration_start_date" class="form-label fw-semibold">Registration Start
-                                Date</label>
-                            <input type="date" name="registration_start_date" id="registration_start_date"
-                                class="form-control" min="{{ $today }}"
-                                value="{{ old('registration_start_date', $pathPage->registration_start_date?->format('Y-m-d')) ?? '' }}">
-                        </div>
-
-                        <div class="col-md-6">
-                            <label for="registration_end_date" class="form-label fw-semibold">Registration End
-                                Date</label>
-                            <input type="date" name="registration_end_date" id="registration_end_date"
-                                class="form-control"
-                                min="{{ old('registration_start_date', $pathPage->registration_start_date ?? $today) }}"
-                                value="{{ old('registration_end_date', $pathPage->registration_end_date?->format('Y-m-d')) ?? '' }}">
-                        </div>
-                    </div>
-
-                    <div class="row mb-4">
-                        <div class="col-md-6">
-                            <label for="exemption_start_date" class="form-label fw-semibold">Exemption Start
-                                Date</label>
-                            <input type="date" name="exemption_start_date" id="exemption_start_date" class="form-control"
-                                min="{{ $today }}"
-                                value="{{ old('exemption_start_date', $pathPage->exemption_start_date?->format('Y-m-d')) ?? '' }}">
-                        </div>
-
-                        <div class="col-md-6">
-                            <label for="exemption_end_date" class="form-label fw-semibold">Exemption End Date</label>
-                            <input type="date" name="exemption_end_date" id="exemption_end_date" class="form-control"
-                                min="{{ old('exemption_start_date', $pathPage->exemption_start_date ?? $today) }}"
-                                value="{{ old('exemption_end_date', $pathPage->exemption_end_date?->format('Y-m-d')) ?? '' }}">
-                        </div>
-                    </div>
-                    <div class="mb-4">
-                        <label class="form-label fw-semibold">Register for Foundation Course <span
-                                class="text-danger">*</span></label>
-                        <textarea name="register_course" class="form-control summernote" required>{{ old('register_course', $pathPage->register_course ?? '') }}</textarea>
-                    </div>
-
-                    <div class="mb-4">
-                        <label class="form-label fw-semibold">Apply for Exemption <span class="text-danger">*</span></label>
-                        <textarea name="apply_exemption" class="form-control summernote" required>{{ old('apply_exemption', $pathPage->apply_exemption ?? '') }}</textarea>
-                    </div>
-
-                    <div class="mb-4">
-                        <label class="form-label fw-semibold">Already Registered <span class="text-danger">*</span></label>
-                        <textarea name="already_registered" class="form-control summernote" required>{{ old('already_registered', $pathPage->already_registered ?? '') }}</textarea>
-                    </div>
-
-                    <div class="mb-4">
-                        <label class="form-label fw-semibold">Guidelines <span class="text-danger">*</span></label>
-                        <textarea name="guidelines" class="form-control summernote" required>{{ old('guidelines', $pathPage->guidelines ?? '') }}</textarea>
-                    </div>
-
-                    <!-- FAQs Section -->
-                    <hr>
-                    <h5 class="fw-bold mt-4 mb-3">FAQs Section</h5>
-
-                    <div id="faq-wrapper">
-                        @if (!empty($pathPage) && $pathPage->faqs->count())
-                            @foreach ($pathPage->faqs as $faq)
-                                <div class="row mb-3" data-id="{{ $faq->id }}">
-                                    <div class="col-12">
-                                        <label for="" class="form-label">Question</label>
-                                        <div class="mb-3">
-                                            <input type="text" name="faq_header[]" class="form-control"
-                                                value="{{ $faq->header }}">
-                                        </div>
-                                    </div>
-                                    <div class="col-12">
-                                        <label for="" class="form-label">Answer</label>
-                                        <div class="mb-3">
-                                            <textarea name="faq_content[]" class="form-control" rows="2">{{ $faq->content }}</textarea>
-                                        </div>
-                                    </div>
-                                    <div class="text-end align-self-end">
-                                        <button type="button" class="btn btn-sm btn-danger delete-faq-btn"
-                                            data-id="{{ $faq->id }}">
-                                            Delete
-                                        </button>
-                                    </div>
-                                </div>
-                            @endforeach
-                        @else
-                            <div class="row mb-3">
-                                <div class="col-md-5">
+                <div id="faq-wrapper">
+                    @if ($pathPage && $pathPage->faqs->count())
+                        @foreach ($pathPage->faqs as $faq)
+                            <div class="row mb-3" data-id="{{ $faq->id }}">
+                                <div class="col-12">
                                     <label class="form-label">Question</label>
-                                    <input type="text" name="faq_header[]" class="form-control">
+                                    <div class="mb-3">
+                                        <input type="text" name="faq_header[]" class="form-control" value="{{ $faq->header }}">
+                                    </div>
                                 </div>
-                                <div class="col-md-5 ">
+                                <div class="col-12">
                                     <label class="form-label">Answer</label>
-                                    <textarea name="faq_content[]" class="form-control" rows="2"></textarea>
+                                    <div class="mb-3">
+                                        <textarea name="faq_content[]" class="form-control" rows="2">{{ $faq->content }}</textarea>
+                                    </div>
+                                </div>
+                                <div class="text-end align-self-end">
+                                    <button type="button" class="btn btn-sm btn-danger delete-faq-btn" data-id="{{ $faq->id }}">
+                                        Delete
+                                    </button>
                                 </div>
                             </div>
-                        @endif
-                    </div>
-
-                    <div class="text-end">
-                        <button type="button" class="btn btn-sm btn-outline-primary" id="add-faq">+ Add
-                            FAQ</button>
-                    </div>
-                    <hr>
-                    <!-- Submit -->
-                    <div class="mb-3 gap-2 d-flex justify-content-end">
-                        <button type="submit" class="btn btn-primary d-flex align-items-center px-4 gap-2">Submit
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-    <script>
-        $(document).ready(function() {
-            $('.summernote').summernote({
-                height: 200,
-                tabsize: 2,
-                toolbar: [
-                    ['style', ['style']],
-                    ['font', ['bold', 'italic', 'underline', 'clear']],
-                    ['fontsize', ['fontsize']],
-                    ['color', ['forecolor']],
-                    ['para', ['ul', 'ol', 'paragraph']],
-                    ['table', ['table']],
-                    ['insert', ['link', 'picture']],
-                    ['view', ['fullscreen', 'codeview']],
-                    ['misc', ['undo', 'redo']]
-                ],
-            });
-
-            $('#add-faq').on('click', function() {
-                const newFaq = `
-                    <div class="row faq-item mb-3">
-                        <div class="col-12">
-                            <label class="form-label fw-semibold">Question</label>
-                            <div class="mb-3">
-                               <input type="text" name="faq_header[]" class="form-control">
+                        @endforeach
+                    @else
+                        <div class="row mb-3">
+                            <div class="col-md-5">
+                                <label class="form-label">Question</label>
+                                <input type="text" name="faq_header[]" class="form-control">
                             </div>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label fw-semibold">Answer</label>
-                            <div class="mb-3">
+                            <div class="col-md-5">
+                                <label class="form-label">Answer</label>
                                 <textarea name="faq_content[]" class="form-control" rows="2"></textarea>
                             </div>
                         </div>
-                        <div class="text-end align-self-end">
-                            <button type="button" class="btn btn-sm btn-danger remove-faq">Remove</button>
-                        </div>
-                    </div>`;
-                $('#faq-wrapper').append(newFaq);
-            });
+                    @endif
+                </div>
 
-            $(document).on('click', '.remove-faq', function() {
-                $(this).closest('.faq-item').remove();
-            });
+                <div class="text-end">
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="add-faq">+ Add FAQ</button>
+                </div>
+                <hr>
+                <div class="mb-3 gap-2 d-flex justify-content-end">
+                    <button type="submit" class="btn btn-primary d-flex align-items-center px-4 gap-2">Submit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endsection
 
-            $(document).on('click', '.delete-faq-btn', function() {
-                const id = $(this).data('id');
-                if (confirm('Delete this FAQ?')) {
-                    const form = $('<form>', {
-                        method: 'POST',
-                        action: "/fc/faqs/" + id
-                    });
-                    form.append(`@csrf`);
-                    form.append(`<input type="hidden" name="_method" value="DELETE">`);
-                    $('body').append(form);
-                    form.submit();
-                }
-            });
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.js"></script>
+<script>
+$(document).ready(function() {
+    $('.summernote').summernote({
+        height: 200,
+        tabsize: 2,
+        toolbar: [
+            ['style', ['style']],
+            ['font', ['bold', 'italic', 'underline', 'clear']],
+            ['fontsize', ['fontsize']],
+            ['color', ['forecolor']],
+            ['para', ['ul', 'ol', 'paragraph']],
+            ['table', ['table']],
+            ['insert', ['link', 'picture']],
+            ['view', ['fullscreen', 'codeview']],
+            ['misc', ['undo', 'redo']]
+        ],
+    });
+
+    $('#pathPageForm').on('submit', function() {
+        $('.summernote').each(function() {
+            var $el = $(this);
+            if ($el.next('.note-editor').length) {
+                $el.val($el.summernote('code'));
+            }
         });
-    </script>
+    });
+
+    $('#add-faq').on('click', function() {
+        $('#faq-wrapper').append(`
+            <div class="row faq-item mb-3">
+                <div class="col-12">
+                    <label class="form-label fw-semibold">Question</label>
+                    <div class="mb-3">
+                        <input type="text" name="faq_header[]" class="form-control">
+                    </div>
+                </div>
+                <div class="col-12">
+                    <label class="form-label fw-semibold">Answer</label>
+                    <div class="mb-3">
+                        <textarea name="faq_content[]" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="text-end align-self-end">
+                    <button type="button" class="btn btn-sm btn-danger remove-faq">Remove</button>
+                </div>
+            </div>
+        `);
+    });
+
+    $(document).on('click', '.remove-faq', function() {
+        $(this).closest('.faq-item').remove();
+    });
+
+    $(document).on('click', '.delete-faq-btn', function() {
+        const id = $(this).data('id');
+        if (confirm('Delete this FAQ?')) {
+            const form = $('<form>', { method: 'POST', action: '/fc/faqs/' + id });
+            form.append('<input type="hidden" name="_token" value="{{ csrf_token() }}">');
+            form.append('<input type="hidden" name="_method" value="DELETE">');
+            $('body').append(form);
+            form.submit();
+        }
+    });
 
     @if ($errors->any())
-        <script>
-            Swal.fire({
-                icon: 'error',
-                title: 'Validation Error',
-                html: `<ul style="text-align: left;">@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>`,
-                confirmButtonText: 'OK'
-            });
-        </script>
+    Swal.fire({
+        icon: 'error',
+        title: 'Validation Error',
+        html: '<ul style="text-align: left;">@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>',
+        confirmButtonText: 'OK'
+    });
     @endif
 
     @if (session('success'))
-        <script>
-            Swal.fire({ icon: 'success', title: 'Success', text: '{{ session('success') }}', confirmButtonText: 'OK' });
-        </script>
+    Swal.fire({ icon: 'success', title: 'Success', text: @json(session('success')), confirmButtonText: 'OK' });
     @endif
 
     @if (session('error'))
-        <script>
-            Swal.fire({ icon: 'error', title: 'Error', text: '{{ session('error') }}', confirmButtonText: 'OK' });
-        </script>
+    Swal.fire({ icon: 'error', title: 'Error', text: @json(session('error')), confirmButtonText: 'OK' });
     @endif
-@endsection
+});
+</script>
+@endpush

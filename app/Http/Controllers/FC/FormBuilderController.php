@@ -12,6 +12,7 @@ use App\Services\FC\DynamicFormService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Validation\Rule;
 
 class FormBuilderController extends Controller
 {
@@ -32,7 +33,12 @@ class FormBuilderController extends Controller
     // ── Edit Step ────────────────────────────────────────────────────
     public function editStep(FcFormStep $step)
     {
-        $step->load(['fields' => fn($q) => $q->orderBy('display_order'), 'fieldGroups' => fn($q) => $q->orderBy('display_order'), 'fieldGroups.groupFields' => fn($q) => $q->orderBy('display_order')]);
+        $step->load([
+            'form',
+            'fields' => fn ($q) => $q->orderBy('display_order'),
+            'fieldGroups' => fn ($q) => $q->orderBy('display_order'),
+            'fieldGroups.groupFields' => fn ($q) => $q->orderBy('display_order'),
+        ]);
 
         $docMasters = collect();
         if ($step->step_slug === 'documents') {
@@ -62,8 +68,6 @@ class FormBuilderController extends Controller
 
     public function storeField(Request $request, FcFormStep $step)
     {
-        \Log::info('storeField called', ['step_id' => $step->id, 'input' => $request->all()]);
-
         $data = $this->validateFieldData($request);
         $data['step_id']       = $step->id;
         $data['target_table']  = $data['target_table'] ?: $step->target_table;
@@ -72,7 +76,14 @@ class FormBuilderController extends Controller
         $this->ensureColumnExists($data['target_table'], $data['target_column'], $data['field_type']);
 
         $field = FcFormField::create($data);
-        \Log::info('storeField created', ['field_id' => $field->id, 'step_id' => $field->step_id]);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Field "'.$field->label.'" added. You can add another below.',
+                'fields_count' => $step->fields()->count(),
+                'row_html' => view('admin.form-builder.partials.field-row', compact('field'))->render(),
+            ]);
+        }
 
         return back()->with('success', 'Field added successfully.');
     }
@@ -90,7 +101,12 @@ class FormBuilderController extends Controller
 
     public function deleteField(FcFormField $field)
     {
+        if ($field->is_active) {
+            return back()->with('error', 'This field is currently in use on the form and cannot be deleted. Set it to inactive first, then try again.');
+        }
+
         $field->delete();
+
         return back()->with('success', 'Field removed.');
     }
 
@@ -175,7 +191,12 @@ class FormBuilderController extends Controller
 
     public function deleteGroupField(FcFormGroupField $field)
     {
+        if ($field->is_active) {
+            return back()->with('error', 'This field is currently in use on the form and cannot be deleted. Set it to inactive first, then try again.');
+        }
+
         $field->delete();
+
         return back()->with('success', 'Group field removed.');
     }
 
@@ -218,7 +239,7 @@ class FormBuilderController extends Controller
             $request->merge(['target_column' => $request->input('field_name')]);
         }
 
-        return $request->validate([
+        $data = $request->validate([
             'field_name'           => ['required', 'string', 'max:100', 'regex:/^[a-zA-Z_][a-zA-Z0-9_]*$/'],
             'label'                => 'required|string|max:200',
             'field_type'           => 'required|in:text,number,email,date,select,radio,checkbox,textarea,file,hidden',
@@ -235,11 +256,22 @@ class FormBuilderController extends Controller
             'lookup_label_column'  => 'nullable|string|max:100',
             'lookup_order_column'  => 'nullable|string|max:100',
             'section_heading'      => 'nullable|string|max:200',
-            'css_class'            => 'nullable|string|max:100',
+            'css_class'            => ['nullable', 'string', Rule::in(array_keys(FcFormField::columnLayoutOptions()))],
             'file_max_kb'          => 'nullable|integer',
             'file_extensions'      => 'nullable|string|max:200',
             'is_active'            => 'nullable|boolean',
         ]);
+
+        $data['css_class'] = FcFormField::normalizeColumnLayout($data['css_class'] ?? null);
+        if (! empty($data['options_json'])) {
+            $comma = FcFormField::optionsJsonToCommaList($data['options_json']);
+            $data['options_json'] = FcFormField::commaListToOptionsJson($comma);
+        }
+
+        $data['is_required'] = $request->boolean('is_required');
+        $data['is_active'] = $request->boolean('is_active');
+
+        return $data;
     }
 
     private function validateGroupFieldData(Request $request): array
@@ -248,7 +280,7 @@ class FormBuilderController extends Controller
             $request->merge(['target_column' => $request->input('field_name')]);
         }
 
-        return $request->validate([
+        $data = $request->validate([
             'field_name'           => ['required', 'string', 'max:100', 'regex:/^[a-zA-Z_][a-zA-Z0-9_]*$/'],
             'label'                => 'required|string|max:200',
             'field_type'           => 'required|in:text,number,email,date,select,radio,checkbox,textarea,file,hidden',
@@ -260,9 +292,20 @@ class FormBuilderController extends Controller
             'lookup_table'         => 'nullable|string|max:100',
             'lookup_value_column'  => 'nullable|string|max:100',
             'lookup_label_column'  => 'nullable|string|max:100',
-            'css_class'            => 'nullable|string|max:100',
+            'css_class'            => ['nullable', 'string', Rule::in(array_keys(FcFormField::columnLayoutOptions()))],
             'is_active'            => 'nullable|boolean',
         ]);
+
+        $data['css_class'] = FcFormField::normalizeColumnLayout($data['css_class'] ?? null);
+        if (! empty($data['options_json'])) {
+            $comma = FcFormField::optionsJsonToCommaList($data['options_json']);
+            $data['options_json'] = FcFormField::commaListToOptionsJson($comma);
+        }
+
+        $data['is_required'] = $request->boolean('is_required');
+        $data['is_active'] = $request->boolean('is_active');
+
+        return $data;
     }
 
     // ── Document Master CRUD (documents step) ────────────────────────
