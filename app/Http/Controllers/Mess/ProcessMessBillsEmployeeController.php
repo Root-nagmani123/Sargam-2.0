@@ -66,6 +66,7 @@ class ProcessMessBillsEmployeeController extends Controller
         $buyerNames = $this->normalizeBuyerNames($request->input('buyer_name'));
         $buyerName = $buyerNames[0] ?? null;
         $statusFilter = $request->filled('status') ? $request->status : null;
+        $invoiceSentFilter = $this->resolveInvoiceSentFilter($request);
 
         // Query 1: Selling Voucher with Date Range (sv_date_range_reports)
         $dateRangeQuery = SellingVoucherDateRangeReport::query()
@@ -155,6 +156,8 @@ class ProcessMessBillsEmployeeController extends Controller
                 }
             }
 
+            $combinedBills = $this->filterCombinedBillsByInvoiceSent($combinedBills, $invoiceSentFilter);
+
             return $this->processMessBillsDatatableResponse(
                 $request,
                 $combinedBills,
@@ -237,6 +240,7 @@ class ProcessMessBillsEmployeeController extends Controller
             'clientType',
             'clientTypes',
             'statusFilter',
+            'invoiceSentFilter',
             'clientTypePk',
             'clientTypePks',
             'buyerName',
@@ -663,13 +667,14 @@ class ProcessMessBillsEmployeeController extends Controller
             $combinedId = 'combined-' . rawurlencode($buyerName) . '-' . $clientTypeSlug;
             $combinedInvoiceNo = $this->generateCombinedInvoiceNo($buyerName, $clientTypeSlug);
 
-            $total = (float) $group->sum(fn ($b) => (float) $b->net_total);
+            $total = $this->roundMoney((float) $group->sum(fn ($b) => (float) $b->net_total));
             $paid = 0.0;
             foreach ($group as $b) {
                 $isDr = $b instanceof SellingVoucherDateRangeReport;
                 $paid += $this->getBillPaidAmount($b, $isDr);
             }
-            $due = max(0, $total - $paid);
+            $paid = $this->roundMoney($paid);
+            $due = $this->billDueAmount($total, $paid);
 
             // Invoice date range: use line request dates for SV date-range (filtered items); else voucher issue_date (kitchen / header).
             $dateStrings = collect();
@@ -696,8 +701,19 @@ class ProcessMessBillsEmployeeController extends Controller
                 ? (Carbon::parse($dateMin)->format('d-m-Y') . ($dateMin !== $dateMax ? ' to ' . Carbon::parse($dateMax)->format('d-m-Y') : ''))
                 : '—';
 
-            $allPaid = $group->every(fn ($b) => ((int) ($b->status ?? 0)) === 2);
-            $anyPaid = $group->contains(fn ($b) => ((int) ($b->status ?? 0)) >= 1);
+            $allPaid = $group->every(function ($b) {
+                $isDr = $b instanceof SellingVoucherDateRangeReport;
+
+                return $this->isBillFullyPaid(
+                    $this->getBillPaidAmount($b, $isDr),
+                    (float) $b->net_total
+                );
+            });
+            $anyPaid = $group->contains(function ($b) {
+                $isDr = $b instanceof SellingVoucherDateRangeReport;
+
+                return $this->getBillPaidAmount($b, $isDr) > 0;
+            });
             $status = $allPaid ? 2 : ($anyPaid ? 1 : 0);
 
             $firstReceiptId = $group->first();
@@ -723,10 +739,10 @@ class ProcessMessBillsEmployeeController extends Controller
     }
 
     /**
-     * For modal rows: map "receiver_user_id|combined_id" => true when a MessInvoiceCombined notification exists.
+     * For modal rows: map "receiver_user_id|combined_id" => ['read' => bool] when a MessInvoiceCombined notification exists.
      *
      * @param  \Illuminate\Support\Collection<int, object>  $combinedBills
-     * @return array<string, true>
+     * @return array<string, array{read: bool}>
      */
     private function messCombinedInvoiceNotificationSentKeys($combinedBills): array
     {
@@ -747,7 +763,8 @@ class ProcessMessBillsEmployeeController extends Controller
             ->where('type', 'mess')
             ->where('module_name', 'MessInvoiceCombined')
             ->whereIn('receiver_user_id', $receiverIds)
-            ->get(['receiver_user_id', 'message']);
+            ->orderByDesc('pk')
+            ->get(['pk', 'receiver_user_id', 'message', 'is_read']);
 
         foreach ($notifications as $n) {
             $parsed = NotificationService::parseMessCombinedReceiptPayload($n->message);
@@ -755,12 +772,52 @@ class ProcessMessBillsEmployeeController extends Controller
                 continue;
             }
             $rid = (int) $n->receiver_user_id;
-            if ($rid > 0) {
-                $keys[$rid . '|' . $parsed['i']] = true;
+            $mapKey = $rid . '|' . $parsed['i'];
+            if ($rid > 0 && ! isset($keys[$mapKey])) {
+                $keys[$mapKey] = [
+                    'read' => (int) $n->is_read === 1,
+                ];
             }
         }
 
         return $keys;
+    }
+
+    /**
+     * Default: invoice_sent=sent. Explicit invoice_sent= (empty) means show all.
+     */
+    private function resolveInvoiceSentFilter(Request $request): ?string
+    {
+        if (! $request->has('invoice_sent')) {
+            return 'sent';
+        }
+
+        $value = $request->input('invoice_sent');
+
+        return ($value !== null && $value !== '') ? (string) $value : null;
+    }
+
+    /**
+     * When invoice_sent=sent, keep only combined bills with a MessInvoiceCombined notification.
+     *
+     * @param  \Illuminate\Support\Collection<int, object>  $combinedBills
+     */
+    private function filterCombinedBillsByInvoiceSent(Collection $combinedBills, ?string $invoiceSentFilter): Collection
+    {
+        if ($invoiceSentFilter !== 'sent') {
+            return $combinedBills;
+        }
+
+        $invoiceSentKeys = $this->messCombinedInvoiceNotificationSentKeys($combinedBills);
+
+        return $combinedBills->filter(function ($cb) use ($invoiceSentKeys) {
+            $receiverId = $this->resolveReceiverUserIdFromAnyBill($cb->bills->all());
+            if ($receiverId === null || $receiverId <= 0) {
+                return false;
+            }
+
+            return isset($invoiceSentKeys[$receiverId . '|' . $cb->combined_id]);
+        })->values();
     }
 
     /**
@@ -869,6 +926,7 @@ class ProcessMessBillsEmployeeController extends Controller
         $buyerNames = $this->normalizeBuyerNames($request->input('buyer_name'));
         $buyerName = $buyerNames[0] ?? null;
         $statusFilter = $request->filled('status') ? $request->status : null;
+        $invoiceSentFilter = $this->resolveInvoiceSentFilter($request);
 
         // Same union query as index, but get all results
         $dateRangeQuery = SellingVoucherDateRangeReport::query()
@@ -971,6 +1029,7 @@ class ProcessMessBillsEmployeeController extends Controller
                 $combinedBills = $combinedBills->where('status', $normalized)->values();
             }
         }
+        $combinedBills = $this->filterCombinedBillsByInvoiceSent($combinedBills, $invoiceSentFilter);
         $paymentTypeMap = [0 => 'Cash', 1 => 'Deduct From Salary', 2 => 'Online', 5 => 'Deduct From Salary'];
         $statusMap = [0 => 'Unpaid', 1 => 'Pending', 2 => 'Paid'];
 
@@ -1091,8 +1150,10 @@ class ProcessMessBillsEmployeeController extends Controller
             $referenceNumber = collect($referenceNumbers)->filter()->unique()->implode(', ');
             $orderBy = collect($orderBys)->filter()->unique()->implode(', ');
             $remarks = collect($remarksList)->filter()->unique()->implode(' | ');
-            $dueAmount = max(0, $totalAmount - $paidAmount);
-            $paymentStatusLabel = $paidAmount >= $totalAmount ? 'Paid' : ($paidAmount > 0 ? 'Partial' : 'Unpaid');
+            $totalAmount = $this->roundMoney($totalAmount);
+            $paidAmount = $this->roundMoney($paidAmount);
+            $dueAmount = $this->billDueAmount($totalAmount, $paidAmount);
+            $paymentStatusLabel = $this->isBillFullyPaid($paidAmount, $totalAmount) ? 'Paid' : ($paidAmount > 0 ? 'Partial' : 'Unpaid');
             $buyerName = trim((string) ($bills[0]->client_name ?? ($bills[0]->clientTypeCategory->client_name ?? '—')));
             $clientTypeSlug = $bills[0] instanceof SellingVoucherDateRangeReport
                 ? (string) ($bills[0]->client_type_slug ?? 'employee')
@@ -1163,10 +1224,10 @@ class ProcessMessBillsEmployeeController extends Controller
 
         $this->assertCurrentUserCanAccessSingleBill($bill, $isDateRange);
 
-        $totalAmount = (float) $bill->net_total;
+        $totalAmount = $this->roundMoney((float) $bill->net_total);
         $paidAmount = $this->getBillPaidAmount($bill, $isDateRange);
-        $dueAmount = max(0, $totalAmount - $paidAmount);
-        $paymentStatusLabel = $paidAmount >= $totalAmount ? 'Paid' : ($paidAmount > 0 ? 'Partial' : 'Unpaid');
+        $dueAmount = $this->billDueAmount($totalAmount, $paidAmount);
+        $paymentStatusLabel = $this->isBillFullyPaid($paidAmount, $totalAmount) ? 'Paid' : ($paidAmount > 0 ? 'Partial' : 'Unpaid');
 
         $invoiceNo = $isDateRange
             ? 'DR-' . str_pad($bill->id, 6, '0', STR_PAD_LEFT)
@@ -1282,7 +1343,9 @@ class ProcessMessBillsEmployeeController extends Controller
                     ];
                 }
             }
-            $dueAmount = max(0, $totalAmount - $paidAmount);
+            $totalAmount = $this->roundMoney($totalAmount);
+            $paidAmount = $this->roundMoney($paidAmount);
+            $dueAmount = $this->billDueAmount($totalAmount, $paidAmount);
             $buyerName = trim((string) ($bills[0]->client_name ?? ($bills[0]->clientTypeCategory->client_name ?? '—')));
             $clientTypeSlug = $bills[0] instanceof SellingVoucherDateRangeReport
                 ? (string) ($bills[0]->client_type_slug ?? 'employee')
@@ -1390,9 +1453,9 @@ class ProcessMessBillsEmployeeController extends Controller
             ];
         }
 
-        $totalAmount = (float) $bill->net_total;
+        $totalAmount = $this->roundMoney((float) $bill->net_total);
         $paidAmount = $this->getBillPaidAmount($bill, $isDateRange);
-        $dueAmount = max(0, $totalAmount - $paidAmount);
+        $dueAmount = $this->billDueAmount($totalAmount, $paidAmount);
 
         $clientTypeDisplay = $bill->client_type_display ?? ($bill->client_type_label ?? ($bill->clientTypeCategory ? ucfirst($bill->clientTypeCategory->client_type ?? '') : ucfirst($bill->client_type_slug ?? '—')));
 
@@ -1606,7 +1669,11 @@ class ProcessMessBillsEmployeeController extends Controller
             $sentKey = ($receiverId !== null && $receiverId > 0)
                 ? $receiverId . '|' . $cb->combined_id
                 : null;
-            $invoiceNotificationSent = $sentKey !== null && isset($invoiceSentKeys[$sentKey]);
+            $notificationStatus = ($sentKey !== null && isset($invoiceSentKeys[$sentKey]))
+                ? $invoiceSentKeys[$sentKey]
+                : null;
+            $invoiceNotificationSent = $notificationStatus !== null;
+            $invoiceNotificationRead = $notificationStatus !== null && ($notificationStatus['read'] ?? false);
 
             return [
                 'id' => $cb->combined_id,
@@ -1620,6 +1687,7 @@ class ProcessMessBillsEmployeeController extends Controller
                 'paid_amount' => number_format($cb->paid, 2),
                 'bill_no' => $invoiceNo,
                 'invoice_notification_sent' => $invoiceNotificationSent,
+                'invoice_notification_read' => $invoiceNotificationRead,
                 // Same range used for this row; receipt/print must pass these or server defaults to current month.
                 'date_from' => $dateFrom,
                 'date_to' => $dateTo,
@@ -2008,15 +2076,40 @@ class ProcessMessBillsEmployeeController extends Controller
     }
 
     /**
+     * Round money to 2 decimals (avoids float precision issues in payment totals/comparisons).
+     */
+    private function roundMoney(float $amount): float
+    {
+        return round($amount, 2);
+    }
+
+    /**
+     * Remaining due on a bill (never negative, 2 decimals).
+     */
+    private function billDueAmount(float $totalAmount, float $paidAmount): float
+    {
+        return max(0, $this->roundMoney($totalAmount - $paidAmount));
+    }
+
+    /**
+     * Whether paid amount satisfies the bill total (2-decimal comparison).
+     */
+    private function isBillFullyPaid(float $paidAmount, float $totalAmount): bool
+    {
+        return $this->roundMoney($paidAmount) >= $this->roundMoney($totalAmount);
+    }
+
+    /**
      * Get paid amount for a bill (date range or kitchen issue).
      */
     private function getBillPaidAmount($bill, bool $isDateRange): float
     {
         if ($isDateRange) {
-            return (float) ($bill->paid_amount ?? 0);
+            return $this->roundMoney((float) ($bill->paid_amount ?? 0));
         }
         $bill->load('paymentDetails');
-        return (float) $bill->paymentDetails->sum('paid_amount');
+
+        return $this->roundMoney((float) $bill->paymentDetails->sum('paid_amount'));
     }
 
     /**
@@ -2063,7 +2156,7 @@ class ProcessMessBillsEmployeeController extends Controller
                 'message' => 'Please enter the payment amount.',
             ], 400);
         }
-        $amount = (float) $amount;
+        $amount = $this->roundMoney((float) $amount);
         if ($amount <= 0) {
             return response()->json([
                 'success' => false,
@@ -2084,8 +2177,9 @@ class ProcessMessBillsEmployeeController extends Controller
             foreach ($bills as $b) {
                 $isDr = $b instanceof SellingVoucherDateRangeReport;
                 $paid = $this->getBillPaidAmount($b, $isDr);
-                $totalDue += max(0, (float) $b->net_total - $paid);
+                $totalDue += $this->billDueAmount((float) $b->net_total, $paid);
             }
+            $totalDue = $this->roundMoney($totalDue);
             if ($amount > $totalDue) {
                 return response()->json([
                     'success' => false,
@@ -2098,11 +2192,11 @@ class ProcessMessBillsEmployeeController extends Controller
                 foreach ($bills as $bill) {
                     if ($remaining <= 0) break;
                     $isDr = $bill instanceof SellingVoucherDateRangeReport;
-                    $billTotal = (float) $bill->net_total;
+                    $billTotal = $this->roundMoney((float) $bill->net_total);
                     $billPaid = $this->getBillPaidAmount($bill, $isDr);
-                    $billDue = max(0, $billTotal - $billPaid);
+                    $billDue = $this->billDueAmount($billTotal, $billPaid);
                     if ($billDue <= 0) continue;
-                    $payThis = min($remaining, $billDue);
+                    $payThis = $this->roundMoney(min($remaining, $billDue));
                     if ($isDr) {
                         SvDateRangePaymentDetail::create([
                             'sv_date_range_report_id' => $bill->id,
@@ -2114,8 +2208,8 @@ class ProcessMessBillsEmployeeController extends Controller
                             'cheque_date' => $request->filled('cheque_date') ? $this->parseDate($request->cheque_date) : null,
                             'remarks' => $request->input('remarks'),
                         ]);
-                        $bill->paid_amount = ($bill->paid_amount ?? 0) + $payThis;
-                        $bill->status = ($bill->paid_amount >= $billTotal) ? 2 : 1;
+                        $bill->paid_amount = $this->roundMoney((float) ($bill->paid_amount ?? 0) + $payThis);
+                        $bill->status = $this->isBillFullyPaid((float) $bill->paid_amount, $billTotal) ? 2 : 1;
                         $bill->save();
                     } else {
                         /** @var KitchenIssueMaster $bill */
@@ -2139,10 +2233,10 @@ class ProcessMessBillsEmployeeController extends Controller
                             'remarks' => $request->input('remarks'),
                         ]);
                         $newPaid = $this->getBillPaidAmount($bill, false);
-                        $bill->status = ($newPaid >= $billTotal) ? 2 : 1;
+                        $bill->status = $this->isBillFullyPaid($newPaid, $billTotal) ? 2 : 1;
                         $bill->save();
                     }
-                    $remaining -= $payThis;
+                    $remaining = $this->roundMoney($remaining - $payThis);
                 }
                 DB::commit();
             } catch (\Illuminate\Database\QueryException $e) {
@@ -2158,7 +2252,7 @@ class ProcessMessBillsEmployeeController extends Controller
             $receiverUserId = $this->resolveReceiverUserIdFromAnyBill($bills);
             if ($receiverUserId !== null && $receiverUserId > 0) {
                 try {
-                    $isFullPayment = ($remaining <= 0 && $amount >= $totalDue);
+                    $isFullPayment = $remaining <= 0 && $this->isBillFullyPaid($amount, $totalDue);
                     $dateFromYmd = $request->filled('date_from')
                         ? $this->parseDate($request->date_from)
                         : now()->startOfMonth()->format('Y-m-d');
@@ -2186,13 +2280,15 @@ class ProcessMessBillsEmployeeController extends Controller
                     report($e);
                 }
             }
+            $remainingDueCombined = $this->billDueAmount($totalDue, $amount);
+
             return response()->json([
                 'success' => true,
-                'full_payment' => $amount >= $totalDue,
-                'message' => $amount >= $totalDue
+                'full_payment' => $this->isBillFullyPaid($amount, $totalDue),
+                'message' => $remainingDueCombined <= 0
                     ? 'Payment completed successfully. Confirmation sent to user.'
-                    : 'Partial payment recorded. Remaining due: ₹ ' . number_format($totalDue - $amount, 2),
-                'remaining_due' => max(0, $totalDue - $amount),
+                    : 'Partial payment recorded. Remaining due: ₹ ' . number_format($remainingDueCombined, 2),
+                'remaining_due' => $remainingDueCombined,
                 'paid_amount' => $amount,
                 'bill_id' => $id,
                 'client_name' => $clientName,
@@ -2205,9 +2301,9 @@ class ProcessMessBillsEmployeeController extends Controller
             $bill->load('paymentDetails');
         }
 
-        $totalAmount = (float) $bill->net_total;
+        $totalAmount = $this->roundMoney((float) $bill->net_total);
         $paidBefore = $this->getBillPaidAmount($bill, !$isKitchenIssue);
-        $dueBefore = max(0, $totalAmount - $paidBefore);
+        $dueBefore = $this->billDueAmount($totalAmount, $paidBefore);
 
         if ($dueBefore <= 0) {
             return response()->json([
@@ -2241,13 +2337,9 @@ class ProcessMessBillsEmployeeController extends Controller
                 'transaction_ref' => $request->input('cheque_number'),
                 'remarks' => $request->input('remarks'),
             ]);
-            $paidAfter = $paidBefore + $amount;
-            $isFullPayment = $paidAfter >= $totalAmount;
-            if ($isFullPayment) {
-                $bill->status = 2;
-            } else {
-                $bill->status = 1; // Partial
-            }
+            $paidAfter = $this->roundMoney($paidBefore + $amount);
+            $isFullPayment = $this->isBillFullyPaid($paidAfter, $totalAmount);
+            $bill->status = $isFullPayment ? 2 : 1;
             $bill->save();
         } else {
             SvDateRangePaymentDetail::create([
@@ -2260,18 +2352,14 @@ class ProcessMessBillsEmployeeController extends Controller
                 'cheque_date' => $request->filled('cheque_date') ? $this->parseDate($request->cheque_date) : null,
                 'remarks' => $request->input('remarks'),
             ]);
-            $bill->paid_amount = ($bill->paid_amount ?? 0) + $amount;
-            $paidAfter = (float) $bill->paid_amount;
-            $isFullPayment = $paidAfter >= $totalAmount;
-            if ($isFullPayment) {
-                $bill->status = 2;
-            } else {
-                $bill->status = 1; // Partial
-            }
+            $paidAfter = $this->roundMoney((float) ($bill->paid_amount ?? 0) + $amount);
+            $bill->paid_amount = $paidAfter;
+            $isFullPayment = $this->isBillFullyPaid($paidAfter, $totalAmount);
+            $bill->status = $isFullPayment ? 2 : 1;
             $bill->save();
         }
 
-        $remainingDue = max(0, $totalAmount - $paidAfter);
+        $remainingDue = $this->billDueAmount($totalAmount, $paidAfter);
         $receiverUserId = $this->getReceiverUserIdForBill($bill, $isKitchenIssue);
         $billId = $isKitchenIssue ? $bill->pk : $bill->id;
         $clientName = $bill->client_name ?? ($bill->clientTypeCategory->client_name ?? '—');

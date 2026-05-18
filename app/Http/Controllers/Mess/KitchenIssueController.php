@@ -173,6 +173,25 @@ class KitchenIssueController extends Controller
         ];
         $selectedTypeSlug = $typeSlugMap[$selectedClientType] ?? '';
 
+        // When the user filtered by buyer only, restore type/category for the filter UI from the latest voucher.
+        if ($selectedBuyerName !== '' && $selectedClientType === '') {
+            $inferred = KitchenIssueMaster::query()
+                ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+                ->where(function ($q) use ($selectedBuyerName) {
+                    $q->where('client_name', $selectedBuyerName)
+                        ->orWhere('client_name', 'LIKE', $selectedBuyerName.' (%');
+                })
+                ->orderByDesc('issue_date')
+                ->orderByDesc('pk')
+                ->first(['client_type', 'client_type_pk']);
+
+            if ($inferred && $inferred->client_type) {
+                $selectedClientType = (string) $inferred->client_type;
+                $selectedClientTypePk = (string) ($inferred->client_type_pk ?? '');
+                $selectedTypeSlug = $typeSlugMap[$selectedClientType] ?? '';
+            }
+        }
+
         $filterClientTypePkOptions = collect();
         if (in_array($selectedTypeSlug, ['ot', 'course'], true)) {
             $filterClientTypePkOptions = $otCourses->map(function ($course) {
@@ -197,11 +216,11 @@ class KitchenIssueController extends Controller
             $selectedEmployeeBucket = strtolower(trim((string) $filterClientTypePkOptions
                 ->firstWhere('value', $selectedClientTypePk)['text'] ?? ''));
             if ($selectedEmployeeBucket === 'academy staff') {
-                $filterBuyerNames = $employees->pluck('full_name')->filter()->values();
+                $filterBuyerNames = $employees->pluck('full_name_with_department')->filter()->values();
             } elseif ($selectedEmployeeBucket === 'faculty') {
                 $filterBuyerNames = $faculties->pluck('full_name')->filter()->values();
             } elseif ($selectedEmployeeBucket === 'mess staff') {
-                $filterBuyerNames = $messStaff->pluck('full_name')->filter()->values();
+                $filterBuyerNames = $messStaff->pluck('full_name_with_department')->filter()->values();
             }
         } elseif ($selectedTypeSlug === 'ot' && $selectedClientTypePk !== '') {
             $filterBuyerNames = StudentMaster::join('student_master_course__map', 'student_master.pk', '=', 'student_master_course__map.student_master_pk')
@@ -251,6 +270,30 @@ class KitchenIssueController extends Controller
                 ->unique()
                 ->sort()
                 ->values();
+        }
+
+        if ($selectedBuyerName !== '' && ! $filterBuyerNames->contains($selectedBuyerName)) {
+            $filterBuyerNames = $filterBuyerNames->prepend($selectedBuyerName)->values();
+        }
+
+        if ($selectedClientTypePk !== '' && $selectedClientType !== '') {
+            $hasSelectedCategory = $filterClientTypePkOptions->contains(
+                fn (array $option) => (string) ($option['value'] ?? '') === $selectedClientTypePk
+            );
+            if (! $hasSelectedCategory) {
+                $categoryLabel = '';
+                if (in_array($selectedTypeSlug, ['employee', 'section', 'other'], true)) {
+                    $categoryLabel = (string) (ClientType::find((int) $selectedClientTypePk)?->client_name ?? '');
+                } elseif (in_array($selectedTypeSlug, ['ot', 'course'], true)) {
+                    $categoryLabel = (string) ($otCourses->firstWhere('pk', (int) $selectedClientTypePk)?->course_name ?? '');
+                }
+                if ($categoryLabel !== '') {
+                    $filterClientTypePkOptions = $filterClientTypePkOptions->prepend([
+                        'value' => $selectedClientTypePk,
+                        'text' => $categoryLabel,
+                    ])->values();
+                }
+            }
         }
 
         return view('mess.kitchen-issues.index', compact(
@@ -396,6 +439,7 @@ class KitchenIssueController extends Controller
                 'kim.client_name as voucher_client_name',
                 'kim.payment_type',
                 'kim.status',
+                'kim.issue_date',
                 'kim.created_at',
                 DB::raw($misLabelSql . ' as sub_item_name'),
                 DB::raw($misLabelSql . ' as sub_name'),
@@ -450,18 +494,17 @@ class KitchenIssueController extends Controller
         if ($request->filled('client_type_pk')) {
             $q->where('kim.client_type_pk', (int) $request->input('client_type_pk'));
         }
-        if ($request->filled('buyer_name')) {
-            $q->where('kim.client_name', trim((string) $request->input('buyer_name')));
-        }
+        $this->applySellingVoucherBuyerNameFilter($q, (string) $request->input('buyer_name', ''));
 
+        // Date filter: same branching as Selling Voucher (Date Range); default last 30 days when blank.
         if (! $request->filled('start_date') && ! $request->filled('end_date')) {
             $q->whereDate('kim.issue_date', '>=', now()->subDays(30)->toDateString());
-        }
-        if ($request->filled('start_date')) {
-            $q->where('kim.issue_date', '>=', $request->start_date);
-        }
-        if ($request->filled('end_date')) {
-            $q->where('kim.issue_date', '<=', $request->end_date);
+        } elseif ($request->filled('start_date') && $request->filled('end_date')) {
+            $q->whereBetween('kim.issue_date', [$request->start_date, $request->end_date]);
+        } elseif ($request->filled('start_date')) {
+            $q->whereDate('kim.issue_date', '>=', $request->start_date);
+        } elseif ($request->filled('end_date')) {
+            $q->whereDate('kim.issue_date', '<=', $request->end_date);
         }
 
         $returnStatus = strtolower(trim((string) $request->input('return_status', '')));
@@ -474,6 +517,22 @@ class KitchenIssueController extends Controller
         }
 
         return $q;
+    }
+
+    /**
+     * Match buyer names saved with optional department suffix, e.g. "Name (Dept)".
+     */
+    private function applySellingVoucherBuyerNameFilter(Builder $q, string $buyerName): void
+    {
+        $buyerName = trim($buyerName);
+        if ($buyerName === '') {
+            return;
+        }
+
+        $q->where(function ($bq) use ($buyerName) {
+            $bq->where('kim.client_name', $buyerName)
+                ->orWhere('kim.client_name', 'LIKE', $buyerName.' (%');
+        });
     }
 
     private function applySellingVoucherItemSearch(Builder $q, string $search): void
@@ -577,7 +636,7 @@ class KitchenIssueController extends Controller
             $statusHtml = '<span class="badge rounded-pill text-bg-primary">Completed</span>';
         }
 
-        $reqDateRaw = $row->created_at ?? '';
+        $reqDateRaw = $row->issue_date ?? $row->created_at ?? '';
         $reqDate = '—';
         if ($reqDateRaw) {
             try {
