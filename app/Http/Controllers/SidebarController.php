@@ -149,6 +149,7 @@ class SidebarController extends Controller
     $permissions = $isAdmin ? [] : $user->getAllPermissions()->pluck('name')->toArray();
 
     $groupId = $request->group_id;
+    $currentPath = trim(strtolower(request()->path()), '/');
 
     $group = MenuGroup::with([
         'menus' => function ($q) {
@@ -206,10 +207,11 @@ class SidebarController extends Controller
                 <ul class="collapse list-unstyled ps-3" id="' . $collapseId . '">';
 
             foreach ($children as $submenu) {
+                $activeClass = $this->menuRouteIsActive($submenu->route, $currentPath) ? ' active' : '';
                 $html .= '
                 <li class="sidebar-item">
-                    <a class="sidebar-link" href="' . ($submenu->route ? url($submenu->route) : 'javascript:void(0)') . '" target="' . ($submenu->target == 1 ? '_blank' : '_self') . '">
-                        <span class="hide-menu">' . $submenu->name . '</span>
+                    <a class="sidebar-link' . $activeClass . '" href="' . ($submenu->route ? url($submenu->route) : 'javascript:void(0)') . '" target="' . ($submenu->target == 1 ? '_blank' : '_self') . '">
+                        <span class="hide-menu">' . e($submenu->name) . '</span>
                     </a>
                 </li>';
             }
@@ -220,10 +222,11 @@ class SidebarController extends Controller
 
             // Only show if menu itself is allowed
             if ($hasMenuPermission) {
+                $activeClass = $this->menuRouteIsActive($menu->route, $currentPath) ? ' active' : '';
                 $html .= '
                 <li class="sidebar-item">
-                    <a class="sidebar-link" href="' . ($menu->route ? url($menu->route) : 'javascript:void(0)') . '" target="' . ($menu->target == 1 ? '_blank' : '_self') . '">
-                        <span class="hide-menu">' . $menu->name . '</span>
+                    <a class="sidebar-link' . $activeClass . '" href="' . ($menu->route ? url($menu->route) : 'javascript:void(0)') . '" target="' . ($menu->target == 1 ? '_blank' : '_self') . '">
+                        <span class="hide-menu">' . e($menu->name) . '</span>
                     </a>
                 </li>';
             }
@@ -248,6 +251,26 @@ class SidebarController extends Controller
             'menus' => [],
             'message' => 'No menus found'
         ]);
+    }
+
+    protected function menuRouteIsActive(?string $menuRoute, string $currentPath): bool
+    {
+        if (!$menuRoute || $menuRoute === '#' || trim($menuRoute) === '') {
+            return false;
+        }
+
+        $menuPath = trim(strtolower(parse_url($menuRoute, PHP_URL_PATH) ?? $menuRoute), '/');
+        if ($menuPath === '' || preg_match('#^https?://#i', $menuRoute)) {
+            $menuPath = trim(strtolower($menuRoute), '/');
+        }
+
+        if ($menuPath === $currentPath) {
+            return true;
+        }
+
+        return str_ends_with($currentPath, $menuPath)
+            || str_starts_with($currentPath, $menuPath . '/')
+            || str_contains($currentPath, '/' . $menuPath . '/');
     }
 
     public function getCategoryGroups(Request $request, $category_id)

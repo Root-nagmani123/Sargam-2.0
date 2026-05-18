@@ -546,10 +546,12 @@ function syncSidebarWithMainTabs() {
         activateSidebarTab(targetTab);
     }
     
-    // Also check localStorage for persisted tab
+    // Prefer server-resolved tab (menu placement) over last clicked tab
+    const routeTab = window.SARGAM_ACTIVE_NAV_TAB;
     const savedTab = localStorage.getItem('activeMainTab');
-    if (savedTab) {
-        activateSidebarTab(savedTab);
+    const initialSidebarTab = routeTab || savedTab;
+    if (initialSidebarTab) {
+        activateSidebarTab(initialSidebarTab);
     }
 }
 

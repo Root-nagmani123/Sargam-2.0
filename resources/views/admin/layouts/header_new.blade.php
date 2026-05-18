@@ -1,38 +1,6 @@
+{{-- $activeNavTab, $activeCategoryId resolved in admin.layouts.master --}}
 @php
-    // Determine active tab based on current route/path
-    $activeNavTab = '#home';
-    $path = request()->path();
-    $routeName = request()->route()?->getName() ?? '';
-    if (request()->routeIs('admin.dashboard') || request()->routeIs('admin.dashboard.*') || request()->routeIs('calendar.index')) {
-        $activeNavTab = '#home';
-    } elseif (
-        request()->routeIs('admin.employee_idcard.*') || request()->routeIs('admin.issue-management*') ||
-        request()->routeIs('member.*') || request()->routeIs('faculty.*') || request()->routeIs('programme.*') ||
-        request()->routeIs('admin.roles.*') || request()->routeIs('admin.users.*') ||
-        str_starts_with($path, 'setup/') || str_starts_with($path, 'admin/setup') ||
-        str_starts_with($path, 'admin/employee-idcard') || str_starts_with($path, 'admin/issue-management') ||
-        str_starts_with($path, 'courseAttendanceNoticeMap') || str_starts_with($path, 'course_memo') ||
-        str_starts_with($path, 'building_floor') || str_starts_with($path, 'group_mapping') ||
-        str_starts_with($path, 'course-repository') || str_starts_with($path, 'feedback') ||
-        str_starts_with($path, 'admin/notice') || str_starts_with($path, 'attendance') ||
-        str_starts_with($path, 'security') || str_starts_with($path, 'ot_notice') ||
-        str_starts_with($path, 'forms') || str_starts_with($path, 'registration') ||
-        str_starts_with($path, 'mdo_escrot') || str_starts_with($path, 'student_medical') ||
-        str_starts_with($path, 'medical_exception') || str_starts_with($path, 'memo_discipline') ||
-        str_starts_with($path, 'country') || str_starts_with($path, 'state') || str_starts_with($path, 'city') ||
-        str_starts_with($path, 'stream') || str_starts_with($path, 'subject') || str_starts_with($path, 'Venue-Master') ||
-        str_starts_with($path, 'batch') || str_starts_with($path, 'curriculum') || str_starts_with($path, 'mapping') ||
-        str_starts_with($path, 'admin/master') || str_contains($path, 'breadcrumb-showcase') || str_starts_with($path, 'password') ||
-        str_starts_with($path, 'expertise') || str_starts_with($path, 'faculty_notice') || str_starts_with($path, 'faculty_mdo')
-    ) {
-        $activeNavTab = '#tab-setup';
-    } elseif (str_starts_with($path, 'communications') || request()->routeIs('*communications*')) {
-        $activeNavTab = '#tab-communications';
-    } elseif (str_starts_with($path, 'academics') || request()->routeIs('*academics*')) {
-        $activeNavTab = '#tab-academics';
-    } elseif (str_starts_with($path, 'material') || request()->routeIs('*material*')) {
-        $activeNavTab = '#tab-material-management';
-    }
+    $activeNavTab = $activeNavTab ?? \App\Services\SidebarMenu\SidebarNavResolver::HOME_TAB;
 @endphp
 <header class="topbar px-0">
     <!-- Skip to Content (GIGW Mandatory) -->
@@ -108,15 +76,20 @@
                         <ul class="navbar-nav header-main-nav px-4 py-2 gap-1 align-items-center" role="menubar">
                             @foreach($sidebarMenus as $category)
                                 @php
-                                    $tabId = 'tab-' . $category->slug;
-                                    $isActive = $activeCategoryId == $category->id;
+                                    $categoryTabHash = $category->slug === 'home'
+                                        ? '#home'
+                                        : '#tab-' . $category->slug;
+                                    $tabId = $category->slug === 'home' ? 'home-tab' : 'tab-' . $category->slug;
+                                    $isActive = ($activeNavTab ?? '') === $categoryTabHash;
                                 @endphp
                                 <li class="nav-item" role="none">
-                                    <a href="#"
+                                    <a href="{{ $categoryTabHash }}"
                                         class="nav-link header-nav-link px-3 py-2 sidebar-category-link {{ $isActive ? 'active' : '' }}"
                                         role="tab"
+                                        data-bs-toggle="tab"
                                         id="{{ $tabId }}"
                                         data-id="{{ $category->id }}"
+                                        data-tab="{{ $categoryTabHash }}"
                                         aria-selected="{{ $isActive ? 'true' : 'false' }}">
                                         @if(!empty($category->icon))
                                             <i class="{{ $category->icon }}"></i>
@@ -1361,7 +1334,9 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- Fallback Tab Switcher (if Bootstrap JS not active) -->
 <script>
     // Server-computed active tab (from PHP) - used for route-based tab highlighting
-    window.SARGAM_ACTIVE_NAV_TAB = '{{ $activeNavTab }}';
+    window.SARGAM_ACTIVE_NAV_TAB = @json($activeNavTab ?? '#home');
+    window.SARGAM_ACTIVE_CATEGORY_ID = @json($activeCategoryId ?? null);
+    window.SARGAM_ACTIVE_GROUP_ID = @json($activeGroupId ?? null);
 </script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -1395,6 +1370,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // Save the active tab to localStorage
         localStorage.setItem('activeMainTab', targetId);
     }
+
+    window.showMainNavPane = showPane;
 
     // Handle clicks on all tabs (desktop and mobile)
     tabLinks.forEach(link => {
@@ -1446,11 +1423,17 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         const routeTab = window.SARGAM_ACTIVE_NAV_TAB || '#home';
         const savedTab = localStorage.getItem('activeMainTab');
-        initial = savedTab || routeTab || '#home';
-        console.log('Initial tab:', initial);
+        // Menu placement / current route wins over last clicked tab
+        initial = routeTab || savedTab || '#home';
+        console.log('Initial tab:', initial, '(route:', routeTab, ')');
     }
 
     showPane(initial);
+
+    // Keep localStorage aligned with server-resolved menu placement (category/tab in DB)
+    if (window.SARGAM_ACTIVE_NAV_TAB) {
+        localStorage.setItem('activeMainTab', window.SARGAM_ACTIVE_NAV_TAB);
+    }
 
     // Sync mobile tabs with initial state
     const allTabs = document.querySelectorAll('[data-bs-toggle="tab"]');

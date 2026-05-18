@@ -20,6 +20,11 @@ class Menu extends Model
 
     protected $guarded = [];
 
+    public function category()
+    {
+        return $this->belongsTo(SidebarCategory::class, 'category_id');
+    }
+
     public function group()
     {
         return $this->belongsTo(MenuGroup::class, 'group_id');

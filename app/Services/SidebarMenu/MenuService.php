@@ -47,6 +47,7 @@ class MenuService
         $data['permission_name'] = $permission;
         $data['order'] = $data['order'] ?? Menu::max('order') + 1;
         $menu = Menu::create($data);
+        SidebarNavResolver::clearCache();
         Permission::firstOrCreate([
             'name' => $permission,
             'guard_name' => 'web'
@@ -63,6 +64,7 @@ class MenuService
     {
         $menu = $this->find($id);
         $menu->update(['is_active' => $status]);
+        SidebarNavResolver::clearCache();
         return $menu;
     }
 
@@ -90,13 +92,16 @@ class MenuService
                 ]);
             }
         }
+        SidebarNavResolver::clearCache();
         return $menu;
     }
 
     public function delete($id)
     {
         $menu = $this->find($id);
-        return $menu->delete();
+        $deleted = $menu->delete();
+        SidebarNavResolver::clearCache();
+        return $deleted;
     }
 
 

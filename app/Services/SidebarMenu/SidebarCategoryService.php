@@ -10,6 +10,7 @@
 namespace App\Services\SidebarMenu;
 use Yajra\DataTables\Facades\DataTables;
 use App\Models\SidebarMenu\SidebarCategory;
+use App\Services\SidebarMenu\SidebarNavResolver;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 
@@ -40,6 +41,7 @@ class SidebarCategoryService
     {
         $category = $this->find($id);
         $category->update(['is_active' => $status]);
+        SidebarNavResolver::clearCache();
         return $category;
     }
 
@@ -48,7 +50,9 @@ class SidebarCategoryService
         $data['slug'] = $data['slug'] ?? Str::slug($data['name']);
         $data['order'] = $data['order'] ?? SidebarCategory::max('order') + 1;
 
-        return SidebarCategory::create($data);
+        $category = SidebarCategory::create($data);
+        SidebarNavResolver::clearCache();
+        return $category;
     }
 
     public function find($id)
@@ -62,14 +66,17 @@ class SidebarCategoryService
 
         $data['slug'] = $data['slug'] ?? Str::slug($data['name']);
         $data['order'] = $data['order'] ?? SidebarCategory::max('order') + 1;
-        return $category->update($data);
+        $updated = $category->update($data);
+        SidebarNavResolver::clearCache();
+        return $updated;
     }
 
     public function delete($id)
     {
         $category = $this->find($id);
-
-        return $category->delete(); // soft delete
+        $deleted = $category->delete();
+        SidebarNavResolver::clearCache();
+        return $deleted;
     }
 
     public function columns(): array

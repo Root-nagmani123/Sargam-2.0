@@ -1,10 +1,17 @@
 <!DOCTYPE html>
 <html lang="en" data-bs-theme="light">
 @php
-    $activeCategoryId = request()->get('category') ?? ($sidebarMenus->first()->id ?? null);
-    $activeCategory = $sidebarMenus->find($activeCategoryId);
+    $activeNavTab = $activeNavTab ?? \App\Services\SidebarMenu\SidebarNavResolver::HOME_TAB;
+    $activeCategoryId = $activeCategoryId
+        ?? request()->get('category')
+        ?? ($sidebarMenus->first()->id ?? null);
+    $activeGroupId = $activeGroupId ?? null;
+    $activeCategory = $sidebarMenus->firstWhere('id', $activeCategoryId)
+        ?? $sidebarMenus->first();
+    if ($activeCategory) {
+        $activeCategoryId = $activeCategory->id;
+    }
     $groups = $activeCategory ? $activeCategory->groups : collect([]);
-    
 @endphp
 
 
@@ -892,23 +899,65 @@
     <script>
 
         // @getSidebarGroups()
-        $(document).on('click', '.sidebar-category-link', function(e){
-            e.preventDefault();
-            var categoryId = $(this).data('id');
-            $('.sidebar-category-link').removeClass('active').attr('aria-selected','false');
-            $(this).addClass('active').attr('aria-selected','true');
+        function markActiveSidebarMenuLink() {
+            var current = window.location.href.split('#')[0].split('?')[0];
+            $('#sidebarnav .sidebar-link[href]').each(function () {
+                var href = this.href ? this.href.split('#')[0].split('?')[0] : '';
+                $(this).toggleClass('active', href !== '' && href === current);
+            });
+        }
+
+        function loadSidebarMenusForGroup(groupId, groupName) {
+            if (!groupId) return;
+            if (groupName) {
+                $('#sidebar-title').text(groupName).addClass('border-bottom');
+            }
+            $.ajax({
+                url: '{{ route("sidebar.menu") }}',
+                type: 'GET',
+                data: { group_id: groupId },
+                success: function (response) {
+                    $('#sidebarnav').html(response);
+                    markActiveSidebarMenuLink();
+                },
+                error: function (xhr) {
+                    console.error(xhr.responseText);
+                }
+            });
+        }
+
+        function loadSidebarGroupsForCategory(categoryId, done) {
+            if (!categoryId) {
+                if (typeof done === 'function') done();
+                return;
+            }
             $.ajax({
                 url: '{{ route("sidebar.groups") }}',
                 type: 'GET',
                 data: { category_id: categoryId },
-                success: function(response){ 
+                success: function (response) {
                     $('#sidebar-groups').html(response);
+                    if (typeof done === 'function') done();
                 },
-                error: function(xhr){
+                error: function (xhr) {
                     console.error(xhr.responseText);
-                    alert('Failed to load groups!');
+                    if (typeof done === 'function') done();
                 }
             });
+        }
+
+        $(document).on('click', '.sidebar-category-link', function(e){
+            e.preventDefault();
+            var categoryId = $(this).data('id');
+            var tabHash = $(this).data('tab') || $(this).attr('href');
+            if (tabHash && typeof window.showMainNavPane === 'function') {
+                window.showMainNavPane(tabHash);
+            }
+            $('.sidebar-category-link').removeClass('active').attr('aria-selected','false');
+            $(this).addClass('active').attr('aria-selected','true');
+            $('#sidebarnav').empty();
+            $('#sidebar-title').text('').removeClass('border-bottom');
+            loadSidebarGroupsForCategory(categoryId);
         });
 
         // @getSidebarMenu()
@@ -916,7 +965,6 @@
             e.preventDefault();
             var groupId = $(this).data('id');
             var groupName = $(this).data('name');
-            $('#sidebar-title').text(groupName).addClass('border-bottom');
             $('.sidebar-group-link').removeClass('selected').attr('aria-selected','false');
             $('.sidebar-group-link').removeClass('mx-2 py-1 bg-primary');
             $('.sidebar-google-icon-wrap').removeClass('text-light');
@@ -925,16 +973,33 @@
             $(this).addClass('mx-2 py-1 bg-primary');
             $(this).find('.sidebar-google-icon-wrap').addClass('text-light');
             $(this).find('.sidebar-google-label').addClass('text-light');
-            $.ajax({
-                url: '{{ route("sidebar.menu") }}',
-                type: 'GET',
-                data: { group_id: groupId },
-                success: function(response){ 
-                    $('#sidebarnav').html(response);
-                },
-                error: function(xhr){
-                    console.error(xhr.responseText);
-                    alert('Failed to load menu!');
+            loadSidebarMenusForGroup(groupId, groupName);
+        });
+
+        // On full page load: open tab + sidebar for menu placement (category/group from server)
+        $(function () {
+            var categoryId = window.SARGAM_ACTIVE_CATEGORY_ID;
+            var groupId = window.SARGAM_ACTIVE_GROUP_ID;
+            var routeTab = window.SARGAM_ACTIVE_NAV_TAB;
+
+            if (routeTab && typeof window.showMainNavPane === 'function') {
+                window.showMainNavPane(routeTab);
+            }
+
+            if (!categoryId) return;
+
+            $('.sidebar-category-link').removeClass('active').attr('aria-selected', 'false');
+            $('.sidebar-category-link[data-id="' + categoryId + '"]')
+                .addClass('active')
+                .attr('aria-selected', 'true');
+
+            loadSidebarGroupsForCategory(categoryId, function () {
+                if (!groupId) return;
+                var $groupLink = $('.sidebar-group-link[data-id="' + groupId + '"]');
+                if ($groupLink.length) {
+                    $groupLink.trigger('click');
+                } else {
+                    loadSidebarMenusForGroup(groupId);
                 }
             });
         });
