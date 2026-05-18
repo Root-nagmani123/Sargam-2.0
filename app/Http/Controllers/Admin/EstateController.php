@@ -6645,6 +6645,7 @@ class EstateController extends Controller
             }
             $rows = DB::table('estate_month_reading_details as emrd')
                 ->join('estate_possession_details as epd', 'emrd.estate_possession_details_pk', '=', 'epd.pk')
+                ->leftJoin('estate_house_master as ehm', 'epd.estate_house_master_pk', '=', 'ehm.pk')
                 ->whereIn('emrd.pk', $pks)
                 ->select([
                     'emrd.pk',
@@ -6652,6 +6653,10 @@ class EstateController extends Controller
                     'emrd.curr_month_elec_red',
                     'emrd.last_month_elec_red2',
                     'emrd.curr_month_elec_red2',
+                    'emrd.meter_one as emrd_meter_one',
+                    'emrd.meter_two as emrd_meter_two',
+                    'ehm.meter_one as ehm_meter_one',
+                    'ehm.meter_two as ehm_meter_two',
                     'epd.electric_meter_reading as epd_electric_meter_reading',
                     'epd.electric_meter_reading_2 as epd_electric_meter_reading_2',
                 ])
@@ -6712,10 +6717,18 @@ class EstateController extends Controller
                 // New reading must be >= saved curr when present; otherwise >= last/possession baseline (first entry).
                 $minAllowed = $existingCurr !== null ? $existingCurr : $prev;
                 if ($curr < $minAllowed) {
-                    $v->errors()->add(
-                        $field,
-                        'New meter reading cannot be less than the saved current reading, or than the opening reading when no current reading exists yet.'
-                    );
+                    $newMeterNoDigits = preg_replace('/\D/', '', trim((string) ($item['new_meter_no'] ?? '')));
+                    $effectiveOldMeter = $this->effectiveOldMeterNoForRegularReadingRow($row, $meterSlot);
+                    $oldMeterDigits = preg_replace('/\D/', '', $effectiveOldMeter);
+                    $meterChanged = $newMeterNoDigits !== ''
+                        && $oldMeterDigits !== ''
+                        && $newMeterNoDigits !== $oldMeterDigits;
+                    if (! ($curr === 0 && $meterChanged)) {
+                        $v->errors()->add(
+                            $field,
+                            'New meter reading cannot be less than the saved current reading, or than the opening reading when no current reading exists yet.'
+                        );
+                    }
                 }
             }
         });
@@ -7898,6 +7911,34 @@ class EstateController extends Controller
     }
 
     /**
+     * Effective stored old meter number for other possession reading validation (matches list: emro ?? ehm).
+     *
+     * @param  array<int, object>  $ehmByPossessionPk
+     */
+    private function effectiveOldMeterNoForOtherReadingRow($row, int $meterSlot, array $ehmByPossessionPk): string
+    {
+        $possPk = (int) ($row->estate_possession_other_pk ?? 0);
+        $ehm = $possPk > 0 ? ($ehmByPossessionPk[$possPk] ?? null) : null;
+        if ($meterSlot === 2) {
+            return (string) ($row->meter_two ?? ($ehm->meter_two ?? ''));
+        }
+
+        return (string) ($row->meter_one ?? ($ehm->meter_one ?? ''));
+    }
+
+    /**
+     * Effective old meter number for regular possession reading validation (matches list: emrd ?? ehm).
+     */
+    private function effectiveOldMeterNoForRegularReadingRow($row, int $meterSlot): string
+    {
+        if ($meterSlot === 2) {
+            return (string) ($row->emrd_meter_two ?? ($row->ehm_meter_two ?? ''));
+        }
+
+        return (string) ($row->emrd_meter_one ?? ($row->ehm_meter_one ?? ''));
+    }
+
+    /**
      * API: Get meter reading list for "Update Meter Reading of Other" (filtered).
      * Selected month OR legacy previous-month rows (same dual rule as permanent).
      * List payload: last_month_reading shows curr_month_elec_red (fallback last_month_elec_red if curr empty);
@@ -8372,8 +8413,35 @@ class EstateController extends Controller
                 }
             }
             $rows = EstateMonthReadingDetailsOther::whereIn('pk', $pks)
-                ->get(['pk', 'house_no', 'last_month_elec_red', 'curr_month_elec_red', 'last_month_elec_red2', 'curr_month_elec_red2'])
+                ->get([
+                    'pk',
+                    'house_no',
+                    'estate_possession_other_pk',
+                    'meter_one',
+                    'meter_two',
+                    'last_month_elec_red',
+                    'curr_month_elec_red',
+                    'last_month_elec_red2',
+                    'curr_month_elec_red2',
+                ])
                 ->keyBy('pk');
+
+            $ehmByPossessionPk = [];
+            $possessionPksForEhm = $rows->pluck('estate_possession_other_pk')
+                ->filter()
+                ->map(fn ($x) => (int) $x)
+                ->unique()
+                ->values()
+                ->all();
+            if ($possessionPksForEhm !== []) {
+                $ehmByPossessionPk = DB::table('estate_possession_other as epo')
+                    ->leftJoin('estate_house_master as ehm', 'epo.estate_house_master_pk', '=', 'ehm.pk')
+                    ->whereIn('epo.pk', $possessionPksForEhm)
+                    ->select('epo.pk', 'ehm.meter_one', 'ehm.meter_two')
+                    ->get()
+                    ->keyBy('pk')
+                    ->all();
+            }
 
             foreach ($readings as $idx => $item) {
                 if (empty($item['selected'])) {
@@ -8415,11 +8483,23 @@ class EstateController extends Controller
                     }
                 }
                 if ($curr < $baseline) {
-                    $house = $row->house_no ? (" (House: {$row->house_no})") : '';
-                    $v->errors()->add(
-                        "readings.$idx.curr_month_elec_red",
-                        "Current month reading must be greater than or equal to last month meter reading{$house}."
+                    $newMeterNoDigits = preg_replace('/\D/', '', trim((string) ($item['new_meter_no'] ?? '')));
+                    $effectiveOldMeter = $this->effectiveOldMeterNoForOtherReadingRow(
+                        $row,
+                        $meterSlot,
+                        $ehmByPossessionPk
                     );
+                    $oldMeterDigits = preg_replace('/\D/', '', $effectiveOldMeter);
+                    $meterChanged = $newMeterNoDigits !== ''
+                        && $oldMeterDigits !== ''
+                        && $newMeterNoDigits !== $oldMeterDigits;
+                    if (! ($curr === 0 && $meterChanged)) {
+                        $house = $row->house_no ? (" (House: {$row->house_no})") : '';
+                        $v->errors()->add(
+                            "readings.$idx.curr_month_elec_red",
+                            "Current month reading must be greater than or equal to last month meter reading{$house}."
+                        );
+                    }
                 }
             }
         });
