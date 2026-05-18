@@ -38716,7 +38716,7 @@ pre.code-view code.hljs {
     }
 
     [data-layout="vertical"] [data-sidebartype="mini-sidebar"] .side-mini-panel .sidebarmenu.hovermenus .sidebar-nav.left-none {
-        left: 80px;
+        left: 90px;
     }
 }
 
@@ -38797,7 +38797,6 @@ pre.code-view code.hljs {
     width: 100%;
     background: var(--bs-body-bg);
     z-index: 9;
-    padding: 0 15px;
 }
 
 .topbar .navbar {
@@ -47322,7 +47321,7 @@ html[dir="rtl"] .slide-animation2 {
     }
 
     html[dir="rtl"][data-layout="vertical"] [data-sidebartype="mini-sidebar"] .side-mini-panel .sidebarmenu.hovermenus .sidebar-nav.left-none {
-        right: 80px;
+        right: 90px;
         left: unset;
     }
 
@@ -47333,7 +47332,7 @@ html[dir="rtl"] .slide-animation2 {
     }
 
     html[dir="rtl"][data-layout="vertical"] .link-sidebar[data-sidebartype="mini-sidebar"] .page-wrapper {
-        margin-right: 80px;
+        margin-right: 90px;
         margin-left: 0;
     }
 

@@ -4,9 +4,6 @@
     <a href="#main-content" class="visually-hidden-focusable skip-link">
         Skip to main content
     </a>
-    <a href="#main-content" class="visually-hidden-focusable skip-link">
-        Skip to main content
-    </a>
 
     <header class="header-top-bar d-none d-lg-block">
         <div class="container-fluid d-flex align-items-center justify-content-between flex-wrap py-1">
@@ -41,7 +38,6 @@
                             <i class="material-icons material-symbols-rounded header-globe-icon">language</i>
                             <select class="form-select form-select-sm header-lang-select" aria-label="Select Language">
                                 <option selected>English</option>
-                                <option>हिन्दी</option>
                             </select>
                         </div>
                     </li>
@@ -75,8 +71,10 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <div class="collapse navbar-collapse justify-content-center" id="mainNavbar">
                     <!-- Enhanced Navigation Container (Desktop) -->
-                    <div class="nav-container position-relative d-none d-lg-block">
-                        <ul class="navbar-nav header-main-nav px-1 py-1 gap-0 align-items-center" role="menubar"
+                    <div class="nav-container header-main-nav-scroll position-relative d-none d-lg-block rounded-1 overflow-hidden">
+                        <div class="header-main-nav-scroll__viewport rounded-1" tabindex="0" role="region"
+                            aria-label="Main navigation tabs">
+                        <ul class="navbar-nav header-main-nav flex-nowrap px-1 py-1 gap-0 align-items-center" role="menubar"
                             aria-label="Main navigation">
 
                             <!-- Home -->
@@ -122,6 +120,7 @@
                                 </a>
                             </li>
                         </ul>
+                        </div>
                     </div>
 
                 </div>
@@ -735,7 +734,6 @@
                 gap: 5px;
                 border-radius: 20px;
                 padding: 2px 10px;
-                border: 1px solid rgba(255, 255, 255, 0.2);
                 transition: border-color 0.15s;
             }
 
@@ -778,12 +776,12 @@
             }
 
             .header-logo-emblem {
-                height: 44px;
+                height: 61px;
                 object-fit: contain;
             }
 
             .header-logo {
-                height: 34px;
+                height: 48px;
                 object-fit: contain;
             }
 
@@ -794,11 +792,11 @@
                 }
 
                 .header-logo-emblem {
-                    height: 50px !important;
+                    height: 67px !important;
                 }
 
                 .header-logo {
-                    height: 36px !important;
+                    height: 50px !important;
                 }
             }
 
@@ -808,14 +806,98 @@
                 color: #004a93;
             }
 
-            /* Nav container - light grey pill */
+            /* Nav container - light grey pill; scroll when wider than max width */
+            :root {
+                --header-main-nav-max-width: 42rem;
+            }
+
+            @media (min-width: 992px) {
+                #mainNavbar {
+                    flex: 1 1 auto;
+                    min-width: 0;
+                    justify-content: center !important;
+                }
+
+                .header-main-nav-scroll {
+                    max-width: min(var(--header-main-nav-max-width), calc(100vw - 28rem));
+                    width: max-content;
+                    min-width: 0;
+                    flex: 0 1 auto;
+                    border-radius: var(--bs-border-radius, 0.25rem) !important;
+                    overflow: hidden;
+                }
+
+                .header-main-nav-scroll__viewport {
+                    display: block;
+                    overflow-x: auto;
+                    overflow-y: hidden;
+                    max-width: 100%;
+                    background: #f0f2f5 !important;
+                    border-radius: var(--bs-border-radius, 0.25rem) !important;
+                    padding: 4px !important;
+                    min-height: 44px;
+                    overscroll-behavior-x: contain;
+                    scroll-behavior: smooth;
+                    -webkit-overflow-scrolling: touch;
+                    /* Hidden by default — same look as project SimpleBar thumb on hover */
+                    scrollbar-width: none;
+                    -ms-overflow-style: none;
+                }
+
+                .header-main-nav-scroll__viewport::-webkit-scrollbar {
+                    height: 0;
+                }
+
+                .header-main-nav-scroll.is-scrollable:hover .header-main-nav-scroll__viewport,
+                .header-main-nav-scroll.is-scrollable .header-main-nav-scroll__viewport:hover {
+                    scrollbar-width: thin;
+                    scrollbar-color: rgba(0, 0, 0, 0.5) transparent;
+                    padding-bottom: 6px !important;
+                }
+
+                .header-main-nav-scroll.is-scrollable:hover .header-main-nav-scroll__viewport::-webkit-scrollbar,
+                .header-main-nav-scroll.is-scrollable .header-main-nav-scroll__viewport:hover::-webkit-scrollbar {
+                    height: 11px;
+                }
+
+                .header-main-nav-scroll.is-scrollable:hover .header-main-nav-scroll__viewport::-webkit-scrollbar-thumb,
+                .header-main-nav-scroll.is-scrollable .header-main-nav-scroll__viewport:hover::-webkit-scrollbar-thumb {
+                    background: rgba(0, 0, 0, 0.5);
+                    border-radius: 7px;
+                }
+
+                .header-main-nav-scroll.is-scrollable:hover .header-main-nav-scroll__viewport::-webkit-scrollbar-track,
+                .header-main-nav-scroll.is-scrollable .header-main-nav-scroll__viewport:hover::-webkit-scrollbar-track {
+                    background: transparent;
+                }
+
+                .header-main-nav-scroll__viewport:focus-visible {
+                    outline: 2px solid rgba(0, 74, 147, 0.35);
+                    outline-offset: 2px;
+                }
+
+                .header-main-nav-scroll.is-scrollable .header-main-nav-scroll__viewport {
+                    border-radius: var(--bs-border-radius, 0.25rem) !important;
+                }
+            }
+
             .header-main-nav {
-                background: #f0f2f5 !important;
-                border-radius: 12px;
-                min-height: 44px;
+                display: flex !important;
+                flex-direction: row !important;
+                background: transparent !important;
+                border-radius: 0;
+                min-height: 36px;
                 border: none;
-                padding: 4px !important;
+                padding: 0 !important;
+                margin: 0 !important;
                 gap: 2px !important;
+                flex-wrap: nowrap !important;
+                width: max-content;
+                max-width: none;
+            }
+
+            .header-main-nav .nav-item {
+                flex: 0 0 auto;
             }
 
             .header-nav-link {
@@ -1408,8 +1490,25 @@
                 function updateSidebarState() {
                     // Only apply mobile-specific styles on mobile
                     if (window.innerWidth >= 992) {
-                        // On desktop, don't interfere with sidebar visibility
-                        // Let desktop CSS handle it
+                        // Clear mobile inline hides so desktop sidebar / tab panes stay visible
+                        const sidebarTabContent = document.getElementById('sidebarTabContent');
+                        if (sidebarTabContent) {
+                            sidebarTabContent.style.display = '';
+                            sidebarTabContent.style.visibility = '';
+                            sidebarTabContent.style.opacity = '';
+                        }
+                        document.querySelectorAll('.side-mini-panel, .left-sidebar').forEach(function (el) {
+                            el.style.left = '';
+                            el.style.visibility = '';
+                            el.style.opacity = '';
+                            el.style.display = '';
+                        });
+                        document.body.classList.remove('sidebar-open');
+                        document.body.style.overflow = '';
+                        const overlay = document.querySelector('.sidebar-overlay');
+                        if (overlay) {
+                            overlay.classList.remove('active');
+                        }
                         return;
                     }
 
@@ -1897,6 +1996,58 @@
 </header>
 
 
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        function scrollHeaderMainNavActiveTab(link) {
+            var viewport = link.closest('.header-main-nav-scroll__viewport')
+                || document.querySelector('.header-main-nav-scroll__viewport');
+            if (!viewport || !link) {
+                return;
+            }
+            var linkRect = link.getBoundingClientRect();
+            var vpRect = viewport.getBoundingClientRect();
+            if (linkRect.left < vpRect.left || linkRect.right > vpRect.right) {
+                link.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+            }
+        }
+
+        function updateHeaderMainNavScrollState() {
+            document.querySelectorAll('.header-main-nav-scroll').forEach(function (wrap) {
+                var viewport = wrap.querySelector('.header-main-nav-scroll__viewport');
+                if (!viewport) {
+                    return;
+                }
+                var scrollable = viewport.scrollWidth > viewport.clientWidth + 1;
+                wrap.classList.toggle('is-scrollable', scrollable);
+            });
+        }
+
+        document.querySelectorAll('.header-main-nav-scroll__viewport').forEach(function (viewport) {
+            viewport.addEventListener('scroll', updateHeaderMainNavScrollState, { passive: true });
+            if (typeof ResizeObserver !== 'undefined') {
+                new ResizeObserver(updateHeaderMainNavScrollState).observe(viewport);
+            }
+        });
+
+        updateHeaderMainNavScrollState();
+        window.addEventListener('resize', updateHeaderMainNavScrollState);
+        setTimeout(updateHeaderMainNavScrollState, 150);
+
+        document.querySelectorAll('.header-main-nav-scroll__viewport .header-nav-link.active').forEach(function (el) {
+            scrollHeaderMainNavActiveTab(el);
+        });
+
+        document.querySelectorAll('#mainNavbar [data-bs-toggle="tab"]').forEach(function (tab) {
+            tab.addEventListener('shown.bs.tab', function (e) {
+                if (e.target && e.target.classList.contains('header-nav-link')) {
+                    scrollHeaderMainNavActiveTab(e.target);
+                }
+                updateHeaderMainNavScrollState();
+            });
+        });
+    });
+</script>
 
 <!-- 🧠 Search Toggle Script -->
 <script>

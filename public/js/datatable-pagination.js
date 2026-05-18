@@ -1,20 +1,7 @@
 /**
- * Global DataTable pagination defaults — Material Icons styled.
- * Sets pagingType to 'full_numbers' and clears paginate text labels
- * so CSS ::after pseudo-elements can render Material Symbols icons.
- * Load this AFTER jQuery + DataTables JS but BEFORE any table init.
+ * Legacy hook — pagination/language defaults live in datatables-enhanced.js.
+ * Kept so existing layout script tags do not break.
  */
 (function () {
-    if (typeof jQuery === 'undefined' || !jQuery.fn.dataTable) return;
-    jQuery.extend(true, jQuery.fn.dataTable.defaults, {
-        pagingType: 'full_numbers',
-        language: {
-            paginate: {
-                first: '',
-                previous: '',
-                next: '',
-                last: ''
-            }
-        }
-    });
+    'use strict';
 })();

@@ -489,9 +489,11 @@
 
     {{-- Page-specific styles stack --}}
     @stack('styles')
+    {{-- DataTables UI overrides (must load after page @push styles) --}}
+    <link rel="stylesheet" href="{{ asset('css/datatables-enhanced.css') }}?v={{ @filemtime(public_path('css/datatables-enhanced.css')) ?: time() }}">
 </head>
 
-<body data-sidebartype="mini-sidebar">
+<body data-sidebartype="mini-sidebar" class="sargam-sidebar-mini-only">
     <!-- Preloader - Advanced Sargam 2.0 Loader (Bootstrap 5) -->
     <div class="sargam-loader d-flex align-items-center justify-content-center" id="sargamLoader" role="status" aria-live="polite" aria-label="Loading Sargam 2.0">
         <div class="sargam-loader-particles">
@@ -634,6 +636,12 @@
     @stack('scripts')
     @yield('scripts')
     <script>
+    if (typeof window.sargamEnhanceDataTables === 'function') {
+        window.sargamEnhanceDataTables();
+        setTimeout(window.sargamEnhanceDataTables, 250);
+    }
+    </script>
+    <script>
 document.addEventListener('DOMContentLoaded', function () {
     const toggle = document.getElementById('searchToggle');
     const input  = document.getElementById('searchInput');
@@ -711,46 +719,24 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    // Apply saved sidebar type preference; default to collapsed on first login
+    // Permanent mini rail on desktop; hover flyout only (see sidebar-navigation-fixed.js)
+    body.classList.add('sargam-sidebar-mini-only');
     try {
-        const savedType = localStorage.getItem('SidebarType');
-        if (savedType) {
-            body.setAttribute('data-sidebartype', savedType);
-        } else {
-            // Default to collapsed (mini-sidebar) for new users
-            body.setAttribute('data-sidebartype', 'mini-sidebar');
-            localStorage.setItem('SidebarType', 'mini-sidebar');
-        }
+        localStorage.setItem('SidebarType', 'mini-sidebar');
     } catch (e) {}
-
-    // Initialize collapsed state on page load
-    const sidebarType = body.getAttribute("data-sidebartype");
-
-    // Right menu strip (.sidebarmenu): always has .close in DOM; flyout visibility uses
-    // sidebar-menu-enhanced.css (:hover / :focus-within on .side-mini-panel).
+    body.setAttribute('data-sidebartype', 'mini-sidebar');
+    sidebar.classList.remove('show-sidebar');
     sidebarmenus.forEach(function(el) {
-        el.classList.add("close");
+        el.classList.add('close');
     });
-
-    if (sidebarType === "mini-sidebar") {
-        // Sidebar should be collapsed - ensure main-wrapper doesn't have show-sidebar
-        sidebar.classList.remove("show-sidebar");
-        icons.forEach(function(icon) {
-            icon.textContent = "bottom_panel_open";
-            icon.classList.remove("rotated");
-        });
-        // After initial collapse state, adjust DataTables to new layout
-        setTimeout(adjustAllDataTables, 300);
-    } else {
-        // Sidebar should be expanded (width / show-sidebar); .close on .sidebarmenu still applies until hover
-        sidebar.classList.add("show-sidebar");
-        icons.forEach(function(icon) {
-            icon.textContent = "bottom_panel_open";
-            icon.classList.add("rotated");
-        });
-        // After initial expanded state, adjust DataTables to new layout
-        setTimeout(adjustAllDataTables, 300);
+    icons.forEach(function(icon) {
+        icon.textContent = 'bottom_panel_open';
+        icon.classList.remove('rotated');
+    });
+    if (typeof window.sargamEnforcePermanentMiniSidebar === 'function') {
+        window.sargamEnforcePermanentMiniSidebar();
     }
+    setTimeout(adjustAllDataTables, 300);
 
     // Sync all icon instances with data-sidebartype changes and adjust tables after toggle
     function syncIconWithSidebar(type) {

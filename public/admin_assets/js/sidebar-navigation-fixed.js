@@ -76,6 +76,74 @@
     };
 })(typeof window !== 'undefined' ? window : this);
 
+function sargamIsDesktopFlyoutMode() {
+    return !!(window.matchMedia && window.matchMedia('(min-width: 992px)').matches);
+}
+
+function sargamEnforcePermanentMiniSidebar() {
+    var body = document.body;
+    if (!body) {
+        return;
+    }
+    body.classList.add('sargam-sidebar-mini-only');
+    if (!sargamIsDesktopFlyoutMode()) {
+        return;
+    }
+    body.setAttribute('data-sidebartype', 'mini-sidebar');
+    try {
+        localStorage.setItem('SidebarType', 'mini-sidebar');
+    } catch (e) {}
+    var mainWrapper = document.getElementById('main-wrapper');
+    if (mainWrapper) {
+        mainWrapper.classList.remove('show-sidebar');
+    }
+    document.querySelectorAll('.sidebarmenu').forEach(function (el) {
+        el.classList.add('close');
+    });
+}
+
+window.sargamEnforcePermanentMiniSidebar = sargamEnforcePermanentMiniSidebar;
+
+document.addEventListener(
+    'click',
+    function (e) {
+        if (!sargamIsDesktopFlyoutMode()) {
+            return;
+        }
+        if (!e.target.closest('.sidebartoggler, #headerCollapse')) {
+            return;
+        }
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        sargamEnforcePermanentMiniSidebar();
+    },
+    true
+);
+
+(function bootPermanentMiniSidebar() {
+    function run() {
+        sargamEnforcePermanentMiniSidebar();
+        if (window.MutationObserver && document.body) {
+            new MutationObserver(function () {
+                if (
+                    sargamIsDesktopFlyoutMode() &&
+                    document.body.getAttribute('data-sidebartype') !== 'mini-sidebar'
+                ) {
+                    sargamEnforcePermanentMiniSidebar();
+                }
+            }).observe(document.body, {
+                attributes: true,
+                attributeFilter: ['data-sidebartype'],
+            });
+        }
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', run);
+    } else {
+        run();
+    }
+})();
+
 function sargamRunSidebarNavigationInit() {
     'use strict';
 
@@ -86,6 +154,10 @@ function sargamRunSidebarNavigationInit() {
             : typeof globalThis !== 'undefined'
               ? globalThis
               : this;
+
+    function isDesktopFlyoutMode() {
+        return sargamIsDesktopFlyoutMode();
+    }
 
     if (document.documentElement.getAttribute('data-sargam-sidebar-nav-init') === '1') {
         return;
@@ -195,6 +267,16 @@ function sargamRunSidebarNavigationInit() {
         nav.style.removeProperty('display');
     }
 
+    /** Remember active module menu without showing the flyout (desktop hover-only mode). */
+    function markPaneFlyoutMenu(nav) {
+        if (!nav) {
+            return;
+        }
+        nav.classList.add('is-active');
+        nav.classList.remove('d-block', 'sargam-menu-visible', 'left-none');
+        nav.style.removeProperty('display');
+    }
+
     function setPanelFlyoutOpen(panel, open) {
         if (!panel) {
             return;
@@ -286,6 +368,7 @@ function sargamRunSidebarNavigationInit() {
             }
             hidePaneFlyoutMenus(paneRoot);
             showPaneFlyoutMenu(menuFromRoute);
+            setPanelFlyoutOpen(paneRoot, true);
             return;
         }
 
@@ -297,9 +380,21 @@ function sargamRunSidebarNavigationInit() {
 
         hidePaneFlyoutMenus(paneRoot);
         if (menus.length === 1) {
-            showPaneFlyoutMenu(menus[0]);
+            if (isDesktopFlyoutMode()) {
+                markPaneFlyoutMenu(menus[0]);
+                setPanelFlyoutOpen(paneRoot, false);
+            } else {
+                showPaneFlyoutMenu(menus[0]);
+                setPanelFlyoutOpen(paneRoot, true);
+            }
         } else if (menus.length > 0) {
-            showPaneFlyoutMenu(menus[0]);
+            if (isDesktopFlyoutMode()) {
+                markPaneFlyoutMenu(menus[0]);
+                setPanelFlyoutOpen(paneRoot, false);
+            } else {
+                showPaneFlyoutMenu(menus[0]);
+                setPanelFlyoutOpen(paneRoot, true);
+            }
         }
     }
 
@@ -326,7 +421,13 @@ function sargamRunSidebarNavigationInit() {
         hidePaneFlyoutMenus(paneRoot);
 
         const targetMenu = resolveMenuForMiniItem(paneRoot, itemId);
-        showPaneFlyoutMenu(targetMenu);
+        if (isDesktopFlyoutMode()) {
+            markPaneFlyoutMenu(targetMenu);
+            setPanelFlyoutOpen(paneRoot, false);
+        } else {
+            showPaneFlyoutMenu(targetMenu);
+            setPanelFlyoutOpen(paneRoot, !!targetMenu);
+        }
 
         if (persist && itemId) {
             try {
@@ -383,6 +484,8 @@ function sargamRunSidebarNavigationInit() {
                     return;
                 }
                 global.sargamActivateMiniNavItem(miniNav, miniNavItem, false);
+                var menu = resolveMenuForMiniItem(panel, miniNavItem.id);
+                showPaneFlyoutMenu(menu);
                 setPanelFlyoutOpen(panel, true);
             });
 
@@ -396,6 +499,7 @@ function sargamRunSidebarNavigationInit() {
                 }
                 global.requestAnimationFrame(function () {
                     if (!panelHasFlyoutHover(panel)) {
+                        hidePaneFlyoutMenus(panel);
                         setPanelFlyoutOpen(panel, false);
                     }
                 });
@@ -416,6 +520,7 @@ function sargamRunSidebarNavigationInit() {
                 }
                 global.requestAnimationFrame(function () {
                     if (!panelHasFlyoutHover(panel)) {
+                        hidePaneFlyoutMenus(panel);
                         setPanelFlyoutOpen(panel, false);
                     }
                 });
@@ -434,7 +539,11 @@ function sargamRunSidebarNavigationInit() {
 
                 global.sargamActivateMiniNavItem(container, miniNavItem, true);
                 const asideEl = miniNavItem.closest('.side-mini-panel') || aside;
-                setPanelFlyoutOpen(asideEl, true);
+                if (!isDesktopFlyout()) {
+                    const menu = resolveMenuForMiniItem(asideEl, miniNavItem.id);
+                    showPaneFlyoutMenu(menu);
+                    setPanelFlyoutOpen(asideEl, true);
+                }
             });
         });
         
@@ -739,6 +848,7 @@ function sargamRunSidebarNavigationInit() {
             detectAndActivateCurrentTab();
         }, 150);
         
+        sargamEnforcePermanentMiniSidebar();
         console.log('Sidebar navigation system initialized successfully');
         document.documentElement.setAttribute('data-sargam-sidebar-nav-init', '1');
     } catch (initErr) {

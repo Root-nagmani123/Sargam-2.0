@@ -673,7 +673,6 @@
         left: 90px !important;
         width: 275px;
         max-width: min(275px, calc(100vw - 110px));
-        height: calc(100vh - 140px);
         display: block !important;
         opacity: 0;
         visibility: hidden;
@@ -697,6 +696,24 @@
     /* Flyout panels: hidden until JS marks the active menu */
     .side-mini-panel .sidebarmenu .sargam-menu-flyout:not(.is-active):not(.d-block):not(.sargam-menu-visible) {
         display: none !important;
+    }
+
+    /* Keep the active module menu visible after click / page load (not only while hovering) */
+    .side-mini-panel .sidebarmenu .sidebar-nav.is-active.sargam-menu-visible,
+    .side-mini-panel .sidebarmenu nav.sidebar-nav.d-block.is-active,
+    .side-mini-panel.sidebar-flyout-open .sidebarmenu .sidebar-nav.is-active,
+    .side-mini-panel[data-flyout-open="true"] .sidebarmenu .sidebar-nav.is-active {
+        display: block !important;
+        left: 90px !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        transform: translateX(0) !important;
+        pointer-events: auto !important;
+    }
+
+    html[data-layout="vertical"] body[data-sidebartype="mini-sidebar"] .side-mini-panel .sidebarmenu .sidebar-nav.is-active.left-none,
+    html[data-layout="vertical"] body[data-sidebartype="mini-sidebar"] .side-mini-panel.sidebar-flyout-open .sidebarmenu .sidebar-nav.is-active.left-none {
+        left: 90px !important;
     }
 
   .side-mini-panel:has(.mini-nav .mini-nav-item:hover) .sidebarmenu,
@@ -836,5 +853,37 @@
         transform: translateX(0) !important;
         pointer-events: auto !important;
         z-index: 1060 !important;
+    }
+}
+
+/* ════════════════════════════════════════════
+   12. PERMANENT MINI RAIL + HOVER-ONLY FLYOUT
+   (body.sargam-sidebar-mini-only)
+   ════════════════════════════════════════════ */
+@media (min-width: 992px) {
+    html[data-layout="vertical"] body.sargam-sidebar-mini-only[data-sidebartype="mini-sidebar"] .page-wrapper,
+    html[data-layout="vertical"] body.sargam-sidebar-mini-only .page-wrapper {
+        margin-left: 60px !important;
+    }
+
+    @media (min-width: 1300px) {
+        html[data-layout="vertical"] body.sargam-sidebar-mini-only .page-wrapper {
+            margin-left: 60px !important;
+        }
+    }
+
+    /* Flyout hidden until hover / focus — not pinned open after route restore */
+    body.sargam-sidebar-mini-only .side-mini-panel .sidebarmenu .sidebar-nav.is-active.sargam-menu-visible,
+    body.sargam-sidebar-mini-only .side-mini-panel .sidebarmenu nav.sidebar-nav.d-block.is-active,
+    body.sargam-sidebar-mini-only .side-mini-panel .sidebarmenu .sidebar-nav.is-active {
+        opacity: 0 !important;
+        visibility: hidden !important;
+        transform: translateX(-10px) !important;
+        pointer-events: none !important;
+    }
+
+    body.sargam-sidebar-mini-only .side-mini-panel:not(:hover):not(:focus-within):not(.sidebar-flyout-open):not(.expanded):not([data-flyout-open="true"]) .sidebarmenu .sidebar-nav.is-active.sargam-menu-visible,
+    body.sargam-sidebar-mini-only .side-mini-panel:not(:hover):not(:focus-within):not(.sidebar-flyout-open):not(.expanded):not([data-flyout-open="true"]) .sidebarmenu nav.sidebar-nav.d-block.is-active {
+        display: none !important;
     }
 }

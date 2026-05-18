@@ -387,7 +387,7 @@
 
 </head>
 
-<body data-sidebartype="mini-sidebar">
+<body data-sidebartype="mini-sidebar" class="sargam-sidebar-mini-only">
     <!-- Preloader -->
     <div class="alphabet-loader" id="alphabetLoader">
         <div class="letters">
@@ -502,38 +502,23 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    // Apply saved sidebar type preference; default to collapsed on first login
+    body.classList.add('sargam-sidebar-mini-only');
     try {
-        const savedType = localStorage.getItem('SidebarType');
-        if (savedType) {
-            body.setAttribute('data-sidebartype', savedType);
-        } else {
-            // Default to collapsed (mini-sidebar) for new users
-            body.setAttribute('data-sidebartype', 'mini-sidebar');
-            localStorage.setItem('SidebarType', 'mini-sidebar');
-        }
+        localStorage.setItem('SidebarType', 'mini-sidebar');
     } catch (e) {}
-
-    // Initialize collapsed state on page load (.sidebarmenu stays .close until hover — same as admin)
-    const sidebarType = body.getAttribute("data-sidebartype");
+    body.setAttribute('data-sidebartype', 'mini-sidebar');
+    sidebar.classList.remove('show-sidebar');
     sidebarmenus.forEach(function(el) {
-        el.classList.add("close");
+        el.classList.add('close');
     });
-    if (sidebarType === "mini-sidebar") {
-        sidebar.classList.remove("show-sidebar");
-        icons.forEach(function(icon) {
-            icon.textContent = "keyboard_double_arrow_right";
-            icon.classList.remove("rotated");
-        });
-        setTimeout(adjustAllDataTables, 300);
-    } else {
-        sidebar.classList.add("show-sidebar");
-        icons.forEach(function(icon) {
-            icon.textContent = "keyboard_double_arrow_right";
-            icon.classList.add("rotated");
-        });
-        setTimeout(adjustAllDataTables, 300);
+    icons.forEach(function(icon) {
+        icon.textContent = 'keyboard_double_arrow_right';
+        icon.classList.remove('rotated');
+    });
+    if (typeof window.sargamEnforcePermanentMiniSidebar === 'function') {
+        window.sargamEnforcePermanentMiniSidebar();
     }
+    setTimeout(adjustAllDataTables, 300);
 
     // Sync all icon instances with data-sidebartype changes and adjust tables after toggle
     function syncIconWithSidebar(type) {
