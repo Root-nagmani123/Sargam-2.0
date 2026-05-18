@@ -1008,6 +1008,24 @@ document.addEventListener('DOMContentLoaded', function() {
         toastEl.addEventListener('hidden.bs.toast', function() { toastEl.remove(); });
     }
 
+    /** All selected values from a native multi-select or Choices.js instance. */
+    function getChoicesMultiValues(el) {
+        if (!el) return [];
+        if (el.choicesInstance && typeof el.choicesInstance.getValue === 'function') {
+            var raw = el.choicesInstance.getValue(true);
+            if (Array.isArray(raw)) {
+                return raw.map(function (v) { return String(v || '').trim(); }).filter(Boolean);
+            }
+            if (raw != null && raw !== '') {
+                return [String(raw).trim()];
+            }
+            return [];
+        }
+        return Array.from(el.selectedOptions || []).map(function (opt) {
+            return String(opt.value || '').trim();
+        }).filter(Boolean);
+    }
+
     function loadModalBills(page) {
         var requestedPage = parseInt(page, 10);
         modalBillsCurrentPage = isNaN(requestedPage) ? 1 : Math.max(1, requestedPage);
@@ -1016,18 +1034,20 @@ document.addEventListener('DOMContentLoaded', function() {
         var bn = document.getElementById('modal_buyer_name');
         var dateFrom = getModalDateYmd('modal_date_from');
         var dateTo = getModalDateYmd('modal_date_to');
-        var clientType = (ct && ct.value) ? ct.value : '';
-        var clientTypePk = (ctp && ctp.value) ? ctp.value : '';
+        var clientTypes = getChoicesMultiValues(ct);
+        var clientTypePks = getChoicesMultiValues(ctp);
         var perPage = parseInt((document.getElementById('modalPerPage') || {}).value || 10, 10);
         var modalSearch = (document.getElementById('modalSearch') || {}).value || '';
-        var buyerNames = bn
-            ? Array.from(bn.selectedOptions || []).map(function (o) { return String(o.value || '').trim(); }).filter(Boolean)
-            : [];
+        var buyerNames = getChoicesMultiValues(bn);
         var url = '{{ route("admin.mess.process-mess-bills-employee.modal-data") }}?date_from=' + encodeURIComponent(dateFrom) + '&date_to=' + encodeURIComponent(dateTo);
         url += '&page=' + encodeURIComponent(modalBillsCurrentPage) + '&per_page=' + encodeURIComponent(perPage);
         if (modalSearch) url += '&search=' + encodeURIComponent(modalSearch);
-        if (clientType) url += '&client_type=' + encodeURIComponent(clientType);
-        if (clientTypePk) url += '&client_type_pk=' + encodeURIComponent(clientTypePk);
+        clientTypes.forEach(function (type) {
+            url += '&client_type[]=' + encodeURIComponent(type);
+        });
+        clientTypePks.forEach(function (pk) {
+            url += '&client_type_pk[]=' + encodeURIComponent(pk);
+        });
         if (buyerNames.length) {
             buyerNames.forEach(function (name) {
                 url += '&buyer_name[]=' + encodeURIComponent(name);
@@ -1047,7 +1067,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Also refresh Buyer Name dropdown in modal based on loaded bills.
                 // IMPORTANT: Only do this when no client type is selected, otherwise it
                 // overrides the dependent "Client Type -> Buyer Name" behavior.
-                if (clientType || modalBillsCurrentPage > 1 || modalSearch) {
+                if (clientTypes.length > 0 || modalBillsCurrentPage > 1 || modalSearch) {
                     return;
                 }
                 try {
@@ -1348,13 +1368,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var modalPkToClientGroupKey = {};
 
         function fillModalClientTypePk() {
-            // Get selected slugs (now multiselect)
-            var selectedSlugs = [];
-            if (modalClientType.choicesInstance) {
-                selectedSlugs = modalClientType.choicesInstance.getValue(true);
-            } else {
-                selectedSlugs = Array.from(modalClientType.selectedOptions).map(function(opt) { return opt.value; });
-            }
+            var selectedSlugs = getChoicesMultiValues(modalClientType);
             
             modalClientTypePk.innerHTML = '';
 
@@ -1412,21 +1426,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         function fillModalBuyerNames() {
-            // Get selected slugs (now multiselect)
-            var selectedSlugs = [];
-            if (modalClientType.choicesInstance) {
-                selectedSlugs = modalClientType.choicesInstance.getValue(true);
-            } else {
-                selectedSlugs = Array.from(modalClientType.selectedOptions).map(function(opt) { return opt.value; });
-            }
-            
-            // Get selected pks (now multiselect)
-            var selectedPks = [];
-            if (modalClientTypePk.choicesInstance) {
-                selectedPks = modalClientTypePk.choicesInstance.getValue(true);
-            } else {
-                selectedPks = Array.from(modalClientTypePk.selectedOptions).map(function(opt) { return opt.value; });
-            }
+            var selectedSlugs = getChoicesMultiValues(modalClientType);
+            var selectedPks = getChoicesMultiValues(modalClientTypePk);
             
             modalBuyerName.innerHTML = '';
 
@@ -1690,8 +1691,17 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
-        modalClientType.addEventListener('change', fillModalClientTypePk);
+        function scheduleFillModalClientTypePk() {
+            setTimeout(fillModalClientTypePk, 0);
+        }
+
+        modalClientType.addEventListener('change', scheduleFillModalClientTypePk);
         modalClientTypePk.addEventListener('change', fillModalBuyerNames);
+        ['addItem', 'removeItem'].forEach(function (eventName) {
+            modalClientType.addEventListener(eventName, scheduleFillModalClientTypePk);
+        });
+
+        window.fillModalClientTypePk = fillModalClientTypePk;
 
         // Note: Initial fill is now called when modal is shown (after Choices.js init)
     })();

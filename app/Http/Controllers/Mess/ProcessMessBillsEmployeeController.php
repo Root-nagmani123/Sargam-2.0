@@ -1434,10 +1434,9 @@ class ProcessMessBillsEmployeeController extends Controller
         $dateTo = $request->filled('date_to')
             ? ($this->parseDate($request->date_to) ?? now()->endOfMonth()->format('Y-m-d'))
             : now()->endOfMonth()->format('Y-m-d');
-        $clientType = $request->filled('client_type') ? $request->client_type : null;
-        $clientTypePk = $request->filled('client_type_pk') ? $request->client_type_pk : null;
+        $clientTypes = $this->normalizeFilterArrayValues($request->input('client_type'));
+        $clientTypePks = $this->normalizeFilterArrayValues($request->input('client_type_pk'));
         $buyerNames = $this->normalizeBuyerNames($request->input('buyer_name'));
-        $buyerName = $buyerNames[0] ?? null;
         $page = max(1, (int) $request->input('page', 1));
         $perPage = (int) $request->input('per_page', 10);
         if ($perPage < 1 || $perPage > 100) {
@@ -1447,7 +1446,7 @@ class ProcessMessBillsEmployeeController extends Controller
         $unionCollation = 'utf8mb4_unicode_ci';
 
         // Query 1: Selling Voucher with Date Range
-        $dateRangeSlugs = $clientType ? [$clientType] : self::ALLOWED_CLIENT_SLUGS;
+        $dateRangeSlugs = !empty($clientTypes) ? $clientTypes : self::ALLOWED_CLIENT_SLUGS;
         $dateRangeQuery = SellingVoucherDateRangeReport::query()
             ->select([
                 'id',
@@ -1462,15 +1461,15 @@ class ProcessMessBillsEmployeeController extends Controller
             ->whereIn('client_type_slug', $dateRangeSlugs)
             ->where('status', '!=', 2); // Only unpaid bills
 
-        if ($clientTypePk) {
-            $dateRangeQuery->where('client_type_pk', $clientTypePk);
+        if (!empty($clientTypePks)) {
+            $dateRangeQuery->whereIn('client_type_pk', $clientTypePks);
         }
         $this->applyBuyerNameFilter($dateRangeQuery, $buyerNames);
         $this->applySellingVoucherDateRangeItemIssueDateFilter($dateRangeQuery, $dateFrom, $dateTo);
 
         // Query 2: Regular Selling Voucher (Kitchen Issue)
-        $kitchenClientTypes = $clientType
-            ? [$this->clientTypeSlugToKitchenId($clientType)]
+        $kitchenClientTypes = !empty($clientTypes)
+            ? array_map([$this, 'clientTypeSlugToKitchenId'], $clientTypes)
             : self::ALLOWED_KITCHEN_CLIENT_TYPES;
         $kitchenIssueQuery = KitchenIssueMaster::query()
             ->select([
@@ -1487,8 +1486,8 @@ class ProcessMessBillsEmployeeController extends Controller
             ->whereIn('kitchen_issue_type', self::KITCHEN_MESS_SELLING_ISSUE_TYPES)
             ->where('status', '!=', 2); // Only unpaid bills
 
-        if ($clientTypePk) {
-            $kitchenIssueQuery->where('client_type_pk', $clientTypePk);
+        if (!empty($clientTypePks)) {
+            $kitchenIssueQuery->whereIn('client_type_pk', $clientTypePks);
         }
         $this->applyBuyerNameFilter($kitchenIssueQuery, $buyerNames);
         if ($dateFrom) {
