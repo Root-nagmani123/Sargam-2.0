@@ -13,7 +13,7 @@
     <style>
         body {
             font-family: DejaVu Sans, Arial, sans-serif;
-            font-size: 9px;
+            font-size: 11px;
             margin: 14px 18px;
             color: #1f2937;
         }
@@ -51,7 +51,7 @@
             padding-left: 4px !important;
         }
         .title-line-1 {
-            font-size: 9px;
+            font-size: 11px;
             letter-spacing: .06em;
             text-transform: uppercase;
             color: #0d4d9a;
@@ -66,7 +66,7 @@
             line-height: 1.05;
         }
         .title-line-3 {
-            font-size: 8px;
+            font-size: 10px;
             color: #2f4d73;
             margin-top: 2px;
         }
@@ -91,19 +91,19 @@
             margin-top: 1px;
         }
         .rhs-line-hi {
-            font-size: 6px;
+            font-size: 8px;
             color: #b73a2d;
             font-weight: 600;
             margin-bottom: 1px;
         }
         .rhs-line-en {
-            font-size: 7px;
+            font-size: 9px;
             color: #b73a2d;
             font-weight: 600;
             margin-bottom: 1px;
         }
         .rhs-line-en-sub {
-            font-size: 6px;
+            font-size: 8px;
             color: #b73a2d;
         }
         .meta-row {
@@ -112,7 +112,7 @@
             border: 0;
             background: transparent;
             border-radius: 0;
-            font-size: 7.5px;
+            font-size: 11px;
             color: #374151;
         }
         .meta-row span {
@@ -122,7 +122,7 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 8px;
+            font-size: 10px;
             margin-top: 8px;
         }
         th, td {
@@ -145,13 +145,13 @@
         }
         .no-data {
             margin-top: 10px;
-            font-size: 9px;
+            font-size: 11px;
         }
         .footer {
             border-top: 1px solid #d9e1ec;
             margin-top: 8px;
             padding-top: 3px;
-            font-size: 7px;
+            font-size: 9px;
             color: #6b7280;
             text-align: center;
         }

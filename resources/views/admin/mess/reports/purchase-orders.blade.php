@@ -38,7 +38,7 @@
         </form>
 
         <div class="table-responsive">
-            <table class="table table-hover table-sm">
+            <table class="table table-hover">
                 <thead class="table-light">
                     <tr>
                         <th>PO Number</th>
