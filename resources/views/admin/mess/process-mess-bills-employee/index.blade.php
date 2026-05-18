@@ -2327,10 +2327,10 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    function formatAmountTwoDecimals(value) {
-        var num = parseFloat(value);
-        return isNaN(num) ? '0.00' : num.toFixed(2);
-    }
+    // function formatAmountTwoDecimals(value) {
+    //     var num = parseFloat(value);
+    //     return isNaN(num) ? '0.00' : num.toFixed(2);
+    // }
 
     function renderPaymentDetailsContent(data) {
         var dateStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-');
@@ -2377,9 +2377,9 @@ document.addEventListener('DOMContentLoaded', function() {
             '<div class="receipt-bottom">' +
             '<div></div>' +
             '<div class="payment-summary">' +
-            '<div class="summary-row"><span class="summary-label">Paid Amount</span><span class="summary-value">' + formatAmountTwoDecimals(data.paid_amount) + '</span></div>' +
-            '<div class="summary-row"><span class="summary-label">Total Amount</span><span class="summary-value">' + formatAmountTwoDecimals(data.total_amount) + '</span></div>' +
-            '<div class="summary-row"><span class="summary-label">Due Amount</span><span class="summary-value">' + formatAmountTwoDecimals(data.due_amount) + '</span></div>' +
+            '<div class="summary-row"><span class="summary-label">Paid Amount</span><span class="summary-value">' + (data.paid_amount || '0.0') + '</span></div>' +
+            '<div class="summary-row"><span class="summary-label">Total Amount</span><span class="summary-value">' + (data.total_amount || '0.0') + '</span></div>' +
+            '<div class="summary-row"><span class="summary-label">Due Amount</span><span class="summary-value">' + (data.due_amount || '0.0') + '</span></div>' +
             '</div>' +
             '</div>';
         return html;
@@ -2439,7 +2439,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var dueRaw = content && content.getAttribute('data-due-amount-raw');
         var due = dueRaw !== null && dueRaw !== '' ? parseFloat(dueRaw) : 0;
         var amountInput = document.getElementById('payNowAmount');
-        amountInput.value = isNaN(due) ? '' : due.toFixed(2);
+        amountInput.value = isNaN(due) ? '' : due;
         amountInput.setAttribute('max', (isNaN(due) || due < 0) ? '' : due);
         var pdModal = document.getElementById('paymentDetailsModal');
         if (pdModal && bootstrap.Modal.getInstance(pdModal)) bootstrap.Modal.getInstance(pdModal).hide();
@@ -2488,10 +2488,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!amount) { showToast('Please enter amount.', 'error'); return; }
         var amountNum = parseFloat(amount);
         if (isNaN(amountNum) || amountNum <= 0) { showToast('Please enter a valid amount.', 'error'); return; }
-        amountNum = Math.round(amountNum * 100) / 100;
-        if (amountEl) amountEl.value = amountNum.toFixed(2);
+        // amountNum = Math.round(amountNum * 100) / 100;
+        // if (amountEl) amountEl.value = amountNum.toFixed(2);
         if (amountNum > due) { showToast('Payment amount cannot exceed the balance due (₹ ' + (due.toFixed(2)) + ').', 'error'); return; }
-        var payload = { amount: amountNum.toFixed(2), payment_mode: paymentMode, payment_date: paymentDate };
+        // var payload = { amount: amountNum.toFixed(2), payment_mode: paymentMode, payment_date: paymentDate };
+        var payload = { amount: amount, payment_mode: paymentMode, payment_date: paymentDate };
         if (paymentMode === 'cheque') {
             payload.bank_name = (document.getElementById('payNowBankName') || {}).value || '';
             payload.cheque_number = (document.getElementById('payNowChequeNumber') || {}).value || '';
