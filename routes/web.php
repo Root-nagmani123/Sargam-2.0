@@ -1565,6 +1565,8 @@ Route::middleware(['auth'])->prefix('admin/estate')->name('admin.estate.')->grou
 
         Route::get('bill-report-grid/data', [EstateController::class, 'getBillReportGridData'])->name('bill-report-grid.data');
         Route::get('bill-report-grid', function () {
+            abort_unless(hasRole('Estate'), 403, 'You do not have permission to access this estate section.');
+
             return view('admin.estate.estate_bill_report_grid');
         })->name('bill-report-grid');
 

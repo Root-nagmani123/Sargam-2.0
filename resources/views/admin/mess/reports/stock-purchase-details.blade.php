@@ -62,15 +62,15 @@
                 <div class="row g-3">
                     <div class="col-12 col-sm-6 col-xl-3">
                         <label class="form-label small fw-semibold text-uppercase text-body-secondary mb-1">From Date</label>
-                        <input type="date" name="from_date" class="form-control rounded-2" value="{{ $fromDate }}" required>
+                        <input type="date" name="from_date" class="form-control" value="{{ $fromDate }}" required>
                     </div>
                     <div class="col-12 col-sm-6 col-xl-3">
                         <label class="form-label small fw-semibold text-uppercase text-body-secondary mb-1">To Date</label>
-                        <input type="date" name="to_date" class="form-control rounded-2" value="{{ $toDate }}" required>
+                        <input type="date" name="to_date" class="form-control" value="{{ $toDate }}" required>
                     </div>
                     <div class="col-12 col-sm-6 col-xl-3">
                         <label class="form-label small fw-semibold text-uppercase text-body-secondary mb-1">Vendor Name</label>
-                        <select name="vendor_id[]" class="form-select form-select-sm rounded-2 choices-select" multiple data-placeholder="All Vendors">
+                        <select name="vendor_id[]" class="form-select choices-select" multiple data-placeholder="All Vendors">
                             @foreach($vendors as $vendor)
                                 <option value="{{ $vendor->id }}" @selected(in_array((int) $vendor->id, $selectedVendorIds, true))>{{ $vendor->name }}</option>
                             @endforeach
@@ -78,7 +78,7 @@
                     </div>
                     <div class="col-12 col-sm-6 col-xl-3">
                         <label class="form-label small fw-semibold text-uppercase text-body-secondary mb-1">Store Name</label>
-                        <select name="store_id[]" class="form-select form-select-sm rounded-2 choices-select" multiple data-placeholder="All Stores">
+                        <select name="store_id[]" class="form-select choices-select" multiple data-placeholder="All Stores">
                             @foreach($stores as $store)
                                 <option value="{{ $store->id }}" @selected(in_array((int) $store->id, $selectedStoreIds, true))>{{ $store->store_name }}</option>
                             @endforeach
@@ -86,16 +86,16 @@
                     </div>
                 </div>
                 <div class="d-flex flex-wrap align-items-center gap-2 pt-3 mt-3 border-top border-light-subtle">
-                    <button type="submit" class="btn btn-primary btn-sm rounded-2 d-inline-flex align-items-center gap-1 px-3">
+                    <button type="submit" class="btn btn-primary btn-sm rounded-1 d-inline-flex align-items-center gap-1 px-3">
                         <span class="material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">filter_list</span>
                         <span>Apply filters</span>
                     </button>
-                    <a href="{{ route('admin.mess.reports.stock-purchase-details') }}" class="btn btn-outline-secondary btn-sm rounded-2 d-inline-flex align-items-center gap-1 px-3">
+                    <a href="{{ route('admin.mess.reports.stock-purchase-details') }}" class="btn btn-outline-secondary btn-sm rounded-1 d-inline-flex align-items-center gap-1 px-3">
                         <span class="material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">refresh</span>
                         <span>Reset</span>
                     </a>
                     <div class="vr d-none d-md-block text-secondary mx-1 align-self-stretch my-1" role="separator" aria-hidden="true"></div>
-                    <div class="btn-group shadow-sm rounded-2" role="group" aria-label="Print or download PDF">
+                    <div class="btn-group shadow-sm rounded-1" role="group" aria-label="Print or download PDF">
                         <button type="button" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center justify-content-center gap-1 px-3 rounded-0 rounded-start-2" onclick="printStockPurchaseTable()" title="Print report or choose Save as PDF in print dialog">
                             <span class="material-symbols-rounded" style="font-size: 18px; line-height: 1;" aria-hidden="true">print</span>
                             <span>Print</span>
@@ -105,7 +105,7 @@
                             <span>PDF</span>
                         </a>
                     </div>
-                    <a href="{{ route('admin.mess.reports.stock-purchase-details.excel', request()->query()) }}" class="btn btn-success btn-sm rounded-2 d-inline-flex align-items-center gap-1 px-3" title="Export to Excel">
+                    <a href="{{ route('admin.mess.reports.stock-purchase-details.excel', request()->query()) }}" class="btn btn-success btn-sm rounded-1 d-inline-flex align-items-center gap-1 px-3" title="Export to Excel">
                         <span class="material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">table_view</span>
                         <span>Export Excel</span>
                     </a>
@@ -126,17 +126,17 @@
                             <h4 class="fw-bold mb-0 text-body text-uppercase mess-title-tracking">Stock Purchase Details</h4>
                         </div>
                         <div class="d-flex flex-column flex-sm-row flex-wrap align-items-center justify-content-center gap-2 mb-2">
-                            <span class="badge rounded-pill bg-white text-body-emphasis fw-normal px-3 py-2 shadow-sm border">
+                            <span class="badge rounded-1 bg-white text-body-emphasis fw-normal px-3 py-2 shadow-sm border">
                                 <span class="material-symbols-rounded align-middle me-1" style="font-size:1rem;" aria-hidden="true">date_range</span>
                                 {{ date('d-F-Y', strtotime($fromDate)) }} to {{ date('d-F-Y', strtotime($toDate)) }}
                             </span>
                         </div>
                         <div class="d-flex flex-column flex-sm-row flex-wrap align-items-center justify-content-center gap-2">
-                            <span class="badge rounded-pill bg-primary-subtle text-primary-emphasis border border-primary-subtle fw-normal px-3 py-2 shadow-sm text-wrap text-start" style="max-width: min(100%, 42rem);">
+                            <span class="badge rounded-1 bg-primary-subtle text-primary-emphasis border border-primary-subtle fw-normal px-3 py-2 shadow-sm text-wrap text-start" style="max-width: min(100%, 42rem);">
                                 <span class="material-symbols-rounded align-middle me-1" style="font-size:1rem;" aria-hidden="true">person</span>
                                 <span class="fw-semibold">{{ $stockPurchasePrintVendorHeaderLabel }}</span> {{ $stockPurchasePrintVendorLine }}
                             </span>
-                            <span class="badge rounded-pill bg-success-subtle text-success-emphasis border border-success-subtle fw-normal px-3 py-2 shadow-sm">
+                            <span class="badge rounded-1 bg-success-subtle text-success-emphasis border border-success-subtle fw-normal px-3 py-2 shadow-sm">
                                 <span class="material-symbols-rounded align-middle me-1" style="font-size:1rem;" aria-hidden="true">store</span>
                                 <span class="fw-semibold">Store:</span> {{ $stockPurchasePrintStoreDetails }}
                             </span>
@@ -145,7 +145,7 @@
 
                     <!-- Table: grouped by bill -->
                     <div class="table-responsive rounded-3 border border-light-subtle shadow-sm bg-white stock-purchase-table-wrapper" role="region" aria-label="Stock purchase table" tabindex="0">
-                        <table class="table table-sm table-bordered align-middle mb-0 stock-purchase-table" style="width:100%;">
+                        <table class="table table-bordered align-middle mb-0 stock-purchase-table" style="width:100%;">
                             <thead class="stock-purchase-thead">
                                 <tr>
                                     <th class="spr-th">Item</th>
@@ -231,7 +231,7 @@
                                                 <span class="material-symbols-rounded d-block mx-auto mb-2" style="font-size:2.25rem;color:#94a3b8;" aria-hidden="true">shopping_cart_off</span>
                                                 <h6 class="fw-semibold text-body-secondary mb-2">No purchase details found</h6>
                                                 <p class="small text-body-tertiary mb-3">No records match the selected period, vendor, and store filters.</p>
-                                                <span class="badge bg-body-secondary text-body-emphasis rounded-pill px-3 py-2 fw-normal">
+                                                <span class="badge bg-body-secondary text-body-emphasis rounded-1 px-3 py-2 fw-normal">
                                                     <span class="material-symbols-rounded align-middle me-1" style="font-size:0.875rem;" aria-hidden="true">lightbulb</span>
                                                     Try adjusting date range or filter criteria
                                                 </span>
@@ -403,13 +403,13 @@ function printStockPurchaseTable() {
 '        }\n' +
 '        .print-header img { height: 48px; width: auto; object-fit: contain; }\n' +
 '        .header-text { flex: 1; }\n' +
-'        .header-text .line1 { font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; color: #004a93; font-weight: 600; margin: 0; }\n' +
-'        .header-text .line2 { font-size: 14px; font-weight: 700; text-transform: uppercase; color: #1a1a1a; margin: 2px 0 0; }\n' +
-'        .header-text .line3 { font-size: 9px; color: #555; margin: 1px 0 0; }\n' +
+'        .header-text .line1 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #004a93; font-weight: 600; margin: 0; }\n' +
+'        .header-text .line2 { font-size: 16px; font-weight: 700; text-transform: uppercase; color: #1a1a1a; margin: 2px 0 0; }\n' +
+'        .header-text .line3 { font-size: 11px; color: #555; margin: 1px 0 0; }\n' +
 '\n' +
 '        /* ── Report Title & Meta ── */\n' +
 '        .report-title-block { text-align: center; margin-bottom: 10px; }\n' +
-'        .report-title-block h2 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin: 0 0 4px; color: #1a1a1a; }\n' +
+'        .report-title-block h2 { font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin: 0 0 4px; color: #1a1a1a; }\n' +
 '        .date-pill {\n' +
 '            display: inline-block;\n' +
 '            background: #004a93;\n' +

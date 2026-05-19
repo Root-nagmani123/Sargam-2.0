@@ -16,6 +16,14 @@
                         <input type="month" class="form-control" id="bill_month" name="bill_month" value="{{ date('Y-m') }}" max="{{ date('Y-m') }}" required>
                     </div>
                 </div>
+                <div class="col-md-3 mt-3 mt-md-0">
+                    <label for="employee_type_filter" class="form-label">Employee Type</label>
+                    <select class="form-select rounded-1" id="employee_type_filter" name="employee_type_filter">
+                        <option value="all" selected>All</option>
+                        <option value="lbsnaa">LBSNAA</option>
+                        <option value="other">OTHER</option>
+                    </select>
+                </div>
                 <div class="col-md-2 mt-3 mt-md-0">
                     <button type="button" id="showPendingBtn" class="btn btn-primary rounded-1 px-3 w-100">Show</button>
                 </div>
@@ -33,6 +41,7 @@
                     <thead>
                         <tr>
                             <th>S.No.</th>
+                            <th>Employee Type</th>
                             <th>Name</th>
                             <th>Designation</th>
                             <th>House No.</th>
@@ -42,7 +51,7 @@
                     </thead>
                     <tbody>
                         <tr id="initialInfoRow">
-                            <td colspan="6" class="text-center text-muted">Select Bill Month and click Show to load pending meter readings.</td>
+                            <td colspan="7" class="text-center text-muted">Select Bill Month and click Show to load pending meter readings.</td>
                         </tr>
                     </tbody>
                 </table>
@@ -75,13 +84,14 @@ $(document).ready(function() {
 
         var parts = billMonth.split('-');
         var billYear = parts.length >= 1 ? parts[0] : '';
+        var employeeType = $('#employee_type_filter').val() || 'all';
         destroyDataTable();
-        $(tableSelector + ' tbody').html('<tr><td colspan="6" class="text-center">Loading...</td></tr>');
+        $(tableSelector + ' tbody').html('<tr><td colspan="7" class="text-center">Loading...</td></tr>');
 
         $.ajax({
             url: '{{ route("admin.estate.reports.pending-meter-reading.data") }}',
             type: 'GET',
-            data: { bill_month: billMonth, bill_year: billYear },
+            data: { bill_month: billMonth, bill_year: billYear, employee_type: employeeType },
             dataType: 'json',
             success: function(res) {
                 var tbody = $(tableSelector + ' tbody');
@@ -92,8 +102,9 @@ $(document).ready(function() {
                         tbody.append(
                             '<tr>' +
                                 '<td>' + (row.sno || (i + 1)) + '</td>' +
-                                '<td>' + (row.name || 'N/A') + '</td>' +
                                 '<td>' + (row.employee_type || 'N/A') + '</td>' +
+                                '<td>' + (row.name || 'N/A') + '</td>' +
+                                '<td>' + (row.designation || 'N/A') + '</td>' +
                                 '<td>' + (row.house_no || 'N/A') + '</td>' +
                                 '<td>' + (row.meter_reading_date || '-') + '</td>' +
                                 '<td>' + (row.last_meter_reading || 'N/A') + '</td>' +
@@ -129,7 +140,7 @@ $(document).ready(function() {
                     var $filter = $wrapper.find('.dataTables_filter');
                     $filter.addClass('d-flex align-items-center justify-content-end flex-wrap gap-2');
 
-                    var colLabels = ['S.No.', 'Name', 'Designation', 'House No.', 'Meter Reading Date', 'Last Meter Reading'];
+                    var colLabels = ['S.No.', 'Employee Type', 'Name', 'Designation', 'House No.', 'Meter Reading Date', 'Last Meter Reading'];
                     var $colDropdown = $('<div class="dropdown d-inline-block" data-bs-auto-close="outside">' +
                         '<button class="btn btn-outline-secondary btn-sm rounded-1 dropdown-toggle" type="button" id="pendingMeterColDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Show/Hide columns"><i class="material-icons material-symbols-rounded" style="font-size:18px;vertical-align:middle">view_column</i> Columns</button>' +
                         '<ul class="dropdown-menu dropdown-menu-end py-2" aria-labelledby="pendingMeterColDropdown" id="pendingMeterColMenu"></ul></div>');
@@ -195,12 +206,12 @@ $(document).ready(function() {
                         setTimeout(function() { win.focus(); win.print(); }, 250);
                     });
                 } else {
-                    tbody.append('<tr id="noDataRow"><td colspan="6" class="text-center text-muted">' + (res.message || 'No pending meter readings for the selected month.') + '</td></tr>');
+                    tbody.append('<tr id="noDataRow"><td colspan="7" class="text-center text-muted">' + (res.message || 'No pending meter readings for the selected month.') + '</td></tr>');
                 }
             },
             error: function(xhr) {
                 var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Failed to load data.';
-                $(tableSelector + ' tbody').empty().append('<tr><td colspan="6" class="text-center text-danger">' + msg + '</td></tr>');
+                $(tableSelector + ' tbody').empty().append('<tr><td colspan="7" class="text-center text-danger">' + msg + '</td></tr>');
             }
         });
     }

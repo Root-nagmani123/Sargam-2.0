@@ -411,10 +411,10 @@ $(document).ready(function() {
                         '</td>' +
                         '<td class="other-dual-col other-dual-newmeter-col">' +
                             '<div class="other-dual-seg" data-slot="1">' +
-                            '<input type="text" class="form-control form-control-sm new-meter-no" name="readings['+i0+'][new_meter_no]" value="'+ escAttr(nm1) +'" placeholder="Enter new meter no." inputmode="numeric" maxlength="50">' +
+                            '<input type="text" class="form-control form-control-sm new-meter-no" name="readings['+i0+'][new_meter_no]" value="'+ escAttr(nm1) +'" placeholder="Enter new meter no." inputmode="numeric" maxlength="50" data-old-meter-no="'+ escAttr(m1.old_meter_no || '') +'">' +
                             '</div>' +
                             '<div class="other-dual-seg" data-slot="2">' +
-                            '<input type="text" class="form-control form-control-sm new-meter-no" name="readings['+i1+'][new_meter_no]" value="'+ escAttr(nm2) +'" placeholder="Enter new meter no." inputmode="numeric" maxlength="50">' +
+                            '<input type="text" class="form-control form-control-sm new-meter-no" name="readings['+i1+'][new_meter_no]" value="'+ escAttr(nm2) +'" placeholder="Enter new meter no." inputmode="numeric" maxlength="50" data-old-meter-no="'+ escAttr(m2.old_meter_no || '') +'">' +
                             '</div>' +
                         '</td>' +
                         '<td class="other-dual-col other-dual-reading-col">' +
@@ -460,7 +460,7 @@ $(document).ready(function() {
                     '<td class="text-nowrap">'+ escAttr(row.last_reading_date || 'N/A') +'</td>' +
                     '<td>'+ escAttr(row.old_meter_no || 'N/A') +'</td>' +
                     '<td>'+ escAttr(row.electric_meter_reading ?? 'N/A') +'</td>' +
-                    '<td><input type="text" class="form-control form-control-sm new-meter-no" name="readings['+idx+'][new_meter_no]" value="'+ escAttr(newMeterNo) +'" placeholder="Enter new meter no." inputmode="numeric" maxlength="50"></td>' +
+                    '<td><input type="text" class="form-control form-control-sm new-meter-no" name="readings['+idx+'][new_meter_no]" value="'+ escAttr(newMeterNo) +'" placeholder="Enter new meter no." inputmode="numeric" maxlength="50" data-old-meter-no="'+ escAttr(oldMeterNoStr) +'"></td>' +
                     '<td><input type="number" class="form-control form-control-sm new-meter-reading" name="readings['+idx+'][curr_month_elec_red]" value="'+ escAttr(newMeterReading) +'" min="0" placeholder="Enter" step="1" inputmode="numeric">' +
                     '<input type="hidden" name="readings['+idx+'][pk]" value="'+row.pk+'">' +
                     '<input type="hidden" name="readings['+idx+'][meter_slot]" value="'+ meterSlot +'"></td>' +
@@ -503,6 +503,34 @@ $(document).ready(function() {
         return (lastVal !== '' && lastVal !== undefined && !isNaN(parseFloat(lastVal))) ? parseFloat(lastVal) : null;
     }
 
+    function getNewMeterInputForReading($inp) {
+        const $row = $inp.closest('tr');
+        if ($row.hasClass('other-dual-stacked')) {
+            const slot = $inp.closest('.other-dual-seg').data('slot');
+            if (slot !== undefined && slot !== null) {
+                return $row.find('.other-dual-newmeter-col .other-dual-seg[data-slot="' + slot + '"] .new-meter-no');
+            }
+        }
+        return $row.find('.new-meter-no').first();
+    }
+
+    function isMeterNoChangedForReading($inp) {
+        const $meterInp = getNewMeterInputForReading($inp);
+        const oldNo = String($meterInp.data('old-meter-no') || '').trim();
+        if (!oldNo || oldNo === 'N/A') return false;
+        const newNo = String($meterInp.val() || '').trim();
+        if (!newNo) return false;
+        return newNo !== oldNo;
+    }
+
+    function isReadingBelowMinAllowed($inp, currReading) {
+        if (currReading === null || isNaN(currReading)) return false;
+        const minAllowed = getMinAllowedForReadingInput($inp);
+        if (minAllowed === null || currReading >= minAllowed) return false;
+        if (currReading === 0 && isMeterNoChangedForReading($inp)) return false;
+        return true;
+    }
+
     $('#meterReadingSaveForm').on('submit', function(e) {
         const billMonthVal = $('#bill_month').val();
         if (!billMonthVal) {
@@ -533,8 +561,7 @@ $(document).ready(function() {
                 const $input = $(this);
                 const currVal = $input.val();
                 const currReading = (currVal !== '' && currVal !== null && !isNaN(parseFloat(currVal))) ? parseFloat(currVal) : null;
-                const minAllowed = getMinAllowedForReadingInput($input);
-                if (minAllowed !== null && currReading !== null && currReading < minAllowed) {
+                if (!isNaN(currReading) && isReadingBelowMinAllowed($input, currReading)) {
                     hasInvalidReading = true;
                     $input.trigger('focus');
                     return false;
@@ -547,7 +574,7 @@ $(document).ready(function() {
             const now = Date.now();
             if ((now - lastInvalidReadingAlertAt) > 800) {
                 lastInvalidReadingAlertAt = now;
-                alert('New Meter Reading cannot be less than the minimum allowed baseline for this row (same as server validation).');
+                alert('New Meter Reading cannot be less than the minimum allowed baseline for this row.');
             }
             return;
         }
@@ -635,11 +662,9 @@ $(document).ready(function() {
         const $inp = $(this);
         const currVal = $inp.val();
         const currReading = (currVal !== '' && currVal !== null && !isNaN(parseFloat(currVal))) ? parseFloat(currVal) : null;
-        const minAllowed = getMinAllowedForReadingInput($inp);
-
-        if (minAllowed !== null && currReading !== null && currReading < minAllowed) {
+        if (isReadingBelowMinAllowed($inp, currReading)) {
             lastInvalidReadingAlertAt = Date.now();
-            alert('New Meter Reading cannot be less than the minimum allowed baseline for this row (same as server validation).');
+            alert('New Meter Reading cannot be less than the minimum allowed baseline for this row.');
         }
     });
 

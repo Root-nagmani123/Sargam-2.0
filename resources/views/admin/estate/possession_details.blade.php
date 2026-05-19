@@ -7,7 +7,7 @@
         && (hasRole('Admin') || hasRole('Super Admin') || hasRole('Estate'));
     $estateSelfQuery = $estateSelfHomeTab ? ['scope' => 'self'] : [];
 @endphp
-@section($estateSelfHomeTab ? 'content' : 'setup_content')
+@section($estateSelfHomeTab ? 'content' : 'content')
 <div class="container-fluid py-4">
     <x-breadcrum title="Possession Details"></x-breadcrum>
     <x-estate-workflow-stepper current="possession-details" />

@@ -10,7 +10,7 @@
     </div>
     <div class="card-body">
         <div class="table-responsive">
-            <table class="table table-hover table-sm">
+            <table class="table table-hover">
                 <thead class="table-light">
                     <tr>
                         <th>Store Name</th>

@@ -147,12 +147,14 @@
             margin-top: 0.5rem;
             border-radius: .5rem;
             border: 1px solid #dee2e6;
-            overflow: hidden;
+            overflow: visible;
         }
         .bill-table {
             width: 100%;
             border-collapse: collapse;
             font-size: 0.85rem;
+            table-layout: auto;
+            word-wrap: break-word;
         }
         .bill-table thead {
             background-color: #f3f6fb;
@@ -233,8 +235,9 @@
         }
         @media print {
             body {
-                padding: 10mm 12mm;
+                padding: 5mm;
                 max-width: 100%;
+                font-size: 11px;
             }
             .action-bar {
                 display: none !important;
@@ -242,9 +245,20 @@
             .lbsnaa-header {
                 margin-bottom: .5rem;
             }
+            .bill-table-wrapper {
+                overflow: visible;
+                border-radius: 0;
+            }
+            .bill-table {
+                font-size: 0.75rem;
+            }
+            .bill-table th,
+            .bill-table td {
+                padding: 0.3rem 0.4rem;
+            }
             @page {
-                size: A4 portrait;
-                margin: 10mm;
+                size: A4 landscape;
+                margin: 8mm;
             }
         }
     </style>
