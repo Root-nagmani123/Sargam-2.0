@@ -59,9 +59,9 @@
     border-radius: 6px;
     font-weight: 600;
     font-size: 0.875rem;
-    border: 1px solid #dee2e6;
+    border: 1px solid transparent;
     background: #fff;
-    color: #212529;
+    color: #004a93;
     cursor: pointer;
     transition: all 0.2s ease;
 }

@@ -30,6 +30,11 @@
     $serverSide = isset($serverSide) ? (bool) $serverSide : false;
     $ajaxUrlBase = isset($ajaxUrlBase) ? (string) $ajaxUrlBase : '';
     $serverSideColumnDefs = isset($serverSideColumnDefs) && is_array($serverSideColumnDefs) ? $serverSideColumnDefs : [];
+    $dtWrapperClass = isset($dtWrapperClass) ? trim((string) $dtWrapperClass) : '';
+    $dom = $dom ?? '<"row align-items-center mb-2"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row align-items-center mt-2"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>';
+    $lengthMenuLabel = $lengthMenuLabel ?? 'Show _MENU_ entries';
+    $infoPattern = $infoPattern ?? ('Showing _START_ to _END_ of _TOTAL_ ' . $infoLabel);
+    $infoEmptyPattern = $infoEmptyPattern ?? ('No ' . $infoLabel);
 @endphp
 @if($searchHighlight)
 @push('styles')
@@ -263,18 +268,23 @@ document.addEventListener('DOMContentLoaded', function() {
         responsive: {{ $responsive ? 'true' : 'false' }},
         scrollX: {{ $scrollX ? 'true' : 'false' }},
         pagingType: 'full_numbers',
-        dom: '<"row align-items-center mb-2"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row align-items-center mt-2"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+        dom: {!! json_encode($dom) !!},
         language: {
             search: '',
             searchPlaceholder: '{{ addslashes($searchPlaceholder) }}',
-            lengthMenu: 'Show _MENU_ entries',
-            info: 'Showing _START_ to _END_ of _TOTAL_ {{ $infoLabel }}',
-            infoEmpty: 'No {{ $infoLabel }}',
-            emptyTable: 'No {{ $infoLabel }}',
+            lengthMenu: {!! json_encode($lengthMenuLabel) !!},
+            info: {!! json_encode($infoPattern) !!},
+            infoEmpty: {!! json_encode($infoEmptyPattern) !!},
+            emptyTable: {!! json_encode($infoEmptyPattern) !!},
             infoFiltered: '(filtered from _MAX_ total)',
-            paginate: { first: '', last: '', next: '', previous: '' }
+            paginate: { first: '', last: '', next: '›', previous: '‹' }
         },
         columnDefs: columnDefsMerged,
+        initComplete: function(settings) {
+            @if($dtWrapperClass !== '')
+            $(settings.nTableWrapper).addClass({!! json_encode($dtWrapperClass) !!});
+            @endif
+        },
         drawCallback: function(settings) {
             if (typeof window.adjustAllDataTables === 'function') {
                 try { window.adjustAllDataTables(); } catch (e) {}
@@ -299,18 +309,23 @@ document.addEventListener('DOMContentLoaded', function() {
         responsive: {{ $responsive ? 'true' : 'false' }},
         scrollX: {{ $scrollX ? 'true' : 'false' }},
         pagingType: 'full_numbers',
-        dom: '<"row align-items-center mb-2"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row align-items-center mt-2"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+        dom: {!! json_encode($dom) !!},
         language: {
             search: '',
             searchPlaceholder: '{{ addslashes($searchPlaceholder) }}',
-            lengthMenu: 'Show _MENU_ entries',
-            info: 'Showing _START_ to _END_ of _TOTAL_ {{ $infoLabel }}',
-            infoEmpty: 'No {{ $infoLabel }}',
-            emptyTable: 'No {{ $infoLabel }}',
+            lengthMenu: {!! json_encode($lengthMenuLabel) !!},
+            info: {!! json_encode($infoPattern) !!},
+            infoEmpty: {!! json_encode($infoEmptyPattern) !!},
+            emptyTable: {!! json_encode($infoEmptyPattern) !!},
             infoFiltered: '(filtered from _MAX_ total)',
-            paginate: { first: '', last: '', next: '', previous: '' }
+            paginate: { first: '', last: '', next: '›', previous: '‹' }
         },
         columnDefs: columnDefsMerged,
+        initComplete: function(settings) {
+            @if($dtWrapperClass !== '')
+            $(settings.nTableWrapper).addClass({!! json_encode($dtWrapperClass) !!});
+            @endif
+        },
         drawCallback: function(settings) {
             if (typeof window.adjustAllDataTables === 'function') {
                 try { window.adjustAllDataTables(); } catch (e) {}
