@@ -930,11 +930,21 @@ $(document).ready(function () {
                 $('#upload_import').prop('disabled', true).html('<i class="mdi mdi-loading mdi-spin"></i> Uploading...');
             },
             success: function (response) {
+                if (response.status !== 'success') {
+                    alert(response.message || 'Import failed.');
+                    return;
+                }
 
-                alert('File imported successfully!');
+                alert(response.message || 'File imported successfully!');
+
+                if ($.fn.DataTable && $.fn.DataTable.isDataTable('#group-mapping-table')) {
+                    $('#group-mapping-table').DataTable().ajax.reload(null, false);
+                } else {
+                    location.reload();
+                }
+
                 $('#importModal').modal('hide');
                 resetImportModal();
-                // location.reload();
             },
             error: function (xhr) {
                 console.log('Error response:', xhr);
