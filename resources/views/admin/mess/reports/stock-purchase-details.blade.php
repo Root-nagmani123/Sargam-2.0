@@ -148,7 +148,7 @@
                         <table class="table table-bordered align-middle mb-0 stock-purchase-table" style="width:100%;">
                             <thead class="stock-purchase-thead">
                                 <tr>
-                                    <th class="spr-th text-center" style="width:4rem;">S. No.</th>
+                                    @include('admin.mess.reports.partials.report-sno-th', ['class' => 'spr-th'])
                                     <th class="spr-th">Item</th>
                                     <th class="spr-th">Item Code</th>
                                     <th class="spr-th text-end">Unit</th>
@@ -198,7 +198,7 @@
                                                 $grandTotalAmount += $total;
                                             @endphp
                                             <tr class="spr-item-row">
-                                                <td class="text-center text-body-secondary small">{{ $sprReportLineNo }}</td>
+                                                <td class="text-center text-body-secondary small mess-report-sno-cell">@include('admin.mess.reports.partials.report-serial-number', ['start' => $sprReportLineNo, 'index' => 0])</td>
                                                 <td class="fw-medium">{{ $item->itemSubcategory->item_name ?? $item->itemSubcategory->subcategory_name ?? $item->itemSubcategory->name ?? 'N/A' }}</td>
                                                 <td class="text-body-secondary">{{ $item->itemSubcategory->item_code ?? '—' }}</td>
                                                 <td class="text-end text-body-secondary">{{ $item->unit ?? '—' }}</td>

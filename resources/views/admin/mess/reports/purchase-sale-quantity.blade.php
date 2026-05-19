@@ -1,6 +1,7 @@
 @extends('admin.layouts.master')
 @section('title', 'Item Report')
 @section('content')
+@include('admin.mess.reports.partials.report-styles')
 @php
     /** @var array<int> $storeIds */
     $storeIds = isset($storeIds) ? $storeIds : [];
@@ -249,8 +250,8 @@
                             <table class="table align-middle mb-0 psq-table">
                                 <thead>
                                     <tr>
-                                        <th class="border-0 py-3 text-center" style="width:60px;">S. No.</th>
-                                        <th class="border-0 py-3">Item Name</th>
+                                        @include('admin.mess.reports.partials.report-sno-th', ['class' => 'border-0 py-3 text-center'])
+                                        @include('admin.mess.reports.partials.report-sort-th', ['sortKey' => 'item_name', 'label' => 'Item Name', 'defaultDir' => 'asc', 'defaultSort' => 'item_name', 'class' => 'border-0 py-3'])
                                         <th class="border-0 py-3" style="width:80px;">Unit</th>
                                         <th class="text-end border-0 py-3">Total Purchase Qty</th>
                                         <th class="text-end border-0 py-3">Avg Purchase Price</th>
@@ -262,7 +263,7 @@
                                     @php $psqItemPaginator = $section['paginator'] ?? null; @endphp
                                     @forelse($section['reportData'] as $index => $row)
                                         <tr class="psq-data-row">
-                                            <td class="text-center text-body-secondary small fw-medium">@include('admin.mess.reports.partials.report-serial-number', ['paginator' => $psqItemPaginator ?? ($section['paginator'] ?? null), 'index' => $index])</td>
+                                            <td class="text-center text-body-secondary small fw-medium mess-report-sno-cell">@include('admin.mess.reports.partials.report-serial-number', ['paginator' => $psqItemPaginator ?? ($section['paginator'] ?? null), 'index' => $index])</td>
                                             <td class="fw-medium">{{ $row['item_name'] }}</td>
                                             <td><span class="badge bg-body-secondary text-body-emphasis rounded-1 px-2">{{ $row['unit'] }}</span></td>
                                             <td class="text-end">{{ number_format($row['purchase_qty'], 2) }}</td>
@@ -319,7 +320,7 @@
                                     <table class="table table-hover align-middle mb-0 psq-table">
                                         <thead>
                                             <tr>
-                                                <th class="border-0 py-3 text-center" style="width: 60px;">S. No.</th>
+                                                @include('admin.mess.reports.partials.report-sno-th', ['class' => 'border-0 py-3 text-center'])
                                                 <th class="border-0 py-3">Item Name</th>
                                                 <th class="border-0 py-3" style="width:80px;">Unit</th>
                                                 <th class="text-end border-0 py-3">Total Purchase Qty</th>
@@ -332,7 +333,7 @@
                                             @foreach($group['items'] as $idx => $row)
                                                 @php $psqGroupedSerial++; @endphp
                                                 <tr class="psq-data-row">
-                                                    <td class="text-center text-body-secondary small fw-medium">@include('admin.mess.reports.partials.report-serial-number', ['start' => $psqGroupedSerial, 'index' => 0])</td>
+                                                    <td class="text-center text-body-secondary small fw-medium mess-report-sno-cell">@include('admin.mess.reports.partials.report-serial-number', ['start' => $psqGroupedSerial, 'index' => 0])</td>
                                                     <td class="fw-medium">{{ $row['item_name'] }}</td>
                                                     <td><span class="badge bg-body-secondary text-body-emphasis rounded-1 px-2">{{ $row['unit'] }}</span></td>
                                                     <td class="text-end">{{ number_format($row['purchase_qty'], 2) }}</td>

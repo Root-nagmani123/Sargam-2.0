@@ -52,8 +52,8 @@
             </colgroup>
             <thead class="ssr-thead">
                 <tr>
-                    <th rowspan="2" class="sss-th-fixed text-center align-middle text-nowrap">SR.<br>No.</th>
-                    <th rowspan="2" class="sss-th-fixed text-start align-middle">Item Name</th>
+                    @include('admin.mess.reports.partials.report-sno-th', ['rowspan' => 2, 'class' => 'sss-th-fixed align-middle'])
+                    @include('admin.mess.reports.partials.report-sort-th', ['sortKey' => 'item_name', 'label' => 'Item Name', 'defaultDir' => 'asc', 'defaultSort' => 'item_name', 'rowspan' => 2, 'class' => 'sss-th-fixed text-start align-middle'])
                     <th rowspan="2" class="sss-th-fixed text-center align-middle text-nowrap">Unit</th>
                     <th colspan="3" class="sss-grp ssr-grp-opening text-center align-middle">Opening</th>
                     <th colspan="3" class="sss-grp ssr-grp-purchase text-center align-middle">Purchase</th>
@@ -82,7 +82,7 @@
                 @endphp
                 @forelse($rows as $index => $item)
                     <tr class="sss-body-row">
-                        <td class="text-center text-nowrap ssr-num ssr-cell-fixed">@include('admin.mess.reports.partials.report-serial-number', ['paginator' => $paginator, 'index' => $index])</td>
+                        <td class="text-center text-nowrap ssr-num ssr-cell-fixed mess-report-sno-cell">@include('admin.mess.reports.partials.report-serial-number', ['paginator' => $paginator, 'index' => $index])</td>
                         <td class="text-start fw-medium ssr-item-name ssr-cell-fixed">{{ $item['item_name'] }}</td>
                         <td class="text-center text-nowrap ssr-num ssr-cell-fixed">{{ $item['unit'] ?? '—' }}</td>
                         <td class="text-end text-nowrap ssr-num ssr-grp-opening {{ $item['opening_qty'] < 0 ? 'ssr-negative' : '' }}">{{ number_format($item['opening_qty'], 2) }}</td>

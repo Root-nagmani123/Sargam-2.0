@@ -13,4 +13,4 @@
         $serialStart = (int) $paginator->firstItem();
     }
 @endphp
-{{ $serialStart + $index }}
+<span class="mess-report-sno">{{ $serialStart + $index }}</span>

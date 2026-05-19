@@ -1,6 +1,7 @@
 @extends('admin.layouts.master')
 
 @section('setup_content')
+@include('admin.mess.reports.partials.report-styles')
 <div class="card" style="border-left: 4px solid #004a93;">
     <div class="card-header">
         <h5 class="mb-0">
@@ -41,9 +42,9 @@
             <table class="table table-hover">
                 <thead class="table-light">
                     <tr>
-                        <th class="text-center" style="width:4rem;">S. No.</th>
-                        <th>PO Number</th>
-                        <th>PO Date</th>
+                        @include('admin.mess.reports.partials.report-sno-th')
+                        @include('admin.mess.reports.partials.report-sort-th', ['sortKey' => 'po_number', 'label' => 'PO Number', 'defaultDir' => 'asc'])
+                        @include('admin.mess.reports.partials.report-sort-th', ['sortKey' => 'po_date', 'label' => 'PO Date', 'defaultDir' => 'desc', 'defaultSort' => 'po_date'])
                         <th>Vendor</th>
                         <th>Store</th>
                         <th>Items Count</th>
@@ -55,7 +56,7 @@
                 <tbody>
                     @forelse($orders as $index => $order)
                         <tr>
-                            <td class="text-center text-muted">@include('admin.mess.reports.partials.report-serial-number', ['paginator' => $orders, 'index' => $index])</td>
+                            <td class="text-center text-muted mess-report-sno-cell">@include('admin.mess.reports.partials.report-serial-number', ['paginator' => $orders, 'index' => $index])</td>
                             <td>{{ $order->po_number }}</td>
                             <td>{{ $order->po_date ? date('d-M-Y', strtotime($order->po_date)) : 'N/A' }}</td>
                             <td>{{ $order->vendor->vendor_name ?? 'N/A' }}</td>

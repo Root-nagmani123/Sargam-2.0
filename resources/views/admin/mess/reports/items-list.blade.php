@@ -1,6 +1,7 @@
 @extends('admin.layouts.master')
 
 @section('setup_content')
+@include('admin.mess.reports.partials.report-styles')
 <div class="card" style="border-left: 4px solid #004a93;">
     <div class="card-header">
         <h5 class="mb-0">
@@ -39,9 +40,9 @@
             <table class="table table-hover">
                 <thead class="table-light">
                     <tr>
-                        <th class="text-center" style="width:4rem;">S. No.</th>
-                        <th>Item Code</th>
-                        <th>Item Name</th>
+                        @include('admin.mess.reports.partials.report-sno-th')
+                        @include('admin.mess.reports.partials.report-sort-th', ['sortKey' => 'item_code', 'label' => 'Item Code', 'defaultDir' => 'asc'])
+                        @include('admin.mess.reports.partials.report-sort-th', ['sortKey' => 'item_name', 'label' => 'Item Name', 'defaultDir' => 'asc', 'defaultSort' => 'item_name'])
                         <th>Category</th>
                         <th>Sub-Category</th>
                         <th>Unit</th>
@@ -55,7 +56,7 @@
                 <tbody>
                     @forelse($items as $index => $item)
                         <tr class="{{ $item->current_stock < $item->minimum_stock ? 'table-warning' : '' }}">
-                            <td class="text-center text-muted">@include('admin.mess.reports.partials.report-serial-number', ['paginator' => $items, 'index' => $index])</td>
+                            <td class="text-center text-muted mess-report-sno-cell">@include('admin.mess.reports.partials.report-serial-number', ['paginator' => $items, 'index' => $index])</td>
                             <td>{{ $item->item_code ?? 'N/A' }}</td>
                             <td>{{ $item->item_name }}</td>
                             <td>{{ $item->category->category_name ?? 'N/A' }}</td>

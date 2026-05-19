@@ -1,6 +1,7 @@
 @extends('admin.layouts.master')
 @section('title', 'Stock Summary Report')
 @section('content')
+@include('admin.mess.reports.partials.report-styles')
 @php
     /** @var array<int> $storeIds */
     $storeIds = $storeIds ?? [];

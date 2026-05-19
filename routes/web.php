@@ -1355,6 +1355,11 @@ Route::prefix('admin/mess')->name('admin.mess.')->middleware(['auth'])->group(fu
         Route::get('purchase-sale-quantity/export-pdf', [\App\Http\Controllers\Mess\ReportController::class, 'purchaseSaleQuantityPdf'])->name('purchase-sale-quantity.pdf');
         Route::get('low-stock', [\App\Http\Controllers\Mess\ReportController::class, 'lowStockReport'])->name('low-stock');
         Route::get('low-stock/export-pdf', [\App\Http\Controllers\Mess\ReportController::class, 'lowStockPdf'])->name('low-stock.pdf');
+        Route::get('stock-issue-detail', [\App\Http\Controllers\Mess\ReportController::class, 'stockIssueDetailReport'])->name('stock-issue-detail');
+        Route::get('items-list', [\App\Http\Controllers\Mess\ReportController::class, 'itemsListReport'])->name('items-list');
+        Route::get('purchase-orders', [\App\Http\Controllers\Mess\ReportController::class, 'purchaseOrdersReport'])->name('purchase-orders');
+        Route::get('pending-orders', [\App\Http\Controllers\Mess\ReportController::class, 'pendingOrdersReport'])->name('pending-orders');
+        Route::get('mess-bill', [\App\Http\Controllers\Mess\ReportController::class, 'messBillReport'])->name('mess-bill');
     });
 });
 
