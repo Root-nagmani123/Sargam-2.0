@@ -30,6 +30,18 @@ use Carbon\Carbon;
 class KitchenIssueController extends Controller
 {
     /**
+     * Historical mess_client_types.id values still stored on kitchen_issue_master rows
+     * after employee categories were re-seeded (Academy Staff=3, Mess Staff=4, Faculty=5).
+     *
+     * @var array<string, list<int>>
+     */
+    private const LEGACY_EMPLOYEE_CLIENT_TYPE_PK = [
+        'academy staff' => [2, 12],
+        'faculty' => [1],
+        'mess staff' => [],
+    ];
+
+    /**
      * Display a listing of selling vouchers (kitchen issues)
      */
     public function index(Request $request)
@@ -492,13 +504,23 @@ class KitchenIssueController extends Controller
             $q->where('kim.client_type', $request->client_type);
         }
         if ($request->filled('client_type_pk')) {
-            $q->where('kim.client_type_pk', (int) $request->input('client_type_pk'));
+            $clientTypePk = (int) $request->input('client_type_pk');
+            $clientType = (int) $request->input('client_type', 0);
+            if ($clientType === KitchenIssueMaster::CLIENT_EMPLOYEE) {
+                $q->whereIn('kim.client_type_pk', $this->employeeClientTypePkFilterValues($clientTypePk));
+            } else {
+                $q->where('kim.client_type_pk', $clientTypePk);
+            }
         }
         $this->applySellingVoucherBuyerNameFilter($q, (string) $request->input('buyer_name', ''));
 
-        // Date filter: same branching as Selling Voucher (Date Range); default last 30 days when blank.
+        // Date filter: default last 30 days when blank; skip default when buyer/category filters target a specific client.
+        $hasTargetedClientFilter = $request->filled('client_type_pk')
+            || trim((string) $request->input('buyer_name', '')) !== '';
         if (! $request->filled('start_date') && ! $request->filled('end_date')) {
-            $q->whereDate('kim.issue_date', '>=', now()->subDays(30)->toDateString());
+            if (! $hasTargetedClientFilter) {
+                $q->whereDate('kim.issue_date', '>=', now()->subDays(30)->toDateString());
+            }
         } elseif ($request->filled('start_date') && $request->filled('end_date')) {
             $q->whereBetween('kim.issue_date', [$request->start_date, $request->end_date]);
         } elseif ($request->filled('start_date')) {
@@ -517,6 +539,31 @@ class KitchenIssueController extends Controller
         }
 
         return $q;
+    }
+
+    /**
+     * Employee category filter must match current mess_client_types.id and legacy ids still on old vouchers.
+     *
+     * @return list<int>
+     */
+    private function employeeClientTypePkFilterValues(int $selectedPk): array
+    {
+        if ($selectedPk <= 0) {
+            return [];
+        }
+
+        $pks = [$selectedPk];
+        $category = ClientType::query()
+            ->where('id', $selectedPk)
+            ->where('client_type', ClientType::TYPE_EMPLOYEE)
+            ->value('client_name');
+
+        if ($category !== null) {
+            $legacy = self::LEGACY_EMPLOYEE_CLIENT_TYPE_PK[strtolower(trim((string) $category))] ?? [];
+            $pks = array_merge($pks, $legacy);
+        }
+
+        return array_values(array_unique(array_map('intval', $pks)));
     }
 
     /**
