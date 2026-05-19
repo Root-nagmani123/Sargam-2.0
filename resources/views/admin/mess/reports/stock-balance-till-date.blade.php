@@ -162,7 +162,7 @@
                                     $totalAmount += $item['amount'];
                                 @endphp
                                 <tr>
-                                    <td class="text-center">{{ $index + 1 }}</td>
+                                    <td class="text-center">@include('admin.mess.reports.partials.report-serial-number', ['index' => $index])</td>
                                     <td>{{ $item['item_code'] ?? '—' }}</td>
                                     <td>{{ $item['item_name'] }}</td>
                                     <td class="text-end">{{ number_format($item['remaining_qty'], 2) }}</td>

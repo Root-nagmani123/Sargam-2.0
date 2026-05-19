@@ -13,6 +13,7 @@
             <table class="table table-hover">
                 <thead class="table-light">
                     <tr>
+                        <th class="text-center" style="width:4rem;">S. No.</th>
                         <th>Invoice Number</th>
                         <th>Invoice Date</th>
                         <th>Vendor</th>
@@ -25,11 +26,12 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse($overdueInvoices as $invoice)
+                    @forelse($overdueInvoices as $index => $invoice)
                         @php
                             $daysOverdue = now()->diffInDays($invoice->due_date);
                         @endphp
                         <tr class="table-danger">
+                            <td class="text-center text-muted">@include('admin.mess.reports.partials.report-serial-number', ['paginator' => $overdueInvoices, 'index' => $index])</td>
                             <td>{{ $invoice->invoice_number }}</td>
                             <td>{{ $invoice->invoice_date ? date('d-M-Y', strtotime($invoice->invoice_date)) : 'N/A' }}</td>
                             <td>{{ $invoice->vendor->vendor_name ?? 'N/A' }}</td>
@@ -42,7 +44,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="text-center text-muted py-4">
+                            <td colspan="10" class="text-center text-muted py-4">
                                 <iconify-icon icon="solar:check-circle-bold" style="font-size: 48px; color: green;"></iconify-icon>
                                 <p class="mt-2">No overdue payments</p>
                             </td>

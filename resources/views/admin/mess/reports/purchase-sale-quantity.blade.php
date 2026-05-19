@@ -262,7 +262,7 @@
                                     @php $psqItemPaginator = $section['paginator'] ?? null; @endphp
                                     @forelse($section['reportData'] as $index => $row)
                                         <tr class="psq-data-row">
-                                            <td class="text-center text-body-secondary small fw-medium">{{ $psqItemPaginator && $psqItemPaginator->firstItem() !== null ? $psqItemPaginator->firstItem() + $index : $index + 1 }}</td>
+                                            <td class="text-center text-body-secondary small fw-medium">@include('admin.mess.reports.partials.report-serial-number', ['paginator' => $psqItemPaginator ?? ($section['paginator'] ?? null), 'index' => $index])</td>
                                             <td class="fw-medium">{{ $row['item_name'] }}</td>
                                             <td><span class="badge bg-body-secondary text-body-emphasis rounded-1 px-2">{{ $row['unit'] }}</span></td>
                                             <td class="text-end">{{ number_format($row['purchase_qty'], 2) }}</td>
@@ -300,7 +300,13 @@
                             </table>
                         </div>
                     @else
-                        @php $groupedData = $section['groupedData'] ?? []; @endphp
+                        @php
+                            $groupedData = $section['groupedData'] ?? [];
+                            $psqGroupedSerial = 0;
+                            if (($section['viewType'] ?? '') === 'category_wise' && ! empty($section['paginator']) && $section['paginator']->firstItem() !== null) {
+                                $psqGroupedSerial = (int) $section['paginator']->firstItem() - 1;
+                            }
+                        @endphp
                         @forelse($groupedData as $group)
                             <div class="purchase-sale-group-block mb-0 border-bottom border-secondary border-opacity-25">
                                 <div class="px-4 pt-3 pb-2">
@@ -324,14 +330,9 @@
                                         </thead>
                                         <tbody>
                                             @foreach($group['items'] as $idx => $row)
+                                                @php $psqGroupedSerial++; @endphp
                                                 <tr class="psq-data-row">
-                                                    <td class="text-center text-body-secondary small fw-medium">
-                                                        @if(($section['viewType'] ?? '') === 'category_wise' && ! empty($section['paginator']))
-                                                            {{ $section['paginator']->firstItem() !== null ? $section['paginator']->firstItem() + $idx : $idx + 1 }}
-                                                        @else
-                                                            {{ $idx + 1 }}
-                                                        @endif
-                                                    </td>
+                                                    <td class="text-center text-body-secondary small fw-medium">@include('admin.mess.reports.partials.report-serial-number', ['start' => $psqGroupedSerial, 'index' => 0])</td>
                                                     <td class="fw-medium">{{ $row['item_name'] }}</td>
                                                     <td><span class="badge bg-body-secondary text-body-emphasis rounded-1 px-2">{{ $row['unit'] }}</span></td>
                                                     <td class="text-end">{{ number_format($row['purchase_qty'], 2) }}</td>

@@ -39,6 +39,7 @@
             <table class="table table-hover">
                 <thead class="table-light">
                     <tr>
+                        <th class="text-center" style="width:4rem;">S. No.</th>
                         <th>Bill Number</th>
                         <th>User</th>
                         <th>Period</th>
@@ -49,8 +50,9 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse($bills as $bill)
+                    @forelse($bills as $index => $bill)
                         <tr>
+                            <td class="text-center text-muted">@include('admin.mess.reports.partials.report-serial-number', ['paginator' => $bills, 'index' => $index])</td>
                             <td>{{ $bill->bill_number }}</td>
                             <td>{{ $bill->user->name ?? 'N/A' }}</td>
                             <td>{{ date('F Y', mktime(0, 0, 0, $bill->month, 1, $bill->year)) }}</td>
@@ -65,7 +67,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="text-center text-muted py-4">No bills found</td>
+                            <td colspan="8" class="text-center text-muted py-4">No bills found</td>
                         </tr>
                     @endforelse
                 </tbody>

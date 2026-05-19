@@ -78,14 +78,11 @@
             <tbody>
                 @php
                     $paginator = $reportPage ?? null;
-                    $serialStart = $paginator && method_exists($paginator, 'firstItem') && !is_null($paginator->firstItem())
-                        ? $paginator->firstItem()
-                        : 1;
                     $rows = $reportPage ?? collect($reportData ?? []);
                 @endphp
                 @forelse($rows as $index => $item)
                     <tr class="sss-body-row">
-                        <td class="text-center text-nowrap ssr-num ssr-cell-fixed">{{ $serialStart + $index }}</td>
+                        <td class="text-center text-nowrap ssr-num ssr-cell-fixed">@include('admin.mess.reports.partials.report-serial-number', ['paginator' => $paginator, 'index' => $index])</td>
                         <td class="text-start fw-medium ssr-item-name ssr-cell-fixed">{{ $item['item_name'] }}</td>
                         <td class="text-center text-nowrap ssr-num ssr-cell-fixed">{{ $item['unit'] ?? '—' }}</td>
                         <td class="text-end text-nowrap ssr-num ssr-grp-opening {{ $item['opening_qty'] < 0 ? 'ssr-negative' : '' }}">{{ number_format($item['opening_qty'], 2) }}</td>

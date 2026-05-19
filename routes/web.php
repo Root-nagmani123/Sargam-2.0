@@ -976,6 +976,9 @@ Route::middleware(['auth'])->group(function () {
 
         // Mark all as read
         Route::post('/mark-all-read', 'markAllAsRead')->name('mark-all-read');
+
+        // Refresh notification panels (AJAX)
+        Route::get('/panels', 'panels')->name('panels');
     });
 
     //change password work here

@@ -148,7 +148,7 @@
                                     $alert = $row['alert_quantity'] ?? 0;
                                 @endphp
                                 <tr class="{{ $remaining < $alert ? 'table-danger' : '' }}">
-                                    <td class="text-center ps-3">{{ $index + 1 }}</td>
+                                    <td class="text-center ps-3">@include('admin.mess.reports.partials.report-serial-number', ['index' => $index])</td>
                                     <td class="fw-semibold text-body-emphasis">{{ $row['item_name'] ?? '-' }}</td>
                                     <td class="text-center">{{ $row['unit'] ?? 'Unit' }}</td>
                                     <td class="text-end fw-medium">{{ number_format($remaining, 2) }}</td>

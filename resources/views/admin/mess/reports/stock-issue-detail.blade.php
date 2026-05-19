@@ -35,6 +35,7 @@
             <table class="table table-hover">
                 <thead class="table-light">
                     <tr>
+                        <th class="text-center" style="width:4rem;">S. No.</th>
                         <th>Issue Number</th>
                         <th>Issue Date</th>
                         <th>Store</th>
@@ -47,8 +48,9 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse($issues as $issue)
+                    @forelse($issues as $index => $issue)
                         <tr>
+                            <td class="text-center text-muted">@include('admin.mess.reports.partials.report-serial-number', ['paginator' => $issues, 'index' => $index])</td>
                             <td>{{ $issue->issue_number ?? 'N/A' }}</td>
                             <td>{{ $issue->issue_date ? date('d-M-Y', strtotime($issue->issue_date)) : 'N/A' }}</td>
                             <td>{{ $issue->store->store_name ?? 'N/A' }}</td>
@@ -73,7 +75,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="text-center text-muted py-4">
+                            <td colspan="10" class="text-center text-muted py-4">
                                 <iconify-icon icon="solar:box-minimalistic-bold" style="font-size: 48px;"></iconify-icon>
                                 <p class="mt-2">No stock issues found</p>
                             </td>
@@ -83,7 +85,7 @@
                 @if($issues->count() > 0)
                     <tfoot class="table-light">
                         <tr>
-                            <th colspan="6" class="text-end">Total Amount (Page):</th>
+                            <th colspan="7" class="text-end">Total Amount (Page):</th>
                             <th colspan="3">₹{{ number_format($issues->sum('total_amount'), 2) }}</th>
                         </tr>
                     </tfoot>

@@ -13,6 +13,7 @@
             <table class="table table-hover">
                 <thead class="table-light">
                     <tr>
+                        <th class="text-center" style="width:4rem;">S. No.</th>
                         <th>PO Number</th>
                         <th>PO Date</th>
                         <th>Vendor</th>
@@ -23,8 +24,9 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse($orders as $order)
+                    @forelse($orders as $index => $order)
                         <tr>
+                            <td class="text-center text-muted">@include('admin.mess.reports.partials.report-serial-number', ['paginator' => $orders, 'index' => $index])</td>
                             <td>{{ $order->po_number }}</td>
                             <td>{{ $order->po_date ? date('d-M-Y', strtotime($order->po_date)) : 'N/A' }}</td>
                             <td>{{ $order->vendor->vendor_name ?? 'N/A' }}</td>
@@ -39,7 +41,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="text-center text-muted py-4">No pending orders found</td>
+                            <td colspan="8" class="text-center text-muted py-4">No pending orders found</td>
                         </tr>
                     @endforelse
                 </tbody>

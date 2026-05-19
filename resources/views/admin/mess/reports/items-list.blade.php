@@ -39,6 +39,7 @@
             <table class="table table-hover">
                 <thead class="table-light">
                     <tr>
+                        <th class="text-center" style="width:4rem;">S. No.</th>
                         <th>Item Code</th>
                         <th>Item Name</th>
                         <th>Category</th>
@@ -52,8 +53,9 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse($items as $item)
+                    @forelse($items as $index => $item)
                         <tr class="{{ $item->current_stock < $item->minimum_stock ? 'table-warning' : '' }}">
+                            <td class="text-center text-muted">@include('admin.mess.reports.partials.report-serial-number', ['paginator' => $items, 'index' => $index])</td>
                             <td>{{ $item->item_code ?? 'N/A' }}</td>
                             <td>{{ $item->item_name }}</td>
                             <td>{{ $item->category->category_name ?? 'N/A' }}</td>
@@ -77,7 +79,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="10" class="text-center text-muted py-4">
+                            <td colspan="11" class="text-center text-muted py-4">
                                 <iconify-icon icon="solar:clipboard-list-bold" style="font-size: 48px;"></iconify-icon>
                                 <p class="mt-2">No items found</p>
                             </td>
@@ -87,7 +89,7 @@
                 @if($items->count() > 0)
                     <tfoot class="table-light">
                         <tr>
-                            <th colspan="8" class="text-end">Total Stock Value:</th>
+                            <th colspan="9" class="text-end">Total Stock Value:</th>
                             <th colspan="2">₹{{ number_format($items->sum(function($item) { return ($item->current_stock ?? 0) * ($item->unit_price ?? 0); }), 2) }}</th>
                         </tr>
                     </tfoot>

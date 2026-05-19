@@ -29,6 +29,7 @@
             <table class="table table-hover">
                 <thead class="table-light">
                     <tr>
+                        <th class="text-center" style="width:4rem;">S. No.</th>
                         <th>GRN Number</th>
                         <th>Receipt Date</th>
                         <th>Vendor</th>
@@ -39,8 +40,9 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse($transactions as $transaction)
+                    @forelse($transactions as $index => $transaction)
                         <tr>
+                            <td class="text-center text-muted">@include('admin.mess.reports.partials.report-serial-number', ['paginator' => $transactions, 'index' => $index])</td>
                             <td>{{ $transaction->grn_number }}</td>
                             <td>{{ $transaction->receipt_date ? date('d-M-Y', strtotime($transaction->receipt_date)) : 'N/A' }}</td>
                             <td>{{ $transaction->vendor->vendor_name ?? 'N/A' }}</td>
@@ -51,7 +53,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="text-center text-muted py-4">No approved inbound transactions found</td>
+                            <td colspan="8" class="text-center text-muted py-4">No approved inbound transactions found</td>
                         </tr>
                     @endforelse
                 </tbody>
