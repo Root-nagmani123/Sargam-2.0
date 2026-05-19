@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Mess;
 
 use App\Http\Controllers\Controller;
+use App\Support\DataTableSearchHelper;
 use App\Models\Mess\SellingVoucherDateRangeReport;
 use App\Models\Mess\SellingVoucherDateRangeReportItem;
 use App\Services\Mess\AvailableQuantityService;
@@ -257,7 +258,7 @@ class SellingVoucherDateRangeController extends Controller
         $filtered = clone $base;
         $this->applySellingVoucherDateRangeItemSearch($filtered, $searchRaw);
 
-        $searchTrimmed = trim($searchRaw);
+        $searchTrimmed = DataTableSearchHelper::normalizeRaw($searchRaw);
         $recordsFiltered = $searchTrimmed === ''
             ? $recordsTotal
             : (clone $filtered)->count('sri.id');
@@ -1164,53 +1165,57 @@ class SellingVoucherDateRangeController extends Controller
 
     private function applySellingVoucherDateRangeItemSearch(Builder $q, string $search): void
     {
-        $search = trim($search);
-        if ($search === '') {
+        $tokens = DataTableSearchHelper::tokens($search);
+        if ($tokens === []) {
             return;
         }
 
-        $term = '%' . addcslashes($search, '%_\\') . '%';
-        $needle = strtolower($search);
+        $q->where(function ($outer) use ($tokens) {
+            foreach ($tokens as $token) {
+                $term = DataTableSearchHelper::likePattern($token);
+                $tokenLower = strtolower($token);
 
-        $q->where(function ($w) use ($term, $needle, $search) {
-            $w->where('sri.item_name', 'like', $term)
-                ->orWhere('sv.client_name', 'like', $term)
-                ->orWhere('mct.client_name', 'like', $term)
-                ->orWhere('cm.course_name', 'like', $term)
-                ->orWhere('ms.store_name', 'like', $term)
-                ->orWhere('mss.sub_store_name', 'like', $term)
-                ->orWhereRaw(
-                    '(CASE
-                        WHEN sv.client_type_slug IN (?, ?) THEN ?
-                        ELSE COALESCE(mct.client_type, sv.client_type_slug, ?)
-                    END) LIKE ?',
-                    ['ot', 'course', 'course', '', $term]
-                );
+                $outer->where(function ($w) use ($term, $token, $tokenLower) {
+                    $w->where('sri.item_name', 'like', $term)
+                        ->orWhere('sv.client_name', 'like', $term)
+                        ->orWhere('mct.client_name', 'like', $term)
+                        ->orWhere('cm.course_name', 'like', $term)
+                        ->orWhere('ms.store_name', 'like', $term)
+                        ->orWhere('mss.sub_store_name', 'like', $term)
+                        ->orWhereRaw(
+                            '(CASE
+                                WHEN sv.client_type_slug IN (?, ?) THEN ?
+                                ELSE COALESCE(mct.client_type, sv.client_type_slug, ?)
+                            END) LIKE ?',
+                            ['ot', 'course', 'course', '', $term]
+                        );
 
-            if (is_numeric($search)) {
-                $w->orWhere('sri.quantity', 'like', $term)->orWhere('sri.return_quantity', 'like', $term);
-            }
+                    if (is_numeric($token)) {
+                        $w->orWhere('sri.quantity', 'like', $term)->orWhere('sri.return_quantity', 'like', $term);
+                    }
 
-            if (str_contains($needle, 'credit')) {
-                $w->orWhere('sv.payment_type', 1);
-            }
-            if (str_contains($needle, 'cash')) {
-                $w->orWhere('sv.payment_type', 0);
-            }
-            if (str_contains($needle, 'upi') || str_contains($needle, 'online')) {
-                $w->orWhere('sv.payment_type', 2);
-            }
-            if (str_contains($needle, 'pending')) {
-                $w->orWhere('sv.status', SellingVoucherDateRangeReport::STATUS_DRAFT);
-            }
-            if (str_contains($needle, 'approv')) {
-                $w->orWhere('sv.status', SellingVoucherDateRangeReport::STATUS_APPROVED);
-            }
-            if (str_contains($needle, 'final')) {
-                $w->orWhere('sv.status', SellingVoucherDateRangeReport::STATUS_FINAL);
-            }
-            if (str_contains($needle, 'return')) {
-                $w->orWhere(DB::raw('COALESCE(sri.return_quantity, 0)'), '>', 0);
+                    if (str_contains($tokenLower, 'credit')) {
+                        $w->orWhere('sv.payment_type', 1);
+                    }
+                    if (str_contains($tokenLower, 'cash')) {
+                        $w->orWhere('sv.payment_type', 0);
+                    }
+                    if (str_contains($tokenLower, 'upi') || str_contains($tokenLower, 'online')) {
+                        $w->orWhere('sv.payment_type', 2);
+                    }
+                    if (str_contains($tokenLower, 'pending')) {
+                        $w->orWhere('sv.status', SellingVoucherDateRangeReport::STATUS_DRAFT);
+                    }
+                    if (str_contains($tokenLower, 'approv')) {
+                        $w->orWhere('sv.status', SellingVoucherDateRangeReport::STATUS_APPROVED);
+                    }
+                    if (str_contains($tokenLower, 'final')) {
+                        $w->orWhere('sv.status', SellingVoucherDateRangeReport::STATUS_FINAL);
+                    }
+                    if (str_contains($tokenLower, 'return')) {
+                        $w->orWhere(DB::raw('COALESCE(sri.return_quantity, 0)'), '>', 0);
+                    }
+                });
             }
         });
     }

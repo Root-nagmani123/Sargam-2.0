@@ -15,6 +15,7 @@ use App\Models\CourseMaster;
 use App\Models\Notification;
 use App\Exports\ProcessMessBillsExport;
 use App\Services\NotificationService;
+use App\Support\DataTableSearchHelper;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -277,18 +278,19 @@ class ProcessMessBillsEmployeeController extends Controller
         $searchRaw = '';
         $searchPayload = $request->input('search');
         if (is_array($searchPayload) && isset($searchPayload['value'])) {
-            $searchRaw = trim((string) $searchPayload['value']);
+            $searchRaw = (string) $searchPayload['value'];
         }
 
+        $searchTokens = DataTableSearchHelper::tokens($searchRaw);
+
         $filteredBills = $combinedBills;
-        if ($searchRaw !== '') {
-            $needle = mb_strtolower($searchRaw);
-            $filteredBills = $filteredBills->filter(function ($cb) use ($needle) {
+        if ($searchTokens !== []) {
+            $filteredBills = $filteredBills->filter(function ($cb) use ($searchTokens) {
                 $statusLabel = ((int) ($cb->status ?? 0)) === 2
                     ? 'paid'
                     : (((int) ($cb->status ?? 0)) === 1 ? 'partial' : 'unpaid');
 
-                $haystack = mb_strtolower(implode(' ', [
+                $haystack = implode(' ', [
                     (string) ($cb->buyer_name ?? ''),
                     (string) ($cb->combined_invoice_no ?? ''),
                     (string) ($cb->invoice_date_range ?? ''),
@@ -296,9 +298,9 @@ class ProcessMessBillsEmployeeController extends Controller
                     (string) ($cb->payment_type ?? ''),
                     (string) number_format((float) ($cb->total ?? 0), 2, '.', ''),
                     $statusLabel,
-                ]));
+                ]);
 
-                return str_contains($haystack, $needle);
+                return DataTableSearchHelper::haystackMatchesAllTokens($haystack, $searchTokens);
             })->values();
         }
 
@@ -1575,17 +1577,17 @@ class ProcessMessBillsEmployeeController extends Controller
             return $name . '|' . $slug;
         })->values();
 
-        if ($search !== '') {
-            $needle = mb_strtolower($search);
-            $groupedRows = $groupedRows->filter(function ($group) use ($needle, $paymentTypeMap) {
+        $searchTokens = DataTableSearchHelper::tokens($search);
+        if ($searchTokens !== []) {
+            $groupedRows = $groupedRows->filter(function ($group) use ($searchTokens, $paymentTypeMap) {
                 $first = $group->first();
                 $buyerName = trim((string) ($first->client_name ?? ''));
                 $clientTypeSlug = (string) ($first->client_type_slug ?? 'employee');
                 $invoiceNo = $this->generateCombinedInvoiceNo($buyerName, $clientTypeSlug);
                 $paymentType = $paymentTypeMap[$first->payment_type ?? 1] ?? '—';
-                $haystack = mb_strtolower($buyerName . ' ' . $invoiceNo . ' ' . $paymentType);
+                $haystack = $buyerName . ' ' . $invoiceNo . ' ' . $paymentType;
 
-                return str_contains($haystack, $needle);
+                return DataTableSearchHelper::haystackMatchesAllTokens($haystack, $searchTokens);
             })->values();
         }
 

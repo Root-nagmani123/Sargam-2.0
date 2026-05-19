@@ -2,6 +2,7 @@
 namespace App\Http\Controllers\Mess;
 
 use App\Http\Controllers\Controller;
+use App\Support\DataTableSearchHelper;
 use Illuminate\Http\Request;
 use App\Models\Mess\PurchaseOrder;
 use App\Models\Mess\PurchaseOrderItem;
@@ -42,20 +43,25 @@ class PurchaseOrderController extends Controller
             $draw = (int) $request->input('draw', 0);
             $start = max((int) $request->input('start', 0), 0);
             $length = (int) $request->input('length', 10);
-            $search = trim((string) $request->input('search.value', ''));
+            $searchTokens = DataTableSearchHelper::tokens((string) $request->input('search.value', ''));
 
             $recordsTotal = (clone $query)->count();
 
-            if ($search !== '') {
-                $query->where(function ($q) use ($search) {
-                    $q->where('po_number', 'like', '%' . $search . '%')
-                        ->orWhere('status', 'like', '%' . $search . '%')
-                        ->orWhereHas('vendor', function ($v) use ($search) {
-                            $v->where('name', 'like', '%' . $search . '%');
-                        })
-                        ->orWhereHas('store', function ($s) use ($search) {
-                            $s->where('store_name', 'like', '%' . $search . '%');
+            if ($searchTokens !== []) {
+                $query->where(function ($q) use ($searchTokens) {
+                    foreach ($searchTokens as $token) {
+                        $like = DataTableSearchHelper::likePattern($token);
+                        $q->where(function ($inner) use ($like) {
+                            $inner->where('po_number', 'like', $like)
+                                ->orWhere('status', 'like', $like)
+                                ->orWhereHas('vendor', function ($v) use ($like) {
+                                    $v->where('name', 'like', $like);
+                                })
+                                ->orWhereHas('store', function ($s) use ($like) {
+                                    $s->where('store_name', 'like', $like);
+                                });
                         });
+                    }
                 });
             }
 

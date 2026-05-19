@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Mess;
 
 use App\Http\Controllers\Controller;
+use App\Support\DataTableSearchHelper;
 use App\Models\KitchenIssueMaster;
 use App\Services\Mess\AvailableQuantityService;
 use App\Models\KitchenIssueItem;
@@ -338,7 +339,7 @@ class KitchenIssueController extends Controller
         $this->applySellingVoucherItemSearch($filtered, $searchRaw);
 
         // When the DataTables global search is empty, the filtered query matches `$base`; avoid a second COUNT.
-        $searchTrimmed = trim($searchRaw);
+        $searchTrimmed = DataTableSearchHelper::normalizeRaw($searchRaw);
         $recordsFiltered = $searchTrimmed === ''
             ? $recordsTotal
             : (clone $filtered)->count('kii.pk');
@@ -537,63 +538,68 @@ class KitchenIssueController extends Controller
 
     private function applySellingVoucherItemSearch(Builder $q, string $search): void
     {
-        $search = trim($search);
-        if ($search === '') {
+        $tokens = DataTableSearchHelper::tokens($search);
+        if ($tokens === []) {
             return;
         }
 
-        $term = '%' . addcslashes($search, '%_\\') . '%';
-        $needle = strtolower($search);
         $misCols = $this->messSubcategorySearchColumns();
 
-        $q->where(function ($w) use ($term, $needle, $search, $misCols) {
-            $w->where('kii.item_name', 'like', $term);
-            foreach ($misCols as $col) {
-                $w->orWhere($col, 'like', $term);
-            }
-            $w->orWhere('kim.client_name', 'like', $term)
-                ->orWhere('ms.store_name', 'like', $term)
-                ->orWhere('mss.sub_store_name', 'like', $term)
-                ->orWhere('cm.course_name', 'like', $term)
-                ->orWhere('mct.client_name', 'like', $term)
-                ->orWhereRaw(
-                    '(CASE kim.client_type
-                        WHEN ? THEN \'employee\' WHEN ? THEN \'ot\' WHEN ? THEN \'course\'
-                        WHEN ? THEN \'section\' WHEN ? THEN \'other\' ELSE \'\' END) LIKE ?',
-                    [
-                        KitchenIssueMaster::CLIENT_EMPLOYEE,
-                        KitchenIssueMaster::CLIENT_OT,
-                        KitchenIssueMaster::CLIENT_COURSE,
-                        KitchenIssueMaster::CLIENT_SECTION,
-                        KitchenIssueMaster::CLIENT_OTHER,
-                        $term,
-                    ]
-                );
+        $q->where(function ($outer) use ($tokens, $misCols) {
+            foreach ($tokens as $token) {
+                $term = DataTableSearchHelper::likePattern($token);
+                $tokenLower = strtolower($token);
 
-            if (is_numeric($search)) {
-                $w->orWhere('kii.quantity', 'like', $term)->orWhere('kii.return_quantity', 'like', $term);
-            }
+                $outer->where(function ($w) use ($term, $token, $tokenLower, $misCols) {
+                    $w->where('kii.item_name', 'like', $term);
+                    foreach ($misCols as $col) {
+                        $w->orWhere($col, 'like', $term);
+                    }
+                    $w->orWhere('kim.client_name', 'like', $term)
+                        ->orWhere('ms.store_name', 'like', $term)
+                        ->orWhere('mss.sub_store_name', 'like', $term)
+                        ->orWhere('cm.course_name', 'like', $term)
+                        ->orWhere('mct.client_name', 'like', $term)
+                        ->orWhereRaw(
+                            '(CASE kim.client_type
+                                WHEN ? THEN \'employee\' WHEN ? THEN \'ot\' WHEN ? THEN \'course\'
+                                WHEN ? THEN \'section\' WHEN ? THEN \'other\' ELSE \'\' END) LIKE ?',
+                            [
+                                KitchenIssueMaster::CLIENT_EMPLOYEE,
+                                KitchenIssueMaster::CLIENT_OT,
+                                KitchenIssueMaster::CLIENT_COURSE,
+                                KitchenIssueMaster::CLIENT_SECTION,
+                                KitchenIssueMaster::CLIENT_OTHER,
+                                $term,
+                            ]
+                        );
 
-            if (str_contains($needle, 'credit')) {
-                $w->orWhere('kim.payment_type', KitchenIssueMaster::PAYMENT_CREDIT);
-            }
-            if (str_contains($needle, 'cash')) {
-                $w->orWhere('kim.payment_type', KitchenIssueMaster::PAYMENT_CASH);
-            }
-            if (str_contains($needle, 'upi') || str_contains($needle, 'online')) {
-                $w->orWhere('kim.payment_type', KitchenIssueMaster::PAYMENT_ONLINE);
-            }
-            if (str_contains($needle, 'pending')) {
-                $w->orWhere('kim.status', KitchenIssueMaster::STATUS_PENDING);
-            }
-            if (str_contains($needle, 'approv')) {
-                $w->orWhere('kim.status', KitchenIssueMaster::STATUS_APPROVED);
-            }
-            if (str_contains($needle, 'complet')) {
-                $w->orWhere('kim.status', KitchenIssueMaster::STATUS_COMPLETED);
-            }
-            if (str_contains($needle, 'return')) {
-                $w->orWhere(DB::raw('COALESCE(kii.return_quantity, 0)'), '>', 0);
+                    if (is_numeric($token)) {
+                        $w->orWhere('kii.quantity', 'like', $term)->orWhere('kii.return_quantity', 'like', $term);
+                    }
+
+                    if (str_contains($tokenLower, 'credit')) {
+                        $w->orWhere('kim.payment_type', KitchenIssueMaster::PAYMENT_CREDIT);
+                    }
+                    if (str_contains($tokenLower, 'cash')) {
+                        $w->orWhere('kim.payment_type', KitchenIssueMaster::PAYMENT_CASH);
+                    }
+                    if (str_contains($tokenLower, 'upi') || str_contains($tokenLower, 'online')) {
+                        $w->orWhere('kim.payment_type', KitchenIssueMaster::PAYMENT_ONLINE);
+                    }
+                    if (str_contains($tokenLower, 'pending')) {
+                        $w->orWhere('kim.status', KitchenIssueMaster::STATUS_PENDING);
+                    }
+                    if (str_contains($tokenLower, 'approv')) {
+                        $w->orWhere('kim.status', KitchenIssueMaster::STATUS_APPROVED);
+                    }
+                    if (str_contains($tokenLower, 'complet')) {
+                        $w->orWhere('kim.status', KitchenIssueMaster::STATUS_COMPLETED);
+                    }
+                    if (str_contains($tokenLower, 'return')) {
+                        $w->orWhere(DB::raw('COALESCE(kii.return_quantity, 0)'), '>', 0);
+                    }
+                });
             }
         });
     }

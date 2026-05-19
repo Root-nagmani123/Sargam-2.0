@@ -23,6 +23,8 @@
     $responsive = isset($responsive) ? (bool) $responsive : false;
     $scrollX = isset($scrollX) ? (bool) $scrollX : false;
     $searchSmart = isset($searchSmart) ? (bool) $searchSmart : true;
+    // Client-side tables always use smart search (multi-word AND across row text).
+    $searchSmartClient = true;
     $searchHighlight = isset($searchHighlight) ? (bool) $searchHighlight : true;
     $searchHighlightExcludeColumnsMerged = array_values(array_unique(array_merge(
         $actionColumnIndices,
@@ -201,6 +203,73 @@
             }
         });
     };
+
+    /** Trim/collapse spaces in DataTables search box (NBSP, double spaces). */
+    window.messDataTableNormalizeSearchValue = function(val) {
+        return String(val || '').replace(/\u00a0/g, ' ').trim().replace(/\s+/g, ' ');
+    };
+
+    /** Strip HTML from a cell value for client-side row matching. */
+    window.messDataTableStripHtmlForSearch = function(s) {
+        if (typeof window.jQuery === 'undefined') {
+            return String(s).replace(/<[^>]*>/g, '');
+        }
+        try {
+            return window.jQuery('<div>').append(window.jQuery.parseHTML(String(s))).text();
+        } catch (e) {
+            return String(s).replace(/<[^>]*>/g, '');
+        }
+    };
+
+    /**
+     * When search.smart is false, DataTables matches the full phrase only.
+     * This hook applies space-separated AND matching across visible row text.
+     */
+    if (typeof window.jQuery !== 'undefined' && window.jQuery.fn.dataTable && !window._messDtMultiWordSearchHooked) {
+        window._messDtMultiWordSearchHooked = true;
+        window.jQuery.fn.dataTable.ext.search.push(function(settings, data) {
+            if (!settings._messCustomMultiWordSearch) {
+                return true;
+            }
+            var api = new window.jQuery.fn.dataTable.Api(settings);
+            var raw = window.messDataTableNormalizeSearchValue(
+                typeof api.search === 'function' ? api.search() : ''
+            );
+            if (!raw) {
+                return true;
+            }
+            var tokens = raw.split(/\s+/).filter(Boolean);
+            if (!tokens.length) {
+                return true;
+            }
+            var haystack = data.map(function(cell) {
+                return window.messDataTableStripHtmlForSearch(cell).replace(/\s+/g, ' ').trim();
+            }).join(' ').toLowerCase();
+            return tokens.every(function(t) {
+                return haystack.indexOf(String(t).toLowerCase()) !== -1;
+            });
+        });
+    }
+
+    window.messDataTableBindSearchInputTrim = function(api) {
+        if (!api || !api.table) {
+            return;
+        }
+        var container = api.table().container();
+        if (!container) {
+            return;
+        }
+        var $filter = window.jQuery(container).find('.dataTables_filter input');
+        $filter.off('input.messDtSearchTrim').on('input.messDtSearchTrim', function() {
+            var normalized = window.messDataTableNormalizeSearchValue(this.value);
+            if (this.value !== normalized) {
+                this.value = normalized;
+            }
+            if (typeof api.search === 'function' && api.search() !== normalized) {
+                api.search(normalized).draw();
+            }
+        });
+    };
 })();
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -313,6 +382,11 @@ document.addEventListener('DOMContentLoaded', function() {
             paginate: { first: 'First', last: 'Last', next: 'Next', previous: 'Previous' }
         },
         columnDefs: columnDefsMerged,
+        initComplete: function(settings) {
+            if (typeof window.messDataTableBindSearchInputTrim === 'function') {
+                try { window.messDataTableBindSearchInputTrim(new $.fn.dataTable.Api(settings)); } catch (e) {}
+            }
+        },
         drawCallback: function(settings) {
             if (typeof window.adjustAllDataTables === 'function') {
                 try { window.adjustAllDataTables(); } catch (e) {}
@@ -333,7 +407,10 @@ document.addEventListener('DOMContentLoaded', function() {
         pageLength: {{ $pageLength }},
         lengthMenu: lengthMenu,
         searchDelay: {{ $searchDelay }},
-        search: { smart: {{ $searchSmart ? 'true' : 'false' }} },
+        search: { smart: {{ $searchSmartClient ? 'true' : 'false' }} },
+        @if(!$searchSmartClient)
+        _messCustomMultiWordSearch: true,
+        @endif
         responsive: {{ $responsive ? 'true' : 'false' }},
         scrollX: {{ $scrollX ? 'true' : 'false' }},
         @if($columnManager)
@@ -351,6 +428,11 @@ document.addEventListener('DOMContentLoaded', function() {
             paginate: { first: 'First', last: 'Last', next: 'Next', previous: 'Previous' }
         },
         columnDefs: columnDefsMerged,
+        initComplete: function(settings) {
+            if (typeof window.messDataTableBindSearchInputTrim === 'function') {
+                try { window.messDataTableBindSearchInputTrim(new $.fn.dataTable.Api(settings)); } catch (e) {}
+            }
+        },
         drawCallback: function(settings) {
             if (typeof window.adjustAllDataTables === 'function') {
                 try { window.adjustAllDataTables(); } catch (e) {}
