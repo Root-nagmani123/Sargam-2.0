@@ -272,6 +272,12 @@
                                         <span class="hide-menu">My Feedback</span>
                                     </a></li>
                             </ul>
+                            @if (is_faculty_portal_user())
+                                @include('components.menu.partials.faculty_session_feedback_report_menu', [
+                                    'reportCollapseId' => 'facultySessionFeedbackReportSetup',
+                                    'linkLabelClass' => 'hide-menu',
+                                ])
+                            @endif
                             @endif
                             <!-- faculty menu end -->
                             <!-- medical exemption for OTs -->
