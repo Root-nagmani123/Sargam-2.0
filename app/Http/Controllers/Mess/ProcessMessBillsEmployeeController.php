@@ -1462,7 +1462,7 @@ class ProcessMessBillsEmployeeController extends Controller
 
     /**
      * Return JSON data for the ADD modal table (employee bills for date range).
-     * Only shows unpaid bills (status != 2).
+     * Includes approved SV/kitchen vouchers (same as main index); keeps buyers with period due > 0.
      */
     public function modalData(Request $request)
     {
@@ -1498,7 +1498,7 @@ class ProcessMessBillsEmployeeController extends Controller
                 DB::raw("CONVERT('date_range' USING utf8mb4) COLLATE {$unionCollation} as source_type"),
             ])
             ->whereIn('client_type_slug', $dateRangeSlugs)
-            ->where('status', '!=', 2); // Only unpaid bills
+            ->whereIn('status', $this->sellingVoucherDateRangeReportSaleVoucherStatuses());
 
         if ($clientTypePk) {
             $dateRangeQuery->where('client_type_pk', $clientTypePk);
@@ -1523,7 +1523,7 @@ class ProcessMessBillsEmployeeController extends Controller
             ])
             ->whereIn('client_type', $kitchenClientTypes)
             ->whereIn('kitchen_issue_type', self::KITCHEN_MESS_SELLING_ISSUE_TYPES)
-            ->where('status', '!=', 2); // Only unpaid bills
+            ->where('status', '!=', KitchenIssueMaster::STATUS_REJECTED);
 
         if ($clientTypePk) {
             $kitchenIssueQuery->where('client_type_pk', $clientTypePk);
@@ -1549,6 +1549,18 @@ class ProcessMessBillsEmployeeController extends Controller
             $name = trim((string) ($bill->client_name ?? ''));
             $slug = (string) ($bill->client_type_slug ?? 'employee');
             return $name . '|' . $slug;
+        })->values();
+
+        $groupedRows = $groupedRows->filter(function ($group) use ($dateFrom, $dateTo) {
+            $first = $group->first();
+            $buyerName = trim((string) ($first->client_name ?? ''));
+            if ($buyerName === '') {
+                return false;
+            }
+            $clientTypeSlug = (string) ($first->client_type_slug ?? 'employee');
+            $financials = $this->computeCombinedBillFinancials($buyerName, $clientTypeSlug, $dateFrom, $dateTo);
+
+            return $financials['due'] > 0;
         })->values();
 
         if ($search !== '') {
