@@ -4,6 +4,9 @@
     infoLabel, searchDelay, ordering, pageLength, lengthMenu, responsive (bool), scrollX (bool),
     searchHighlight (bool), searchHighlightExcludeColumns (int[] — extra columns to skip, merged with action columns),
     dom (string|null) — custom DataTables dom layout.
+    columnManager (bool) — enable Manage Columns offcanvas (default true).
+    columnManagerTitle (string|null) — offcanvas title.
+    columnManagerLocked (int[]) — column indexes that stay visible.
 --}}
 @php
     $tableId = $tableId ?? 'masterTable';
@@ -32,7 +35,13 @@
     $ajaxUrlBase = isset($ajaxUrlBase) ? (string) $ajaxUrlBase : '';
     $serverSideColumnDefs = isset($serverSideColumnDefs) && is_array($serverSideColumnDefs) ? $serverSideColumnDefs : [];
     $dom = $dom ?? '<"row align-items-center mb-2"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row align-items-center mt-2"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>';
+    $columnManager = isset($columnManager) ? (bool) $columnManager : true;
+    $columnManagerTitle = $columnManagerTitle ?? 'Manage Columns';
+    $columnManagerLocked = isset($columnManagerLocked) ? (array) $columnManagerLocked : [];
 @endphp
+@if($columnManager)
+    @include('components.mess-column-manager', ['tableId' => $tableId, 'title' => $columnManagerTitle])
+@endif
 @if($searchHighlight)
 @push('styles')
 <style>
@@ -289,6 +298,9 @@ document.addEventListener('DOMContentLoaded', function() {
         search: { smart: {{ $searchSmart ? 'true' : 'false' }} },
         responsive: {{ $responsive ? 'true' : 'false' }},
         scrollX: {{ $scrollX ? 'true' : 'false' }},
+        @if($columnManager)
+        colReorder: { realtime: false, fixedColumnsRight: {{ count($actionColumnIndices) > 0 ? 1 : 0 }} },
+        @endif
         dom: {!! json_encode($dom) !!},
         language: {
             search: '',
@@ -324,6 +336,9 @@ document.addEventListener('DOMContentLoaded', function() {
         search: { smart: {{ $searchSmart ? 'true' : 'false' }} },
         responsive: {{ $responsive ? 'true' : 'false' }},
         scrollX: {{ $scrollX ? 'true' : 'false' }},
+        @if($columnManager)
+        colReorder: { realtime: false, fixedColumnsRight: {{ count($actionColumnIndices) > 0 ? 1 : 0 }} },
+        @endif
         dom: {!! json_encode($dom) !!},
         language: {
             search: '',
@@ -353,7 +368,27 @@ document.addEventListener('DOMContentLoaded', function() {
 
     window.messMasterDataTableRegistry = window.messMasterDataTableRegistry || [];
     if ($.fn.DataTable.isDataTable($table)) {
-        window.messMasterDataTableRegistry.push($table.DataTable());
+        var dtApi = $table.DataTable();
+        window.messMasterDataTableRegistry.push(dtApi);
+
+        @if($columnManager)
+        function initMessColumnManagerWhenReady() {
+            if (typeof window.MessColumnManager === 'undefined') {
+                setTimeout(initMessColumnManagerWhenReady, 50);
+                return;
+            }
+            window.MessColumnManager.init({
+                tableId: '{{ $tableId }}',
+                mode: 'datatable',
+                dtApi: dtApi,
+                $table: $table,
+                colReorder: true,
+                lockedColumns: {!! json_encode($columnManagerLocked) !!},
+                skipColumns: {!! json_encode($actionColumnIndices) !!}
+            });
+        }
+        initMessColumnManagerWhenReady();
+        @endif
     }
 });
 </script>

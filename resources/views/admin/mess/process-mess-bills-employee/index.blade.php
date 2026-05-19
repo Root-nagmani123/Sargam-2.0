@@ -307,6 +307,9 @@
     'infoLabel' => 'bills',
     'serverSide' => true,
     'ajaxUrlBase' => route('admin.mess.process-mess-bills-employee.index'),
+    'columnManager' => true,
+    'columnManagerLocked' => [0],
+    'columnManagerTitle' => 'Process Mess Bills columns',
 ])
 
 @push('scripts')
@@ -2637,18 +2640,27 @@ function printProcessMessBillsMainTable() {
         });
     }
 
-    // Remove action column (last column) for print
     var actionColIdx = 8;
+    var visibleIndexes = null;
+    if (window.MessColumnManager && typeof window.MessColumnManager.getVisibleIndexes === 'function') {
+        visibleIndexes = window.MessColumnManager.getVisibleIndexes('processMessBillsTable');
+    }
 
     var originalThead = table.querySelector('thead');
     var headerCells = originalThead ? Array.from(originalThead.querySelectorAll('tr th')) : [];
-    var printHeaderCells = headerCells.filter(function (_, idx) { return idx !== actionColIdx; });
+
+    var printColIndexes = visibleIndexes && visibleIndexes.length
+        ? visibleIndexes
+        : headerCells.map(function (_, idx) { return idx; }).filter(function (idx) { return idx !== actionColIdx; });
+
+    var printHeaderCells = printColIndexes.map(function (idx) { return headerCells[idx]; }).filter(Boolean);
     var headerHtml = '<tr>' + printHeaderCells.map(function (th) { return '<th>' + th.innerHTML + '</th>'; }).join('') + '</tr>';
 
     var bodyRowsHtml = rowsData.map(function (row) {
         var cells = Array.isArray(row) ? row : (row && row.length != null ? Array.from(row) : []);
-        var filteredCells = cells.filter(function (_, idx) { return idx !== actionColIdx; });
-        return '<tr>' + filteredCells.map(function (c) { return '<td>' + c + '</td>'; }).join('') + '</tr>';
+        return '<tr>' + printColIndexes.map(function (idx) {
+            return '<td>' + (cells[idx] != null ? cells[idx] : '') + '</td>';
+        }).join('') + '</tr>';
     }).join('');
 
     var columnsCount = printHeaderCells.length || 8;

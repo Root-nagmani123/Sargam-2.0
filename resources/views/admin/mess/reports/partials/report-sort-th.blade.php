@@ -8,6 +8,7 @@
     $defaultDir = $defaultDir ?? 'asc';
     $defaultSort = $defaultSort ?? null;
     $thClass = trim(($class ?? '') . ' mess-report-sort-th');
+    $messFilterField = $messFilterField ?? null;
     $activeSort = request()->filled('sort') ? (string) request('sort') : ($defaultSort ?? '');
     $isActive = $activeSort === $sortKey || ($activeSort === '' && $defaultSort === $sortKey);
     $currentDir = $isActive
@@ -25,7 +26,7 @@
     $params['sort_dir'] = $nextDir;
     $sortUrl = request()->url() . '?' . http_build_query($params);
 @endphp
-<th class="{{ $thClass }}" scope="col"@if(!empty($rowspan)) rowspan="{{ (int) $rowspan }}"@endif>
+<th class="{{ $thClass }}" scope="col"@if(!empty($rowspan)) rowspan="{{ (int) $rowspan }}"@endif@if($messFilterField) data-mess-filter="{{ $messFilterField }}"@endif>
     <a href="{{ $sortUrl }}" class="mess-report-sort-link text-decoration-none text-reset d-inline-flex align-items-center gap-1">
         <span>{{ $label }}</span>
         @if($isActive)

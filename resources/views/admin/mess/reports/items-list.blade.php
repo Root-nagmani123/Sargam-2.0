@@ -24,8 +24,8 @@
                     </select>
                 </div>
                 <div class="col-md-6">
-                    <input type="text" name="search" class="form-control " 
-                           placeholder="Search by item name or code..." 
+                    <input type="text" name="search" id="mess_items_search" class="form-control" data-mess-filter-field="search"
+                           placeholder="Search by item name or code..."
                            value="{{ request('search') }}">
                 </div>
                 <div class="col-md-2">
@@ -37,12 +37,12 @@
         </form>
 
         <div class="table-responsive mess-items-report-scroll">
-            <table class="table table-hover">
+            <table id="messItemsListTable" class="table table-hover" data-mess-column-manager data-mess-column-title="Items list columns">
                 <thead class="table-light">
                     <tr>
                         @include('admin.mess.reports.partials.report-sno-th')
                         @include('admin.mess.reports.partials.report-sort-th', ['sortKey' => 'item_code', 'label' => 'Item Code', 'defaultDir' => 'asc'])
-                        @include('admin.mess.reports.partials.report-sort-th', ['sortKey' => 'item_name', 'label' => 'Item Name', 'defaultDir' => 'asc', 'defaultSort' => 'item_name'])
+                        @include('admin.mess.reports.partials.report-sort-th', ['sortKey' => 'item_name', 'label' => 'Item Name', 'defaultDir' => 'asc', 'defaultSort' => 'item_name', 'messFilterField' => 'search'])
                         <th>Category</th>
                         <th>Sub-Category</th>
                         <th>Unit</th>

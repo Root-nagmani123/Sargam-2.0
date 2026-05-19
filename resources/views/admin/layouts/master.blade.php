@@ -651,6 +651,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     @if(request()->routeIs('admin.mess.*'))
         @include('admin.mess.partials.smooth-scroll')
+        @include('admin.mess.partials.column-manager-auto-init')
     @endif
     @stack('scripts')
     @yield('scripts')

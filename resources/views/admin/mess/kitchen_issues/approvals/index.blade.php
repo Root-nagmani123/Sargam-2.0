@@ -17,7 +17,7 @@
                     <hr>
 
                     <div class="table-responsive">
-                        <table class="table w-100 text-nowrap">
+                        <table id="kitchenIssueApprovalsTable" class="table w-100 text-nowrap" data-mess-column-manager data-mess-column-skip="7">
                             <thead>
                                 <tr>
                                     <th>S.No.</th>
