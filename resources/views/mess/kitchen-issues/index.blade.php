@@ -73,7 +73,6 @@
                                 (string) \App\Models\KitchenIssueMaster::CLIENT_SECTION => 'Section',
                                 (string) \App\Models\KitchenIssueMaster::CLIENT_OTHER => 'Other',
                             ];
-                            $selectedClientType = (string) request('client_type', '');
                         @endphp
                         <div class="sv-filter-field">
                             <label class="form-label small text-muted mb-1">Client type</label>
@@ -1582,6 +1581,19 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    /** Keep Choices.js multi-select UI in sync with server-rendered selected options after filter submit. */
+    function syncFilterChoicesMultiFromNative(selectEl) {
+        if (!selectEl || !selectEl.choicesInstance || !selectEl.choicesInstance._choices) return;
+        var choicesApi = selectEl.choicesInstance._choices;
+        Array.from(selectEl.options).forEach(function(opt) {
+            if (opt.selected && String(opt.value) !== '') {
+                try {
+                    choicesApi.setChoiceByValue(String(opt.value));
+                } catch (e) {}
+            }
+        });
+    }
+
     // Filter dropdowns (Choices.js): same exact word-token search as selling voucher modals
     if (typeof Choices !== 'undefined') {
         var filterStatus = document.getElementById('filter_status');
@@ -1644,6 +1656,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         }, 0);
                     }
                 });
+                syncFilterChoicesMultiFromNative(filterStatus);
             } catch (e) {
                 console.error('Choices initialization failed for status filter:', e);
             }
@@ -1706,6 +1719,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         }, 0);
                     }
                 });
+                syncFilterChoicesMultiFromNative(filterStore);
             } catch (e) {
                 console.error('Choices initialization failed for store filter:', e);
             }
@@ -1720,11 +1734,13 @@ document.addEventListener('DOMContentLoaded', function() {
         var buyerEl = document.getElementById('filter_buyer_name');
         if (!typeEl || !typePkEl || !buyerEl) return;
 
-        var selectedTypePk = @json((string) ($selectedClientTypePk ?? request('client_type_pk', '')));
-        var selectedBuyer = @json((string) ($selectedBuyerName ?? request('buyer_name', '')));
-        var employees = @json(($employees ?? collect())->pluck('full_name')->filter()->values()->all(), JSON_UNESCAPED_UNICODE);
+        var selectedClientType = @json((string) ($selectedClientType ?? ''));
+        var selectedTypePk = @json((string) ($selectedClientTypePk ?? ''));
+        var selectedBuyer = @json((string) ($selectedBuyerName ?? ''));
+        var isRestoringSellingVoucherFilters = false;
+        var employees = @json(($employees ?? collect())->pluck('full_name_with_department')->filter()->values()->all(), JSON_UNESCAPED_UNICODE);
         var faculties = @json(($faculties ?? collect())->pluck('full_name')->filter()->values()->all(), JSON_UNESCAPED_UNICODE);
-        var messStaff = @json(($messStaff ?? collect())->pluck('full_name')->filter()->values()->all(), JSON_UNESCAPED_UNICODE);
+        var messStaff = @json(($messStaff ?? collect())->pluck('full_name_with_department')->filter()->values()->all(), JSON_UNESCAPED_UNICODE);
 
         var typeSlugMap = {
             '{{ (string) \App\Models\KitchenIssueMaster::CLIENT_EMPLOYEE }}': 'employee',
@@ -1835,16 +1851,26 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         typeEl.addEventListener('change', function () {
+            if (isRestoringSellingVoucherFilters) return;
             selectedTypePk = '';
             selectedBuyer = '';
             loadTypePkOptions(false);
         });
         typePkEl.addEventListener('change', function () {
+            if (isRestoringSellingVoucherFilters) return;
             selectedBuyer = '';
             loadBuyerOptions(false);
         });
 
-        loadTypePkOptions(true);
+        function restoreSellingVoucherFilterCascade() {
+            if (!selectedClientType) return;
+            isRestoringSellingVoucherFilters = true;
+            typeEl.value = selectedClientType;
+            loadTypePkOptions(true);
+            isRestoringSellingVoucherFilters = false;
+        }
+
+        restoreSellingVoucherFilterCascade();
     })();
 
     function destroyAddModalTomSelects() {
